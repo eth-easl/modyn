@@ -1,0 +1,8 @@
+kafka>=2.0.2
+kafka-python>=2.0.2
+sklearn
+pandas==1.5.0
+tensorflow_io
+
+
+# To install tensorflow_io on Mac M1/M2 follow this https://github.com/tensorflow/io/issues/1643
