@@ -1,8 +1,10 @@
-kafka>=2.0.2
-kafka-python>=2.0.2
+kafka-python
 sklearn
-pandas==1.5.0
+pandas
+tensorflow
 tensorflow_io
 
+# For best performance of tensorflow on mac M1:
+# https://developer.apple.com/metal/tensorflow-plugin/
 
-# To install tensorflow_io on Mac M1/M2 follow this https://github.com/tensorflow/io/issues/1643
+# To install tensorflow_io on Mac M1/M2 follow this and install it directly: https://github.com/tensorflow/io/issues/1643
