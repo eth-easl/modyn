@@ -33,6 +33,8 @@ def load_data(train_file):
 
     train_df, test_df = train_test_split(data_df, test_size=0.4, shuffle=True)
 
+    # TODO [asridhar]: Please select the training and testing x and y here if you want to train for something different
+    # Should be made configurable in future iterations
     x_train_df = train_df.drop(['click'], axis=1)
     y_train_df = train_df['click']
 
@@ -45,6 +47,8 @@ def load_data(train_file):
     x_test = list(filter(None, x_test_df.to_csv(index=False).split("\n")[1:]))
     y_test = list(filter(None, y_test_df.to_csv(index=False).split("\n")[1:]))
 
+    # TODO: Best case would be to do this split at the preprocessing engine and not at the producer
+    # This would better simulate an actual datastream coming in
     write_to_kafka("benchmark-train", zip(x_train, y_train))
     write_to_kafka("benchmark-test", zip(x_test, y_test))
 
@@ -73,6 +77,8 @@ def fit():
     pass
 
 def online_training(num_columns):
+    # TODO: We will have to figure out a customizable policy on when and how to retrain/fit to the model
+    # After how much time and so forth
     online_train_ds = tfio.experimental.streaming.KafkaBatchIODataset(
         topics=['benchmark-train'],
         group_id='cgonline',
@@ -118,6 +124,8 @@ def main():
     num_columns = load_data('./data/train/train_mini.csv')
 
     run_experiment(num_columns)
+
+    # TODO: Implement a benchmarking node that tests the system
 
 if __name__ == "__main__":
     main()
