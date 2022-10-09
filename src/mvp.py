@@ -16,6 +16,7 @@ import pandas as pd
 from kafka import KafkaProducer
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
+# TODO: This currently does not work on Apple Mac M1 on Monterey (see https://github.com/tensorflow/io/issues/1625)
 import tensorflow_io as tfio
 
 COLUMNS = ['id','click','hour','C1','banner_pos','site_id','site_domain','site_category','app_id','app_domain','app_category','device_id','device_ip','device_model','device_type','device_conn_type','C14','C15','C16','C17','C18','C19','C20','C21']
@@ -24,6 +25,8 @@ def error_callback(exc):
     raise Exception('Error while sendig data to kafka: {0}'.format(str(exc)))
 
 def load_data(train_file):
+    # TODO: In the initial training, we should define the number of samples we want to use. 
+    # Subsequently, the producer can produce new samples that we then train according to the retrain/fit policy
     file_iterator = pd.read_csv(train_file, header=None, chunksize=100000, names=COLUMNS)
 
     data_df = next(file_iterator)
@@ -62,11 +65,11 @@ def decode_kafka_item(item, num_columns):
     return (message, key)
 
 def train(train_ds):
-    # TODO: Implement
+    # TODO [asridhar]: Implement
     pass
 
 def fit():
-    # TODO: Implement
+    # TODO [asridhar]: Implement
     pass
 
 def online_training(num_columns):
@@ -101,6 +104,8 @@ def run_experiment(num_columns):
     print(f'{datetime.now()} Training')
     train(train_ds)
 
+    # TODO: Online training shouldn't happen immediately but only after a certain amount of new data is available.
+    # This policy should be editable by the experimental scientist
     online_training(num_columns)
 
 def main():
@@ -108,6 +113,8 @@ def main():
     print("tensorflow-io version: {}".format(tfio.__version__))
     print("tensorflow version: {}".format(tf.__version__))
 
+    # TODO: The data loading and provisioning should be moved to a different node as this should happen asynchronously to the training
+    # Additionally, data storage can or should be implemented on a new node for existing data
     num_columns = load_data('./data/train/train_mini.csv')
 
     run_experiment(num_columns)
