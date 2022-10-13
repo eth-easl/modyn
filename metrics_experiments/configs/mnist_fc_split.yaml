@@ -1,0 +1,11 @@
+dataset: 
+  name: SplitMNIST
+  batch_size: 256
+
+model:
+  name: vanilla
+
+lr: 0.001
+epochs: 5
+# trainer: defaultTrainer
+trainer: naiveTaskBasedTrainer

@@ -1,0 +1,1 @@
+Made one modification to exp1: collapse_targets. Basically when it's enabled, MNIST becomes strictly a binary task. That is, predicting 6/7 would use the same output "neurons" as predicting 0/1. So the model architecture naturally becomes [.., .., 2]
