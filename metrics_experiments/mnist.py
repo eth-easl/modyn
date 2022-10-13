@@ -6,10 +6,18 @@ import copy
 from tqdm import tqdm
 import yaml 
 import results_visualizer
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Importance Metrics")
+    parser.add_argument("experiment", help="Name of the experiment (for config file and write directory)")
+    parser.add_argument("write", help="Should the results be written out")
+    args = parser.parse_args()
+    return args
 
 if __name__ == '__main__':
-    experiment_name = 'exp3'
-    write = False
+    experiment_name = args.experiment
+    write = args.write
 
     with open(f'configs/{experiment_name}.yaml') as f:
         configs = yaml.load(f, Loader=yaml.FullLoader)
