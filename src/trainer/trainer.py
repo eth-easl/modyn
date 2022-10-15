@@ -7,6 +7,7 @@ def fit():
     pass
 
 def online_training(num_columns):
+    pass
     # Request a new batch(es) from data_loader
     # TODO: We will have to figure out a customizable policy on when and how to retrain/fit to the model
     # After how much time and so forth
@@ -22,9 +23,5 @@ def online_training(num_columns):
     #    ],
     #)
 
-    for mini_ds in online_train_ds:
-        mini_ds = mini_ds.shuffle(buffer_size=32)
-        mini_ds = mini_ds.map(lambda x: decode_kafka_item(x, num_columns))
-        mini_ds = mini_ds.batch(32)
-        if len(mini_ds) > 0:
-            fit()
+
+    # TODO: Implement grpc to access data from the online data feeders as propagated by the data orchestrator

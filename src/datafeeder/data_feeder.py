@@ -31,7 +31,7 @@ class DataFeeder:
 
 
     def load_data(self, train_file):
-        for chunk in  pd.read_csv(train_file, header=0, chunksize=self.config['data_feeder']['batch_size']):
+        for chunk in pd.read_csv(train_file, header=0, chunksize=self.config['data_feeder']['batch_size']):
             self.write_to_kafka(self.config['kafka']['topic'], chunk)
 
             time.sleep(self.config['data_feeder']['interval_length'])
@@ -48,6 +48,7 @@ def main():
 
     data_feeder = DataFeeder(parsed_yaml)
 
+    # TODO: Make input file location agnostic (should also be able to be remote)
     data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 
 if __name__ == "__main__":

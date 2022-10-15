@@ -14,9 +14,26 @@ class DataLoader:
             value_deserializer=lambda x: loads(x.decode('utf-8'))
             )
         # TODO: check the value_deserializer
+        # TODO: Test
 
     def run(self):
         for message in self.consumer:
             message.value
 
-        # TODO: What should we do with a message
+            self.offline_preprocessing()
+
+            self.write_to_storage()
+
+            self.update_data_importance_server()
+
+    def offline_preprocessing(self):
+        # TODO: Implement
+        pass
+
+    def write_to_storage(self):
+        # TODO: Write to datastorage
+        pass
+
+    def update_data_importance_server(self):
+        # TODO: Let data importance server know about the new data
+        pass
