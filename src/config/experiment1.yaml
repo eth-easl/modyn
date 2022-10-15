@@ -1,0 +1,38 @@
+data_storage:
+  
+
+data_feeder:
+  batch_size: 100
+  input_file: 'src/data/train/train_mini.csv'
+  interval_length: 100
+
+kafka:
+  topic: 'test'
+  bootstrap_servers:
+    - 'kafka:29092'
+
+data:
+  - id
+  - click
+  - hour
+  - C1
+  - banner_pos
+  - site_id
+  - site_domain
+  - site_category
+  - app_id
+  - app_domain
+  - app_category
+  - device_id
+  - device_ip
+  - device_model
+  - device_type
+  - device_conn_type
+  - C14
+  - C15
+  - C16
+  - C17
+  - C18
+  - C19
+  - C20
+  - C21

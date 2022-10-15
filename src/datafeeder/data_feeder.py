@@ -1,47 +1,54 @@
 from datetime import datetime
+import argparse
+import yaml
+import time
 
 import pandas as pd
-from sklearn.model_selection import train_test_split
-
 from kafka import KafkaProducer
 
-def error_callback(exc):
-    raise Exception('Error while sendig data to kafka: {0}'.format(str(exc)))
+def parse_args():
+    parser = argparse.ArgumentParser(description="Data Feeder")
+    parser.add_argument("config", help="Config File")
+    args = parser.parse_args()
+    return args
+class DataFeeder:
+    config = None
 
-def write_to_kafka(topic_name, items):
-    count=0
-    producer = KafkaProducer(bootstrap_servers=['kafka:29092'])
-    for message, key in items:
-        producer.send(topic_name, key=key.encode('utf-8'), value=message.encode('utf-8')).add_errback(error_callback)
-        count+=1
-    producer.flush()
-    print('{0} Wrote {1} messages into topic: {2}'.format(datetime.now(), count, topic_name))
+    def __init__(self, config: dict):
+        self.config = config
+
+    def error_callback(self, exc):
+        raise Exception('Error while sendig data to kafka: {0}'.format(str(exc)))
+
+    def write_to_kafka(self, topic_name, items):
+        count=0
+        producer = KafkaProducer(bootstrap_servers=self.config['kafka']['bootstrap_servers'])
+        for message, key in items:
+            producer.send(topic_name, key=key.encode('utf-8'), value=message.encode('utf-8')).add_errback(self.error_callback)
+            count+=1
+        producer.flush()
+        print('{0} Wrote {1} messages into topic: {2}'.format(datetime.now(), count, topic_name))
 
 
-def load_data(train_file):
-    # TODO: In the initial training, we should define the number of samples we want to use. 
-    # Subsequently, the producer can produce new samples that we then train according to the retrain/fit policy
-    file_iterator = pd.read_csv(train_file, header=0, chunksize=100000)
+    def load_data(self, train_file):
+        for chunk in  pd.read_csv(train_file, header=0, chunksize=self.config['data_feeder']['batch_size']):
+            self.write_to_kafka(self.config['kafka']['topic'], chunk)
 
-    data_df = next(file_iterator)
+            time.sleep(self.config['data_feeder']['interval_length'])
 
-    train_df, test_df = train_test_split(data_df, test_size=0.4, shuffle=True)
+def main():
+    args = parse_args()
+    config = args.experiment
 
-    # TODO [asridhar]: Please select the training and testing x and y here if you want to train for something different
-    # Should be made configurable in future iterations
-    x_train_df = train_df.drop(['click'], axis=1)
-    y_train_df = train_df['click']
+    with open(config, 'r') as stream:
+        try:
+            parsed_yaml=yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
 
-    x_test_df = test_df.drop(['click'], axis=1)
-    y_test_df = test_df['click']
+    data_feeder = DataFeeder(parsed_yaml)
 
-    x_train = list(filter(None, x_train_df.to_csv(index=False).split("\n")[1:]))
-    y_train = list(filter(None, y_train_df.to_csv(index=False).split("\n")[1:]))
+    data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 
-    x_test = list(filter(None, x_test_df.to_csv(index=False).split("\n")[1:]))
-    y_test = list(filter(None, y_test_df.to_csv(index=False).split("\n")[1:]))
-
-    # TODO: Best case would be to do this split at the preprocessing engine and not at the producer
-    # This would better simulate an actual datastream coming in
-    write_to_kafka("benchmark-train", zip(x_train, y_train))
-    write_to_kafka("benchmark-test", zip(x_test, y_test))
+if __name__ == "__main__":
+    main()

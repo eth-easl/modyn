@@ -24,14 +24,8 @@ def run_experiment(num_columns):
 
 def main():
 
-    # print("tensorflow-io version: {}".format(tfio.__version__))
-    # print("tensorflow version: {}".format(tf.__version__))
-
     # TODO: The data loading and provisioning should be moved to a different node as this should happen asynchronously to the training
     # Additionally, data storage can or should be implemented on a new node for existing data
-    # num_columns = load_data('./data/train/train_mini.csv')
-
-    # run_experiment(num_columns)
 
     # TODO: Implement a benchmarking node that tests the system
     pass

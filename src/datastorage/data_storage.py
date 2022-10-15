@@ -2,30 +2,37 @@ import os
 from random import sample
 from typing import List, Tuple
 import json 
+import time 
 
+import pandas as pd
 import webdataset as wds
+import pathlib
 
-# TODO: Decice on what format the metadata should be, what should be contained, how do we best store the batches, what batches
-# do we cummulate together etc.
+STORAGE_LOCATION = pathlib.Path(__file__).parent.resolve() + '/store'
 
-def write_dataset_to_tar(dataset: Tuple[str, dict]):
-    with wds.TarWriter('out-%06d.tar') as sink:
-        with open(f"{dataset[0]}", "rb") as stream:
-            input = stream.read()
-        sink.write({
-            "__key__": "sample",
-            "input.csv": input
-        })
-    with open("sample.json", "w") as outfile:
-        json.dump(dataset[1], outfile)
-    
+class DataStorage:
+    config = None
 
-def read_dataset_from_tar(input_tar: str):
-    # TODO: Do we need to preprocess anything here?
-    dataset = wds.WebDataset(input_tar)
+    def __init__(self, config: dict):
+        self.config = config
 
-def main():
-    pass
+    def add_to_metadata(self, metadata: dict):
+        with open(f'{STORAGE_LOCATION}/metadata.json', 'a+') as f:
+            metadata_object = json.load(f)
+            metadata_object.setdefault('files', [])
+            metadata_object['files'] += metadata
 
-if __name__ == "__main__":
-    main()
+        with open(f'{STORAGE_LOCATION}/metadata.json', 'w') as f:
+            json.dump(metadata_object, f)
+        
+    def write_dataset_to_tar(self, metadata: dict, csv: str):
+        batch_name = metadata['batch_name']
+        self.add_to_metadata(metadata)
+
+        with wds.TarWriter(f'{STORAGE_LOCATION}/{batch_name}.tar') as sink:
+            with open(csv, 'rb') as stream:
+                data = stream.read()
+            sink.write({
+                "__key__": "batch",
+                "data.csv": data
+            })
