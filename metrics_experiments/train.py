@@ -16,6 +16,8 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
+    args = parse_args()
+
     experiment_name = args.experiment
     write = args.write
 

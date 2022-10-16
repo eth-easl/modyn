@@ -4,15 +4,15 @@ from torchvision import transforms
 import torch
 from .task_dataset import TaskDataset
 
-def get_mnist_dataset(augmentation=None, version='normal', collapse_targets=True):
+def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', collapse_targets=True):
     (trainX, trainY), (testX, testY) = mnist.load_data()
     trainX = torch.from_numpy((trainX/255).reshape(-1, 1, 28, 28)).float()
     testX = torch.from_numpy((testX/255).reshape(-1, 1, 28, 28)).float()
     trainY = torch.from_numpy(trainY).long()
     testY = torch.from_numpy(testY).long()
 
-    if augmentation is None:
-        augmentation = transforms.Compose([
+    if train_aug is None:
+        train_aug = transforms.Compose([
             transforms.ToPILImage(),
             transforms.RandomAffine(degrees = 30),
             transforms.RandomPerspective(),
@@ -20,15 +20,22 @@ def get_mnist_dataset(augmentation=None, version='normal', collapse_targets=True
             # TODO missing the normalize
         ])
 
+    if val_aug is None: 
+        val_aug = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.ToTensor(),
+            # TODO not actually sure what the honte is here
+        ])
+
     if version == 'normal':
         return {
-            'train': MNISTDataset(trainX, trainY, augmentation),
-            'test': MNISTDataset(testX, testY, augmentation),
+            'train': MNISTDataset(trainX, trainY, train_aug),
+            'test': MNISTDataset(testX, testY, val_aug),
         }
     elif version == 'split':
         return {
-            'train': SplitMNISTDataset(trainX, trainY, augmentation, collapse_targets),
-            'test': SplitMNISTDataset(testX, testY, augmentation, collapse_targets),
+            'train': SplitMNISTDataset(trainX, trainY, train_aug, collapse_targets),
+            'test': SplitMNISTDataset(testX, testY, val_aug, collapse_targets),
         }
     else:
         raise NotImplementedError()
@@ -38,7 +45,6 @@ class MNISTDataset(Dataset):
         self.x = x
         self.y = y
         self.augmentation = augmentation
-            
 
     def __len__(self):
         return len(self.x)

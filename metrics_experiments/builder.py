@@ -5,6 +5,12 @@ def make_dataset(dataset_config):
     elif dataset_config['name'].lower() == 'splitmnist':
         from datasets.mnist_dataset import get_mnist_dataset
         return get_mnist_dataset(version='split', collapse_targets=dataset_config['collapse_targets'])
+    elif dataset_config['name'].lower() == 'cifar10':
+        from datasets.cifar_10_dataset import get_cifar10_dataset
+        return get_cifar10_dataset(version='normal')
+    elif dataset_config['name'].lower() == 'splitcifar10':
+        from datasets.cifar_10_dataset import get_cifar10_dataset
+        return get_cifar10_dataset(version='split', collapse_targets=dataset_config['collapse_targets'])
     else:
         raise NotImplementedError()
 
@@ -24,16 +30,20 @@ def make_model(model_config):
         model = FCNet(model_config)
         return model 
 
+    elif model_config['name'].lower() == 'smallconv':
+        from models.small_conv import SmallConv
+        return SmallConv(model_config)
+
     else:
         raise NotImplementedError()
 
 def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, dataloaders, num_epochs, device):
     trainer_name = trainer_configs['name']
-    memory_buffer_size = trainer_configs['memory_buffer_size']
+    memory_buffer_size = trainer_configs.get('memory_buffer_size', 10)
 
     if trainer_name == 'defaultTrainer':
         from trainers.default_trainer import DefaultTrainer
-        return DefaultTrainer(model, criterion, optimizer, scheduler, dataloaders, num_epochs, device, memory_buffer_size)
+        return DefaultTrainer(model, criterion, optimizer, scheduler, dataloaders, num_epochs, device)
     elif trainer_name == 'naiveTaskBasedTrainer':
         from trainers.naive_task_based_trainer import NaiveTaskBasedTrainer
         return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataloaders, num_epochs, device, memory_buffer_size)
