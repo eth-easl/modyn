@@ -48,7 +48,7 @@ def main():
 
     data_feeder = DataFeeder(parsed_yaml)
 
-    # TODO: Make input file location agnostic (should also be able to be remote)
+    # TODO: Make input file location agnostic (should also be able to be remote) (17.10.2022)
     data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 
 if __name__ == "__main__":
