@@ -18,11 +18,13 @@ class DataStorage:
         
     def write_dataset_to_tar(self, batch_name, data: str):
         # TODO: Figure out data format and replace txt with this format
-        with wds.TarWriter(f'{STORAGE_LOCATION}/{batch_name}.tar') as sink:
+        filename = f'{STORAGE_LOCATION}/{batch_name}.tar'
+        with wds.TarWriter(filename) as sink:
             sink.write({
                 "__key__": "batch",
                 "data.txt": data
             })
+        return filename
 
     # TODO: Think about how to best access the data (how to make it available for other instances to access the stored tar files)
     # This should involve only reading from the tar files directly as propagated by this instance

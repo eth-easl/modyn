@@ -2,9 +2,13 @@ from datetime import datetime
 import argparse
 import yaml
 import time
+import pathlib 
+import os
 
 import pandas as pd
 from kafka import KafkaProducer
+
+STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.resolve())
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Data Feeder")
@@ -22,17 +26,15 @@ class DataFeeder:
         raise Exception('Error while sendig data to kafka: {0}'.format(str(exc)))
 
     def write_to_kafka(self, topic_name, items):
-        count=0
-        producer = KafkaProducer(bootstrap_servers=self.config['kafka']['bootstrap_servers'])
-        for message, key in items:
-            producer.send(topic_name, key=key.encode('utf-8'), value=message.encode('utf-8')).add_errback(self.error_callback)
-            count+=1
-        producer.flush()
-        print('DataFeeder: {0} Wrote {1} messages into topic: {2}'.format(datetime.now(), count, topic_name))
+        producer = KafkaProducer(bootstrap_servers=self.config['kafka']['bootstrap_servers'], value_serializer= lambda x: x.encode('utf-8'))
+        
+        producer.send(topic_name, value=items.to_csv(encoding='utf-8')).add_errback(self.error_callback)
 
+        producer.flush()
+        print('DataFeeder: {0} Wrote messages into topic: {1}'.format(datetime.now(), topic_name))
 
     def load_data(self, train_file):
-        for chunk in pd.read_csv(train_file, header=0, chunksize=self.config['data_feeder']['batch_size']):
+        for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0, chunksize=self.config['data_feeder']['batch_size']):
             self.write_to_kafka(self.config['kafka']['topic'], chunk)
 
             time.sleep(self.config['data_feeder']['interval_length'])
@@ -40,7 +42,7 @@ class DataFeeder:
 
 def main():
     args = parse_args()
-    config = args.experiment
+    config = args.config
 
     with open(config, 'r') as stream:
         try:
@@ -50,8 +52,7 @@ def main():
 
     data_feeder = DataFeeder(parsed_yaml)
 
-    # Offset before feeding
-    time.sleep(100)
+    time.sleep(20)
 
     data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 

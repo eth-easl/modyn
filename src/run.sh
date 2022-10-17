@@ -1,4 +1,4 @@
 #!/bin/bash
-
-exec python ./data_feeder/data_feeder.py ./config/experiment1.yaml &
-exec python /mvp.py
+cd ..
+exec python ./src/datafeeder/data_feeder.py ./config/experiment1.yaml &
+exec python ./src/dataloader/data_loader.py ./config/experiment1.yaml

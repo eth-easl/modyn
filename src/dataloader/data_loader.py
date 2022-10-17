@@ -3,8 +3,8 @@ import datetime
 import yaml
 from kafka import KafkaConsumer
 from json import loads
-from ..datastorage import DataStorage
-from ..dataorchestrator import DataOrchestrator
+from datastorage.data_storage import DataStorage
+from dataorchestrator.data_orchestrator import DataOrchestrator
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Data Feeder")
@@ -27,9 +27,6 @@ class DataLoader:
             value_deserializer=lambda x: loads(x.decode('utf-8'))
             )
 
-        # TODO: check the value_deserializer (17.10.2022)
-        # TODO: Test (17.10.2022)
-
         self.data_storage = DataStorage(config)
         self.data_orchestrator = DataOrchestrator(config)
 
@@ -41,24 +38,24 @@ class DataLoader:
 
             dataset = self.offline_preprocessing(message_value)
 
-            self.write_to_storage(dataset)
+            filename = self.write_to_storage(dataset)
+
+            self.update_metadata(filename)
 
             self.update_data_importance_server()
 
     def offline_preprocessing(self, message_value):
         return message_value
 
-    def write_to_storage(self, dataset):
-        # TODO: Replace batch name with an actual name
-        self.data_storage.write_dataset_to_tar('Test', dataset)
+    def write_to_storage(self, batch_name, dataset):
+        return self.data_storage.write_dataset_to_tar(batch_name, dataset)
 
-    def update_metadata(self):
-        # TODO: Replace batch name with an actual name
-        self.data_orchestrator.add_batch_to_metadata('Test')
+    def update_metadata(self, filename):
+        self.data_orchestrator.add_batch_to_metadata(filename)
 
 def main():
     args = parse_args()
-    config = args.experiment
+    config = args.config
 
     with open(config, 'r') as stream:
         try:

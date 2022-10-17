@@ -36,10 +36,8 @@ services:
       kafka-topics --bootstrap-server kafka:29092 --list
 
       echo -e 'Creating kafka topics'
-      kafka-topics --create --bootstrap-server kafka:29092 --replication-factor 1 --partitions 1 --topic benchmark-train
-      kafka-topics --create --bootstrap-server kafka:29092 --replication-factor 1 --partitions 2 --topic benchmark-test
-      kafka-topics --describe --bootstrap-server kafka:29092 --topic benchmark-train
-      kafka-topics --describe --bootstrap-server kafka:29092 --topic benchmark-test
+      kafka-topics --create --bootstrap-server kafka:29092 --replication-factor 1 --partitions 1 --topic test
+      kafka-topics --describe --bootstrap-server kafka:29092 --topic test
 
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:29092 --list

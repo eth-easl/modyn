@@ -15,23 +15,23 @@ class DataOrchestrator:
 
     def setup_database(self):
         cur = self.con.cursor()
-        # TODO: Add primary key id as integer?
-        cur.execute('''CREATE TABLE metadata (
-            filename VARCHAR(100) NOT NULL PRIMARY KEY, 
+        cur.execute('''CREATE TABLE IF NOT EXISTS metadata (
+            id INTEGER PRIMARY KEY,
+            filename VARCHAR(100), 
             timestamp INTEGER, 
             score REAL,
             new INTEGER NOT NULL);'''
             )
         self.con.commit()
 
-    def add_batch_to_metadata(self, batch_name: str):
+    def add_batch_to_metadata(self, filename: str):
         cur = self.con.cursor()
-        cur.execute('''INSERT INTO metadata VALUES(?, ?, ?, ?)''', (batch_name, time.time(), 0, 1))
+        cur.execute('''INSERT INTO metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''', (filename, time.time(), 0, 1))
         self.con.commit()
 
-    def update_metadata(self, batch_name: str, score: float, new: bool):
+    def update_metadata(self, batch_id: int, score: float, new: bool):
         cur = self.con.cursor()
-        cur.execute('''UPDATE metadata SET score = ?, new = ? WHERE filename = ?''', (score, new, batch_name))
+        cur.execute('''UPDATE metadata SET score = ?, new = ? WHERE id = ?''', (score, new, batch_id))
         self.con.commit()
 
     def update_batches(self):

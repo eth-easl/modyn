@@ -4,8 +4,8 @@ data_orchestrator:
 
 data_feeder:
   batch_size: 100
-  input_file: 'src/data/train/train_mini.csv'
-  interval_length: 1000
+  input_file: '/data/train/train_mini.csv'
+  interval_length: 20
 
 kafka:
   topic: 'test'
