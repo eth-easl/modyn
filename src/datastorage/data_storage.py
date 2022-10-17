@@ -16,20 +16,16 @@ class DataStorage:
     def __init__(self, config: dict):
         self.config = config
         
-    def write_dataset_to_tar(self, metadata: dict, csv: str):
-        batch_name = metadata['batch_name']
-
+    def write_dataset_to_tar(self, batch_name, data: str):
+        # TODO: Figure out data format and replace txt with this format
         with wds.TarWriter(f'{STORAGE_LOCATION}/{batch_name}.tar') as sink:
-            with open(csv, 'rb') as stream:
-                data = stream.read()
             sink.write({
                 "__key__": "batch",
-                "data.csv": data
+                "data.txt": data
             })
 
     # TODO: Think about how to best access the data (how to make it available for other instances to access the stored tar files)
     # This should involve only reading from the tar files directly as propagated by this instance
     # Write only datastructure, do not delete or change written files
-    # (17.10.2022)
 
     # TODO: Implement grpc for other instances to access this class from other nodes to store data

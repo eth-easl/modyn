@@ -1,12 +1,11 @@
 # TODO: Define structure and write Schema
-
-data_storage:
-  
+data_orchestrator:
+  in_memory_database: 'metadata.db'
 
 data_feeder:
   batch_size: 100
   input_file: 'src/data/train/train_mini.csv'
-  interval_length: 100
+  interval_length: 1000
 
 kafka:
   topic: 'test'

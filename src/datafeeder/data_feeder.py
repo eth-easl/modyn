@@ -11,6 +11,7 @@ def parse_args():
     parser.add_argument("config", help="Config File")
     args = parser.parse_args()
     return args
+
 class DataFeeder:
     config = None
 
@@ -27,7 +28,7 @@ class DataFeeder:
             producer.send(topic_name, key=key.encode('utf-8'), value=message.encode('utf-8')).add_errback(self.error_callback)
             count+=1
         producer.flush()
-        print('{0} Wrote {1} messages into topic: {2}'.format(datetime.now(), count, topic_name))
+        print('DataFeeder: {0} Wrote {1} messages into topic: {2}'.format(datetime.now(), count, topic_name))
 
 
     def load_data(self, train_file):
@@ -35,6 +36,7 @@ class DataFeeder:
             self.write_to_kafka(self.config['kafka']['topic'], chunk)
 
             time.sleep(self.config['data_feeder']['interval_length'])
+
 
 def main():
     args = parse_args()
@@ -48,7 +50,9 @@ def main():
 
     data_feeder = DataFeeder(parsed_yaml)
 
-    # TODO: Make input file location agnostic (should also be able to be remote) (17.10.2022)
+    # Offset before feeding
+    time.sleep(100)
+
     data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 
 if __name__ == "__main__":

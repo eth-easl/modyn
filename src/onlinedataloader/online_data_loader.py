@@ -5,7 +5,7 @@ class OnlineDataLoader:
         self.config = config
 
     def load_data(self):
-        # TODO: Load data from data storage node (17.10.2022)
+        # TODO: Load data from data storage node
         pass
 
     def get_next_batch(self):
