@@ -37,18 +37,18 @@ def make_model(model_config):
     else:
         raise NotImplementedError()
 
-def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, dataloaders, num_epochs, device):
+def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device):
     trainer_name = trainer_configs['name']
     memory_buffer_size = trainer_configs.get('memory_buffer_size', 10)
 
     if trainer_name == 'defaultTrainer':
         from trainers.default_trainer import DefaultTrainer
-        return DefaultTrainer(model, criterion, optimizer, scheduler, dataloaders, num_epochs, device)
+        return DefaultTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device)
     elif trainer_name == 'naiveTaskBasedTrainer':
         from trainers.naive_task_based_trainer import NaiveTaskBasedTrainer
-        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataloaders, num_epochs, device, memory_buffer_size)
+        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
     elif trainer_name == 'uniformSamplingTaskBasedTrainer':
         from trainers.uniform_sampling_task_based_trainer import UniformSamplingTaskBasedTrainer
-        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataloaders, num_epochs, device, memory_buffer_size)
+        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
     else:
         raise NotImplementedError()

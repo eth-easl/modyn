@@ -6,19 +6,19 @@ from .task_trainer import TaskTrainer
 
 class NaiveTaskBasedTrainer(TaskTrainer):
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataloaders, num_epochs, device, memory_buffer_size):
-        super().__init__(model, criterion, optimizer, scheduler, dataloaders, num_epochs, device, memory_buffer_size)
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size):
+        super().__init__(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
 
 
     def train(self):
         print("naive task based training!")
         result = {}
         while True:
-            print('Training on task', self.dataloaders['train'].dataset.active_task())
+            print('Training on task', self.dataset['train'].active_task())
             self.train_task()
-            result[self.dataloaders['train'].dataset.active_task()] = self.validation()
+            result[self.dataset['train'].active_task()] = self.validation()
             try:
-                self.dataloaders['train'].dataset.next_task()
+                self.dataset['train'].next_task()
             except IndexError:
                 break
         print('Done!')
@@ -30,16 +30,17 @@ class NaiveTaskBasedTrainer(TaskTrainer):
         running_loss = 0.0
         running_corrects = 0
         running_count = 0
-        self.dataloaders['val'].dataset.set_active_task(0)
+        self.dataset['test'].set_active_task(0)
         result = {}
 
+        val_loader = torch.utils.data.DataLoader(self.dataset['test'], batch_size = self.dataset_configs['batch_size'], shuffle = False)
         while True:
-            print('Task', self.dataloaders['val'].dataset.active_task())
+            print('Task', self.dataset['test'].active_task())
             inner_loss = 0.0
             inner_corrects = 0
             inner_count = 0
 
-            for inputs, labels in tqdm(self.dataloaders['val']):
+            for inputs, labels in tqdm(val_loader):
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
 
@@ -59,11 +60,11 @@ class NaiveTaskBasedTrainer(TaskTrainer):
                 inner_corrects += torch.sum(preds == labels.data)
                 inner_count += inputs.size(0)
 
-            result[self.dataloaders['val'].dataset.active_task()] = {
+            result[self.dataset['test'].active_task()] = {
                 'Loss': inner_loss / inner_count, 'Accuracy': inner_corrects.double().item() / inner_count
             }
             try:
-                self.dataloaders['val'].dataset.next_task()
+                self.dataset['test'].next_task()
             except IndexError:
                 break
 
@@ -79,6 +80,7 @@ class NaiveTaskBasedTrainer(TaskTrainer):
 
     def train_task(self, ):
         since = time.time()
+        train_loader = torch.utils.data.DataLoader(self.dataset['train'], batch_size = self.dataset_configs['batch_size'], shuffle = True)
         
         for epoch in range(self.num_epochs):
             print('Epoch {}/{}'.format(epoch+1, self.num_epochs))
@@ -88,7 +90,7 @@ class NaiveTaskBasedTrainer(TaskTrainer):
             running_loss = 0.0
             running_corrects = 0
 
-            for inputs, labels in tqdm(self.dataloaders['train']):
+            for inputs, labels in tqdm(train_loader):
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
                 self.optimizer.zero_grad()
@@ -105,8 +107,8 @@ class NaiveTaskBasedTrainer(TaskTrainer):
 
                 # self.scheduler.step()
 
-            epoch_loss = running_loss / len(self.dataloaders['train'].dataset)
-            epoch_acc = running_corrects.double() / len(self.dataloaders['train'].dataset)
+            epoch_loss = running_loss / len(self.dataset['train'])
+            epoch_acc = running_corrects.double() / len(self.dataset['train'])
 
             print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
 

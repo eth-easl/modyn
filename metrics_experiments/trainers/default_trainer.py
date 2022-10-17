@@ -5,12 +5,15 @@ import torch
 
 class DefaultTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataloaders, num_epochs, device):
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.dataloaders = dataloaders
+        self.dataloaders = {
+            'train': torch.utils.data.DataLoader(dataset['train'], batch_size = dataset_configs['batch_size'], shuffle = True), 
+            'val': torch.utils.data.DataLoader(dataset['test'], batch_size = dataset_configs['batch_size'], shuffle = False), 
+        }
         self.num_epochs = num_epochs
         self.device = device
 
