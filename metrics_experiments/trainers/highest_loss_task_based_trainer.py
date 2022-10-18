@@ -6,14 +6,14 @@ from .task_trainer import TaskTrainer
 import numpy as np
 from datasets.buffer_dataset import BufferDataset
 
-class UniformSamplingTaskBasedTrainer(TaskTrainer):
+class HighestLossTaskBasedTrainer(TaskTrainer):
 
     def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size):
-        super().__init__(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
+        super().__init__(model, criterion(reduction='none'), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
         self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
 
     def train(self):
-        print("uniform task based training!")
+        print("highest loss task based training!")
         result = {}
         while True:
             print('Training on task', self.dataset['train'].active_task())
@@ -52,7 +52,8 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
                 with torch.set_grad_enabled(False):
                     outputs = self.model(inputs)
                     _, preds = torch.max(outputs, 1)
-                    loss = self.criterion(outputs, labels)
+                    loss_each = self.criterion(outputs, labels)
+                    loss = torch.mean(loss_each)
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
@@ -103,6 +104,10 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
             running_loss = 0.0
             running_corrects = 0
 
+            inputs_all = []
+            labels_all = []
+            losses_all = []
+
             for inputs, labels in tqdm(train_loader):
                 if epoch == 0:
                     all_inputs.append(inputs[(labels==task_idx*2)|(labels==task_idx*2+1)])
@@ -115,12 +120,17 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
                 with torch.set_grad_enabled(True):
                     outputs = self.model(inputs)
                     _, preds = torch.max(outputs, 1)
-                    loss = self.criterion(outputs, labels)
+                    loss_each = self.criterion(outputs, labels)
+                    loss = torch.mean(loss_each)
                     loss.backward()
                     self.optimizer.step()
 
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
+
+                inputs_all.append(inputs)
+                labels_all.append(labels)
+                losses_all.append(loss_each)
 
                 # self.scheduler.step()
 
@@ -133,9 +143,9 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
         print('Training complete in {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
 
-        self.update_buffer(task_idx, torch.cat(all_inputs), torch.cat(all_labels))
+        self.update_buffer(task_idx, torch.cat(all_inputs), torch.cat(all_labels), torch.cat(losses_all))
 
-    def update_buffer(self, task_idx, new_samples, new_labels):
+    def update_buffer(self, task_idx, new_samples, new_labels, all_losses):
         assert self.memory_buffer_size % 12 == 0, "Prototype only supports memory buffer as multiple of 12. "
         if task_idx >= 4:
             return
@@ -146,16 +156,11 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
             old_sector_size = int(12 / task_idx)
             # Shrink the i-th task
             for j in range(new_sector_size):
-                # self.bufferX[i*new_sector_size+j] = self.bufferX[i*old_sector_size+j]
-                # self.bufferY[i*new_sector_size+j] = self.bufferY[i*old_sector_size+j]
                 self.buffer.replace(i*new_sector_size+j, i*old_sector_size+j)
         start_idx = task_idx * new_sector_size
 
-        new_indices = np.random.choice(new_labels.shape[0], new_sector_size, replace=False)
+        new_indices = torch.topk(all_losses, new_sector_size, largest=True, sorted=True).indices
         for i in range(new_sector_size):
-            # self.bufferX[i+start_idx] = new_samples[new_indices[i]]
-            # self.bufferY[i+start_idx] = new_labels[new_indices[i]]
             self.buffer.insert(i+start_idx, new_samples[new_indices[i]], new_labels[new_indices[i]])
 
-        # self.buffer_dataset.update(torch.stack(self.bufferX), self.bufferY)
         self.buffer_dataset.update(self.buffer)

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pickle
 from PIL import Image
 from torchvision import transforms
+import torch
 
 from .task_dataset import TaskDataset
 
@@ -34,12 +35,12 @@ def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', collapse
     testX, testY = load_cifar10_data('test_batch')
 
     trainX = np.concatenate([batch_1,batch_2,batch_3,batch_4,batch_5], 0)
-    trainY = np.concatenate([labels_1,labels_2,labels_3,labels_4,labels_5], 0)
+    trainY = torch.from_numpy(np.concatenate([labels_1,labels_2,labels_3,labels_4,labels_5], 0))
 
     trainX = np.reshape(trainX, (-1, 32, 32, 3))
     testX = np.reshape(testX, (-1, 32, 32, 3))
 
-    testY = np.array(testY)
+    testY = torch.from_numpy(np.array(testY))
 
     classes = ('airplane', 'car', 'bird', 'cat',
             'deer', 'dog', 'frog', 'horse', 'ship', 'truck')

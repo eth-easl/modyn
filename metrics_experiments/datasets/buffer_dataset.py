@@ -27,3 +27,8 @@ class BufferDataset(Dataset):
     def update(self, x, y):
         self.x = x 
         self.y = y 
+
+    def update(self, buffer):
+        self.x = torch.stack(buffer.bufferX)
+        self.y = buffer.bufferY
+        self.weights = buffer.weights

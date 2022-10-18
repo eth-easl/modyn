@@ -50,5 +50,8 @@ def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, datase
     elif trainer_name == 'uniformSamplingTaskBasedTrainer':
         from trainers.uniform_sampling_task_based_trainer import UniformSamplingTaskBasedTrainer
         return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
+    elif trainer_name == 'highestLossTaskBasedTrainer':
+        from trainers.highest_loss_task_based_trainer import HighestLossTaskBasedTrainer
+        return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
     else:
         raise NotImplementedError()

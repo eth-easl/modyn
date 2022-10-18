@@ -12,5 +12,5 @@ model:
 lr: 0.001
 epochs: 1
 trainer: 
-  name: uniformSamplingTaskBasedTrainer
+  name: highestLossTaskBasedTrainer
   memory_buffer_size: 12

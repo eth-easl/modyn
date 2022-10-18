@@ -3,6 +3,7 @@ import copy
 from tqdm import tqdm 
 import torch
 from torch.utils.data import Dataset
+from .buffer import Buffer
 
 class TaskTrainer:
 
@@ -18,6 +19,7 @@ class TaskTrainer:
         self.memory_buffer_size = memory_buffer_size
         self.bufferX = [None for _ in range(memory_buffer_size)]
         self.bufferY = [None for _ in range(memory_buffer_size)]
+        self.buffer = Buffer(memory_buffer_size)
         self.buffer_dataset = None
         assert dataset['train'].is_task_based() 
 

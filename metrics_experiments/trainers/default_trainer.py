@@ -7,7 +7,7 @@ class DefaultTrainer:
 
     def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device):
         self.model = model
-        self.criterion = criterion
+        self.criterion = criterion()
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.dataloaders = {
