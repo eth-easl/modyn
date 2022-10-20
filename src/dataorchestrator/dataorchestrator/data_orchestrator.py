@@ -3,8 +3,6 @@ import json
 import sqlite3
 import time 
 
-STORAGE_LOCATION = pathlib.Path(__file__).parent.resolve() + '/store'
-
 class DataOrchestrator:
     config = None
     con = None
@@ -12,6 +10,7 @@ class DataOrchestrator:
     def __init__(self, config: dict):
         self.config = config
         self.con = sqlite3.connect(config['data_orchestrator']['in_memory_database'])
+        self.setup_database()
 
     def setup_database(self):
         cur = self.con.cursor()

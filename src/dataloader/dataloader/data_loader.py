@@ -1,10 +1,12 @@
 import argparse
-import datetime
+from datetime import datetime
 import yaml
+import sys
+import uuid
 from kafka import KafkaConsumer
 from json import loads
-from datastorage.data_storage import DataStorage
-from dataorchestrator.data_orchestrator import DataOrchestrator
+from dataorchestrator import DataOrchestrator
+from datastorage import DataStorage
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Data Feeder")
@@ -14,31 +16,30 @@ def parse_args():
 
 class DataLoader:
     config = None
-    consumer = None
     data_storage = None
     data_orchestrator = None
 
     def __init__(self, config: dict):
         self.config = config
-        self.consumer = KafkaConsumer(
-            self.config['kafka']['topic'], 
-            bootstrap_servers=self.config['kafka']['bootstrap_servers'],
-            auto_offstet_reset='earliest',
-            value_deserializer=lambda x: loads(x.decode('utf-8'))
-            )
 
         self.data_storage = DataStorage(config)
         self.data_orchestrator = DataOrchestrator(config)
 
     def run(self):
-        for message in self.consumer:
+        consumer = KafkaConsumer(
+            self.config['kafka']['topic'], 
+            bootstrap_servers=self.config['kafka']['bootstrap_servers'],
+            enable_auto_commit=True,
+            value_deserializer=lambda x: loads(x.decode('utf-8'))
+            )
+        for message in consumer:
             message_value = message.value
 
-            print('DataLoader: {0} Read following message from topic {2}: {3}'.format(datetime.now(), self.config['kafka']['topic'], message_value))
+            print('DataLoader: {0} Read message from topic {1}'.format(datetime.now(), self.config['kafka']['topic']))
 
             dataset = self.offline_preprocessing(message_value)
 
-            filename = self.write_to_storage(dataset)
+            filename = self.write_to_storage(uuid.uuid4(), dataset)
 
             self.update_metadata(filename)
 
@@ -52,6 +53,9 @@ class DataLoader:
 
     def update_metadata(self, filename):
         self.data_orchestrator.add_batch_to_metadata(filename)
+
+    def update_data_importance_server(self):
+        pass
 
 def main():
     args = parse_args()

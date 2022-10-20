@@ -8,7 +8,7 @@ import os
 import pandas as pd
 from kafka import KafkaProducer
 
-STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.resolve())
+STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Data Feeder")
@@ -28,7 +28,7 @@ class DataFeeder:
     def write_to_kafka(self, topic_name, items):
         producer = KafkaProducer(bootstrap_servers=self.config['kafka']['bootstrap_servers'], value_serializer= lambda x: x.encode('utf-8'))
         
-        producer.send(topic_name, value=items.to_csv(encoding='utf-8')).add_errback(self.error_callback)
+        producer.send(topic_name, value=items.to_json()).add_errback(self.error_callback)
 
         producer.flush()
         print('DataFeeder: {0} Wrote messages into topic: {1}'.format(datetime.now(), topic_name))
@@ -38,7 +38,7 @@ class DataFeeder:
             self.write_to_kafka(self.config['kafka']['topic'], chunk)
 
             time.sleep(self.config['data_feeder']['interval_length'])
-
+            break
 
 def main():
     args = parse_args()
@@ -52,7 +52,11 @@ def main():
 
     data_feeder = DataFeeder(parsed_yaml)
 
-    time.sleep(20)
+    print('DataFeeder: {0} Starting up'.format(datetime.now()))
+
+    time.sleep(1)
+
+    print('DataFeeder: {0} Ready to send first message'.format(datetime.now()))
 
     data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 

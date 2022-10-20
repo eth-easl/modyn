@@ -2,4 +2,3 @@ kafka-python
 sklearn
 pandas
 webdataset
-grpcio-tools

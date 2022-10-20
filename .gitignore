@@ -1,3 +1,7 @@
 /data/train/train
 *.log
 .vscode
+dist/
+build/
+*.egg-info
+*.tar
