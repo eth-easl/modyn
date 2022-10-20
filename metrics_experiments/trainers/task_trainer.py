@@ -7,7 +7,7 @@ from .buffer import Buffer
 
 class TaskTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size):
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -21,6 +21,7 @@ class TaskTrainer:
         self.bufferY = [None for _ in range(memory_buffer_size)]
         self.buffer = Buffer(memory_buffer_size)
         self.buffer_dataset = None
+        self.get_gradient_error = get_gradient_error
         assert dataset['train'].is_task_based() 
 
     def next_task(self):
@@ -30,4 +31,18 @@ class TaskTrainer:
         return False
 
     def train(self):
-        raise NotImplementedError()
+        print('Training with', repr(self))
+        result = {}
+        while True:
+            print('Training on task', self.dataset['train'].active_task())
+            self.train_task(self.dataset['train'].active_idx)
+            result[self.dataset['train'].active_task()] = self.validation()
+            try:
+                self.dataset['train'].next_task()
+            except IndexError:
+                break
+        print('Done!')
+        return result
+
+    def __repr__(self):
+        return 'Generic Task Based Trainer'

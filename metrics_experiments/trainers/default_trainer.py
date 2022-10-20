@@ -18,6 +18,7 @@ class DefaultTrainer:
         self.device = device
 
     def train(self):
+        print('Training with Default Trainer')
         since = time.time()
 
         best_model_wts = copy.deepcopy(self.model.state_dict())

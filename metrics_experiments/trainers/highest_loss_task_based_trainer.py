@@ -8,23 +8,12 @@ from datasets.buffer_dataset import BufferDataset
 
 class HighestLossTaskBasedTrainer(TaskTrainer):
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size):
-        super().__init__(model, criterion(reduction='none'), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
-        self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
+    def __repr__(self):
+        return 'Highest Loss Trainer'
 
-    def train(self):
-        print("highest loss task based training!")
-        result = {}
-        while True:
-            print('Training on task', self.dataset['train'].active_task())
-            self.train_task(self.dataset['train'].active_idx)
-            result[self.dataset['train'].active_task()] = self.validation()
-            try:
-                self.dataset['train'].next_task()
-            except IndexError:
-                break
-        print('Done!')
-        return result
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error):
+        super().__init__(model, criterion(reduction='none'), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error)
+        self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
 
     def validation(self):
         print('Validation')

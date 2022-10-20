@@ -6,23 +6,11 @@ from .task_trainer import TaskTrainer
 
 class NaiveTaskBasedTrainer(TaskTrainer):
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size):
-        super().__init__(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size)
+    def __repr__(self):
+        return 'Naive Trainer'
 
-
-    def train(self):
-        print("naive task based training!")
-        result = {}
-        while True:
-            print('Training on task', self.dataset['train'].active_task())
-            self.train_task()
-            result[self.dataset['train'].active_task()] = self.validation()
-            try:
-                self.dataset['train'].next_task()
-            except IndexError:
-                break
-        print('Done!')
-        return result
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error):
+        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error)
 
     def validation(self):
         print('Validation')
