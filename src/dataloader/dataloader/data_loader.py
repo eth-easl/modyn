@@ -33,14 +33,29 @@ class DataLoader:
     config = None
     data_storage = None
     data_orchestrator = None
+    nr_batches = 0
+    row_number = 0
 
     def __init__(self, config: dict):
         self.config = config
 
         self.data_storage = DataStorage(config)
-        self.data_orchestrator = DataOrchestrator(config)
+        self.data_orchestrator = DataOrchestrator(config, self.data_storage)
 
     def run(self):
+        """
+        Run an instance of the dataloader
+
+        Currently, everything is hooked on this instance of the dataloader and all the work happens from here.
+
+        We constantly read from the kafka stream and if a new message arrives:
+
+           1. read the message and log arrival
+           2. run some offline processing (to be extended)
+           3. write the file to storage as a json
+           4. update the metadata in the database
+           5. every three files that have arrived also create a new batch by shuffling existing batches
+        """
         consumer = KafkaConsumer(
             self.config['kafka']['topic'],
             bootstrap_servers=self.config['kafka']['bootstrap_servers'],
@@ -55,18 +70,31 @@ class DataLoader:
 
             df = self.offline_preprocessing(message_value)
 
-            filename = self.write_to_storage(uuid.uuid4(), df.to_json())
+            filename = self.data_storage.write_dataset_to_tar(
+                uuid.uuid4(), df.to_json())
 
-            self.update_metadata(filename, df.index.tolist())
+            self.data_orchestrator.add_batch(filename, df['row_id'].tolist())
 
-    def offline_preprocessing(self, message_value):
-        return pd.read_json(message_value)
+            self.nr_batches += 1
+            if (self.nr_batches % self.config['data_orchestrator']['nr_files_update'] == 0):
+                self.data_orchestrator.update_batches()
 
-    def write_to_storage(self, batch_name, dataset):
-        return self.data_storage.write_dataset_to_tar(batch_name, dataset)
+    def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
+        """
+        Apply offline processing of the data to make it ready for storage
 
-    def update_metadata(self, filename, rows):
-        self.data_orchestrator.add_file(filename, rows)
+        Args:
+            message_value (str): from the stream retrieved message
+
+        Returns:
+            pd.DataFrame: pandas dataframe of the processed data
+        """
+        df = pd.read_json(message_value)
+        rows_in_df = len(df.index)
+        rows = list(range(self.row_number, self.row_number + rows_in_df))
+        self.row_number += rows_in_df
+        df['row_id'] = rows
+        return df
 
 
 def main():

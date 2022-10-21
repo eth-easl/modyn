@@ -26,18 +26,20 @@ def parse_args():
     return args
 
 
-class Ka(Exception):
-    """Base class for other exceptions"""
-    pass
-
-
 class DataFeeder:
     config = None
 
     def __init__(self, config: dict):
         self.config = config
 
-    def write_to_kafka(self, topic_name, items):
+    def write_to_kafka(self, topic_name: str, items: pd.DataFrame):
+        """
+        Write a dataframe to a Kafka stream as a json
+
+        Args:
+            topic_name (str): kafka topic to write to
+            items (pd.DataFrame): dataframe to be written to the stream
+        """
         producer = KafkaProducer(
             bootstrap_servers=self.config['kafka']['bootstrap_servers'], value_serializer=lambda x: x.encode('utf-8'))
 
@@ -56,7 +58,13 @@ class DataFeeder:
         producer.flush()
         logger.info('Wrote messages into topic: {0}'.format(topic_name))
 
-    def load_data(self, train_file):
+    def load_data(self, train_file: str):
+        """
+        Load the data from a specified training file (csv)
+
+        Args:
+            train_file (str): File to be read and sent over kafka
+        """
         for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0, chunksize=self.config['data_feeder']['batch_size']):
             self.write_to_kafka(self.config['kafka']['topic'], chunk)
 

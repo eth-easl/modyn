@@ -11,7 +11,7 @@ class Trainer:
         self.config = config
         self.online_data_loader = OnlineDataLoader(config)
 
-    def train(self, train_ds):
+    def train(self):
         # TODO: Implement
         pass
 
@@ -19,10 +19,10 @@ class Trainer:
         # TODO: Implement
         pass
 
-    def online_training(self, num_columns):
+    def online_training(self):
         # TODO: Implement 
         pass
 
     def get_next(self):
-        
+        # TODO: Implement
         pass

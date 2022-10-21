@@ -1,6 +1,7 @@
 # TODO: Define structure and write Schema
 data_orchestrator:
   in_memory_database: 'metadata.db'
+  nr_files_update: 3
 
 data_feeder:
   batch_size: 100
