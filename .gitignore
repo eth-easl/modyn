@@ -1,7 +1,30 @@
-/data/train/train
+# Logging files
 *.log
+
+# Visual Studio Code
 .vscode
-dist/
-build/
-*.egg-info
+
+# Storage
 *.tar
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg

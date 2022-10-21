@@ -5,7 +5,7 @@ data_orchestrator:
 data_feeder:
   batch_size: 100
   input_file: '/data/train/train_mini.csv'
-  interval_length: 2
+  interval_length: 10
 
 kafka:
   topic: 'test'
