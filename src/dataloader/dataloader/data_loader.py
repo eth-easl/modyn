@@ -3,16 +3,27 @@ from datetime import datetime
 import yaml
 import sys
 import uuid
+import logging
+import pathlib
 
 from kafka import KafkaConsumer
 from json import loads
+import pandas as pd
 
 from dataorchestrator import DataOrchestrator
 from datastorage import DataStorage
 
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
+
+logger = logging.getLogger('DataLoader')
+handler = logging.FileHandler('DataLoader.log')
+logger.addHandler(handler)
+
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Data Feeder")
+    parser = argparse.ArgumentParser(description="Data Loader")
     parser.add_argument("config", help="Config File")
     args = parser.parse_args()
     return args
@@ -39,28 +50,23 @@ class DataLoader:
         for message in consumer:
             message_value = message.value
 
-            print('DataLoader: {0} Read message from topic {1}'.format(
-                datetime.now(), self.config['kafka']['topic']))
+            logger.info('Read message from topic {0}'.format(
+                self.config['kafka']['topic']))
 
-            dataset = self.offline_preprocessing(message_value)
+            df = self.offline_preprocessing(message_value)
 
-            filename = self.write_to_storage(uuid.uuid4(), dataset)
+            filename = self.write_to_storage(uuid.uuid4(), df.to_json())
 
-            self.update_metadata(filename)
-
-            self.update_data_importance_server()
+            self.update_metadata(filename, df.index.tolist())
 
     def offline_preprocessing(self, message_value):
-        return message_value
+        return pd.read_json(message_value)
 
     def write_to_storage(self, batch_name, dataset):
         return self.data_storage.write_dataset_to_tar(batch_name, dataset)
 
-    def update_metadata(self, filename):
-        self.data_orchestrator.add_batch_to_metadata(filename)
-
-    def update_data_importance_server(self):
-        pass
+    def update_metadata(self, filename, rows):
+        self.data_orchestrator.add_file(filename, rows)
 
 
 def main():
@@ -71,7 +77,8 @@ def main():
         try:
             parsed_yaml = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
-            print(exc)
+            logger.error(exc)
+            raise yaml.YAMLError
 
     data_loader = DataLoader(parsed_yaml)
     data_loader.run()

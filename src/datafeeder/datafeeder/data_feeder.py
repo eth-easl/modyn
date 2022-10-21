@@ -4,11 +4,19 @@ import yaml
 import time
 import pathlib
 import os
+import logging
 
 import pandas as pd
-from kafka import KafkaProducer
+from kafka import KafkaProducer, KafkaTimeoutError, LogSendException, KafkaError
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
+logger = logging.getLogger('DataFeeder')
+handler = logging.FileHandler('DataFeeder.log')
+logger.addHandler(handler)
 
 
 def parse_args():
@@ -18,26 +26,35 @@ def parse_args():
     return args
 
 
+class Ka(Exception):
+    """Base class for other exceptions"""
+    pass
+
+
 class DataFeeder:
     config = None
 
     def __init__(self, config: dict):
         self.config = config
 
-    def error_callback(self, exc):
-        raise Exception(
-            'Error while sendig data to kafka: {0}'.format(str(exc)))
-
     def write_to_kafka(self, topic_name, items):
         producer = KafkaProducer(
             bootstrap_servers=self.config['kafka']['bootstrap_servers'], value_serializer=lambda x: x.encode('utf-8'))
 
-        producer.send(topic_name, value=items.to_json()
-                      ).add_errback(self.error_callback)
+        try:
+            producer.send(topic_name, value=items.to_json())
+        except KafkaTimeoutError as kte:
+            logger.exception(
+                "KafkaLogsProducer timeout sending log to Kafka: {0}".format(kte))
+        except KafkaError as ke:
+            logger.exception(
+                "KafkaLogsProducer error sending log to Kafka: {0}".format(ke))
+        except Exception as e:
+            logger.exception(
+                "KafkaLogsProducer exception sending log to Kafka: {0}".format(e))
 
         producer.flush()
-        print('DataFeeder: {0} Wrote messages into topic: {1}'.format(
-            datetime.now(), topic_name))
+        logger.info('Wrote messages into topic: {0}'.format(topic_name))
 
     def load_data(self, train_file):
         for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0, chunksize=self.config['data_feeder']['batch_size']):
@@ -54,15 +71,16 @@ def main():
         try:
             parsed_yaml = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
-            print(exc)
+            logger.error(exc)
+            raise yaml.YAMLError
 
     data_feeder = DataFeeder(parsed_yaml)
 
-    print('DataFeeder: {0} Starting up'.format(datetime.now()))
+    logger.info('Starting up')
 
     time.sleep(1)
 
-    print('DataFeeder: {0} Ready to send first message'.format(datetime.now()))
+    logger.info('Ready to send first message')
 
     data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 

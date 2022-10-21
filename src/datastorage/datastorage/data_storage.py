@@ -33,8 +33,4 @@ class DataStorage:
             })
         return filename
 
-    # TODO: Think about how to best access the data (how to make it available for other instances to access the stored tar files)
-    # This should involve only reading from the tar files directly as propagated by this instance
-    # Write only datastructure, do not delete or change written files
-
-    # TODO: Implement grpc for other instances to access this class from other nodes to store data
+    # TODO: Make files accessible from other instances
