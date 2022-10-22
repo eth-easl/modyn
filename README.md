@@ -13,7 +13,7 @@
 ### Configuration:
 - In `src/config/devel.yaml` you will find a test configuration for the system, adapt as required
 
-### Current state:
+### Current state:
 - DataFeeder feeds the defined file in defined batch sizes to the Kafka stream
 - DataLoader reads the data, does some minimal offline preprocessing, writes the batch to harddisk, updates the metadata and every now and then creates new batches from the existing batches
 
