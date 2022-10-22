@@ -7,7 +7,8 @@ import os
 import logging
 
 import pandas as pd
-from kafka import KafkaProducer, KafkaTimeoutError, LogSendException, KafkaError
+from kafka import KafkaProducer
+from kafka.errors import KafkaTimeoutError, KafkaError
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',

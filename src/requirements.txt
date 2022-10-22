@@ -2,3 +2,5 @@ kafka-python
 sklearn
 pandas
 webdataset
+pytest
+mock

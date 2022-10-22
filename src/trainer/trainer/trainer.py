@@ -23,6 +23,6 @@ class Trainer:
         # TODO: Implement 
         pass
 
-    def get_next(self):
-        # TODO: Implement
+    def run(self):
+        # TODO: Implement
         pass

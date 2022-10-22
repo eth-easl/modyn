@@ -1,6 +1,9 @@
 # Logging files
 *.log
 
+# Database files
+*.db
+
 # Visual Studio Code
 .vscode
 
@@ -28,3 +31,4 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.eggs/

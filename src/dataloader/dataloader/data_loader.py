@@ -1,12 +1,10 @@
 import argparse
 from datetime import datetime
 import yaml
-import sys
 import uuid
 import logging
-import pathlib
 
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, errors
 from json import loads
 import pandas as pd
 
@@ -19,6 +17,7 @@ logging.basicConfig(
 
 logger = logging.getLogger('DataLoader')
 handler = logging.FileHandler('DataLoader.log')
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 
@@ -39,7 +38,7 @@ class DataLoader:
     def __init__(self, config: dict):
         self.config = config
 
-        self.data_storage = DataStorage(config)
+        self.data_storage = DataStorage()
         self.data_orchestrator = DataOrchestrator(config, self.data_storage)
 
     def run(self):
@@ -56,12 +55,16 @@ class DataLoader:
            4. update the metadata in the database
            5. every three files that have arrived also create a new batch by shuffling existing batches
         """
-        consumer = KafkaConsumer(
-            self.config['kafka']['topic'],
-            bootstrap_servers=self.config['kafka']['bootstrap_servers'],
-            enable_auto_commit=True,
-            value_deserializer=lambda x: loads(x.decode('utf-8'))
-        )
+        try:
+            consumer = KafkaConsumer(
+                self.config['kafka']['topic'],
+                bootstrap_servers=self.config['kafka']['bootstrap_servers'],
+                enable_auto_commit=True,
+                value_deserializer=lambda x: loads(x.decode('utf-8'))
+            )
+        except errors.NoBrokersAvailable as e:
+            logger.exception(e)
+            return
         for message in consumer:
             message_value = message.value
 
@@ -73,11 +76,14 @@ class DataLoader:
             filename = self.data_storage.write_dataset_to_tar(
                 uuid.uuid4(), df.to_json())
 
+            logger.info(f'Created file {filename}')
+
             self.data_orchestrator.add_batch(filename, df['row_id'].tolist())
 
             self.nr_batches += 1
             if (self.nr_batches % self.config['data_orchestrator']['nr_files_update'] == 0):
                 self.data_orchestrator.update_batches()
+                logger.info("Updating batches")
 
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
         """
@@ -89,7 +95,8 @@ class DataLoader:
         Returns:
             pd.DataFrame: pandas dataframe of the processed data
         """
-        df = pd.read_json(message_value)
+        df = pd.DataFrame()
+        df = df.from_dict(message_value)
         rows_in_df = len(df.index)
         rows = list(range(self.row_number, self.row_number + rows_in_df))
         self.row_number += rows_in_df

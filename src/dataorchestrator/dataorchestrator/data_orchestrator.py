@@ -1,10 +1,10 @@
 import pathlib
-import json
 import time
 import sqlite3
 import random
 import statistics
 import logging
+import os
 
 from datastorage import DataStorage
 
@@ -12,9 +12,10 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
+STORAGE_LOCATION = os.getcwd()
 logger = logging.getLogger('DataOrchestrator')
 handler = logging.FileHandler('DataOrchestrator.log')
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 
@@ -22,16 +23,21 @@ class DataOrchestrator:
     config = None
     data_storage = None
     con = None
-    ROWS_BY_SCORE = "SELECT row from row_metadata WHERE batch_id=? ORDER BY score DESC LIMIT ?"
-    BATCHES_BY_SCORE = "SELECT id, filename FROM batch_metadata ORDER BY score DESC LIMIT ?"
-    BATCHES_BY_TIMESTAMP = "SELECT id, filename FROM batch_metadata ORDER BY timestamp DESC LIMIT 2"
+    nr_batches_update = 3
+    batch_size = 100
+    ROWS_BY_SCORE = "SELECT row, score from row_metadata WHERE batch_id=? ORDER BY score DESC LIMIT "
+    BATCHES_BY_SCORE = "SELECT id, filename FROM batch_metadata ORDER BY score DESC LIMIT "
+    BATCHES_BY_TIMESTAMP = "SELECT id, filename FROM batch_metadata ORDER BY timestamp DESC LIMIT "
 
     def __init__(self, config: dict, data_storage: DataStorage):
         self.config = config
         self.data_storage = data_storage
+        self.nr_batches_update = config['data_orchestrator']['nr_files_update']
+        self.batch_size = config['data_feeder']['batch_size']
         self.con = sqlite3.connect(
             config['data_orchestrator']['in_memory_database'])
         self.setup_database()
+        logger.info('Setup complete')
 
     def setup_database(self):
         logger.info('Setting up database')
@@ -52,7 +58,7 @@ class DataOrchestrator:
                     )
         self.con.commit()
 
-    def add_batch(self, filename: str, rows: list[int]):
+    def add_batch(self, filename: str, rows: list[int], scores=None):
         """
         Add a batch to the data orchestrator metadata database
 
@@ -73,6 +79,8 @@ class DataOrchestrator:
     def add_batch_to_metadata(self, filename: str) -> int:
         """
         Insert a batch into the metadata database
+
+        Warning: filename could lead to a sql injection
 
         Args:
             filename (str): filename of the batch
@@ -150,7 +158,7 @@ class DataOrchestrator:
             list[tuple[int, str]]: list of tuples of batch ids to filename
         """
         cur = self.con.cursor()
-        cur.execute(sql_statment, (batch_count))
+        cur.execute(sql_statment + str(batch_count))
         batches = cur.fetchall()
         return batches
 
@@ -167,11 +175,11 @@ class DataOrchestrator:
             list[int]: list of int of row ids
         """
         cur = self.con.cursor()
-        cur.execute(sql_statement, (batch_id, row_count))
+        cur.execute(sql_statement + str(row_count), (batch_id,))
         rows = cur.fetchall()
-        return rows
+        return [i[0] for i in rows]
 
-    def update_batches(self, batch_selection=BATCHES_BY_SCORE, row_selection=ROWS_BY_SCORE, batch_count=config['data_orchestrator']['nr_batches_update'], batch_size=config['data_feeder']['batch_size']):
+    def update_batches(self, batch_selection=BATCHES_BY_SCORE, row_selection=ROWS_BY_SCORE, batch_count=nr_batches_update, batch_size=batch_size):
         """_summary_
 
         Args:
@@ -180,14 +188,28 @@ class DataOrchestrator:
             batch_count (int, optional): number of batches to include in the updated batch. Defaults to config['data_orchestrator']['nr_batches_update'].
             batch_size (int, optional): number of rows in the resulting batch. Defaults to config['data_feeder']['batch_size'].
         """
-        logging.info('Updating batches')
         batches = self.fetch_batches(batch_selection, batch_count)
         row_count = int(batch_size / batch_count)
         filename_to_rows = dict()
-        for batch_id, filename in enumerate(batches):
+        for batch_id, filename in batches:
             rows = self.fetch_rows(row_selection, row_count, batch_id)
+            rows.sort()
             filename_to_rows[filename] = rows
 
-        new_filename, new_rows = self.data_storage.create_shuffled_batch(
-            filename_to_rows)
+        new_filename, new_rows = self.data_storage.create_shuffled_batch(filename_to_rows)
+        logger.info(f'Updating batches created new file {new_filename}')
+        # TODO: Currently we set the scores to new random scores. This would probably have to be changed depending on the data importance metric
         self.add_batch(new_filename, new_rows)
+
+    def get_next_batch(self) -> str:
+        """
+        Get the next unread batch and update that it has been read
+
+        Returns:
+            str: filename of the next ready batch
+        """
+        cur = self.con.cursor()
+        cur.execute('SELECT id, filename, score FROM batch_metadata WHERE new=1 ORDER BY timestamp ASC LIMIT 1')
+        row = cur.fetchall()[0]
+        self.update_batch_metadata(row[0], row[2], 0)
+        return row[1]
