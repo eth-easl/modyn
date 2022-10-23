@@ -66,6 +66,7 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
         since = time.time()
         all_inputs = []
         all_labels = []
+        train_losses, train_accuracies, gradient_errors = [], [], []
 
         train_loader = torch.utils.data.DataLoader(
             torch.utils.data.ConcatDataset([self.dataset['train'], self.buffer_dataset]),
@@ -119,7 +120,11 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
                 grad_error = self.get_grad_error(true_grad)
                 self.clear_grad()
             else:
-                grad_error = 'Uncomputed'
+                grad_error = 0
+
+            train_losses.append(epoch_loss)
+            train_accuracies.append(epoch_acc.item())
+            gradient_errors.append(grad_error.item())  
 
             print('Train Loss: {:.4f} Acc: {:.4f}. Gradient error: {:.4f}'.format(epoch_loss, epoch_acc, grad_error))
 
@@ -128,6 +133,15 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
             time_elapsed // 60, time_elapsed % 60))
 
         self.update_buffer(task_idx, torch.cat(all_inputs), torch.cat(all_labels))
+
+        train_results = {
+            'train_loss': train_losses,
+            'train_accuracy': train_accuracies,
+        }
+        if self.get_gradient_error:
+            train_results['gradient_errors'] = gradient_errors
+
+        return train_results 
 
     def update_buffer(self, task_idx, new_samples, new_labels):
         assert self.memory_buffer_size % 12 == 0, "Prototype only supports memory buffer as multiple of 12. "

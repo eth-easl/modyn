@@ -73,6 +73,8 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
 
     def train_task(self, task_idx):
         since = time.time()
+        train_losses, train_accuracies, gradient_errors = [], [], []
+
         all_inputs = []
         all_labels = []
 
@@ -88,6 +90,9 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
         for epoch in range(self.num_epochs):
             print('Epoch {}/{}'.format(epoch+1, self.num_epochs))
             print('-' * 10)
+
+            if self.get_gradient_error:
+                true_grad = self.compute_true_grad()
 
             self.model.train()
             running_loss = 0.0
@@ -114,6 +119,9 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
                     loss.backward()
                     self.optimizer.step()
 
+                    if self.get_gradient_error: 
+                        self.report_grad()  
+
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
 
@@ -123,8 +131,18 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
 
                 # self.scheduler.step()
 
+            if self.get_gradient_error:
+                grad_error = self.get_grad_error(true_grad)
+                self.clear_grad()
+            else:
+                grad_error = 0
+
             epoch_loss = running_loss / len(self.dataset['train'])
             epoch_acc = running_corrects.double() / len(self.dataset['train'])
+
+            train_losses.append(epoch_loss)
+            train_accuracies.append(epoch_acc.item())
+            gradient_errors.append(grad_error.item())
 
             print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
 
@@ -133,6 +151,15 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
             time_elapsed // 60, time_elapsed % 60))
 
         self.update_buffer(task_idx, torch.cat(all_inputs), torch.cat(all_labels), torch.cat(losses_all))
+
+        train_results = {
+            'train_loss': train_losses,
+            'train_accuracy': train_accuracies,
+        }
+        if self.get_gradient_error:
+            train_results['gradient_errors'] = gradient_errors
+
+        return train_results 
 
     def update_buffer(self, task_idx, new_samples, new_labels, all_losses):
         assert self.memory_buffer_size % 12 == 0, "Prototype only supports memory buffer as multiple of 12. "

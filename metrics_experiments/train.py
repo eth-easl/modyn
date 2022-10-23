@@ -11,7 +11,7 @@ import argparse
 def parse_args():
     parser = argparse.ArgumentParser(description="Importance Metrics")
     parser.add_argument("experiment", help="Name of the experiment (for config file and write directory)")
-    parser.add_argument("write", help="Should the results be written out")
+    parser.add_argument('--write', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -21,11 +21,14 @@ if __name__ == '__main__':
     experiment_name = args.experiment
     write = args.write
 
+    print(f'Running experiment {experiment_name}. Writing: {"Yes" if write else "No"}')
+
     with open(f'configs/{experiment_name}.yaml') as f:
         configs = yaml.load(f, Loader=yaml.FullLoader)
 
     dataset = builder.make_dataset(configs['dataset'])
     model = builder.make_model(configs['model'])
+    print(model)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -41,6 +44,9 @@ if __name__ == '__main__':
             epochs, device)
 
     result = trainer.train()
+
+    print(result)
+    quit()
 
     if write: 
         results_visualizer.visualize_results(result, experiment_name)

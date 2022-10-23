@@ -38,7 +38,7 @@ def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', collapse
     trainY = torch.from_numpy(np.concatenate([labels_1,labels_2,labels_3,labels_4,labels_5], 0))
 
     trainX = np.reshape(trainX, (-1, 32, 32, 3))
-    testX = np.reshape(testX, (-1, 32, 32, 3))
+    testX = np.reshape(testX, (-1, 32, 32, 3)) 
 
     testY = torch.from_numpy(np.array(testY))
 
@@ -107,6 +107,9 @@ class SplitCIFAR10Dataset(TaskDataset):
         task_idx.append((y==4) | (y==5))
         task_idx.append((y==6) | (y==7))
         task_idx.append((y==8) | (y==9))
+        self.full_x = x
+        self.full_y = y
+        self.full_mode = False
 
         for idx, task in enumerate(task_idx):
             self.x.append(x[task])
@@ -117,14 +120,17 @@ class SplitCIFAR10Dataset(TaskDataset):
 
     
     def __len__(self):
-        return len(self.x[self.active_idx])
+        return len(self.full_x) if self.full_mode else len(self.x[self.active_idx]) 
 
     def __getitem__(self, idx):
+        x = self.full_x[idx] if self.full_mode else self.x[self.active_idx][idx]
+        y = self.full_y[idx] if self.full_mode else self.y[self.active_idx][idx]
+
         if self.augmentation is not None:
-            return self.augmentation(self.x[self.active_idx][idx]), self.y[self.active_idx][idx]
-        elif self.y is None:
-            return [self.x[self.active_idx][idx]]
-        return self.x[self.active_idx][idx], self.y[self.active_idx][idx]
+            return self.augmentation(x), y
+        elif y is None:
+            return [x]
+        return x, y
 
 
 if __name__ == '__main__':

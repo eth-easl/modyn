@@ -9,7 +9,7 @@ model:
   dropout: 0.2
 
 lr: 0.001
-epochs: 15
+epochs: 10
 trainer: 
   name: defaultTrainer
   memory_buffer_size: 10

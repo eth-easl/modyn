@@ -38,8 +38,9 @@ class TaskTrainer:
         result = {}
         while True:
             print('Training on task', self.dataset['train'].active_task())
-            self.train_task(self.dataset['train'].active_idx)
-            result[self.dataset['train'].active_task()] = self.validation()
+            train_results = self.train_task(self.dataset['train'].active_idx)
+            val_results = self.validation()
+            result[self.dataset['train'].active_task()] = {'train': train_results, 'val': val_results}
             try:
                 self.dataset['train'].next_task()
             except IndexError:
@@ -55,39 +56,32 @@ class TaskTrainer:
     """
     def report_grad(self):
         current_grad = torch.cat([param.grad.flatten() for param in self.model.parameters()]) 
-        if self.grad_avg is None:
-            self.grad_avg = current_grad 
-            self.num_grads = 1
+        if self.grad_total is None:
+            self.grad_total = current_grad 
         else: 
-            self.num_grads += 1
-            self.grad_avg = (1/self.num_grads)*current_grad+((self.num_grads-1)/self.num_grads)*self.grad_avg
+            self.grad_total += current_grad
 
     """
         For gradient error visualization, this should be called before each epoch. Guarantees that the train dataset will remain on the same active task. 
     """
     def compute_true_grad(self):
-        original_active_idx = self.dataset['train'].active_idx
         self.model.train()
-        self.dataset['train'].set_active_task(0)
+        self.dataset['train'].full_mode = True
         print('Computing true gradient...')
         self.optimizer.zero_grad()
         train_loader = torch.utils.data.DataLoader(self.dataset['train'], batch_size=self.dataset_configs['batch_size'])
-        while True:
-            for inputs, labels in tqdm(train_loader): 
-                inputs = inputs.to(self.device)
-                labels = labels.to(self.device)
-                self.criterion(self.model(inputs), labels).backward()
-            if not self.next_task():
-                break
+        for inputs, labels in tqdm(train_loader): 
+            inputs, labels = inputs.to(self.device), labels.to(self.device)
+            self.criterion(self.model(inputs), labels).backward()
         true_grad = torch.cat([param.grad.flatten() for param in self.model.parameters()])
         self.optimizer.zero_grad()
-        self.dataset['train'].set_active_task(original_active_idx)
+        self.dataset['train'].full_mode = False
         print('True gradient computed ')
         return true_grad
 
     def get_grad_error(self, true_grad):
-        return torch.norm(true_grad - self.grad_avg)
+        print(true_grad - self.grad_total)
+        return torch.norm(true_grad - self.grad_total)
 
     def clear_grad(self):
-        self.grad_avg = None 
-        self.num_grads = 0
+        self.grad_total = None 
