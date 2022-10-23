@@ -1,0 +1,1 @@
+{'Ship/Truck': {'Airplane/Car': {'Loss': 11.159028076171875, 'Accuracy': 0.0}, 'Bird/Cat': {'Loss': 12.54032797241211, 'Accuracy': 0.0}, 'Deer/Dog': {'Loss': 13.22079571533203, 'Accuracy': 0.0}, 'Frog/Horse': {'Loss': 12.879375442504882, 'Accuracy': 0.0}, 'Ship/Truck': {'Loss': 0.622896746635437, 'Accuracy': 0.6555}, 'all': {'Loss': 10.084484790611267, 'Accuracy': 0.1311}}}

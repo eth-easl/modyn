@@ -6,10 +6,10 @@ from .task_trainer import TaskTrainer
 import numpy as np
 from datasets.buffer_dataset import BufferDataset
 
-class UniformSamplingTaskBasedTrainer(TaskTrainer):
+class CheaterTaskBasedTrainer(TaskTrainer):
 
     def __repr__(self):
-        return 'Uniform Sampling Trainer'
+        return 'Cheating Trainer (used as a sanity check for debugging)'
 
     def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error):
         super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error)
@@ -64,11 +64,9 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
 
     def train_task(self, task_idx):
         since = time.time()
-        all_inputs = []
-        all_labels = []
 
         train_loader = torch.utils.data.DataLoader(
-            torch.utils.data.ConcatDataset([self.dataset['train'], self.buffer_dataset]),
+            self.dataset['train'], 
             shuffle=True,
             batch_size=self.dataset_configs['batch_size']
         )
@@ -88,32 +86,36 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
 
             running_loss = 0.0
             running_corrects = 0
+            running_count = 0
+            print('Cheating... setting active task to 0')
+            self.dataset['train'].set_active_task(0)
+            while True:
+                for inputs, labels in tqdm(train_loader):
 
-            for inputs, labels in tqdm(train_loader):
-                if epoch == 0:
-                    all_inputs.append(inputs[(labels==task_idx*2)|(labels==task_idx*2+1)])
-                    all_labels.append(labels[(labels==task_idx*2)|(labels==task_idx*2+1)])
+                    inputs = inputs.to(self.device)
+                    labels = labels.to(self.device)
+                    self.optimizer.zero_grad()
 
-                inputs = inputs.to(self.device)
-                labels = labels.to(self.device)
-                self.optimizer.zero_grad()
+                    with torch.set_grad_enabled(True):
+                        outputs = self.model(inputs)
+                        _, preds = torch.max(outputs, 1)
+                        loss = self.criterion(outputs, labels)
+                        loss.backward()
+                        self.optimizer.step()
+                        if self.get_gradient_error: 
+                            self.report_grad()  
 
-                with torch.set_grad_enabled(True):
-                    outputs = self.model(inputs)
-                    _, preds = torch.max(outputs, 1)
-                    loss = self.criterion(outputs, labels)
-                    loss.backward()
-                    self.optimizer.step()
-                    if self.get_gradient_error: 
-                        self.report_grad()  
-
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                    running_loss += loss.item() * inputs.size(0)
+                    running_corrects += torch.sum(preds == labels.data)
+                    running_count += inputs.size(0)
+                
+                if not self.next_task():
+                    break
 
                 # self.scheduler.step()
 
-            epoch_loss = running_loss / len(self.dataset['train'])
-            epoch_acc = running_corrects.double() / len(self.dataset['train'])
+            epoch_loss = running_loss / running_count
+            epoch_acc = running_corrects.double() / running_count
 
             if self.get_gradient_error:
                 grad_error = self.get_grad_error(true_grad)
@@ -127,24 +129,3 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
         print('Training complete in {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
 
-        self.update_buffer(task_idx, torch.cat(all_inputs), torch.cat(all_labels))
-
-    def update_buffer(self, task_idx, new_samples, new_labels):
-        assert self.memory_buffer_size % 12 == 0, "Prototype only supports memory buffer as multiple of 12. "
-        if task_idx >= 4:
-            return
-
-        new_sector_size = int(12 / (task_idx+1))
-
-        for i in range(task_idx):
-            old_sector_size = int(12 / task_idx)
-            # Shrink the i-th task
-            for j in range(new_sector_size):
-                self.buffer.replace(i*new_sector_size+j, i*old_sector_size+j)
-        start_idx = task_idx * new_sector_size
-
-        new_indices = np.random.choice(new_labels.shape[0], new_sector_size, replace=False)
-        for i in range(new_sector_size):
-            self.buffer.insert(i+start_idx, new_samples[new_indices[i]], new_labels[new_indices[i]])
-
-        self.buffer_dataset.update(self.buffer)
