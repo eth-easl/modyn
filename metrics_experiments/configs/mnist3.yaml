@@ -1,18 +1,18 @@
 dataset: 
-  name: SplitCIFAR10
-  batch_size: 64
+  name: SplitMNIST
+  batch_size: 256
   collapse_targets: False
 
 model:
   name: smallconv
-  in_channels: 3
+  in_channels: 1
   num_classes: 10
-  dropout: 0.2
-  fc_in: 4096
+  dropout: 0.3
+  fc_in: 3136
 
 lr: 0.001
 epochs: 4
 trainer: 
   name: uniformSamplingTaskBasedTrainer
-  memory_buffer_size: 204
+  memory_buffer_size: 360
   get_grad_error: True

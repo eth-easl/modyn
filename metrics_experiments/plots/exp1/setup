@@ -1,1 +1,0 @@
-Initial MNIST setup. No learning rate scheduling, learning rate = 0.001, 5 epochs per task, batch size 256, 784/800/10 FC network. Going to try 784/800/2 network next for the alternate setup. 

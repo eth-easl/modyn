@@ -5,27 +5,6 @@ import torchvision
 import torch.utils.data as Data
 import torchvision.transforms as transforms
 
-# class SmallConv(nn.Module):
-#     def __init__(self, configs):
-#         super(SmallConv, self).__init__()
-#         self.conv1 = nn.Conv2d(in_channels=configs['in_channels'], out_channels=6, kernel_size=5)
-#         self.pool = nn.MaxPool2d(kernel_size=(2,2), stride=2)
-#         self.conv2 = nn.Conv2d(6, 16, 5)
-#         self.fc1 = nn.Linear(16 * 5 * 5, 120)
-#         self.fc2 = nn.Linear(120, 84)
-#         self.fc3 = nn.Linear(84, configs['num_classes'])
-            
-
-#     def forward(self, x):
-#         x = self.pool(F.relu(self.conv1(x)))
-#         x = self.pool(F.relu(self.conv2(x)))
-
-#         x = x.view(-1, 16 * 5 * 5)
-#         x = F.relu(self.fc1(x))
-#         x = F.relu(self.fc2(x))
-#         x = self.fc3(x)
-#         return x
-
 class SmallConv(nn.Module):
     def __init__(self, configs):
         super(SmallConv, self).__init__()
@@ -40,8 +19,7 @@ class SmallConv(nn.Module):
         self.dropout2 = nn.Dropout(p=configs['dropout'])
         self.pool2 = nn.MaxPool2d(kernel_size=(2,2), stride=2)
         #16*16*64 -> 8*8*64
-        # self.fc1 = nn.Linear(8*8*64, 1024) # This line for CIFAR. TODO
-        self.fc1 = nn.Linear(3136, 1024)
+        self.fc1 = nn.Linear(configs.get('fc_in', 4096), 1024) 
         self.dropout3 = nn.Dropout(p=configs['dropout'])
         self.fc2 = nn.Linear(1024, 512)
         self.dropout4 = nn.Dropout(p=configs['dropout'])
