@@ -9,8 +9,8 @@ class NaiveTaskBasedTrainer(TaskTrainer):
     def __repr__(self):
         return 'Naive Trainer'
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error):
-        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error)
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
+        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model)
 
     def validation(self):
         print('Validation')
@@ -102,16 +102,16 @@ class NaiveTaskBasedTrainer(TaskTrainer):
                 # self.scheduler.step()
 
             if self.get_gradient_error:
-                grad_error = self.get_grad_error(true_grad)
+                grad_error = self.get_grad_error(true_grad).item()
                 self.clear_grad()
             else:
                 grad_error = 0
 
-            epoch_loss = running_loss / len(self.dataset['train'])
-            epoch_acc = running_corrects.double() / len(self.dataset['train'])
+            epoch_loss = running_loss / (len(self.dataset['train']) + len(self.buffer_dataset))
+            epoch_acc = running_corrects.double() / (len(self.dataset['train']) + len(self.buffer_dataset))
             train_losses.append(epoch_loss)
             train_accuracies.append(epoch_acc.item())
-            gradient_errors.append(grad_error.item())
+            gradient_errors.append(grad_error)
             print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
 
         time_elapsed = time.time() - since

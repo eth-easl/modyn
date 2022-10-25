@@ -41,21 +41,22 @@ def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, datase
     trainer_name = trainer_configs['name']
     trainer_get_grad_error = trainer_configs.get('get_grad_error', False)
     memory_buffer_size = trainer_configs.get('memory_buffer_size', 10)
+    reset_model = trainer_configs.get('reset_model', True)
 
     if trainer_name == 'defaultTrainer':
         from trainers.default_trainer import DefaultTrainer
         return DefaultTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device)
     elif trainer_name == 'naiveTaskBasedTrainer':
         from trainers.naive_task_based_trainer import NaiveTaskBasedTrainer
-        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error)
+        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
     elif trainer_name == 'uniformSamplingTaskBasedTrainer':
         from trainers.uniform_sampling_task_based_trainer import UniformSamplingTaskBasedTrainer
-        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error)
+        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
     elif trainer_name == 'cheaterTaskBasedTrainer':
         from trainers.cheater_task_based_trainer import CheaterTaskBasedTrainer
-        return CheaterTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error)
+        return CheaterTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
     elif trainer_name == 'highestLossTaskBasedTrainer':
         from trainers.highest_loss_task_based_trainer import HighestLossTaskBasedTrainer
-        return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error)
+        return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
     else:
         raise NotImplementedError()

@@ -40,7 +40,8 @@ class SmallConv(nn.Module):
         self.dropout2 = nn.Dropout(p=configs['dropout'])
         self.pool2 = nn.MaxPool2d(kernel_size=(2,2), stride=2)
         #16*16*64 -> 8*8*64
-        self.fc1 = nn.Linear(8*8*64, 1024)
+        # self.fc1 = nn.Linear(8*8*64, 1024) # This line for CIFAR. TODO
+        self.fc1 = nn.Linear(3136, 1024)
         self.dropout3 = nn.Dropout(p=configs['dropout'])
         self.fc2 = nn.Linear(1024, 512)
         self.dropout4 = nn.Dropout(p=configs['dropout'])

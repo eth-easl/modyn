@@ -15,3 +15,4 @@ trainer:
   name: uniformSamplingTaskBasedTrainer
   memory_buffer_size: 360
   get_grad_error: True
+  reset_model: False

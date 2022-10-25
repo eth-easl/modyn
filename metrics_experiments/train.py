@@ -25,6 +25,7 @@ if __name__ == '__main__':
 
     with open(f'configs/{experiment_name}.yaml') as f:
         configs = yaml.load(f, Loader=yaml.FullLoader)
+        print(configs)
 
     dataset = builder.make_dataset(configs['dataset'])
     model = builder.make_model(configs['model'])
@@ -46,8 +47,6 @@ if __name__ == '__main__':
     result = trainer.train()
 
     print(result)
-    quit()
-
     if write: 
         results_visualizer.visualize_results(result, experiment_name)
 

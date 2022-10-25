@@ -7,7 +7,7 @@ from .buffer import Buffer
 
 class TaskTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error):
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -22,10 +22,28 @@ class TaskTrainer:
         self.buffer = Buffer(memory_buffer_size)
         self.buffer_dataset = None
         self.get_gradient_error = get_gradient_error
+        self.should_reset_model = reset_model
         if self.get_gradient_error:
             self.clear_grad()
 
         assert dataset['train'].is_task_based() 
+
+    def reset_model(self):
+        """
+        refs:
+            - https://discuss.pytorch.org/t/how-to-re-set-alll-parameters-in-a-network/20819/6
+            - https://stackoverflow.com/questions/63627997/reset-parameters-of-a-neural-network-in-pytorch
+            - https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+        """
+        with torch.no_grad():
+            def weight_reset(m):
+                # - check if the current module has reset_parameters & if it's callable, call it on m
+                reset_parameters = getattr(m, "reset_parameters", None)
+                if callable(reset_parameters):
+                    m.reset_parameters()
+
+            # Applies fn recursively to every submodule see: https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+            self.model.apply(fn=weight_reset)
 
     def next_task(self):
         if self.dataset['train'].has_more_tasks():

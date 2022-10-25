@@ -11,8 +11,8 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
     def __repr__(self):
         return 'Uniform Sampling Trainer'
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error):
-        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error)
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
+        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model)
         self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
 
     def validation(self):
@@ -77,6 +77,9 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
         if task_idx > 0:
             print('Buffer labels: ' + self.buffer.pretty_labels())
 
+        if self.should_reset_model:
+            self.reset_model()
+
 
         for epoch in range(self.num_epochs):
             print('Epoch {}/{}'.format(epoch+1, self.num_epochs))
@@ -113,18 +116,18 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
 
                 # self.scheduler.step()
 
-            epoch_loss = running_loss / len(self.dataset['train'])
-            epoch_acc = running_corrects.double() / len(self.dataset['train'])
+            epoch_loss = running_loss / (len(self.dataset['train']) + len(self.buffer_dataset))
+            epoch_acc = running_corrects.double() / (len(self.dataset['train']) + len(self.buffer_dataset))
 
             if self.get_gradient_error:
-                grad_error = self.get_grad_error(true_grad)
+                grad_error = self.get_grad_error(true_grad).item()
                 self.clear_grad()
             else:
                 grad_error = 0
 
             train_losses.append(epoch_loss)
             train_accuracies.append(epoch_acc.item())
-            gradient_errors.append(grad_error.item())  
+            gradient_errors.append(grad_error)  
 
             print('Train Loss: {:.4f} Acc: {:.4f}. Gradient error: {:.4f}'.format(epoch_loss, epoch_acc, grad_error))
 
@@ -148,10 +151,10 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
         if task_idx >= 4:
             return
 
-        new_sector_size = int(12 / (task_idx+1))
+        new_sector_size = int(self.memory_buffer_size / (task_idx+1))
 
         for i in range(task_idx):
-            old_sector_size = int(12 / task_idx)
+            old_sector_size = int(self.memory_buffer_size / task_idx)
             # Shrink the i-th task
             for j in range(new_sector_size):
                 self.buffer.replace(i*new_sector_size+j, i*old_sector_size+j)
@@ -162,3 +165,5 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
             self.buffer.insert(i+start_idx, new_samples[new_indices[i]], new_labels[new_indices[i]])
 
         self.buffer_dataset.update(self.buffer)
+        self.buffer_dataset.fake_size = (1+task_idx) * len(self.dataset['train'])
+
