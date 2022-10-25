@@ -11,7 +11,21 @@ def visualize_results(results, exp_name):
     f.write(str(results))
     f.close()
 
-    for train_task in results.keys():
+    grid_rows = len(results.keys()) // 3 + 2
+    grid_cols = 3
+    subplot_names = []
+    extents = []
+    num_tasks = len(results.keys())
+    figsize=(14, 12)
+    fig = plt.figure(figsize=figsize)
+    plt.subplots_adjust(left=0.1,
+                        bottom=0.1,
+                        right=0.9,
+                        top=0.9,
+                        wspace=0.4,
+                        hspace=0.4)
+
+    for idx, train_task in enumerate(results.keys()):
         validation_results = results[train_task]['val']
 
         labels = []
@@ -21,13 +35,14 @@ def visualize_results(results, exp_name):
             y.append(v['Accuracy'])
         x = np.arange(len(labels))
 
-        plt.figure()
-        plt.bar(x, y, align='center', alpha=0.5)
-        plt.xticks(x, labels)
-        plt.ylabel('Accuracy')
-        plt.title('Per task accuracy')
-        plt.savefig('{}/{}'.format(dir_name, train_task.replace('/', ' vs ')))
-        plt.close()
+        ax = fig.add_subplot(grid_rows, grid_cols, idx+1)
+        ax.bar(x, y, align='center', alpha=0.5)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels)
+        ax.set_ylabel('Accuracy')
+        ax.set_title('Per task accuracy')
+        subplot_names.append(train_task.replace('/', ' vs '))
+        extents.append(ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()))
 
     tasks, all_loss, all_acc, all_grad_err = [], [], [], []
     for train_task in results.keys():
@@ -39,29 +54,40 @@ def visualize_results(results, exp_name):
 
     epochs = len(all_loss) // len(results.keys())
 
-    plt.figure()
-    plt.plot(all_loss)
-    plt.title('Train loss')
-    plt.xticks(range(len(all_loss)), tasks, rotation=20)
-    [l.set_visible(False) for (i,l) in enumerate(plt.gca().xaxis.get_ticklabels()) if i % epochs != 0]
-    plt.savefig(f'{dir_name}/train_loss')
-    plt.close()
+    ax1 = fig.add_subplot(grid_rows, grid_cols, num_tasks+1)
+    ax1.plot(all_loss)
+    ax1.set_title('Train loss')
+    ax1.set_xticks(range(len(all_loss)))
+    ax1.set_xticklabels(tasks, rotation=20)
+    [l.set_visible(False) for (i,l) in enumerate(ax1.xaxis.get_ticklabels()) if i % epochs != 0]
+    subplot_names.append('train_loss')
+    extents.append(ax1.get_window_extent().transformed(fig.dpi_scale_trans.inverted()))
 
-    plt.figure()
-    plt.plot(all_acc)
-    plt.title('Train accuracy')
-    plt.xticks(range(len(all_acc)), tasks, rotation=20)
-    [l.set_visible(False) for (i,l) in enumerate(plt.gca().xaxis.get_ticklabels()) if i % epochs != 0]
-    plt.savefig(f'{dir_name}/train_accuracy')
-    plt.close()
+    ax2 = fig.add_subplot(grid_rows, grid_cols, num_tasks+2)
+    ax2.plot(all_acc)
+    ax2.set_title('Train accuracy')
+    ax2.set_xticks(range(len(all_acc)))
+    ax2.set_xticklabels(tasks, rotation=20)
+    [l.set_visible(False) for (i,l) in enumerate(ax2.xaxis.get_ticklabels()) if i % epochs != 0]
+    subplot_names.append('train_accuracy')
+    extents.append(ax2.get_window_extent().transformed(fig.dpi_scale_trans.inverted()))
 
-    plt.figure()
-    plt.plot(all_grad_err)
-    plt.xticks(range(len(all_grad_err)), tasks, rotation=20)
-    [l.set_visible(False) for (i,l) in enumerate(plt.gca().xaxis.get_ticklabels()) if i % epochs != 0]
-    plt.title('Gradient error')
-    plt.savefig(f'{dir_name}/grad_error')
-    plt.close()
+
+    ax3 = fig.add_subplot(grid_rows, grid_cols, num_tasks+3)
+    ax3.plot(all_grad_err)
+    ax3.set_xticks(range(len(all_grad_err)))
+    ax3.set_xticklabels(tasks, rotation=20)
+    [l.set_visible(False) for (i,l) in enumerate(ax3.xaxis.get_ticklabels()) if i % epochs != 0]
+    ax3.set_title('Gradient error')
+    subplot_names.append('grad_error')
+    extents.append(ax1.get_window_extent().transformed(fig.dpi_scale_trans.inverted()))
+
+    plt.savefig(f'{dir_name}/all')
+
+    for (name, extent) in zip(subplot_names, extents):
+        fig.savefig(f'{dir_name}/{name}', bbox_inches=extent.expanded(1.4, 1.3))
+
+
 
 
 
