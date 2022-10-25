@@ -15,53 +15,6 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
         super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model)
         self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
 
-    def validation(self):
-        print('Validation')
-        self.model.eval()
-        self.dataset['test'].set_active_task(0)
-        running_loss, running_corrects, running_count, result = 0.0, 0, 0, {}
-
-        val_loader = torch.utils.data.DataLoader(self.dataset['test'], batch_size = self.dataset_configs['batch_size'], shuffle = False)
-
-        while True:
-            print('Task', self.dataset['test'].active_task())
-            inner_loss, inner_corrects, inner_count = 0.0, 0, 0
-
-            for inputs, labels in tqdm(val_loader):
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-                self.optimizer.zero_grad()
-
-                with torch.no_grad():
-                    outputs = self.model(inputs)
-                    _, preds = torch.max(outputs, 1)
-                    loss = self.criterion(outputs, labels)
-
-                # statistics
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
-                running_count += inputs.size(0)
-                inner_loss += loss.item() * inputs.size(0)
-                inner_corrects += torch.sum(preds == labels.data)
-                inner_count += inputs.size(0)
-
-            result[self.dataset['test'].active_task()] = {
-                'Loss': inner_loss / inner_count, 'Accuracy': inner_corrects.double().item() / inner_count
-            }
-            try:
-                self.dataset['test'].next_task()
-            except IndexError:
-                break
-
-        all_loss = running_loss / running_count
-        all_accuracy = running_corrects.double().item() / running_count
-
-        print('Validation loss: {:.4f} Acc: {:.4f}'.format(all_loss, all_accuracy))
-        result['all'] = {
-            'Loss': all_loss, 'Accuracy': all_accuracy
-        }
-        return result 
-
-
     def train_task(self, task_idx):
         since = time.time()
         all_inputs = []
