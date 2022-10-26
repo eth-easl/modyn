@@ -58,5 +58,9 @@ def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, datase
     elif trainer_name == 'highestLossTaskBasedTrainer':
         from trainers.highest_loss_task_based_trainer import HighestLossTaskBasedTrainer
         return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
+    elif trainer_name == 'poolingTaskBasedTrainer':
+        from trainers.pooling_task_based_trainer import PoolingTaskBasedTrainer
+        return PoolingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
+ 
     else:
         raise NotImplementedError()
