@@ -14,6 +14,9 @@
 - In `src/config/devel.yaml` you will find a test configuration for the system, adapt as required
 
 ### Current state:
+
+![Current state diagram](docs/images/Current_design.png)
+
 - DataFeeder feeds the defined file in defined batch sizes to the Kafka stream
 - DataLoader reads the data, does some minimal offline preprocessing, writes the batch to harddisk, updates the metadata and every now and then creates new batches from the existing batches
 
@@ -25,5 +28,5 @@
 ### How to test:
 0. Create [virtual environment](https://docs.python.org/3/tutorial/venv.html) 
 1. Install python requirements `pip install -r src/requirements.txt`
-2. cd into package to be tested (for example `src/dataorchestrator`)
+2. cd into package to be tested (for example `src/datascorer`)
 3. Run tests `python -m unittest discover`

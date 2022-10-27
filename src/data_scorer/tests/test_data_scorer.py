@@ -6,21 +6,21 @@ import os
 from mock import patch
 import pandas as pd
 
-from dataorchestrator import DataOrchestrator
+from datascorer import DataScorer
 from datastorage import DataStorage
 
 STORAGE_LOCATION = os.getcwd()
 
-class TestDataOrchestrator(unittest.TestCase):
+class TestDataScorer(unittest.TestCase):
 
     def setUp(self):
         def __init__(self, config):
             self.con = sqlite3.connect(':memory:')
             self.data_storage = DataStorage()
 
-        with patch.object(DataOrchestrator, '__init__', __init__):
-            self.data_orchestrator = DataOrchestrator(None)
-            self.data_orchestrator.setup_database()
+        with patch.object(DataScorer, '__init__', __init__):
+            self.data_scorer = DataScorer(None)
+            self.data_scorer.setup_database()
 
     def test_setup_database(self):
         con = sqlite3.connect('metadata.db')
@@ -39,10 +39,10 @@ class TestDataOrchestrator(unittest.TestCase):
 
     def test_add_batch_to_metadata(self):
         test_file = 'test_file1.csv'
-        batch_id = self.data_orchestrator.add_batch_to_metadata(test_file)
+        batch_id = self.data_scorer.add_batch_to_metadata(test_file)
         self.assertEqual(batch_id, 1)
 
-        cursor = self.data_orchestrator.con.cursor()
+        cursor = self.data_scorer.con.cursor()
         cursor.execute("SELECT * FROM batch_metadata;")
         row = cursor.fetchall()[0]
         self.assertEqual(row[1], test_file)
@@ -52,9 +52,9 @@ class TestDataOrchestrator(unittest.TestCase):
         test_row = 42
         test_batch_id = 9
         test_score = 0.5
-        self.data_orchestrator.add_row_to_metadata(test_row, test_batch_id, test_score)
+        self.data_scorer.add_row_to_metadata(test_row, test_batch_id, test_score)
 
-        cursor = self.data_orchestrator.con.cursor()
+        cursor = self.data_scorer.con.cursor()
         cursor.execute("SELECT * FROM row_metadata;")
         row = cursor.fetchall()[0]
         self.assertEqual(row[0], test_row)
@@ -65,9 +65,9 @@ class TestDataOrchestrator(unittest.TestCase):
         test_file = 'test_file1.csv'
         rows1 = [6,7,8]
 
-        self.data_orchestrator.add_batch(test_file, rows1)
+        self.data_scorer.add_batch(test_file, rows1)
 
-        cursor = self.data_orchestrator.con.cursor()
+        cursor = self.data_scorer.con.cursor()
         cursor.execute("SELECT * FROM batch_metadata;")
         row = cursor.fetchall()[0]
         batch_id = row[0]
@@ -86,7 +86,7 @@ class TestDataOrchestrator(unittest.TestCase):
 
         rows2 = [42,96,106]
 
-        self.data_orchestrator.add_batch(test_file, rows2)
+        self.data_scorer.add_batch(test_file, rows2)
 
         cursor.execute("SELECT * FROM batch_metadata WHERE id=2;")
         row = cursor.fetchall()[0]
@@ -109,7 +109,7 @@ class TestDataOrchestrator(unittest.TestCase):
         filename3 = 'test3.tar'
         filename4 = 'test4.tar'
 
-        cursor = self.data_orchestrator.con.cursor()
+        cursor = self.data_scorer.con.cursor()
 
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
                     (filename1, 10.1, 0.3, 1))
@@ -120,16 +120,16 @@ class TestDataOrchestrator(unittest.TestCase):
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
                     (filename4, 15, 0.5, 1))
 
-        results = self.data_orchestrator.fetch_batches(self.data_orchestrator.BATCHES_BY_SCORE, 2)
+        results = self.data_scorer.fetch_batches(self.data_scorer.BATCHES_BY_SCORE, 2)
         self.assertEqual(results[0][1], filename2)
         self.assertEqual(results[1][1], filename3)
 
-        results = self.data_orchestrator.fetch_batches(self.data_orchestrator.BATCHES_BY_TIMESTAMP, 2)
+        results = self.data_scorer.fetch_batches(self.data_scorer.BATCHES_BY_TIMESTAMP, 2)
         self.assertEqual(results[0][1], filename4)
         self.assertEqual(results[1][1], filename3)
 
     def test_fetch_rows(self):
-        cursor = self.data_orchestrator.con.cursor()
+        cursor = self.data_scorer.con.cursor()
 
         cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
                     (10, 1, 0.5))
@@ -140,11 +140,11 @@ class TestDataOrchestrator(unittest.TestCase):
         cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
                     (13, 2, 0.9))
 
-        results = self.data_orchestrator.fetch_rows(self.data_orchestrator.ROWS_BY_SCORE, 2, 1)
+        results = self.data_scorer.fetch_rows(self.data_scorer.ROWS_BY_SCORE, 2, 1)
         self.assertEqual(results[0], 11)
         self.assertEqual(results[1], 10)
 
-    def test_update_batches(self):
+    def test_create_shuffled_batches(self):
         batchname1 = 'test1'
         batchname2 = 'test2'
         batchname3 = 'test3'
@@ -152,15 +152,15 @@ class TestDataOrchestrator(unittest.TestCase):
 
         df = pd.read_csv(STORAGE_LOCATION + '/tests/data/test.csv', header=0)
         df['row_id'] = [10, 11, 12]
-        filename1 = self.data_orchestrator.data_storage.write_dataset_to_tar(batchname1, df.to_json())
+        filename1 = self.data_scorer.data_storage.write_dataset_to_tar(batchname1, df.to_json())
         df['row_id'] = [20, 21, 22]
-        filename2 = self.data_orchestrator.data_storage.write_dataset_to_tar(batchname2, df.to_json())
+        filename2 = self.data_scorer.data_storage.write_dataset_to_tar(batchname2, df.to_json())
         df['row_id'] = [30, 31, 32]
-        filename3 = self.data_orchestrator.data_storage.write_dataset_to_tar(batchname3, df.to_json())
+        filename3 = self.data_scorer.data_storage.write_dataset_to_tar(batchname3, df.to_json())
         df['row_id'] = [40, 41, 42]
-        filename4 = self.data_orchestrator.data_storage.write_dataset_to_tar(batchname4, df.to_json())
+        filename4 = self.data_scorer.data_storage.write_dataset_to_tar(batchname4, df.to_json())
 
-        cursor = self.data_orchestrator.con.cursor()
+        cursor = self.data_scorer.con.cursor()
 
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
                     (filename1, 10.1, 0.3, 1))
@@ -196,7 +196,7 @@ class TestDataOrchestrator(unittest.TestCase):
         cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
                     (42, 4, 0.8))
 
-        self.data_orchestrator.update_batches(self.data_orchestrator.BATCHES_BY_SCORE, self.data_orchestrator.ROWS_BY_SCORE, 2, 4)
+        self.data_scorer.create_shuffled_batches(self.data_scorer.BATCHES_BY_SCORE, self.data_scorer.ROWS_BY_SCORE, 2, 4)
 
         cursor.execute("SELECT * FROM row_metadata WHERE batch_id = 5;")
         row = cursor.fetchall()
@@ -208,7 +208,7 @@ class TestDataOrchestrator(unittest.TestCase):
         filename3 = 'test3.tar'
         filename4 = 'test4.tar'
 
-        cursor = self.data_orchestrator.con.cursor()
+        cursor = self.data_scorer.con.cursor()
 
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
                     (filename1, 10.1, 0.3, 1))
@@ -219,5 +219,5 @@ class TestDataOrchestrator(unittest.TestCase):
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
                     (filename4, 15, 0.5, 1))
 
-        result = self.data_orchestrator.get_next_batch()
+        result = self.data_scorer.get_next_batch()
         self.assertEqual(result, filename1)

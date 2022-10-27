@@ -1,8 +1,13 @@
 class OnlineDataLoader:
-    config = None
+    """
+    Provide an abstraction for the dataloader
+
+    TODO: Extend the underlying pytorch dataloader
+    """
+    __config = None
 
     def __init__(self, config: dict):
-        self.config = config
+        self.__config = config
 
     def load_data(self):
         # TODO: Implement grpc to access data from the online data feeders as propagated by the data orchestrator

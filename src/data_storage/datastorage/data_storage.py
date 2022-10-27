@@ -1,8 +1,6 @@
 import os
-import typing
 import logging
 import uuid
-from itertools import islice
 
 import pandas as pd
 import webdataset as wds
@@ -20,6 +18,9 @@ logger.addHandler(handler)
 
 
 class DataStorage:
+    """
+    Provide a high level abstraction for the data storage layer
+    """
 
     def __init__(self):
         os.makedirs(f'{STORAGE_LOCATION}/store/', exist_ok=True)
@@ -60,16 +61,14 @@ class DataStorage:
             str: corresponding filename of the new batch
         """
         new_df = pd.DataFrame()
-        new_rows = []
         for filename in filenames_to_rows:
             dataset = wds.WebDataset(filename)
             # TODO: The following doesn't yet properly close the tar after opening yet
-            for data in islice(dataset, 0, 1):
+            for data in dataset:
                 df = pd.read_json(data['data.json'].decode())
                 selected_df = df[df['row_id'].isin(
                     filenames_to_rows[filename])]
                 new_df = pd.concat([new_df, selected_df])
-            new_rows.extend(filenames_to_rows[filename])
         new_df = new_df.reset_index()
 
         filename = self.write_dataset_to_tar(uuid.uuid4(), new_df.to_json())

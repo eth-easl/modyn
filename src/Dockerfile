@@ -14,8 +14,8 @@ RUN python -m pip install -r requirements.txt
 WORKDIR /src
 COPY . /src
 
-RUN pip install dataorchestrator/.
-RUN pip install datastorage/.
+RUN pip install data_orchestrator/.
+RUN pip install data_storage/.
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers

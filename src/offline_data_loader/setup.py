@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(
-    name='DataLoader',
+    name='OfflineDataLoader',
     version='1.0',
-    packages=['dataloader'],
+    packages=['offlinedataloader'],
 )

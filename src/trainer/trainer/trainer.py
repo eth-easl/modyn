@@ -4,12 +4,12 @@ from onlinedataloader.onlinedataloader.online_data_loader import OnlineDataLoade
 from onlinedataloader import OnlineDataLoader
 
 class Trainer:
-    config = None
-    online_data_loader = None
+    __config = None
+    __online_data_loader = None
 
     def __init__(self, config: dict):
-        self.config = config
-        self.online_data_loader = OnlineDataLoader(config)
+        self.__config = config
+        self.__online_data_loader = OnlineDataLoader(config)
 
     def train(self):
         # TODO: Implement
