@@ -12,7 +12,7 @@ The regime we are considering is called "Class Incremental Learning" (CIL) in li
 
 Blurry CIL refers to the case where we do allow for some instances from "minor classes", or those that aren't the focus of the current task, into our current dataset as well. So a BlurryM setup refers to the fact that M% of the current dataset is from the minor classes (evenly distributed). In the extremal case that M=0, we can equivalently call this the Disjoint CIL setup. We expect, of course, that higher M results in easier learning. 
 
-Offline learning refers to the idea that we can keep the current task in memory. Essentially, we can see the whole current task and then choose which parts of it we want to keep. In online learning, we restrict ourselves to only be able to see samples once, unless we add it to our buffer. Online learning is clearly harder, and demands even more careful memory management techniques. 
+Offline learning refers to the idea that we can keep the current task in memory. Essentially, we can see the whole current task and then choose which parts of it we want to keep. In online learning, we restrict ourselves to only be able to see samples once, unless we add it to our buffer. Online learning is clearly harder, and demands even more careful memory management techniques. Essentially, we can train x epochs with all data from current task + memory buffer, then edit the memory buffer, then train y epochs with only the memory buffer. If we restrict x = 1, then we're in the online setting. Also technically in the online setting you can't decide after the fact that you actually did want sample xyz in your buffer, but that seems to not really be an issue.
 
 ## Metrics
 

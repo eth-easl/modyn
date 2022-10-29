@@ -2,6 +2,7 @@ dataset:
   name: SplitMNIST
   batch_size: 256
   collapse_targets: False
+  blurry: 10
 
 model:
   name: smallconv
@@ -11,9 +12,10 @@ model:
   fc_in: 3136
 
 lr: 0.001
-epochs: 5
+epochs: 2
 trainer: 
   name: uniformSamplingTaskBasedTrainer
   memory_buffer_size: 108
-  get_grad_error: True
+  get_grad_error: False
   reset_model: False
+  online: True

@@ -4,10 +4,11 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset
 from .buffer import Buffer
+import numpy as np
 
 class TaskTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -16,13 +17,14 @@ class TaskTrainer:
         self.dataset_configs = dataset_configs
         self.num_epochs = num_epochs
         self.device = device
-        self.memory_buffer_size = memory_buffer_size
-        self.bufferX = [None for _ in range(memory_buffer_size)]
-        self.bufferY = [None for _ in range(memory_buffer_size)]
-        self.buffer = Buffer(memory_buffer_size)
+        self.memory_buffer_size = trainer_configs['memory_buffer_size']
+        self.bufferX = [None for _ in range(self.memory_buffer_size)]
+        self.bufferY = [None for _ in range(self.memory_buffer_size)]
+        self.buffer = Buffer(self.memory_buffer_size)
         self.buffer_dataset = None
-        self.get_gradient_error = get_gradient_error
-        self.should_reset_model = reset_model
+        self.get_gradient_error = trainer_configs['get_grad_error']
+        self.should_reset_model = trainer_configs['reset_model']
+        self.online = trainer_configs['online']
         if self.get_gradient_error:
             self.clear_grad()
 
@@ -53,6 +55,7 @@ class TaskTrainer:
 
     def train(self):
         print('Training with', repr(self))
+        num_tasks = len(self.dataset['train'].tasks)
         result = {}
         while True:
             print('Training on task', self.dataset['train'].active_task())
@@ -63,8 +66,20 @@ class TaskTrainer:
                 self.dataset['train'].next_task()
             except IndexError:
                 break
+        result[f'A{num_tasks}'] = result[self.dataset['train'].tasks[-1]]['val']['all']['Accuracy']
+        result[f'F{num_tasks}'] = self.get_forgetting(result)
         print('Done!')
         return result
+
+    def get_forgetting(self, result):
+        forgetting = []
+        for task in self.dataset['train'].tasks:
+            # We'll assume that the best is from when we trained on it. 
+            best = result[task]['val'][task]['Accuracy']
+            # And also that the worst is from the last epoch
+            worst = result[self.dataset['train'].tasks[-1]]['val'][task]['Accuracy']
+            forgetting.append(best-worst)
+        return np.mean(np.array(forgetting))
 
     def validation(self):
         print('Validation')

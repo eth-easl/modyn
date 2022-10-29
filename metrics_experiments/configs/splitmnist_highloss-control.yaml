@@ -2,6 +2,7 @@ dataset:
   name: SplitMNIST
   batch_size: 256
   collapse_targets: False
+  blurry: 0
 
 model:
   name: smallconv

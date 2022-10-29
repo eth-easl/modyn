@@ -25,10 +25,14 @@ if __name__ == '__main__':
 
     with open(f'configs/{experiment_name}.yaml') as f:
         configs = yaml.load(f, Loader=yaml.FullLoader)
+        print('Configs:')
         print(configs)
 
     dataset = builder.make_dataset(configs['dataset'])
+    print('Dataset:')
+    print(dataset)
     model = builder.make_model(configs['model'])
+    print('Model:')
     print(model)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

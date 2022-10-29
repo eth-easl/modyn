@@ -4,13 +4,13 @@ def make_dataset(dataset_config):
         return get_mnist_dataset(version='normal')
     elif dataset_config['name'].lower() == 'splitmnist':
         from datasets.mnist_dataset import get_mnist_dataset
-        return get_mnist_dataset(version='split', collapse_targets=dataset_config['collapse_targets'])
+        return get_mnist_dataset(version='split', configs=dataset_config)
     elif dataset_config['name'].lower() == 'cifar10':
         from datasets.cifar_10_dataset import get_cifar10_dataset
         return get_cifar10_dataset(version='normal')
     elif dataset_config['name'].lower() == 'splitcifar10':
         from datasets.cifar_10_dataset import get_cifar10_dataset
-        return get_cifar10_dataset(version='split', collapse_targets=dataset_config['collapse_targets'])
+        return get_cifar10_dataset(version='split', configs=dataset_config)
     else:
         raise NotImplementedError()
 
@@ -39,28 +39,29 @@ def make_model(model_config):
 
 def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device):
     trainer_name = trainer_configs['name']
-    trainer_get_grad_error = trainer_configs.get('get_grad_error', False)
-    memory_buffer_size = trainer_configs.get('memory_buffer_size', 10)
-    reset_model = trainer_configs.get('reset_model', True)
+    trainer_configs.setdefault('get_grad_error', False)
+    trainer_configs.setdefault('memory_buffer_size', 10)
+    trainer_configs.setdefault('reset_model', True)
+    trainer_configs.setdefault('online', False)
 
     if trainer_name == 'defaultTrainer':
         from trainers.default_trainer import DefaultTrainer
         return DefaultTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device)
     elif trainer_name == 'naiveTaskBasedTrainer':
         from trainers.naive_task_based_trainer import NaiveTaskBasedTrainer
-        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
+        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'uniformSamplingTaskBasedTrainer':
         from trainers.uniform_sampling_task_based_trainer import UniformSamplingTaskBasedTrainer
-        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
+        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'cheaterTaskBasedTrainer':
         from trainers.cheater_task_based_trainer import CheaterTaskBasedTrainer
-        return CheaterTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
+        return CheaterTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'highestLossTaskBasedTrainer':
         from trainers.highest_loss_task_based_trainer import HighestLossTaskBasedTrainer
-        return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
+        return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'poolingTaskBasedTrainer':
         from trainers.pooling_task_based_trainer import PoolingTaskBasedTrainer
-        return PoolingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, trainer_get_grad_error, reset_model)
+        return PoolingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
  
     else:
         raise NotImplementedError()

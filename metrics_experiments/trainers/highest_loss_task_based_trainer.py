@@ -11,8 +11,8 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
     def __repr__(self):
         return 'Highest Loss Trainer'
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
-        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model)
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs):
+        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
         self.criterion_noreduce = criterion(reduction='none')
         self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
 
@@ -41,6 +41,10 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
 
             if self.get_gradient_error:
                 true_grad = self.compute_true_grad()
+
+            if self.online and epoch == 1:
+                # At this point, you lose the data, so switch the train loader to only the buffer dataset
+                train_loader = torch.utils.data.DataLoader(self.buffer_dataset, shuffle=True, batch_size=self.dataset_configs['batch_size'])   
 
             self.model.train()
             running_loss = 0.0
@@ -125,7 +129,7 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
         start_idx = task_idx * new_sector_size
 
         new_indices = torch.topk(all_losses, new_sector_size, largest=False, sorted=True).indices
-        # new_indices = np.random.choice(new_labels.shape[0], new_sector_size, replace=False)
+
         for i in range(new_sector_size):
             self.buffer.insert(i+start_idx, new_samples[new_indices[i]], new_labels[new_indices[i]])
 

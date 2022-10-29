@@ -4,7 +4,7 @@ from torchvision import transforms
 import torch
 from .task_dataset import TaskDataset
 
-def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', collapse_targets=True):
+def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', configs=None):
     (trainX, trainY), (testX, testY) = mnist.load_data()
     trainX = torch.from_numpy((trainX/255).reshape(-1, 1, 28, 28)).float()
     testX = torch.from_numpy((testX/255).reshape(-1, 1, 28, 28)).float()
@@ -24,8 +24,11 @@ def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', collapse_t
         val_aug = transforms.Compose([
             transforms.ToPILImage(),
             transforms.ToTensor(),
-            # TODO not actually sure what the honte is here
+            # TODO not actually sure if you're supposed to normalize with this or train normalize
         ])
+
+    val_configs = configs.copy()
+    val_configs['blurry'] = 0
 
     if version == 'normal':
         return {
@@ -34,8 +37,8 @@ def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', collapse_t
         }
     elif version == 'split':
         return {
-            'train': SplitMNISTDataset(trainX, trainY, train_aug, collapse_targets),
-            'test': SplitMNISTDataset(testX, testY, val_aug, collapse_targets),
+            'train': SplitMNISTDataset(trainX, trainY, train_aug, configs),
+            'test': SplitMNISTDataset(testX, testY, val_aug, val_configs),
         }
     else:
         raise NotImplementedError()
@@ -59,9 +62,13 @@ class MNISTDataset(Dataset):
     def is_task_based(self):
         return False
 
+    def __repr__(self):
+        return f'MNIST-Normal'
+
+
 class SplitMNISTDataset(TaskDataset):
-    def __init__(self, x, y, augmentation, collapse_targets):
-        super(SplitMNISTDataset, self).__init__(['0/1', '2/3', '4/5', '6/7', '8/9'])
+    def __init__(self, x, y, augmentation, dataset_config):
+        super(SplitMNISTDataset, self).__init__(['0/1', '2/3', '4/5', '6/7', '8/9'], dataset_config)
         self.augmentation = augmentation
 
         task_idx, self.x, self.y = [], [], []
@@ -76,18 +83,35 @@ class SplitMNISTDataset(TaskDataset):
 
         for idx, task in enumerate(task_idx):
             self.x.append(x[task])
-            if collapse_targets: 
+            if dataset_config['collapse_targets']: 
                 self.y.append(y[task] - 2*idx)
             else:
                 self.y.append(y[task])
 
+    def __repr__(self):
+        return f'CIL-MNIST-Blurry{self.blurry}'
     
     def __len__(self):
-        return len(self.full_x) if self.full_mode else len(self.x[self.active_idx]) 
+        if self.full_mode:
+            return len(self.full_x)
+        else:
+            return int(len(self.x[self.active_idx]) * (1+self.blurry/100))
 
     def __getitem__(self, idx):
-        x = self.full_x[idx] if self.full_mode else self.x[self.active_idx][idx]
-        y = self.full_y[idx] if self.full_mode else self.y[self.active_idx][idx]
+        if self.full_mode:
+            x = self.full_x[idx]
+            y = self.full_y[idx]
+        elif idx >= len(self.x[self.active_idx]):
+            minor_idx = idx - len(self.x[self.active_idx])
+            minor_task = minor_idx % (len(self.tasks) - 1)
+            minor_idx = minor_idx // (len(self.tasks) - 1)
+            if minor_task >= self.active_idx:
+                minor_task+=1
+            x = self.x[minor_task][minor_idx]
+            y = self.y[minor_task][minor_idx]
+        else:
+            x = self.x[self.active_idx][idx]
+            y = self.y[self.active_idx][idx]
 
         if self.augmentation is not None:
             return self.augmentation(x), y

@@ -9,8 +9,8 @@ class NaiveTaskBasedTrainer(TaskTrainer):
     def __repr__(self):
         return 'Naive Trainer'
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
-        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model)
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs):
+        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
 
     def train_task(self, ):
         since = time.time()

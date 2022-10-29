@@ -11,8 +11,8 @@ class CheaterTaskBasedTrainer(TaskTrainer):
     def __repr__(self):
         return 'Cheating Trainer (used as a sanity check for debugging)'
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
-        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model)
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs):
+        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
         self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
 
     def train_task(self, task_idx):

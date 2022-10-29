@@ -10,7 +10,7 @@ import torch
 
 from .task_dataset import TaskDataset
 
-def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', collapse_targets=True):
+def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', configs=None):
 
     def normalize_dataset(data):
         mean = data.mean(axis=(0,1,2)) / 255.0
@@ -63,6 +63,9 @@ def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', collapse
             normalize_dataset(testX)
         ])
 
+    val_configs = configs.copy()
+    val_configs['blurry'] = 0
+
     if version == 'normal':
         return {
             'train': CIFAR10Dataset(trainX, trainY, train_aug),
@@ -70,8 +73,8 @@ def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', collapse
         }
     elif version == 'split':
         return {
-            'train': SplitCIFAR10Dataset(trainX, trainY, train_aug, collapse_targets),
-            'test': SplitCIFAR10Dataset(testX, testY, val_aug, collapse_targets),
+            'train': SplitCIFAR10Dataset(trainX, trainY, train_aug, configs),
+            'test': SplitCIFAR10Dataset(testX, testY, val_aug, val_configs),
         }
     else:
         raise NotImplementedError()
@@ -96,9 +99,13 @@ class CIFAR10Dataset(Dataset):
             return [self.x[idx]]
         return self.x[idx], self.y[idx]
 
+    def __repr__(self):
+        return f'CIFAR10-Normal'
+
+
 class SplitCIFAR10Dataset(TaskDataset):
-    def __init__(self, x, y, augmentation, collapse_targets):
-        super(SplitCIFAR10Dataset, self).__init__(['Airplane/Car', 'Bird/Cat', 'Deer/Dog', 'Frog/Horse', 'Ship/Truck'])
+    def __init__(self, x, y, augmentation, configs):
+        super(SplitCIFAR10Dataset, self).__init__(['Airplane/Car', 'Bird/Cat', 'Deer/Dog', 'Frog/Horse', 'Ship/Truck'], configs)
         self.augmentation = augmentation
 
         task_idx, self.x, self.y = [], [], []
@@ -113,18 +120,33 @@ class SplitCIFAR10Dataset(TaskDataset):
 
         for idx, task in enumerate(task_idx):
             self.x.append(x[task])
-            if collapse_targets: 
+            if configs['collapse_targets']: 
                 self.y.append(y[task] - 2*idx)
             else:
                 self.y.append(y[task])
 
-    
+    def __repr__(self):
+        return f'CIL-CIFAR10-Blurry{self.blurry}'
+
     def __len__(self):
-        return len(self.full_x) if self.full_mode else len(self.x[self.active_idx]) 
+        if self.full_mode:
+            return len(self.full_x)
+        else:
+            return int(len(self.x[self.active_idx]) * (1+self.blurry/100))
 
     def __getitem__(self, idx):
-        x = self.full_x[idx] if self.full_mode else self.x[self.active_idx][idx]
-        y = self.full_y[idx] if self.full_mode else self.y[self.active_idx][idx]
+        if self.full_mode:
+            x = self.full_x[idx]
+            y = self.full_y[idx]
+        elif idx > len(self.x[self.active_idx]):
+            minor_idx = idx - len(self.x[self.active_idx])
+            minor_task = minor_idx % (len(self.tasks) - 1)
+            minor_idx = minor_idx // (len(self.tasks) - 1)
+            x = self.x[minor_task][minor_idx]
+            y = self.y[minor_task][minor_idx]
+        else:
+            x = self.x[self.active_idx][idx]
+            y = self.y[self.active_idx][idx]
 
         if self.augmentation is not None:
             return self.augmentation(x), y

@@ -11,8 +11,8 @@ class PoolingTaskBasedTrainer(TaskTrainer):
     def __repr__(self):
         return '2x2 Pooling Trainer'
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model):
-        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, memory_buffer_size, get_gradient_error, reset_model)
+    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs):
+        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
         self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
 
     def train_task(self, task_idx):
@@ -42,6 +42,10 @@ class PoolingTaskBasedTrainer(TaskTrainer):
 
             if self.get_gradient_error:
                 true_grad = self.compute_true_grad()
+
+            if self.online and epoch == 1:
+                # At this point, you lose the data, so switch the train loader to only the buffer dataset
+                train_loader = torch.utils.data.DataLoader(self.buffer_dataset, shuffle=True, batch_size=self.dataset_configs['batch_size'])   
 
             running_loss = 0.0
             running_corrects = 0

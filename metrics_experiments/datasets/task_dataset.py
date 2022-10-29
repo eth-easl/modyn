@@ -2,9 +2,10 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class TaskDataset(Dataset):
-    def __init__(self, tasks):
+    def __init__(self, tasks, dataset_configs):
         self.tasks = tasks
         self.active_idx = 0
+        self.blurry = dataset_configs.get('blurry', 0)
 
     def set_active_task(self, task):
         if isinstance(task, str):
