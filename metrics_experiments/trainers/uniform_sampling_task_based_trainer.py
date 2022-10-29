@@ -26,6 +26,7 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
             shuffle=True,
             batch_size=self.dataset_configs['batch_size']
         )
+        train_length = (len(self.dataset['train']) + len(self.buffer_dataset))
 
         if task_idx > 0:
             print('Buffer labels: ' + self.buffer.pretty_labels())
@@ -47,6 +48,7 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
                 print('Switching the loader to the buffer dataset')
                 self.buffer_dataset.fake_size = len(self.dataset['train'])
                 train_loader = torch.utils.data.DataLoader(self.buffer_dataset, shuffle=True, batch_size=self.dataset_configs['batch_size'])   
+                train_length = len(self.buffer_dataset)
 
             running_loss = 0.0
             running_corrects = 0
@@ -74,8 +76,8 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
 
                 # self.scheduler.step()
 
-            epoch_loss = running_loss / (len(self.dataset['train']) + len(self.buffer_dataset))
-            epoch_acc = running_corrects.double() / (len(self.dataset['train']) + len(self.buffer_dataset))
+            epoch_loss = running_loss / train_length
+            epoch_acc = running_corrects.double() / train_length
 
             if self.get_gradient_error:
                 grad_error = self.get_grad_error(true_grad).item()
@@ -109,8 +111,8 @@ class UniformSamplingTaskBasedTrainer(TaskTrainer):
         return train_results 
 
     def update_buffer(self, task_idx, new_samples, new_labels):
-        assert self.memory_buffer_size % 12 == 0, "Prototype only supports memory buffer as multiple of 12. "
-        if task_idx >= 4:
+        assert self.memory_buffer_size % 60 == 0, "Prototype only supports memory buffer as multiple of 60. "
+        if task_idx >= 5:
             return
 
         new_sector_size = int(self.memory_buffer_size / (task_idx+1))
