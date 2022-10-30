@@ -8,7 +8,7 @@ from kafka import KafkaConsumer, errors
 from json import loads
 import pandas as pd
 
-from datascorer import DataScorer
+from scorer import RandomScorer
 from datastorage import DataStorage
 
 logging.basicConfig(
@@ -35,7 +35,7 @@ class OfflineDataLoader:
     """
     __config = None
     __data_storage = None
-    __data_orchestrator = None
+    __data_scorer = None
     __nr_batches = 0
     __row_number = 0
 
@@ -49,7 +49,7 @@ class OfflineDataLoader:
         self.__config = config
 
         self.__data_storage = DataStorage()
-        self.__data_orchestrator = DataScorer(config, self.__data_storage)
+        self.__data_scorer = RandomScorer(config, self.__data_storage)
 
     def run(self):
         """
@@ -88,11 +88,11 @@ class OfflineDataLoader:
 
             logger.info(f'Created file {filename}')
 
-            self.__data_orchestrator.add_batch(filename, df['row_id'].tolist())
+            self.__data_scorer.add_batch(filename, df['row_id'].tolist())
 
             self.__nr_batches += 1
-            if (self.__nr_batches % self.__config['data_orchestrator']['nr_files_update'] == 0):
-                self.__data_orchestrator.updatecreate_shuffled_batches_batches()
+            if (self.__nr_batches % self.__config['data_scorer']['nr_files_update'] == 0):
+                self.__data_scorer.create_shuffled_batches(self.__data_scorer.BATCHES_BY_SCORE, self.__data_scorer.ROWS_BY_SCORE, self.__config['data_scorer']['nr_files_update'], self.__config['data_feeder']['batch_size'])
                 logger.info("Updating batches")
 
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
@@ -112,6 +112,9 @@ class OfflineDataLoader:
         self.__row_number += rows_in_df
         df['row_id'] = rows
         return df
+
+    def get_row_number(self):
+        return self.__row_number
 
 
 def main():

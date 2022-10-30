@@ -28,5 +28,5 @@
 ### How to test:
 0. Create [virtual environment](https://docs.python.org/3/tutorial/venv.html) 
 1. Install python requirements `pip install -r src/requirements.txt`
-2. cd into package to be tested (for example `src/datascorer`)
+2. cd into package to be tested (for example `src/data_scorer`)
 3. Run tests `python -m unittest discover`

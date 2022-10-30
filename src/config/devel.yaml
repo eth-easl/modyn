@@ -1,5 +1,5 @@
 # TODO: Define structure and write Schema
-data_orchestrator:
+data_scorer:
   in_memory_database: 'metadata.db'
   nr_files_update: 3
 

@@ -14,7 +14,7 @@ RUN python -m pip install -r requirements.txt
 WORKDIR /src
 COPY . /src
 
-RUN pip install data_orchestrator/.
+RUN pip install scorer/.
 RUN pip install data_storage/.
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder

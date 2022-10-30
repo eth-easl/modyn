@@ -15,9 +15,9 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
-__logger = logging.getLogger('DataFeeder')
+logger = logging.getLogger('DataFeeder')
 handler = logging.FileHandler('DataFeeder.log')
-__logger.addHandler(handler)
+logger.addHandler(handler)
 
 
 def parse_args():
@@ -32,6 +32,9 @@ class DataFeeder:
     Class to simulate a dynamic dataset out of a static dataset from provided parameters
     """
     __config = None
+    _batch_size = None
+    _kafka_topic = None
+    _interval_length = None
 
     def __init__(self, config: dict):
         """
@@ -41,6 +44,9 @@ class DataFeeder:
             See src/config/README.md for more information
         """
         self.__config = config
+        self._batch_size = config['data_feeder']['batch_size']
+        self._kafka_topic = config['kafka']['topic']
+        self._interval_length = config['data_feeder']['interval_length']
 
     def write_to_kafka(self, topic_name: str, items: pd.DataFrame):
         """
@@ -56,17 +62,17 @@ class DataFeeder:
         try:
             producer.send(topic_name, value=items.to_json())
         except KafkaTimeoutError as kte:
-            __logger.exception(
+            logger.exception(
                 "KafkaLogsProducer timeout sending log to Kafka: {0}".format(kte))
         except KafkaError as ke:
-            __logger.exception(
+            logger.exception(
                 "KafkaLogsProducer error sending log to Kafka: {0}".format(ke))
         except Exception as e:
-            __logger.exception(
+            logger.exception(
                 "KafkaLogsProducer exception sending log to Kafka: {0}".format(e))
 
         producer.flush()
-        __logger.info('Wrote messages into topic: {0}'.format(topic_name))
+        logger.info('Wrote messages into topic: {0}'.format(topic_name))
 
     def load_data(self, train_file: str):
         """
@@ -75,10 +81,10 @@ class DataFeeder:
         Args:
             train_file (str): File to be read and sent over kafka
         """
-        for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0, chunksize=self.__config['data_feeder']['batch_size']):
-            self.write_to_kafka(self.__config['kafka']['topic'], chunk)
+        for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0, chunksize=self._batch_size):
+            self.write_to_kafka(self._kafka_topic, chunk)
 
-            time.sleep(self.__config['data_feeder']['interval_length'])
+            time.sleep(self._interval_length)
 
 
 def main():
@@ -89,12 +95,12 @@ def main():
         try:
             parsed_yaml = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
-            __logger.error(exc)
+            logger.error(exc)
             raise yaml.YAMLError
 
     data_feeder = DataFeeder(parsed_yaml)
 
-    __logger.info('Starting up')
+    logger.info('Starting up')
 
     data_feeder.load_data(parsed_yaml['data_feeder']['input_file'])
 
