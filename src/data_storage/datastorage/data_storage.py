@@ -50,12 +50,14 @@ class DataStorage:
             })
         return filename
 
-    def create_shuffled_batch(self, filenames_to_rows: dict[str, list[int]]) -> str:
+    def create_shuffled_batch(
+            self, filenames_to_rows: dict[str, list[int]]) -> str:
         """
         Create a new shuffled batch from the specification of the input parameter
 
         Args:
-            filenames_to_rows (dict[str, list[int]]): dictionary of the filenames and the corresponding rows that should be added to the new batch
+            filenames_to_rows (dict[str, list[int]]): dictionary of the 
+            filenames and the corresponding rows that should be added to the new batch
 
         Returns:
             str: corresponding filename of the new batch

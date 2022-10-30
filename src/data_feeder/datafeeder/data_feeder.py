@@ -57,13 +57,15 @@ class DataFeeder:
             items (pd.DataFrame): dataframe to be written to the stream
         """
         producer = KafkaProducer(
-            bootstrap_servers=self.__config['kafka']['bootstrap_servers'], value_serializer=lambda x: x.encode('utf-8'))
+            bootstrap_servers=self.__config['kafka']['bootstrap_servers'],
+            value_serializer=lambda x: x.encode('utf-8'))
 
         try:
             producer.send(topic_name, value=items.to_json())
         except KafkaTimeoutError as kte:
             logger.exception(
-                "KafkaLogsProducer timeout sending log to Kafka: {0}".format(kte))
+                "KafkaLogsProducer timeout sending log to Kafka: {0}".format(
+                    kte))
         except KafkaError as ke:
             logger.exception(
                 "KafkaLogsProducer error sending log to Kafka: {0}".format(ke))
@@ -81,7 +83,8 @@ class DataFeeder:
         Args:
             train_file (str): File to be read and sent over kafka
         """
-        for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0, chunksize=self._batch_size):
+        for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0,
+                                 chunksize=self._batch_size):
             self.write_to_kafka(self._kafka_topic, chunk)
 
             time.sleep(self._interval_length)

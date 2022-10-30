@@ -48,16 +48,18 @@ class RandomScorer(Scorer):
         """
         return random.uniform(0, 1)
 
-    def create_shuffled_batches(self, batch_selection, row_selection, batch_count, batch_size):
+    def create_shuffled_batches(
+            self, batch_selection, row_selection, batch_count, batch_size):
         """
-        Update an existing batch based on a batch and row selection criterion. Select a number of batches and decide on a total number of 
-        samples for the new batch. The created batch will contain equal proportion of the selected batches.
+        Update an existing batch based on a batch and row selection criterion. Select a number of batches 
+        and decide on a total number of samples for the new batch. The created batch will contain equal 
+        proportion of the selected batches.
 
         Args:
-            batch_selection (str, optional): sql to select batches according to a criteria. Defaults to BATCHES_BY_SCORE.
-            row_selection (str, optional): sql to select rows accordig to a criteria. Defaults to ROWS_BY_SCORE.
-            batch_count (int, optional): number of batches to include in the updated batch. Defaults to __config['data_scorer']['nr_batches_update'].
-            batch_size (int, optional): number of rows in the resulting batch. Defaults to __config['data_feeder']['batch_size'].
+            batch_selection (str, optional): sql to select batches according to a criteria.
+            row_selection (str, optional): sql to select rows accordig to a criteria.
+            batch_count (int, optional): number of batches to include in the updated batch.
+            batch_size (int, optional): number of rows in the resulting batch.
         """
         batches = self.fetch_batches(batch_selection, batch_count)
         row_count = int(batch_size / batch_count)

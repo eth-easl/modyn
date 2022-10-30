@@ -42,39 +42,55 @@ class TestRandomScorer(TestScorer):
 
         cursor = self.scorer._con.cursor()
 
-        cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                       (filename1, 10.1, 0.3, 1))
-        cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                       (filename2, 10.5, 0.8, 1))
-        cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                       (filename3, 11, 0.7, 1))
-        cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                       (filename4, 15, 0.5, 1))
+        cursor.execute(
+            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
+            (filename1, 10.1, 0.3, 1))
+        cursor.execute(
+            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
+            (filename2, 10.5, 0.8, 1))
+        cursor.execute(
+            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
+            (filename3, 11, 0.7, 1))
+        cursor.execute(
+            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
+            (filename4, 15, 0.5, 1))
 
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (10, 1, 0.5))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (11, 1, 0.8))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (12, 1, 0.3))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (20, 2, 0.9))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (21, 2, 0.7))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (22, 2, 0.1))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (30, 3, 0.1))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (31, 3, 0.2))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (32, 3, 0.8))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (40, 4, 0.74))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (41, 4, 0.23))
-        cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                       (42, 4, 0.8))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (10, 1, 0.5))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (11, 1, 0.8))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (12, 1, 0.3))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (20, 2, 0.9))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (21, 2, 0.7))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (22, 2, 0.1))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (30, 3, 0.1))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (31, 3, 0.2))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (32, 3, 0.8))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (40, 4, 0.74))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (41, 4, 0.23))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (42, 4, 0.8))
 
         self.scorer.create_shuffled_batches(
             self.scorer.BATCHES_BY_SCORE, self.scorer.ROWS_BY_SCORE, 2, 4)

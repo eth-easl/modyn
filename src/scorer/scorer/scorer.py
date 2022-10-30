@@ -10,7 +10,8 @@ from datastorage import DataStorage
 
 class Scorer(ABC):
     """
-    Abstract class to score the samples according to the implementors defined data importance measure and update the corresponding metadata database
+    Abstract class to score the samples according to the implementors defined data importance measure 
+    and update the corresponding metadata database
     """
     _config = None
     _data_storage = None
@@ -88,8 +89,10 @@ class Scorer(ABC):
             int: unique id for this batch
         """
         cur = self._con.cursor()
-        cur.execute('''INSERT INTO batch_metadata(filename, timestamp, new) VALUES(?, ?, ?)''',
-                    (filename, time.time(), 1))
+        cur.execute(
+            '''INSERT INTO batch_metadata(filename, timestamp, new) VALUES(?, ?, ?)''',
+            (filename, time.time(),
+             1))
         batch_id = cur.lastrowid
         self._con.commit()
         return batch_id
@@ -104,8 +107,9 @@ class Scorer(ABC):
             score (float): initial score of the row
         """
         cur = self._con.cursor()
-        cur.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                    (row, batch_id, score))
+        cur.execute(
+            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
+            (row, batch_id, score))
         self._con.commit()
 
     def update_batch_metadata(self, batch_id: int, score: float, new: bool):
@@ -119,7 +123,8 @@ class Scorer(ABC):
         """
         cur = self._con.cursor()
         cur.execute(
-            '''UPDATE batch_metadata SET score = ?, new = ? WHERE id = ?''', (score, new, batch_id))
+            '''UPDATE batch_metadata SET score = ?, new = ? WHERE id = ?''',
+            (score, new, batch_id))
         self._con.commit()
 
     def update_row_metadata(self, batch_id: int, row: int, score: float):
@@ -133,7 +138,8 @@ class Scorer(ABC):
         """
         cur = self._con.cursor()
         cur.execute(
-            '''UPDATE row_metadata SET score = ? WHERE batch_id = ? AND row = ?''', (score, batch_id, row))
+            '''UPDATE row_metadata SET score = ? WHERE batch_id = ? AND row = ?''',
+            (score, batch_id, row))
         self._con.commit()
 
     def fetch_batches(self, sql_statment: str, batch_count: int) -> list[tuple[int, str]]:
@@ -184,10 +190,12 @@ class Scorer(ABC):
         return row[1]
 
     @abstractmethod
-    def create_shuffled_batches(self, batch_selection, row_selection, batch_count, batch_size):
+    def create_shuffled_batches(
+            self, batch_selection, row_selection, batch_count, batch_size):
         """
-        Update an existing batch based on a batch and row selection criterion. Select a number of batches and decide on a total number of 
-        samples for the new batch. The created batch will contain equal proportion of the selected batches.
+        Update an existing batch based on a batch and row selection criterion. Select a 
+        number of batches and decide on a total number of samples for the new batch.
+        The created batch will contain equal proportion of the selected batches.
 
         Args:
             batch_selection (str, optional): sql to select batches according to a criteria.

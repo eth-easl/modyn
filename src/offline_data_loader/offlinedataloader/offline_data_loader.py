@@ -30,8 +30,8 @@ def parse_args():
 
 class OfflineDataLoader:
     """
-    Loading data from a dynamic source (currently a kafka stream), storing the data and providing the data
-    importance class with the necessary information for its workflow
+    Loading data from a dynamic source (currently a kafka stream), storing the data and 
+    providing the data importance class with the necessary information for its workflow
     """
     __config = None
     __data_storage = None
@@ -55,7 +55,8 @@ class OfflineDataLoader:
         """
         Run an instance of the offline dataloader
 
-        Currently, everything is hooked on this instance of the offline dataloader and all the work happens from here.
+        Currently, everything is hooked on this instance of the offline dataloader 
+        and all the work happens from here.
 
         We constantly read from the kafka stream and if a new message arrives:
 
@@ -63,7 +64,8 @@ class OfflineDataLoader:
            2. run some offline processing (to be extended)
            3. write the file to storage as a json
            4. update the metadata in the database
-           5. every n files that have arrived also create a new batch by shuffling existing batches where n is configurable
+           5. every n files that have arrived also create a new batch by shuffling 
+           existing batches where n is configurable
         """
         try:
             consumer = KafkaConsumer(
@@ -92,8 +94,11 @@ class OfflineDataLoader:
 
             self.__nr_batches += 1
             if (self.__nr_batches % self.__config['data_scorer']['nr_files_update'] == 0):
-                self.__data_scorer.create_shuffled_batches(self.__data_scorer.BATCHES_BY_SCORE, self.__data_scorer.ROWS_BY_SCORE,
-                                                           self.__config['data_scorer']['nr_files_update'], self.__config['data_feeder']['batch_size'])
+                self.__data_scorer.create_shuffled_batches(
+                    self.__data_scorer.BATCHES_BY_SCORE, self.__data_scorer.
+                    ROWS_BY_SCORE, self.__config['data_scorer']
+                    ['nr_files_update'],
+                    self.__config['data_feeder']['batch_size'])
                 logger.info("Updating batches")
 
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
