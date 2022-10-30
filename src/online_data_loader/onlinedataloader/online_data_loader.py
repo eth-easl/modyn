@@ -1,8 +1,6 @@
 class OnlineDataLoader:
     """
     Provide an abstraction for the dataloader
-
-    TODO: Extend the underlying pytorch dataloader
     """
     __config = None
 
@@ -18,5 +16,5 @@ class OnlineDataLoader:
         pass
 
     def get_next(self):
-        # TODO: Connect instance with trainer to feed data fast and efficiently
+        # TODO: Connect instance with trainer to feed data fast and efficiently
         pass
