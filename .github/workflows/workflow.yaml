@@ -5,7 +5,7 @@ on: [push]
 defaults:
   run:
     shell: bash
-    working-directory: scr
+    working-directory: src
 
 jobs:
   build:
