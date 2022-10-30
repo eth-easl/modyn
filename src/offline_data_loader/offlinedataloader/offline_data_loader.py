@@ -30,8 +30,8 @@ def parse_args():
 
 class OfflineDataLoader:
     """
-    Loading data from a dynamic source (currently a kafka stream), storing the data and providing the data importance class
-    with the necessary information for its workflow
+    Loading data from a dynamic source (currently a kafka stream), storing the data and providing the data
+    importance class with the necessary information for its workflow
     """
     __config = None
     __data_storage = None
