@@ -40,7 +40,7 @@ class DataFeeder:
         """
         Args:
             config (dict): YAML config file with the required structure. 
-            
+
             See src/config/README.md for more information
         """
         self.__config = config

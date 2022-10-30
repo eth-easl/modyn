@@ -1,12 +1,13 @@
 import unittest
 import sqlite3
-import os 
+import os
 from unittest.mock import MagicMock
 
 from mock import patch
 
 from scorer import Scorer
 from datastorage import DataStorage
+
 
 class TestScorer(unittest.TestCase):
     STORAGE_LOCATION = os.getcwd()
@@ -16,7 +17,7 @@ class TestScorer(unittest.TestCase):
         def __init__(self, config):
             self._con = sqlite3.connect(':memory:')
             self._data_storage = DataStorage()
-            
+
         with patch.object(Scorer, '__init__', __init__):
             self.scorer = Scorer(None)
             self.scorer.get_score = MagicMock(return_value=0)
@@ -62,7 +63,7 @@ class TestScorer(unittest.TestCase):
 
     def test_add_batch(self):
         test_file = 'test_file1.csv'
-        rows1 = [6,7,8]
+        rows1 = [6, 7, 8]
 
         self.scorer.add_batch(test_file, rows1)
 
@@ -83,7 +84,7 @@ class TestScorer(unittest.TestCase):
         self.assertEqual(result_rows[2][1], batch_id)
         self.assertTrue(0 <= result_rows[2][2] <= 1)
 
-        rows2 = [42,96,106]
+        rows2 = [42, 96, 106]
 
         self.scorer.add_batch(test_file, rows2)
 
@@ -94,7 +95,8 @@ class TestScorer(unittest.TestCase):
         self.assertTrue(0 <= row[3] <= 1)
         self.assertEqual(row[4], 1)
 
-        cursor.execute("SELECT * FROM row_metadata WHERE batch_id=2 ORDER BY row ASC;")
+        cursor.execute(
+            "SELECT * FROM row_metadata WHERE batch_id=2 ORDER BY row ASC;")
         result_rows = cursor.fetchall()
         self.assertEqual(result_rows[0][0], rows2[0])
         self.assertTrue(0 <= result_rows[0][2] <= 1)
@@ -111,19 +113,20 @@ class TestScorer(unittest.TestCase):
         cursor = self.scorer._con.cursor()
 
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename1, 10.1, 0.3, 1))
+                       (filename1, 10.1, 0.3, 1))
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename2, 10.5, 0.8, 1))
+                       (filename2, 10.5, 0.8, 1))
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename3, 11, 0.7, 1))
+                       (filename3, 11, 0.7, 1))
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename4, 15, 0.5, 1))
+                       (filename4, 15, 0.5, 1))
 
         results = self.scorer.fetch_batches(self.scorer.BATCHES_BY_SCORE, 2)
         self.assertEqual(results[0][1], filename2)
         self.assertEqual(results[1][1], filename3)
 
-        results = self.scorer.fetch_batches(self.scorer.BATCHES_BY_TIMESTAMP, 2)
+        results = self.scorer.fetch_batches(
+            self.scorer.BATCHES_BY_TIMESTAMP, 2)
         self.assertEqual(results[0][1], filename4)
         self.assertEqual(results[1][1], filename3)
 
@@ -131,19 +134,17 @@ class TestScorer(unittest.TestCase):
         cursor = self.scorer._con.cursor()
 
         cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                    (10, 1, 0.5))
+                       (10, 1, 0.5))
         cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                    (11, 1, 0.8))
+                       (11, 1, 0.8))
         cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                    (12, 1, 0.3))
+                       (12, 1, 0.3))
         cursor.execute('''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-                    (13, 2, 0.9))
+                       (13, 2, 0.9))
 
         results = self.scorer.fetch_rows(self.scorer.ROWS_BY_SCORE, 2, 1)
         self.assertEqual(results[0], 11)
         self.assertEqual(results[1], 10)
-
-    
 
     def test_get_next_batch(self):
         filename1 = 'test1.tar'
@@ -154,13 +155,13 @@ class TestScorer(unittest.TestCase):
         cursor = self.scorer._con.cursor()
 
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename1, 10.1, 0.3, 1))
+                       (filename1, 10.1, 0.3, 1))
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename2, 10.5, 0.8, 1))
+                       (filename2, 10.5, 0.8, 1))
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename3, 11, 0.7, 1))
+                       (filename3, 11, 0.7, 1))
         cursor.execute('''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-                    (filename4, 15, 0.5, 1))
+                       (filename4, 15, 0.5, 1))
 
         result = self.scorer.get_next_batch()
         self.assertEqual(result, filename1)

@@ -3,6 +3,7 @@ from onlinedataloader.onlinedataloader.online_data_loader import OnlineDataLoade
 
 from onlinedataloader import OnlineDataLoader
 
+
 class Trainer:
     __config = None
     __online_data_loader = None
@@ -20,7 +21,7 @@ class Trainer:
         pass
 
     def online_training(self):
-        # TODO: Implement 
+        # TODO: Implement
         pass
 
     def run(self):

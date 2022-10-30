@@ -7,8 +7,6 @@ import pandas as pd
 
 from datafeeder import DataFeeder
 
-STORAGE_LOCATION = os.getcwd()
-
 
 class TestDataFeeder(unittest.TestCase):
 
@@ -28,5 +26,5 @@ class TestDataFeeder(unittest.TestCase):
 
             pd.testing.assert_frame_equal(
                 data_feeder.write_to_kafka.call_args[0][1],
-                pd.read_csv(os.getcwd() + '/tests/data/test.csv')
+                pd.read_csv(os.getcwd() + '/data_feeder/tests/data/test.csv')
             )

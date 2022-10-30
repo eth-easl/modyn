@@ -8,6 +8,7 @@ from . import Scorer
 
 STORAGE_LOCATION = os.getcwd()
 
+
 class RandomScorer(Scorer):
     """
     Score the samples according to the defined data importance measure and update the corresponding metadata database

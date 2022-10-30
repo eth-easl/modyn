@@ -43,7 +43,7 @@ class OfflineDataLoader:
         """
         Args:
             config (dict): YAML config file with the required structure. 
-            
+
             See src/config/README.md for more information
         """
         self.__config = config
@@ -92,7 +92,8 @@ class OfflineDataLoader:
 
             self.__nr_batches += 1
             if (self.__nr_batches % self.__config['data_scorer']['nr_files_update'] == 0):
-                self.__data_scorer.create_shuffled_batches(self.__data_scorer.BATCHES_BY_SCORE, self.__data_scorer.ROWS_BY_SCORE, self.__config['data_scorer']['nr_files_update'], self.__config['data_feeder']['batch_size'])
+                self.__data_scorer.create_shuffled_batches(self.__data_scorer.BATCHES_BY_SCORE, self.__data_scorer.ROWS_BY_SCORE,
+                                                           self.__config['data_scorer']['nr_files_update'], self.__config['data_feeder']['batch_size'])
                 logger.info("Updating batches")
 
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:

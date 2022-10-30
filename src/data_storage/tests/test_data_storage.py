@@ -1,6 +1,6 @@
 import unittest
 import uuid
-import os 
+import os
 
 from datastorage import DataStorage
 
@@ -13,4 +13,5 @@ class TestDataStorage(unittest.TestCase):
         test_name = str(uuid.uuid4())
         data_storage.write_dataset_to_tar(test_name, 'TEST')
 
-        self.assertTrue(os.path.isfile(os.getcwd() + '/store/' + test_name + '.tar'))
+        self.assertTrue(os.path.isfile(
+            os.getcwd() + '/store/' + test_name + '.tar'))
