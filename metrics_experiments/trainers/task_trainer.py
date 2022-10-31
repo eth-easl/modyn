@@ -8,11 +8,12 @@ import numpy as np
 
 class TaskTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs):
+    def __init__(self, model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
-        self.scheduler = scheduler
+        self.scheduler_factory = scheduler_factory
+        self.scheduler = scheduler_factory()
         self.dataset = dataset
         self.dataset_configs = dataset_configs
         self.num_epochs = num_epochs
@@ -164,3 +165,6 @@ class TaskTrainer:
 
     def clear_grad(self):
         self.grad_total = None 
+
+    def reset_scheduler(self):
+        self.scheduler = self.scheduler_factory()

@@ -37,7 +37,7 @@ def make_model(model_config):
     else:
         raise NotImplementedError()
 
-def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device):
+def make_trainer(trainer_configs, model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device):
     trainer_name = trainer_configs['name']
     trainer_configs.setdefault('get_grad_error', False)
     trainer_configs.setdefault('memory_buffer_size', 10)
@@ -46,22 +46,25 @@ def make_trainer(trainer_configs, model, criterion, optimizer, scheduler, datase
 
     if trainer_name == 'defaultTrainer':
         from trainers.default_trainer import DefaultTrainer
-        return DefaultTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device)
+        return DefaultTrainer(model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device)
     elif trainer_name == 'naiveTaskBasedTrainer':
         from trainers.naive_task_based_trainer import NaiveTaskBasedTrainer
-        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
+        return NaiveTaskBasedTrainer(model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'uniformSamplingTaskBasedTrainer':
         from trainers.uniform_sampling_task_based_trainer import UniformSamplingTaskBasedTrainer
-        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
+        return UniformSamplingTaskBasedTrainer(model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'cheaterTaskBasedTrainer':
         from trainers.cheater_task_based_trainer import CheaterTaskBasedTrainer
-        return CheaterTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
+        return CheaterTaskBasedTrainer(model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'highestLossTaskBasedTrainer':
         from trainers.highest_loss_task_based_trainer import HighestLossTaskBasedTrainer
-        return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
+        return HighestLossTaskBasedTrainer(model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs)
     elif trainer_name == 'poolingTaskBasedTrainer':
         from trainers.pooling_task_based_trainer import PoolingTaskBasedTrainer
-        return PoolingTaskBasedTrainer(model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
+        return PoolingTaskBasedTrainer(model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs)
+    elif trainer_name == 'gdumbTrainer':
+        from trainers.gdumb_trainer import GDumbTrainer
+        return GDumbTrainer(model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs)
  
     else:
         raise NotImplementedError()

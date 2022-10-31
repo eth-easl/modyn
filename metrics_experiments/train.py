@@ -42,9 +42,10 @@ if __name__ == '__main__':
     model = model.to(device)
     criterion = torch.nn.CrossEntropyLoss
     optimizer = Adam(model.parameters(), lr=configs['lr'])
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    def scheduler_factory():
+        return lr_scheduler.CosineAnnealingLR(optimizer, 32)
 
-    trainer = builder.make_trainer(configs['trainer'], model, criterion, optimizer, exp_lr_scheduler, 
+    trainer = builder.make_trainer(configs['trainer'], model, criterion, optimizer, scheduler_factory, 
             dataset, configs['dataset'], 
             epochs, device)
 
