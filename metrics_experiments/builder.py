@@ -24,6 +24,16 @@ def make_model(model_config):
         if model_config['num_classes'] != 1000:
             model.fc = torch.nn.Linear(model.fc.in_features, model_config['num_classes'])
         return model
+
+    if model_config['name'].lower() in ['resnet34', 'resnet-34']:
+        from torchvision import models
+        import torch.nn
+        model = models.resnet34(pretrained=False)
+        if model_config['in_channels'] != 3:
+            model.conv1 = torch.nn.Conv2d(model_config['in_channels'], 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False) 
+        if model_config['num_classes'] != 1000:
+            model.fc = torch.nn.Linear(model.fc.in_features, model_config['num_classes'])
+        return model
     
     elif model_config['name'].lower() == 'vanilla':
         from models.fc import FCNet
