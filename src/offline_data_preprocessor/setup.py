@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(
-    name='OfflineDataLoader',
+    name='OfflineDataPreprocessor',
     version='1.0',
-    packages=['offlinedataloader'],
+    packages=['offlinedatapreprocessor'],
 )

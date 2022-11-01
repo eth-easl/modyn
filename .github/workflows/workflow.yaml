@@ -23,7 +23,7 @@ jobs:
         pip install -r requirements.txt
         pip install data_feeder/.
         pip install data_storage/.
-        pip install offline_data_loader/.
+        pip install offline_data_preprocessor/.
         pip install scorer/.
     - name: autopep8
       id: autopep8
@@ -39,4 +39,4 @@ jobs:
         pytest scorer/.
         pytest data_storage/.
         pytest data_feeder/.
-        pytest offline_data_loader/.
+        pytest offline_data_preprocessor/.

@@ -18,7 +18,7 @@
 ![Current state diagram](docs/images/Current_design.png)
 
 - DataFeeder feeds the defined file in defined batch sizes to the Kafka stream
-- DataLoader reads the data, does some minimal offline preprocessing, writes the batch to harddisk, updates the metadata and every now and then creates new batches from the existing batches
+- DataPreprocessor reads the data, does some minimal offline preprocessing, writes the batch to harddisk, updates the metadata and every now and then creates new batches from the existing batches
 
 ### How to run:
 1. Install [Docker](https://docs.docker.com/get-docker/) 
