@@ -1,7 +1,5 @@
 import sqlite3
-import logging
 import time
-import statistics
 from abc import ABC, abstractmethod
 
 from datastorage import DataStorage
@@ -17,6 +15,7 @@ class Scorer(ABC):
     _con = None
     _nr_batches_update = 3
     _batch_size = 100
+    _nr_batches = 0
     ROWS_BY_SCORE = "SELECT row, score from row_metadata WHERE batch_id=? ORDER BY score DESC LIMIT "
     BATCHES_BY_SCORE = "SELECT id, filename FROM batch_metadata ORDER BY score DESC LIMIT "
     BATCHES_BY_TIMESTAMP = "SELECT id, filename FROM batch_metadata ORDER BY timestamp DESC LIMIT "
@@ -55,25 +54,6 @@ class Scorer(ABC):
             FOREIGN KEY (batch_id) REFERENCES batch_metadata(id));'''
                     )
         self._con.commit()
-
-    def add_batch(self, filename: str, rows: list[int], scores=None):
-        """
-        Add a batch to the data scorer metadata database
-
-        Args:
-            filename (str): filename of the batch
-            rows (list[int]): row numbers in the batch
-        """
-        logging.info(
-            f'Adding batch from input file {filename} to metadata database')
-        batch_id = self.add_batch_to_metadata(filename)
-        scores = []
-        for row in rows:
-            score = self.get_score()
-            self.add_row_to_metadata(row, batch_id, score)
-            scores.append(score)
-        median = statistics.median(scores)
-        self.update_batch_metadata(batch_id, median, 1)
 
     def add_batch_to_metadata(self, filename: str) -> int:
         """
@@ -211,6 +191,17 @@ class Scorer(ABC):
 
         Returns:
             float: score
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_batch(self, filename: str, rows: list[int], scores=None, initial=False):
+        """
+        Add a batch to the data scorer metadata database
+
+        Args:
+            filename (str): filename of the batch
+            rows (list[int]): row numbers in the batch
         """
         raise NotImplementedError
 

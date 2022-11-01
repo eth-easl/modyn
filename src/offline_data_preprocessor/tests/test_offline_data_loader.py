@@ -3,7 +3,7 @@ import unittest
 from mock import patch
 import pandas as pd
 
-from offlinedataloader import OfflineDataLoader
+from offlinedatapreprocessor import OfflineDataPreprocessor
 
 
 class TestOfflineDataLoader(unittest.TestCase):
@@ -11,8 +11,8 @@ class TestOfflineDataLoader(unittest.TestCase):
     def test_offline_preprocessing(self):
         def __init__(self, config):
             pass
-        with patch.object(OfflineDataLoader, '__init__', __init__):
-            offline_dataloader = OfflineDataLoader(None)
+        with patch.object(OfflineDataPreprocessor, '__init__', __init__):
+            offline_dataloader = OfflineDataPreprocessor(None)
 
             self.assertEqual(offline_dataloader.get_row_number(), 0)
 

@@ -16,21 +16,21 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
 
-logger = logging.getLogger('OfflineDataLoader')
-handler = logging.FileHandler('OfflineDataLoader.log')
+logger = logging.getLogger('OfflineDataPreprocessor')
+handler = logging.FileHandler('OfflineDataPreprocessor.log')
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Data Loader")
+    parser = argparse.ArgumentParser(description="Data Preprocessor")
     parser.add_argument("config", help="Config File")
     args = parser.parse_args()
     return args
 
 
-class OfflineDataLoader:
+class OfflineDataPreprocessor:
     """
     Loading data from a dynamic source (currently a kafka stream), storing the data and
     providing the data importance class with the necessary information for its workflow
@@ -38,7 +38,6 @@ class OfflineDataLoader:
     __config = None
     __data_storage = None
     __data_scorer = None
-    __nr_batches = 0
     __row_number = 0
 
     def __init__(self, config: dict):
@@ -55,9 +54,9 @@ class OfflineDataLoader:
 
     def run(self):
         """
-        Run an instance of the offline dataloader
+        Run an instance of the offline data preprocessor
 
-        Currently, everything is hooked on this instance of the offline dataloader
+        Currently, everything is hooked on this instance of the offline data preprocessor
         and all the work happens from here.
 
         We constantly read from the kafka stream and if a new message arrives:
@@ -94,15 +93,6 @@ class OfflineDataLoader:
 
             self.__data_scorer.add_batch(filename, df['row_id'].tolist())
 
-            self.__nr_batches += 1
-            if (self.__nr_batches % self.__config['data_scorer']['nr_files_update'] == 0):
-                self.__data_scorer.create_shuffled_batches(
-                    self.__data_scorer.BATCHES_BY_SCORE, self.__data_scorer.
-                    ROWS_BY_SCORE, self.__config['data_scorer']
-                    ['nr_files_update'],
-                    self.__config['data_feeder']['batch_size'])
-                logger.info("Updating batches")
-
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
         """
         Apply offline processing of the data to make it ready for storage
@@ -136,8 +126,8 @@ def main():
             logger.error(exc)
             raise yaml.YAMLError
 
-    data_loader = OfflineDataLoader(parsed_yaml)
-    data_loader.run()
+    data_preprocessor = OfflineDataPreprocessor(parsed_yaml)
+    data_preprocessor.run()
 
 
 if __name__ == "__main__":

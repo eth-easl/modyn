@@ -2,6 +2,7 @@ import sqlite3
 import random
 import logging
 import os
+import statistics
 
 from datastorage import DataStorage
 from . import Scorer
@@ -13,7 +14,7 @@ class RandomScorer(Scorer):
     """
     Score the samples according to the defined data importance measure and update the corresponding metadata database
     """
-    __config = None
+    _config = None
     _data_storage = None
     _con = None
     __nr_batches_update = 3
@@ -71,4 +72,32 @@ class RandomScorer(Scorer):
 
         new_filename, new_rows = self._data_storage.create_shuffled_batch(
             filename_to_rows)
-        self.add_batch(new_filename, new_rows)
+        self.add_batch(new_filename, new_rows, initial=False)
+
+    def add_batch(self, filename: str, rows: list[int], initial=True):
+        """
+        Add a batch to the data scorer metadata database
+
+        Calculate the batch score by the median of the row scores
+
+        Args:
+            filename (str): filename of the batch
+            rows (list[int]): row numbers in the batch
+            initial (bool): if adding a batch initially or otherwise
+        """
+        logging.info(
+            f'Adding batch from input file {filename} to metadata database')
+        self._nr_batches += 1
+        if (initial and self._nr_batches % self._config['data_scorer']['nr_files_update'] == 0):
+            self.create_shuffled_batches(
+                self.BATCHES_BY_SCORE, self.ROWS_BY_SCORE, 
+                self._config['data_scorer']['nr_files_update'],
+                self._config['data_feeder']['batch_size'])
+        batch_id = self.add_batch_to_metadata(filename)
+        scores = []
+        for row in rows:
+            score = self.get_score()
+            self.add_row_to_metadata(row, batch_id, score)
+            scores.append(score)
+        median = statistics.median(scores)
+        self.update_batch_metadata(batch_id, median, 1)

@@ -62,7 +62,8 @@ class DataStorage:
             filenames and the corresponding rows that should be added to the new batch
 
         Returns:
-            str: corresponding filename of the new batch
+            (str, list[int]): corresponding filename of the new batch and the row
+            indexes of the batch
         """
         new_df = pd.DataFrame()
         for filename in filenames_to_rows:
