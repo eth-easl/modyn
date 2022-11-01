@@ -1,4 +1,5 @@
 import sqlite3
+import pathlib
 
 from mock import patch
 import pandas as pd
@@ -7,13 +8,15 @@ from . import TestScorer
 from datastorage import DataStorage
 from scorer import RandomScorer
 
+STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
+
 
 class TestRandomScorer(TestScorer):
 
     def setUp(self):
         def __init__(self, config):
             self._con = sqlite3.connect(':memory:')
-            self._data_storage = DataStorage()
+            self._data_storage = DataStorage(STORAGE_LOCATION + '/scorer/tests/tmp')
 
         with patch.object(RandomScorer, '__init__', __init__):
             self.scorer = RandomScorer(None)
@@ -97,4 +100,8 @@ class TestRandomScorer(TestScorer):
 
         cursor.execute("SELECT * FROM row_metadata WHERE batch_id = 5;")
         row = cursor.fetchall()
+        print(row)
         self.assertEqual(len(row), 4)
+        expected_results = [20,21,31,32]
+        for idx, r in enumerate(row):
+            self.assertEqual(r[0], expected_results[idx])

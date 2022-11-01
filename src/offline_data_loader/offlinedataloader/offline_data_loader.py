@@ -3,6 +3,7 @@ from datetime import datetime
 import yaml
 import uuid
 import logging
+import pathlib
 
 from kafka import KafkaConsumer, errors
 from json import loads
@@ -19,6 +20,7 @@ logger = logging.getLogger('OfflineDataLoader')
 handler = logging.FileHandler('OfflineDataLoader.log')
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
+STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
 
 
 def parse_args():
@@ -30,7 +32,7 @@ def parse_args():
 
 class OfflineDataLoader:
     """
-    Loading data from a dynamic source (currently a kafka stream), storing the data and 
+    Loading data from a dynamic source (currently a kafka stream), storing the data and
     providing the data importance class with the necessary information for its workflow
     """
     __config = None
@@ -42,20 +44,20 @@ class OfflineDataLoader:
     def __init__(self, config: dict):
         """
         Args:
-            config (dict): YAML config file with the required structure. 
+            config (dict): YAML config file with the required structure.
 
             See src/config/README.md for more information
         """
         self.__config = config
 
-        self.__data_storage = DataStorage()
+        self.__data_storage = DataStorage(STORAGE_LOCATION + '/store')
         self.__data_scorer = RandomScorer(config, self.__data_storage)
 
     def run(self):
         """
         Run an instance of the offline dataloader
 
-        Currently, everything is hooked on this instance of the offline dataloader 
+        Currently, everything is hooked on this instance of the offline dataloader
         and all the work happens from here.
 
         We constantly read from the kafka stream and if a new message arrives:
@@ -64,7 +66,7 @@ class OfflineDataLoader:
            2. run some offline processing (to be extended)
            3. write the file to storage as a json
            4. update the metadata in the database
-           5. every n files that have arrived also create a new batch by shuffling 
+           5. every n files that have arrived also create a new batch by shuffling
            existing batches where n is configurable
         """
         try:

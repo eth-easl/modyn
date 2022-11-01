@@ -4,3 +4,4 @@ pandas
 webdataset
 pytest
 mock
+numpy

@@ -2,11 +2,15 @@ import unittest
 import sqlite3
 import os
 from unittest.mock import MagicMock
+import pathlib
+import shutil
 
 from mock import patch
 
 from scorer import Scorer
 from datastorage import DataStorage
+
+STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
 
 
 class TestScorer(unittest.TestCase):
@@ -16,12 +20,15 @@ class TestScorer(unittest.TestCase):
     def setUp(self):
         def __init__(self, config):
             self._con = sqlite3.connect(':memory:')
-            self._data_storage = DataStorage()
+            self._data_storage = DataStorage(STORAGE_LOCATION + '/scorer/tests/tmp')
 
         with patch.object(Scorer, '__init__', __init__):
             self.scorer = Scorer(None)
             self.scorer.get_score = MagicMock(return_value=0)
             self.scorer.setup_database()
+
+    def tearDown(self):
+        shutil.rmtree(STORAGE_LOCATION + '/scorer/tests/tmp')
 
     def test_setup_database(self):
         cursor = self.scorer.get_con().cursor()
@@ -177,3 +184,8 @@ class TestScorer(unittest.TestCase):
 
         result = self.scorer.get_next_batch()
         self.assertEqual(result, filename1)
+
+        cursor.execute(
+            "SELECT new FROM batch_metadata WHERE filename='test1.tar';")
+        result_rows = cursor.fetchall()
+        self.assertTrue(result_rows[0][0] == 0)

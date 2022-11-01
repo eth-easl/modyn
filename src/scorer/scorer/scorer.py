@@ -1,5 +1,4 @@
 import sqlite3
-import pathlib
 import logging
 import time
 import statistics

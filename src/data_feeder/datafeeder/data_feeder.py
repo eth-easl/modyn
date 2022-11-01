@@ -39,7 +39,7 @@ class DataFeeder:
     def __init__(self, config: dict):
         """
         Args:
-            config (dict): YAML config file with the required structure. 
+            config (dict): YAML config file with the required structure.
 
             See src/config/README.md for more information
         """

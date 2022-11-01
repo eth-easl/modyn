@@ -21,9 +21,11 @@ class DataStorage:
     """
     Provide a high level abstraction for the data storage layer
     """
+    __storage_location = None
 
-    def __init__(self):
-        os.makedirs(f'{STORAGE_LOCATION}/store/', exist_ok=True)
+    def __init__(self, storage_location):
+        os.makedirs(storage_location, exist_ok=True)
+        self.__storage_location = storage_location
 
     def write_dataset_to_tar(self, batch_name: str, data: str):
         """
@@ -36,7 +38,7 @@ class DataStorage:
         Returns:
             str: corresponding stored filename
         """
-        filename = f'{STORAGE_LOCATION}/store/{batch_name}.tar'
+        filename = f'{self.__storage_location}/{batch_name}.tar'
 
         logger.info(f'Storing file {filename}')
 
@@ -56,7 +58,7 @@ class DataStorage:
         Create a new shuffled batch from the specification of the input parameter
 
         Args:
-            filenames_to_rows (dict[str, list[int]]): dictionary of the 
+            filenames_to_rows (dict[str, list[int]]): dictionary of the
             filenames and the corresponding rows that should be added to the new batch
 
         Returns:

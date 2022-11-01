@@ -71,5 +71,4 @@ class RandomScorer(Scorer):
 
         new_filename, new_rows = self._data_storage.create_shuffled_batch(
             filename_to_rows)
-        # TODO: Currently we set the scores to new random scores. This would probably have to be changed depending on the data importance metric
         self.add_batch(new_filename, new_rows)
