@@ -1,9 +1,9 @@
 # TODO: Define structure and write Schema
-data_scorer:
+scorer:
   in_memory_database: 'metadata.db'
   nr_files_update: 3
 
-data_feeder:
+feeder:
   batch_size: 100
   input_file: '/data/train/train_mini.csv'
   interval_length: 10

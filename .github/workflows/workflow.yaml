@@ -21,10 +21,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install data_feeder/.
-        pip install data_storage/.
-        pip install offline_data_preprocessor/.
-        pip install scorer/.
+        pip install .
     - name: autopep8
       id: autopep8
       uses: peter-evans/autopep8@v1
@@ -36,7 +33,4 @@ jobs:
         arguments: '--max-line-length=120'
     - name: Test with pytest
       run: |
-        pytest scorer/.
-        pytest data_storage/.
-        pytest data_feeder/.
-        pytest offline_data_preprocessor/.
+        pytest .

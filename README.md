@@ -29,5 +29,5 @@
 0. Create [virtual environment](https://docs.python.org/3/tutorial/venv.html) 
 1. cd into src
 2. Install python requirements `pip install -r src/requirements.txt`
-3. Install local requirements `pip install [module]/.`
-3. Run tests `pytest [module]`
+3. Install local requirements `pip install .`
+3. Run tests `pytest .`
