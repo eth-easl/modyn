@@ -21,33 +21,61 @@ class TestLastSelector(unittest.TestCase):
 
         with patch.object(LastSelector, '__init__', __init__):
             self.scorer = LastSelector(None)
-            self.scorer.setup_database()
+            self.scorer._setup_database()
 
     def test_get_next_batch(self):
-        filename1 = 'test1.tar'
-        filename2 = 'test2.tar'
-        filename3 = 'test3.tar'
-        filename4 = 'test4.tar'
+        filename1 = 'test1.json'
+        filename2 = 'test2.json'
+        filename3 = 'test3.json'
+        filename4 = 'test4.json'
 
         cursor = self.scorer._con.cursor()
 
         cursor.execute(
-            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-            (filename1, 10.1, 0.3, 1))
+            '''INSERT INTO batch_metadata(timestamp, score, new) VALUES(?, ?, ?)''',
+            (10.1, 0.3, 1))
         cursor.execute(
-            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-            (filename2, 10.5, 0.8, 1))
+            '''INSERT INTO batch_metadata(timestamp, score, new) VALUES(?, ?, ?)''',
+            (10.5, 0.8, 1))
         cursor.execute(
-            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-            (filename3, 11, 0.7, 1))
+            '''INSERT INTO batch_metadata(timestamp, score, new) VALUES(?, ?, ?)''',
+            (11, 0.7, 1))
         cursor.execute(
-            '''INSERT INTO batch_metadata(filename, timestamp, score, new) VALUES(?, ?, ?, ?)''',
-            (filename4, 15, 0.5, 1))
-
-        result = self.scorer.get_next_batch()
-        self.assertEqual(result, filename1)
+            '''INSERT INTO batch_metadata(timestamp, score, new) VALUES(?, ?, ?)''',
+            (15, 0.5, 1))
 
         cursor.execute(
-            "SELECT new FROM batch_metadata WHERE filename='test1.tar';")
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (10, filename4, 4, 0.5))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (11, filename4, 4, 0.8))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (12, filename4, 4, 0.3))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (20, filename2, 2, 0.9))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (21, filename2, 2, 0.7))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (22, filename2, 2, 0.1))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (30, filename3, 3, 0.1))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (31, filename3, 3, 0.2))
+        cursor.execute(
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (32, filename3, 3, 0.8))
+
+        result = self.scorer._get_next_batch()
+        self.assertCountEqual(result['test4.json'], [10, 11, 12])
+
+        cursor.execute(
+            "SELECT new FROM batch_metadata WHERE id=4;")
         result_rows = cursor.fetchall()
         self.assertTrue(result_rows[0][0] == 0)

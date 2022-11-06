@@ -5,3 +5,4 @@ webdataset
 pytest
 mock
 numpy
+coverage

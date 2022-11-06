@@ -24,7 +24,7 @@ class Storage:
         os.makedirs(storage_location, exist_ok=True)
         self.__storage_location = storage_location
 
-    def write_dataset_to_tar(self, batch_name: str, data: str):
+    def write_dataset(self, batch_name: str, data: str):
         """
         Write a json batch to a tar
 
@@ -35,43 +35,49 @@ class Storage:
         Returns:
             str: corresponding stored filename
         """
-        filename = f'{self.__storage_location}/{batch_name}.tar'
+        filename = f'{self.__storage_location}/{batch_name}.json'
 
         logger.info(f'Storing file {filename}')
 
-        file = open(filename, 'w+')
-        file.close()
+        with open(filename, 'w+') as file:
+            file.write(data)
 
-        with wds.TarWriter(filename) as sink:
-            sink.write({
-                "__key__": "batch",
-                "data.json": data
-            })
         return filename
 
-    def create_shuffled_batch(
-            self, filenames_to_rows: dict[str, list[int]]) -> str:
+    def get_data(self, dict_data: dict[str, list[int]]) -> str:
         """
-        Create a new shuffled batch from the specification of the input parameter
+        Get the data from a tar
 
         Args:
-            filenames_to_rows (dict[str, list[int]]): dictionary of the
-            filenames and the corresponding rows that should be added to the new batch
+            dict_data (dict[str, list[int]]): map of filename to indexes of the rows in the batch
 
         Returns:
-            (str, list[int]): corresponding filename of the new batch and the row
-            indexes of the batch
+            str: data as json
         """
-        new_df = pd.DataFrame()
-        for filename in filenames_to_rows:
-            dataset = wds.WebDataset(filename)
-            # TODO: The following doesn't yet properly close the tar after opening yet
-            for data in dataset:
-                df = pd.read_json(data['data.json'].decode())
-                selected_df = df[df['row_id'].isin(
-                    filenames_to_rows[filename])]
-                new_df = pd.concat([new_df, selected_df])
-        new_df = new_df.reset_index()
+        # TODO: implement this method as a remote procedure call
+        data = self._get_data(dict_data)
 
-        filename = self.write_dataset_to_tar(uuid.uuid4(), new_df.to_json())
-        return (filename, new_df['row_id'])
+        return data.to_json()
+
+    def _get_data(self, dict_data: dict[str, list[int]]) -> pd.DataFrame:
+        """
+        Get the data from a tar
+
+        Args:
+            dict_data (dict[str, list[int]]): map of filename to indexes of the rows in the batch
+
+        Returns:
+            str: data as json
+        """
+        data = pd.DataFrame()
+        for filename, indexes in dict_data.items():
+            logger.info(f'Loading file {filename}')
+
+            with open(filename, 'r') as file:
+                data = file.read()
+
+            df = pd.read_json(data)
+
+            data = data.append(df.iloc[indexes])
+
+        return data

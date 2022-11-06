@@ -33,7 +33,6 @@ class OfflinePreprocessor:
     """
     __config = None
     __data_storage = None
-    __data_scorer = None
     __row_number = 0
 
     def __init__(self, config: dict):
@@ -46,7 +45,6 @@ class OfflinePreprocessor:
         self.__config = config
 
         self.__data_storage = Storage(STORAGE_LOCATION + '/store')
-        self.__data_scorer = None  # TODO: Replace with remote procedure call
 
     def run(self):
         """
@@ -82,12 +80,13 @@ class OfflinePreprocessor:
 
             df = self.offline_preprocessing(message_value)
 
-            filename = self.__data_storage.write_dataset_to_tar(
+            filename = self.__data_storage.write_dataset(
                 uuid.uuid4(), df.to_json())
 
             logger.info(f'Created file {filename}')
 
-            self.__data_scorer.add_batch(filename, df['row_id'].tolist())
+            # self.__data_scorer.add_batch(filename, df['row_id'].tolist())
+            # TODO: Replace with remote procedure call
 
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
         """

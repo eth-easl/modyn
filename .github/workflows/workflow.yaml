@@ -1,6 +1,6 @@
 name: Python package
 
-on: [push]
+on: [push, pull_request]
 
 defaults:
   run:
@@ -31,6 +31,13 @@ jobs:
       uses: quentinguidee/pep8-action@v1
       with:
         arguments: '--max-line-length=120'
-    - name: Test with pytest
+    - name: Tests
       run: |
-        pytest .
+        coverage run -m unittest
+        coverage report
+        coverage html
+    - name: Code coverage html report
+      uses: actions/upload-artifact@v2
+      with:
+        name: code-coverage-report
+        path: src/htmlcov

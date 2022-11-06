@@ -13,48 +13,47 @@ class Metadata(ABC):
         self._config = config
         self._con = sqlite3.connect(
             config['data_scorer']['in_memory_database'])
-        self.setup_database()
+        self._setup_database()
 
-    def setup_database(self):
+    def _setup_database(self):
         cur = self._con.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS batch_metadata (
             id INTEGER PRIMARY KEY,
-            filename VARCHAR(100),
             timestamp INTEGER,
             score REAL,
-            new INTEGER NOT NULL);'''
+            new INTEGER DEFAULT 1);'''
                     )
         cur.execute('''CREATE TABLE IF NOT EXISTS row_metadata (
             row INTEGER,
             batch_id INTEGER,
+            filename VARCHAR(100),
             score REAL,
             PRIMARY KEY (row, batch_id),
             FOREIGN KEY (batch_id) REFERENCES batch_metadata(id));'''
                     )
         self._con.commit()
 
-    def add_batch_to_metadata(self, filename: str) -> int:
+    def _add_batch_to_metadata(self) -> int:
         """
         Insert a batch into the metadata database
-
-        Warning: filename could lead to a sql injection
-
-        Args:
-            filename (str): filename of the batch
 
         Returns:
             int: unique id for this batch
         """
         cur = self._con.cursor()
         cur.execute(
-            '''INSERT INTO batch_metadata(filename, timestamp, new) VALUES(?, ?, ?)''',
-            (filename, time.time(),
-             1))
+            '''INSERT INTO batch_metadata(timestamp) VALUES(?)''',
+            (time.time(),))
         batch_id = cur.lastrowid
         self._con.commit()
         return batch_id
 
-    def add_row_to_metadata(self, row: int, batch_id: int, score: float):
+    def _add_row_to_metadata(
+            self,
+            row: int,
+            batch_id: int,
+            score: float,
+            filename: str):
         """
         Insert a data item from a batch to the row metadata database
 
@@ -65,11 +64,11 @@ class Metadata(ABC):
         """
         cur = self._con.cursor()
         cur.execute(
-            '''INSERT INTO row_metadata(row, batch_id, score) VALUES(?, ?, ?)''',
-            (row, batch_id, score))
+            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            (row, filename, batch_id, score))
         self._con.commit()
 
-    def update_batch_metadata(self, batch_id: int, score: float, new: bool):
+    def _update_batch_metadata(self, batch_id: int, score: float, new: bool):
         """
         Update the metadata of a batch
 
@@ -84,7 +83,7 @@ class Metadata(ABC):
             (score, new, batch_id))
         self._con.commit()
 
-    def update_row_metadata(self, batch_id: int, row: int, score: float):
+    def _update_row_metadata(self, batch_id: int, row: int, score: float):
         """
         Update the metadata of a data item as a row
 
@@ -99,7 +98,7 @@ class Metadata(ABC):
             (score, batch_id, row))
         self._con.commit()
 
-    def fetch_batches(self, sql_statment: str, batch_count: int) -> list[tuple[int, str]]:
+    def fetch_batches(self, sql_statment: str, batch_count: int) -> list[int]:
         """
         Fetch the corresponding batches accoring to the sql statement
 
@@ -108,14 +107,15 @@ class Metadata(ABC):
             batch_count (int): number of batches to be retrieved
 
         Returns:
-            list[tuple[int, str]]: list of tuples of batch ids to filename
+            list[int]: list of batch ids
         """
         cur = self._con.cursor()
         cur.execute(sql_statment + str(batch_count))
         batches = cur.fetchall()
-        return batches
+        return [item for t in batches for item in t]
 
-    def fetch_rows(self, sql_statement: str, row_count: int, batch_id: int) -> list[int]:
+    def _fetch_rows(self, sql_statement: str, row_count: int,
+                    batch_id: int) -> dict[str, list[int]]:
         """
         Fetch the corresponding rows accoring to the sql statement
 
@@ -125,12 +125,15 @@ class Metadata(ABC):
             batch_id (int): corresponding batch id
 
         Returns:
-            list[int]: list of int of row ids
+            dict[str, list[int]]: map of filename to indexes of the rows in the batch
         """
         cur = self._con.cursor()
         cur.execute(sql_statement + str(row_count), (batch_id,))
         rows = cur.fetchall()
-        return [i[0] for i in rows]
+        row_dict = dict()
+        for x, y in rows:
+            row_dict.setdefault(x, []).append(y)
+        return row_dict
 
     def get_con(self):
         return self._con
