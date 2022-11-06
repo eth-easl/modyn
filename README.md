@@ -10,7 +10,7 @@
 
 ### Current state:
 
-![Current node and class diagram](docs/images/Current_Design.png)
+![Current node and class diagram](docs/images/Current_design.png)
 
 ### Current state in a pipeline view:
 
