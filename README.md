@@ -1,10 +1,5 @@
 # Dynamic Datasets DSL Project
 
-## Datasets:
-
-### Avazu Dataset:
-- Full training dataset [here](https://polybox.ethz.ch/index.php/apps/files/?dir=/DSL&fileid=3018496834)
-
 ## Dynamic Datasets Testing Infrastructure:
 
 ### Requirements:
@@ -15,7 +10,11 @@
 
 ### Current state:
 
-![Current state diagram](docs/images/Current_design.png)
+![Current node and class diagram](docs/images/Current_Design.png)
+
+### Current state in a pipeline view:
+
+![Current pipeline diagram](docs/images/Pipeline.png)
 
 - DataFeeder feeds the defined file in defined batch sizes to the Kafka stream
 - DataPreprocessor reads the data, does some minimal offline preprocessing, writes the batch to harddisk, updates the metadata and every now and then creates new batches from the existing batches
