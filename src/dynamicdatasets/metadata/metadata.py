@@ -53,8 +53,9 @@ class Metadata(ABC):
         cur.execute(
             self._insert_batch_metadata_sql,
             (time.time(),))
-        batch_id = cur.fetchone()[0]
-        if batch_id is None:
+        try:
+            batch_id = cur.fetchone()[0]
+        except TypeError:
             batch_id = cur.lastrowid
         self._con.commit()
         return batch_id

@@ -17,7 +17,7 @@ class TestRandomScorer(unittest.TestCase):
             self._config = {'metadata': {
                 'nr_files_update': 3}, 'feeder': {'batch_size': 1}}
             self._row_selection = "SELECT filename, row from row_metadata WHERE batch_id=? ORDER BY score DESC LIMIT "
-            self._insert_batch_metadata_sql = '''INSERT INTO batch_metadata(timestamp) VALUES(?) RETURNING id;'''
+            self._insert_batch_metadata_sql = '''INSERT INTO batch_metadata(timestamp) VALUES(?);'''
             self._insert_row_metadata_sql = '''INSERT INTO row_metadata(row, filename, batch_id, score)
                                                 VALUES(?, ?, ?, ?);'''
             self._update_batch_metadata_sql = '''UPDATE batch_metadata SET score = ?, new = ? WHERE id = ?;'''
