@@ -3,7 +3,6 @@ import argparse
 import yaml
 import time
 import pathlib
-import os
 import logging
 
 import pandas as pd
@@ -71,6 +70,7 @@ class Feeder:
             logger.exception(
                 "KafkaLogsProducer exception sending log to Kafka: {0}".format(e))
 
+        print("Sent batch to Kafka")
         producer.flush()
         logger.info('Wrote messages into topic: {0}'.format(topic_name))
 

@@ -8,8 +8,11 @@ import pathlib
 from kafka import KafkaConsumer, errors
 from json import loads
 import pandas as pd
+import grpc
 
-from .storage import Storage
+from dynamicdatasets.offline.storage import Storage
+from dynamicdatasets.metadata.metadata_pb2_grpc import MetadataStub
+from dynamicdatasets.metadata.metadata_pb2 import Batch
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -75,7 +78,7 @@ class OfflinePreprocessor:
         for message in consumer:
             message_value = message.value
 
-            logger.info('Read message from topic {0}'.format(
+            print('Read message from topic {0}'.format(
                 self.__config['kafka']['topic']))
 
             df = self.offline_preprocessing(message_value)
@@ -83,10 +86,9 @@ class OfflinePreprocessor:
             filename = self.__data_storage.write_dataset(
                 uuid.uuid4(), df.to_json())
 
-            logger.info(f'Created file {filename}')
-
-            # self.__data_scorer.add_batch(filename, df['row_id'].tolist())
-            # TODO: Replace with remote procedure call
+            with grpc.insecure_channel('localhost:50051') as channel:
+                stub = MetadataStub(channel)
+                stub.AddBatch(Batch(filename=filename, rows=df['row_id'].tolist()))
 
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
         """

@@ -1,7 +1,7 @@
-import sqlite3
 import time
-
 from abc import ABC
+
+import psycopg2
 
 
 class Metadata(ABC):
@@ -11,8 +11,10 @@ class Metadata(ABC):
 
     def __init__(self, config: dict):
         self._config = config
-        self._con = sqlite3.connect(
-            config['data_scorer']['in_memory_database'])
+        self._con = psycopg2.connect(
+            host="db",
+            user="postgres",
+            password="postgres")
         self._setup_database()
 
     def _setup_database(self):

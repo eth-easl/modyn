@@ -1,5 +1,3 @@
-import sqlite3
-import time
 from abc import ABC, abstractmethod
 
 from .. import Metadata
@@ -10,8 +8,7 @@ class Scorer(Metadata):
     Abstract class to score the samples according to the implementors defined data importance measure
     and update the corresponding metadata database
     """
-    _nr_batches_update = 3
-    _batch_size = 100
+    _con = None
     _nr_batches = 0
     _batch_selection = None
     _row_selection = None
@@ -26,15 +23,13 @@ class Scorer(Metadata):
             data_storage (DataStorage): Data storage instance to store the newly created data instances
         """
         super().__init__(config)
-        self.nr_batches_update = config['data_scorer']['nr_files_update']
-        self.batch_size = config['data_feeder']['batch_size']
 
     def _add_batch(
             self,
             filename: str,
             rows: list[int],
             initial=True,
-            batch_id=None) -> str:
+            batch_id=None) -> int:
         """
         Add a batch to the data scorer metadata database
 
@@ -44,14 +39,17 @@ class Scorer(Metadata):
             filename (str): filename of the batch
             rows (list[int]): row numbers in the batch
             initial (bool): if adding a batch initially or otherwise
+
+        Returns:
+            int: batch_id of the added batch
         """
         self._nr_batches += 1
         if (initial and self._nr_batches %
-                self._config['data_scorer']['nr_files_update'] == 0):
+                self._config['metadata']['nr_files_update'] == 0):
             self._create_shuffled_batches(
                 self.BATCHES_BY_SCORE, self.ROWS_BY_SCORE,
-                self._config['data_scorer']['nr_files_update'],
-                self._config['data_feeder']['batch_size'])
+                self._config['metadata']['nr_files_update'],
+                self._config['feeder']['batch_size'])
         if batch_id is None:
             batch_id = self._add_batch_to_metadata()
 
@@ -103,12 +101,14 @@ class Scorer(Metadata):
         Args:
             filename (str): filename of the batch
             rows (list[int]): row numbers in the batch
+
+        Returns:
+            int: batch_id of the added batch
         """
-        # TODO: Implement with a remote procedure call
         return self._add_batch(filename, rows)
 
     @abstractmethod
-    def _get_score(self):
+    def _get_score(self) -> float:
         """
         Generate score according to data importance
 

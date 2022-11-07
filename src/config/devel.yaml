@@ -1,7 +1,9 @@
 # TODO: Define structure and write Schema
-scorer:
+metadata:
   in_memory_database: 'metadata.db'
   nr_files_update: 3
+  scorer: 'RandomScorer'
+  selector: 'LastSelector'
 
 feeder:
   batch_size: 100

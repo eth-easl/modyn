@@ -14,8 +14,8 @@ class TestRandomScorer(unittest.TestCase):
     def setUp(self):
         def __init__(self, config):
             self._con = sqlite3.connect(':memory:')
-            self._config = {'data_scorer': {
-                'nr_files_update': 3}, 'data_feeder': {'batch_size': 1}}
+            self._config = {'metadata': {
+                'nr_files_update': 3}, 'feeder': {'batch_size': 1}}
 
         with patch.object(RandomScorer, '__init__', __init__):
             self.scorer = RandomScorer(None)

@@ -1,9 +1,6 @@
-import sqlite3
 import random
-import logging
 import os
 import statistics
-import uuid
 
 from . import Scorer
 
@@ -14,10 +11,6 @@ class RandomScorer(Scorer):
     """
     Score the samples according to the defined data importance measure and update the corresponding metadata database
     """
-    _config = None
-    _con = None
-    __nr_batches_update = 3
-    __batch_size = 100
     _row_selection = "SELECT filename, row from row_metadata WHERE batch_id=? ORDER BY score DESC LIMIT "
     _batch_selection = "SELECT id FROM batch_metadata ORDER BY score DESC LIMIT "
 
@@ -30,12 +23,7 @@ class RandomScorer(Scorer):
 
             data_storage (DataStorage): Data storage instance to store the newly created data instances
         """
-        self.__config = config
-        self.__nr_batches_update = config['data_scorer']['nr_files_update']
-        self.__batch_size = config['data_feeder']['batch_size']
-        self._con = sqlite3.connect(
-            config['data_scorer']['in_memory_database'])
-        self._setup_database()
+        super().__init__(config)
 
     def _get_score(self) -> float:
         """

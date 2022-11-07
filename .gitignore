@@ -32,3 +32,6 @@ var/
 .installed.cfg
 *.egg
 .eggs/
+
+# postgresql
+postgres-data/

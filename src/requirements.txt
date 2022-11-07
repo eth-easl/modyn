@@ -6,3 +6,6 @@ pytest
 mock
 numpy
 coverage
+grpcio
+psycopg2
+protobuf

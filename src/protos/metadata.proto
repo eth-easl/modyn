@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+package metadata;
+
+service Metadata {
+    rpc AddBatch(Batch) returns (BatchId) {}
+    rpc GetBatch(google.protobuf.Empty) returns (BatchData) {}
+}
+
+message BatchId {
+    int32 batchId = 1;
+}
+
+message Batch {
+    string filename = 1;
+    repeated int32 rows = 2 [packed = true];
+}
+
+message BatchData {
+    google.protobuf.Struct dataMap = 1;
+}

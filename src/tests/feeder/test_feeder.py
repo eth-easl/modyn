@@ -17,14 +17,14 @@ class TestDataFeeder(unittest.TestCase):
             self._interval_length = 0
 
         with patch.object(Feeder, '__init__', __init__):
-            data_feeder = Feeder(None)
+            feeder = Feeder(None)
 
-            data_feeder.write_to_kafka = MagicMock()
+            feeder.write_to_kafka = MagicMock()
             test_file = '/tests/data/test.csv'
 
-            data_feeder.load_data(test_file)
+            feeder.load_data(test_file)
 
             pd.testing.assert_frame_equal(
-                data_feeder.write_to_kafka.call_args[0][1],
+                feeder.write_to_kafka.call_args[0][1],
                 pd.read_csv(os.getcwd() + '/tests/data/test.csv').tail(9)
             )
