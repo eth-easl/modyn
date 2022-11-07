@@ -16,6 +16,24 @@ class TestRandomScorer(unittest.TestCase):
             self._con = sqlite3.connect(':memory:')
             self._config = {'metadata': {
                 'nr_files_update': 3}, 'feeder': {'batch_size': 1}}
+            self._row_selection = "SELECT filename, row from row_metadata WHERE batch_id=? ORDER BY score DESC LIMIT "
+            self._insert_batch_metadata_sql = '''INSERT INTO batch_metadata(timestamp) VALUES(?) RETURNING id;'''
+            self._insert_row_metadata_sql = '''INSERT INTO row_metadata(row, filename, batch_id, score)
+                                                VALUES(?, ?, ?, ?);'''
+            self._update_batch_metadata_sql = '''UPDATE batch_metadata SET score = ?, new = ? WHERE id = ?;'''
+            self._update_row_metadata_sql = '''UPDATE row_metadata SET score = ? WHERE batch_id = ? AND row = ?;'''
+            self._create_batch_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS batch_metadata (
+                                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                        timestamp INTEGER,
+                                                        score REAL,
+                                                        new INTEGER DEFAULT 1);'''
+            self._create_row_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS row_metadata (
+                                                        row INTEGER,
+                                                        batch_id INTEGER,
+                                                        filename VARCHAR(100),
+                                                        score REAL,
+                                                        PRIMARY KEY (row, batch_id),
+                                                        FOREIGN KEY (batch_id) REFERENCES batch_metadata(id));'''
 
         with patch.object(RandomScorer, '__init__', __init__):
             self.scorer = RandomScorer(None)

@@ -3,6 +3,7 @@ from . import Selector
 
 
 class LastSelector(Selector):
+    _select_statement = 'SELECT filename, row FROM row_metadata WHERE batch_id=%s ORDER BY row ASC'
 
     def _get_next_batch(self) -> dict[str, list[int]]:
         """
@@ -17,7 +18,7 @@ class LastSelector(Selector):
         row = cur.fetchall()[0]
         self._update_batch_metadata(row[0], row[1], 0)
         cur.execute(
-            'SELECT filename, row FROM row_metadata WHERE batch_id=? ORDER BY row ASC',
+            self._select_statement,
             (row[0],
              ))
         rows = cur.fetchall()

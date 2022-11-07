@@ -24,6 +24,23 @@ class TestMetadata(unittest.TestCase):
         def __init__(self, config):
             self._con = sqlite3.connect(':memory:')
             self._data_storage = Storage(STORAGE_LOCATION + '/tests/tmp')
+            self._insert_batch_metadata_sql = '''INSERT INTO batch_metadata(timestamp) VALUES(?) RETURNING id;'''
+            self._insert_row_metadata_sql = '''INSERT INTO row_metadata(row, filename, batch_id, score)
+                                                VALUES(?, ?, ?, ?);'''
+            self._update_batch_metadata_sql = '''UPDATE batch_metadata SET score = ?, new = ? WHERE id = ?;'''
+            self._update_row_metadata_sql = '''UPDATE row_metadata SET score = ? WHERE batch_id = ? AND row = ?;'''
+            self._create_batch_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS batch_metadata (
+                                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                        timestamp INTEGER,
+                                                        score REAL,
+                                                        new INTEGER DEFAULT 1);'''
+            self._create_row_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS row_metadata (
+                                                        row INTEGER,
+                                                        batch_id INTEGER,
+                                                        filename VARCHAR(100),
+                                                        score REAL,
+                                                        PRIMARY KEY (row, batch_id),
+                                                        FOREIGN KEY (batch_id) REFERENCES batch_metadata(id));'''
 
         with patch.object(Metadata, '__init__', __init__):
             self.metadata = Metadata(None)
@@ -38,7 +55,7 @@ class TestMetadata(unittest.TestCase):
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
         self.assertEqual(tables[0][0], 'batch_metadata')
-        self.assertEqual(tables[1][0], 'row_metadata')
+        self.assertEqual(tables[2][0], 'row_metadata')
 
         cursor.execute("SELECT * FROM batch_metadata;")
         names = [description[0] for description in cursor.description]

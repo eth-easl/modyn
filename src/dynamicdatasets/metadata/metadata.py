@@ -1,5 +1,6 @@
 import time
 from abc import ABC
+import sqlite3
 
 import psycopg2
 
@@ -8,6 +9,22 @@ class Metadata(ABC):
 
     _config = None
     _con = None
+    _insert_batch_metadata_sql = '''INSERT INTO batch_metadata(timestamp) VALUES(%s) RETURNING id;'''
+    _insert_row_metadata_sql = '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(%s, %s, %s, %s);'''
+    _update_batch_metadata_sql = '''UPDATE batch_metadata SET score = %s, new = %s WHERE id = %s;'''
+    _update_row_metadata_sql = '''UPDATE row_metadata SET score = %s WHERE batch_id = %s AND row = %s;'''
+    _create_batch_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS batch_metadata (
+            id SERIAL PRIMARY KEY,
+            timestamp INTEGER,
+            score REAL,
+            new INTEGER DEFAULT 1);'''
+    _create_row_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS row_metadata (
+            row INTEGER,
+            batch_id INTEGER,
+            filename VARCHAR(100),
+            score REAL,
+            PRIMARY KEY (row, batch_id),
+            FOREIGN KEY (batch_id) REFERENCES batch_metadata(id));'''
 
     def __init__(self, config: dict):
         self._config = config
@@ -19,19 +36,9 @@ class Metadata(ABC):
 
     def _setup_database(self):
         cur = self._con.cursor()
-        cur.execute('''CREATE TABLE IF NOT EXISTS batch_metadata (
-            id INTEGER PRIMARY KEY,
-            timestamp INTEGER,
-            score REAL,
-            new INTEGER DEFAULT 1);'''
+        cur.execute(self._create_batch_metadata_table_sql
                     )
-        cur.execute('''CREATE TABLE IF NOT EXISTS row_metadata (
-            row INTEGER,
-            batch_id INTEGER,
-            filename VARCHAR(100),
-            score REAL,
-            PRIMARY KEY (row, batch_id),
-            FOREIGN KEY (batch_id) REFERENCES batch_metadata(id));'''
+        cur.execute(self._create_row_metadata_table_sql
                     )
         self._con.commit()
 
@@ -44,9 +51,11 @@ class Metadata(ABC):
         """
         cur = self._con.cursor()
         cur.execute(
-            '''INSERT INTO batch_metadata(timestamp) VALUES(?)''',
+            self._insert_batch_metadata_sql,
             (time.time(),))
-        batch_id = cur.lastrowid
+        batch_id = cur.fetchone()[0]
+        if batch_id is None:
+            batch_id = cur.lastrowid
         self._con.commit()
         return batch_id
 
@@ -66,7 +75,7 @@ class Metadata(ABC):
         """
         cur = self._con.cursor()
         cur.execute(
-            '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(?, ?, ?, ?)''',
+            self._insert_row_metadata_sql,
             (row, filename, batch_id, score))
         self._con.commit()
 
@@ -81,7 +90,7 @@ class Metadata(ABC):
         """
         cur = self._con.cursor()
         cur.execute(
-            '''UPDATE batch_metadata SET score = ?, new = ? WHERE id = ?''',
+            self._update_batch_metadata_sql,
             (score, new, batch_id))
         self._con.commit()
 
@@ -96,7 +105,7 @@ class Metadata(ABC):
         """
         cur = self._con.cursor()
         cur.execute(
-            '''UPDATE row_metadata SET score = ? WHERE batch_id = ? AND row = ?''',
+            self._update_row_metadata_sql,
             (score, batch_id, row))
         self._con.commit()
 

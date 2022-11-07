@@ -47,7 +47,6 @@ class Scorer(Metadata):
         if (initial and self._nr_batches %
                 self._config['metadata']['nr_files_update'] == 0):
             self._create_shuffled_batches(
-                self.BATCHES_BY_SCORE, self.ROWS_BY_SCORE,
                 self._config['metadata']['nr_files_update'],
                 self._config['feeder']['batch_size'])
         if batch_id is None:

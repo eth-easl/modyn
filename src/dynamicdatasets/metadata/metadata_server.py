@@ -5,8 +5,6 @@ import argparse
 import grpc
 from dynamicdatasets.metadata.metadata_pb2 import BatchData, BatchId
 from dynamicdatasets.metadata.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
-from dynamicdatasets.metadata.scorer import RandomScorer
-from dynamicdatasets.metadata.selector import LastSelector
 
 
 def parse_args():
@@ -21,9 +19,13 @@ class MetadataServicer(MetadataServicer):
 
     def __init__(self, config: dict):
         scorer_module = self.my_import('dynamicdatasets.metadata.scorer')
-        self._scorer = getattr(scorer_module, config['metadata']['scorer'])(config)
+        self._scorer = getattr(
+            scorer_module,
+            config['metadata']['scorer'])(config)
         selector_module = self.my_import('dynamicdatasets.metadata.selector')
-        self._selector = getattr(selector_module, config['metadata']['selector'])(config)
+        self._selector = getattr(
+            selector_module,
+            config['metadata']['selector'])(config)
 
     def my_import(self, name):
         components = name.split('.')
@@ -33,7 +35,7 @@ class MetadataServicer(MetadataServicer):
         return mod
 
     def AddBatch(self, request, context):
-        print('AddBatch')
+        print("Adding batch")
         batch_id = self._scorer.add_batch(request.filename, request.rows)
         if batch_id is None:
             return BatchId(batchId=-1)
@@ -41,7 +43,7 @@ class MetadataServicer(MetadataServicer):
             return BatchId(batchId=batch_id)
 
     def GetBatch(self, request, context):
-        print('GetBatch')
+        print("Getting batch")
         batch = self._selector.get_next_batch()
         if batch is None:
             return BatchData(dataMap={})
@@ -69,5 +71,4 @@ def serve():
 
 
 if __name__ == '__main__':
-    print('Starting server. Listening on port 50051.')
     serve()
