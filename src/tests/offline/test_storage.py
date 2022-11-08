@@ -10,23 +10,30 @@ import webdataset as wds
 
 from dynamicdatasets.offline.storage import Storage
 
-STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.resolve())
+TEMP_STORAGE_LOCATION = str(pathlib.Path(
+    __file__).parent.parent.resolve()) + '/tmp'
 
 
 class TestStorage(unittest.TestCase):
 
     def setUp(self):
-        pathlib.Path(STORAGE_LOCATION +
-                     '/tmp').mkdir(parents=True, exist_ok=True)
+        pathlib.Path(TEMP_STORAGE_LOCATION
+                     ).mkdir(parents=True, exist_ok=True)
 
     def tearDown(self):
-        shutil.rmtree(STORAGE_LOCATION + '/tmp')
+        shutil.rmtree(TEMP_STORAGE_LOCATION
+                      )
 
     def test_write_dataset(self):
-        data_storage = Storage(STORAGE_LOCATION + '/tmp')
+        data_storage = Storage(TEMP_STORAGE_LOCATION
+                               )
 
         test_name = str(uuid.uuid4())
         data_storage.write_dataset(test_name, 'TEST')
 
-        self.assertTrue(os.path.isfile(STORAGE_LOCATION +
-                        '/tmp/' + test_name + '.json'))
+        self.assertTrue(
+            os.path.isfile(
+                TEMP_STORAGE_LOCATION +
+                '/' +
+                test_name +
+                '.json'))

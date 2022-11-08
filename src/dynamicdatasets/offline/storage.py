@@ -5,8 +5,6 @@ import uuid
 import pandas as pd
 import webdataset as wds
 
-STORAGE_LOCATION = os.getcwd()
-
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')

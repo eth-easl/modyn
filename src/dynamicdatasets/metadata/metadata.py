@@ -10,21 +10,34 @@ class Metadata(ABC):
     _config = None
     _con = None
     _insert_batch_metadata_sql = '''INSERT INTO batch_metadata(timestamp) VALUES(%s) RETURNING id;'''
-    _insert_row_metadata_sql = '''INSERT INTO row_metadata(row, filename, batch_id, score) VALUES(%s, %s, %s, %s);'''
+    _insert_row_metadata_sql = '''INSERT INTO row_metadata(row, filename, score) VALUES(%s, %s, %s);'''
     _update_batch_metadata_sql = '''UPDATE batch_metadata SET score = %s, new = %s WHERE id = %s;'''
-    _update_row_metadata_sql = '''UPDATE row_metadata SET score = %s WHERE batch_id = %s AND row = %s;'''
+    _update_row_metadata_sql = '''UPDATE row_metadata
+                                  SET score = %s
+                                  WHERE row = %s AND EXISTS (SELECT *
+                                                            FROM batch_to_row
+                                                            WHERE row = row_metadata.row AND batch_id = %s);'''
+    _get_scores_sql = '''SELECT score
+                         FROM row_metadata
+                         JOIN batch_to_row ON batch_to_row.row = row_metadata.row
+                         WHERE batch_id = %s;'''
+    _select_row_sql = '''SELECT * FROM row_metadata WHERE row = %s;'''
+    _insert_batch_to_row_sql = '''INSERT INTO batch_to_row(batch_id, row) VALUES(%s, %s);'''
     _create_batch_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS batch_metadata (
             id SERIAL PRIMARY KEY,
             timestamp INTEGER,
             score REAL,
             new INTEGER DEFAULT 1);'''
     _create_row_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS row_metadata (
-            row INTEGER,
-            batch_id INTEGER,
+            row INTEGER PRIMARY KEY,
             filename VARCHAR(100),
-            score REAL,
-            PRIMARY KEY (row, batch_id),
-            FOREIGN KEY (batch_id) REFERENCES batch_metadata(id));'''
+            score REAL);'''
+    _create_batch_to_row_table_sql = '''CREATE TABLE IF NOT EXISTS batch_to_row (
+            batch_id INTEGER,
+            row INTEGER,
+            PRIMARY KEY (batch_id, row),
+            FOREIGN KEY (batch_id) REFERENCES batch_metadata(id),
+            FOREIGN KEY (row) REFERENCES row_metadata(row));'''
 
     def __init__(self, config: dict):
         self._config = config
@@ -36,10 +49,9 @@ class Metadata(ABC):
 
     def _setup_database(self):
         cur = self._con.cursor()
-        cur.execute(self._create_batch_metadata_table_sql
-                    )
-        cur.execute(self._create_row_metadata_table_sql
-                    )
+        cur.execute(self._create_batch_metadata_table_sql)
+        cur.execute(self._create_row_metadata_table_sql)
+        cur.execute(self._create_batch_to_row_table_sql)
         self._con.commit()
 
     def _add_batch_to_metadata(self) -> int:
@@ -75,9 +87,12 @@ class Metadata(ABC):
             score (float): initial score of the row
         """
         cur = self._con.cursor()
-        cur.execute(
-            self._insert_row_metadata_sql,
-            (row, filename, batch_id, score))
+        cur.execute(self._select_row_sql, (row,))
+        if cur.fetchone() is None:
+            cur.execute(
+                self._insert_row_metadata_sql,
+                (row, filename, score))
+        cur.execute(self._insert_batch_to_row_sql, (batch_id, row))
         self._con.commit()
 
     def _update_batch_metadata(self, batch_id: int, score: float, new: bool):
@@ -110,7 +125,10 @@ class Metadata(ABC):
             (score, batch_id, row))
         self._con.commit()
 
-    def fetch_batches(self, sql_statment: str, batch_count: int) -> list[int]:
+    def _fetch_batch_ids(
+            self,
+            sql_statment: str,
+            batch_count: int) -> list[int]:
         """
         Fetch the corresponding batches accoring to the sql statement
 
@@ -126,10 +144,25 @@ class Metadata(ABC):
         batches = cur.fetchall()
         return [item for t in batches for item in t]
 
-    def _fetch_rows(self, sql_statement: str, row_count: int,
-                    batch_id: int) -> dict[str, list[int]]:
+    def _get_scores(self, batch_id) -> list[float]:
         """
-        Fetch the corresponding rows accoring to the sql statement
+        Get the scores of the rows in a batch
+
+        Args:
+            batch_id (int): batch_id of the batch
+
+        Returns:
+            list[float]: list of scores
+        """
+        cur = self._con.cursor()
+        cur.execute(self._get_scores_sql, (batch_id,))
+        scores = cur.fetchall()
+        return [item for t in scores for item in t]
+
+    def _fetch_filenames_to_indexes(self, sql_statement: str, row_count: int,
+                                    batch_id: int) -> dict[str, list[int]]:
+        """
+        Fetch the corresponding filename to indexes dictionary accoring to the sql statement
 
         Args:
             sql_statment (str): sql statement to retrieve rows

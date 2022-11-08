@@ -33,7 +33,7 @@ class Scorer(Metadata):
         """
         Add a batch to the data scorer metadata database
 
-        Calculate the batch score by the median of the row scores
+        Calculate the batch score by the score defined by the subclass of the row scores
 
         Args:
             filename (str): filename of the batch
@@ -43,7 +43,6 @@ class Scorer(Metadata):
         Returns:
             int: batch_id of the added batch
         """
-        self._nr_batches += 1
         if (initial and self._nr_batches %
                 self._config['metadata']['nr_files_update'] == 0):
             self._create_shuffled_batches(
@@ -57,8 +56,10 @@ class Scorer(Metadata):
             score = self._get_score()
             self._add_row_to_metadata(row, batch_id, score, filename)
             scores.append(score)
-        median = self._get_cumulative_score(scores)
-        self._update_batch_metadata(batch_id, median, 1)
+        if initial:
+            batch_score = self._get_cumulative_score(scores)
+            self._nr_batches += 1
+            self._update_batch_metadata(batch_id, batch_score, 1)
         return batch_id
 
     def _create_shuffled_batches(
@@ -69,18 +70,18 @@ class Scorer(Metadata):
         proportion of the selected batches.
 
         Args:
-            batch_selection (str, optional): sql to select batches according to a criteria.
-            row_selection (str, optional): sql to select rows accordig to a criteria.
             batch_count (int, optional): number of batches to include in the updated batch.
             batch_size (int, optional): number of rows in the resulting batch.
         """
-        batches = self.fetch_batches(self._batch_selection, batch_count)
+        batches = self._fetch_batch_ids(self._batch_selection, batch_count)
         row_count = int(batch_size / batch_count)
+        self._nr_batches += 1
 
         new_batch_id = None
 
         for batch_id in batches:
-            rows = self._fetch_rows(self._row_selection, row_count, batch_id)
+            rows = self._fetch_filenames_to_indexes(
+                self._row_selection, row_count, batch_id)
 
             for filename in rows:
                 bid = self._add_batch(
@@ -91,6 +92,10 @@ class Scorer(Metadata):
 
                 if new_batch_id is None:
                     new_batch_id = bid
+        if new_batch_id is not None:
+            new_batch_scores = self._get_scores(new_batch_id)
+            new_batch_score = self._get_cumulative_score(new_batch_scores)
+            self._update_batch_metadata(new_batch_id, new_batch_score, 1)
 
     def add_batch(
             self, filename: str, rows: list[int]):
