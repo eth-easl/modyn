@@ -1,0 +1,16 @@
+# TODO: Define structure and write Schema
+metadata:
+  in_memory_database: 'metadata.db'
+  nr_files_update: 3
+  scorer: 'RandomScorer'
+  selector: 'LastSelector'
+
+feeder:
+  batch_size: 100
+  input_file: '/data/train/train_mini.csv'
+  interval_length: 10
+
+kafka:
+  topic: 'test'
+  bootstrap_servers:
+    - 'kafka:29092'

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "google/protobuf/struct.proto";
+
+package offline;
+
+service Metadata {
+    rpc GetData(BatchData) returns (Data) {}
+}
+
+message BatchData {
+    google.protobuf.Struct dataMap = 1;
+}
+
+message Data {
+    google.protobuf.Struct dataMap = 1;
+}
