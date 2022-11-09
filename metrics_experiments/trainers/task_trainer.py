@@ -8,7 +8,8 @@ import numpy as np
 
 class TaskTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs):
+    def __init__(self, model, criterion, optimizer, scheduler_factory, 
+                dataset, dataset_configs, num_epochs, device, trainer_configs):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -45,7 +46,8 @@ class TaskTrainer:
                 if callable(reset_parameters):
                     m.reset_parameters()
 
-            # Applies fn recursively to every submodule see: https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+            # Applies fn recursively to every submodule see: 
+            # https://pytorch.org/docs/stable/generated/torch.nn.Module.html
             self.model.apply(fn=weight_reset)
 
     def next_task(self):
@@ -88,7 +90,9 @@ class TaskTrainer:
         self.dataset['test'].set_active_task(0)
         running_loss, running_corrects, running_count, result = 0.0, 0, 0, {}
 
-        val_loader = torch.utils.data.DataLoader(self.dataset['test'], batch_size = self.dataset_configs['batch_size'], shuffle = False)
+        val_loader = torch.utils.data.DataLoader(self.dataset['test'], 
+                                                batch_size = self.dataset_configs['batch_size'], 
+                                                shuffle = False)
 
         while True:
             print('Task', self.dataset['test'].active_task())
@@ -142,14 +146,16 @@ class TaskTrainer:
             self.grad_total += current_grad
 
     """
-        For gradient error visualization, this should be called before each epoch. Guarantees that the train dataset will remain on the same active task. 
+        For gradient error visualization, this should be called before each epoch. 
+        Guarantees that the train dataset will remain on the same active task. 
     """
     def compute_true_grad(self):
         self.model.train()
         self.dataset['train'].full_mode = True
         print('Computing true gradient...')
         self.optimizer.zero_grad()
-        train_loader = torch.utils.data.DataLoader(self.dataset['train'], batch_size=self.dataset_configs['batch_size'])
+        train_loader = torch.utils.data.DataLoader(self.dataset['train'], 
+                                                    batch_size=self.dataset_configs['batch_size'])
         for inputs, labels in tqdm(train_loader): 
             inputs, labels = inputs.to(self.device), labels.to(self.device)
             self.criterion(self.model(inputs), labels).backward()
