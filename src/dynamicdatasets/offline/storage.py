@@ -5,6 +5,8 @@ import uuid
 import pandas as pd
 import webdataset as wds
 
+from dynamicdatasets.interfaces import Storable
+
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S')
@@ -79,3 +81,6 @@ class Storage:
             data = data.append(df.iloc[indexes])
 
         return data
+
+    def set_storable(self, storable: Storable):
+        pass

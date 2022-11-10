@@ -114,6 +114,12 @@ class OfflinePreprocessor:
     def get_row_number(self):
         return self.__row_number
 
+    def set_preprocess():
+        pass
+
+    def set_storable():
+        pass 
+
 
 def main():
     args = parse_args()

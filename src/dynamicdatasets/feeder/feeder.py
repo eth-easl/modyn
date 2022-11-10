@@ -1,13 +1,15 @@
-from datetime import datetime
 import argparse
-import yaml
-import time
-import pathlib
 import logging
+import pathlib
+import time
+from datetime import datetime
 
 import pandas as pd
+import yaml
 from kafka import KafkaProducer
-from kafka.errors import KafkaTimeoutError, KafkaError
+from kafka.errors import KafkaError, KafkaTimeoutError
+
+from experiments import builder
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -44,6 +46,7 @@ class Feeder:
         self._batch_size = config['feeder']['batch_size']
         self._kafka_topic = config['kafka']['topic']
         self._interval_length = config['feeder']['interval_length']
+        self.source = None
 
     def write_to_kafka(self, topic_name: str, items: pd.DataFrame):
         """
@@ -81,16 +84,25 @@ class Feeder:
         Args:
             train_file (str): File to be read and sent over kafka
         """
-        for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0,
-                                 chunksize=self._batch_size):
-            self.write_to_kafka(self._kafka_topic, chunk)
+        # for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0,
+        #                          chunksize=self._batch_size):
+        #     self.write_to_kafka(self._kafka_topic, chunk)
 
-            time.sleep(self._interval_length)
+        #     time.sleep(self._interval_length)
 
+
+    def connect_task_queriable(self, source):
+        self.source = source
+
+    def run(self):
+        if self.source is None:
+            raise RuntimeError('You must connect a Queryable object to a feeder before running!')
 
 def main():
     args = parse_args()
     config = args.config
+
+    # config_path = config/devel.yaml
 
     with open(config, 'r') as stream:
         try:

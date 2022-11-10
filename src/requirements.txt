@@ -9,3 +9,4 @@ coverage
 grpcio
 psycopg2
 protobuf
+pyyaml 

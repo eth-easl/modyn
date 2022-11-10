@@ -1,0 +1,13 @@
+dataset: 
+  name: SplitMNIST
+  batch_size: 256
+  collapse_targets: True
+
+model:
+  name: vanilla
+  widths: [784, 800, 2]
+
+lr: 0.001
+epochs: 5
+trainer: 
+  name: naiveTaskBasedTrainer
