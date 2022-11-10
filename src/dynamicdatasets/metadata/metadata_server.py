@@ -51,19 +51,19 @@ class MetadataServicer(MetadataServicer):
             return BatchData(dataMap=batch)
 
 
-def serve():
-    args = parse_args()
-    config = args.config
+def serve(config_dict):
+    # args = parse_args()
+    # config = args.config
 
-    with open(config, 'r') as stream:
-        try:
-            parsed_yaml = yaml.safe_load(stream)
-        except yaml.YAMLError as exc:
-            raise yaml.YAMLError
+    # with open(config, 'r') as stream:
+    #     try:
+    #         parsed_yaml = yaml.safe_load(stream)
+    #     except yaml.YAMLError as exc:
+    #         raise yaml.YAMLError
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(
-        MetadataServicer(parsed_yaml), server)
+        MetadataServicer(config_dict), server)
     print('Starting server. Listening on port 50051.')
     server.add_insecure_port('[::]:50051')
     server.start()

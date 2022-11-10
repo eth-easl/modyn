@@ -28,26 +28,34 @@ if __name__ == '__main__':
 
     print(f'Running experiment {experiment_name}. Writing: {"Yes" if write else "No"}')
 
-    with open(f'configs/{experiment_name}.yaml') as f:
+    with open(f'experiments/configs/{experiment_name}.yaml') as f:
         configs = yaml.load(f, Loader=yaml.FullLoader)
         print('Configs:')
         print(configs)
 
-    dataset_dict = builder.make_dataset(configs['dataset'])
+    with open('config/devel.yaml', 'r') as stream:
+        try:
+            parsed_yaml = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            raise yaml.YAMLError
+        system_config = parsed_yaml
+
+    dataset_dict = builder.get_dataset(configs['dataset'])
 
     model = builder.make_model(configs['model'])
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    feeder = feed.Feeder()
+    feeder = feed.Feeder(system_config)
     feeder.connect_task_queriable(dataset_dict['queryable'])
-    Thread(target=lambda: feeder.run()).start()
 
-    preprocessor = preprocess.OfflinePreprocessor()
+    preprocessor = preprocess.OfflinePreprocessor(system_config)
     preprocessor.set_preprocess(dataset_dict['preprocessor'].preprocess)
     preprocessor.set_storable(dataset_dict['storable'])
 
-    Thread(target=lambda: metadata_server.serve()).start()
-    Thread(target=lambda: preprocessor.main()).start()
+    Thread(target=lambda: metadata_server.serve(system_config)).start()
+    Thread(target=lambda: preprocessor.run()).start()
+
+    # Note: we can easily create a train_feeder / val_feeder, train/val preprocessor. 
 
     epochs = configs['epochs']
     model = model.to(device)
@@ -56,15 +64,19 @@ if __name__ == '__main__':
     def scheduler_factory():
         return lr_scheduler.CosineAnnealingLR(optimizer, 32)
 
-    trainer = builder.make_trainer(configs['trainer'], model, criterion, optimizer, scheduler_factory, 
-            dataset_dict['dataset'], configs['dataset'], 
-            epochs, device)
+    print('All running!')
+    time.sleep(1)
+    feeder.task_step()
 
-            
+    # trainer = builder.make_trainer(configs['trainer'], model, criterion, optimizer, scheduler_factory, 
+    #         dataset_dict['dataset'], configs['dataset'], 
+    #         epochs, device)
 
-    result = trainer.train()
 
-    print(result)
-    if write: 
-        results_visualizer.visualize_results(result, experiment_name)
+
+    # result = trainer.train()
+
+    # print(result)
+    # if write: 
+    #     results_visualizer.visualize_results(result, experiment_name)
 

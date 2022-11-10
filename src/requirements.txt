@@ -10,3 +10,8 @@ grpcio
 psycopg2
 protobuf
 pyyaml 
+keras
+tensorflow
+torch 
+tqdm
+matplotlib

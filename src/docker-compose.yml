@@ -62,3 +62,11 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+
+  experiments:
+    image: experiments
+    depends_on: 
+      - dynamicdatasets
+    build:
+      context: .
+      dockerfile: ./Dockerfile

@@ -122,15 +122,15 @@ class SplitMNISTDataset(TaskDataset):
         return x, y
 
 class MNISTWrapper(Storable, Queryable, Preprocessor):
-    
+
     def __init__(self, data_dict):
         self.data_dict = data_dict 
 
     def query_next(self):
-        pass
+        return 'MNIST Task'
 
     def store_task(self):
-        pass 
+        pass # TODO
 
     def preprocess():
-        pass
+        pass # TODO

@@ -48,6 +48,8 @@ class OfflinePreprocessor:
         self.__config = config
 
         self.__data_storage = Storage(STORAGE_LOCATION + '/store')
+        self.preprocess_function = None
+        self.storable = None
 
     def run(self):
         """
@@ -70,28 +72,31 @@ class OfflinePreprocessor:
                 self.__config['kafka']['topic'],
                 bootstrap_servers=self.__config['kafka']['bootstrap_servers'],
                 enable_auto_commit=True,
-                value_deserializer=lambda x: loads(x.decode('utf-8'))
+                # value_deserializer=lambda x: loads(x.decode('utf-8'))
+                # value_deserializer=lambda x: x
             )
         except errors.NoBrokersAvailable as e:
             logger.exception(e)
             return
         for message in consumer:
+            # Here's where I'm not quite sure exactly what can be passed through Kafka. 
+            print('Preprocessor heard: ' + str(message.value))
             message_value = message.value
 
-            print('Read message from topic {0}'.format(
-                self.__config['kafka']['topic']))
+            # print('Read message from topic {0}'.format(
+            #     self.__config['kafka']['topic']))
 
-            df = self.offline_preprocessing(message_value)
+            # df = self.offline_preprocessing(message_value)
 
-            filename = self.__data_storage.write_dataset(
-                uuid.uuid4(), df.to_json())
+            # filename = self.__data_storage.write_dataset(
+            #     uuid.uuid4(), df.to_json())
 
-            with grpc.insecure_channel('dynamicdatasets:50051') as channel:
-                stub = MetadataStub(channel)
-                stub.AddBatch(
-                    Batch(
-                        filename=filename,
-                        rows=df['row_id'].tolist()))
+            # with grpc.insecure_channel('dynamicdatasets:50051') as channel:
+            #     stub = MetadataStub(channel)
+            #     stub.AddBatch(
+            #         Batch(
+            #             filename=filename,
+            #             rows=df['row_id'].tolist()))
 
     def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
         """
@@ -114,11 +119,11 @@ class OfflinePreprocessor:
     def get_row_number(self):
         return self.__row_number
 
-    def set_preprocess():
-        pass
+    def set_preprocess(self, preprocess_function):
+        self.preprocess_function = preprocess_function
 
-    def set_storable():
-        pass 
+    def set_storable(self, storable):
+        self.storable = storable 
 
 
 def main():
