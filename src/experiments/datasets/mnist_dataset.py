@@ -125,12 +125,21 @@ class MNISTWrapper(Storable, Queryable, Preprocessor):
 
     def __init__(self, data_dict):
         self.data_dict = data_dict 
+        self.data = []
+        self.task = 0
 
     def query_next(self):
-        return 'MNIST Task'
+        self.task += 1
+        return 'MNIST Task ' + str(self.task)
 
-    def store_task(self):
-        pass # TODO
+    def store_task(self, task_data):
+        self.data.append(task_data)
 
     def preprocess(self, query_data):
         return str(query_data).lower()
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        return self.data[i]

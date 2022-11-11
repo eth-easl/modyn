@@ -23,6 +23,7 @@ class Storage:
     def __init__(self, storage_location):
         os.makedirs(storage_location, exist_ok=True)
         self.__storage_location = storage_location
+        self.storable = None
 
     def write_dataset(self, batch_name: str, data: str):
         """
@@ -43,6 +44,15 @@ class Storage:
             file.write(data)
 
         return filename
+
+    def extend(self, new_data):
+        self.storable.store_task(new_data)
+
+    def __len__(self):
+        return len(self.storable)
+
+    def __getitem__(self, i):
+        return self.storable.__getitem__(i)
 
     def get_data(self, dict_data: dict[str, list[int]]) -> str:
         """
@@ -83,4 +93,4 @@ class Storage:
         return data
 
     def set_storable(self, storable: Storable):
-        pass
+        self.storable = storable

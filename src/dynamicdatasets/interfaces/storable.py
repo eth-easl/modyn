@@ -12,3 +12,9 @@ class Storable:
             str: select statement
         """
         raise NotImplementedError
+
+    def __len__(self):
+        pass 
+
+    def __getitem__(self, i):
+        pass

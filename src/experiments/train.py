@@ -66,7 +66,12 @@ if __name__ == '__main__':
 
     print('All running!')
 
-    feeder.task_step()
+    time.sleep(2)
+
+    for i in range(10):
+        feeder.task_step()
+        time.sleep(1)
+        print('Last item: ' + str(preprocessor.get_last_item()))
 
     # @Viktor: an imagined pseudocode workflow would go like this: 
     # strategy = dynamicdatasets.strategies.get('gdumb')

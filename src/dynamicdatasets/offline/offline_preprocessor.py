@@ -75,7 +75,6 @@ class OfflinePreprocessor:
                 bootstrap_servers=self.__config['kafka']['bootstrap_servers'],
                 enable_auto_commit=True,
                 # value_deserializer=lambda x: loads(x.decode('utf-8'))
-                # value_deserializer=lambda x: x
             )
         except errors.NoBrokersAvailable as e:
             logger.exception(e)
@@ -92,6 +91,9 @@ class OfflinePreprocessor:
 
             preprocessed = self.offline_preprocessing(message_value)
             print('Preprocessed data: ' + preprocessed)
+
+            self.__data_storage.extend(preprocessed)
+            # I'm not too sure how the metadata would work here. 
 
             # filename = self.__data_storage.write_dataset(
             #     uuid.uuid4(), df.to_json())
@@ -132,6 +134,11 @@ class OfflinePreprocessor:
 
     def set_storable(self, storable):
         self.storable = storable 
+        self.__data_storage.set_storable(storable)
+
+    def get_last_item(self):
+        # print('There are ' + str(len(self.__data_storage)) + ' items.')
+        return self.__data_storage[len(self.__data_storage) - 1]
 
 
 def main():
