@@ -69,4 +69,4 @@ services:
       - dynamicdatasets
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile_run

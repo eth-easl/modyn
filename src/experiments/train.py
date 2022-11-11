@@ -65,17 +65,28 @@ if __name__ == '__main__':
         return lr_scheduler.CosineAnnealingLR(optimizer, 32)
 
     print('All running!')
-    time.sleep(1)
+
     feeder.task_step()
+
+    # @Viktor: an imagined pseudocode workflow would go like this: 
+    # strategy = dynamicdatasets.strategies.get('gdumb')
+    # while feeder.task_step(): 
+    # (task_step doesn't return anything right now, but it'd do like True if more data, False otherwise. )
+        # trainer.continual_learn(model, configs={'max_iters': 1000})
+        # trainer.validate()
+    # visualize_results(trainer)
+
+
+
+
+
+
+
 
     # trainer = builder.make_trainer(configs['trainer'], model, criterion, optimizer, scheduler_factory, 
     #         dataset_dict['dataset'], configs['dataset'], 
     #         epochs, device)
-
-
-
     # result = trainer.train()
-
     # print(result)
     # if write: 
     #     results_visualizer.visualize_results(result, experiment_name)

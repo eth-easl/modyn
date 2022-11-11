@@ -132,5 +132,5 @@ class MNISTWrapper(Storable, Queryable, Preprocessor):
     def store_task(self):
         pass # TODO
 
-    def preprocess():
-        pass # TODO
+    def preprocess(self, query_data):
+        return str(query_data).lower()

@@ -67,6 +67,8 @@ class OfflinePreprocessor:
            5. every n files that have arrived also create a new batch by shuffling
            existing batches where n is configurable
         """
+        if self.preprocess_function is None or self.storable is None:
+            raise RuntimeError('Must register a preprocess function and a Storable object to run!')
         try:
             consumer = KafkaConsumer(
                 self.__config['kafka']['topic'],
@@ -83,10 +85,13 @@ class OfflinePreprocessor:
             print('Preprocessor heard: ' + str(message.value))
             message_value = message.value
 
-            # print('Read message from topic {0}'.format(
-            #     self.__config['kafka']['topic']))
 
-            # df = self.offline_preprocessing(message_value)
+
+            print('Read message from topic {0}'.format(
+                self.__config['kafka']['topic']))
+
+            preprocessed = self.offline_preprocessing(message_value)
+            print('Preprocessed data: ' + preprocessed)
 
             # filename = self.__data_storage.write_dataset(
             #     uuid.uuid4(), df.to_json())
@@ -98,7 +103,7 @@ class OfflinePreprocessor:
             #             filename=filename,
             #             rows=df['row_id'].tolist()))
 
-    def offline_preprocessing(self, message_value: str) -> pd.DataFrame:
+    def offline_preprocessing(self, data):
         """
         Apply offline processing of the data to make it ready for storage
 
@@ -108,13 +113,16 @@ class OfflinePreprocessor:
         Returns:
             pd.DataFrame: pandas dataframe of the processed data
         """
-        df = pd.DataFrame()
-        df = df.from_dict(message_value)
-        rows_in_df = len(df.index)
-        rows = list(range(self.__row_number, self.__row_number + rows_in_df))
-        self.__row_number += rows_in_df
-        df['row_id'] = rows
-        return df
+        # df = pd.DataFrame()
+        # df = df.from_dict(message_value)
+        # rows_in_df = len(df.index)
+        # rows = list(range(self.__row_number, self.__row_number + rows_in_df))
+        # self.__row_number += rows_in_df
+        # df['row_id'] = rows
+        # return df
+
+        return self.preprocess_function(data)
+
 
     def get_row_number(self):
         return self.__row_number
