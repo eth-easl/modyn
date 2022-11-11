@@ -1,15 +1,25 @@
 import time
 import copy
-from tqdm import tqdm 
+from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset
 from .buffer import Buffer
 import numpy as np
 
+
 class TaskTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler_factory, 
-                dataset, dataset_configs, num_epochs, device, trainer_configs):
+    def __init__(
+            self,
+            model,
+            criterion,
+            optimizer,
+            scheduler_factory,
+            dataset,
+            dataset_configs,
+            num_epochs,
+            device,
+            trainer_configs):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -30,7 +40,7 @@ class TaskTrainer:
         if self.get_gradient_error:
             self.clear_grad()
 
-        assert dataset['train'].is_task_based() 
+        assert dataset['train'].is_task_based()
 
     def reset_model(self):
         """
@@ -46,7 +56,7 @@ class TaskTrainer:
                 if callable(reset_parameters):
                     m.reset_parameters()
 
-            # Applies fn recursively to every submodule see: 
+            # Applies fn recursively to every submodule see:
             # https://pytorch.org/docs/stable/generated/torch.nn.Module.html
             self.model.apply(fn=weight_reset)
 
@@ -64,12 +74,14 @@ class TaskTrainer:
             print('Training on task', self.dataset['train'].active_task())
             train_results = self.train_task(self.dataset['train'].active_idx)
             val_results = self.validation()
-            result[self.dataset['train'].active_task()] = {'train': train_results, 'val': val_results}
+            result[self.dataset['train'].active_task()] = {
+                'train': train_results, 'val': val_results}
             try:
                 self.dataset['train'].next_task()
             except IndexError:
                 break
-        result[f'A{num_tasks}'] = result[self.dataset['train'].tasks[-1]]['val']['all']['Accuracy']
+        result[f'A{num_tasks}'] = result[self.dataset['train'].tasks[-1]
+                                         ]['val']['all']['Accuracy']
         result[f'F{num_tasks}'] = self.get_forgetting(result)
         print('Done!')
         return result
@@ -77,11 +89,12 @@ class TaskTrainer:
     def get_forgetting(self, result):
         forgetting = []
         for task in self.dataset['train'].tasks:
-            # We'll assume that the best is from when we trained on it. 
+            # We'll assume that the best is from when we trained on it.
             best = result[task]['val'][task]['Accuracy']
             # And also that the worst is from the last epoch
-            worst = result[self.dataset['train'].tasks[-1]]['val'][task]['Accuracy']
-            forgetting.append(best-worst)
+            worst = result[self.dataset['train'].tasks[-1]
+                           ]['val'][task]['Accuracy']
+            forgetting.append(best - worst)
         return np.mean(np.array(forgetting))
 
     def validation(self):
@@ -90,9 +103,10 @@ class TaskTrainer:
         self.dataset['test'].set_active_task(0)
         running_loss, running_corrects, running_count, result = 0.0, 0, 0, {}
 
-        val_loader = torch.utils.data.DataLoader(self.dataset['test'], 
-                                                batch_size = self.dataset_configs['batch_size'], 
-                                                shuffle = False)
+        val_loader = torch.utils.data.DataLoader(
+            self.dataset['test'],
+            batch_size=self.dataset_configs['batch_size'],
+            shuffle=False)
 
         while True:
             print('Task', self.dataset['test'].active_task())
@@ -126,40 +140,46 @@ class TaskTrainer:
         all_loss = running_loss / running_count
         all_accuracy = running_corrects.double().item() / running_count
 
-        print('Validation loss: {:.4f} Acc: {:.4f}'.format(all_loss, all_accuracy))
+        print(
+            'Validation loss: {:.4f} Acc: {:.4f}'.format(
+                all_loss, all_accuracy))
         result['all'] = {
             'Loss': all_loss, 'Accuracy': all_accuracy
         }
-        return result 
+        return result
 
     def __repr__(self):
         return 'Generic Task Based Trainer'
 
     """
-        For gradient error visualization, this should be called every SGD step. 
+        For gradient error visualization, this should be called every SGD step.
     """
+
     def report_grad(self):
-        current_grad = torch.cat([param.grad.flatten() for param in self.model.parameters()]) 
+        current_grad = torch.cat([param.grad.flatten()
+                                 for param in self.model.parameters()])
         if self.grad_total is None:
-            self.grad_total = current_grad 
-        else: 
+            self.grad_total = current_grad
+        else:
             self.grad_total += current_grad
 
     """
-        For gradient error visualization, this should be called before each epoch. 
-        Guarantees that the train dataset will remain on the same active task. 
+        For gradient error visualization, this should be called before each epoch.
+        Guarantees that the train dataset will remain on the same active task.
     """
+
     def compute_true_grad(self):
         self.model.train()
         self.dataset['train'].full_mode = True
         print('Computing true gradient...')
         self.optimizer.zero_grad()
-        train_loader = torch.utils.data.DataLoader(self.dataset['train'], 
-                                                    batch_size=self.dataset_configs['batch_size'])
-        for inputs, labels in tqdm(train_loader): 
+        train_loader = torch.utils.data.DataLoader(
+            self.dataset['train'], batch_size=self.dataset_configs['batch_size'])
+        for inputs, labels in tqdm(train_loader):
             inputs, labels = inputs.to(self.device), labels.to(self.device)
             self.criterion(self.model(inputs), labels).backward()
-        true_grad = torch.cat([param.grad.flatten() for param in self.model.parameters()])
+        true_grad = torch.cat([param.grad.flatten()
+                              for param in self.model.parameters()])
         self.optimizer.zero_grad()
         self.dataset['train'].full_mode = False
         print('True gradient computed ')
@@ -170,7 +190,7 @@ class TaskTrainer:
         return torch.norm(true_grad - self.grad_total)
 
     def clear_grad(self):
-        self.grad_total = None 
+        self.grad_total = None
 
     def reset_scheduler(self):
         self.scheduler = self.scheduler_factory()

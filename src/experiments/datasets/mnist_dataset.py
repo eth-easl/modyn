@@ -6,27 +6,33 @@ from .task_dataset import TaskDataset
 
 from dynamicdatasets.interfaces import Queryable, Storable, Preprocessor
 
-def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', configs=None):
+
+def get_mnist_dataset(
+        train_aug=None,
+        val_aug=None,
+        version='normal',
+        configs=None):
     (trainX, trainY), (testX, testY) = mnist.load_data()
-    trainX = torch.from_numpy((trainX/255).reshape(-1, 1, 28, 28)).float()
-    testX = torch.from_numpy((testX/255).reshape(-1, 1, 28, 28)).float()
+    trainX = torch.from_numpy((trainX / 255).reshape(-1, 1, 28, 28)).float()
+    testX = torch.from_numpy((testX / 255).reshape(-1, 1, 28, 28)).float()
     trainY = torch.from_numpy(trainY).long()
     testY = torch.from_numpy(testY).long()
 
     if train_aug is None:
         train_aug = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.RandomAffine(degrees = 30),
+            transforms.RandomAffine(degrees=30),
             transforms.RandomPerspective(),
             transforms.ToTensor(),
             # TODO missing the normalize
         ])
 
-    if val_aug is None: 
+    if val_aug is None:
         val_aug = transforms.Compose([
             transforms.ToPILImage(),
             transforms.ToTensor(),
-            # TODO not actually sure if you're supposed to normalize with this or train normalize
+            # TODO not actually sure if you're supposed to normalize with this
+            # or train normalize
         ])
 
     val_configs = configs.copy()
@@ -44,6 +50,7 @@ def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', configs=No
         }
     else:
         raise NotImplementedError()
+
 
 class MNISTDataset(Dataset):
     def __init__(self, x, y, augmentation):
@@ -70,34 +77,35 @@ class MNISTDataset(Dataset):
 
 class SplitMNISTDataset(TaskDataset):
     def __init__(self, x, y, augmentation, dataset_config):
-        super(SplitMNISTDataset, self).__init__(['0/1', '2/3', '4/5', '6/7', '8/9'], dataset_config)
+        super(SplitMNISTDataset, self).__init__(
+            ['0/1', '2/3', '4/5', '6/7', '8/9'], dataset_config)
         self.augmentation = augmentation
 
         task_idx, self.x, self.y = [], [], []
-        task_idx.append((y==0) | (y==1))
-        task_idx.append((y==2) | (y==3))
-        task_idx.append((y==4) | (y==5))
-        task_idx.append((y==6) | (y==7))
-        task_idx.append((y==8) | (y==9))
+        task_idx.append((y == 0) | (y == 1))
+        task_idx.append((y == 2) | (y == 3))
+        task_idx.append((y == 4) | (y == 5))
+        task_idx.append((y == 6) | (y == 7))
+        task_idx.append((y == 8) | (y == 9))
         self.full_x = x
         self.full_y = y
         self.full_mode = False
 
         for idx, task in enumerate(task_idx):
             self.x.append(x[task])
-            if dataset_config['collapse_targets']: 
-                self.y.append(y[task] - 2*idx)
+            if dataset_config['collapse_targets']:
+                self.y.append(y[task] - 2 * idx)
             else:
                 self.y.append(y[task])
 
     def __repr__(self):
         return f'CIL-MNIST-Blurry{self.blurry}'
-    
+
     def __len__(self):
         if self.full_mode:
             return len(self.full_x)
         else:
-            return int(len(self.x[self.active_idx]) * (1+self.blurry/100))
+            return int(len(self.x[self.active_idx]) * (1 + self.blurry / 100))
 
     def __getitem__(self, idx):
         if self.full_mode:
@@ -108,7 +116,7 @@ class SplitMNISTDataset(TaskDataset):
             minor_task = minor_idx % (len(self.tasks) - 1)
             minor_idx = minor_idx // (len(self.tasks) - 1)
             if minor_task >= self.active_idx:
-                minor_task+=1
+                minor_task += 1
             x = self.x[minor_task][minor_idx]
             y = self.y[minor_task][minor_idx]
         else:
@@ -121,10 +129,11 @@ class SplitMNISTDataset(TaskDataset):
             return [x]
         return x, y
 
+
 class MNISTWrapper(Storable, Queryable, Preprocessor):
 
     def __init__(self, data_dict):
-        self.data_dict = data_dict 
+        self.data_dict = data_dict
         self.data = []
         self.task = 0
 

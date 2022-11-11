@@ -1,19 +1,40 @@
 import time
 import copy
-from tqdm import tqdm 
+from tqdm import tqdm
 import torch
 from .task_trainer import TaskTrainer
 import numpy as np
 from datasets.buffer_dataset import BufferDataset
+
 
 class GDumbTrainer(TaskTrainer):
 
     def __repr__(self):
         return 'GDumb Trainer'
 
-    def __init__(self, model, criterion, optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs):
-        super().__init__(model, criterion(), optimizer, scheduler_factory, dataset, dataset_configs, num_epochs, device, trainer_configs)
-        self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
+    def __init__(
+            self,
+            model,
+            criterion,
+            optimizer,
+            scheduler_factory,
+            dataset,
+            dataset_configs,
+            num_epochs,
+            device,
+            trainer_configs):
+        super().__init__(
+            model,
+            criterion(),
+            optimizer,
+            scheduler_factory,
+            dataset,
+            dataset_configs,
+            num_epochs,
+            device,
+            trainer_configs)
+        self.buffer_dataset = BufferDataset(
+            [], [], dataset['train'].augmentation, fake_size=512)
 
     def train_task(self, task_idx):
         since = time.time()
@@ -32,11 +53,14 @@ class GDumbTrainer(TaskTrainer):
             self.reset_model()
             self.reset_scheduler()
 
-        train_loader = torch.utils.data.DataLoader(self.buffer_dataset, shuffle=True, batch_size=self.dataset_configs['batch_size'])   
+        train_loader = torch.utils.data.DataLoader(
+            self.buffer_dataset,
+            shuffle=True,
+            batch_size=self.dataset_configs['batch_size'])
         train_length = len(self.buffer_dataset)
 
         for epoch in range(self.num_epochs):
-            print('Epoch {}/{}'.format(epoch+1, self.num_epochs))
+            print('Epoch {}/{}'.format(epoch + 1, self.num_epochs))
             print('-' * 10)
 
             self.model.train()
@@ -58,8 +82,8 @@ class GDumbTrainer(TaskTrainer):
                     loss = self.criterion(outputs, labels)
                     loss.backward()
                     self.optimizer.step()
-                    if self.get_gradient_error: 
-                        self.report_grad()  
+                    if self.get_gradient_error:
+                        self.report_grad()
 
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
@@ -77,9 +101,11 @@ class GDumbTrainer(TaskTrainer):
 
             train_losses.append(epoch_loss)
             train_accuracies.append(epoch_acc.item())
-            gradient_errors.append(grad_error)  
+            gradient_errors.append(grad_error)
 
-            print('Train Loss: {:.4f} Acc: {:.4f}. Gradient error: {:.4f}'.format(epoch_loss, epoch_acc, grad_error))
+            print(
+                'Train Loss: {:.4f} Acc: {:.4f}. Gradient error: {:.4f}'.format(
+                    epoch_loss, epoch_acc, grad_error))
 
         time_elapsed = time.time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(
@@ -92,19 +118,24 @@ class GDumbTrainer(TaskTrainer):
         if self.get_gradient_error:
             train_results['gradient_errors'] = gradient_errors
 
-        return train_results 
+        return train_results
 
     def gdumb_update(self, x, y):
         if not self.buffer.is_full():
             self.buffer.insert_new(x, y)
         else:
-            classes, count = np.unique(np.array(self.buffer.bufferY), return_counts=True)
+            classes, count = np.unique(
+                np.array(self.buffer.bufferY), return_counts=True)
             kc = self.buffer.get_size() / len(classes)
-            if y not in classes or count[np.where(classes==y)[0][0]] < kc: # Line 5 of GDumb
-                max_label = np.random.choice(np.where(count == count.max())[0]) # Find the class that has the most instances, breaking ties randomly
+            if y not in classes or count[np.where(
+                    classes == y)[0][0]] < kc:  # Line 5 of GDumb
+                # Find the class that has the most instances, breaking ties
+                # randomly
+                max_label = np.random.choice(np.where(count == count.max())[0])
                 idx = np.random.randint(count[max_label])
-                to_replace = np.where(self.buffer.bufferY == max_label)[0][idx] # Get a random instance of that class
-                self.buffer.insert(to_replace, x, y) # Replace that random instance with (x, y)
+                to_replace = np.where(self.buffer.bufferY == max_label)[
+                    0][idx]  # Get a random instance of that class
+                # Replace that random instance with (x, y)
+                self.buffer.insert(to_replace, x, y)
 
         self.buffer_dataset.update(self.buffer)
-

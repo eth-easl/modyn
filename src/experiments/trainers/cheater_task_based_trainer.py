@@ -1,32 +1,53 @@
 import time
 import copy
-from tqdm import tqdm 
+from tqdm import tqdm
 import torch
 from .task_trainer import TaskTrainer
 import numpy as np
 from datasets.buffer_dataset import BufferDataset
+
 
 class CheaterTaskBasedTrainer(TaskTrainer):
 
     def __repr__(self):
         return 'Cheating Trainer (used as a sanity check for debugging)'
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs):
-        super().__init__(model, criterion(), optimizer, scheduler, dataset, dataset_configs, num_epochs, device, trainer_configs)
-        self.buffer_dataset = BufferDataset([], [], dataset['train'].augmentation, fake_size=512)
+    def __init__(
+            self,
+            model,
+            criterion,
+            optimizer,
+            scheduler,
+            dataset,
+            dataset_configs,
+            num_epochs,
+            device,
+            trainer_configs):
+        super().__init__(
+            model,
+            criterion(),
+            optimizer,
+            scheduler,
+            dataset,
+            dataset_configs,
+            num_epochs,
+            device,
+            trainer_configs)
+        self.buffer_dataset = BufferDataset(
+            [], [], dataset['train'].augmentation, fake_size=512)
 
     def train_task(self, task_idx):
         since = time.time()
         train_losses, train_accuracies, gradient_errors = [], [], []
 
         train_loader = torch.utils.data.DataLoader(
-            self.dataset['train'], 
+            self.dataset['train'],
             shuffle=True,
             batch_size=self.dataset_configs['batch_size']
         )
 
         for epoch in range(self.num_epochs):
-            print('Epoch {}/{}'.format(epoch+1, self.num_epochs))
+            print('Epoch {}/{}'.format(epoch + 1, self.num_epochs))
             print('-' * 10)
 
             self.model.train()
@@ -50,8 +71,8 @@ class CheaterTaskBasedTrainer(TaskTrainer):
                     loss = self.criterion(outputs, labels)
                     loss.backward()
                     self.optimizer.step()
-                    if self.get_gradient_error: 
-                        self.report_grad()  
+                    if self.get_gradient_error:
+                        self.report_grad()
 
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
@@ -72,7 +93,9 @@ class CheaterTaskBasedTrainer(TaskTrainer):
             train_losses.append(epoch_loss)
             train_accuracies.append(epoch_acc.item())
             gradient_errors.append(grad_error)
-            print('Train Loss: {:.4f} Acc: {:.4f}. Gradient error: {:.4f}'.format(epoch_loss, epoch_acc, grad_error))
+            print(
+                'Train Loss: {:.4f} Acc: {:.4f}. Gradient error: {:.4f}'.format(
+                    epoch_loss, epoch_acc, grad_error))
 
         time_elapsed = time.time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(
@@ -85,4 +108,4 @@ class CheaterTaskBasedTrainer(TaskTrainer):
         if self.get_gradient_error:
             train_results['gradient_errors'] = gradient_errors
 
-        return train_results 
+        return train_results

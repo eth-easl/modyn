@@ -8,7 +8,7 @@ import shutil
 from mock import patch
 
 from dynamicdatasets.metadata import Metadata
-from dynamicdatasets.offline.storage import Storage
+from dynamicdatasets.offline.storage.storage import Storage
 
 STORAGE_LOCATION = str(pathlib.Path(__file__).parent.parent.parent.resolve())
 

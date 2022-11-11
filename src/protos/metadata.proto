@@ -1,24 +1,36 @@
 syntax = "proto3";
 
-import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 
 package metadata;
 
 service Metadata {
-    rpc AddBatch(Batch) returns (BatchId) {}
-    rpc GetBatch(google.protobuf.Empty) returns (BatchData) {}
+    rpc AddMetadata(AddMetadataRequest) returns (AddMetadataResponse) {}
+    rpc GetNext(GetNextRequest) returns (GetNextResponse) {}
+    rpc AddTrainingData(AddTrainingDataRequest) returns (AddTrainingDataResponse) {}
 }
 
-message BatchId {
-    int32 batchId = 1;
+message AddMetadataResponse {
+    int32 metadataId = 1;
 }
 
-message Batch {
+message AddMetadataRequest {
     string filename = 1;
     repeated int32 rows = 2 [packed = true];
 }
 
-message BatchData {
+message GetNextResponse {
+    google.protobuf.Struct dataMap = 1;
+}
+
+message GetNextRequest {
+    int32 metadataId = 1;
+}
+
+message AddTrainingDataResponse {
+    bool success = 1;
+}
+
+message AddTrainingDataRequest {
     google.protobuf.Struct dataMap = 1;
 }

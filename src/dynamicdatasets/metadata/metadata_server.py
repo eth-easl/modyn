@@ -1,17 +1,9 @@
 from concurrent import futures
-import yaml
-import argparse
 
 import grpc
-from dynamicdatasets.metadata.metadata_pb2 import BatchData, BatchId
+
+from dynamicdatasets.metadata.metadata_pb2 import AddMetadataRequest, GetNextResponse
 from dynamicdatasets.metadata.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Feeder")
-    parser.add_argument("config", help="Config File")
-    args = parser.parse_args()
-    return args
 
 
 class MetadataServicer(MetadataServicer):
@@ -34,33 +26,24 @@ class MetadataServicer(MetadataServicer):
             mod = getattr(mod, comp)
         return mod
 
-    def AddBatch(self, request, context):
-        print("Adding batch")
-        batch_id = self._scorer.add_batch(request.filename, request.rows)
-        if batch_id is None:
-            return BatchId(batchId=-1)
+    def AddMetadata(self, request, context):
+        print("Adding metadata")
+        metadata_id = self._scorer.add_batch(request.filename, request.rows)
+        if metadata_id is None:
+            return AddMetadataRequest(metadataId=-1)
         else:
-            return BatchId(batchId=batch_id)
+            return AddMetadataRequest(metadataId=metadata_id)
 
-    def GetBatch(self, request, context):
-        print("Getting batch")
-        batch = self._selector.get_next_batch()
-        if batch is None:
-            return BatchData(dataMap={})
+    def GetMetadata(self, request, context):
+        print("Getting metadata")
+        next = self._selector.get_next_batch()
+        if next is None:
+            return GetNextResponse(dataMap={})
         else:
-            return BatchData(dataMap=batch)
+            return GetNextResponse(dataMap=next)
 
 
 def serve(config_dict):
-    # args = parse_args()
-    # config = args.config
-
-    # with open(config, 'r') as stream:
-    #     try:
-    #         parsed_yaml = yaml.safe_load(stream)
-    #     except yaml.YAMLError as exc:
-    #         raise yaml.YAMLError
-
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(
         MetadataServicer(config_dict), server)
@@ -68,7 +51,3 @@ def serve(config_dict):
     server.add_insecure_port('[::]:50051')
     server.start()
     server.wait_for_termination()
-
-
-if __name__ == '__main__':
-    serve()

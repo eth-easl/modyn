@@ -11,7 +11,7 @@ class TaskDataset(Dataset):
         if isinstance(task, str):
             task = self.tasks.index(task)
         self.active_idx = task
-    
+
     def active_task(self):
         return self.tasks[self.active_idx]
 
@@ -20,7 +20,7 @@ class TaskDataset(Dataset):
 
     def has_more_tasks(self):
         return self.active_idx < len(self.tasks) - 1
-    
+
     def next_task(self):
         if self.has_more_tasks():
             self.active_idx += 1
@@ -29,4 +29,3 @@ class TaskDataset(Dataset):
 
     def serialize():
         raise NotImplementedError
-

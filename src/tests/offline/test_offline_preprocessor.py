@@ -3,7 +3,7 @@ import unittest
 from mock import patch
 import pandas as pd
 
-from dynamicdatasets.offline.offline_preprocessor import OfflinePreprocessor
+from dynamicdatasets.offline.preprocess.offline_preprocessor import OfflinePreprocessor
 
 
 class TestOfflineDataPreprocessor(unittest.TestCase):

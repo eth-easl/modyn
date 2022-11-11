@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import webdataset as wds
 
-from dynamicdatasets.offline.storage import Storage
+from dynamicdatasets.offline.storage.storage import Storage
 
 TEMP_STORAGE_LOCATION = str(pathlib.Path(
     __file__).parent.parent.resolve()) + '/tmp'

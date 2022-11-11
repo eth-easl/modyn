@@ -1,7 +1,7 @@
 class Buffer:
 
     def __init__(self, max_size=12):
-        assert max_size%12 == 0, 'Currently only support buffers of sizes multiple of 12'
+        assert max_size % 12 == 0, 'Currently only support buffers of sizes multiple of 12'
 
         self.bufferX = [None for _ in range(max_size)]
         self.bufferY = [None for _ in range(max_size)]
@@ -19,7 +19,8 @@ class Buffer:
 
     def insert(self, index, x, y, weight=1):
         if self.bufferX[index] is None:
-            raise Exception('Attempting to insert into empty slot. If buffer is not full (like now), please use insert_new')
+            raise Exception(
+                'Attempting to insert into empty slot. If buffer is not full (like now), please use insert_new')
         self.bufferX[index] = x
         self.bufferY[index] = y
         self.weights[index] = weight
@@ -29,16 +30,16 @@ class Buffer:
 
     def get_size(self):
         return self.size
-    
+
     def is_full(self):
         return self.size == self.max_size
 
     def insert_new(self, x, y, weight=1):
         if self.size >= self.max_size:
-            raise Exception('Attempting to insert_new into a buffer that is already full. Use insert instead')
+            raise Exception(
+                'Attempting to insert_new into a buffer that is already full. Use insert instead')
         else:
             self.bufferX[self.size] = x
             self.bufferY[self.size] = y
             self.weights[self.size] = weight
             self.size += 1
-    

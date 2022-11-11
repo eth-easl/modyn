@@ -10,9 +10,9 @@ from json import loads
 import pandas as pd
 import grpc
 
-from dynamicdatasets.offline.storage import Storage
+from dynamicdatasets.offline.storage.storage import Storage
 from dynamicdatasets.metadata.metadata_pb2_grpc import MetadataStub
-from dynamicdatasets.metadata.metadata_pb2 import Batch
+from dynamicdatasets.metadata.metadata_pb2 import AddMetadataRequest
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -68,32 +68,28 @@ class OfflinePreprocessor:
            existing batches where n is configurable
         """
         if self.preprocess_function is None or self.storable is None:
-            raise RuntimeError('Must register a preprocess function and a Storable object to run!')
+            raise RuntimeError(
+                'Must register a preprocess function and a Storable object to run!')
         try:
             consumer = KafkaConsumer(
                 self.__config['kafka']['topic'],
                 bootstrap_servers=self.__config['kafka']['bootstrap_servers'],
                 enable_auto_commit=True,
-                # value_deserializer=lambda x: loads(x.decode('utf-8'))
             )
         except errors.NoBrokersAvailable as e:
             logger.exception(e)
             return
         for message in consumer:
-            # Here's where I'm not quite sure exactly what can be passed through Kafka. 
+            # Here's where I'm not quite sure exactly what can be passed
+            # through Kafka.
             print('Preprocessor heard: ' + str(message.value))
             message_value = message.value
-
-
-
-            print('Read message from topic {0}'.format(
-                self.__config['kafka']['topic']))
 
             preprocessed = self.offline_preprocessing(message_value)
             print('Preprocessed data: ' + preprocessed)
 
             self.__data_storage.extend(preprocessed)
-            # I'm not too sure how the metadata would work here. 
+            # I'm not too sure how the metadata would work here.
 
             # filename = self.__data_storage.write_dataset(
             #     uuid.uuid4(), df.to_json())
@@ -125,7 +121,6 @@ class OfflinePreprocessor:
 
         return self.preprocess_function(data)
 
-
     def get_row_number(self):
         return self.__row_number
 
@@ -133,7 +128,7 @@ class OfflinePreprocessor:
         self.preprocess_function = preprocess_function
 
     def set_storable(self, storable):
-        self.storable = storable 
+        self.storable = storable
         self.__data_storage.set_storable(storable)
 
     def get_last_item(self):

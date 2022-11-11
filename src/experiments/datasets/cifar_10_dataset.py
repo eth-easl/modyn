@@ -10,16 +10,21 @@ import torch
 
 from .task_dataset import TaskDataset
 
-def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', configs=None):
+
+def get_cifar10_dataset(
+        train_aug=None,
+        val_aug=None,
+        version='normal',
+        configs=None):
 
     def normalize_dataset(data):
-        mean = data.mean(axis=(0,1,2)) / 255.0
-        std = data.std(axis=(0,1,2)) / 255.0
+        mean = data.mean(axis=(0, 1, 2)) / 255.0
+        std = data.std(axis=(0, 1, 2)) / 255.0
         normalize = transforms.Normalize(mean=mean, std=std)
         return normalize
 
     def load_cifar10_data(filename):
-        with open('./data/cifar10/cifar-10-batches-py/'+ filename, 'rb') as file:
+        with open('./data/cifar10/cifar-10-batches-py/' + filename, 'rb') as file:
             batch = pickle.load(file, encoding='latin1')
 
         features = batch['data']
@@ -34,26 +39,27 @@ def get_cifar10_dataset(train_aug=None, val_aug=None, version='normal', configs=
     batch_5, labels_5 = load_cifar10_data('data_batch_5')
     testX, testY = load_cifar10_data('test_batch')
 
-    trainX = np.concatenate([batch_1,batch_2,batch_3,batch_4,batch_5], 0)
-    trainY = torch.from_numpy(np.concatenate([labels_1,labels_2,labels_3,labels_4,labels_5], 0))
+    trainX = np.concatenate([batch_1, batch_2, batch_3, batch_4, batch_5], 0)
+    trainY = torch.from_numpy(np.concatenate(
+        [labels_1, labels_2, labels_3, labels_4, labels_5], 0))
 
     trainX = np.reshape(trainX, (-1, 32, 32, 3))
-    testX = np.reshape(testX, (-1, 32, 32, 3)) 
+    testX = np.reshape(testX, (-1, 32, 32, 3))
 
     testY = torch.from_numpy(np.array(testY))
 
     classes = ('airplane', 'car', 'bird', 'cat',
-            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-    
+               'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
     if train_aug is None:
         train_aug = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((40, 40)),      
-            transforms.RandomCrop((32, 32)),   
+            transforms.Resize((40, 40)),
+            transforms.RandomCrop((32, 32)),
             transforms.RandomHorizontalFlip(),
             transforms.RandomRotation(15),
             transforms.ToTensor(),
-            normalize_dataset(trainX) 
+            normalize_dataset(trainX)
         ])
 
     if val_aug is None:
@@ -84,11 +90,11 @@ class CIFAR10Dataset(Dataset):
     def __init__(self, x, y, augmentation):
         self.x = x
         self.y = y
-        self.augmentation = augmentation 
-    
+        self.augmentation = augmentation
+
     def __len__(self):
         return len(self.x)
-    
+
     def is_task_based(self):
         return False
 
@@ -105,23 +111,24 @@ class CIFAR10Dataset(Dataset):
 
 class SplitCIFAR10Dataset(TaskDataset):
     def __init__(self, x, y, augmentation, configs):
-        super(SplitCIFAR10Dataset, self).__init__(['Airplane/Car', 'Bird/Cat', 'Deer/Dog', 'Frog/Horse', 'Ship/Truck'], configs)
+        super(SplitCIFAR10Dataset, self).__init__(
+            ['Airplane/Car', 'Bird/Cat', 'Deer/Dog', 'Frog/Horse', 'Ship/Truck'], configs)
         self.augmentation = augmentation
 
         task_idx, self.x, self.y = [], [], []
-        task_idx.append((y==0) | (y==1))
-        task_idx.append((y==2) | (y==3))
-        task_idx.append((y==4) | (y==5))
-        task_idx.append((y==6) | (y==7))
-        task_idx.append((y==8) | (y==9))
+        task_idx.append((y == 0) | (y == 1))
+        task_idx.append((y == 2) | (y == 3))
+        task_idx.append((y == 4) | (y == 5))
+        task_idx.append((y == 6) | (y == 7))
+        task_idx.append((y == 8) | (y == 9))
         self.full_x = x
         self.full_y = y
         self.full_mode = False
 
         for idx, task in enumerate(task_idx):
             self.x.append(x[task])
-            if configs['collapse_targets']: 
-                self.y.append(y[task] - 2*idx)
+            if configs['collapse_targets']:
+                self.y.append(y[task] - 2 * idx)
             else:
                 self.y.append(y[task])
 
@@ -132,7 +139,7 @@ class SplitCIFAR10Dataset(TaskDataset):
         if self.full_mode:
             return len(self.full_x)
         else:
-            return int(len(self.x[self.active_idx]) * (1+self.blurry/100))
+            return int(len(self.x[self.active_idx]) * (1 + self.blurry / 100))
 
     def __getitem__(self, idx):
         if self.full_mode:

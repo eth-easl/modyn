@@ -1,18 +1,34 @@
 import time
 import copy
-from tqdm import tqdm 
+from tqdm import tqdm
 import torch
+
 
 class DefaultTrainer:
 
-    def __init__(self, model, criterion, optimizer, scheduler, dataset, dataset_configs, num_epochs, device):
+    def __init__(
+            self,
+            model,
+            criterion,
+            optimizer,
+            scheduler,
+            dataset,
+            dataset_configs,
+            num_epochs,
+            device):
         self.model = model
         self.criterion = criterion()
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.dataloaders = {
-            'train': torch.utils.data.DataLoader(dataset['train'], batch_size = dataset_configs['batch_size'], shuffle = True), 
-            'val': torch.utils.data.DataLoader(dataset['test'], batch_size = dataset_configs['batch_size'], shuffle = False), 
+            'train': torch.utils.data.DataLoader(
+                dataset['train'],
+                batch_size=dataset_configs['batch_size'],
+                shuffle=True),
+            'val': torch.utils.data.DataLoader(
+                dataset['test'],
+                batch_size=dataset_configs['batch_size'],
+                shuffle=False),
         }
         self.num_epochs = num_epochs
         self.device = device
@@ -25,7 +41,7 @@ class DefaultTrainer:
         best_acc = 0.0
 
         for epoch in range(self.num_epochs):
-            print('Epoch {}/{}'.format(epoch+1, self.num_epochs))
+            print('Epoch {}/{}'.format(epoch + 1, self.num_epochs))
             print('-' * 10)
 
             # Each epoch has a training and validation phase
@@ -64,18 +80,20 @@ class DefaultTrainer:
                 if phase == 'train':
                     self.scheduler.step()
 
-                epoch_loss = running_loss / len(self.dataloaders[phase].dataset)
-                epoch_acc = running_corrects.double() / len(self.dataloaders[phase].dataset)
+                epoch_loss = running_loss / \
+                    len(self.dataloaders[phase].dataset)
+                epoch_acc = running_corrects.double(
+                ) / len(self.dataloaders[phase].dataset)
 
                 print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+                    phase, epoch_loss, epoch_acc))
 
                 # deep copy the model
                 if phase == 'val' and epoch_acc > best_acc:
                     best_acc = epoch_acc
                     best_model_wts = copy.deepcopy(self.model.state_dict())
 
-            #print()
+            # print()
 
         time_elapsed = time.time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(

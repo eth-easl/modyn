@@ -5,13 +5,13 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class BatchData(_message.Message):
+class DataRequest(_message.Message):
     __slots__ = ["dataMap"]
     DATAMAP_FIELD_NUMBER: _ClassVar[int]
     dataMap: _struct_pb2.Struct
     def __init__(self, dataMap: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
-class Data(_message.Message):
+class DataResponse(_message.Message):
     __slots__ = ["dataMap"]
     DATAMAP_FIELD_NUMBER: _ClassVar[int]
     dataMap: _struct_pb2.Struct

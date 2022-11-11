@@ -80,7 +80,7 @@ class Feeder:
 
     def task_step(self):
         """
-        Step through time to the next distribution (task). Publish those over Kafka. 
+        Step through time to the next distribution (task). Publish those over Kafka.
         """
         # for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0,
         #                          chunksize=self._batch_size):
@@ -89,7 +89,8 @@ class Feeder:
         #     time.sleep(self._interval_length)
 
         if self.source is None:
-            raise RuntimeError('You must connect a Queryable object to a feeder before you can get data!')
+            raise RuntimeError(
+                'You must connect a Queryable object to a feeder before you can get data!')
         data = self.source.query_next()
         self.write_to_kafka(self._kafka_topic, data)
 

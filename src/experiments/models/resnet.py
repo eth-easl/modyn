@@ -5,7 +5,13 @@ from models.layers import ConvBlock, InitialBlock, FinalBlock
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, opt, inChannels, outChannels, stride=1, downsample=None):
+    def __init__(
+            self,
+            opt,
+            inChannels,
+            outChannels,
+            stride=1,
+            downsample=None):
         super(BasicBlock, self).__init__()
         self.downsample = downsample
         expansion = 1
@@ -42,7 +48,13 @@ class BasicBlock(nn.Module):
 class BottleneckBlock(nn.Module):
     expansion = 4
 
-    def __init__(self, opt, inChannels, outChannels, stride=1, downsample=None):
+    def __init__(
+            self,
+            opt,
+            inChannels,
+            outChannels,
+            stride=1,
+            downsample=None):
         super(BottleneckBlock, self).__init__()
         expansion = 4
         self.conv1 = ConvBlock(
@@ -127,7 +139,20 @@ class ResNet(nn.Module):
             blocktype, self.nettype = "BasicBlock", "imagenet"
         elif depth in [50, 101, 152]:
             blocktype, self.nettype = "BottleneckBlock", "imagenet"
-        assert depth in [20, 32, 44, 56, 110, 1202, 164, 1001, 18, 34, 50, 101, 152]
+        assert depth in [
+            20,
+            32,
+            44,
+            56,
+            110,
+            1202,
+            164,
+            1001,
+            18,
+            34,
+            50,
+            101,
+            152]
 
         if blocktype == "BasicBlock" and self.nettype == "cifar":
             assert (
@@ -196,7 +221,8 @@ class ResNet(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+                nn.init.kaiming_normal_(
+                    m.weight, mode="fan_out", nonlinearity="relu")
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -211,4 +237,4 @@ class ResNet(nn.Module):
         out = self.pool(out)
         out = out.view(x.size(0), -1)
         out = self.fc(out)
-        return 
+        return

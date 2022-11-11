@@ -14,7 +14,7 @@ class Storable:
         raise NotImplementedError
 
     def __len__(self):
-        pass 
+        pass
 
     def __getitem__(self, i):
         pass

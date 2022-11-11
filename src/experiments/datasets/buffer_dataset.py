@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 import torch
 
+
 class BufferDataset(Dataset):
     def __init__(self, x, y, augmentation, fake_size=0):
         self.x = x
@@ -25,8 +26,8 @@ class BufferDataset(Dataset):
         return self.x[idx], self.y[idx]
 
     def update(self, x, y):
-        self.x = x 
-        self.y = y 
+        self.x = x
+        self.y = y
 
     def update(self, buffer):
         self.x = torch.cat(buffer.bufferX[:buffer.get_size()])
