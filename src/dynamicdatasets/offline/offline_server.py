@@ -4,6 +4,7 @@ import grpc
 
 from dynamicdatasets.offline.offline_pb2 import DataResponse, DataRequest
 from dynamicdatasets.offline.offline_pb2_grpc import OfflineServicer, add_OfflineServicer_to_server
+from dynamicdatasets.offline.preprocess.offline_preprocessor import OfflinePreprocessor
 
 
 class OfflineServicer(OfflineServicer):
@@ -22,6 +23,7 @@ class OfflineServicer(OfflineServicer):
         self._preprocess.set_preprocess(
             dataset_dict['preprocessor'].preprocess)
         self._preprocess.set_storable(dataset_dict['storable'])
+        self._preprocess.run()
 
     def my_import(self, name):
         components = name.split('.')
@@ -32,8 +34,10 @@ class OfflineServicer(OfflineServicer):
 
     def GetData(self, request, context):
         print("Getting data")
-        # TODO: figure out what the request object should look like
-        data = self._storage.__getitem__(request)
+        if request['get_last_item']:
+            data = self._storage.get_last_item()
+        else:
+            data = self._storage.get_data()
         if data is None:
             return DataResponse(dataMap={})
         else:

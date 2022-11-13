@@ -43,8 +43,6 @@ def add_OfflineServicer_to_server(servicer, server):
         'offline.Offline', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
- # This class is part of an EXPERIMENTAL API.
-
 
 class Offline(object):
     """Missing associated documentation comment in .proto file."""

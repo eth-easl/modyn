@@ -1,18 +1,21 @@
-import builder
-import torch
-from torch.optim import lr_scheduler, Adam
 import time
 import copy
+import argparse
+from threading import Thread
+
+import grpc
 from tqdm import tqdm
 import yaml
-import results_visualizer
-import argparse
+import torch
+from torch.optim import lr_scheduler, Adam
 
 import dynamicdatasets.feeder.feeder as feed
 import dynamicdatasets.metadata.metadata_server as metadata_server
 import dynamicdatasets.offline.offline_server as offline_server
-import dynamicdatasets.offline.preprocess.offline_preprocessor as preprocess
-from threading import Thread
+from dynamicdatasets.offline.offline_pb2_grpc import OfflineStub
+from dynamicdatasets.offline.offline_pb2 import DataRequest
+import builder
+import results_visualizer
 
 
 def parse_args():
@@ -78,7 +81,14 @@ if __name__ == '__main__':
     for i in range(10):
         feeder.task_step()
         time.sleep(1)
-        print('Last item: ' + str(preprocessor.get_last_item()))
+        with grpc.insecure_channel('dynamicdatasets:50051') as channel:
+            stub = OfflineStub(channel)
+            data = stub.GetData(
+                DataRequest(
+                    {'get_last_item': True},
+                )
+            )
+            print('Last item: ' + str(data))
 
     # @Viktor: an imagined pseudocode workflow would go like this:
     # strategy = dynamicdatasets.strategies.get('gdumb')

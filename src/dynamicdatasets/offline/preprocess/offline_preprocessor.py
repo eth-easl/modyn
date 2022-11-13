@@ -1,13 +1,10 @@
 import argparse
 from datetime import datetime
 import yaml
-import uuid
 import logging
 import pathlib
 
 from kafka import KafkaConsumer, errors
-from json import loads
-import pandas as pd
 import grpc
 
 from dynamicdatasets.offline.storage.storage import Storage
@@ -37,6 +34,7 @@ class OfflinePreprocessor:
     __config = None
     __data_storage = None
     __row_number = 0
+    __preprocess_function = None
 
     def __init__(self, config: dict):
         """
@@ -48,7 +46,7 @@ class OfflinePreprocessor:
         self.__config = config
 
         self.__data_storage = Storage(STORAGE_LOCATION + '/store')
-        self.preprocess_function = None
+        self.__preprocess_function = None
         self.storable = None
 
     def run(self):
@@ -67,7 +65,7 @@ class OfflinePreprocessor:
            5. every n files that have arrived also create a new batch by shuffling
            existing batches where n is configurable
         """
-        if self.preprocess_function is None or self.storable is None:
+        if self.__preprocess_function is None or self.storable is None:
             raise RuntimeError(
                 'Must register a preprocess function and a Storable object to run!')
         try:
@@ -89,11 +87,8 @@ class OfflinePreprocessor:
             print('Preprocessed data: ' + preprocessed)
 
             self.__data_storage.extend(preprocessed)
-            # I'm not too sure how the metadata would work here.
 
-            # filename = self.__data_storage.write_dataset(
-            #     uuid.uuid4(), df.to_json())
-
+            # TODO: Update metadata & Update row number:
             # with grpc.insecure_channel('dynamicdatasets:50051') as channel:
             #     stub = MetadataStub(channel)
             #     stub.AddBatch(
@@ -111,45 +106,17 @@ class OfflinePreprocessor:
         Returns:
             pd.DataFrame: pandas dataframe of the processed data
         """
-        # df = pd.DataFrame()
-        # df = df.from_dict(message_value)
-        # rows_in_df = len(df.index)
-        # rows = list(range(self.__row_number, self.__row_number + rows_in_df))
-        # self.__row_number += rows_in_df
-        # df['row_id'] = rows
-        # return df
-
-        return self.preprocess_function(data)
+        return self.__preprocess_function(data)
 
     def get_row_number(self):
         return self.__row_number
 
     def set_preprocess(self, preprocess_function):
-        self.preprocess_function = preprocess_function
+        self.__preprocess_function = preprocess_function
 
     def set_storable(self, storable):
         self.storable = storable
         self.__data_storage.set_storable(storable)
 
     def get_last_item(self):
-        # print('There are ' + str(len(self.__data_storage)) + ' items.')
         return self.__data_storage[len(self.__data_storage) - 1]
-
-
-def main():
-    args = parse_args()
-    config = args.config
-
-    with open(config, 'r') as stream:
-        try:
-            parsed_yaml = yaml.safe_load(stream)
-        except yaml.YAMLError as exc:
-            logger.error(exc)
-            raise yaml.YAMLError
-
-    data_preprocessor = OfflinePreprocessor(parsed_yaml)
-    data_preprocessor.run()
-
-
-if __name__ == "__main__":
-    main()

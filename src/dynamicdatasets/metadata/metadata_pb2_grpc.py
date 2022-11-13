@@ -75,8 +75,6 @@ def add_MetadataServicer_to_server(servicer, server):
         'metadata.Metadata', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
- # This class is part of an EXPERIMENTAL API.
-
 
 class Metadata(object):
     """Missing associated documentation comment in .proto file."""
