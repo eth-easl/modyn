@@ -29,15 +29,17 @@ class Metadata(ABC):
             score REAL,
             new INTEGER DEFAULT 1);'''
     _create_row_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS row_metadata (
-            row INTEGER PRIMARY KEY,
+            row SERIAL PRIMARY KEY,
             filename VARCHAR(100),
             score REAL);'''
     _create_batch_to_row_table_sql = '''CREATE TABLE IF NOT EXISTS batch_to_row (
+            id SERIAL PRIMARY KEY,
             batch_id INTEGER,
             row INTEGER,
-            PRIMARY KEY (batch_id, row),
             FOREIGN KEY (batch_id) REFERENCES batch_metadata(id),
             FOREIGN KEY (row) REFERENCES row_metadata(row));'''
+    # TODO: Fix this (psycopg2.errors.InvalidForeignKey: there is no unique
+    # constraint matching given keys for referenced table "row_metadata")
 
     def __init__(self, config: dict):
         self._config = config

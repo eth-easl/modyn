@@ -93,8 +93,6 @@ def main():
     args = parse_args()
     config = args.config
 
-    # config_path = config/devel.yaml
-
     with open(config, 'r') as stream:
         try:
             parsed_yaml = yaml.safe_load(stream)

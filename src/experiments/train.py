@@ -81,11 +81,11 @@ if __name__ == '__main__':
     for i in range(10):
         feeder.task_step()
         time.sleep(1)
-        with grpc.insecure_channel('dynamicdatasets:50051') as channel:
+        with grpc.insecure_channel('dynamicdatasets:50052') as channel:
             stub = OfflineStub(channel)
             data = stub.GetData(
                 DataRequest(
-                    {'get_last_item': True},
+                    get_last=True,
                 )
             )
             print('Last item: ' + str(data))

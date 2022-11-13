@@ -14,3 +14,5 @@ keras
 torch 
 tqdm
 matplotlib
+tensorflow
+tensorflow-io

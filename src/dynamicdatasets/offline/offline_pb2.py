@@ -12,7 +12,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\roffline.proto\x12\x07offline\x1a\x1cgoogle/protobuf/struct.proto\"7\n\x0b\x44\x61taRequest\x12(\n\x07\x64\x61taMap\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"8\n\x0c\x44\x61taResponse\x12(\n\x07\x64\x61taMap\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct2C\n\x07Offline\x12\x38\n\x07GetData\x12\x14.offline.DataRequest\x1a\x15.offline.DataResponse\"\x00\x62\x06proto3')  # noqa
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\roffline.proto\x12\x07offline\x1a\x1cgoogle/protobuf/struct.proto\"\x1f\n\x0b\x44\x61taRequest\x12\x10\n\x08get_last\x18\x01 \x01(\x08\"8\n\x0c\x44\x61taResponse\x12(\n\x07\x64\x61taMap\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct2C\n\x07Offline\x12\x38\n\x07GetData\x12\x14.offline.DataRequest\x1a\x15.offline.DataResponse\"\x00\x62\x06proto3')  # noqa
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'offline_pb2', globals())
@@ -20,9 +20,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
 
     DESCRIPTOR._options = None
     _DATAREQUEST._serialized_start = 56
-    _DATAREQUEST._serialized_end = 111
-    _DATARESPONSE._serialized_start = 113
-    _DATARESPONSE._serialized_end = 169
-    _OFFLINE._serialized_start = 171
-    _OFFLINE._serialized_end = 238
+    _DATAREQUEST._serialized_end = 87
+    _DATARESPONSE._serialized_start = 89
+    _DATARESPONSE._serialized_end = 145
+    _OFFLINE._serialized_start = 147
+    _OFFLINE._serialized_end = 214
 # @@protoc_insertion_point(module_scope)

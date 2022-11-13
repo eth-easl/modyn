@@ -1,4 +1,5 @@
 from concurrent import futures
+from threading import Thread
 
 import grpc
 
@@ -14,7 +15,7 @@ class OfflineServicer(OfflineServicer):
         storage_module = self.my_import('dynamicdatasets.offline.storage')
         self._storage = getattr(
             storage_module,
-            config['offline']['storage'])(config)
+            config['offline']['storage'])()
         preprocess_module = self.my_import(
             'dynamicdatasets.offline.preprocess')
         self._preprocess = getattr(
@@ -23,7 +24,10 @@ class OfflineServicer(OfflineServicer):
         self._preprocess.set_preprocess(
             dataset_dict['preprocessor'].preprocess)
         self._preprocess.set_storable(dataset_dict['storable'])
-        self._preprocess.run()
+        # TODO: Is the following safe to do? Can we run preprocess in a
+        # separate thread?
+        thread = Thread(target=self._preprocess.run)
+        thread.start()
 
     def my_import(self, name):
         components = name.split('.')
@@ -34,7 +38,7 @@ class OfflineServicer(OfflineServicer):
 
     def GetData(self, request, context):
         print("Getting data")
-        if request['get_last_item']:
+        if request.get_last:
             data = self._storage.get_last_item()
         else:
             data = self._storage.get_data()

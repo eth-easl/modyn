@@ -17,3 +17,7 @@ kafka:
 
 experiment:
   name: cifar1
+
+offline:
+  storage: 'Storage'
+  preprocess: 'OfflinePreprocessor'

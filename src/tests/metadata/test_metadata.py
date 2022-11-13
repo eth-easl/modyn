@@ -43,6 +43,7 @@ def __metadata_init__(self, config):
             PRIMARY KEY (batch_id, row),
             FOREIGN KEY (batch_id) REFERENCES batch_metadata(id),
             FOREIGN KEY (row) REFERENCES row_metadata(row));'''
+
     self._select_statement = '''SELECT filename, row_metadata.row
                                 FROM row_metadata JOIN batch_to_row ON row_metadata.row = batch_to_row.row
                                 WHERE batch_id=? ORDER BY row_metadata.row ASC'''

@@ -20,10 +20,14 @@ class Storage:
     """
     __storage_location = None
 
-    def __init__(self, storage_location):
+    def __init__(self, storage_location=None):
+        if storage_location is not None:
+            self.set_storage_location(storage_location)
+        self.storable = None
+
+    def set_storage_location(self, storage_location):
         os.makedirs(storage_location, exist_ok=True)
         self.__storage_location = storage_location
-        self.storable = None
 
     def write_dataset(self, batch_name: str, data: str):
         """
@@ -54,6 +58,9 @@ class Storage:
     def __getitem__(self, i):
         return self.storable.__getitem__(i)
 
+    def get_last_item(self):
+        return self.storable.__getitem__(len(self.storable) - 1)
+
     def get_data(self, dict_data: dict[str, list[int]]) -> str:
         """
         Get the data from a tar
@@ -64,7 +71,6 @@ class Storage:
         Returns:
             str: data as json
         """
-        # TODO: implement this method as a remote procedure call
         data = self._get_data(dict_data)
 
         return data.to_json()
@@ -81,7 +87,6 @@ class Storage:
         """
         data = pd.DataFrame()
         for filename, indexes in dict_data.items():
-            logger.info(f'Loading file {filename}')
 
             with open(filename, 'r') as file:
                 data = file.read()

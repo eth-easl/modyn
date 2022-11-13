@@ -6,10 +6,10 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DataRequest(_message.Message):
-    __slots__ = ["dataMap"]
-    DATAMAP_FIELD_NUMBER: _ClassVar[int]
-    dataMap: _struct_pb2.Struct
-    def __init__(self, dataMap: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    __slots__ = ["get_last"]
+    GET_LAST_FIELD_NUMBER: _ClassVar[int]
+    get_last: bool
+    def __init__(self, get_last: bool = ...) -> None: ...
 
 class DataResponse(_message.Message):
     __slots__ = ["dataMap"]
