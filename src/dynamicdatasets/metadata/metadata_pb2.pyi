@@ -20,18 +20,6 @@ class AddMetadataResponse(_message.Message):
     metadataId: int
     def __init__(self, metadataId: _Optional[int] = ...) -> None: ...
 
-class AddTrainingDataRequest(_message.Message):
-    __slots__ = ["dataMap"]
-    DATAMAP_FIELD_NUMBER: _ClassVar[int]
-    dataMap: _struct_pb2.Struct
-    def __init__(self, dataMap: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
-
-class AddTrainingDataResponse(_message.Message):
-    __slots__ = ["success"]
-    SUCCESS_FIELD_NUMBER: _ClassVar[int]
-    success: bool
-    def __init__(self, success: bool = ...) -> None: ...
-
 class GetNextRequest(_message.Message):
     __slots__ = ["metadataId"]
     METADATAID_FIELD_NUMBER: _ClassVar[int]

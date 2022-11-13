@@ -7,7 +7,6 @@ package metadata;
 service Metadata {
     rpc AddMetadata(AddMetadataRequest) returns (AddMetadataResponse) {}
     rpc GetNext(GetNextRequest) returns (GetNextResponse) {}
-    rpc AddTrainingData(AddTrainingDataRequest) returns (AddTrainingDataResponse) {}
 }
 
 message AddMetadataResponse {
@@ -25,12 +24,4 @@ message GetNextResponse {
 
 message GetNextRequest {
     int32 metadataId = 1;
-}
-
-message AddTrainingDataResponse {
-    bool success = 1;
-}
-
-message AddTrainingDataRequest {
-    google.protobuf.Struct dataMap = 1;
 }

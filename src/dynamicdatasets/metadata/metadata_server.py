@@ -2,7 +2,7 @@ from concurrent import futures
 
 import grpc
 
-from dynamicdatasets.metadata.metadata_pb2 import AddMetadataResponse, GetNextResponse, AddTrainingDataResponse
+from dynamicdatasets.metadata.metadata_pb2 import AddMetadataResponse, GetNextResponse
 from dynamicdatasets.metadata.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
 
 
@@ -28,7 +28,8 @@ class MetadataServicer(MetadataServicer):
 
     def AddMetadata(self, request, context):
         print("Adding metadata")
-        metadata_id = self._scorer.add_batch(request.filename, request.rows)
+        metadata_id = self._scorer.add_training_set(
+            request.filename, request.rows)
         if metadata_id is None:
             return AddMetadataResponse(metadataId=-1)
         else:
@@ -36,18 +37,11 @@ class MetadataServicer(MetadataServicer):
 
     def GetNext(self, request, context):
         print("Getting metadata")
-        next = self._selector.get_next_batch()
+        next = self._selector.get_next_training_set()
         if next is None:
             return GetNextResponse(dataMap={})
         else:
             return GetNextResponse(dataMap=next)
-
-    def AddTrainingData(self, request, context):
-        print("Adding training data")
-        #  TODO: Implement
-        success = self._scorer.add_training_data(
-            request.metadataId, request.label)
-        return AddTrainingDataResponse(success=success)
 
 
 def serve(config_dict):

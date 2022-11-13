@@ -7,40 +7,40 @@ class Selector(Metadata):
     def __init__(self, config: dict):
         super().__init__(config)
 
-    def get_next_batch(self) -> dict[str, list[int]]:
+    def get_next_training_set(self) -> dict[str, list[int]]:
         """
-        Return the next batch available
+        Return the next training_set available
 
         Returns:
-            dict[str, list[int]]: map of filename to indexes of the rows in the batch
+            dict[str, list[int]]: map of filename to indexes of the sample in the training_set
         """
-        return self._get_next_batch()
+        return self._get_next_training_set()
 
-    def _get_next_batch(self) -> dict[str, list[int]]:
+    def _get_next_training_set(self) -> dict[str, list[int]]:
         """
-        Get the next batch as defined by the selector
+        Get the next training_set as defined by the selector
 
         Returns:
-            dict[str, list[int]]: map of filename to indexes of the rows in the batch
+            dict[str, list[int]]: map of filename to indexes of the sample in the training_set
         """
         cur = self._con.cursor()
         cur.execute(self._get_select_statement())
-        row = cur.fetchall()[0]
-        self._update_batch_metadata(row[0], row[1], 0)
+        sample = cur.fetchall()[0]
+        self._update_training_set_metadata(sample[0], sample[1], 0)
         cur.execute(
             self._select_statement,
-            (row[0],
+            (sample[0],
              ))
-        rows = cur.fetchall()
-        row_dict = dict()
-        for x, y in rows:
-            row_dict.setdefault(x, []).append(y)
-        return row_dict
+        sample = cur.fetchall()
+        sample_dict = dict()
+        for x, y in sample:
+            sample_dict.setdefault(x, []).append(y)
+        return sample_dict
 
     @abstractmethod
     def _get_select_statement(self) -> str:
         """
-        Get the select statement to get the rows of a batch
+        Get the select statement to get the sample of a training_set
 
         Returns:
             str: select statement

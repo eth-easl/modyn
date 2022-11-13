@@ -12,7 +12,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emetadata.proto\x12\x08metadata\x1a\x1cgoogle/protobuf/struct.proto\")\n\x13\x41\x64\x64MetadataResponse\x12\x12\n\nmetadataId\x18\x01 \x01(\x05\"8\n\x12\x41\x64\x64MetadataRequest\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x10\n\x04rows\x18\x02 \x03(\x05\x42\x02\x10\x01\";\n\x0fGetNextResponse\x12(\n\x07\x64\x61taMap\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"$\n\x0eGetNextRequest\x12\x12\n\nmetadataId\x18\x01 \x01(\x05\"*\n\x17\x41\x64\x64TrainingDataResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"B\n\x16\x41\x64\x64TrainingDataRequest\x12(\n\x07\x64\x61taMap\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct2\xf4\x01\n\x08Metadata\x12L\n\x0b\x41\x64\x64Metadata\x12\x1c.metadata.AddMetadataRequest\x1a\x1d.metadata.AddMetadataResponse\"\x00\x12@\n\x07GetNext\x12\x18.metadata.GetNextRequest\x1a\x19.metadata.GetNextResponse\"\x00\x12X\n\x0f\x41\x64\x64TrainingData\x12 .metadata.AddTrainingDataRequest\x1a!.metadata.AddTrainingDataResponse\"\x00\x62\x06proto3')  # noqa
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0emetadata.proto\x12\x08metadata\x1a\x1cgoogle/protobuf/struct.proto\")\n\x13\x41\x64\x64MetadataResponse\x12\x12\n\nmetadataId\x18\x01 \x01(\x05\"8\n\x12\x41\x64\x64MetadataRequest\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x10\n\x04rows\x18\x02 \x03(\x05\x42\x02\x10\x01\";\n\x0fGetNextResponse\x12(\n\x07\x64\x61taMap\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"$\n\x0eGetNextRequest\x12\x12\n\nmetadataId\x18\x01 \x01(\x05\x32\x9a\x01\n\x08Metadata\x12L\n\x0b\x41\x64\x64Metadata\x12\x1c.metadata.AddMetadataRequest\x1a\x1d.metadata.AddMetadataResponse\"\x00\x12@\n\x07GetNext\x12\x18.metadata.GetNextRequest\x1a\x19.metadata.GetNextResponse\"\x00\x62\x06proto3')  # noqa
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'metadata_pb2', globals())
@@ -29,10 +29,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
     _GETNEXTRESPONSE._serialized_end = 218
     _GETNEXTREQUEST._serialized_start = 220
     _GETNEXTREQUEST._serialized_end = 256
-    _ADDTRAININGDATARESPONSE._serialized_start = 258
-    _ADDTRAININGDATARESPONSE._serialized_end = 300
-    _ADDTRAININGDATAREQUEST._serialized_start = 302
-    _ADDTRAININGDATAREQUEST._serialized_end = 368
-    _METADATA._serialized_start = 371
-    _METADATA._serialized_end = 615
+    _METADATA._serialized_start = 259
+    _METADATA._serialized_end = 413
 # @@protoc_insertion_point(module_scope)
