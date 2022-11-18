@@ -43,47 +43,65 @@ class TestLastSelector(TestMetadata):
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (10, filename4, 0.5))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (4, 10))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (4,
+             10))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (11, filename4, 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (4, 11))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (4,
+             11))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (12, filename4, 0.3))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (4, 12))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (4,
+             12))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (20, filename2, 0.9))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 20))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             20))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (21, filename2, 0.7))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 21))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             21))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (22, filename2, 0.1))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 22))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             22))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (30, filename3, 0.1))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (3, 30))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (3,
+             30))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (31, filename3, 0.2))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (3, 31))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (3,
+             31))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (32, filename3, 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (3, 32))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (3,
+             32))
 
         result = self.selector._get_next_training_set()
         self.assertCountEqual(result['test4.json'], [10, 11, 12])

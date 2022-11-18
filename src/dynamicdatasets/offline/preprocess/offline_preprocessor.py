@@ -82,7 +82,6 @@ class OfflinePreprocessor:
             message_value = message.value
 
             preprocessed = self.offline_preprocessing(message_value)
-            # TODO: Move to kafka stream processor
             print('Preprocessed data: ' + preprocessed)
 
             self.__data_storage.extend(preprocessed)

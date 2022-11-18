@@ -40,68 +40,93 @@ class TestRandomScorer(TestMetadata):
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (10, filename4, 0.5))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 10))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             10))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (11, filename4, 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 11))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             11))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (12, filename4, 0.3))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 12))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             12))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (20, filename2, 0.9))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 20))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             20))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (21, filename2, 0.7))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 21))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             21))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (22, filename2, 0.1))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 22))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             22))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (30, filename3, 0.1))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (3, 30))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (3,
+             30))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (31, filename3, 0.2))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (3, 31))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (3,
+             31))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (32, filename3, 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (3, 32))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (3,
+             32))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (40, filename3, 0.1))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (4, 40))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (4,
+             40))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (41, filename3, 0.2))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (4, 41))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (4,
+             41))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (42, filename3, 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (4, 42))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (4,
+             42))
 
         self.scorer._create_shuffled_training_setes(2, 4)
 
         cursor.execute(
             '''SELECT * FROM sample_metadata
-            JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample WHERE training_set_id = 5;''')
+            JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample
+            WHERE training_set_id = 5;''')
         entry = cursor.fetchall()
         self.assertEqual(len(entry), 4)
         expected_results = [20, 21, 31, 32]
@@ -110,11 +135,13 @@ class TestRandomScorer(TestMetadata):
 
         cursor.execute(
             '''SELECT score FROM sample_metadata
-            JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample WHERE training_set_id = 5;''')
+            JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample
+            WHERE training_set_id = 5;''')
         scores = cursor.fetchall()
         scores = [s[0] for s in scores]
         print(scores)
-        cursor.execute('''SELECT score FROM training_set_metadata WHERE id = 5;''')
+        cursor.execute(
+            '''SELECT score FROM training_set_metadata WHERE id = 5;''')
         training_set_score = cursor.fetchall()[0][0]
         self.assertEqual(
             self.scorer._get_cumulative_score(scores),
@@ -131,7 +158,9 @@ class TestRandomScorer(TestMetadata):
         sample = cursor.fetchall()[0]
         training_set_id = sample[0]
         cursor.execute(
-            "SELECT * FROM sample_metadata JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample WHERE training_set_id = ?;",
+            '''SELECT * FROM sample_metadata JOIN training_set_to_sample
+            ON training_set_to_sample.sample = sample_metadata.sample
+            WHERE training_set_id = ?;''',
             (training_set_id,
              ))
         samples = cursor.fetchall()
@@ -153,7 +182,9 @@ class TestRandomScorer(TestMetadata):
         sample = cursor.fetchall()[0]
         training_set_id = sample[0]
         cursor.execute(
-            "SELECT * FROM sample_metadata JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample WHERE training_set_id = ?;",
+            '''SELECT * FROM sample_metadata JOIN training_set_to_sample
+            ON training_set_to_sample.sample = sample_metadata.sample
+            WHERE training_set_id = ?;''',
             (training_set_id,
              ))
         samples = cursor.fetchall()
@@ -162,7 +193,8 @@ class TestRandomScorer(TestMetadata):
         self.assertEqual(sample[3], 1)
 
         cursor.execute(
-            '''SELECT * FROM sample_metadata JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample
+            '''SELECT * FROM sample_metadata JOIN training_set_to_sample
+            ON training_set_to_sample.sample = sample_metadata.sample
             WHERE training_set_id=2 ORDER BY sample ASC;''')
         result_samples = cursor.fetchall()
         self.assertEqual(result_samples[0][0], samples2[0])

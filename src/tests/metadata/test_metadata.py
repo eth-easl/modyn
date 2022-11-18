@@ -26,8 +26,10 @@ def __metadata_init__(self, config):
                                   SET score = ?
                                   WHERE sample = ? AND EXISTS (SELECT *
                                                             FROM training_set_to_sample
-                                                            WHERE sample = sample_metadata.sample AND training_set_id = ?);'''
-    self._insert_training_set_to_sample_sql = '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?);'''
+                                                            WHERE sample = sample_metadata.sample
+                                                            AND training_set_id = ?);'''
+    self._insert_training_set_to_sample_sql = '''INSERT INTO training_set_to_sample(training_set_id, sample)
+                                                 VALUES(?, ?);'''
     self._create_training_set_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS training_set_metadata (
                                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                                                     timestamp INTEGER,
@@ -45,13 +47,17 @@ def __metadata_init__(self, config):
             FOREIGN KEY (sample) REFERENCES sample_metadata(sample));'''
 
     self._select_statement = '''SELECT filename, sample_metadata.sample
-                                FROM sample_metadata JOIN training_set_to_sample ON sample_metadata.sample = training_set_to_sample.sample
+                                FROM sample_metadata JOIN training_set_to_sample
+                                ON sample_metadata.sample = training_set_to_sample.sample
                                 WHERE training_set_id=? ORDER BY sample_metadata.sample ASC'''
     self._sample_selection = '''SELECT filename, sample_metadata.sample
-                             FROM sample_metadata JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample
+                             FROM sample_metadata JOIN training_set_to_sample
+                             ON training_set_to_sample.sample = sample_metadata.sample
                              WHERE training_set_id=? ORDER BY score DESC LIMIT '''
     self._get_scores_sql = '''SELECT score FROM sample_metadata
-                              JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample WHERE training_set_id = ?;'''
+                              JOIN training_set_to_sample
+                              ON training_set_to_sample.sample = sample_metadata.sample
+                              WHERE training_set_id = ?;'''
     self._select_sample_sql = '''SELECT * FROM sample_metadata WHERE sample = ?;'''
 
 
@@ -127,22 +133,30 @@ class TestMetadata(unittest.TestCase):
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (1, 'test_file1.json', 0.3))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 1))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             1))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (2, 'test_file2.json', 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 2))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             2))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (3, 'test_file3.json', 0.7))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 3))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             3))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (4, 'test_file4.json', 0.5))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 4))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             4))
 
         self.metadata._update_sample_metadata(1, 2, 0.9)
         cursor.execute("SELECT * FROM sample_metadata WHERE sample=2;")
@@ -179,7 +193,8 @@ class TestMetadata(unittest.TestCase):
             '''INSERT INTO training_set_metadata(timestamp, score, new) VALUES(?, ?, ?)''',
             (15, 0.5, 1))
 
-        results = self.metadata._fetch_training_set_ids(self.TRAINING_SETES_BY_SCORE, 2)
+        results = self.metadata._fetch_training_set_ids(
+            self.TRAINING_SETES_BY_SCORE, 2)
         self.assertCountEqual(results, [2, 3])
 
         results = self.metadata._fetch_training_set_ids(
@@ -193,22 +208,30 @@ class TestMetadata(unittest.TestCase):
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (10, 'test1', 0.5))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 10))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             10))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (11, 'test2', 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 11))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             11))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (12, 'test3', 0.3))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 12))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             12))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (13, 'test4', 0.9))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 13))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             13))
 
         results = self.metadata._fetch_filenames_to_indexes(
             self.SAMPLES_BY_SCORE, 2, 1)
@@ -222,22 +245,30 @@ class TestMetadata(unittest.TestCase):
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (10, 'test1', 0.5))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 10))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             10))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (11, 'test2', 0.8))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 11))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             11))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (12, 'test3', 0.3))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (1, 12))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (1,
+             12))
         cursor.execute(
             '''INSERT INTO sample_metadata(sample, filename, score) VALUES(?, ?, ?)''',
             (13, 'test4', 0.9))
         cursor.execute(
-            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''', (2, 13))
+            '''INSERT INTO training_set_to_sample(training_set_id, sample) VALUES(?, ?)''',
+            (2,
+             13))
 
         results = self.metadata._get_scores(1)
         self.assertCountEqual(results, [0.5, 0.8, 0.3])
