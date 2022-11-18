@@ -8,7 +8,7 @@ numpy
 coverage
 grpcio
 psycopg2
-protobuf
+protobuf==3.19.4
 pyyaml 
 keras
 torch 
