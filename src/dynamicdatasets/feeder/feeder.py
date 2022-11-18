@@ -1,13 +1,13 @@
-from datetime import datetime
 import argparse
-import yaml
-import time
-import pathlib
 import logging
+import pathlib
+from datetime import datetime
 
-import pandas as pd
+import yaml
 from kafka import KafkaProducer
-from kafka.errors import KafkaTimeoutError, KafkaError
+from kafka.errors import KafkaError, KafkaTimeoutError
+
+from dynamicdatasets.interfaces import Queryable
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -44,8 +44,9 @@ class Feeder:
         self._batch_size = config['feeder']['batch_size']
         self._kafka_topic = config['kafka']['topic']
         self._interval_length = config['feeder']['interval_length']
+        self.__source: Queryable = None
 
-    def write_to_kafka(self, topic_name: str, items: pd.DataFrame):
+    def write_to_kafka(self, topic_name: str, items):
         """
         Write a dataframe to a Kafka stream as a json
 
@@ -58,7 +59,7 @@ class Feeder:
             value_serializer=lambda x: x.encode('utf-8'))
 
         try:
-            producer.send(topic_name, value=items.to_json())
+            producer.send(topic_name, value=items)
         except KafkaTimeoutError as kte:
             logger.exception(
                 "KafkaLogsProducer timeout sending log to Kafka: {0}".format(
@@ -74,18 +75,18 @@ class Feeder:
         producer.flush()
         logger.info('Wrote messages into topic: {0}'.format(topic_name))
 
-    def load_data(self, train_file: str):
+    def task_step(self):
         """
-        Load the data from a specified training file (csv) and upload them to Kafka in a configurable interval
-
-        Args:
-            train_file (str): File to be read and sent over kafka
+        Step through time to the next distribution (task). Publish those over Kafka.
         """
-        for chunk in pd.read_csv(STORAGE_LOCATION + train_file, header=0,
-                                 chunksize=self._batch_size):
-            self.write_to_kafka(self._kafka_topic, chunk)
+        if self.__source is None:
+            raise RuntimeError(
+                'You must connect a Queryable object to a feeder before you can get data!')
+        data = self.__source.query_next()
+        self.write_to_kafka(self._kafka_topic, data)
 
-            time.sleep(self._interval_length)
+    def connect_task_queriable(self, source):
+        self.__source = source
 
 
 def main():

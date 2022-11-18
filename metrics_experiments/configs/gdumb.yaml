@@ -1,0 +1,18 @@
+dataset: 
+  name: SplitMNIST
+  batch_size: 16
+  collapse_targets: False
+  blurry: 10
+
+model:
+  name: vanilla
+  widths: [784, 400, 10]
+
+lr: 0.005
+epochs: 64
+trainer: 
+  name: gdumbTrainer
+  memory_buffer_size: 480
+  # get_grad_error: False
+  reset_model: True
+  online: True

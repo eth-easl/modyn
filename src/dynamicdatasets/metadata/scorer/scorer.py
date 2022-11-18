@@ -9,9 +9,9 @@ class Scorer(Metadata):
     and update the corresponding metadata database
     """
     _con = None
-    _nr_batches = 0
-    _batch_selection = None
-    _row_selection = None
+    _nr_training_setes = 0
+    _training_set_selection = None
+    _sample_selection = None
 
     def __init__(self, config: dict):
         """
@@ -24,92 +24,97 @@ class Scorer(Metadata):
         """
         super().__init__(config)
 
-    def _add_batch(
+    def _add_training_set(
             self,
             filename: str,
-            rows: list[int],
+            samples: list[int],
             initial=True,
-            batch_id=None) -> int:
+            training_set_id=None) -> int:
         """
-        Add a batch to the data scorer metadata database
+        Add a training_set to the data scorer metadata database
 
-        Calculate the batch score by the score defined by the subclass of the row scores
+        Calculate the training_set score by the score defined by the subclass of the sample scores
 
         Args:
-            filename (str): filename of the batch
-            rows (list[int]): row numbers in the batch
-            initial (bool): if adding a batch initially or otherwise
+            filename (str): filename of the training_set
+            samples (list[int]): sample numbers in the training_set
+            initial (bool): if adding a training_set initially or otherwise
 
         Returns:
-            int: batch_id of the added batch
+            int: training_set_id of the added training_set
         """
-        if (initial and self._nr_batches %
+        if (initial and self._nr_training_setes %
                 self._config['metadata']['nr_files_update'] == 0):
-            self._create_shuffled_batches(
+            self._create_shuffled_training_setes(
                 self._config['metadata']['nr_files_update'],
-                self._config['feeder']['batch_size'])
-        if batch_id is None:
-            batch_id = self._add_batch_to_metadata()
+                self._config['feeder']['training_set_size'])
+        if training_set_id is None:
+            training_set_id = self._add_training_set_to_metadata()
 
         scores = []
-        for row in rows:
+        for sample in samples:
             score = self._get_score()
-            self._add_row_to_metadata(row, batch_id, score, filename)
+            self._add_sample_to_metadata(
+                sample, training_set_id, score, filename)
             scores.append(score)
         if initial:
-            batch_score = self._get_cumulative_score(scores)
-            self._nr_batches += 1
-            self._update_batch_metadata(batch_id, batch_score, 1)
-        return batch_id
+            training_set_score = self._get_cumulative_score(scores)
+            self._nr_training_setes += 1
+            self._update_training_set_metadata(
+                training_set_id, training_set_score, 1)
+        return training_set_id
 
-    def _create_shuffled_batches(
-            self, batch_count: int, batch_size: int):
+    def _create_shuffled_training_setes(
+            self, training_set_count: int, training_set_size: int):
         """
-        Update an existing batch based on a batch and row selection criterion. Select a number of batches
-        and decide on a total number of samples for the new batch. The created batch will contain equal
-        proportion of the selected batches.
+        Update an existing training_set based on a training_set and sample selection criterion. Select a number
+        of training_sets and decide on a total number of samples for the new training_set. The created
+        training_set will contain equal proportion of the selected training_setes.
 
         Args:
-            batch_count (int, optional): number of batches to include in the updated batch.
-            batch_size (int, optional): number of rows in the resulting batch.
+            training_set_count (int, optional): number of training_setes to include in the updated training_set.
+            training_set_size (int, optional): number of samples in the resulting training_set.
         """
-        batches = self._fetch_batch_ids(self._batch_selection, batch_count)
-        row_count = int(batch_size / batch_count)
-        self._nr_batches += 1
+        training_setes = self._fetch_training_set_ids(
+            self._training_set_selection, training_set_count)
+        sample_count = int(training_set_size / training_set_count)
+        self._nr_training_setes += 1
 
-        new_batch_id = None
+        new_training_set_id = None
 
-        for batch_id in batches:
-            rows = self._fetch_filenames_to_indexes(
-                self._row_selection, row_count, batch_id)
+        for training_set_id in training_setes:
+            samples = self._fetch_filenames_to_indexes(
+                self._sample_selection, sample_count, training_set_id)
 
-            for filename in rows:
-                bid = self._add_batch(
+            for filename in samples:
+                bid = self._add_training_set(
                     filename,
-                    rows[filename],
+                    samples[filename],
                     initial=False,
-                    batch_id=new_batch_id)
+                    training_set_id=new_training_set_id)
 
-                if new_batch_id is None:
-                    new_batch_id = bid
-        if new_batch_id is not None:
-            new_batch_scores = self._get_scores(new_batch_id)
-            new_batch_score = self._get_cumulative_score(new_batch_scores)
-            self._update_batch_metadata(new_batch_id, new_batch_score, 1)
+                if new_training_set_id is None:
+                    new_training_set_id = bid
+        if new_training_set_id is not None:
+            new_training_set_scores = self._get_scores(new_training_set_id)
+            new_training_set_score = self._get_cumulative_score(
+                new_training_set_scores)
+            self._update_training_set_metadata(
+                new_training_set_id, new_training_set_score, 1)
 
-    def add_batch(
-            self, filename: str, rows: list[int]):
+    def add_training_set(
+            self, filename: str, samples: list[int]):
         """
-        Add a batch to the data scorer metadata database
+        Add a training_set to the data scorer metadata database
 
         Args:
-            filename (str): filename of the batch
-            rows (list[int]): row numbers in the batch
+            filename (str): filename of the training_set
+            samples (list[int]): sample numbers in the training_set
 
         Returns:
-            int: batch_id of the added batch
+            int: training_set_id of the added training_set
         """
-        return self._add_batch(filename, rows)
+        return self._add_training_set(filename, samples)
 
     @abstractmethod
     def _get_score(self) -> float:

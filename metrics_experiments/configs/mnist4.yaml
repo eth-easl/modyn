@@ -1,0 +1,19 @@
+dataset: 
+  name: SplitMNIST
+  batch_size: 256
+  collapse_targets: False
+
+model:
+  name: smallconv
+  in_channels: 1
+  num_classes: 10
+  dropout: 0.3
+  fc_in: 3136
+
+lr: 0.001
+epochs: 4
+trainer: 
+  name: uniformSamplingTaskBasedTrainer
+  memory_buffer_size: 360
+  get_grad_error: True
+  reset_model: False

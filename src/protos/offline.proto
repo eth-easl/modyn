@@ -4,14 +4,14 @@ import "google/protobuf/struct.proto";
 
 package offline;
 
-service Metadata {
-    rpc GetData(BatchData) returns (Data) {}
+service Offline {
+    rpc GetData(DataRequest) returns (DataResponse) {}
 }
 
-message BatchData {
-    google.protobuf.Struct dataMap = 1;
+message DataRequest {
+    bool get_last = 1;
 }
 
-message Data {
+message DataResponse {
     google.protobuf.Struct dataMap = 1;
 }

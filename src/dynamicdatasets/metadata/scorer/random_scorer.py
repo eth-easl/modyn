@@ -11,12 +11,12 @@ class RandomScorer(Scorer):
     """
     Score the samples according to the defined data importance measure and update the corresponding metadata database
     """
-    _row_selection = '''SELECT filename, row
-                      FROM row_metadata
-                      JOIN batch_to_row ON batch_to_row.row = row_metadata.row
-                      WHERE batch_id=%s
+    _sample_selection = '''SELECT filename, sample
+                      FROM sample_metadata
+                      JOIN training_set_to_sample ON training_set_to_sample.sample = sample_metadata.sample
+                      WHERE training_set_id=%s
                       ORDER BY score DESC LIMIT '''
-    _batch_selection = '''SELECT id FROM batch_metadata ORDER BY score DESC LIMIT '''
+    _training_set_selection = '''SELECT id FROM training_set_metadata ORDER BY score DESC LIMIT '''
 
     def __init__(self, config: dict):
         """

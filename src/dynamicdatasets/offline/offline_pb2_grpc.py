@@ -2,10 +2,10 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import offline_pb2 as offline__pb2
+import dynamicdatasets.offline.offline_pb2 as offline__pb2
 
 
-class MetadataStub(object):
+class OfflineStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -15,13 +15,13 @@ class MetadataStub(object):
             channel: A grpc.Channel.
         """
         self.GetData = channel.unary_unary(
-            '/offline.Metadata/GetData',
-            request_serializer=offline__pb2.BatchData.SerializeToString,
-            response_deserializer=offline__pb2.Data.FromString,
+            '/offline.Offline/GetData',
+            request_serializer=offline__pb2.DataRequest.SerializeToString,
+            response_deserializer=offline__pb2.DataResponse.FromString,
         )
 
 
-class MetadataServicer(object):
+class OfflineServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetData(self, request, context):
@@ -31,20 +31,20 @@ class MetadataServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_MetadataServicer_to_server(servicer, server):
+def add_OfflineServicer_to_server(servicer, server):
     rpc_method_handlers = {
         'GetData': grpc.unary_unary_rpc_method_handler(
             servicer.GetData,
-            request_deserializer=offline__pb2.BatchData.FromString,
-            response_serializer=offline__pb2.Data.SerializeToString,
+            request_deserializer=offline__pb2.DataRequest.FromString,
+            response_serializer=offline__pb2.DataResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        'offline.Metadata', rpc_method_handlers)
+        'offline.Offline', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
-class Metadata(object):
+class Offline(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -61,9 +61,9 @@ class Metadata(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/offline.Metadata/GetData',
-            offline__pb2.BatchData.SerializeToString,
-            offline__pb2.Data.FromString,
+            '/offline.Offline/GetData',
+            offline__pb2.DataRequest.SerializeToString,
+            offline__pb2.DataResponse.FromString,
             options,
             channel_credentials,
             insecure,

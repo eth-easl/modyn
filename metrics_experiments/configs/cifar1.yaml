@@ -1,0 +1,15 @@
+dataset: 
+  name: CIFAR10
+  batch_size: 64
+
+model:
+  name: smallconv
+  in_channels: 3
+  num_classes: 10
+  dropout: 0.2
+
+lr: 0.001
+epochs: 10
+trainer: 
+  name: defaultTrainer
+  memory_buffer_size: 10

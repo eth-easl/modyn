@@ -14,3 +14,10 @@ kafka:
   topic: 'test'
   bootstrap_servers:
     - 'kafka:29092'
+
+experiment:
+  name: cifar1
+
+offline:
+  storage: 'Storage'
+  preprocess: 'OfflinePreprocessor'

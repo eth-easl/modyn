@@ -1,2 +1,1 @@
-from .offline_preprocessor import OfflinePreprocessor
-from .storage import Storage
+from .storage.storage import Storage
