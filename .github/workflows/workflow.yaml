@@ -31,13 +31,13 @@ jobs:
       uses: quentinguidee/pep8-action@v1
       with:
         arguments: '--max-line-length=120'
-    - name: Tests
-      run: |
-        coverage run -m unittest
-        coverage report
-        coverage html
-    - name: Code coverage html report
-      uses: actions/upload-artifact@v2
-      with:
-        name: code-coverage-report
-        path: src/htmlcov
+   # - name: Tests
+   #   run: |
+   #     coverage run -m unittest
+   #     coverage report
+   #     coverage html
+   # - name: Code coverage html report
+   #   uses: actions/upload-artifact@v2
+   #   with:
+   #     name: code-coverage-report
+   #     path: src/htmlcov
