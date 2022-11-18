@@ -78,23 +78,14 @@ class OfflinePreprocessor:
             logger.exception(e)
             return
         for message in consumer:
-            # Here's where I'm not quite sure exactly what can be passed
-            # through Kafka.
             print('Preprocessor heard: ' + str(message.value))
             message_value = message.value
 
             preprocessed = self.offline_preprocessing(message_value)
+            # TODO: Move to kafka stream processor
             print('Preprocessed data: ' + preprocessed)
 
             self.__data_storage.extend(preprocessed)
-
-            # TODO: Update metadata & Update row number:
-            # with grpc.insecure_channel('dynamicdatasets:50051') as channel:
-            #     stub = MetadataStub(channel)
-            #     stub.AddBatch(
-            #         Batch(
-            #             filename=filename,
-            #             rows=df['row_id'].tolist()))
 
     def offline_preprocessing(self, data):
         """

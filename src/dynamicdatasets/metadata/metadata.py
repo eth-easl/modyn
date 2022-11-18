@@ -1,6 +1,5 @@
 import time
 from abc import ABC
-import sqlite3
 
 import psycopg2
 
@@ -30,7 +29,6 @@ class Metadata(ABC):
             timestamp INTEGER,
             score REAL,
             new INTEGER DEFAULT 1);'''
-    #  Rename sample to sample
     _create_sample_metadata_table_sql = '''CREATE TABLE IF NOT EXISTS sample_metadata (
             sample SERIAL PRIMARY KEY,
             filename VARCHAR(100),
@@ -42,8 +40,6 @@ class Metadata(ABC):
             sample INTEGER,
             FOREIGN KEY (training_set_id) REFERENCES training_set_metadata(id),
             FOREIGN KEY (sample) REFERENCES sample_metadata(sample));'''
-    # TODO: Fix this (psycopg2.errors.InvalidForeignKey: there is no unique
-    # constraint matching given keys for referenced table "sample_metadata")
 
     def __init__(self, config: dict):
         self._config = config

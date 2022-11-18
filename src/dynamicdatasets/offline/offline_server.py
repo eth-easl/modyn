@@ -24,8 +24,6 @@ class OfflineServicer(OfflineServicer):
         self._preprocess.set_preprocess(
             dataset_dict['preprocessor'].preprocess)
         self._preprocess.set_storable(dataset_dict['storable'])
-        # TODO: Is the following safe to do? Can we run preprocess in a
-        # separate thread?
         thread = Thread(target=self._preprocess.run)
         thread.start()
 
