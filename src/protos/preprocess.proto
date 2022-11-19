@@ -1,0 +1,13 @@
+syntax = "proto3";
+package preprocess;
+
+service Preprocess {
+    rpc Preprocess (PreprocessRequest) returns (PreprocessResponse) {}
+}
+
+message PreprocessRequest {
+    repeated bytes value = 1;
+}
+
+message PreprocessResponse {
+}

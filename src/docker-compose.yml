@@ -10,8 +10,9 @@ services:
       POSTGRES_DB: default_database
     ports:
       - '5432:5432'
-    volumes: 
-          - ./postgres-data:/var/lib/postgresql/data
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
@@ -19,6 +20,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 22181:2181
+
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -53,12 +55,41 @@ services:
       kafka-topics --bootstrap-server kafka:29092 --list
       "
 
-  dynamicdatasets:
-    image: dynamicdatasets
+  storage:
+    image: storage
     depends_on:
-      - zookeeper
-      - init-kafka
       - db
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./
+      dockerfile: ./dynamicdatasets/storage/Dockerfile
+
+  newqueue:
+    image: newqueue
+    build:
+      context: ./
+      dockerfile: ./dynamicdatasets/newqueue/Dockerfile
+
+  preprocess:
+    image: preprocess
+    build:
+      context: ./
+      dockerfile: ./dynamicdatasets/preprocess/Dockerfile
+
+  odm:
+    image: odm
+    depends_on:
+      - db
+    build:
+      context: ./
+      dockerfile: ./dynamicdatasets/odm/Dockerfile
+
+  input:
+    image: input
+    depends_on:
+      - db
+      - storage
+      - newqueue
+      - preprocess
+    build:
+      context: ./
+      dockerfile: ./dynamicdatasets/input/Dockerfile

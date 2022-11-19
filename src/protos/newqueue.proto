@@ -1,0 +1,22 @@
+syntax = "proto3";
+package newqueue;
+
+service NewQueue {
+    rpc GetNext (GetNextRequest) returns (GetNextResponse) {}
+    rpc Add (AddRequest) returns (AddResponse) {}
+}
+
+message GetNextRequest {
+    int32 limit = 1;
+}
+
+message GetNextResponse {
+    repeated string keys = 2;
+}
+
+message AddRequest {
+    string key = 1;
+}
+
+message AddResponse {
+}

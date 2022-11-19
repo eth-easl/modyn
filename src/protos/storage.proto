@@ -1,0 +1,23 @@
+syntax = "proto3";
+package storage;
+
+service Storage {
+  rpc Get (GetRequest) returns (GetResponse) {}
+  rpc Put (PutRequest) returns (PutResponse) {}
+}
+
+message GetRequest {
+  repeated string keys = 1;
+}
+
+message GetResponse {
+  repeated bytes value = 1;
+}
+
+message PutRequest {
+  repeated string keys = 1;
+  repeated bytes value = 2;
+}
+
+message PutResponse {
+}

@@ -1,0 +1,46 @@
+kafka:
+  topic: "test"
+  bootstrap_servers:
+    - "kafka:29092"
+
+experiment:
+  name: cifar1
+
+storage:
+  adapter: "DBMAdapter"
+  port: "50051"
+  hostname: "storage"
+  dbm:
+    path: "dbm"
+  postgresql:
+    host: db
+    port: "5432"
+    database: "postgres"
+    user: "postgres"
+    password: "postgres"
+  s3:
+    bucket: "test"
+  sqlite:
+    path: "sqlite"
+
+newqueue:
+  path: "newqueue"
+  port: "50052"
+  hostname: "newqueue"
+
+preprocess:
+  port: "50053"
+  function: "lambda x: x"
+
+odm:
+  port: "50054"
+  postgresql:
+    host: db
+    port: "5432"
+    database: "postgres"
+    user: "postgres"
+    password: "postgres"
+
+input:
+  adapter: "MNISTAdapter"
+  size: 10

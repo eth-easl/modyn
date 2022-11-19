@@ -9,9 +9,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update -q \
   && apt-get install --no-install-recommends -qy \
-    gcc \
-    g++ \
-    inetutils-ping \
+  gcc \
+  g++ \
+  inetutils-ping \
   && rm -rf /var/lib/apt/lists/*
 RUN apt-get update && apt-get install build-essential -y
 RUN apt-get install -y postgresql

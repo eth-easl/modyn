@@ -16,3 +16,6 @@ tqdm
 matplotlib
 tensorflow
 tensorflow-io
+boto3
+sqlitedict
+persist-queue
