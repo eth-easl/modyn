@@ -15,7 +15,7 @@ message GetNextResponse {
 }
 
 message AddRequest {
-    string key = 1;
+    repeated string keys = 1;
 }
 
 message AddResponse {

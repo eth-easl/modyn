@@ -6,10 +6,10 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Op
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AddRequest(_message.Message):
-    __slots__ = ["key"]
-    KEY_FIELD_NUMBER: _ClassVar[int]
-    key: str
-    def __init__(self, key: _Optional[str] = ...) -> None: ...
+    __slots__ = ["keys"]
+    KEYS_FIELD_NUMBER: _ClassVar[int]
+    keys: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, keys: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class AddResponse(_message.Message):
     __slots__ = []

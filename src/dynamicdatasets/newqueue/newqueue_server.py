@@ -17,7 +17,8 @@ class NewQueueServicer(NewQueueServicer):
 
     def Add(self, request: AddRequest, context) -> AddResponse:
         print("Adding data")
-        self.__queue.put(request.key)
+        for key in request.keys:
+            self.__queue.put(key)
         return AddResponse()
 
     def GetNext(self, request: GetNextRequest, context) -> GetNextResponse:
