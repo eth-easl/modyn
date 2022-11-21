@@ -10,20 +10,20 @@ class PostgreSQLAdapter(BaseAdapter):
 
     def __init__(self, config: dict):
         super().__init__(config)
-        self.__db = psycopg2.connect(
-            host=self._config['storage']['postgresql']['host'],
-            port=self._config['storage']['postgresql']['port'],
-            database=self._config['storage']['postgresql']['database'],
-            user=self._config['storage']['postgresql']['user'],
-            password=self._config['storage']['postgresql']['password']
+        self.__con = psycopg2.connect(
+            host=self._config['postgresql']['host'],
+            port=self._config['postgresql']['port'],
+            database=self._config['postgresql']['database'],
+            user=self._config['postgresql']['user'],
+            password=self._config['postgresql']['password']
         )
-        self.__cursor = self.__db.cursor()
+        self.__cursor = self.__con.cursor()
         self.create_table()
 
     def create_table(self) -> None:
         self.__cursor.execute(
             "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, data TEXT)")
-        self.__db.commit()
+        self.__con.commit()
 
     def get(self, keys: list[str]) -> list[str]:
         self.__cursor.execute(
@@ -36,6 +36,7 @@ class PostgreSQLAdapter(BaseAdapter):
             return data
 
     def put(self, key: list[str], data: list[str]) -> None:
-        self.__cursor.execute(
-            "INSERT INTO storage (key, data) VALUES (%s, %s)", (key, data))
-        self.__db.commit()
+        for i in range(len(key)):
+            self.__cursor.execute(
+                "INSERT INTO storage (key, data) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", (key[i], data[i]))
+        self.__con.commit()
