@@ -8,8 +8,8 @@ DESCRIPTOR: _descriptor.FileDescriptor
 class PreprocessRequest(_message.Message):
     __slots__ = ["value"]
     VALUE_FIELD_NUMBER: _ClassVar[int]
-    value: _containers.RepeatedScalarFieldContainer[bytes]
-    def __init__(self, value: _Optional[_Iterable[bytes]] = ...) -> None: ...
+    value: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, value: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class PreprocessResponse(_message.Message):
     __slots__ = []

@@ -7,7 +7,7 @@ class BaseAdapter(ABC):
         self._config = config
 
     @abstractmethod
-    def get(self, keys: list[str]) -> list[bytes]:
+    def get(self, keys: list[str]) -> list[str]:
         """
         Get data from the storage
 
@@ -20,7 +20,7 @@ class BaseAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def put(self, key: list[str], data: list[bytes]) -> None:
+    def put(self, key: list[str], data: list[str]) -> None:
         """
         Put data into the storage
 

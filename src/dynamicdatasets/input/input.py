@@ -3,6 +3,7 @@ import time
 import grpc
 
 from dynamicdatasets.preprocess.preprocess_pb2_grpc import PreprocessStub
+from dynamicdatasets.preprocess.preprocess_pb2 import PreprocessRequest
 
 
 class Input:
@@ -10,15 +11,15 @@ class Input:
     def __init__(self, config: dict) -> None:
         self.__config = config
 
-        self.adapter_module = self.my_import('dynamicdatasets.input.adapter.')
+        self.adapter_module = self.my_import('dynamicdatasets.input.adapter')
         self.__adapter = getattr(
             self.adapter_module,
             config['input']['adapter'])(config)
 
         preprocess_channel = grpc.insecure_channel(
-            self.__config['newqueue']['hostname'] +
+            self.__config['preprocess']['hostname'] +
             ':' +
-            self.__config['newqueue']['port'])
+            self.__config['preprocess']['port'])
         self.__preprocess_stub = PreprocessStub(preprocess_channel)
 
     def my_import(self, name):
@@ -34,8 +35,9 @@ class Input:
 
             if data is not None:
                 print("Sending data to preprocess")
-                self.__preprocess_stub.Preprocess(data)
-            time.sleep(1)
+                self.__preprocess_stub.Preprocess(
+                    PreprocessRequest(value=data))
+            time.sleep(10)
 
 
 if __name__ == '__main__':

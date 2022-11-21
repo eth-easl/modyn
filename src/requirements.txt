@@ -8,7 +8,7 @@ numpy
 coverage
 grpcio
 psycopg2
-protobuf==3.19.4
+protobuf
 pyyaml 
 keras
 torch 
@@ -19,3 +19,4 @@ tensorflow-io
 boto3
 sqlitedict
 persist-queue
+torchvision

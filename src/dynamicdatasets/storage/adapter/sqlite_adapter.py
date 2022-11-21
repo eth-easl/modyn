@@ -14,12 +14,12 @@ class SQLiteAdapter(BaseAdapter):
             self._config['storage']['sqlite']['path'],
             autocommit=True)
 
-    def get(self, keys: list[str]) -> list[bytes]:
+    def get(self, keys: list[str]) -> list[str]:
         data = []
         for key in keys:
             data.append(self.__db[key])
         return data
 
-    def put(self, key: list[str], data: list[bytes]) -> None:
+    def put(self, key: list[str], data: list[str]) -> None:
         for i in range(len(key)):
             self.__db[key[i]] = data[i]

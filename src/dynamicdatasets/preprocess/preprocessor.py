@@ -4,6 +4,8 @@ import grpc
 
 from dynamicdatasets.newqueue.newqueue_pb2_grpc import NewQueueStub
 from dynamicdatasets.storage.storage_pb2_grpc import StorageStub
+from dynamicdatasets.newqueue.newqueue_pb2 import AddRequest
+from dynamicdatasets.storage.storage_pb2 import PutRequest
 
 
 class Preprocessor:
@@ -30,11 +32,11 @@ class Preprocessor:
             data.append(eval(self.__preprocess_function)(v))
             keys.append(uuid.uuid4().hex)
 
-        self.__add_to_newqueue(keys)
         self.__add_to_storage(keys, data)
+        self.__add_to_newqueue(keys)
 
     def __add_to_newqueue(self, key: list[str]):
-        self.__newqueue_stub.Add(key=key)
+        self.__newqueue_stub.Add(AddRequest(keys=key))
 
     def __add_to_storage(self, keys: list[str], data: list[bytes]):
-        self.__storage_stub.Put(keys=keys, data=data)
+        self.__storage_stub.Put(PutRequest(keys=keys, value=data))

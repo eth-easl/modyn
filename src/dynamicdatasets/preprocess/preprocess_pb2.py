@@ -11,8 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x10preprocess.proto\x12\npreprocess\"\"\n\x11PreprocessRequest\x12\r\n\x05value\x18\x01 \x03(\x0c\"\x14\n\x12PreprocessResponse2[\n\nPreprocess\x12M\n\nPreprocess\x12\x1d.preprocess.PreprocessRequest\x1a\x1e.preprocess.PreprocessResponse\"\x00\x62\x06proto3')  # noqa: E501
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10preprocess.proto\x12\npreprocess\"\"\n\x11PreprocessRequest\x12\r\n\x05value\x18\x01 \x03(\t\"\x14\n\x12PreprocessResponse2[\n\nPreprocess\x12M\n\nPreprocess\x12\x1d.preprocess.PreprocessRequest\x1a\x1e.preprocess.PreprocessResponse\"\x00\x62\x06proto3')  # noqa: E501
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(

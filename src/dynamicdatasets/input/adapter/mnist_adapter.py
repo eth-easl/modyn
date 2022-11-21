@@ -2,6 +2,7 @@ import json
 
 from torchvision.datasets.mnist import MNIST
 from torch.utils.data import DataLoader
+from torchvision import transforms
 
 from . import BaseAdapter
 
@@ -12,20 +13,22 @@ class MNISTAdapter(BaseAdapter):
 
     def __init__(self, config: dict):
         super().__init__(config)
-        dataset = MNIST(root='./data')
         self.__dataloader = DataLoader(
-            dataset,
+            MNIST(root='./data',
+                  download=True,
+                  transform=transforms.Compose([transforms.ToTensor()])),
             batch_size=self._config['input']['size'],
-            shuffle=True,
-            num_workers=5)
+            shuffle=True)
 
-    def _get(self) -> list[bytes]:
+    def get_next(self) -> list[bytes]:
         data: list[bytes] = []
 
         images, labels = next(iter(self.__dataloader))
 
         for i in range(len(images)):
-            d = {'image': images[i], 'label': labels[i]}
-            data_bytes = json.dumps(d).encode('utf-8')
-            data.append(data_bytes)
+            d = {
+                'image': images[i].numpy().tolist(),
+                'label': labels[i].item()}
+            data_json = json.dumps(d)
+            data.append(data_json)
         return data

@@ -22,10 +22,10 @@ class PostgreSQLAdapter(BaseAdapter):
 
     def create_table(self) -> None:
         self.__cursor.execute(
-            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, data bytea)")
+            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, data TEXT)")
         self.__db.commit()
 
-    def get(self, keys: list[str]) -> list[bytes]:
+    def get(self, keys: list[str]) -> list[str]:
         self.__cursor.execute(
             "SELECT data FROM storage WHERE key IN %s", (tuple(keys),))
         data = self.__cursor.fetchall()
@@ -35,7 +35,7 @@ class PostgreSQLAdapter(BaseAdapter):
         else:
             return data
 
-    def put(self, key: list[str], data: list[bytes]) -> None:
+    def put(self, key: list[str], data: list[str]) -> None:
         self.__cursor.execute(
             "INSERT INTO storage (key, data) VALUES (%s, %s)", (key, data))
         self.__db.commit()

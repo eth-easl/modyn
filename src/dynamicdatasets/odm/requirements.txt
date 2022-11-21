@@ -1,4 +1,0 @@
-psycopg2
-grpcio
-protobuf
-pyyaml

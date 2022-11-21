@@ -13,13 +13,13 @@ class S3Adapter(BaseAdapter):
         self.__bucket = self.__s3.Bucket(
             self._config['storage']['s3']['bucket'])
 
-    def get(self, keys: list[str]) -> list[bytes]:
+    def get(self, keys: list[str]) -> list[str]:
 
         data = []
         for key in keys:
             data.append(self.__bucket.Object(key).get()['Body'].read())
         return data
 
-    def put(self, key: list[str], data: list[bytes]) -> None:
+    def put(self, key: list[str], data: list[str]) -> None:
         for i in range(len(key)):
             self.__bucket.put_object(Key=key[i], Body=data[i])

@@ -13,7 +13,7 @@ class DBMAdapter(BaseAdapter):
         self.__db = dbm.open(self._config['storage']['dbm']['path'], 'c')
         self.__db.close()
 
-    def get(self, keys: list[str]) -> list[bytes]:
+    def get(self, keys: list[str]) -> list[str]:
         self.__db = dbm.open(self._config['storage']['dbm']['path'], 'r')
         data = []
         for key in keys:
@@ -21,7 +21,7 @@ class DBMAdapter(BaseAdapter):
         self.__db.close()
         return data
 
-    def put(self, key: list[str], data: list[bytes]) -> None:
+    def put(self, key: list[str], data: list[str]) -> None:
         self.__db = dbm.open(self._config['storage']['dbm']['path'], 'c')
         for i in range(len(key)):
             self.__db[key[i]] = data[i]

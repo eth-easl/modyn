@@ -13,7 +13,7 @@ class NewQueueServicer(NewQueueServicer):
 
     def __init__(self, config: dict):
         super().__init__()
-        self.__queue = persistqueue.SQLiteQueue(config['newqueue']['path'])
+        self.__queue = persistqueue.Queue(config['newqueue']['path'])
 
     def Add(self, request: AddRequest, context) -> AddResponse:
         print("Adding data")
@@ -30,7 +30,7 @@ class NewQueueServicer(NewQueueServicer):
 
 
 def serve(config_dict):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
     add_NewQueueServicer_to_server(
         NewQueueServicer(config_dict), server)
     print(

@@ -31,9 +31,11 @@ newqueue:
 preprocess:
   port: "50053"
   function: "lambda x: x"
+  hostname: "preprocess"
 
 odm:
   port: "50054"
+  hostname: "odm"
   postgresql:
     host: db
     port: "5432"

@@ -11,7 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\x07storage\"\x1a\n\nGetRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\x1c\n\x0bGetResponse\x12\r\n\x05value\x18\x01 \x03(\x0c\")\n\nPutRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x03(\x0c\"\r\n\x0bPutResponse2q\n\x07Storage\x12\x32\n\x03Get\x12\x13.storage.GetRequest\x1a\x14.storage.GetResponse\"\x00\x12\x32\n\x03Put\x12\x13.storage.PutRequest\x1a\x14.storage.PutResponse\"\x00\x62\x06proto3')  # noqa: E501
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\x07storage\"\x1a\n\nGetRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\x1c\n\x0bGetResponse\x12\r\n\x05value\x18\x01 \x03(\t\")\n\nPutRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x03(\t\"\r\n\x0bPutResponse2q\n\x07Storage\x12\x32\n\x03Get\x12\x13.storage.GetRequest\x1a\x14.storage.GetResponse\"\x00\x12\x32\n\x03Put\x12\x13.storage.PutRequest\x1a\x14.storage.PutResponse\"\x00\x62\x06proto3')  # noqa: E501
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'storage_pb2', globals())

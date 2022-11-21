@@ -21,10 +21,7 @@ class StorageServicer(StorageServicer):
     def Get(self, request: GetRequest, context):
         print("Getting data")
         data = self.__adapter.get(request.keys)
-        if data is None:
-            return GetResponse(dataMap={})
-        else:
-            return GetResponse(dataMap=data)
+        return GetResponse(value=data)
 
     def Put(self, request: PutRequest, context):
         print("Putting data")

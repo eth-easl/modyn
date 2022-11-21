@@ -19,8 +19,10 @@ RUN apt-get install -y python3-dev
 RUN apt-get install -y libpq-dev
 
 # Install pip requirements
-COPY ./dynamicdatasets/odm/requirements.txt .
+COPY ./requirements.txt .
 RUN python -m pip install -r requirements.txt
+
+RUN pip install --upgrade protobuf
 
 WORKDIR /src
 COPY . /src
