@@ -19,7 +19,7 @@ message GetByQueryRequest {
 message GetResponse {
     repeated string keys = 1;
     repeated float scores = 2;
-    repeated bytes data = 3;
+    repeated string data = 3;
 }
 
 message GetKeysResponse {
@@ -29,7 +29,7 @@ message GetKeysResponse {
 message SetRequest {
     repeated string keys = 1;
     repeated float scores = 2;
-    repeated bytes data = 3;
+    repeated string data = 3;
 }
 
 message SetResponse {

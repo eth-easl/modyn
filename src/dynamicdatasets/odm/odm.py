@@ -14,7 +14,7 @@ class OptimalDatasetMetadata:
 
     def create_table(self) -> None:
         self.__cursor.execute(
-            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, score float, data bytea)")
+            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, score float, data text)")
         self.__db.commit()
 
     def set(
@@ -32,14 +32,14 @@ class OptimalDatasetMetadata:
                     data[i]))
         self.__db.commit()
 
-    def get_by_keys(self, keys: list[str]) -> list[tuple[str, float, bytes]]:
+    def get_by_keys(self, keys: list[str]) -> list[tuple[str, float, str]]:
         self.__cursor.execute(
             "SELECT key, score, data FROM storage WHERE key IN %s", (tuple(keys),))
         data = self.__cursor.fetchall()
         data = map(list, zip(*data))
         return data[0], data[1], data[2]
 
-    def get_by_query(self, query: str) -> list[tuple[str, float, bytes]]:
+    def get_by_query(self, query: str) -> list[tuple[str, float, str]]:
         self.__cursor.execute(query)
         data = self.__cursor.fetchall()
         data = map(list, zip(*data))

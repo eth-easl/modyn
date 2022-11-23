@@ -28,20 +28,20 @@ class GetResponse(_message.Message):
     DATA_FIELD_NUMBER: _ClassVar[int]
     KEYS_FIELD_NUMBER: _ClassVar[int]
     SCORES_FIELD_NUMBER: _ClassVar[int]
-    data: _containers.RepeatedScalarFieldContainer[bytes]
+    data: _containers.RepeatedScalarFieldContainer[str]
     keys: _containers.RepeatedScalarFieldContainer[str]
     scores: _containers.RepeatedScalarFieldContainer[float]
-    def __init__(self, keys: _Optional[_Iterable[str]] = ..., scores: _Optional[_Iterable[float]] = ..., data: _Optional[_Iterable[bytes]] = ...) -> None: ...
+    def __init__(self, keys: _Optional[_Iterable[str]] = ..., scores: _Optional[_Iterable[float]] = ..., data: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SetRequest(_message.Message):
     __slots__ = ["data", "keys", "scores"]
     DATA_FIELD_NUMBER: _ClassVar[int]
     KEYS_FIELD_NUMBER: _ClassVar[int]
     SCORES_FIELD_NUMBER: _ClassVar[int]
-    data: _containers.RepeatedScalarFieldContainer[bytes]
+    data: _containers.RepeatedScalarFieldContainer[str]
     keys: _containers.RepeatedScalarFieldContainer[str]
     scores: _containers.RepeatedScalarFieldContainer[float]
-    def __init__(self, keys: _Optional[_Iterable[str]] = ..., scores: _Optional[_Iterable[float]] = ..., data: _Optional[_Iterable[bytes]] = ...) -> None: ...
+    def __init__(self, keys: _Optional[_Iterable[str]] = ..., scores: _Optional[_Iterable[float]] = ..., data: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SetResponse(_message.Message):
     __slots__ = []
