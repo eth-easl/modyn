@@ -38,5 +38,7 @@ class PostgreSQLAdapter(BaseAdapter):
     def put(self, key: list[str], data: list[str]) -> None:
         for i in range(len(key)):
             self.__cursor.execute(
-                "INSERT INTO storage (key, data) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", (key[i], data[i]))
+                "INSERT INTO storage (key, data) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data",
+                (key[i],
+                 data[i]))
         self.__con.commit()

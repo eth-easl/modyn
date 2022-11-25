@@ -3,7 +3,7 @@ from threading import Thread
 
 import grpc
 
-from dynamicdatasets.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse  # noqa: E501
+from dynamicdatasets.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
 from dynamicdatasets.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
 
 from dynamicdatasets.odm.odm import OptimalDatasetMetadata
@@ -19,7 +19,8 @@ class ODMServicer(ODMServicer):
 
     def GetByKeys(self, request: GetByKeysRequest, context):
         print("Getting data by keys")
-        keys, score, data = self.__odm.get_by_keys(request.keys)
+        keys, score, data = self.__odm.get_by_keys(
+            request.keys, request.training_id)
         return GetResponse(keys=keys, data=data, scores=score)
 
     def GetByQuery(self, request: GetByQueryRequest, context):
@@ -34,8 +35,17 @@ class ODMServicer(ODMServicer):
 
     def Set(self, request: SetRequest, context):
         print("Setting data")
-        self.__odm.set(request.keys, request.scores, request.data)
+        self.__odm.set(
+            request.keys,
+            request.scores,
+            request.data,
+            request.training_id)
         return SetResponse()
+
+    def DeleteTraining(self, request: DeleteRequest, context):
+        print("Deleting training data")
+        self.__odm.delete_training(request.training_id)
+        return DeleteResponse()
 
 
 def serve(config: dict):

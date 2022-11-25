@@ -9,10 +9,11 @@ stub = SelectorStub(channel=channel)
 
 
 #tid = stub.register_training(RegisterTrainingRequest(training_set_size=8, num_workers=2))
-#print(tid)
+# print(tid)
 
-samples = stub.get_sample_keys(GetSamplesRequest(training_id=2, training_set_number=1, worker_id=0))
+samples = stub.get_sample_keys(
+    GetSamplesRequest(
+        training_id=2,
+        training_set_number=1,
+        worker_id=0))
 print(samples)
-
-
-

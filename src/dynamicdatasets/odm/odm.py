@@ -14,27 +14,34 @@ class OptimalDatasetMetadata:
 
     def create_table(self) -> None:
         self.__cursor.execute(
-            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, score float, data text)")
+            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, score float, data text, training_id int)")
         self.__db.commit()
 
     def set(
             self,
             keys: list[str],
             score: list[float],
-            data: list[bytes]) -> None:
+            data: list[bytes],
+            training_id: int) -> None:
         self.__cursor.execute(
-            "DELETE FROM storage WHERE key IN %s", (tuple(keys),))
+            "DELETE FROM storage WHERE key IN %s AND training_id = %s",
+            (tuple(keys),
+             training_id))
         for i in range(len(keys)):
             self.__cursor.execute(
-                "INSERT INTO storage (key, score, data) VALUES (%s, %s, %s)",
+                "INSERT INTO storage (key, score, data, training_id) VALUES (%s, %s, %s, %s)",
                 (keys[i],
                  score[i],
-                    data[i]))
+                    data[i],
+                    training_id))
         self.__db.commit()
 
-    def get_by_keys(self, keys: list[str]) -> list[tuple[str, float, str]]:
+    def get_by_keys(
+            self, keys: list[str], training_id: int) -> list[tuple[str, float, str]]:
         self.__cursor.execute(
-            "SELECT key, score, data FROM storage WHERE key IN %s", (tuple(keys),))
+            "SELECT key, score, data FROM storage WHERE key IN %s AND training_id = %s",
+            (tuple(keys),
+             training_id))
         data = self.__cursor.fetchall()
         data = map(list, zip(*data))
         return data[0], data[1], data[2]
@@ -50,3 +57,8 @@ class OptimalDatasetMetadata:
         data = self.__cursor.fetchall()
         data = [d[0] for d in data]
         return data
+
+    def delete_training(self, training_id: int) -> None:
+        self.__cursor.execute(
+            "DELETE FROM storage WHERE training_id = %s", (training_id,))
+        self.__db.commit()
