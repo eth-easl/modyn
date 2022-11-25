@@ -17,7 +17,7 @@ class MNISTAdapter(BaseAdapter):
             MNIST(root='./data',
                   download=True,
                   transform=transforms.Compose([transforms.ToTensor()])),
-            batch_size=self._config['input']['size'],
+            batch_size=self._config['input']['send_batch_size'],
             shuffle=True)
 
     def get_next(self) -> list[bytes]:

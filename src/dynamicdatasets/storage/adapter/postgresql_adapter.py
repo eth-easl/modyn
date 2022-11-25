@@ -11,11 +11,11 @@ class PostgreSQLAdapter(BaseAdapter):
     def __init__(self, config: dict):
         super().__init__(config)
         self.__con = psycopg2.connect(
-            host=self._config['postgresql']['host'],
-            port=self._config['postgresql']['port'],
-            database=self._config['postgresql']['database'],
-            user=self._config['postgresql']['user'],
-            password=self._config['postgresql']['password']
+            host=self._config['storage']['postgresql']['host'],
+            port=self._config['storage']['postgresql']['port'],
+            database=self._config['storage']['postgresql']['database'],
+            user=self._config['storage']['postgresql']['user'],
+            password=self._config['storage']['postgresql']['password']
         )
         self.__cursor = self.__con.cursor()
         self.create_table()

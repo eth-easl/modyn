@@ -1,17 +1,12 @@
-kafka:
-  topic: "test"
-  bootstrap_servers:
-    - "kafka:29092"
+project:
+  name: "Dynamic Datasets DSL Project"
+  description: "Instance of Dynamic Datasets DSL Project"
+  version: "0.0.1"
 
-experiment:
-  name: cifar1
-
-postgresql:
-  host: db
-  port: "5432"
-  database: "postgres"
-  user: "postgres"
-  password: "postgres"
+input:
+  adapter: "MNISTAdapter"
+  send_batch_size: 10
+  send_batch_interval: 5
 
 storage:
   adapter: "PostgreSQLAdapter"
@@ -21,18 +16,32 @@ storage:
     path: "dbm"
   s3:
     bucket: "test"
+    access_key: ""
+    secret_key: ""
+    endpoint_url: "http://localhost:9000"
   sqlite:
     path: "sqlite"
+  postgresql:
+    host: db
+    port: "5432"
+    database: "postgres"
+    user: "postgres"
+    password: "postgres"
 
 newqueue:
-  path: "newqueue"
   port: "50052"
   hostname: "newqueue"
+  postgresql:
+    host: db
+    port: "5432"
+    database: "postgres"
+    user: "postgres"
+    password: "postgres"
 
 preprocess:
   port: "50053"
-  function: "lambda x: x"
   hostname: "preprocess"
+  function: "lambda x: x"
 
 odm:
   port: "50054"
@@ -43,8 +52,3 @@ odm:
     database: "postgres"
     user: "postgres"
     password: "postgres"
-
-input:
-  adapter: "MNISTAdapter"
-  size: 10
-  cooldown: 5

@@ -37,7 +37,7 @@ class Input:
                 print("Sending data to preprocess")
                 self.__preprocess_stub.Preprocess(
                     PreprocessRequest(value=data))
-            time.sleep(self.__config['input']['cooldown'])
+            time.sleep(self.__config['input']['send_batch_interval'])
 
 
 if __name__ == '__main__':
