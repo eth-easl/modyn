@@ -8,6 +8,7 @@ service NewQueue {
 
 message GetNextRequest {
     int32 limit = 1;
+    int32 training_id = 2;
 }
 
 message GetNextResponse {

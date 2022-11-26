@@ -11,21 +11,23 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enewqueue.proto\x12\x08newqueue\"\x1f\n\x0eGetNextRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\"\x1f\n\x0fGetNextResponse\x12\x0c\n\x04keys\x18\x02 \x03(\t\"\x1a\n\nAddRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\r\n\x0b\x41\x64\x64Response2\x82\x01\n\x08NewQueue\x12@\n\x07GetNext\x12\x18.newqueue.GetNextRequest\x1a\x19.newqueue.GetNextResponse\"\x00\x12\x34\n\x03\x41\x64\x64\x12\x14.newqueue.AddRequest\x1a\x15.newqueue.AddResponse\"\x00\x62\x06proto3')  # noqa: E501
+
+
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enewqueue.proto\x12\x08newqueue\"4\n\x0eGetNextRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\x12\x13\n\x0btraining_id\x18\x02 \x01(\x05\"\x1f\n\x0fGetNextResponse\x12\x0c\n\x04keys\x18\x02 \x03(\t\"\x1a\n\nAddRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\r\n\x0b\x41\x64\x64Response2\x82\x01\n\x08NewQueue\x12@\n\x07GetNext\x12\x18.newqueue.GetNextRequest\x1a\x19.newqueue.GetNextResponse\"\x00\x12\x34\n\x03\x41\x64\x64\x12\x14.newqueue.AddRequest\x1a\x15.newqueue.AddResponse\"\x00\x62\x06proto3')  # noqa: E501
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'newqueue_pb2', globals())
-if not _descriptor._USE_C_DESCRIPTORS:
+if _descriptor._USE_C_DESCRIPTORS == False:
 
-    DESCRIPTOR._options = None
-    _GETNEXTREQUEST._serialized_start = 28
-    _GETNEXTREQUEST._serialized_end = 59
-    _GETNEXTRESPONSE._serialized_start = 61
-    _GETNEXTRESPONSE._serialized_end = 92
-    _ADDREQUEST._serialized_start = 94
-    _ADDREQUEST._serialized_end = 120
-    _ADDRESPONSE._serialized_start = 122
-    _ADDRESPONSE._serialized_end = 135
-    _NEWQUEUE._serialized_start = 138
-    _NEWQUEUE._serialized_end = 268
+  DESCRIPTOR._options = None
+  _GETNEXTREQUEST._serialized_start=28
+  _GETNEXTREQUEST._serialized_end=80
+  _GETNEXTRESPONSE._serialized_start=82
+  _GETNEXTRESPONSE._serialized_end=113
+  _ADDREQUEST._serialized_start=115
+  _ADDREQUEST._serialized_end=141
+  _ADDRESPONSE._serialized_start=143
+  _ADDRESPONSE._serialized_end=156
+  _NEWQUEUE._serialized_start=159
+  _NEWQUEUE._serialized_end=289
 # @@protoc_insertion_point(module_scope)

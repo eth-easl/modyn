@@ -16,10 +16,12 @@ class AddResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class GetNextRequest(_message.Message):
-    __slots__ = ["limit"]
+    __slots__ = ["limit", "training_id"]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
+    TRAINING_ID_FIELD_NUMBER: _ClassVar[int]
     limit: int
-    def __init__(self, limit: _Optional[int] = ...) -> None: ...
+    training_id: int
+    def __init__(self, limit: _Optional[int] = ..., training_id: _Optional[int] = ...) -> None: ...
 
 class GetNextResponse(_message.Message):
     __slots__ = ["keys"]

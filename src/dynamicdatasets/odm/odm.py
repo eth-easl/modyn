@@ -1,21 +1,35 @@
 import psycopg2
 
 
-class OptimalDatasetMetadata:
+class OptimalDatasetMetadata(object):
     def __init__(self, config: dict):
-        self.__db = psycopg2.connect(
+        self.__config = config
+        self.__con = psycopg2.connect(
             host=config['odm']['postgresql']['host'],
             port=config['odm']['postgresql']['port'],
+            database=config['odm']['postgresql']['database'],
             user=config['odm']['postgresql']['user'],
             password=config['odm']['postgresql']['password']
         )
-        self.__cursor = self.__db.cursor()
+        self.__cursor = self.__con.cursor()
         self.create_table()
 
     def create_table(self) -> None:
         self.__cursor.execute(
-            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, score float, data text, training_id int)")
-        self.__db.commit()
+            'CREATE TABLE IF NOT EXISTS storage ('
+            'id SERIAL PRIMARY KEY,'
+            'key varchar(255) NOT NULL,'
+            'score float NOT NULL,'
+            'data text NOT NULL,'
+            'training_id int NOT NULL)'
+        )
+        self.__cursor.execute(
+            'CREATE INDEX IF NOT EXISTS storage_key_idx ON storage (key)'
+        )
+        self.__cursor.execute(
+            'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON storage (training_id)'
+        )
+        self.__con.commit()
 
     def set(
             self,
@@ -34,7 +48,7 @@ class OptimalDatasetMetadata:
                  score[i],
                     data[i],
                     training_id))
-        self.__db.commit()
+        self.__con.commit()
 
     def get_by_keys(
             self, keys: list[str], training_id: int) -> list[tuple[str, float, str]]:
@@ -61,4 +75,4 @@ class OptimalDatasetMetadata:
     def delete_training(self, training_id: int) -> None:
         self.__cursor.execute(
             "DELETE FROM storage WHERE training_id = %s", (training_id,))
-        self.__db.commit()
+        self.__con.commit()

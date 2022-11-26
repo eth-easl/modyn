@@ -22,7 +22,14 @@ class PostgreSQLAdapter(BaseAdapter):
 
     def create_table(self) -> None:
         self.__cursor.execute(
-            "CREATE TABLE IF NOT EXISTS storage (key varchar(255) PRIMARY KEY, data TEXT)")
+            'CREATE TABLE IF NOT EXISTS storage ('
+            'id SERIAL PRIMARY KEY,'
+            'key varchar(255),'
+            'data TEXT)'
+        )
+        self.__cursor.execute(
+            'CREATE INDEX IF NOT EXISTS storage_key_idx ON storage (key)'
+        )
         self.__con.commit()
 
     def get(self, keys: list[str]) -> list[str]:
