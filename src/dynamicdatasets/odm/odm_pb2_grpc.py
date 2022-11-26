@@ -107,8 +107,6 @@ def add_ODMServicer_to_server(servicer, server):
         'odm.ODM', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
- # This class is part of an EXPERIMENTAL API.
-
 
 class ODM(object):
     """Missing associated documentation comment in .proto file."""

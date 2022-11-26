@@ -50,7 +50,12 @@ class NewQueue(object):
 
     def get_next(self, limit, training_id):
         self.__cursor.execute(
-            'SELECT key FROM queue_data WHERE key NOT IN (SELECT key FROM queue WHERE training_id = %s) ORDER BY created ASC LIMIT %s',
+            'SELECT key'
+            'FROM queue_data'
+            'WHERE key NOT IN'
+            '(SELECT key FROM queue WHERE training_id = %s)'
+            'ORDER BY created ASC'
+            'LIMIT %s',
             (training_id, limit,)
         )
         keys = self.__cursor.fetchall()

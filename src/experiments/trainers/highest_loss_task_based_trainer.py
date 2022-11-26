@@ -45,7 +45,8 @@ class HighestLossTaskBasedTrainer(TaskTrainer):
         all_labels = []
 
         train_loader = torch.utils.data.DataLoader(
-            torch.utils.data.ConcatDataset([self.dataset['train'], self.buffer_dataset]),
+            torch.utils.data.ConcatDataset(
+                [self.dataset['train'], self.buffer_dataset]),
             shuffle=True,
             batch_size=self.dataset_configs['batch_size']
         )

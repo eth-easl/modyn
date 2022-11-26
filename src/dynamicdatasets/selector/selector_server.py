@@ -24,14 +24,17 @@ class SelectorServicer(SelectorServicer):
 
     def register_training(self, request, context):
         print("Registerining training")
-        training_id = self._selector.register_training(request.training_set_size, request.num_workers)
-        return TrainingResponse(training_id = training_id)
+        training_id = self._selector.register_training(
+            request.training_set_size, request.num_workers)
+        return TrainingResponse(training_id=training_id)
 
-    #def get_sample_keys(self, training_id: int, training_set_number: int, worker_id: int) -> list():
+    # def get_sample_keys(self, training_id: int, training_set_number: int,
+    # worker_id: int) -> list():
     def get_sample_keys(self, request, context):
         print("Returning samples")
-        samples_keys = self._selector.get_sample_keys(request.training_id, request.training_set_number, request.worker_id)
-        return SamplesResponse(training_samples_subset = samples_keys)
+        samples_keys = self._selector.get_sample_keys(
+            request.training_id, request.training_set_number, request.worker_id)
+        return SamplesResponse(training_samples_subset=samples_keys)
 
 
 def serve(config_dict):
@@ -43,7 +46,7 @@ def serve(config_dict):
     server.start()
     server.wait_for_termination()
 
-    
+
 if __name__ == '__main__':
     import sys
     import yaml

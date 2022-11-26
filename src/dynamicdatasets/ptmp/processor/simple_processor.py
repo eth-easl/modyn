@@ -4,11 +4,13 @@ import random
 from base import PostTrainingMetadataProcessor
 from dynamicdatasets.odm.odm_pb2 import SetRequest
 
+
 class SimpleProcessor(PostTrainingMetadataProcessor):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
 
-    def _process_post_training_metadata(self, training_id: str, data: str) -> dict:
+    def _process_post_training_metadata(
+            self, training_id: str, data: str) -> dict:
         data_dict = json.loads(data)
 
         output_data = []
@@ -22,4 +24,5 @@ class SimpleProcessor(PostTrainingMetadataProcessor):
                 output_keys.append(key)
                 output_scores.append(score)
 
-        return SetRequest(training_id=training_id, data=output_data, keys=output_keys, scores=output_scores)
+        return SetRequest(training_id=training_id, data=output_data,
+                          keys=output_keys, scores=output_scores)

@@ -1,4 +1,4 @@
-from abc import ABC,abstractmethod
+from abc import ABC, abstractmethod
 from threading import Thread
 from concurrent import futures
 
@@ -14,7 +14,8 @@ class PostTrainingMetadataProcessor(ABC):
         self.__config = config
         self.__thread_pool = futures.ThreadPoolExecutor(max_workers=10)
 
-    def process_post_training_metadata(self, training_id: str, data: str) -> None:
+    def process_post_training_metadata(
+            self, training_id: str, data: str) -> None:
         self.__thread_pool.submit(self.__process_and_send, training_id, data)
 
     def __process_and_send(self, training_id: str, data: str) -> None:
@@ -23,13 +24,14 @@ class PostTrainingMetadataProcessor(ABC):
 
     def __send_to_odm(self, training_id: str, set_request: SetRequest) -> None:
         channel = grpc.insecure_channel(self.__config['odm']['hostname'] +
-            ':' +
-            self.__config['odm']['port'])
+                                        ':' +
+                                        self.__config['odm']['port'])
         stub = ODMStub(channel)
         stub.Set(set_request)
 
     @abstractmethod
-    def _process_post_training_metadata(self, training_id: str, data: str) -> SetRequest:
+    def _process_post_training_metadata(
+            self, training_id: str, data: str) -> SetRequest:
         """Processes post training metadata for the given training_id and data.
 
         Args:

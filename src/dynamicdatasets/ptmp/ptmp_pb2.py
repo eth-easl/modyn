@@ -15,13 +15,13 @@ DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nptmp.proto\x12\x
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'ptmp_pb2', globals())
-if _descriptor._USE_C_DESCRIPTORS == False:
+if _descriptor._USE_C_DESCRIPTORS is False:
 
-  DESCRIPTOR._options = None
-  _POSTTRAININGMETADATAREQUEST._serialized_start=20
-  _POSTTRAININGMETADATAREQUEST._serialized_end=84
-  _POSTTRAININGMETADATARESPONSE._serialized_start=86
-  _POSTTRAININGMETADATARESPONSE._serialized_end=116
-  _POSTTRAININGMETADATAPROCESSOR._serialized_start=119
-  _POSTTRAININGMETADATAPROCESSOR._serialized_end=254
+    DESCRIPTOR._options = None
+    _POSTTRAININGMETADATAREQUEST._serialized_start = 20
+    _POSTTRAININGMETADATAREQUEST._serialized_end = 84
+    _POSTTRAININGMETADATARESPONSE._serialized_start = 86
+    _POSTTRAININGMETADATARESPONSE._serialized_end = 116
+    _POSTTRAININGMETADATAPROCESSOR._serialized_start = 119
+    _POSTTRAININGMETADATAPROCESSOR._serialized_end = 254
 # @@protoc_insertion_point(module_scope)

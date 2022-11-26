@@ -6,7 +6,6 @@ class NewDataSelector(Selector):
         sample_keys = []
         for i in range(training_set_size):
             sample_keys.append('key - ' + str(i))
-        #sample_keys = new_queue_service.get(count = training_set_size)
+        # sample_keys = new_queue_service.get(count = training_set_size)
 
         return sample_keys
-

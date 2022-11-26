@@ -43,7 +43,8 @@ class PoolingTaskBasedTrainer(TaskTrainer):
         train_losses, train_accuracies, gradient_errors = [], [], []
 
         train_loader = torch.utils.data.DataLoader(
-            torch.utils.data.ConcatDataset([self.dataset['train'], self.buffer_dataset]),
+            torch.utils.data.ConcatDataset(
+                [self.dataset['train'], self.buffer_dataset]),
             shuffle=True,
             batch_size=self.dataset_configs['batch_size']
         )

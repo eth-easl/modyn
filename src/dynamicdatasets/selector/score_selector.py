@@ -6,7 +6,6 @@ class ScoreSelector(Selector):
         sample_keys = []
         for i in range(training_set_size):
             sample_keys.append('key - ' + str(i))
-        #sample_keys = odm_service.get(query = "select key from <> order by score desc")
+        # sample_keys = odm_service.get(query = "select key from <> order by score desc")
 
         return sample_keys
-

@@ -8,7 +8,7 @@ channel = grpc.insecure_channel('127.0.0.1:5444')
 stub = SelectorStub(channel=channel)
 
 
-#tid = stub.register_training(RegisterTrainingRequest(training_set_size=8, num_workers=2))
+# tid = stub.register_training(RegisterTrainingRequest(training_set_size=8, num_workers=2))
 # print(tid)
 
 samples = stub.get_sample_keys(

@@ -14,7 +14,8 @@ class PreprocessServicer(preprocess_pb2_grpc.PreprocessServicer):
     def __init__(self, config: dict, preprocess_function: str):
         super().__init__()
         self.__config = config
-        self.__preprocessor = preprocessor.Preprocessor(config, preprocess_function)
+        self.__preprocessor = preprocessor.Preprocessor(
+            config, preprocess_function)
 
     def Preprocess(self, request: preprocess_pb2.PreprocessRequest, context):
         print("Preprocessing data")

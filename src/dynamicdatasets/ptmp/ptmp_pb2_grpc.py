@@ -15,10 +15,10 @@ class PostTrainingMetadataProcessorStub(object):
             channel: A grpc.Channel.
         """
         self.ProcessPostTrainingMetadata = channel.unary_unary(
-                '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
-                request_serializer=ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
-                response_deserializer=ptmp__pb2.PostTrainingMetadataResponse.FromString,
-                )
+            '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
+            request_serializer=ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
+            response_deserializer=ptmp__pb2.PostTrainingMetadataResponse.FromString,
+        )
 
 
 class PostTrainingMetadataProcessorServicer(object):
@@ -33,14 +33,14 @@ class PostTrainingMetadataProcessorServicer(object):
 
 def add_PostTrainingMetadataProcessorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'ProcessPostTrainingMetadata': grpc.unary_unary_rpc_method_handler(
-                    servicer.ProcessPostTrainingMetadata,
-                    request_deserializer=ptmp__pb2.PostTrainingMetadataRequest.FromString,
-                    response_serializer=ptmp__pb2.PostTrainingMetadataResponse.SerializeToString,
-            ),
+        'ProcessPostTrainingMetadata': grpc.unary_unary_rpc_method_handler(
+            servicer.ProcessPostTrainingMetadata,
+            request_deserializer=ptmp__pb2.PostTrainingMetadataRequest.FromString,
+            response_serializer=ptmp__pb2.PostTrainingMetadataResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'ptmp.PostTrainingMetadataProcessor', rpc_method_handlers)
+        'ptmp.PostTrainingMetadataProcessor', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
@@ -49,17 +49,18 @@ class PostTrainingMetadataProcessor(object):
 
     @staticmethod
     def ProcessPostTrainingMetadata(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
-            ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
-            ptmp__pb2.PostTrainingMetadataResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                    target,
+                                    options=(),
+                                    channel_credentials=None,
+                                    call_credentials=None,
+                                    insecure=False,
+                                    compression=None,
+                                    wait_for_ready=None,
+                                    timeout=None,
+                                    metadata=None):
+        return grpc.experimental.unary_unary(request, target,
+                                             '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
+                                             ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
+                                             ptmp__pb2.PostTrainingMetadataResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

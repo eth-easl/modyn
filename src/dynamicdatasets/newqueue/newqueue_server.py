@@ -7,6 +7,7 @@ from newqueue_pb2 import AddRequest, AddResponse, GetNextRequest, GetNextRespons
 from newqueue_pb2_grpc import NewQueueServicer, add_NewQueueServicer_to_server
 from newqueue import NewQueue
 
+
 class NewQueueServicer(NewQueueServicer):
     """Provides methods that implement functionality of the new queue server."""
 

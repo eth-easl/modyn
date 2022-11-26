@@ -15,15 +15,15 @@ class NewQueueStub(object):
             channel: A grpc.Channel.
         """
         self.GetNext = channel.unary_unary(
-                '/newqueue.NewQueue/GetNext',
-                request_serializer=newqueue__pb2.GetNextRequest.SerializeToString,
-                response_deserializer=newqueue__pb2.GetNextResponse.FromString,
-                )
+            '/newqueue.NewQueue/GetNext',
+            request_serializer=newqueue__pb2.GetNextRequest.SerializeToString,
+            response_deserializer=newqueue__pb2.GetNextResponse.FromString,
+        )
         self.Add = channel.unary_unary(
-                '/newqueue.NewQueue/Add',
-                request_serializer=newqueue__pb2.AddRequest.SerializeToString,
-                response_deserializer=newqueue__pb2.AddResponse.FromString,
-                )
+            '/newqueue.NewQueue/Add',
+            request_serializer=newqueue__pb2.AddRequest.SerializeToString,
+            response_deserializer=newqueue__pb2.AddResponse.FromString,
+        )
 
 
 class NewQueueServicer(object):
@@ -44,19 +44,19 @@ class NewQueueServicer(object):
 
 def add_NewQueueServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetNext': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetNext,
-                    request_deserializer=newqueue__pb2.GetNextRequest.FromString,
-                    response_serializer=newqueue__pb2.GetNextResponse.SerializeToString,
-            ),
-            'Add': grpc.unary_unary_rpc_method_handler(
-                    servicer.Add,
-                    request_deserializer=newqueue__pb2.AddRequest.FromString,
-                    response_serializer=newqueue__pb2.AddResponse.SerializeToString,
-            ),
+        'GetNext': grpc.unary_unary_rpc_method_handler(
+            servicer.GetNext,
+            request_deserializer=newqueue__pb2.GetNextRequest.FromString,
+            response_serializer=newqueue__pb2.GetNextResponse.SerializeToString,
+        ),
+        'Add': grpc.unary_unary_rpc_method_handler(
+            servicer.Add,
+            request_deserializer=newqueue__pb2.AddRequest.FromString,
+            response_serializer=newqueue__pb2.AddResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'newqueue.NewQueue', rpc_method_handlers)
+        'newqueue.NewQueue', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
@@ -65,20 +65,20 @@ class NewQueue(object):
 
     @staticmethod
     def GetNext(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                target,
+                options=(),
+                channel_credentials=None,
+                call_credentials=None,
+                insecure=False,
+                compression=None,
+                wait_for_ready=None,
+                timeout=None,
+                metadata=None):
         return grpc.experimental.unary_unary(request, target, '/newqueue.NewQueue/GetNext',
-            newqueue__pb2.GetNextRequest.SerializeToString,
-            newqueue__pb2.GetNextResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             newqueue__pb2.GetNextRequest.SerializeToString,
+                                             newqueue__pb2.GetNextResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Add(request,
@@ -92,7 +92,7 @@ class NewQueue(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/newqueue.NewQueue/Add',
-            newqueue__pb2.AddRequest.SerializeToString,
-            newqueue__pb2.AddResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             newqueue__pb2.AddRequest.SerializeToString,
+                                             newqueue__pb2.AddResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
