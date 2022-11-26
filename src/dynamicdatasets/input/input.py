@@ -41,12 +41,17 @@ class Input:
 
 
 if __name__ == '__main__':
-    import logging
     import sys
     import yaml
+    import logging
 
-    logging.basicConfig()
-    with open(sys.argv[1], 'r') as stream:
-        config = yaml.safe_load(stream)
+    logging.basicConfig(level=logging.INFO)
+    if len(sys.argv) != 2:
+        print("Usage: python input.py <config_file>")
+        sys.exit(1)
+
+    with open(sys.argv[1], "r") as f:
+        config = yaml.safe_load(f)
+
     input = Input(config)
     input.run()

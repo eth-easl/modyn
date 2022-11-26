@@ -1,10 +1,9 @@
 from concurrent import futures
-from threading import Thread
 
 import grpc
 
-from dynamicdatasets.storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse
-from dynamicdatasets.storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
+from storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse
+from storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
 
 
 class StorageServicer(StorageServicer):
@@ -49,11 +48,16 @@ def serve(config_dict):
 
 
 if __name__ == '__main__':
-    import logging
     import sys
     import yaml
+    import logging
 
-    logging.basicConfig()
-    with open(sys.argv[1], 'r') as stream:
-        config = yaml.safe_load(stream)
+    logging.basicConfig(level=logging.INFO)
+    if len(sys.argv) != 2:
+        print("Usage: python storage_server.py <config_file>")
+        sys.exit(1)
+
+    with open(sys.argv[1], "r") as f:
+        config = yaml.safe_load(f)
+
     serve(config)

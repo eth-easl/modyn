@@ -43,13 +43,18 @@ def serve(config_dict):
     server.start()
     server.wait_for_termination()
 
-
+    
 if __name__ == '__main__':
-    import logging
     import sys
     import yaml
+    import logging
 
-    logging.basicConfig()
-    #with open(sys.argv[1], 'r') as stream:
-    #    config = yaml.safe_load(stream)
-    serve({})
+    logging.basicConfig(level=logging.INFO)
+    if len(sys.argv) != 2:
+        print("Usage: python selector_server.py <config_file>")
+        sys.exit(1)
+
+    with open(sys.argv[1], "r") as f:
+        config = yaml.safe_load(f)
+
+    serve(config)

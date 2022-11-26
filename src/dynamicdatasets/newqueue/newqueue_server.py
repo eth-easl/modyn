@@ -3,9 +3,9 @@ from threading import Thread
 
 import grpc
 
-from dynamicdatasets.newqueue.newqueue_pb2 import AddRequest, AddResponse, GetNextRequest, GetNextResponse
-from dynamicdatasets.newqueue.newqueue_pb2_grpc import NewQueueServicer, add_NewQueueServicer_to_server
-from dynamicdatasets.newqueue.newqueue import NewQueue
+from newqueue_pb2 import AddRequest, AddResponse, GetNextRequest, GetNextResponse
+from newqueue_pb2_grpc import NewQueueServicer, add_NewQueueServicer_to_server
+from newqueue import NewQueue
 
 class NewQueueServicer(NewQueueServicer):
     """Provides methods that implement functionality of the new queue server."""
@@ -40,11 +40,16 @@ def serve(config_dict):
 
 
 if __name__ == '__main__':
-    import logging
     import sys
     import yaml
+    import logging
 
-    logging.basicConfig()
-    with open(sys.argv[1], 'r') as stream:
-        config = yaml.safe_load(stream)
+    logging.basicConfig(level=logging.INFO)
+    if len(sys.argv) != 2:
+        print("Usage: python newqueue_server.py <config_file>")
+        sys.exit(1)
+
+    with open(sys.argv[1], "r") as f:
+        config = yaml.safe_load(f)
+
     serve(config)

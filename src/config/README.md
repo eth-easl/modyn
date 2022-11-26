@@ -197,6 +197,21 @@ properties:
             type: string
             description: |
               The password to use for the PostgreSQL server.
+  ptmp:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the ptmp server.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the ptmp server.
+      processor:
+        type: string
+        description: |
+          The processor to use for the ptmp server.
 required:
   - project
   - input

@@ -52,3 +52,8 @@ odm:
     database: "postgres"
     user: "postgres"
     password: "postgres"
+
+ptmp:
+  port: "50055"
+  hostname: "ptmp"
+  processor: "SimpleProcessor"

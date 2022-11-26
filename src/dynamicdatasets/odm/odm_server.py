@@ -1,12 +1,11 @@
 from concurrent import futures
-from threading import Thread
 
 import grpc
 
-from dynamicdatasets.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
-from dynamicdatasets.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
+from odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
+from odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
 
-from dynamicdatasets.odm.odm import OptimalDatasetMetadata
+from odm import OptimalDatasetMetadata
 
 
 class ODMServicer(ODMServicer):
@@ -58,11 +57,16 @@ def serve(config: dict):
 
 
 if __name__ == '__main__':
-    import logging
     import sys
     import yaml
+    import logging
 
-    logging.basicConfig()
-    with open(sys.argv[1], 'r') as stream:
-        config = yaml.safe_load(stream)
+    logging.basicConfig(level=logging.INFO)
+    if len(sys.argv) != 2:
+        print("Usage: python odm_server.py <config_file>")
+        sys.exit(1)
+
+    with open(sys.argv[1], "r") as f:
+        config = yaml.safe_load(f)
+
     serve(config)
