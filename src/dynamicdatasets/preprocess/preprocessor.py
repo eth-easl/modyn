@@ -9,6 +9,9 @@ from dynamicdatasets.storage.storage_pb2 import PutRequest
 
 
 class Preprocessor:
+    """
+    Preprocess the data and send it to the storage service and the newqueue service.
+    """
     def __init__(self, config: dict, preprocess_function: str):
         self.__config = config
         self.__preprocess_function = preprocess_function
@@ -26,6 +29,12 @@ class Preprocessor:
         self.__storage_stub = StorageStub(storage_channel)
 
     def preprocess(self, value: list[bytes]):
+        """
+        Preprocess the data and send it to the storage service and the newqueue service.
+
+        Args:
+            value (list[bytes]): The data to preprocess.
+        """
         data = []
         keys = []
         for v in value:
@@ -35,8 +44,21 @@ class Preprocessor:
         self.__add_to_storage(keys, data)
         self.__add_to_newqueue(keys)
 
-    def __add_to_newqueue(self, key: list[str]):
-        self.__newqueue_stub.Add(AddRequest(keys=key))
+    def __add_to_newqueue(self, keys: list[str]):
+        """
+        Add the key to the newqueue service.
+
+        Args:
+            keys (list[str]): The keys to add.
+        """
+        self.__newqueue_stub.Add(AddRequest(keys=keys))
 
     def __add_to_storage(self, keys: list[str], data: list[bytes]):
+        """
+        Add the data to the storage service.
+
+        Args:
+            keys (list[str]): The keys to add.
+            data (list[bytes]): The data to add.
+        """
         self.__storage_stub.Put(PutRequest(keys=keys, value=data))

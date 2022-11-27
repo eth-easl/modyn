@@ -2,6 +2,13 @@ import psycopg2
 
 
 class NewQueue(object):
+    """
+    New queue service is responsible for storing data in a database and
+    retrieving data from the database upon request in a queue like fashion.
+
+    Args:
+        object (_type_): _description_
+    """
     def __init__(self, config):
         self.__config = config
         self.__conn = psycopg2.connect(
@@ -15,6 +22,9 @@ class NewQueue(object):
         self.create_table()
 
     def create_table(self):
+        """
+        Create tables if they do not exist.
+        """
         self.__cursor.execute(
             'CREATE TABLE IF NOT EXISTS queue_data ('
             'id SERIAL PRIMARY KEY,'
@@ -40,7 +50,13 @@ class NewQueue(object):
         )
         self.__conn.commit()
 
-    def add(self, keys):
+    def add(self, keys: list[str]) -> None:
+        """
+        Add keys to the queue.
+
+        Args:
+            keys (list[str]): List of keys to add to the queue.
+        """
         for key in keys:
             self.__cursor.execute(
                 'INSERT INTO queue_data (key, created, updated) VALUES (%s, NOW(), NOW())',
@@ -48,7 +64,19 @@ class NewQueue(object):
             )
         self.__conn.commit()
 
-    def get_next(self, limit, training_id):
+    def get_next(self, limit: int, training_id: int) -> list[str]:
+        """
+        Get the next keys from the queue for a training id.
+
+        Args:
+            limit (int): Number of keys to retrieve. 
+                         If limit is greater than the number of 
+                         keys in the queue, all keys will be returned.
+            training_id (int): Training id to retrieve keys for.
+
+        Returns:
+            list[str]: List of keys.
+        """
         self.__cursor.execute(
             'SELECT key'
             'FROM queue_data'

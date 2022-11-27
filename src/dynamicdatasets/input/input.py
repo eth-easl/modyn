@@ -7,6 +7,10 @@ from dynamicdatasets.preprocess.preprocess_pb2 import PreprocessRequest
 from dynamicdatasets.input.adapter import base
 
 class Input(object):
+    """
+    Input service is responsible for getting data from the input adapter and
+    sending it to the preprocess service.
+    """
 
     def __init__(self, config: dict) -> None:
         self.__config = config
@@ -30,6 +34,9 @@ class Input(object):
         return mod
 
     def run(self):
+        """
+        Run the input service.
+        """
         while True:
             data = self.__adapter.get_next()
 
