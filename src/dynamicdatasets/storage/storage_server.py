@@ -2,8 +2,8 @@ from concurrent import futures
 
 import grpc
 
-from storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse
-from storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
+from dynamicdatasets.storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse
+from dynamicdatasets.storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
 
 
 class StorageServicer(StorageServicer):

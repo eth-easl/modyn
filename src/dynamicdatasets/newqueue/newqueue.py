@@ -18,7 +18,7 @@ class NewQueue(object):
         self.__cursor.execute(
             'CREATE TABLE IF NOT EXISTS queue_data ('
             'id SERIAL PRIMARY KEY,'
-            'key VARCHAR(255) NOT NULL,'
+            'key VARCHAR(255) NOT NULL UNIQUE,'
             'created TIMESTAMP NOT NULL,'
             'updated TIMESTAMP NOT NULL'
             ')'
@@ -32,7 +32,7 @@ class NewQueue(object):
             'key VARCHAR(255) NOT NULL,'
             'training_id INTEGER NOT NULL,'
             'read TIMESTAMP NOT NULL,'
-            'FOREIGN KEY (key) REFERENCES newqueue_data(key)'
+            'FOREIGN KEY (key) REFERENCES queue_data(key)'
             ')'
         )
         self.__cursor.execute(

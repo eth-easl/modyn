@@ -2,32 +2,39 @@ from concurrent import futures
 
 import grpc
 
-import ptmp_pb2
-import ptmp_pb2_grpc
+from dynamicdatasets.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse
+from dynamicdatasets.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, add_PostTrainingMetadataProcessorServicer_to_server
 
 
 class PostTrainingMetadataProcessor(
-        ptmp_pb2_grpc.PostTrainingMetadataProcessorServicer):
+        PostTrainingMetadataProcessorServicer):
     """Provides methods that implement functionality of PostTrainingMetadataProcessor server."""
 
     def __init__(self, config: dict) -> None:
         super().__init__()
         self.__config = config
-        processor_module = self.my_import('dynamicdatasets.storage.processor')
+        processor_module = self.my_import('dynamicdatasets.ptmp.processor')
         self.__processor = getattr(
             processor_module,
             config['ptmp']['processor'])(config)
 
     def ProcessPostTrainingMetadata(
-            self, request: ptmp_pb2.PostTrainingMetadataRequest, context):
+            self, request: PostTrainingMetadataRequest, context):
         self.__processor.process_post_training_metadata(
             request.training_id, request.data)
-        return ptmp_pb2.PostTrainingMetadataResponse()
+        return PostTrainingMetadataResponse()
+    
+    def my_import(self, name):
+        components = name.split('.')
+        mod = __import__(components[0])
+        for comp in components[1:]:
+            mod = getattr(mod, comp)
+        return mod
 
 
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    ptmp_pb2_grpc.add_PostTrainingMetadataProcessorServicer_to_server(
+    add_PostTrainingMetadataProcessorServicer_to_server(
         PostTrainingMetadataProcessor(config), server)
     print('Starting server. Listening on port .' + config["ptmp"]["port"])
     server.add_insecure_port(f'[::]:{config["ptmp"]["port"]}')

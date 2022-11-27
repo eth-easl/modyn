@@ -19,7 +19,7 @@ RUN apt-get install -y python3-dev
 RUN apt-get install -y libpq-dev
 
 # Install pip requirements
-COPY ./dynamicdatasets/ptmp/requirements.txt .
+COPY ./dynamicdatasets/storage/requirements.txt .
 RUN python -m pip install -r requirements.txt
 
 RUN pip install --upgrade protobuf
@@ -34,7 +34,7 @@ RUN pip install -e .
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /src
 USER appuser
 
-RUN chmod a+x ./dynamicdatasets/ptmp/run.sh
+RUN chmod a+x ./dynamicdatasets/storage/run.sh
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["./dynamicdatasets/ptmp/run.sh"]
+CMD ["./dynamicdatasets/storage/run.sh"]

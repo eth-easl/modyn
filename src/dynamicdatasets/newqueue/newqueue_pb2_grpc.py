@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import newqueue_pb2 as newqueue__pb2
+import dynamicdatasets.newqueue.newqueue_pb2 as newqueue__pb2
 
 
 class NewQueueStub(object):

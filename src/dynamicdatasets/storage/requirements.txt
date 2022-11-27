@@ -1,0 +1,5 @@
+grpcio
+psycopg2
+boto3
+sqlitedict
+pyyaml

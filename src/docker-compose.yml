@@ -41,17 +41,6 @@ services:
       context: ./
       dockerfile: ./dynamicdatasets/odm/Dockerfile
 
-  input:
-    image: input
-    depends_on:
-      - db
-      - storage
-      - newqueue
-      - preprocess
-    build:
-      context: ./
-      dockerfile: ./dynamicdatasets/input/Dockerfile
-
   ptmp:
     image: ptmp
     depends_on:
@@ -62,3 +51,16 @@ services:
     build:
       context: ./
       dockerfile: ./dynamicdatasets/ptmp/Dockerfile
+
+  input:
+    image: input
+    depends_on:
+      - db
+      - storage
+      - newqueue
+      - preprocess
+      - ptmp
+      - odm
+    build:
+      context: ./
+      dockerfile: ./dynamicdatasets/input/Dockerfile

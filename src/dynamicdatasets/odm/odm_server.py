@@ -2,10 +2,10 @@ from concurrent import futures
 
 import grpc
 
-from odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
-from odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
+from dynamicdatasets.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
+from dynamicdatasets.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
 
-from odm import OptimalDatasetMetadata
+from dynamicdatasets.odm.odm import OptimalDatasetMetadata
 
 
 class ODMServicer(ODMServicer):

@@ -1,7 +1,7 @@
 import json
 import random
 
-from base import PostTrainingMetadataProcessor
+from dynamicdatasets.ptmp.processor.base import PostTrainingMetadataProcessor
 from dynamicdatasets.odm.odm_pb2 import SetRequest
 
 

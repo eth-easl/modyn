@@ -24,8 +24,8 @@ class PostgreSQLAdapter(BaseAdapter):
         self.__cursor.execute(
             'CREATE TABLE IF NOT EXISTS storage ('
             'id SERIAL PRIMARY KEY,'
-            'key varchar(255),'
-            'data TEXT)'
+            'key varchar(255) UNIQUE NOT NULL,'
+            'data TEXT NOT NULL)'
         )
         self.__cursor.execute(
             'CREATE INDEX IF NOT EXISTS storage_key_idx ON storage (key)'
@@ -45,7 +45,7 @@ class PostgreSQLAdapter(BaseAdapter):
     def put(self, key: list[str], data: list[str]) -> None:
         for i in range(len(key)):
             self.__cursor.execute(
-                "INSERT INTO storage (key, data) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data",
+                'INSERT INTO storage (key, data) VALUES (%s, %s)',
                 (key[i],
                  data[i]))
         self.__con.commit()

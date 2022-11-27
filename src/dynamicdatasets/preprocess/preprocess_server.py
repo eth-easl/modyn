@@ -3,29 +3,29 @@ from threading import Thread
 
 import grpc
 
-import preprocess_pb2
-import preprocess_pb2_grpc
-import preprocessor
+from dynamicdatasets.preprocess.preprocess_pb2 import PreprocessRequest, PreprocessResponse
+from dynamicdatasets.preprocess.preprocess_pb2_grpc import PreprocessServicer, add_PreprocessServicer_to_server
+from dynamicdatasets.preprocess.preprocessor import Preprocessor
 
 
-class PreprocessServicer(preprocess_pb2_grpc.PreprocessServicer):
+class PreprocessServicer(PreprocessServicer):
     """Provides methods that implement functionality of the preprocess server."""
 
     def __init__(self, config: dict, preprocess_function: str):
         super().__init__()
         self.__config = config
-        self.__preprocessor = preprocessor.Preprocessor(
+        self.__preprocessor = Preprocessor(
             config, preprocess_function)
 
-    def Preprocess(self, request: preprocess_pb2.PreprocessRequest, context):
+    def Preprocess(self, request: PreprocessRequest, context):
         print("Preprocessing data")
         self.__preprocessor.preprocess(request.value)
-        return preprocess_pb2.PreprocessResponse()
+        return PreprocessResponse()
 
 
 def serve(config_dict):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    preprocess_pb2_grpc.add_PreprocessServicer_to_server(
+    add_PreprocessServicer_to_server(
         PreprocessServicer(
             config_dict,
             config_dict['preprocess']['function']),

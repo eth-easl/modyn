@@ -14,12 +14,10 @@ RUN apt-get update -q \
     inetutils-ping \
     && rm -rf /var/lib/apt/lists/*
 RUN apt-get update && apt-get install build-essential -y
-RUN apt-get install -y postgresql
 RUN apt-get install -y python3-dev
-RUN apt-get install -y libpq-dev
 
 # Install pip requirements
-COPY ./requirements.txt .
+COPY ./dynamicdatasets/input/requirements.txt .
 RUN python -m pip install -r requirements.txt
 
 RUN pip install --upgrade protobuf

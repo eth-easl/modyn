@@ -16,7 +16,7 @@ class OptimalDatasetMetadata(object):
 
     def create_table(self) -> None:
         self.__cursor.execute(
-            'CREATE TABLE IF NOT EXISTS storage ('
+            'CREATE TABLE IF NOT EXISTS odm_storage ('
             'id SERIAL PRIMARY KEY,'
             'key varchar(255) NOT NULL,'
             'score float NOT NULL,'
@@ -24,10 +24,10 @@ class OptimalDatasetMetadata(object):
             'training_id int NOT NULL)'
         )
         self.__cursor.execute(
-            'CREATE INDEX IF NOT EXISTS storage_key_idx ON storage (key)'
+            'CREATE INDEX IF NOT EXISTS storage_key_idx ON odm_storage (key)'
         )
         self.__cursor.execute(
-            'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON storage (training_id)'
+            'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON odm_storage (training_id)'
         )
         self.__con.commit()
 
@@ -38,12 +38,12 @@ class OptimalDatasetMetadata(object):
             data: list[bytes],
             training_id: int) -> None:
         self.__cursor.execute(
-            "DELETE FROM storage WHERE key IN %s AND training_id = %s",
+            "DELETE FROM odm_storage WHERE key IN %s AND training_id = %s",
             (tuple(keys),
              training_id))
         for i in range(len(keys)):
             self.__cursor.execute(
-                "INSERT INTO storage (key, score, data, training_id) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO odm_storage (key, score, data, training_id) VALUES (%s, %s, %s, %s)",
                 (keys[i],
                  score[i],
                     data[i],
@@ -53,7 +53,7 @@ class OptimalDatasetMetadata(object):
     def get_by_keys(
             self, keys: list[str], training_id: int) -> list[tuple[str, float, str]]:
         self.__cursor.execute(
-            "SELECT key, score, data FROM storage WHERE key IN %s AND training_id = %s",
+            "SELECT key, score, data FROM odm_storage WHERE key IN %s AND training_id = %s",
             (tuple(keys),
              training_id))
         data = self.__cursor.fetchall()
@@ -74,5 +74,5 @@ class OptimalDatasetMetadata(object):
 
     def delete_training(self, training_id: int) -> None:
         self.__cursor.execute(
-            "DELETE FROM storage WHERE training_id = %s", (training_id,))
+            "DELETE FROM odm_storage WHERE training_id = %s", (training_id,))
         self.__con.commit()

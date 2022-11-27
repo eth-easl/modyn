@@ -3,9 +3,9 @@ from threading import Thread
 
 import grpc
 
-from newqueue_pb2 import AddRequest, AddResponse, GetNextRequest, GetNextResponse
-from newqueue_pb2_grpc import NewQueueServicer, add_NewQueueServicer_to_server
-from newqueue import NewQueue
+from dynamicdatasets.newqueue.newqueue_pb2 import AddRequest, AddResponse, GetNextRequest, GetNextResponse
+from dynamicdatasets.newqueue.newqueue_pb2_grpc import NewQueueServicer, add_NewQueueServicer_to_server
+from dynamicdatasets.newqueue.newqueue import NewQueue
 
 
 class NewQueueServicer(NewQueueServicer):
@@ -14,7 +14,7 @@ class NewQueueServicer(NewQueueServicer):
     def __init__(self, config: dict):
         super().__init__()
         self.__config = config
-        self.__queue = NewQueue()
+        self.__queue = NewQueue(config)
 
     def Add(self, request: AddRequest, context) -> AddResponse:
         print("Adding data")

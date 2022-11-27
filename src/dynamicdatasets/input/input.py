@@ -4,9 +4,9 @@ import grpc
 
 from dynamicdatasets.preprocess.preprocess_pb2_grpc import PreprocessStub
 from dynamicdatasets.preprocess.preprocess_pb2 import PreprocessRequest
+from dynamicdatasets.input.adapter import base
 
-
-class Input:
+class Input(object):
 
     def __init__(self, config: dict) -> None:
         self.__config = config
