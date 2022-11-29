@@ -36,3 +36,6 @@ var/
 
 # postgresql
 postgres-data/
+
+# Trainer output data
+src/data/*

@@ -4,16 +4,16 @@ from selector_pb2 import *
 import grpc
 
 
-channel = grpc.insecure_channel('127.0.0.1:5444')
+channel = grpc.insecure_channel('localhost:50055')
 stub = SelectorStub(channel=channel)
 
 
-# tid = stub.register_training(RegisterTrainingRequest(training_set_size=8, num_workers=2))
+# tid = stub.register_training(RegisterTrainingRequest(training_set_size=20, num_workers=1))
 # print(tid)
 
 samples = stub.get_sample_keys(
     GetSamplesRequest(
-        training_id=2,
-        training_set_number=1,
+        training_id=4,
+        training_set_number=4,
         worker_id=0))
-print(samples)
+print(samples.training_samples_subset)

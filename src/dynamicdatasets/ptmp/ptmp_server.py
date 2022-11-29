@@ -3,7 +3,8 @@ from concurrent import futures
 import grpc
 
 from dynamicdatasets.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse
-from dynamicdatasets.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, add_PostTrainingMetadataProcessorServicer_to_server
+from dynamicdatasets.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, \
+    add_PostTrainingMetadataProcessorServicer_to_server
 
 
 class PostTrainingMetadataProcessor(
@@ -23,7 +24,7 @@ class PostTrainingMetadataProcessor(
         self.__processor.process_post_training_metadata(
             request.training_id, request.data)
         return PostTrainingMetadataResponse()
-    
+
     def my_import(self, name):
         components = name.split('.')
         mod = __import__(components[0])

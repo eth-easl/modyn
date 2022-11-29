@@ -64,3 +64,13 @@ services:
     build:
       context: ./
       dockerfile: ./dynamicdatasets/input/Dockerfile
+
+  selector:
+    image: selector
+    depends_on:
+      - db
+      - newqueue
+      - odm
+    build:
+      context: ./
+      dockerfile: ./dynamicdatasets/selector/Dockerfile

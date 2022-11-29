@@ -78,11 +78,11 @@ class NewQueue(object):
             list[str]: List of keys.
         """
         self.__cursor.execute(
-            'SELECT key'
-            'FROM queue_data'
+            'SELECT key '
+            'FROM queue_data '
             'WHERE key NOT IN'
-            '(SELECT key FROM queue WHERE training_id = %s)'
-            'ORDER BY created ASC'
+            '(SELECT key FROM queue WHERE training_id = %s) '
+            'ORDER BY created ASC '
             'LIMIT %s',
             (training_id, limit,)
         )

@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import selector_pb2 as selector__pb2
+import dynamicdatasets.selector.selector_pb2 as selector__pb2
 
 
 class SelectorStub(object):

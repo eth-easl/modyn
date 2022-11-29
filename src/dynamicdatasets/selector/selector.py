@@ -29,9 +29,11 @@ class Selector(ABC):
     def __init__(self, config: dict):
         self._config = config
         self._con = psycopg2.connect(
-            host="localhost",
-            user="postgres",
-            password="postgres")
+            host=config['selector']['postgresql']['host'],
+            port=config['selector']['postgresql']['port'],
+            user=config['selector']['postgresql']['user'],
+            password=config['selector']['postgresql']['password']
+        )
         self._setup_database()
 
     def _setup_database(self):
@@ -108,7 +110,7 @@ class Selector(ABC):
         # Get the training_set_size and num_workers for this training_id
         cur.execute(self._fetch_training_info_sql, [training_id])
         training_info = cur.fetchone()
-        if(training_info is None):
+        if (training_info is None):
             raise Exception("Invalid training id")
         training_set_size, num_workers = training_info
 
@@ -119,10 +121,12 @@ class Selector(ABC):
 
         # If there is no training_set selected yet, create a new one and fetch
         # those
-        if(len(training_samples) == 0):
-            training_samples = self._create_new_training_set(training_set_size)
-            self._insert_training_samples(
-                training_samples, training_id, training_set_number)
+        if (len(training_samples) == 0):
+            training_samples = self._create_new_training_set(
+                training_set_size, training_id)
+            if (len(training_samples) != 0):
+                self._insert_training_samples(
+                    training_samples, training_id, training_set_number)
         else:
             # convert sql result tuple to list of string
             training_samples = [x[0] for x in training_samples]
