@@ -5,16 +5,6 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Op
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class AddRequest(_message.Message):
-    __slots__ = ["keys"]
-    KEYS_FIELD_NUMBER: _ClassVar[int]
-    keys: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keys: _Optional[_Iterable[str]] = ...) -> None: ...
-
-class AddResponse(_message.Message):
-    __slots__ = []
-    def __init__(self) -> None: ...
-
 class GetNextRequest(_message.Message):
     __slots__ = ["limit", "training_id"]
     LIMIT_FIELD_NUMBER: _ClassVar[int]

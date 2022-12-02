@@ -3,12 +3,12 @@ project:
   description: "Instance of Dynamic Datasets DSL Project"
   version: "0.0.1"
 
-input:
-  adapter: "MNISTAdapter"
-  send_batch_size: 10
-  send_batch_interval: 5
-
 storage:
+  data_source: 
+    enabled: true
+    type: "MNISTDataSource"
+    batch_size: 10
+    batch_interval: 5
   adapter: "PostgreSQLAdapter"
   port: "50051"
   hostname: "storage"
@@ -37,11 +37,6 @@ newqueue:
     database: "postgres"
     user: "postgres"
     password: "postgres"
-
-preprocess:
-  port: "50053"
-  hostname: "preprocess"
-  function: "lambda x: x"
 
 odm:
   port: "50054"

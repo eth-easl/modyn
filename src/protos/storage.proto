@@ -3,6 +3,7 @@ package storage;
 
 service Storage {
   rpc Get (GetRequest) returns (GetResponse) {}
+  rpc Query (QueryRequest) returns (QueryResponse) {}
   rpc Put (PutRequest) returns (PutResponse) {}
 }
 
@@ -12,6 +13,13 @@ message GetRequest {
 
 message GetResponse {
   repeated string value = 1;
+}
+
+message QueryRequest {
+}
+
+message QueryResponse {
+  repeated string keys = 1;
 }
 
 message PutRequest {

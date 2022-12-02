@@ -1,3 +1,0 @@
-pip install jax
-pip install neural_tangents
-pip install jaxlib

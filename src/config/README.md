@@ -28,21 +28,6 @@ properties:
         type: string
         description: |
           The version of the project.
-  input:
-    type: object
-    properties:
-      adapter:
-        type: string
-        description: |
-          The input adapter to use for the tests.
-      send_batch_size:
-        type: integer
-        description: |
-          The number of samples in a batch to send to the system.
-      send_batch_interval:
-        type: integer
-        description: |
-          The interval in seconds between sending batches to the system.
   storage:
     type: object
     properties:
@@ -58,6 +43,30 @@ properties:
         type: string
         description: |
           The hostname to use for the storage server.
+      data_source:
+        type: object
+        description: |
+          The data source to use for the storage server.
+        properties:
+          enabled:
+            type: boolean
+            description: |
+              Whether the data source is enabled.
+          type:
+            type: string
+            description: |
+              The name of the data source.
+            optional: true
+          batch_size:
+            type: integer
+            description: |
+              The batch size to use for the data source.
+            optional: true
+          batch_interval:
+            type: integer
+            description: |
+              The batch interval to use for the data source.
+            optional: true
       dbm:
         type: object
         properties:
@@ -148,21 +157,6 @@ properties:
             type: string
             description: |
               The password to use for the PostgreSQL server.
-  preprocess:
-    type: object
-    properties:
-      port:
-        type: string
-        description: |
-          The port to use for the preprocess server.
-      hostname:
-        type: string
-        description: |
-          The hostname to use for the preprocess server.
-      function:
-        type: string
-        description: |
-          The function to use for the preprocess server. # TODO - change this
   odm:
     type: object
     properties:
