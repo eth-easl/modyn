@@ -5,7 +5,7 @@ from torchvision.datasets.mnist import MNIST
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from dynamicdatasetsstorage.datasource import BaseSource
+from storage.datasource import BaseSource
 
 
 class MNISTAdapter(BaseSource):

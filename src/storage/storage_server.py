@@ -3,8 +3,8 @@ from multiprocessing import Process
 
 import grpc
 
-from dynamicdatasetsstorage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
-from dynamicdatasetsstorage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
+from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
+from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
 
 
 class StorageServicer(StorageServicer):

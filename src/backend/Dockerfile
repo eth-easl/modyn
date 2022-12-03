@@ -34,7 +34,7 @@ RUN pip install -e .
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /src
 USER appuser
 
-RUN chmod a+x ./dynamicdatasets/ptmp/run.sh
+RUN chmod a+x ./backend/run.sh
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["./dynamicdatasets/ptmp/run.sh"]
+CMD ["./backend/run.sh"]
