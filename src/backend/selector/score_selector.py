@@ -1,4 +1,4 @@
-from selector import Selector
+from backend.selector import Selector
 
 
 class ScoreSelector(Selector):

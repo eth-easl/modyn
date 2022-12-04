@@ -25,18 +25,25 @@ class BaseSource(ABC):
         """
         Add data to the storage
         """
+        print("Adding data to storage")
         storage_channel = grpc.insecure_channel(
-            self.__config['storage']['hostname'] +
+            self._config['storage']['hostname'] +
             ':' +
-            self.__config['storage']['port'])
+            self._config['storage']['port'])
+        print("Storage channel created")
         storage_stub = StorageStub(storage_channel)
+        print("Storage stub created")
         storage_stub.Put(PutRequest(keys=keys, data=data))
+        print("Data added to storage")
 
     def run(self):
         """
         Run the source
         """
         while True:
+            print("Getting data from source")
             keys, data = self.get_next(self._config['storage']['data_source']['batch_size'])
+            print("Adding data to storage")
             self.add_to_storage(keys, data)
-            time.sleep(self.__config['storage']['data_source']['batch_interval'])
+            print("Added data to storage")
+            time.sleep(self._config['storage']['data_source']['batch_interval'])

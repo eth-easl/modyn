@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import dynamicdatasets.odm.odm_pb2 as odm__pb2
+import backend.odm.odm_pb2 as odm__pb2
 
 
 class ODMStub(object):

@@ -3,6 +3,7 @@ package newqueue;
 
 service NewQueue {
     rpc GetNext (GetNextRequest) returns (GetNextResponse) {}
+    rpc Add (AddRequest) returns (AddResponse) {}
 }
 
 message GetNextRequest {
@@ -12,4 +13,11 @@ message GetNextRequest {
 
 message GetNextResponse {
     repeated string keys = 2;
+}
+
+message AddRequest {
+    repeated string keys = 1;
+}
+
+message AddResponse {
 }

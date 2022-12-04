@@ -1,9 +1,16 @@
 from concurrent import futures
+import os
+import sys
+from pathlib import Path
+
+path = Path(os.path.abspath(__file__))
+SCRIPT_DIR = path.parent.parent.absolute()
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 import grpc
 
-from dynamicdatasets.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse
-from dynamicdatasets.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, \
+from backend.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse
+from backend.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, \
     add_PostTrainingMetadataProcessorServicer_to_server
 
 
@@ -14,7 +21,7 @@ class PostTrainingMetadataProcessor(
     def __init__(self, config: dict) -> None:
         super().__init__()
         self.__config = config
-        processor_module = self.my_import('dynamicdatasets.ptmp.processor')
+        processor_module = self.my_import('backend.ptmp.processor')
         self.__processor = getattr(
             processor_module,
             config['ptmp']['processor'])(config)

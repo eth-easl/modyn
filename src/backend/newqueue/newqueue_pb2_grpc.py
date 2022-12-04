@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import dynamicdatasets.newqueue.newqueue_pb2 as newqueue__pb2
+import backend.newqueue.newqueue_pb2 as newqueue__pb2
 
 
 class NewQueueStub(object):
@@ -19,12 +19,23 @@ class NewQueueStub(object):
                 request_serializer=newqueue__pb2.GetNextRequest.SerializeToString,
                 response_deserializer=newqueue__pb2.GetNextResponse.FromString,
                 )
+        self.Add = channel.unary_unary(
+                '/newqueue.NewQueue/Add',
+                request_serializer=newqueue__pb2.AddRequest.SerializeToString,
+                response_deserializer=newqueue__pb2.AddResponse.FromString,
+                )
 
 
 class NewQueueServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetNext(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Add(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -37,6 +48,11 @@ def add_NewQueueServicer_to_server(servicer, server):
                     servicer.GetNext,
                     request_deserializer=newqueue__pb2.GetNextRequest.FromString,
                     response_serializer=newqueue__pb2.GetNextResponse.SerializeToString,
+            ),
+            'Add': grpc.unary_unary_rpc_method_handler(
+                    servicer.Add,
+                    request_deserializer=newqueue__pb2.AddRequest.FromString,
+                    response_serializer=newqueue__pb2.AddResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -61,5 +77,22 @@ class NewQueue(object):
         return grpc.experimental.unary_unary(request, target, '/newqueue.NewQueue/GetNext',
             newqueue__pb2.GetNextRequest.SerializeToString,
             newqueue__pb2.GetNextResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Add(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/newqueue.NewQueue/Add',
+            newqueue__pb2.AddRequest.SerializeToString,
+            newqueue__pb2.AddResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

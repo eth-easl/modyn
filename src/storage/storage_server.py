@@ -1,7 +1,12 @@
 from concurrent import futures
 from multiprocessing import Process
+import os
+import sys
 
 import grpc
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
 from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
@@ -13,17 +18,10 @@ class StorageServicer(StorageServicer):
     def __init__(self, config: dict):
         super().__init__()
 
-        adapter_module = self.my_import('dynamicdatasets.storage.adapter')
+        adapter_module = my_import('storage.adapter')
         self.__adapter = getattr(
             adapter_module,
             config['storage']['adapter'])(config)
-        if (config['storage']['data_source']['enabled']):
-            source_module = self.my_import('dynamicdatasets.storage.datasource')
-            self.__source = getattr(
-                source_module,
-                config['storage']['data_source']['type'])(config)
-            self.source_process = Process(target=self.__source.run, args=())
-            self.source_process.start()
 
     def Query(self, request: QueryRequest, context):
         print("Query for data")
@@ -40,12 +38,12 @@ class StorageServicer(StorageServicer):
         self.__adapter.put(request.keys, request.value)
         return PutResponse()
 
-    def my_import(self, name):
-        components = name.split('.')
-        mod = __import__(components[0])
-        for comp in components[1:]:
-            mod = getattr(mod, comp)
-        return mod
+def my_import(name):
+    components = name.split('.')
+    mod = __import__(components[0])
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+    return mod
 
 
 def serve(config_dict):
@@ -57,7 +55,17 @@ def serve(config_dict):
         config_dict['storage']['port'])
     server.add_insecure_port('[::]:' + config_dict['storage']['port'])
     server.start()
+
+    if (config['storage']['data_source']['enabled']):
+        source_module = my_import('storage.datasource')
+        source = getattr(
+            source_module,
+            config['storage']['data_source']['type'])(config)
+        source_process = Process(target=source.run, args=())
+        source_process.start()
+
     server.wait_for_termination()
+    source_process.join()
 
 
 if __name__ == '__main__':

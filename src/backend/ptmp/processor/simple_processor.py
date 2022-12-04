@@ -1,8 +1,8 @@
 import json
 import random
 
-from dynamicdatasets.ptmp.processor.base import PostTrainingMetadataProcessor
-from dynamicdatasets.odm.odm_pb2 import SetRequest
+from backend.ptmp.processor.base import PostTrainingMetadataProcessor
+from backend.odm.odm_pb2 import SetRequest
 
 
 class SimpleProcessor(PostTrainingMetadataProcessor):

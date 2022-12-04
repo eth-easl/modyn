@@ -134,6 +134,10 @@ properties:
         type: string
         description: |
           The hostname to use for the newqueue server.
+      polling_interval:
+        type: integer
+        description: |
+          The polling interval to use for the newqueue server.
       postgresql:
         type: object
         properties:

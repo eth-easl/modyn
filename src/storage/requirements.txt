@@ -3,4 +3,5 @@ psycopg2
 boto3
 sqlitedict
 pyyaml
+torch
 torchvision

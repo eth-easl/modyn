@@ -17,17 +17,17 @@ RUN apt-get update && apt-get install build-essential -y
 RUN apt-get install -y postgresql
 RUN apt-get install -y python3-dev
 RUN apt-get install -y libpq-dev
+RUN apt-get install -y libpng-dev
+RUN apt-get install -y libjpeg-dev
 
 # Install pip requirements
-COPY ./dynamicdatasets/ptmp/requirements.txt .
+COPY ./backend/requirements.txt .
 RUN python -m pip install -r requirements.txt
 
 RUN pip install --upgrade protobuf
 
 WORKDIR /src
 COPY . /src
-
-RUN pip install -e .
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers

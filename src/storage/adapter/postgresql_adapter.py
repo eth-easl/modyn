@@ -25,10 +25,11 @@ class PostgreSQLAdapter(BaseAdapter):
             'CREATE TABLE IF NOT EXISTS storage ('
             'id SERIAL PRIMARY KEY,'
             'key varchar(255) UNIQUE NOT NULL,'
-            'data TEXT NOT NULL)'
+            'data TEXT NOT NULL, '
+            'query_key boolean DEFAULT false);'
         )
         self.__cursor.execute(
-            'CREATE INDEX IF NOT EXISTS storage_key_idx ON storage (key)'
+            'CREATE INDEX IF NOT EXISTS storage_key_idx ON storage (key);'
         )
         self.__con.commit()
 
@@ -49,3 +50,13 @@ class PostgreSQLAdapter(BaseAdapter):
                 (key[i],
                  data[i]))
         self.__con.commit()
+
+    def query(self) -> list[str]:
+        self.__cursor.execute(
+            'SELECT key FROM storage WHERE query_key = false')
+        keys = self.__cursor.fetchall()
+        keys = [k[0] for k in keys]
+        self.__cursor.execute(
+            'UPDATE storage SET query_key = true WHERE key IN %s',
+            (tuple(keys),))
+        return keys

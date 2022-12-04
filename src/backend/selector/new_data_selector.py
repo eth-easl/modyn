@@ -1,8 +1,8 @@
 import grpc
 
-from selector import Selector
-from dynamicdatasets.newqueue.newqueue_pb2_grpc import NewQueueStub
-from dynamicdatasets.newqueue.newqueue_pb2 import GetNextRequest
+from backend.selector.selector import Selector
+from backend.newqueue.newqueue_pb2_grpc import NewQueueStub
+from backend.newqueue.newqueue_pb2 import GetNextRequest
 
 class NewDataSelector(Selector):
     def __init__(self, config: dict):

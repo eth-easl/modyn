@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import dynamicdatasets.ptmp.ptmp_pb2 as ptmp__pb2
+import backend.ptmp.ptmp_pb2 as ptmp__pb2
 
 
 class PostTrainingMetadataProcessorStub(object):

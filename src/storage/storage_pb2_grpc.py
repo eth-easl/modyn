@@ -2,8 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import storage.storage_pb2 as storage__pb2
-
+from storage import storage_pb2 as storage__pb2
 
 class StorageStub(object):
     """Missing associated documentation comment in .proto file."""

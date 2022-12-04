@@ -1,8 +1,17 @@
-from selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server
-from selector_pb2 import SamplesResponse, TrainingResponse
-import grpc
-from new_data_selector import NewDataSelector
+import os
+import sys
 from concurrent import futures
+from pathlib import Path
+
+path = Path(os.path.abspath(__file__))
+SCRIPT_DIR = path.parent.parent.absolute()
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+import grpc
+
+from backend.selector.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server
+from backend.selector.selector_pb2 import SamplesResponse, TrainingResponse
+from backend.selector.new_data_selector import NewDataSelector
 
 
 class SelectorServicer(SelectorServicer):

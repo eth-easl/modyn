@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enewqueue.proto\x12\x08newqueue\"4\n\x0eGetNextRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\x12\x13\n\x0btraining_id\x18\x02 \x01(\x05\"\x1f\n\x0fGetNextResponse\x12\x0c\n\x04keys\x18\x02 \x03(\t2L\n\x08NewQueue\x12@\n\x07GetNext\x12\x18.newqueue.GetNextRequest\x1a\x19.newqueue.GetNextResponse\"\x00\x62\x06proto3')  # noqa: E501
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enewqueue.proto\x12\x08newqueue\"4\n\x0eGetNextRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\x12\x13\n\x0btraining_id\x18\x02 \x01(\x05\"\x1f\n\x0fGetNextResponse\x12\x0c\n\x04keys\x18\x02 \x03(\t\"\x1a\n\nAddRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\r\n\x0b\x41\x64\x64Response2\x82\x01\n\x08NewQueue\x12@\n\x07GetNext\x12\x18.newqueue.GetNextRequest\x1a\x19.newqueue.GetNextResponse\"\x00\x12\x34\n\x03\x41\x64\x64\x12\x14.newqueue.AddRequest\x1a\x15.newqueue.AddResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'newqueue_pb2', globals())
@@ -24,6 +24,10 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _GETNEXTREQUEST._serialized_end=80
   _GETNEXTRESPONSE._serialized_start=82
   _GETNEXTRESPONSE._serialized_end=113
-  _NEWQUEUE._serialized_start=115
-  _NEWQUEUE._serialized_end=191
+  _ADDREQUEST._serialized_start=115
+  _ADDREQUEST._serialized_end=141
+  _ADDRESPONSE._serialized_start=143
+  _ADDRESPONSE._serialized_end=156
+  _NEWQUEUE._serialized_start=159
+  _NEWQUEUE._serialized_end=289
 # @@protoc_insertion_point(module_scope)

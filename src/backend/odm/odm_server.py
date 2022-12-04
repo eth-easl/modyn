@@ -1,11 +1,17 @@
 from concurrent import futures
+import os 
+import sys
+from pathlib import Path
 
 import grpc
 
-from dynamicdatasets.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
-from dynamicdatasets.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
+path = Path(os.path.abspath(__file__))
+SCRIPT_DIR = path.parent.parent.absolute()
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from dynamicdatasets.odm.odm import OptimalDatasetMetadata
+from backend.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
+from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
+from backend.odm.odm import OptimalDatasetMetadata
 
 
 class ODMServicer(ODMServicer):

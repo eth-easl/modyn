@@ -19,39 +19,33 @@ services:
       - db
     build:
       context: ./
-      dockerfile: ./dynamicdatasetsstorage/Dockerfile
+      dockerfile: ./storage/Dockerfile
+    ports:
+      - '5123:5123'
+    volumes:
+      - ./storage:/app
 
-  newqueue:
-    image: newqueue
-    build:
-      context: ./
-      dockerfile: ./dynamicdatasets/newqueue/Dockerfile
-
-  odm:
-    image: odm
-    depends_on:
-      - db
-    build:
-      context: ./
-      dockerfile: ./dynamicdatasets/odm/Dockerfile
-
-  ptmp:
-    image: ptmp
+  backend:
+    image: backend
     depends_on:
       - db
       - storage
-      - newqueue
-      - preprocess
     build:
       context: ./
-      dockerfile: ./dynamicdatasets/ptmp/Dockerfile
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - '5124:5124'
+    volumes:
+      - ./backend:/app
 
-  selector:
-    image: selector
+  frontend:
+    image: frontend
     depends_on:
-      - db
-      - newqueue
-      - odm
+      - backend
     build:
       context: ./
-      dockerfile: ./dynamicdatasets/selector/Dockerfile
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./frontend:/app

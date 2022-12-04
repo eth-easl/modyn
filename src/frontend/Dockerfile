@@ -19,7 +19,7 @@ RUN apt-get install -y python3-dev
 RUN apt-get install -y libpq-dev
 
 # Install pip requirements
-COPY ./requirements.txt .
+COPY ./frontend/requirements.txt .
 RUN python -m pip install -r requirements.txt
 
 RUN pip install --upgrade protobuf
@@ -27,14 +27,14 @@ RUN pip install --upgrade protobuf
 WORKDIR /src
 COPY . /src
 
-RUN pip install -e .
+RUN pip install -e ./frontend/
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /src
 USER appuser
 
-RUN chmod a+x ./dynamicdatasets/selector/run.sh
+RUN chmod a+x ./frontend/run.sh
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["./dynamicdatasets/selector/run.sh"]
+CMD ["./frontend/run.sh"]

@@ -4,8 +4,8 @@ from concurrent import futures
 
 import grpc
 
-from dynamicdatasets.odm.odm_pb2 import SetRequest
-from dynamicdatasets.odm.odm_pb2_grpc import ODMStub
+from backend.odm.odm_pb2 import SetRequest
+from backend.odm.odm_pb2_grpc import ODMStub
 
 
 class PostTrainingMetadataProcessor(ABC):

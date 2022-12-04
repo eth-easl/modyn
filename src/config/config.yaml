@@ -7,7 +7,7 @@ storage:
   data_source: 
     enabled: true
     type: "MNISTDataSource"
-    batch_size: 10
+    batch_size: 15
     batch_interval: 5
   adapter: "PostgreSQLAdapter"
   port: "50051"
@@ -31,6 +31,7 @@ storage:
 newqueue:
   port: "50052"
   hostname: "newqueue"
+  polling_interval: 5
   postgresql:
     host: db
     port: "5432"
