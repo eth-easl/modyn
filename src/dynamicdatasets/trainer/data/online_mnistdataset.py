@@ -1,0 +1,25 @@
+import sys
+sys.path.append('/Users/ambarish/Documents/ETHCourseMaterial/DSL/dynamic_datasets_dsl/src')
+
+from data.online_dataset import OnlineDataset
+
+import torch
+import json
+
+class OnlineMNISTDataset(OnlineDataset):
+
+    def _process(self, data):
+        """
+        Override to add custom data processing.
+
+        Args:
+            data: sequence of elements from storage, most likely as json strings
+
+        Returns:
+            sequence of processed elements
+        """
+
+        images = torch.tensor(list(map(lambda x: json.loads(x)['image'], data)), dtype=torch.float32)
+        labels = torch.tensor(list(map(lambda x: json.loads(x)['label'], data)))
+        train_data = list(map(lambda i: (images[i], labels[i]),range(len(images))))
+        return train_data

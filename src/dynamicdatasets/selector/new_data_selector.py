@@ -1,11 +1,21 @@
-from selector import Selector
+import grpc
 
+from selector import Selector
+from dynamicdatasets.newqueue.newqueue_pb2_grpc import NewQueueStub
+from dynamicdatasets.newqueue.newqueue_pb2 import GetNextRequest
 
 class NewDataSelector(Selector):
-    def _create_new_training_set(self, training_set_size: int) -> list():
-        sample_keys = []
-        for i in range(training_set_size):
-            sample_keys.append('key - ' + str(i))
-        # sample_keys = new_queue_service.get(count = training_set_size)
+    def __init__(self, config: dict):
+        super().__init__(config)
 
+        # Setup connection to the new queue server
+        newqueue_channel = grpc.insecure_channel(
+            self._config['newqueue']['hostname'] +
+            ':' +
+            self._config['newqueue']['port'])
+        self.__newqueue_stub = NewQueueStub(newqueue_channel)
+
+    def _create_new_training_set(self, training_set_size: int, training_id: int) -> list():
+        request = GetNextRequest(limit=training_set_size, training_id=training_id)
+        sample_keys = self.__newqueue_stub.GetNext(request).keys
         return sample_keys

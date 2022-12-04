@@ -1,10 +1,8 @@
-from concurrent import futures
-from new_data_selector import NewDataSelector
-
-import grpc
-
-from selector_pb2 import SamplesResponse, TrainingResponse
 from selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server
+from selector_pb2 import SamplesResponse, TrainingResponse
+import grpc
+from new_data_selector import NewDataSelector
+from concurrent import futures
 
 
 class SelectorServicer(SelectorServicer):
@@ -23,7 +21,7 @@ class SelectorServicer(SelectorServicer):
         return mod
 
     def register_training(self, request, context):
-        print("Registerining training")
+        print("Registering training with request - " + str(request))
         training_id = self._selector.register_training(
             request.training_set_size, request.num_workers)
         return TrainingResponse(training_id=training_id)
@@ -31,18 +29,20 @@ class SelectorServicer(SelectorServicer):
     # def get_sample_keys(self, training_id: int, training_set_number: int,
     # worker_id: int) -> list():
     def get_sample_keys(self, request, context):
-        print("Returning samples")
+        print("Fetching samples for request - " + str(request))
         samples_keys = self._selector.get_sample_keys(
             request.training_id, request.training_set_number, request.worker_id)
         return SamplesResponse(training_samples_subset=samples_keys)
 
 
-def serve(config_dict):
+def serve(config: dict):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
     add_SelectorServicer_to_server(
-        SelectorServicer(config_dict), server)
-    print('Starting server. Listening on port 5444.')
-    server.add_insecure_port('[::]:5444')
+        SelectorServicer(config), server)
+    print(
+        'Starting server. Listening on port .' +
+        config['selector']['port'])
+    server.add_insecure_port('[::]:' + config['selector']['port'])
     server.start()
     server.wait_for_termination()
 
