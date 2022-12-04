@@ -12,7 +12,6 @@ storage:
   adapter: "PostgreSQLAdapter"
   port: "50051"
   hostname: "storage"
-  #hostname: "localhost"
   dbm:
     path: "dbm"
   s3:
@@ -24,7 +23,6 @@ storage:
     path: "sqlite"
   postgresql:
     host: db
-    #host: localhost
     port: "5432"
     database: "postgres"
     user: "postgres"
@@ -33,10 +31,8 @@ storage:
 newqueue:
   port: "50052"
   hostname: "newqueue"
-  #hostname: "localhost"
   postgresql:
     host: db
-    #host: localhost
     port: "5432"
     database: "postgres"
     user: "postgres"
@@ -45,7 +41,6 @@ newqueue:
 preprocess:
   port: "50053"
   hostname: "preprocess"
-  #hostname: localhost
   function: "lambda x: x"
 
 odm:
@@ -59,17 +54,15 @@ odm:
     password: "postgres"
 
 ptmp:
-  port: "50056"
+  port: "50055"
   hostname: "ptmp"
   processor: "SimpleProcessor"
 
 selector:
   hostname: "selector"
-  #hostname: "localhost"
-  port: "50055"
+  port: "50056"
   postgresql:
     host: db
-    #host: localhost
     port: "5432"
     database: "postgres"
     user: "postgres"
