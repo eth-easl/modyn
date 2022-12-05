@@ -58,9 +58,17 @@ class PostTrainingMetadataProcessor(object):
                                     wait_for_ready=None,
                                     timeout=None,
                                     metadata=None):
-        return grpc.experimental.unary_unary(request, target,
-                                             '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
-                                             ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
-                                             ptmp__pb2.PostTrainingMetadataResponse.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
+            ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
+            ptmp__pb2.PostTrainingMetadataResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)

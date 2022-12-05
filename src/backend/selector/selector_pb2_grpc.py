@@ -74,11 +74,20 @@ class Selector(object):
                           wait_for_ready=None,
                           timeout=None,
                           metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/selector.Selector/register_training',
-                                             selector__pb2.RegisterTrainingRequest.SerializeToString,
-                                             selector__pb2.TrainingResponse.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/selector.Selector/register_training',
+            selector__pb2.RegisterTrainingRequest.SerializeToString,
+            selector__pb2.TrainingResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
 
     @staticmethod
     def get_sample_keys(request,
@@ -91,8 +100,17 @@ class Selector(object):
                         wait_for_ready=None,
                         timeout=None,
                         metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_sample_keys',
-                                             selector__pb2.GetSamplesRequest.SerializeToString,
-                                             selector__pb2.SamplesResponse.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/selector.Selector/get_sample_keys',
+            selector__pb2.GetSamplesRequest.SerializeToString,
+            selector__pb2.SamplesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)

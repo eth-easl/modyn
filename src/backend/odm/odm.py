@@ -5,6 +5,7 @@ class OptimalDatasetMetadata(object):
     """
     Store the metadata of the optimal dataset for a given training.
     """
+
     def __init__(self, config: dict):
         self.__config = config
         self.__con = psycopg2.connect(

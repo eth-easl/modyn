@@ -2,6 +2,7 @@ from concurrent import futures
 import os
 import sys
 from pathlib import Path
+import logging
 
 import grpc
 
@@ -9,9 +10,11 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from backend.newqueue.newqueue_pb2 import GetNextRequest, GetNextResponse, AddRequest, AddResponse
-from backend.newqueue.newqueue_pb2_grpc import NewQueueServicer, add_NewQueueServicer_to_server
 from backend.newqueue.newqueue import NewQueue
+from backend.newqueue.newqueue_pb2_grpc import NewQueueServicer, add_NewQueueServicer_to_server
+from backend.newqueue.newqueue_pb2 import GetNextRequest, GetNextResponse, AddRequest, AddResponse
+
+logging.basicConfig(format='%(asctime)s %(message)s')
 
 
 class NewQueueServicer(NewQueueServicer):
@@ -23,13 +26,13 @@ class NewQueueServicer(NewQueueServicer):
         self.__queue = NewQueue(config)
 
     def GetNext(self, request: GetNextRequest, context) -> GetNextResponse:
-        print("Getting next data")
+        logging.info("Getting next data")
         keys = []
         keys = self.__queue.get_next(request.limit, request.training_id)
         return GetNextResponse(keys=keys)
 
     def Add(self, request: AddRequest, context) -> AddResponse:
-        print("Adding data")
+        logging.info("Adding data")
         self.__queue.add(request.keys)
         return AddResponse()
 
@@ -38,7 +41,7 @@ def serve(config_dict: dict):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
     add_NewQueueServicer_to_server(
         NewQueueServicer(config_dict), server)
-    print(
+    logging.info(
         'Starting server. Listening on port .' +
         config_dict['newqueue']['port'])
     server.add_insecure_port('[::]:' + config_dict['newqueue']['port'])

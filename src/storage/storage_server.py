@@ -2,14 +2,18 @@ from concurrent import futures
 from multiprocessing import Process
 import os
 import sys
+import logging
 
 import grpc
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
 from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
+from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
+from utils import my_import
+
+logging.basicConfig(format='%(asctime)s %(message)s')
 
 
 class StorageServicer(StorageServicer):
@@ -18,39 +22,32 @@ class StorageServicer(StorageServicer):
     def __init__(self, config: dict):
         super().__init__()
 
-        adapter_module = self.my_import('storage.adapter')
+        adapter_module = my_import('storage.adapter')
         self.__adapter = getattr(
             adapter_module,
             config['storage']['adapter'])(config)
 
     def Query(self, request: QueryRequest, context):
-        print("Query for data")
+        logging.info("Storage: Query for data")
         keys = self.__adapter.query()
         return QueryResponse(keys=keys)
 
     def Get(self, request: GetRequest, context):
-        print("Getting data")
+        logging.info("Storage: Getting data")
         data = self.__adapter.get(request.keys)
         return GetResponse(value=data)
 
     def Put(self, request: PutRequest, context):
-        print("Putting data")
+        logging.info("Storage: Putting data")
         self.__adapter.put(request.keys, request.value)
         return PutResponse()
-
-    def my_import(self, name):
-        components = name.split('.')
-        mod = __import__(components[0])
-        for comp in components[1:]:
-            mod = getattr(mod, comp)
-        return mod
 
 
 def serve(config_dict):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_StorageServicer_to_server(
         StorageServicer(config_dict), server)
-    print(
+    logging.info(
         'Starting server. Listening on port .' +
         config_dict['storage']['port'])
     server.add_insecure_port('[::]:' + config_dict['storage']['port'])

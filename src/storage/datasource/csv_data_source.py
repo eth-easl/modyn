@@ -5,6 +5,7 @@ import pandas as pd
 
 from .base import BaseSource
 
+
 class CSVDataSource(BaseSource):
     """
     CSVDataSource is an adapter for the CSV dataset.
@@ -12,13 +13,19 @@ class CSVDataSource(BaseSource):
 
     def __init__(self, config: dict):
         super().__init__(config)
-        self._dataloader = iter(pd.read_csv(self._config['storage']['data_source']['path'], chunksize=self._config['storage']['data_source']['batch_size']))
+        self._dataloader = iter(
+            pd.read_csv(
+                self._config['storage']['data_source']['path'],
+                chunksize=self._config['storage']['data_source']['batch_size']))
 
     def get_next(self, limit: int) -> tuple[list[str], list[str]]:
         data: list[bytes] = []
         keys: list[str] = []
 
-        df = next(self._dataloader)
+        df = next(self._dataloader, None)
+
+        if df is None:
+            return [], []
 
         for i in range(len(df)):
             d = {

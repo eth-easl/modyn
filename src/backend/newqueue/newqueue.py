@@ -9,6 +9,7 @@ class NewQueue(object):
     Args:
         object (_type_): _description_
     """
+
     def __init__(self, config):
         self.__config = config
         self.__conn = psycopg2.connect(
@@ -69,8 +70,8 @@ class NewQueue(object):
         Get the next keys from the queue for a training id.
 
         Args:
-            limit (int): Number of keys to retrieve. 
-                         If limit is greater than the number of 
+            limit (int): Number of keys to retrieve.
+                         If limit is greater than the number of
                          keys in the queue, all keys will be returned.
             training_id (int): Training id to retrieve keys for.
 

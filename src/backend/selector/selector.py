@@ -47,7 +47,10 @@ class Selector(ABC):
 
     @abstractmethod
     def _create_new_training_set(
-            self, training_id: int, training_set_number: int, training_set_size) -> list():
+            self,
+            training_id: int,
+            training_set_number: int,
+            training_set_size) -> list():
         """
         Create a new training set of samples for the given training id. Samples should be selected from
         the new data queue service or the metadata service
@@ -58,7 +61,10 @@ class Selector(ABC):
         raise NotImplementedError
 
     def _insert_training_samples(
-            self, training_samples: list(), training_id: int, training_set_number: int):
+            self,
+            training_samples: list(),
+            training_id: int,
+            training_set_number: int):
         """
         Insert the list of training_samples into the DB
         """

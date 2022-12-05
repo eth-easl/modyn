@@ -6,6 +6,7 @@ import grpc
 from storage.storage_pb2_grpc import StorageStub
 from storage.storage_pb2 import PutRequest
 
+
 class BaseSource(ABC):
 
     def __init__(self, config: dict):
@@ -37,6 +38,8 @@ class BaseSource(ABC):
         Run the source
         """
         while True:
-            keys, data = self.get_next(self._config['storage']['data_source']['batch_size'])
+            keys, data = self.get_next(
+                self._config['storage']['data_source']['batch_size'])
             self.add_to_storage(keys, data)
-            time.sleep(self._config['storage']['data_source']['batch_interval'])
+            time.sleep(self._config['storage']
+                       ['data_source']['batch_interval'])

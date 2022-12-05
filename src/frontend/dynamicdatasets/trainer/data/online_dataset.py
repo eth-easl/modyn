@@ -8,6 +8,7 @@ from torch.utils.data import IterableDataset, get_worker_info
 import grpc
 from abc import abstractmethod
 
+
 class OnlineDataset(IterableDataset):
 
     def __init__(self, training_id, config):
@@ -30,8 +31,10 @@ class OnlineDataset(IterableDataset):
         return StorageStub(storage_channel)
 
     def _get_keys_from_selector(self, worker_id):
-        req = GetSamplesRequest(training_id=self._training_id,
-                                training_set_number=self._trainining_set_number, worker_id=worker_id)
+        req = GetSamplesRequest(
+            training_id=self._training_id,
+            training_set_number=self._trainining_set_number,
+            worker_id=worker_id)
         samples_response = self.__selector_stub().get_sample_keys(req)
         keys = samples_response.training_samples_subset
         return keys
@@ -50,14 +53,12 @@ class OnlineDataset(IterableDataset):
             worker_id = worker_info.id
         self._trainining_set_number += 1
         keys = self._get_keys_from_selector(worker_id)
-        print("Got ", len(keys), " keys from the selector")
         raw_data = self._get_data_from_storage(keys)
         processed_data = self._process(raw_data)
         return iter(processed_data)
 
     def __len__(self):
         return self._config['trainer']['train_set_size']
-
 
     @abstractmethod
     def _process(self, data):
@@ -71,4 +72,3 @@ class OnlineDataset(IterableDataset):
             sequence of processed elements
         """
         raise NotImplementedError
-

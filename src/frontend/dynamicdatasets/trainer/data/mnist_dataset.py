@@ -26,7 +26,11 @@ class MNISTDataset(Dataset):
         return f'MNIST-Normal'
 
 
-def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', configs=None):
+def get_mnist_dataset(
+        train_aug=None,
+        val_aug=None,
+        version='normal',
+        configs=None):
     if train_aug is None:
         train_aug = transforms.Compose([
             transforms.RandomAffine(degrees=30),
@@ -40,7 +44,7 @@ def get_mnist_dataset(train_aug=None, val_aug=None, version='normal', configs=No
         ])
 
     traindt = dts.MNIST(
-        root='data', train=True, transform=train_aug,  download=True,
+        root='data', train=True, transform=train_aug, download=True,
     )
     testdt = dts.MNIST(
         root='data', train=False, transform=val_aug

@@ -1,8 +1,10 @@
 import os
 import sys
-import time 
+import time
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 
 def serve(config: dict):
     if (config['storage']['data_source']['enabled']):
@@ -12,12 +14,14 @@ def serve(config: dict):
             config['storage']['data_source']['type'])(config)
         source.run()
 
+
 def my_import(name):
     components = name.split('.')
     mod = __import__(components[0])
     for comp in components[1:]:
         mod = getattr(mod, comp)
     return mod
+
 
 if __name__ == '__main__':
     import sys

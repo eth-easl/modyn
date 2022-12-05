@@ -1,3 +1,4 @@
+import grpc
 import time
 import os
 import sys
@@ -7,29 +8,26 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-import grpc
-
-from backend.newqueue.newqueue_pb2 import AddRequest
-from backend.newqueue.newqueue_pb2_grpc import NewQueueStub
-from storage.storage_pb2_grpc import StorageStub
 from storage.storage_pb2 import QueryRequest, QueryResponse
+from storage.storage_pb2_grpc import StorageStub
+from backend.newqueue.newqueue_pb2_grpc import NewQueueStub
+from backend.newqueue.newqueue_pb2 import AddRequest
 
 
 def poll(config_dict: dict):
     while True:
         time.sleep(config_dict['newqueue']['polling_interval'])
-        storage_channel = grpc.insecure_channel(config_dict['storage']['hostname'] +
-                                        ':' +
-                                        config_dict['storage']['port'])
+        storage_channel = grpc.insecure_channel(
+            config_dict['storage']['hostname'] + ':' + config_dict['storage']['port'])
         storage_stub = StorageStub(storage_channel)
 
         query_result: QueryResponse = storage_stub.Query(QueryRequest())
 
         if len(query_result.keys) >= 0:
             newqueue_channel = grpc.insecure_channel(
-                                        config_dict['newqueue']['hostname'] +
-                                        ':' +
-                                        config_dict['newqueue']['port'])
+                config_dict['newqueue']['hostname'] +
+                ':' +
+                config_dict['newqueue']['port'])
             newqueue_stub = NewQueueStub(newqueue_channel)
             newqueue_stub.Add(AddRequest(keys=query_result.keys))
 

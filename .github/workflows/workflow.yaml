@@ -22,22 +22,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install .
-    - name: autopep8
-      id: autopep8
-      uses: peter-evans/autopep8@v1
-      with:
-        args: --recursive --in-place --aggressive --aggressive .
     - name: 'Run PEP8'
       uses: quentinguidee/pep8-action@v1
       with:
-        arguments: '--max-line-length=120'
-   # - name: Tests
-   #   run: |
-   #     coverage run -m unittest
-   #     coverage report
-   #     coverage html
-   # - name: Code coverage html report
-   #   uses: actions/upload-artifact@v2
-   #   with:
-   #     name: code-coverage-report
-   #     path: src/htmlcov
+        arguments: '--max-line-length=120 --ignore=E402,W504'

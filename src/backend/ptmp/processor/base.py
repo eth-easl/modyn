@@ -14,6 +14,7 @@ class PostTrainingMetadataProcessor(ABC):
     PostTrainingMetadataRequest. It should process the data and return a
     SetRequest.
     """
+
     def __init__(self, config: dict) -> None:
         super().__init__()
         self.__config = config

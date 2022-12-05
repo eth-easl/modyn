@@ -1,25 +1,29 @@
 import copy
 import time
-from tqdm import tqdm 
+from tqdm import tqdm
 import torch
 import pdb
+import logging
 
 from trainer import Trainer
+
+logging.basicConfig(format='%(asctime)s %(message)s')
+
 
 class DefaultTrainer(Trainer):
     def __init__(self, config: dict):
         super().__init__(config)
 
     def _train(self):
-        print('Training with Default Trainer')
+        logging.info('Training with Default Trainer')
         since = time.time()
 
         best_model_wts = copy.deepcopy(self._model.state_dict())
         best_acc = 0.0
 
         for epoch in range(self._num_epochs):
-            print('Epoch {}/{}'.format(epoch+1, self._num_epochs))
-            print('-' * 10)
+            logging.info('Epoch {}/{}'.format(epoch + 1, self._num_epochs))
+            logging.info('-' * 10)
 
             # Each epoch has a training and validation phase
             for phase in ['train', 'val']:
@@ -57,23 +61,23 @@ class DefaultTrainer(Trainer):
                 if phase == 'train':
                     self._scheduler.step()
 
-                epoch_loss = running_loss / len(self._dataloaders[phase].dataset)
-                epoch_acc = running_corrects.double() / len(self._dataloaders[phase].dataset)
+                epoch_loss = running_loss / \
+                    len(self._dataloaders[phase].dataset)
+                epoch_acc = running_corrects.double(
+                ) / len(self._dataloaders[phase].dataset)
 
-                print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+                logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(
+                    phase, epoch_loss, epoch_acc))
 
                 # deep copy the model
                 if phase == 'val' and epoch_acc > best_acc:
                     best_acc = epoch_acc
                     best_model_wts = copy.deepcopy(self._model.state_dict())
 
-            #print()
-
         time_elapsed = time.time() - since
-        print('Training complete in {:.0f}m {:.0f}s'.format(
+        logging.info('Training complete in {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
-        print('Best val Acc: {:4f}'.format(best_acc))
+        logging.info('Best val Acc: {:4f}'.format(best_acc))
 
         # load best model weights
         self._model.load_state_dict(best_model_wts)

@@ -1,7 +1,8 @@
 from concurrent import futures
-import os 
+import os
 import sys
 from pathlib import Path
+import logging
 
 import grpc
 
@@ -10,8 +11,10 @@ SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from backend.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
-from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
 from backend.odm.odm import OptimalDatasetMetadata
+from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
+
+logging.basicConfig(format='%(asctime)s %(message)s')
 
 
 class ODMServicer(ODMServicer):
@@ -23,23 +26,23 @@ class ODMServicer(ODMServicer):
         self.__odm = OptimalDatasetMetadata(config)
 
     def GetByKeys(self, request: GetByKeysRequest, context):
-        print("Getting data by keys")
+        logging.info("Getting data by keys")
         keys, score, data = self.__odm.get_by_keys(
             request.keys, request.training_id)
         return GetResponse(keys=keys, data=data, scores=score)
 
     def GetByQuery(self, request: GetByQueryRequest, context):
-        print("Getting data by query")
+        logging.info("Getting data by query")
         keys, score, data = self.__odm.get_by_query(request.keys)
         return GetResponse(keys=keys, data=data, scores=score)
 
     def GetKeysByQuery(self, request: GetByQueryRequest, context):
-        print("Getting keys by query")
+        logging.info("Getting keys by query")
         keys = self.__odm.get_keys_by_query(request.keys)
         return GetKeysResponse(keys=keys)
 
     def Set(self, request: SetRequest, context):
-        print("Setting data")
+        logging.info("Setting data")
         self.__odm.set(
             request.keys,
             request.scores,
@@ -48,7 +51,7 @@ class ODMServicer(ODMServicer):
         return SetResponse()
 
     def DeleteTraining(self, request: DeleteRequest, context):
-        print("Deleting training data")
+        logging.info("Deleting training data")
         self.__odm.delete_training(request.training_id)
         return DeleteResponse()
 
@@ -56,7 +59,7 @@ class ODMServicer(ODMServicer):
 def serve(config: dict):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_ODMServicer_to_server(ODMServicer(config), server)
-    print('Starting server. Listening on port .' + config["odm"]["port"])
+    prilogging.infont('Starting server. Listening on port .' + config["odm"]["port"])
     server.add_insecure_port(f'[::]:{config["odm"]["port"]}')
     server.start()
     server.wait_for_termination()
