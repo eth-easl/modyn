@@ -69,7 +69,7 @@ selector:
     password: "postgres"
 
 trainer:
-  epochs: 2
+  epochs: 10
   lr: 0.001
   batch_size: 100
   train_set_size: 1000

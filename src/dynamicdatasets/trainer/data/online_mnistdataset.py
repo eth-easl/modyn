@@ -1,6 +1,3 @@
-import sys
-sys.path.append('/Users/ambarish/Documents/ETHCourseMaterial/DSL/dynamic_datasets_dsl/src')
-
 from data.online_dataset import OnlineDataset
 
 import torch
