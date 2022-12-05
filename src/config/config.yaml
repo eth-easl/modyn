@@ -6,9 +6,10 @@ project:
 storage:
   data_source: 
     enabled: true
-    type: "MNISTDataSource"
+    type: "CSVDataSource"
     batch_size: 15
     batch_interval: 5
+    path: "storage/datasource/data/sample_train.csv"
   adapter: "PostgreSQLAdapter"
   port: "50051"
   hostname: "storage"
@@ -30,7 +31,7 @@ storage:
 
 newqueue:
   port: "50052"
-  hostname: "newqueue"
+  hostname: "backend"
   polling_interval: 5
   postgresql:
     host: db
@@ -41,7 +42,7 @@ newqueue:
 
 odm:
   port: "50054"
-  hostname: "odm"
+  hostname: "backend"
   postgresql:
     host: db
     port: "5432"
@@ -51,11 +52,11 @@ odm:
 
 ptmp:
   port: "50055"
-  hostname: "ptmp"
+  hostname: "backend"
   processor: "SimpleProcessor"
 
 selector:
-  hostname: "selector"
+  hostname: "backend"
   port: "50056"
   postgresql:
     host: db

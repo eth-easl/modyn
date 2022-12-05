@@ -9,7 +9,8 @@ from .base import BaseSource
 
 
 class MNISTDataSource(BaseSource):
-    """MNISTAdapter is an adapter for the MNIST dataset.
+    """
+    MNISTAdapter is an adapter for the MNIST dataset.
     """
 
     def __init__(self, config: dict):
@@ -21,7 +22,7 @@ class MNISTDataSource(BaseSource):
                 batch_size=self._config['storage']['data_source']['batch_size'],
                 shuffle=True)
 
-    def get_next(self, limit: int) -> tuple[list[str], list[bytes]]:
+    def get_next(self, limit: int) -> tuple[list[str], list[str]]:
         data: list[bytes] = []
         keys: list[str] = []
 

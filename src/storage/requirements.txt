@@ -5,3 +5,4 @@ sqlitedict
 pyyaml
 torch
 torchvision
+pandas

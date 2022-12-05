@@ -12,7 +12,7 @@ class BaseSource(ABC):
         self._config = config
 
     @abstractmethod
-    def get_next(self, limit: int) -> tuple[list[str], list[bytes]]:
+    def get_next(self, limit: int) -> tuple[list[str], list[str]]:
         """
         Get next data from the source
 
@@ -21,29 +21,22 @@ class BaseSource(ABC):
         """
         raise NotImplementedError
 
-    def add_to_storage(self, keys: list[str], data: list[bytes]):
+    def add_to_storage(self, keys: list[str], data: list[str]):
         """
         Add data to the storage
         """
-        print("Adding data to storage")
         storage_channel = grpc.insecure_channel(
             self._config['storage']['hostname'] +
             ':' +
             self._config['storage']['port'])
-        print("Storage channel created")
         storage_stub = StorageStub(storage_channel)
-        print("Storage stub created")
-        storage_stub.Put(PutRequest(keys=keys, data=data))
-        print("Data added to storage")
+        storage_stub.Put(PutRequest(keys=keys, value=data))
 
     def run(self):
         """
         Run the source
         """
         while True:
-            print("Getting data from source")
             keys, data = self.get_next(self._config['storage']['data_source']['batch_size'])
-            print("Adding data to storage")
             self.add_to_storage(keys, data)
-            print("Added data to storage")
             time.sleep(self._config['storage']['data_source']['batch_interval'])

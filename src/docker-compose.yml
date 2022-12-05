@@ -49,3 +49,4 @@ services:
       - '3001:3001'
     volumes:
       - ./frontend:/app
+    command: tail -F anything

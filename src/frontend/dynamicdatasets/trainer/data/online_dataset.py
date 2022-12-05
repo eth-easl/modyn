@@ -1,8 +1,8 @@
-from dynamicdatasets.selector.selector_pb2 import GetSamplesRequest
-from dynamicdatasets.selector.selector_pb2_grpc import SelectorStub
+from backend.selector.selector_pb2 import GetSamplesRequest
+from backend.selector.selector_pb2_grpc import SelectorStub
 
-from dynamicdatasets.storage.storage_pb2 import GetRequest
-from dynamicdatasets.storage.storage_pb2_grpc import StorageStub
+from storage.storage_pb2 import GetRequest
+from storage.storage_pb2_grpc import StorageStub
 
 from torch.utils.data import IterableDataset, get_worker_info
 import grpc

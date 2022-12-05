@@ -18,7 +18,7 @@ class StorageServicer(StorageServicer):
     def __init__(self, config: dict):
         super().__init__()
 
-        adapter_module = my_import('storage.adapter')
+        adapter_module = self.my_import('storage.adapter')
         self.__adapter = getattr(
             adapter_module,
             config['storage']['adapter'])(config)
@@ -38,12 +38,12 @@ class StorageServicer(StorageServicer):
         self.__adapter.put(request.keys, request.value)
         return PutResponse()
 
-def my_import(name):
-    components = name.split('.')
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
+    def my_import(self, name):
+        components = name.split('.')
+        mod = __import__(components[0])
+        for comp in components[1:]:
+            mod = getattr(mod, comp)
+        return mod
 
 
 def serve(config_dict):
@@ -56,16 +56,7 @@ def serve(config_dict):
     server.add_insecure_port('[::]:' + config_dict['storage']['port'])
     server.start()
 
-    if (config['storage']['data_source']['enabled']):
-        source_module = my_import('storage.datasource')
-        source = getattr(
-            source_module,
-            config['storage']['data_source']['type'])(config)
-        source_process = Process(target=source.run, args=())
-        source_process.start()
-
     server.wait_for_termination()
-    source_process.join()
 
 
 if __name__ == '__main__':

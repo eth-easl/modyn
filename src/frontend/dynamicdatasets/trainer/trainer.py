@@ -1,16 +1,24 @@
 from abc import ABC, abstractmethod
-from data.mnist_dataset import get_mnist_dataset
+import os
+import sys
+from pathlib import Path
+
+path = Path(os.path.abspath(__file__))
+SCRIPT_DIR = path.parent.parent.parent.absolute()
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+from frontend.dynamicdatasets.trainer.data.mnist_dataset import get_mnist_dataset
 import torch
 from torch.optim import lr_scheduler, Adam
 import pdb
 
 from models.small_conv import SmallConv
-from data.online_mnistdataset import OnlineMNISTDataset
+from frontend.dynamicdatasets.trainer.data.online_mnistdataset import OnlineMNISTDataset
 
 import grpc
 
-from dynamicdatasets.selector.selector_pb2_grpc import SelectorStub
-from dynamicdatasets.selector.selector_pb2 import RegisterTrainingRequest
+from backend.selector.selector_pb2_grpc import SelectorStub
+from backend.selector.selector_pb2 import RegisterTrainingRequest
 
 
 class Trainer(ABC):
@@ -37,8 +45,7 @@ class Trainer(ABC):
         return selector_response.training_id
 
     def _setup_model(self):
-        # TODO: Read from config
-        self._model = SmallConv(self._config['trainer']['model_config'])#.to(device)
+        self._model = SmallConv(self._config['trainer']['model_config'])
 
     def _scheduler_factory(self, optimizer):
         return lr_scheduler.CosineAnnealingLR(optimizer, 32)
