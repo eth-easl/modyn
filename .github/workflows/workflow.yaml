@@ -5,7 +5,7 @@ on: [push, pull_request]
 defaults:
   run:
     shell: bash
-    working-directory: src
+    working-directory: ./src
 
 jobs:
   build:
@@ -17,7 +17,3 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: '3.10'
-    - name: 'Run PEP8'
-      uses: quentinguidee/pep8-action@v1
-      with:
-        arguments: '--max-line-length=120 --ignore=E402,W504'
