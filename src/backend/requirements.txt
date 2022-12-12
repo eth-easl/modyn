@@ -3,5 +3,4 @@ pyyaml
 psycopg2
 boto3
 sqlitedict
-torchvision
 pandas
