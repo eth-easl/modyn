@@ -1,4 +1,4 @@
-from utils import my_import
+from utils import dynamic_module_import
 import grpc
 from concurrent import futures
 import os
@@ -26,7 +26,7 @@ class PostTrainingMetadataProcessor(
     def __init__(self, config: dict) -> None:
         super().__init__()
         self.__config = config
-        processor_module = my_import('backend.ptmp.processor')
+        processor_module = dynamic_module_import('backend.ptmp.processor')
         self.__processor = getattr(
             processor_module,
             config['ptmp']['processor'])(config)

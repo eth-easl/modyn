@@ -1,4 +1,4 @@
-from utils import my_import
+from utils import dynamic_module_import
 from concurrent import futures
 import os
 import sys
@@ -23,7 +23,7 @@ class StorageServicer(StorageServicer):
     def __init__(self, config: dict):
         super().__init__()
 
-        adapter_module = my_import('storage.adapter')
+        adapter_module = dynamic_module_import('storage.adapter')
         self.__adapter = getattr(
             adapter_module,
             config['storage']['adapter'])(config)

@@ -5,25 +5,16 @@ import logging
 
 import yaml
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
+from config import dynamic_module_import
 
 
 def serve(config: dict):
     if (config['storage']['data_source']['enabled']):
-        source_module = my_import('storage.datasource')
+        source_module = dynamic_module_import('storage.datasource')
         source = getattr(
             source_module,
             config['storage']['data_source']['type'])(config)
         source.run()
-
-
-def my_import(name):
-    components = name.split('.')
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
 
 
 if __name__ == '__main__':

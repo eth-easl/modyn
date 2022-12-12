@@ -23,7 +23,7 @@ class SelectorServicer(SelectorServicer):
     """Provides methods that implement functionality of the metadata server."""
 
     def __init__(self, config: dict):
-        # selector_module = my_import('dynamicdatasets.selector')
+        # selector_module = dynamic_module_import('dynamicdatasets.selector')
         # self._selector = getattr(selector_module,config['metadata']['selector'])(config)
         self._selector = NewDataSelector(config)
 
