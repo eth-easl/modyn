@@ -21,4 +21,4 @@ jobs:
       run: |
         pip install flake8
         flake8 --version
-        flake8 --statistics --line-length=120
+        flake8 --statistics
