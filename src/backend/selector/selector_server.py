@@ -1,3 +1,6 @@
+from backend.selector.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server
+from backend.selector.selector_pb2 import SamplesResponse, TrainingResponse
+from backend.selector.new_data_selector import NewDataSelector
 import grpc
 import os
 import sys
@@ -5,13 +8,12 @@ from concurrent import futures
 from pathlib import Path
 import logging
 
+import yaml
+
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from backend.selector.new_data_selector import NewDataSelector
-from backend.selector.selector_pb2 import SamplesResponse, TrainingResponse
-from backend.selector.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
@@ -52,10 +54,6 @@ def serve(config: dict):
 
 
 if __name__ == '__main__':
-    import sys
-    import yaml
-    import logging
-
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
         print("Usage: python selector_server.py <config_file>")

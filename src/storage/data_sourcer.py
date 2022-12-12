@@ -1,6 +1,9 @@
 import os
 import sys
 import time
+import logging
+
+import yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -24,10 +27,6 @@ def my_import(name):
 
 
 if __name__ == '__main__':
-    import sys
-    import yaml
-    import logging
-
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
         print("Usage: python storage_server.py <config_file>")

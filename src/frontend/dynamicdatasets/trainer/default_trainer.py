@@ -2,8 +2,10 @@ import copy
 import time
 from tqdm import tqdm
 import torch
-import pdb
 import logging
+import sys
+
+import yaml
 
 from trainer import Trainer
 
@@ -86,10 +88,6 @@ class DefaultTrainer(Trainer):
 
 
 if __name__ == '__main__':
-    import sys
-    import yaml
-    import logging
-
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
         print("Usage: python trainer.py <config_file>")

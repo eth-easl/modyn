@@ -1,3 +1,6 @@
+from utils import my_import
+from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
+from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
 from concurrent import futures
 from multiprocessing import Process
 import os
@@ -5,13 +8,11 @@ import sys
 import logging
 
 import grpc
+import yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
-from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
-from utils import my_import
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
@@ -57,10 +58,6 @@ def serve(config_dict):
 
 
 if __name__ == '__main__':
-    import sys
-    import yaml
-    import logging
-
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
         print("Usage: python storage_server.py <config_file>")

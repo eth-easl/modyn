@@ -1,3 +1,5 @@
+from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
+from backend.odm.odm import OptimalDatasetMetadata
 from concurrent import futures
 import os
 import sys
@@ -5,14 +7,13 @@ from pathlib import Path
 import logging
 
 import grpc
+import yaml
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from backend.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501
-from backend.odm.odm import OptimalDatasetMetadata
-from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
@@ -59,17 +60,15 @@ class ODMServicer(ODMServicer):
 def serve(config: dict):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_ODMServicer_to_server(ODMServicer(config), server)
-    prilogging.infont('Starting server. Listening on port .' + config["odm"]["port"])
+    logging.infont(
+        'Starting server. Listening on port .' +
+        config["odm"]["port"])
     server.add_insecure_port(f'[::]:{config["odm"]["port"]}')
     server.start()
     server.wait_for_termination()
 
 
 if __name__ == '__main__':
-    import sys
-    import yaml
-    import logging
-
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
         print("Usage: python odm_server.py <config_file>")
