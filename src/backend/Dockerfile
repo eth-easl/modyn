@@ -6,16 +6,16 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update -q \
   && apt-get install --no-install-recommends -qy \
+    build-essential \
+    postgresql \
+    python3-dev \
+    libpq-dev \
+    libpng-dev \
+    libjpeg-dev \
     gcc \
     g++ \
     inetutils-ping \
   && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install build-essential -y
-RUN apt-get install -y postgresql
-RUN apt-get install -y python3-dev
-RUN apt-get install -y libpq-dev
-RUN apt-get install -y libpng-dev
-RUN apt-get install -y libjpeg-dev
 
 # Install pip requirements
 COPY ./backend/requirements.txt .

@@ -6,14 +6,12 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update -q \
   && apt-get install --no-install-recommends -qy \
+    build-essential \
+    python3-dev \
     gcc \
     g++ \
     inetutils-ping \
   && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install build-essential -y
-RUN apt-get install -y postgresql
-RUN apt-get install -y python3-dev
-RUN apt-get install -y libpq-dev
 
 # Install pip requirements
 COPY ./frontend/requirements.txt .
