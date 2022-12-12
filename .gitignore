@@ -39,3 +39,5 @@ postgres-data/
 
 # Trainer output data
 src/data/*
+
+.DS_Store
