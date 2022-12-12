@@ -15,10 +15,11 @@ class OptimalDatasetMetadata(object):
             user=config['odm']['postgresql']['user'],
             password=config['odm']['postgresql']['password']
         )
+        self.__con.autocommit = False
         self.__cursor = self.__con.cursor()
-        self.create_table()
+        self.initialize_db()
 
-    def create_table(self) -> None:
+    def initialize_db(self) -> None:
         """
         Create tables if they do not exist.
         """
@@ -37,6 +38,7 @@ class OptimalDatasetMetadata(object):
             'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON odm_storage (training_id)'
         )
         self.__con.commit()
+        self.__con.g
 
     def set(
             self,

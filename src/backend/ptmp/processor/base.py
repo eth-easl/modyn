@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from threading import Thread
 from concurrent import futures
 
 import grpc

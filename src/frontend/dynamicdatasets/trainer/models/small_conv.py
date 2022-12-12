@@ -1,9 +1,5 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
-import torch.utils.data as Data
-import torchvision.transforms as transforms
 
 
 class SmallConv(nn.Module):

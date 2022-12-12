@@ -18,18 +18,18 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'storage_pb2', globals())
 if not _descriptor._USE_C_DESCRIPTORS:
 
     DESCRIPTOR._options = None
-    _GETREQUEST._serialized_start = 26
-    _GETREQUEST._serialized_end = 52
-    _GETRESPONSE._serialized_start = 54
-    _GETRESPONSE._serialized_end = 82
-    _QUERYREQUEST._serialized_start = 84
-    _QUERYREQUEST._serialized_end = 98
-    _QUERYRESPONSE._serialized_start = 100
-    _QUERYRESPONSE._serialized_end = 129
-    _PUTREQUEST._serialized_start = 131
-    _PUTREQUEST._serialized_end = 172
-    _PUTRESPONSE._serialized_start = 174
-    _PUTRESPONSE._serialized_end = 187
-    _STORAGE._serialized_start = 190
-    _STORAGE._serialized_end = 361
+    _GETREQUEST._serialized_start = 26  # noqa: F821
+    _GETREQUEST._serialized_end = 52  # noqa: F821
+    _GETRESPONSE._serialized_start = 54  # noqa: F821
+    _GETRESPONSE._serialized_end = 82  # noqa: F821
+    _QUERYREQUEST._serialized_start = 84  # noqa: F821
+    _QUERYREQUEST._serialized_end = 98  # noqa: F821
+    _QUERYRESPONSE._serialized_start = 100  # noqa: F821
+    _QUERYRESPONSE._serialized_end = 129  # noqa: F821
+    _PUTREQUEST._serialized_start = 131  # noqa: F821
+    _PUTREQUEST._serialized_end = 172  # noqa: F821
+    _PUTRESPONSE._serialized_start = 174  # noqa: F821
+    _PUTRESPONSE._serialized_end = 187  # noqa: F821
+    _STORAGE._serialized_start = 190  # noqa: F821
+    _STORAGE._serialized_end = 361  # noqa: F821
 # @@protoc_insertion_point(module_scope)

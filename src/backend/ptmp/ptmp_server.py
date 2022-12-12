@@ -1,7 +1,4 @@
 from utils import my_import
-from backend.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse
-from backend.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, \
-    add_PostTrainingMetadataProcessorServicer_to_server
 import grpc
 from concurrent import futures
 import os
@@ -15,6 +12,9 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
+from backend.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse  # noqa: E402
+from backend.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, \
+    add_PostTrainingMetadataProcessorServicer_to_server  # noqa: E402
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 

@@ -1,6 +1,5 @@
 import grpc
 from models.small_conv import SmallConv
-import pdb
 from torch.optim import lr_scheduler, Adam
 import torch
 from abc import ABC, abstractmethod
@@ -13,10 +12,11 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from backend.selector.selector_pb2 import RegisterTrainingRequest
-from backend.selector.selector_pb2_grpc import SelectorStub
-from frontend.dynamicdatasets.trainer.data.online_mnistdataset import OnlineMNISTDataset
-from frontend.dynamicdatasets.trainer.data.mnist_dataset import get_mnist_dataset
+from frontend.dynamicdatasets.trainer.data.mnist_dataset import get_mnist_dataset  # noqa: E402
+from frontend.dynamicdatasets.trainer.data.online_mnistdataset import OnlineMNISTDataset  # noqa: E402
+from backend.selector.selector_pb2_grpc import SelectorStub  # noqa: E402
+from backend.selector.selector_pb2 import RegisterTrainingRequest  # noqa: E402
+
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
@@ -66,7 +66,9 @@ class Trainer(ABC):
 
         # Training from selector
         training_id = self._register_training(self._config)
-        logging.info("Registered training with training id - " + str(training_id))
+        logging.info(
+            "Registered training with training id - " +
+            str(training_id))
         train_dataset = OnlineMNISTDataset(training_id, self._config)
         train_dataloader = torch.utils.data.DataLoader(
             train_dataset,
@@ -85,5 +87,3 @@ class Trainer(ABC):
             'train': train_dataloader,
             'val': val_dataloader
         }
-
-        result = self._train()

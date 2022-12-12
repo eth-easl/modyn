@@ -18,22 +18,22 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'odm_pb2', globals())
 if not _descriptor._USE_C_DESCRIPTORS:
 
     DESCRIPTOR._options = None
-    _GETBYKEYSREQUEST._serialized_start = 18
-    _GETBYKEYSREQUEST._serialized_end = 71
-    _GETBYQUERYREQUEST._serialized_start = 73
-    _GETBYQUERYREQUEST._serialized_end = 107
-    _GETRESPONSE._serialized_start = 109
-    _GETRESPONSE._serialized_end = 166
-    _GETKEYSRESPONSE._serialized_start = 168
-    _GETKEYSRESPONSE._serialized_end = 199
-    _SETREQUEST._serialized_start = 201
-    _SETREQUEST._serialized_end = 278
-    _SETRESPONSE._serialized_start = 280
-    _SETRESPONSE._serialized_end = 293
-    _DELETEREQUEST._serialized_start = 295
-    _DELETEREQUEST._serialized_end = 331
-    _DELETERESPONSE._serialized_start = 333
-    _DELETERESPONSE._serialized_end = 349
-    _ODM._serialized_start = 352
-    _ODM._serialized_end = 642
+    _GETBYKEYSREQUEST._serialized_start = 18  # noqa: F821
+    _GETBYKEYSREQUEST._serialized_end = 71  # noqa: F821
+    _GETBYQUERYREQUEST._serialized_start = 73  # noqa: F821
+    _GETBYQUERYREQUEST._serialized_end = 107  # noqa: F821
+    _GETRESPONSE._serialized_start = 109  # noqa: F821
+    _GETRESPONSE._serialized_end = 166  # noqa: F821
+    _GETKEYSRESPONSE._serialized_start = 168  # noqa: F821
+    _GETKEYSRESPONSE._serialized_end = 199  # noqa: F821
+    _SETREQUEST._serialized_start = 201  # noqa: F821
+    _SETREQUEST._serialized_end = 278  # noqa: F821
+    _SETRESPONSE._serialized_start = 280  # noqa: F821
+    _SETRESPONSE._serialized_end = 293  # noqa: F821
+    _DELETEREQUEST._serialized_start = 295  # noqa: F821
+    _DELETEREQUEST._serialized_end = 331  # noqa: F821
+    _DELETERESPONSE._serialized_start = 333  # noqa: F821
+    _DELETERESPONSE._serialized_end = 349  # noqa: F821
+    _ODM._serialized_start = 352  # noqa: F821
+    _ODM._serialized_end = 642  # noqa: F821
 # @@protoc_insertion_point(module_scope)

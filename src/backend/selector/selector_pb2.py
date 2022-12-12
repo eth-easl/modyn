@@ -18,14 +18,14 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'selector_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS is False:
 
     DESCRIPTOR._options = None
-    _REGISTERTRAININGREQUEST._serialized_start = 28
-    _REGISTERTRAININGREQUEST._serialized_end = 101
-    _TRAININGRESPONSE._serialized_start = 103
-    _TRAININGRESPONSE._serialized_end = 142
-    _GETSAMPLESREQUEST._serialized_start = 144
-    _GETSAMPLESREQUEST._serialized_end = 232
-    _SAMPLESRESPONSE._serialized_start = 234
-    _SAMPLESRESPONSE._serialized_end = 284
-    _SELECTOR._serialized_start = 287
-    _SELECTOR._serialized_end = 460
+    _REGISTERTRAININGREQUEST._serialized_start = 28  # noqa: F821
+    _REGISTERTRAININGREQUEST._serialized_end = 101  # noqa: F821
+    _TRAININGRESPONSE._serialized_start = 103  # noqa: F821
+    _TRAININGRESPONSE._serialized_end = 142  # noqa: F821
+    _GETSAMPLESREQUEST._serialized_start = 144  # noqa: F821
+    _GETSAMPLESREQUEST._serialized_end = 232  # noqa: F821
+    _SAMPLESRESPONSE._serialized_start = 234  # noqa: F821
+    _SAMPLESRESPONSE._serialized_end = 284  # noqa: F821
+    _SELECTOR._serialized_start = 287  # noqa: F821
+    _SELECTOR._serialized_end = 460  # noqa: F821
 # @@protoc_insertion_point(module_scope)

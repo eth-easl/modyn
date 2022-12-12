@@ -23,7 +23,7 @@ class MNISTDataset(Dataset):
         return False
 
     def __repr__(self):
-        return f'MNIST-Normal'
+        return 'MNIST-Normal'
 
 
 def get_mnist_dataset(

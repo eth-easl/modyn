@@ -1,8 +1,5 @@
 from utils import my_import
-from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse
-from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server
 from concurrent import futures
-from multiprocessing import Process
 import os
 import sys
 import logging
@@ -12,6 +9,9 @@ import yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse  # noqa: E501, E402
+from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server  # noqa: E402
 
 
 logging.basicConfig(format='%(asctime)s %(message)s')

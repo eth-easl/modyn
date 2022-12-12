@@ -1,3 +1,4 @@
+# flake8: noqa
 from .dbm_adapter import DBMAdapter
 from .s3_adapter import S3Adapter
 from .postgresql_adapter import PostgreSQLAdapter
