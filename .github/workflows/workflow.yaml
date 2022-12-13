@@ -8,7 +8,7 @@ defaults:
     working-directory: ./src
 
 jobs:
-  build:
+  linting:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,8 +17,30 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: '3.10'
-    - name: flake8
+    - name: Flake8
       run: |
         pip install flake8
         flake8 --version
         flake8 --statistics
+  unittests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.10'
+    - name: Run Unittests
+      run: clear # TODO
+  integrationtests:
+      runs-on: ubuntu-latest
+      
+      steps:
+      - uses: actions/checkout@v1
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.10'
+      - name: Run Integrationtests
+        run: clear # TODO
