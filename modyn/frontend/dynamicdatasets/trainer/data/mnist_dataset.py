@@ -5,6 +5,7 @@ import torch.nn.Module
 import torch.Tesnor
 from typing import Optional
 
+
 class MNISTDataset(Dataset):
     # TODO(roxanastiuca): please check the typing in this class. This class is never used currently.
 
@@ -31,9 +32,9 @@ class MNISTDataset(Dataset):
 
 
 def get_mnist_dataset(
-        train_aug: Optional[torch.nn.Module] =None,
-        val_aug: Optional[torch.nn.Module]=None,
-        version: str='normal') -> dict:
+        train_aug: Optional[torch.nn.Module] = None,
+        val_aug: Optional[torch.nn.Module] = None,
+        version: str = 'normal') -> dict:
     if train_aug is None:
         train_aug = transforms.Compose([
             transforms.RandomAffine(degrees=30),

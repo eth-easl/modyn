@@ -146,7 +146,7 @@ class Selector(ABC):
         self._con.commit()
 
         assert training_set_id is not None and training_set_id[0] is not None, "Insertion failed"
-        
+
         return training_set_id[0]
 
     def _get_info_for_training(self, training_id: int) -> tuple[int, int]:
@@ -186,7 +186,7 @@ class Selector(ABC):
         training_samples = cur.fetchall()
 
         if len(training_samples) > 0:
-            return  [x[0] for x in training_samples], True
+            return [x[0] for x in training_samples], True
         else:
             return [], False
 

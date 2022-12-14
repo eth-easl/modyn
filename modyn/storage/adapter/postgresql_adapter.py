@@ -39,7 +39,9 @@ class PostgreSQLAdapter(BaseAdapter):
         data = self.__cursor.fetchall()
         data = [d[0] for d in data]
         # TODO(vGsteiger): Invalid typing here:
-        # modyn/storage/adapter/postgresql_adapter.py:44: error: Incompatible return value type (got "List[Tuple[Any, ...]]", expected "List[str]")
+        # modyn/storage/adapter/postgresql_adapter.py:44:
+        # error: Incompatible return value type
+        # (got "List[Tuple[Any, ...]]", expected "List[str]")
 
         if data is None:
             return None
@@ -66,6 +68,8 @@ class PostgreSQLAdapter(BaseAdapter):
             self.__con.commit()
 
         # TODO(vGsteiger): Invalid typing here:
-        # modyn/storage/adapter/postgresql_adapter.py:64: error: Incompatible return value type (got "List[Tuple[Any, ...]]", expected "List[str]")
+        # modyn/storage/adapter/postgresql_adapter.py:64:
+        # error: Incompatible return value type
+        # (got "List[Tuple[Any, ...]]", expected "List[str]")
 
         return keys

@@ -1,5 +1,6 @@
 from types import ModuleType
 
+
 def dynamic_module_import(name: str) -> ModuleType:
     """
     Import a module by name to enable dynamic loading of modules from config
