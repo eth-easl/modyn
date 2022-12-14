@@ -16,10 +16,11 @@ class NewDataSelector(Selector):
             self._config['newqueue']['port'])
         self.__newqueue_stub = NewQueueStub(newqueue_channel)
 
-    def _create_new_training_set(
+    def _select_new_training_samples(
             self,
-            training_set_size: int,
-            training_id: int) -> list():
+            training_id: int,
+            training_set_size: int
+            ) -> list():
         request = GetNextRequest(
             limit=training_set_size,
             training_id=training_id)

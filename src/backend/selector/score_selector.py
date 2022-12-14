@@ -1,8 +1,12 @@
-from backend.selector import Selector
+from backend.selector.selector import Selector
 
 
 class ScoreSelector(Selector):
-    def _create_new_training_set(self, training_set_size: int) -> list():
+    def _select_new_training_samples(
+            self,
+            training_id: int,
+            training_set_size: int
+    ) -> list():
         sample_keys = []
         for i in range(training_set_size):
             sample_keys.append('key - ' + str(i))

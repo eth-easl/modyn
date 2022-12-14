@@ -46,17 +46,17 @@ class Selector(ABC):
         self._con.commit()
 
     @abstractmethod
-    def _create_new_training_set(
+    def _select_new_training_samples(
             self,
             training_id: int,
-            training_set_number: int,
-            training_set_size) -> list():
+            training_set_size: int
+    ) -> list():
         """
-        Create a new training set of samples for the given training id. Samples should be selected from
+        Selects a new training set of samples for the given training id. Samples should be selected from
         the new data queue service or the metadata service
 
         Returns:
-            list(int): the training sample keys for the newly created training_set
+            list(int): the training sample keys for the newly selected training_set
         """
         raise NotImplementedError
 
@@ -83,6 +83,44 @@ class Selector(ABC):
         cur.execute(insert_samples_sql)
         self._con.commit()
 
+    def _prepare_training_set(
+            self,
+            training_id: int,
+            training_set_number: int,
+            training_set_size: int,
+    ) -> list():
+        """
+        Create a new training set of samples for the given training id. New samples are selected from
+        the select_new_samples method and are inserted into the database for the given set number.
+
+        Returns:
+            list(int): the training sample keys for the newly prepared training_set
+        """
+        training_samples = self._select_new_training_samples(training_id, training_set_size)
+
+        # Throw error if no new samples are selected
+        if (len(training_samples) == 0):
+            raise ValueError("No new samples selected")
+
+        self._insert_training_samples(training_samples, training_id, training_set_number)
+        return training_samples
+
+    def _get_training_set_partition(
+            self,
+            training_samples: list(),
+            training_set_size: int,
+            num_workers: int,
+            worker_id: int) -> list():
+        """
+        Return the required subset of training samples for the particular worker id
+        The subset is calculated by taking an offset from the start based on the given worker id
+        """
+        worker_subset_size = int(training_set_size / num_workers)
+        start_index = worker_id * worker_subset_size
+        training_samples_subset = training_samples[start_index: start_index +
+                                                   worker_subset_size]
+        return training_samples_subset
+
     def register_training(self, training_set_size: int,
                           num_workers: int) -> int:
         """
@@ -93,21 +131,19 @@ class Selector(ABC):
         cur = self._con.cursor()
         cur.execute(
             self._insert_training_sql,
-            (training_set_size, num_workers))
-        try:
-            training_set_id = cur.fetchone()[0]
-        except TypeError:
-            training_set_id = cur.lastrowid
+            (training_set_size, num_workers)
+        )
+        training_set_id = cur.fetchone()[0]
         self._con.commit()
         return training_set_id
 
     def get_sample_keys(self, training_id: int,
                         training_set_number: int, worker_id: int) -> list():
         """
-        For a given training_id, training_set_number and worker_id it returns a subset of sample keys
-        so that the data can be queried from storage.
-        If the samples for that training_set have not been selected it, performs the selection first
-        The subset is calculated by taking an offset from the start based on the given worker id
+        For a given training_id, training_set_number and worker_id it returns a subset of sample 
+        keys so that the data can be queried from storage. If the samples for that training_set have
+        not been selected it, performs the selection first.
+
         Returns:
             List of keys for the samples to be returned to that particular worker
         """
@@ -125,23 +161,17 @@ class Selector(ABC):
                     (training_id, training_set_number))
         training_samples = cur.fetchall()
 
-        # If there is no training_set selected yet, create a new one and fetch
-        # those
+        # If there is no training_set selected yet, create a new one by
+        # selecting new samples
         if (len(training_samples) == 0):
-            training_samples = self._create_new_training_set(
-                training_set_size, training_id)
-            if (len(training_samples) != 0):
-                self._insert_training_samples(
-                    training_samples, training_id, training_set_number)
+            training_samples = self._prepare_training_set(training_id, training_set_number, training_set_size)
         else:
             # convert sql result tuple to list of string
             training_samples = [x[0] for x in training_samples]
 
         # Return the subset correpsonding to the worker_id
-        worker_subset_size = int(training_set_size / num_workers)
-        start_index = worker_id * worker_subset_size
-        training_samples_subset = training_samples[start_index: start_index +
-                                                   worker_subset_size]
+        training_samples_subset = self._get_training_set_partition(
+            training_samples, training_set_size, num_workers, worker_id)
 
         return training_samples_subset
 
