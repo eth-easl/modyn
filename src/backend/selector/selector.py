@@ -140,7 +140,7 @@ class Selector(ABC):
     def get_sample_keys(self, training_id: int,
                         training_set_number: int, worker_id: int) -> list():
         """
-        For a given training_id, training_set_number and worker_id it returns a subset of sample 
+        For a given training_id, training_set_number and worker_id it returns a subset of sample
         keys so that the data can be queried from storage. If the samples for that training_set have
         not been selected it, performs the selection first.
 
