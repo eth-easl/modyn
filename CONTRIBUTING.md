@@ -40,7 +40,7 @@ from) [Darwin](https://github.com/hpides/darwin), which is inspired by [Hyrise](
 * `<github-name>/feature/<issue-id><name>` for features.
 * `<github-name>/bug/<issue-id><name>` for bugs.
 * `<github-name>/<something-something>` for small, untracked things (fixing typos, etc.).
-* Example: `manner/feature/#38-in-memory-sink`.
+* Example: `MaxiBoether/feature/#37-pylint-compliance`.
 
 ## Pull Requests
 
