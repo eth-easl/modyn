@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package ptmp;
+
+service PostTrainingMetadataProcessor {
+    rpc ProcessPostTrainingMetadata (PostTrainingMetadataRequest) returns (PostTrainingMetadataResponse) {}
+}
+
+message PostTrainingMetadataRequest {
+    int32 training_id = 1;
+    string data = 2;
+}
+
+message PostTrainingMetadataResponse {
+}

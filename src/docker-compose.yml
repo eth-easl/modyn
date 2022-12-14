@@ -10,55 +10,43 @@ services:
       POSTGRES_DB: default_database
     ports:
       - '5432:5432'
-    volumes: 
-          - ./postgres-data:/var/lib/postgresql/data
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - 22181:2181
-  kafka:
-    image: confluentinc/cp-kafka:latest
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
+  storage:
+    image: storage
     depends_on:
-      - zookeeper
-    ports:
-      - '9092:9092'
-    expose:
-      - '29092'
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
-      KAFKA_MIN_INSYNC_REPLICAS: '1'
-
-  init-kafka:
-    image: confluentinc/cp-kafka:latest
-    depends_on:
-      - kafka
-    entrypoint: [ '/bin/sh', '-c' ]
-    command: |
-      "
-      # blocks until kafka is reachable
-      kafka-topics --bootstrap-server kafka:29092 --list
-
-      echo -e 'Creating kafka topics'
-      kafka-topics --create --bootstrap-server kafka:29092 --replication-factor 1 --partitions 1 --topic test
-      kafka-topics --describe --bootstrap-server kafka:29092 --topic test
-
-      echo -e 'Successfully created the following topics:'
-      kafka-topics --bootstrap-server kafka:29092 --list
-      "
-
-  dynamicdatasets:
-    image: dynamicdatasets
-    depends_on:
-      - zookeeper
-      - init-kafka
       - db
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./
+      dockerfile: ./storage/Dockerfile
+    ports:
+      - '5123:5123'
+    volumes:
+      - ./storage:/app
+
+  backend:
+    image: backend
+    depends_on:
+      - db
+      - storage
+    build:
+      context: ./
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - '5124:5124'
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    image: frontend
+    depends_on:
+      - backend
+    build:
+      context: ./
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./frontend:/app
+    command: tail -F anything

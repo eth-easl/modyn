@@ -1,0 +1,8 @@
+grpcio
+psycopg2
+tqdm
+torch
+torchvision
+boto3
+sqlitedict
+pyaml

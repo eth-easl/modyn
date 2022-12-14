@@ -1,0 +1,46 @@
+syntax = "proto3";
+package odm;
+
+service ODM {
+    rpc GetByKeys (GetByKeysRequest) returns (GetResponse) {}
+    rpc GetByQuery (GetByQueryRequest) returns (GetResponse) {}
+    rpc GetKeysByQuery (GetByQueryRequest) returns (GetKeysResponse) {}
+    rpc Set (SetRequest) returns (SetResponse) {}
+    rpc DeleteTraining (DeleteRequest) returns (DeleteResponse) {}
+}
+
+message GetByKeysRequest {
+    int32 training_id = 1;
+    repeated string keys = 2;
+}
+
+message GetByQueryRequest {
+    string query = 1;
+}
+
+message GetResponse {
+    repeated string keys = 1;
+    repeated float scores = 2;
+    repeated string data = 3;
+}
+
+message GetKeysResponse {
+    repeated string keys = 1;
+}
+
+message SetRequest {
+    int32 training_id = 1;
+    repeated string keys = 2;
+    repeated float scores = 3;
+    repeated string data = 4;
+}
+
+message SetResponse {
+}
+
+message DeleteRequest {
+    int32 training_id = 1;
+}
+
+message DeleteResponse {
+}

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package selector;
+
+service Selector {
+    rpc register_training(RegisterTrainingRequest) returns (TrainingResponse) {}
+    rpc get_sample_keys(GetSamplesRequest) returns (SamplesResponse) {}
+}
+
+message RegisterTrainingRequest {
+    int32 training_set_size = 1;
+    int32 num_workers = 2;
+}
+
+message TrainingResponse {
+    int32 training_id = 1;
+}
+
+message GetSamplesRequest {
+    int32 training_id = 1;
+    int32 training_set_number = 2;
+    int32 worker_id = 3;
+}
+
+message SamplesResponse{
+    repeated string training_samples_subset = 1;
+}

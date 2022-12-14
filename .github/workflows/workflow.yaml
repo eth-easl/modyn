@@ -1,14 +1,14 @@
 name: Python package
 
-on: [push, pull_request]
+on: [pull_request]
 
 defaults:
   run:
     shell: bash
-    working-directory: src
+    working-directory: ./src
 
 jobs:
-  build:
+  linting:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,27 +17,26 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: '3.10'
-    - name: Install dependencies
+    - name: Flake8
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install .
-    - name: autopep8
-      id: autopep8
-      uses: peter-evans/autopep8@v1
+        pip install flake8
+        flake8 --version
+        flake8 --statistics
+  unittests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
       with:
-        args: --recursive --in-place --aggressive --aggressive .
-    - name: 'Run PEP8'
-      uses: quentinguidee/pep8-action@v1
-      with:
-        arguments: '--max-line-length=120'
-   # - name: Tests
-   #   run: |
-   #     coverage run -m unittest
-   #     coverage report
-   #     coverage html
-   # - name: Code coverage html report
-   #   uses: actions/upload-artifact@v2
-   #   with:
-   #     name: code-coverage-report
-   #     path: src/htmlcov
+        python-version: '3.10'
+  integrationtests:
+      runs-on: ubuntu-latest
+      
+      steps:
+      - uses: actions/checkout@v1
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.10'
