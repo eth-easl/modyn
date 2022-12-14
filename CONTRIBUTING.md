@@ -12,6 +12,7 @@ from) [Darwin](https://github.com/hpides/darwin), which is inspired by [Hyrise](
 - Just as your code is not perfect, neither is the code that people wrote before you. Try to improve it as part of your
   PRs and do not hesitate to ask if anything is unclear. Chances are that it can be improved.
 - Test your code. This includes unit *and* system tests. Try to isolate parts that can be independently tested.
+- Mark TODOs explicitly. Either create an issue and write `#TODO(#1337): Fix this` (preferred), or write your Github username (`#TODO(FooBar): Fix this`)
 
 ## Formatting and Naming
 
@@ -66,3 +67,5 @@ from) [Darwin](https://github.com/hpides/darwin), which is inspired by [Hyrise](
   the code base should be better than before.
 * Verify the CI results, including how the reported coverage changed, and (when applicable) check if performance
   have been negatively affected.
+* The person opening a thread in the PR is usually responsible for closing it. Don't declare something as handled if the person
+   that opened the thread did not agree yet.
