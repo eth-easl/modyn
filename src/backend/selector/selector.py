@@ -115,6 +115,7 @@ class Selector(ABC):
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id
         """
+        # TODO(#36): Handle training_set_size % num_workers > 0 
         worker_subset_size = int(training_set_size / num_workers)
         start_index = worker_id * worker_subset_size
         training_samples_subset = training_samples[start_index: start_index +
