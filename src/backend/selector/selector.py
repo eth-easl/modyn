@@ -107,14 +107,16 @@ class Selector(ABC):
 
     def _get_training_set_partition(
             self,
+            training_id: int,
             training_samples: list(),
-            training_set_size: int,
-            num_workers: int,
             worker_id: int) -> list():
         """
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id
         """
+
+        training_set_size, num_workers = self._get_info_for_training(training_id)
+
         # TODO(#36): Handle training_set_size % num_workers > 0 
         worker_subset_size = int(training_set_size / num_workers)
         start_index = worker_id * worker_subset_size
@@ -138,15 +140,12 @@ class Selector(ABC):
         self._con.commit()
         return training_set_id
 
-    def get_sample_keys(self, training_id: int,
-                        training_set_number: int, worker_id: int) -> list():
+    def _get_info_for_training(self, training_id: int) -> tuple(int, int):
         """
-        For a given training_id, training_set_number and worker_id it returns a subset of sample
-        keys so that the data can be queried from storage. If the samples for that training_set have
-        not been selected it, performs the selection first.
+        Queries the database for the the training set size and number of workers for a given training.
 
         Returns:
-            List of keys for the samples to be returned to that particular worker
+            Tuple of training set size and number of workers.
         """
         cur = self._con.cursor()
 
@@ -157,24 +156,65 @@ class Selector(ABC):
             raise Exception("Invalid training id")
         training_set_size, num_workers = training_info
 
+        return training_set_size, num_workers
+
+    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple(list[str], bool):
+        """
+        For a given training_set and training_set_number, fetch the pre-calculated training set from
+        the database, if it has been calculated.
+
+        Returns:
+            Tuple containing a list of keys describing the training set and a boolean to indicate whether the 
+            training set has been pre-calculated or the result is empty.
+        """
+
+        cur = self._con.cursor()
+
         # Fetch the samples for that training and training set
         cur.execute(self._fetch_training_samples_sql,
                     (training_id, training_set_number))
         training_samples = cur.fetchall()
 
-        # If there is no training_set selected yet, create a new one by
-        # selecting new samples
-        if (len(training_samples) == 0):
-            training_samples = self._prepare_training_set(training_id, training_set_number, training_set_size)
-        else:
+        set_exists = False
+
+        if len(training_samples) > 0:
             # convert sql result tuple to list of string
             training_samples = [x[0] for x in training_samples]
+            set_exists = True
 
-        # Return the subset correpsonding to the worker_id
+        return training_samples, set_exists
+
+    def _create_or_fetch_existing_set(self, training_id: int, training_set_number: int) -> list[str]:
+        """
+        For a given training_set and training_set_number, fetch the pre-calculated training set from
+        the database. In case the set has not yet been calculated, calculate it.
+
+        Returns:
+            List of keys describing the training set with number `training_set_number` for the training
+            with `training_id`
+        """
+        training_set_size, _ = self._get_info_for_training(training_id)
+        training_samples, set_exists = self._fetch_training_set_if_exists(training_id, training_set_number)
+
+        if not set_exists:
+            training_samples = self._prepare_training_set(training_id, training_set_number, training_set_size)
+
+        return training_samples
+
+
+    def get_sample_keys(self, training_id: int,
+                        training_set_number: int, worker_id: int) -> list():
+        """
+        For a given training_id, training_set_number and worker_id, it returns a subset of sample
+        keys so that the data can be queried from storage. 
+
+        Returns:
+            List of keys for the samples to be returned to that particular worker
+        """
+
+        training_samples = self._create_or_fetch_existing_set(training_id, training_set_number)
+
         training_samples_subset = self._get_training_set_partition(
-            training_samples, training_set_size, num_workers, worker_id)
+            training_id, training_samples, worker_id)
 
         return training_samples_subset
-
-    def _get_con(self):
-        return self._con
