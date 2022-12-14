@@ -34,7 +34,7 @@ jobs:
     - name: pip
       run: pip install -r dev-requirements.txt
     - name: mypy
-      uses: jpetrucciani/mypy-check@master
+      uses: mypy modyn
 
   unittests:
     runs-on: ubuntu-latest
