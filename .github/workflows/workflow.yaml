@@ -34,6 +34,7 @@ jobs:
     - name: Pytest
       run: |
         pip install -r dev-requirements.txt
+        pip install -e .
         pytest
         pytest > pytest-coverage.txt
     - name: Comment coverage
