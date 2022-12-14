@@ -9,7 +9,7 @@ from setuptools import find_packages, setup
 # Package meta-data.
 NAME = 'modyn'
 DESCRIPTION = \
-    'TODO'
+    'A platform for training on dynamic datasets.'
 
 URL = 'https://github.com/eth-easl/dynamic_datasets_dsl'
 URL_DOKU = "https://github.com/eth-easl/dynamic_datasets_dsl"
@@ -60,23 +60,18 @@ setup(
     project_urls={
         "Bug Tracker": URL_ISSUES,
         "Source Code": URL_GITHUB,
-        # "Documentation": URL_DOKU,
-        # "Homepage": URL,
-        # "Related Software": DACS_SOFTWARE},
     },
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*", "tests.*.*"]),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
     # 'mycli=mymodule:cli'
-    # entry_points={'console_scripts': ["millipede_sim=millipede.simulation:main",
-    #                                  "millipede_train=millipede.scripts.millipede_train:main",
-    #                                  "millipede_preprocess=millipede.scripts.millipede_preprocess:main"],
+    # entry_points={'console_scripts': ["script_name=modyn.scripts:main"],
     #              },
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
-    # license='BSD 3-Clause',
+    license='MIT',
     keywords=KEYWORDS,
     classifiers=[
         # Trove classifiers
