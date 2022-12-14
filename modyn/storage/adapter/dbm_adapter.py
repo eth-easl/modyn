@@ -19,6 +19,8 @@ class DBMAdapter(BaseAdapter):
         for key in keys:
             data.append(self.__db[key])
         self.__db.close()
+        # TODO(vGsteiger): We currently return a list of bytes here, but want to return a list of strings. How exactly do we convert that? We cannot do
+        # str(x) for x in data, because then we would cast each byte individually.
         return data
 
     def put(self, key: list[str], data: list[str]) -> None:
