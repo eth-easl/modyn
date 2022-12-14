@@ -33,6 +33,7 @@ var/
 .installed.cfg
 *.egg
 .eggs/
+*.egg-info
 
 # postgresql
 postgres-data/
@@ -41,3 +42,11 @@ postgres-data/
 src/data/*
 
 .DS_Store
+
+# Pytest stuff
+.pytest_cache
+reports/
+htmlcov/
+assets/
+report.html
+.coverage
