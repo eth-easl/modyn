@@ -29,17 +29,6 @@ storage:
     user: "postgres"
     password: "postgres"
 
-newqueue:
-  port: "50052"
-  hostname: "backend"
-  polling_interval: 5
-  postgresql:
-    host: db
-    port: "5432"
-    database: "postgres"
-    user: "postgres"
-    password: "postgres"
-
 odm:
   port: "50054"
   hostname: "backend"
