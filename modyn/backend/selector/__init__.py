@@ -1,5 +1,5 @@
 """
-TODO
+TODO: Describe what is in this directory/submodule.
 """
 import os
 files = os.listdir(os.path.dirname(__file__))
