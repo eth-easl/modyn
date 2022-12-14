@@ -20,7 +20,7 @@ class NewDataSelector(Selector):
             self,
             training_id: int,
             training_set_size: int
-    ) -> list():
+    ) -> list:
         request = GetNextRequest(
             limit=training_set_size,
             training_id=training_id)

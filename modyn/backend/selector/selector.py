@@ -4,7 +4,7 @@ import psycopg2
 
 class Selector(ABC):
 
-    _config = None
+    _config: dict = dict()
     _con = None
 
     _create_trainings_table_sql = '''CREATE TABLE IF NOT EXISTS trainings (

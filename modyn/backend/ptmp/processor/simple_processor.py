@@ -10,7 +10,7 @@ class SimpleProcessor(PostTrainingMetadataProcessor):
         super().__init__(config)
 
     def _process_post_training_metadata(
-            self, training_id: str, data: str) -> dict:
+            self, training_id: int, data: str) -> SetRequest:
         data_dict = json.loads(data)
 
         output_data = []

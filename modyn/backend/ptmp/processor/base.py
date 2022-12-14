@@ -20,7 +20,7 @@ class PostTrainingMetadataProcessor(ABC):
         self.__thread_pool = futures.ThreadPoolExecutor(max_workers=10)
 
     def process_post_training_metadata(
-            self, training_id: str, data: str) -> None:
+            self, training_id: int, data: str) -> None:
         """
         Add the task to process the post training metadata and send it to the ODM to the thread pool.
 
@@ -30,7 +30,7 @@ class PostTrainingMetadataProcessor(ABC):
         """
         self.__thread_pool.submit(self.__process_and_send, training_id, data)
 
-    def __process_and_send(self, training_id: str, data: str) -> None:
+    def __process_and_send(self, training_id: int, data: str) -> None:
         """
         Process the post training metadata and send it to the ODM.
 
@@ -41,7 +41,7 @@ class PostTrainingMetadataProcessor(ABC):
         set_request = self._process_post_training_metadata(training_id, data)
         self.__send_to_odm(training_id, set_request)
 
-    def __send_to_odm(self, training_id: str, set_request: SetRequest) -> None:
+    def __send_to_odm(self, training_id: int, set_request: SetRequest) -> None:
         """
         Send the set request to the ODM.
 
@@ -57,7 +57,7 @@ class PostTrainingMetadataProcessor(ABC):
 
     @abstractmethod
     def _process_post_training_metadata(
-            self, training_id: str, data: str) -> SetRequest:
+            self, training_id: int, data: str) -> SetRequest:
         """Processes post training metadata for the given training_id and data.
 
         Args:

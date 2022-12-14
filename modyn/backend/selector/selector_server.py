@@ -12,14 +12,14 @@ SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from backend.selector.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402
-from backend.selector.selector_pb2 import SamplesResponse, TrainingResponse  # noqa: E402
+from backend.selector.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest, SamplesResponse, TrainingResponse  # noqa: E402
 from backend.selector.new_data_selector import NewDataSelector  # noqa: E402
 
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
 
-class SelectorServicer(SelectorServicer):
+class SelectorGRPCServer(SelectorServicer):
     """Provides methods that implement functionality of the metadata server."""
 
     def __init__(self, config: dict):
@@ -27,25 +27,23 @@ class SelectorServicer(SelectorServicer):
         # self._selector = getattr(selector_module,config['metadata']['selector'])(config)
         self._selector = NewDataSelector(config)
 
-    def register_training(self, request, context):
+    def register_training(self, request: RegisterTrainingRequest, context: grpc.ServicerContext) -> TrainingResponse:
         logging.info("Registering training with request - " + str(request))
         training_id = self._selector.register_training(
             request.training_set_size, request.num_workers)
         return TrainingResponse(training_id=training_id)
 
-    # def get_sample_keys(self, training_id: int, training_set_number: int,
-    # worker_id: int) -> list():
-    def get_sample_keys(self, request, context):
+    def get_sample_keys(self, request: GetSamplesRequest, context: grpc.ServicerContext) -> SamplesResponse:
         logging.info("Fetching samples for request - " + str(request))
         samples_keys = self._selector.get_sample_keys(
             request.training_id, request.training_set_number, request.worker_id)
         return SamplesResponse(training_samples_subset=samples_keys)
 
 
-def serve(config: dict):
+def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
     add_SelectorServicer_to_server(
-        SelectorServicer(config), server)
+        SelectorGRPCServer(config), server)
     logging.info(
         'Starting server. Listening on port .' +
         config['selector']['port'])

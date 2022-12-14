@@ -32,7 +32,7 @@ class PostTrainingMetadataProcessor(
             config['ptmp']['processor'])(config)
 
     def ProcessPostTrainingMetadata(
-            self, request: PostTrainingMetadataRequest, context):
+            self, request: PostTrainingMetadataRequest, context: grpc.ServicerContext) -> PostTrainingMetadataResponse:
         self.__processor.process_post_training_metadata(
             request.training_id, request.data)
         return PostTrainingMetadataResponse()

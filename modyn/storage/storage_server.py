@@ -17,7 +17,7 @@ from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_ser
 logging.basicConfig(format='%(asctime)s %(message)s')
 
 
-class StorageServicer(StorageServicer):
+class StorageGRPCServer(StorageServicer):
     """Provides methods that implement functionality of the storage server."""
 
     def __init__(self, config: dict):
@@ -28,26 +28,26 @@ class StorageServicer(StorageServicer):
             adapter_module,
             config['storage']['adapter'])(config)
 
-    def Query(self, request: QueryRequest, context):
+    def Query(self, request: QueryRequest, context: grpc.ServicerContext) -> QueryResponse:
         logging.info("Storage: Query for data")
         keys = self.__adapter.query()
         return QueryResponse(keys=keys)
 
-    def Get(self, request: GetRequest, context):
+    def Get(self, request: GetRequest, context: grpc.ServicerContext) -> GetResponse:
         logging.info("Storage: Getting data")
         data = self.__adapter.get(request.keys)
         return GetResponse(value=data)
 
-    def Put(self, request: PutRequest, context):
+    def Put(self, request: PutRequest, context: grpc.ServicerContext) -> PutResponse:
         logging.info("Storage: Putting data")
         self.__adapter.put(request.keys, request.value)
         return PutResponse()
 
 
-def serve(config_dict):
+def serve(config_dict: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_StorageServicer_to_server(
-        StorageServicer(config_dict), server)
+        StorageGRPCServer(config_dict), server)
     logging.info(
         'Starting server. Listening on port .' +
         config_dict['storage']['port'])
