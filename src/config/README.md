@@ -123,44 +123,6 @@ properties:
             type: string
             description: |
               The password to use for the PostgreSQL server.
-  newqueue:
-    type: object
-    properties:
-      port:
-        type: string
-        description: |
-          The port to use for the newqueue server.
-      hostname:
-        type: string
-        description: |
-          The hostname to use for the newqueue server.
-      polling_interval:
-        type: integer
-        description: |
-          The polling interval to use for the newqueue server.
-      postgresql:
-        type: object
-        properties:
-          host:
-            type: string
-            description: |
-              The hostname to use for the PostgreSQL server.
-          port:
-            type: string
-            description: |
-              The port to use for the PostgreSQL server
-          database:
-            type: string
-            description: |
-              The name of the PostgreSQL database.
-          user:
-            type: string
-            description: |
-              The user to use for the PostgreSQL server.
-          password:
-            type: string
-            description: |
-              The password to use for the PostgreSQL server.
   odm:
     type: object
     properties:
