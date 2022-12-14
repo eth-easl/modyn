@@ -36,10 +36,11 @@ class Selector(ABC):
         )
         self._setup_database()
 
-    def _setup_database(self):
+    def _setup_database(self) -> None:
         """
         Ensure the tables required are created in the DB
         """
+        assert self._con is not None, "No connection established"
         cur = self._con.cursor()
         cur.execute(self._create_trainings_table_sql)
         cur.execute(self._create_training_samples_table_sql)
@@ -50,7 +51,7 @@ class Selector(ABC):
             self,
             training_id: int,
             training_set_size: int
-    ) -> list():
+    ) -> list[int]:
         """
         Selects a new training set of samples for the given training id. Samples should be selected from
         the new data queue service or the metadata service
@@ -62,12 +63,15 @@ class Selector(ABC):
 
     def _insert_training_samples(
             self,
-            training_samples: list(),
+            training_samples: list[int],
             training_id: int,
-            training_set_number: int):
+            training_set_number: int) -> None:
         """
         Insert the list of training_samples into the DB
         """
+
+        assert self._con is not None, "No connection established"
+
         # Form the sql query
         insert_samples_sql = 'INSERT INTO training_samples ' + \
                              '(training_id, training_set_number, sample_number, sample_key) VALUES '
@@ -88,7 +92,7 @@ class Selector(ABC):
             training_id: int,
             training_set_number: int,
             training_set_size: int,
-    ) -> list():
+    ) -> list[int]:
         """
         Create a new training set of samples for the given training id. New samples are selected from
         the select_new_samples method and are inserted into the database for the given set number.
@@ -108,8 +112,8 @@ class Selector(ABC):
     def _get_training_set_partition(
             self,
             training_id: int,
-            training_samples: list(),
-            worker_id: int) -> list():
+            training_samples: list[int],
+            worker_id: int) -> list[int]:
         """
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id
@@ -131,14 +135,19 @@ class Selector(ABC):
         Returns:
             The id of the newly created training object
         """
+        assert self._con is not None, "No connection established"
+
         cur = self._con.cursor()
         cur.execute(
             self._insert_training_sql,
             (training_set_size, num_workers)
         )
-        training_set_id = cur.fetchone()[0]
+        training_set_id = cur.fetchone()
         self._con.commit()
-        return training_set_id
+
+        assert training_set_id is not None and training_set_id[0] is not None, "Insertion failed"
+        
+        return training_set_id[0]
 
     def _get_info_for_training(self, training_id: int) -> tuple[int, int]:
         """
@@ -147,6 +156,7 @@ class Selector(ABC):
         Returns:
             Tuple of training set size and number of workers.
         """
+        assert self._con is not None, "No connection established"
         cur = self._con.cursor()
 
         # Get the training_set_size and num_workers for this training_id
@@ -158,7 +168,7 @@ class Selector(ABC):
 
         return training_set_size, num_workers
 
-    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple[list[str], bool]:
+    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple[list[int], bool]:
         """
         For a given training_set and training_set_number, fetch the pre-calculated training set from
         the database, if it has been calculated.
@@ -167,7 +177,7 @@ class Selector(ABC):
             Tuple containing a list of keys describing the training set and a boolean to indicate whether the
             training set has been pre-calculated or the result is empty.
         """
-
+        assert self._con is not None, "No connection established"
         cur = self._con.cursor()
 
         # Fetch the samples for that training and training set
@@ -175,16 +185,12 @@ class Selector(ABC):
                     (training_id, training_set_number))
         training_samples = cur.fetchall()
 
-        set_exists = False
-
         if len(training_samples) > 0:
-            # convert sql result tuple to list of string
-            training_samples = [x[0] for x in training_samples]
-            set_exists = True
+            return  [x[0] for x in training_samples], True
+        else:
+            return [], False
 
-        return training_samples, set_exists
-
-    def _create_or_fetch_existing_set(self, training_id: int, training_set_number: int) -> list[str]:
+    def _create_or_fetch_existing_set(self, training_id: int, training_set_number: int) -> list[int]:
         """
         For a given training_set and training_set_number, fetch the pre-calculated training set from
         the database. In case the set has not yet been calculated, calculate it.
@@ -202,7 +208,7 @@ class Selector(ABC):
         return training_samples
 
     def get_sample_keys(self, training_id: int,
-                        training_set_number: int, worker_id: int) -> list():
+                        training_set_number: int, worker_id: int) -> list[int]:
         """
         For a given training_id, training_set_number and worker_id, it returns a subset of sample
         keys so that the data can be queried from storage.
