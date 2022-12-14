@@ -117,7 +117,7 @@ class Selector(ABC):
 
         training_set_size, num_workers = self._get_info_for_training(training_id)
 
-        # TODO(#36): Handle training_set_size % num_workers > 0 
+        # TODO(#36): Handle training_set_size % num_workers > 0
         worker_subset_size = int(training_set_size / num_workers)
         start_index = worker_id * worker_subset_size
         training_samples_subset = training_samples[start_index: start_index +
@@ -164,7 +164,7 @@ class Selector(ABC):
         the database, if it has been calculated.
 
         Returns:
-            Tuple containing a list of keys describing the training set and a boolean to indicate whether the 
+            Tuple containing a list of keys describing the training set and a boolean to indicate whether the
             training set has been pre-calculated or the result is empty.
         """
 
@@ -201,12 +201,11 @@ class Selector(ABC):
 
         return training_samples
 
-
     def get_sample_keys(self, training_id: int,
                         training_set_number: int, worker_id: int) -> list():
         """
         For a given training_id, training_set_number and worker_id, it returns a subset of sample
-        keys so that the data can be queried from storage. 
+        keys so that the data can be queried from storage.
 
         Returns:
             List of keys for the samples to be returned to that particular worker
