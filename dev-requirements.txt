@@ -5,3 +5,4 @@ pytest-html
 mypy
 types-protobuf
 types-psycopg2
+types-PyYAML

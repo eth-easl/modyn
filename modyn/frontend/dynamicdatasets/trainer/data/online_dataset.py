@@ -9,6 +9,7 @@ import grpc
 from abc import abstractmethod
 import Typing
 
+
 class OnlineDataset(IterableDataset):
 
     def __init__(self, training_id: int, config: dict):
