@@ -22,6 +22,20 @@ jobs:
         flake8 --version
         flake8 --statistics
 
+  mypy-typechecking:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.10'
+    - name: pip
+      run: pip install -r dev-requirements.txt
+    - name: mypy
+      uses: jpetrucciani/mypy-check@master
+
   unittests:
     runs-on: ubuntu-latest
 
