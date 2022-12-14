@@ -140,7 +140,7 @@ class Selector(ABC):
         self._con.commit()
         return training_set_id
 
-    def _get_info_for_training(self, training_id: int) -> tuple(int, int):
+    def _get_info_for_training(self, training_id: int) -> tuple[int, int]:
         """
         Queries the database for the the training set size and number of workers for a given training.
 
@@ -158,7 +158,7 @@ class Selector(ABC):
 
         return training_set_size, num_workers
 
-    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple(list[str], bool):
+    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple[list[str], bool]:
         """
         For a given training_set and training_set_number, fetch the pre-calculated training set from
         the database, if it has been calculated.
