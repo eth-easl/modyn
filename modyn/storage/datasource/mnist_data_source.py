@@ -23,7 +23,7 @@ class MNISTDataSource(BaseSource):
             shuffle=True)
 
     def get_next(self, limit: int) -> tuple[list[str], list[str]]:
-        data: list[bytes] = []
+        data: list[str] = []
         keys: list[str] = []
 
         images, labels = next(iter(self._dataloader))

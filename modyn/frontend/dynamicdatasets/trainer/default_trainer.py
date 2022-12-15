@@ -4,6 +4,7 @@ from tqdm import tqdm
 import torch
 import logging
 import sys
+import Typing
 
 import yaml
 
@@ -16,7 +17,7 @@ class DefaultTrainer(Trainer):
     def __init__(self, config: dict):
         super().__init__(config)
 
-    def _train(self):
+    def _train(self) -> Typing.any:
         logging.info('Training with Default Trainer')
         since = time.time()
 
@@ -65,8 +66,7 @@ class DefaultTrainer(Trainer):
 
                 epoch_loss = running_loss / \
                     len(self._dataloaders[phase].dataset)
-                epoch_acc = running_corrects.double(
-                ) / len(self._dataloaders[phase].dataset)
+                epoch_acc = float(running_corrects) / len(self._dataloaders[phase].dataset)
 
                 logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(
                     phase, epoch_loss, epoch_acc))

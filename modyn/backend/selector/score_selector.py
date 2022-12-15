@@ -6,7 +6,7 @@ class ScoreSelector(Selector):
             self,
             training_id: int,
             training_set_size: int
-    ) -> list():
+    ) -> list:
         sample_keys = []
         for i in range(training_set_size):
             sample_keys.append('key - ' + str(i))

@@ -34,7 +34,9 @@ jobs:
     - name: pip
       run: pip install -r dev-requirements.txt
     - name: mypy
-      run: mypy modyn
+      run: |
+        mypy --version
+        mypy modyn
 
   unittests:
     runs-on: ubuntu-latest

@@ -4,7 +4,7 @@ import psycopg2
 
 class Selector(ABC):
 
-    _config = None
+    _config: dict = dict()
     _con = None
 
     _create_trainings_table_sql = '''CREATE TABLE IF NOT EXISTS trainings (
@@ -51,19 +51,19 @@ class Selector(ABC):
             self,
             training_id: int,
             training_set_size: int
-    ) -> list[int]:
+    ) -> list[str]:
         """
         Selects a new training set of samples for the given training id. Samples should be selected from
         the new data queue service or the metadata service
 
         Returns:
-            list(int): the training sample keys for the newly selected training_set
+            list(str): the training sample keys for the newly selected training_set
         """
         raise NotImplementedError
 
     def _insert_training_samples(
             self,
-            training_samples: list[int],
+            training_samples: list[str],
             training_id: int,
             training_set_number: int) -> None:
         """
@@ -92,13 +92,13 @@ class Selector(ABC):
             training_id: int,
             training_set_number: int,
             training_set_size: int,
-    ) -> list[int]:
+    ) -> list[str]:
         """
         Create a new training set of samples for the given training id. New samples are selected from
         the select_new_samples method and are inserted into the database for the given set number.
 
         Returns:
-            list(int): the training sample keys for the newly prepared training_set
+            list(str): the training sample keys for the newly prepared training_set
         """
         training_samples = self._select_new_training_samples(training_id, training_set_size)
 
@@ -112,8 +112,8 @@ class Selector(ABC):
     def _get_training_set_partition(
             self,
             training_id: int,
-            training_samples: list[int],
-            worker_id: int) -> list[int]:
+            training_samples: list[str],
+            worker_id: int) -> list[str]:
         """
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id
@@ -168,7 +168,7 @@ class Selector(ABC):
 
         return training_set_size, num_workers
 
-    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple[list[int], bool]:
+    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple[list[str], bool]:
         """
         For a given training_set and training_set_number, fetch the pre-calculated training set from
         the database, if it has been calculated.
@@ -190,7 +190,7 @@ class Selector(ABC):
         else:
             return [], False
 
-    def _create_or_fetch_existing_set(self, training_id: int, training_set_number: int) -> list[int]:
+    def _create_or_fetch_existing_set(self, training_id: int, training_set_number: int) -> list[str]:
         """
         For a given training_set and training_set_number, fetch the pre-calculated training set from
         the database. In case the set has not yet been calculated, calculate it.
@@ -208,7 +208,7 @@ class Selector(ABC):
         return training_samples
 
     def get_sample_keys(self, training_id: int,
-                        training_set_number: int, worker_id: int) -> list[int]:
+                        training_set_number: int, worker_id: int) -> list[str]:
         """
         For a given training_id, training_set_number and worker_id, it returns a subset of sample
         keys so that the data can be queried from storage.

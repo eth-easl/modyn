@@ -7,7 +7,7 @@ import yaml
 from config import dynamic_module_import
 
 
-def serve(config: dict):
+def serve(config: dict) -> None:
     if (config['storage']['data_source']['enabled']):
         source_module = dynamic_module_import('storage.datasource')
         source = getattr(

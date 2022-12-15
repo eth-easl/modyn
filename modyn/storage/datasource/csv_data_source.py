@@ -19,7 +19,7 @@ class CSVDataSource(BaseSource):
                 chunksize=self._config['storage']['data_source']['batch_size']))
 
     def get_next(self, limit: int) -> tuple[list[str], list[str]]:
-        data: list[bytes] = []
+        data: list[str] = []
         keys: list[str] = []
 
         df = next(self._dataloader, None)

@@ -22,7 +22,7 @@ class BaseSource(ABC):
         """
         raise NotImplementedError
 
-    def add_to_storage(self, keys: list[str], data: list[str]):
+    def add_to_storage(self, keys: list[str], data: list[str]) -> None:
         """
         Add data to the storage
         """
@@ -33,7 +33,7 @@ class BaseSource(ABC):
         storage_stub = StorageStub(storage_channel)
         storage_stub.Put(PutRequest(keys=keys, value=data))
 
-    def run(self):
+    def run(self) -> None:
         """
         Run the source
         """

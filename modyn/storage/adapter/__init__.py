@@ -2,7 +2,6 @@
 TODO: Describe what is in this directory/submodule.
 """
 # flake8: noqa
-from .dbm_adapter import DBMAdapter
 from .s3_adapter import S3Adapter
 from .postgresql_adapter import PostgreSQLAdapter
 from .sqlite_adapter import SQLiteAdapter

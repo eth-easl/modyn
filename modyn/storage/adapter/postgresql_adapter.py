@@ -37,16 +37,12 @@ class PostgreSQLAdapter(BaseAdapter):
         self.__cursor.execute(
             "SELECT data FROM storage WHERE key IN %s", (tuple(keys),))
         data = self.__cursor.fetchall()
-        data = [d[0] for d in data]
-        # TODO(vGsteiger): Invalid typing here:
-        # modyn/storage/adapter/postgresql_adapter.py:44:
-        # error: Incompatible return value type
-        # (got "List[Tuple[Any, ...]]", expected "List[str]")
+        return_data: list[str] = [d[0] for d in data]
 
-        if data is None:
+        if return_data is None:
             return None
         else:
-            return data
+            return return_data
 
     def put(self, key: list[str], data: list[str]) -> None:
         for i in range(len(key)):
@@ -60,16 +56,11 @@ class PostgreSQLAdapter(BaseAdapter):
         self.__cursor.execute(
             'SELECT key FROM storage WHERE queried = false')
         keys = self.__cursor.fetchall()
-        keys = [k[0] for k in keys]
-        if len(keys) > 0:
+        return_keys: list[str] = [k[0] for k in keys]
+        if len(return_keys) > 0:
             self.__cursor.execute(
                 'UPDATE storage SET queried = true WHERE key IN %s',
-                (tuple(keys),))
+                (tuple(return_keys),))
             self.__con.commit()
 
-        # TODO(vGsteiger): Invalid typing here:
-        # modyn/storage/adapter/postgresql_adapter.py:64:
-        # error: Incompatible return value type
-        # (got "List[Tuple[Any, ...]]", expected "List[str]")
-
-        return keys
+        return return_keys
