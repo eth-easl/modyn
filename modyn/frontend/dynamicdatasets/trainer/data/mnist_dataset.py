@@ -1,36 +1,40 @@
 from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision import datasets as dts
+import torch.nn.Module
+import torch.Tesnor
+from typing import Optional
 
 
 class MNISTDataset(Dataset):
-    def __init__(self, x, y, augmentation):
+    # TODO(roxanastiuca): please check the typing in this class. This class is never used currently.
+
+    def __init__(self, x: list, y: list, augmentation: torch.nn.Module):
         self.x = x
         self.y = y
         self.augmentation = augmentation
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.x)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> torch.Tensor:
         if self.augmentation is not None:
             return self.augmentation(self.x[idx]), self.y[idx]
         elif self.y is None:
             return [self.x[idx]]
         return self.x[idx], self.y[idx]
 
-    def is_task_based(self):
+    def is_task_based(self) -> bool:
         return False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'MNIST-Normal'
 
 
 def get_mnist_dataset(
-        train_aug=None,
-        val_aug=None,
-        version='normal',
-        configs=None):
+        train_aug: Optional[torch.nn.Module] = None,
+        val_aug: Optional[torch.nn.Module] = None,
+        version: str = 'normal') -> dict:
     if train_aug is None:
         train_aug = transforms.Compose([
             transforms.RandomAffine(degrees=30),

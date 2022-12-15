@@ -11,7 +11,7 @@ This assumes python 3.6+ is installed.
 First move to the directory where you want to generate the python files.
 
 Then run the following command:
-`python -m grpc_tools.protoc -I../../protos --python_out=. --pyi_out=. --grpc_python_out=. ../../protos/[component_name].proto`
+`python -m grpc_tools.protoc -I../../protos --python_out=. --grpc_python_out=. --mypy_out=. ../../protos/[component_name].proto`
 
 This will generate the following files:
 - [component_name]_pb2.py

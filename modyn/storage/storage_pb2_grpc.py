@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from storage import storage_pb2 as storage__pb2
+import storage_pb2 as storage__pb2
 
 
 class StorageStub(object):
@@ -75,6 +75,8 @@ def add_StorageServicer_to_server(servicer, server):
         'storage.Storage', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
+ # This class is part of an EXPERIMENTAL API.
+
 
 class Storage(object):
     """Missing associated documentation comment in .proto file."""
@@ -90,20 +92,11 @@ class Storage(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/storage.Storage/Get',
-            storage__pb2.GetRequest.SerializeToString,
-            storage__pb2.GetResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/storage.Storage/Get',
+                                             storage__pb2.GetRequest.SerializeToString,
+                                             storage__pb2.GetResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Query(request,
@@ -116,20 +109,11 @@ class Storage(object):
               wait_for_ready=None,
               timeout=None,
               metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/storage.Storage/Query',
-            storage__pb2.QueryRequest.SerializeToString,
-            storage__pb2.QueryResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/storage.Storage/Query',
+                                             storage__pb2.QueryRequest.SerializeToString,
+                                             storage__pb2.QueryResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Put(request,
@@ -142,17 +126,8 @@ class Storage(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/storage.Storage/Put',
-            storage__pb2.PutRequest.SerializeToString,
-            storage__pb2.PutResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/storage.Storage/Put',
+                                             storage__pb2.PutRequest.SerializeToString,
+                                             storage__pb2.PutResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

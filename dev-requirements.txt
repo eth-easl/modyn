@@ -2,3 +2,7 @@ pytest
 pytest-cov
 flake8
 pytest-html
+mypy
+types-protobuf
+types-psycopg2
+types-PyYAML

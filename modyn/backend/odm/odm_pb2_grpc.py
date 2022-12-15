@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import backend.odm.odm_pb2 as odm__pb2
+import odm_pb2 as odm__pb2
 
 
 class ODMStub(object):
@@ -107,6 +107,8 @@ def add_ODMServicer_to_server(servicer, server):
         'odm.ODM', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
+ # This class is part of an EXPERIMENTAL API.
+
 
 class ODM(object):
     """Missing associated documentation comment in .proto file."""
@@ -122,20 +124,11 @@ class ODM(object):
                   wait_for_ready=None,
                   timeout=None,
                   metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/odm.ODM/GetByKeys',
-            odm__pb2.GetByKeysRequest.SerializeToString,
-            odm__pb2.GetResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/odm.ODM/GetByKeys',
+                                             odm__pb2.GetByKeysRequest.SerializeToString,
+                                             odm__pb2.GetResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def GetByQuery(request,
@@ -148,20 +141,11 @@ class ODM(object):
                    wait_for_ready=None,
                    timeout=None,
                    metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/odm.ODM/GetByQuery',
-            odm__pb2.GetByQueryRequest.SerializeToString,
-            odm__pb2.GetResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/odm.ODM/GetByQuery',
+                                             odm__pb2.GetByQueryRequest.SerializeToString,
+                                             odm__pb2.GetResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def GetKeysByQuery(request,
@@ -174,20 +158,11 @@ class ODM(object):
                        wait_for_ready=None,
                        timeout=None,
                        metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/odm.ODM/GetKeysByQuery',
-            odm__pb2.GetByQueryRequest.SerializeToString,
-            odm__pb2.GetKeysResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/odm.ODM/GetKeysByQuery',
+                                             odm__pb2.GetByQueryRequest.SerializeToString,
+                                             odm__pb2.GetKeysResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Set(request,
@@ -200,20 +175,11 @@ class ODM(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/odm.ODM/Set',
-            odm__pb2.SetRequest.SerializeToString,
-            odm__pb2.SetResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/odm.ODM/Set',
+                                             odm__pb2.SetRequest.SerializeToString,
+                                             odm__pb2.SetResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def DeleteTraining(request,
@@ -226,17 +192,8 @@ class ODM(object):
                        wait_for_ready=None,
                        timeout=None,
                        metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/odm.ODM/DeleteTraining',
-            odm__pb2.DeleteRequest.SerializeToString,
-            odm__pb2.DeleteResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/odm.ODM/DeleteTraining',
+                                             odm__pb2.DeleteRequest.SerializeToString,
+                                             odm__pb2.DeleteResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

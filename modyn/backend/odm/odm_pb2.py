@@ -11,29 +11,29 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\todm.proto\x12\x03odm\"5\n\x10GetByKeysRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\t\"\"\n\x11GetByQueryRequest\x12\r\n\x05query\x18\x01 \x01(\t\"9\n\x0bGetResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x0e\n\x06scores\x18\x02 \x03(\x02\x12\x0c\n\x04\x64\x61ta\x18\x03 \x03(\t\"\x1f\n\x0fGetKeysResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\"M\n\nSetRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\t\x12\x0e\n\x06scores\x18\x03 \x03(\x02\x12\x0c\n\x04\x64\x61ta\x18\x04 \x03(\t\"\r\n\x0bSetResponse\"$\n\rDeleteRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"\x10\n\x0e\x44\x65leteResponse2\xa2\x02\n\x03ODM\x12\x36\n\tGetByKeys\x12\x15.odm.GetByKeysRequest\x1a\x10.odm.GetResponse\"\x00\x12\x38\n\nGetByQuery\x12\x16.odm.GetByQueryRequest\x1a\x10.odm.GetResponse\"\x00\x12@\n\x0eGetKeysByQuery\x12\x16.odm.GetByQueryRequest\x1a\x14.odm.GetKeysResponse\"\x00\x12*\n\x03Set\x12\x0f.odm.SetRequest\x1a\x10.odm.SetResponse\"\x00\x12;\n\x0e\x44\x65leteTraining\x12\x12.odm.DeleteRequest\x1a\x13.odm.DeleteResponse\"\x00\x62\x06proto3')  # noqa: E501
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\todm.proto\x12\x03odm\"5\n\x10GetByKeysRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\t\"\"\n\x11GetByQueryRequest\x12\r\n\x05query\x18\x01 \x01(\t\"9\n\x0bGetResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x0e\n\x06scores\x18\x02 \x03(\x02\x12\x0c\n\x04\x64\x61ta\x18\x03 \x03(\t\"\x1f\n\x0fGetKeysResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\"M\n\nSetRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\t\x12\x0e\n\x06scores\x18\x03 \x03(\x02\x12\x0c\n\x04\x64\x61ta\x18\x04 \x03(\t\"\r\n\x0bSetResponse\"$\n\rDeleteRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"\x10\n\x0e\x44\x65leteResponse2\xa2\x02\n\x03ODM\x12\x36\n\tGetByKeys\x12\x15.odm.GetByKeysRequest\x1a\x10.odm.GetResponse\"\x00\x12\x38\n\nGetByQuery\x12\x16.odm.GetByQueryRequest\x1a\x10.odm.GetResponse\"\x00\x12@\n\x0eGetKeysByQuery\x12\x16.odm.GetByQueryRequest\x1a\x14.odm.GetKeysResponse\"\x00\x12*\n\x03Set\x12\x0f.odm.SetRequest\x1a\x10.odm.SetResponse\"\x00\x12;\n\x0e\x44\x65leteTraining\x12\x12.odm.DeleteRequest\x1a\x13.odm.DeleteResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'odm_pb2', globals())
-if not _descriptor._USE_C_DESCRIPTORS:
+if _descriptor._USE_C_DESCRIPTORS == False:
 
     DESCRIPTOR._options = None
-    _GETBYKEYSREQUEST._serialized_start = 18  # noqa: F821
-    _GETBYKEYSREQUEST._serialized_end = 71  # noqa: F821
-    _GETBYQUERYREQUEST._serialized_start = 73  # noqa: F821
-    _GETBYQUERYREQUEST._serialized_end = 107  # noqa: F821
-    _GETRESPONSE._serialized_start = 109  # noqa: F821
-    _GETRESPONSE._serialized_end = 166  # noqa: F821
-    _GETKEYSRESPONSE._serialized_start = 168  # noqa: F821
-    _GETKEYSRESPONSE._serialized_end = 199  # noqa: F821
-    _SETREQUEST._serialized_start = 201  # noqa: F821
-    _SETREQUEST._serialized_end = 278  # noqa: F821
-    _SETRESPONSE._serialized_start = 280  # noqa: F821
-    _SETRESPONSE._serialized_end = 293  # noqa: F821
-    _DELETEREQUEST._serialized_start = 295  # noqa: F821
-    _DELETEREQUEST._serialized_end = 331  # noqa: F821
-    _DELETERESPONSE._serialized_start = 333  # noqa: F821
-    _DELETERESPONSE._serialized_end = 349  # noqa: F821
-    _ODM._serialized_start = 352  # noqa: F821
-    _ODM._serialized_end = 642  # noqa: F821
+    _GETBYKEYSREQUEST._serialized_start = 18
+    _GETBYKEYSREQUEST._serialized_end = 71
+    _GETBYQUERYREQUEST._serialized_start = 73
+    _GETBYQUERYREQUEST._serialized_end = 107
+    _GETRESPONSE._serialized_start = 109
+    _GETRESPONSE._serialized_end = 166
+    _GETKEYSRESPONSE._serialized_start = 168
+    _GETKEYSRESPONSE._serialized_end = 199
+    _SETREQUEST._serialized_start = 201
+    _SETREQUEST._serialized_end = 278
+    _SETRESPONSE._serialized_start = 280
+    _SETRESPONSE._serialized_end = 293
+    _DELETEREQUEST._serialized_start = 295
+    _DELETEREQUEST._serialized_end = 331
+    _DELETERESPONSE._serialized_start = 333
+    _DELETERESPONSE._serialized_end = 349
+    _ODM._serialized_start = 352
+    _ODM._serialized_end = 642
 # @@protoc_insertion_point(module_scope)

@@ -11,25 +11,25 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\x07storage\"\x1a\n\nGetRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\x1c\n\x0bGetResponse\x12\r\n\x05value\x18\x01 \x03(\t\"\x0e\n\x0cQueryRequest\"\x1d\n\rQueryResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\")\n\nPutRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x03(\t\"\r\n\x0bPutResponse2\xab\x01\n\x07Storage\x12\x32\n\x03Get\x12\x13.storage.GetRequest\x1a\x14.storage.GetResponse\"\x00\x12\x38\n\x05Query\x12\x15.storage.QueryRequest\x1a\x16.storage.QueryResponse\"\x00\x12\x32\n\x03Put\x12\x13.storage.PutRequest\x1a\x14.storage.PutResponse\"\x00\x62\x06proto3')  # noqa: E501
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\x07storage\"\x1a\n\nGetRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\x1c\n\x0bGetResponse\x12\r\n\x05value\x18\x01 \x03(\t\"\x0e\n\x0cQueryRequest\"\x1d\n\rQueryResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\")\n\nPutRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x03(\t\"\r\n\x0bPutResponse2\xab\x01\n\x07Storage\x12\x32\n\x03Get\x12\x13.storage.GetRequest\x1a\x14.storage.GetResponse\"\x00\x12\x38\n\x05Query\x12\x15.storage.QueryRequest\x1a\x16.storage.QueryResponse\"\x00\x12\x32\n\x03Put\x12\x13.storage.PutRequest\x1a\x14.storage.PutResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'storage_pb2', globals())
-if not _descriptor._USE_C_DESCRIPTORS:
+if _descriptor._USE_C_DESCRIPTORS == False:
 
     DESCRIPTOR._options = None
-    _GETREQUEST._serialized_start = 26  # noqa: F821
-    _GETREQUEST._serialized_end = 52  # noqa: F821
-    _GETRESPONSE._serialized_start = 54  # noqa: F821
-    _GETRESPONSE._serialized_end = 82  # noqa: F821
-    _QUERYREQUEST._serialized_start = 84  # noqa: F821
-    _QUERYREQUEST._serialized_end = 98  # noqa: F821
-    _QUERYRESPONSE._serialized_start = 100  # noqa: F821
-    _QUERYRESPONSE._serialized_end = 129  # noqa: F821
-    _PUTREQUEST._serialized_start = 131  # noqa: F821
-    _PUTREQUEST._serialized_end = 172  # noqa: F821
-    _PUTRESPONSE._serialized_start = 174  # noqa: F821
-    _PUTRESPONSE._serialized_end = 187  # noqa: F821
-    _STORAGE._serialized_start = 190  # noqa: F821
-    _STORAGE._serialized_end = 361  # noqa: F821
+    _GETREQUEST._serialized_start = 26
+    _GETREQUEST._serialized_end = 52
+    _GETRESPONSE._serialized_start = 54
+    _GETRESPONSE._serialized_end = 82
+    _QUERYREQUEST._serialized_start = 84
+    _QUERYREQUEST._serialized_end = 98
+    _QUERYRESPONSE._serialized_start = 100
+    _QUERYRESPONSE._serialized_end = 129
+    _PUTREQUEST._serialized_start = 131
+    _PUTREQUEST._serialized_end = 172
+    _PUTRESPONSE._serialized_start = 174
+    _PUTRESPONSE._serialized_end = 187
+    _STORAGE._serialized_start = 190
+    _STORAGE._serialized_end = 361
 # @@protoc_insertion_point(module_scope)

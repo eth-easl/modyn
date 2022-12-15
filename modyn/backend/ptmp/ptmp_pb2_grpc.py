@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import backend.ptmp.ptmp_pb2 as ptmp__pb2
+import ptmp_pb2 as ptmp__pb2
 
 
 class PostTrainingMetadataProcessorStub(object):
@@ -43,6 +43,8 @@ def add_PostTrainingMetadataProcessorServicer_to_server(servicer, server):
         'ptmp.PostTrainingMetadataProcessor', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
+ # This class is part of an EXPERIMENTAL API.
+
 
 class PostTrainingMetadataProcessor(object):
     """Missing associated documentation comment in .proto file."""
@@ -58,17 +60,8 @@ class PostTrainingMetadataProcessor(object):
                                     wait_for_ready=None,
                                     timeout=None,
                                     metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
-            ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
-            ptmp__pb2.PostTrainingMetadataResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
+                                             ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
+                                             ptmp__pb2.PostTrainingMetadataResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

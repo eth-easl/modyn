@@ -38,7 +38,6 @@ class OptimalDatasetMetadata(object):
             'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON odm_storage (training_id)'
         )
         self.__con.commit()
-        self.__con.g
 
     def set(
             self,
@@ -69,7 +68,7 @@ class OptimalDatasetMetadata(object):
         self.__con.commit()
 
     def get_by_keys(
-            self, keys: list[str], training_id: int) -> list[tuple[str, float, str]]:
+            self, keys: list[str], training_id: int) -> tuple[list[str], list[float], list[str]]:
         """
         Get the optimal dataset metadata for a given training and keys.
 
@@ -85,10 +84,12 @@ class OptimalDatasetMetadata(object):
             (tuple(keys),
              training_id))
         data = self.__cursor.fetchall()
-        data = map(list, zip(*data))
-        return data[0], data[1], data[2]
+        return_keys = [d[0] for d in data]
+        scores = [d[1] for d in data]
+        return_data = [d[2] for d in data]
+        return return_keys, scores, return_data
 
-    def get_by_query(self, query: str) -> list[tuple[str, float, str]]:
+    def get_by_query(self, query: str) -> tuple[list[str], list[float], list[str]]:
         """
         Get the optimal dataset metadata for a given training and a executable query.
 
@@ -100,8 +101,10 @@ class OptimalDatasetMetadata(object):
         """
         self.__cursor.execute(query)
         data = self.__cursor.fetchall()
-        data = map(list, zip(*data))
-        return data[0], data[1], data[2]
+        keys = [d[0] for d in data]
+        scores = [d[1] for d in data]
+        return_data = [d[2] for d in data]
+        return keys, scores, return_data
 
     def get_keys_by_query(self, query: str) -> list[str]:
         """
@@ -115,8 +118,8 @@ class OptimalDatasetMetadata(object):
         """
         self.__cursor.execute(query)
         data = self.__cursor.fetchall()
-        data = [d[0] for d in data]
-        return data
+        return_data: list[str] = [d[0] for d in data]
+        return return_data
 
     def delete_training(self, training_id: int) -> None:
         """

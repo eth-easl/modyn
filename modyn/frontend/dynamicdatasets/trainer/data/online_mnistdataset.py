@@ -6,7 +6,7 @@ import json
 
 class OnlineMNISTDataset(OnlineDataset):
 
-    def _process(self, data):
+    def _process(self, data: list) -> list:
         """
         Override to add custom data processing.
 
