@@ -5,8 +5,11 @@ This is the Training Supervisor submodule.
 The training supervisor is the brain of Modyn. ML engineers start the supervisor using `./modyn-supervisor pipeline.yaml config.yaml`″.
 The first configuration file describes the pipeline setup, while the second configuration file describes the system setup.
 
-Optional command line flag: `--experiment-mode`. Requires `initial_mode = replay` in the pipeline config. 
-This mode does not trigger on new data but just replays data and ends after replay to run a simulation.
+Optional command line flag: `--experiment-start-replay-at TIMESTAMP`.
+This mode does not trigger on new data but just replays data starting at `TIMESTAMP` and ends all training afterwards.
+`TIMESTAMP` can be 0 and then just replays all data.
+In case of `initial_mode == train_until` with `now` as timestamp or a timestamp that is higher than the replay timestamp in the pipeline config we fail because then the initialization will conflict with the experiment.
+We need to think about how communication will work in this case, probably the supervisor will need to tell the storage to replay the data in order to ensure correct communication with the selector etc. TBD
 
 ## How a pipeline is configured
 
@@ -17,8 +20,7 @@ This mode does not trigger on new data but just replays data and ends after repl
     - multi GPU (with the various suboptions, parameter server, all reduce, ...)
     - num workers
     - augmentation pipeline
-    - epochs
-    - lr / lr scheduling / ...
+    - lr / lr scheduling / ... (TODO think about the semantics of this in dynamic settings)
     - batch size
     - model config, if applicable, such as number of channels etc, passed directly to model.
 - Dataset source and identifier
@@ -34,7 +36,7 @@ This mode does not trigger on new data but just replays data and ends after repl
     - Baselines, GDumb, ... with strategy subconfig passed directly to strategy, if applicable.
 - Do we do an initial pass to train on all existing data or not?
     - If not, do we replay the existing data as a stream for our training strategy (requires that strategy is not retraining)
-    - maybe: `initial_mode = [train_on_everything, replay, ignore]`
+    - maybe: `initial_mode = [replay, ignore, train_until]` where train_until expects a subconfig that is either a timestamp or `now` and tells on which data we should train initially
 - Logging
     - what to log, where to log
 - Evaluation tasks?
