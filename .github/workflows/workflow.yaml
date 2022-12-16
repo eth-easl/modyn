@@ -1,6 +1,5 @@
 name: Python package
-# TODO(MaxiBoether): remove push before merge
-on: [push, pull_request]
+on: [pull_request]
 
 defaults:
   run:
