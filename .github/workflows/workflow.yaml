@@ -76,6 +76,23 @@ jobs:
     - name: Comment coverage
       uses: coroo/pytest-coverage-commentator@v1.0.2
 
+# TODO(create issue): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
+# Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
+  coverage-newarchitecture:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.10'
+    - name: Pytest
+      run: |
+        pip install -r dev-requirements.txt
+        pip install -r modyn/backend/requirements.txt
+        pip install -e .
+        pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
 
   integrationtests:
       runs-on: ubuntu-latest
