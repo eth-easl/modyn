@@ -3,7 +3,7 @@ import yaml
 import argparse
 import pathlib
 
-from modyn.backend.supervisor.supervisor import Supervisor
+from modyn.backend.supervisor import Supervisor
 
 logging.basicConfig(level=logging.NOTSET, format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d:%H:%M:%S')

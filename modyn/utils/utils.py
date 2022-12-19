@@ -1,5 +1,6 @@
 from types import ModuleType
-
+import modyn.models
+import inspect
 
 def dynamic_module_import(name: str) -> ModuleType:
     """
@@ -16,3 +17,7 @@ def dynamic_module_import(name: str) -> ModuleType:
     for comp in components[1:]:
         mod = getattr(mod, comp)
     return mod
+
+def model_available(model_id: str) -> bool:
+    available_models = list(x[0] for x in inspect.getmembers(modyn.models,inspect.isclass))
+    return model_id in available_models
