@@ -1,11 +1,8 @@
 import typing
 import logging
-from jsonschema import validate
-from jsonschema.exceptions import ValidationError
-import yaml
 import os
 import pathlib
-from modyn.utils import model_available
+from modyn.utils import model_available, validate_yaml
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 
 logger = logging.getLogger(__name__)
@@ -34,15 +31,12 @@ class Supervisor():
     def validate_pipeline_config_schema(self) -> bool:
         # TODO(MaxiBoether): Actually write the schema.
         schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "pipeline-schema.yaml"
-        assert schema_path.is_file(), "Did not find pipeline configuration schema."
-        with open(schema_path, "r") as f:
-            pipeline_schema = yaml.safe_load(f)
+        valid_yaml, exception = validate_yaml(self.pipeline_config, schema_path)
 
-        try:
-            validate(self.pipeline_config, pipeline_schema)
-        except ValidationError as e:
-            logger.error(f"Error while validating pipeline configuration file for schema-compliance: {e.message}")
-            logger.error(e)
+        if not valid_yaml:
+            logger.error(
+                f"Error while validating pipeline configuration file for schema-compliance: {exception.message}")
+            logger.error(exception)
             return False
 
         return True

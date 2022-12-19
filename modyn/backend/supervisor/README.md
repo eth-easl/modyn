@@ -2,7 +2,8 @@
 
 This is the Training Supervisor submodule. 
 
-The training supervisor is the brain of Modyn. ML engineers start the supervisor using `./modyn-supervisor pipeline.yaml config.yaml`″.
+The training supervisor is the brain of Modyn. ML engineers start the supervisor using `modyn-supervisor pipeline.yaml config.yaml`″. 
+The script should be in PATH after installing the `modyn` module.
 The first configuration file describes the pipeline setup, while the second configuration file describes the system setup.
 
 Optional command line flag: `--start-replay-at TIMESTAMP`.

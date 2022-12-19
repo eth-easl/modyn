@@ -1,4 +1,4 @@
 #!/bin/bash
-SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
 # TODO(#31): activate conda environment here
-python $SCRIPTPATH/entrypoint.py "$@"
+python $MODYNPATH/backend/supervisor/entrypoint.py "$@"

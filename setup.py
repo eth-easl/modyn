@@ -68,6 +68,7 @@ setup(
     # 'mycli=mymodule:cli'
     # entry_points={'console_scripts': ["script_name=modyn.scripts:main"],
     #              },
+    scripts=['modyn/backend/supervisor/modyn-supervisor'],
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
