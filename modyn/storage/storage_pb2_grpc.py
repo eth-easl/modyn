@@ -15,20 +15,25 @@ class StorageStub(object):
             channel: A grpc.Channel.
         """
         self.Get = channel.unary_unary(
-            '/storage.Storage/Get',
-            request_serializer=storage__pb2.GetRequest.SerializeToString,
-            response_deserializer=storage__pb2.GetResponse.FromString,
-        )
+                '/modyn.storage.Storage/Get',
+                request_serializer=storage__pb2.GetRequest.SerializeToString,
+                response_deserializer=storage__pb2.GetResponse.FromString,
+                )
         self.Query = channel.unary_unary(
-            '/storage.Storage/Query',
-            request_serializer=storage__pb2.QueryRequest.SerializeToString,
-            response_deserializer=storage__pb2.QueryResponse.FromString,
-        )
+                '/modyn.storage.Storage/Query',
+                request_serializer=storage__pb2.QueryRequest.SerializeToString,
+                response_deserializer=storage__pb2.QueryResponse.FromString,
+                )
         self.Put = channel.unary_unary(
-            '/storage.Storage/Put',
-            request_serializer=storage__pb2.PutRequest.SerializeToString,
-            response_deserializer=storage__pb2.PutResponse.FromString,
-        )
+                '/modyn.storage.Storage/Put',
+                request_serializer=storage__pb2.PutRequest.SerializeToString,
+                response_deserializer=storage__pb2.PutResponse.FromString,
+                )
+        self.CheckAvailability = channel.unary_unary(
+                '/modyn.storage.Storage/CheckAvailability',
+                request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
+                response_deserializer=storage__pb2.DatasetAvailableResponse.FromString,
+                )
 
 
 class StorageServicer(object):
@@ -52,32 +57,42 @@ class StorageServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CheckAvailability(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StorageServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        'Get': grpc.unary_unary_rpc_method_handler(
-            servicer.Get,
-            request_deserializer=storage__pb2.GetRequest.FromString,
-            response_serializer=storage__pb2.GetResponse.SerializeToString,
-        ),
-        'Query': grpc.unary_unary_rpc_method_handler(
-            servicer.Query,
-            request_deserializer=storage__pb2.QueryRequest.FromString,
-            response_serializer=storage__pb2.QueryResponse.SerializeToString,
-        ),
-        'Put': grpc.unary_unary_rpc_method_handler(
-            servicer.Put,
-            request_deserializer=storage__pb2.PutRequest.FromString,
-            response_serializer=storage__pb2.PutResponse.SerializeToString,
-        ),
+            'Get': grpc.unary_unary_rpc_method_handler(
+                    servicer.Get,
+                    request_deserializer=storage__pb2.GetRequest.FromString,
+                    response_serializer=storage__pb2.GetResponse.SerializeToString,
+            ),
+            'Query': grpc.unary_unary_rpc_method_handler(
+                    servicer.Query,
+                    request_deserializer=storage__pb2.QueryRequest.FromString,
+                    response_serializer=storage__pb2.QueryResponse.SerializeToString,
+            ),
+            'Put': grpc.unary_unary_rpc_method_handler(
+                    servicer.Put,
+                    request_deserializer=storage__pb2.PutRequest.FromString,
+                    response_serializer=storage__pb2.PutResponse.SerializeToString,
+            ),
+            'CheckAvailability': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckAvailability,
+                    request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
+                    response_serializer=storage__pb2.DatasetAvailableResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        'storage.Storage', rpc_method_handlers)
+            'modyn.storage.Storage', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
+
  # This class is part of an EXPERIMENTAL API.
-
-
 class Storage(object):
     """Missing associated documentation comment in .proto file."""
 
@@ -92,28 +107,28 @@ class Storage(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/storage.Storage/Get',
-                                             storage__pb2.GetRequest.SerializeToString,
-                                             storage__pb2.GetResponse.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/Get',
+            storage__pb2.GetRequest.SerializeToString,
+            storage__pb2.GetResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Query(request,
-              target,
-              options=(),
-              channel_credentials=None,
-              call_credentials=None,
-              insecure=False,
-              compression=None,
-              wait_for_ready=None,
-              timeout=None,
-              metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/storage.Storage/Query',
-                                             storage__pb2.QueryRequest.SerializeToString,
-                                             storage__pb2.QueryResponse.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/Query',
+            storage__pb2.QueryRequest.SerializeToString,
+            storage__pb2.QueryResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Put(request,
@@ -126,8 +141,25 @@ class Storage(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/storage.Storage/Put',
-                                             storage__pb2.PutRequest.SerializeToString,
-                                             storage__pb2.PutResponse.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/Put',
+            storage__pb2.PutRequest.SerializeToString,
+            storage__pb2.PutResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def CheckAvailability(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/CheckAvailability',
+            storage__pb2.DatasetAvailableRequest.SerializeToString,
+            storage__pb2.DatasetAvailableResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

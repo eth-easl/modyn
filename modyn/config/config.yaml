@@ -11,9 +11,7 @@ storage:
     batch_interval: 5
     path: "modyn/storage/datasource/data/sample_train.csv"
   adapter: "PostgreSQLAdapter"
-  port: "50051"
-  ports:
-    - 50051:50051
+  port: "50051" # TODO: synchronize this with docker-compose file. this was off
   hostname: "localhost"
   dbm:
     path: "dbm"

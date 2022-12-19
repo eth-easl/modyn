@@ -6,8 +6,9 @@ import pathlib
 from modyn.backend.supervisor import Supervisor
 
 logging.basicConfig(level=logging.NOTSET, format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d:%H:%M:%S')
+                    datefmt='%Y-%m-%d:%H:%M:%S')
 logger = logging.getLogger(__name__)
+
 
 def setup_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Modyn Training Supervisor')
@@ -30,7 +31,7 @@ if __name__ == '__main__':
 
     with open(args.pipeline, "r") as f:
         pipeline_config = yaml.safe_load(f)
-    
+
     with open(args.config, "r") as f:
         modyn_config = yaml.safe_load(f)
 

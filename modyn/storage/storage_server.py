@@ -10,12 +10,12 @@ import yaml
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse  # noqa: E501, E402
+from storage.storage_pb2 import DatasetAvailableRequest, DatasetAvailableResponse, GetRequest, GetResponse, PutRequest, PutResponse, QueryRequest, QueryResponse  # noqa: E501, E402
 from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server  # noqa: E402
 
 
 logging.basicConfig(level=logging.NOTSET, format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-    datefmt='%Y-%m-%d:%H:%M:%S')
+                    datefmt='%Y-%m-%d:%H:%M:%S')
 logger = logging.getLogger(__name__)
 
 
@@ -44,6 +44,12 @@ class StorageGRPCServer(StorageServicer):
         logger.info("Storage: Putting data")
         self.__adapter.put(request.keys, request.value)
         return PutResponse()
+
+    def CheckAvailability(self, request: DatasetAvailableRequest, context: grpc.ServicerContext) -> DatasetAvailableResponse:
+        #TODO(#44): Implement this.
+        logger.warn(
+            f"Storage: Dataset availability request for dataset {request.dataset_id}. Not yet implemented => returning True")
+        return DatasetAvailableResponse(available=True)
 
 
 def serve(config_dict: dict) -> None:

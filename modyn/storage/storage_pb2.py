@@ -11,25 +11,31 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\x07storage\"\x1a\n\nGetRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\x1c\n\x0bGetResponse\x12\r\n\x05value\x18\x01 \x03(\t\"\x0e\n\x0cQueryRequest\"\x1d\n\rQueryResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\")\n\nPutRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x03(\t\"\r\n\x0bPutResponse2\xab\x01\n\x07Storage\x12\x32\n\x03Get\x12\x13.storage.GetRequest\x1a\x14.storage.GetResponse\"\x00\x12\x38\n\x05Query\x12\x15.storage.QueryRequest\x1a\x16.storage.QueryResponse\"\x00\x12\x32\n\x03Put\x12\x13.storage.PutRequest\x1a\x14.storage.PutResponse\"\x00\x62\x06proto3')
+
+
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\rmodyn.storage\"\x1a\n\nGetRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\"\x1c\n\x0bGetResponse\x12\r\n\x05value\x18\x01 \x03(\t\"\x0e\n\x0cQueryRequest\"\x1d\n\rQueryResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\")\n\nPutRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x03(\t\"\r\n\x0bPutResponse\"-\n\x17\x44\x61tasetAvailableRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\"-\n\x18\x44\x61tasetAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\x32\xb7\x02\n\x07Storage\x12>\n\x03Get\x12\x19.modyn.storage.GetRequest\x1a\x1a.modyn.storage.GetResponse\"\x00\x12\x44\n\x05Query\x12\x1b.modyn.storage.QueryRequest\x1a\x1c.modyn.storage.QueryResponse\"\x00\x12>\n\x03Put\x12\x19.modyn.storage.PutRequest\x1a\x1a.modyn.storage.PutResponse\"\x00\x12\x66\n\x11\x43heckAvailability\x12&.modyn.storage.DatasetAvailableRequest\x1a\'.modyn.storage.DatasetAvailableResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'storage_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
-    DESCRIPTOR._options = None
-    _GETREQUEST._serialized_start = 26
-    _GETREQUEST._serialized_end = 52
-    _GETRESPONSE._serialized_start = 54
-    _GETRESPONSE._serialized_end = 82
-    _QUERYREQUEST._serialized_start = 84
-    _QUERYREQUEST._serialized_end = 98
-    _QUERYRESPONSE._serialized_start = 100
-    _QUERYRESPONSE._serialized_end = 129
-    _PUTREQUEST._serialized_start = 131
-    _PUTREQUEST._serialized_end = 172
-    _PUTRESPONSE._serialized_start = 174
-    _PUTRESPONSE._serialized_end = 187
-    _STORAGE._serialized_start = 190
-    _STORAGE._serialized_end = 361
+  DESCRIPTOR._options = None
+  _GETREQUEST._serialized_start=32
+  _GETREQUEST._serialized_end=58
+  _GETRESPONSE._serialized_start=60
+  _GETRESPONSE._serialized_end=88
+  _QUERYREQUEST._serialized_start=90
+  _QUERYREQUEST._serialized_end=104
+  _QUERYRESPONSE._serialized_start=106
+  _QUERYRESPONSE._serialized_end=135
+  _PUTREQUEST._serialized_start=137
+  _PUTREQUEST._serialized_end=178
+  _PUTRESPONSE._serialized_start=180
+  _PUTRESPONSE._serialized_end=193
+  _DATASETAVAILABLEREQUEST._serialized_start=195
+  _DATASETAVAILABLEREQUEST._serialized_end=240
+  _DATASETAVAILABLERESPONSE._serialized_start=242
+  _DATASETAVAILABLERESPONSE._serialized_end=287
+  _STORAGE._serialized_start=290
+  _STORAGE._serialized_end=601
 # @@protoc_insertion_point(module_scope)

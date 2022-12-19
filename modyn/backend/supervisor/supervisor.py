@@ -10,6 +10,7 @@ from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 
 logger = logging.getLogger(__name__)
 
+
 class Supervisor():
     def __init__(self, pipeline_config: dict, modyn_config: dict, replay_at: typing.Optional[int]) -> None:
         self.pipeline_config = pipeline_config
@@ -21,7 +22,6 @@ class Supervisor():
         logging.info("Setting up connections to cluster components.")
         self.grpc = GRPCHandler(modyn_config)
 
-
         if not self.validate_system():
             raise ValueError("Invalid system configuration")
 
@@ -30,7 +30,6 @@ class Supervisor():
         else:
             self.experiment_mode = True
             self.replay_at = replay_at
-
 
     def validate_pipeline_config_schema(self) -> bool:
         # TODO(MaxiBoether): Actually write the schema.
@@ -62,8 +61,13 @@ class Supervisor():
         return self.validate_pipeline_config_schema() and self.validate_pipeline_config_content()
 
     def dataset_available(self) -> bool:
-        return True
-        #return self.grpc.storage.
+        dataset_id = self.pipeline_config["data"]["dataset_id"]
+        available = self.grpc.dataset_available(dataset_id)
+
+        if not available:
+            logger.error(f"Dataset {dataset_id} not available at storage.")
+
+        return available
 
     def trainer_available(self) -> bool:
         return True
@@ -91,5 +95,5 @@ class Supervisor():
         else:
             # TODO(MaxiBoether): think about data coming in between initial pass and pulling. probably just pass timestamp before initial pass started to pull and then get notified about that data
             self.wait_for_new_data()
-        
+
         self.end_pipeline()
