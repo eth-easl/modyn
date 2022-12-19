@@ -1,5 +1,5 @@
 from modyn.storage.storage_pb2_grpc import StorageStub
-from modyn.storage.storage_pb2 import DatasetAvailableRequest, DatasetAvailableResponse
+from modyn.storage.storage_pb2 import DatasetAvailableRequest
 
 import grpc
 import logging

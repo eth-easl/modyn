@@ -14,7 +14,8 @@ from storage.storage_pb2 import DatasetAvailableRequest, DatasetAvailableRespons
 from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server  # noqa: E402
 
 
-logging.basicConfig(level=logging.NOTSET, format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+logging.basicConfig(level=logging.NOTSET,
+                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d:%H:%M:%S')
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,11 @@ class StorageGRPCServer(StorageServicer):
         self.__adapter.put(request.keys, request.value)
         return PutResponse()
 
-    def CheckAvailability(self, request: DatasetAvailableRequest, context: grpc.ServicerContext) -> DatasetAvailableResponse:
-        #TODO(#44): Implement this.
-        logger.warn(
-            f"Storage: Dataset availability request for dataset {request.dataset_id}. Not yet implemented => returning True")
+    def CheckAvailability(self, request: DatasetAvailableRequest,
+                          context: grpc.ServicerContext) -> DatasetAvailableResponse:
+        # TODO(#44): Implement this.
+        logger.warn(f"Storage: Dataset availability request for dataset {request.dataset_id}.' \
+            ' Not yet implemented => returning True")
         return DatasetAvailableResponse(available=True)
 
 

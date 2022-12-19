@@ -1,4 +1,4 @@
-from modyn.backend.supervisor.supervisor import Supervisor
+from modyn.backend.supervisor import Supervisor
 
 
 def test_initialization() -> None:

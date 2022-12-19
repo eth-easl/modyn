@@ -5,7 +5,8 @@ import pathlib
 
 from modyn.backend.supervisor import Supervisor
 
-logging.basicConfig(level=logging.NOTSET, format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+logging.basicConfig(level=logging.NOTSET,
+                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d:%H:%M:%S')
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,9 @@ def setup_argparser() -> argparse.ArgumentParser:
     parser.add_argument('config', type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
 
     parser.add_argument('--start-replay-at', type=int, action="store",
-                        help='This mode does not trigger on new data but just replays data starting at `TIMESTAMP` and ends all training afterwards. `TIMESTAMP` can be 0 and then just replays all data. See README for more.')
+                        help='This mode does not trigger on new data but just '
+                        'replays data starting at `TIMESTAMP` and ends all training afterwards. '
+                        '`TIMESTAMP` can be 0 and then just replays all data. See README for more.')
 
     return parser
 

@@ -53,6 +53,10 @@ class Supervisor():
             logger.error(f"Model {model_id} is not available within Modyn.")
             return False
 
+        if self.pipeline_config["training"]["gpus"] != 1:
+            logger.error("Currently, only single GPU training is supported.")
+            return False
+
         # TODO(MaxiBoether): More checks.
 
         return True
@@ -70,6 +74,7 @@ class Supervisor():
         return available
 
     def trainer_available(self) -> bool:
+        # TODO(MaxiBoether): implement
         return True
 
     def validate_system(self) -> bool:
@@ -93,7 +98,9 @@ class Supervisor():
         if self.experiment_mode:
             self.replay_data()
         else:
-            # TODO(MaxiBoether): think about data coming in between initial pass and pulling. probably just pass timestamp before initial pass started to pull and then get notified about that data
+            # TODO(MaxiBoether): think about data coming in between initial pass and pulling.
+            # probably just pass timestamp before initial pass started to pull and
+            # then get notified about that data
             self.wait_for_new_data()
 
         self.end_pipeline()
