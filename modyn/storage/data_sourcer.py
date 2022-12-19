@@ -4,12 +4,12 @@ import logging
 
 import yaml
 
-from config import dynamic_module_import
+from modyn.utils import dynamic_module_import
 
 
 def serve(config: dict) -> None:
     if (config['storage']['data_source']['enabled']):
-        source_module = dynamic_module_import('storage.datasource')
+        source_module = dynamic_module_import('modyn.storage.datasource')
         source = getattr(
             source_module,
             config['storage']['data_source']['type'])(config)

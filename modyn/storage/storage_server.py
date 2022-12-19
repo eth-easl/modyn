@@ -1,4 +1,4 @@
-from utils import dynamic_module_import
+from modyn.utils import dynamic_module_import
 from concurrent import futures
 import os
 import sys
@@ -14,7 +14,9 @@ from storage.storage_pb2 import GetRequest, GetResponse, PutRequest, PutResponse
 from storage.storage_pb2_grpc import StorageServicer, add_StorageServicer_to_server  # noqa: E402
 
 
-logging.basicConfig(format='%(asctime)s %(message)s')
+logging.basicConfig(level=logging.NOTSET, format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S')
+logger = logging.getLogger(__name__)
 
 
 class StorageGRPCServer(StorageServicer):
@@ -23,23 +25,23 @@ class StorageGRPCServer(StorageServicer):
     def __init__(self, config: dict):
         super().__init__()
 
-        adapter_module = dynamic_module_import('storage.adapter')
+        adapter_module = dynamic_module_import('modyn.storage.adapter')
         self.__adapter = getattr(
             adapter_module,
             config['storage']['adapter'])(config)
 
     def Query(self, request: QueryRequest, context: grpc.ServicerContext) -> QueryResponse:
-        logging.info("Storage: Query for data")
+        logger.info("Storage: Query for data")
         keys = self.__adapter.query()
         return QueryResponse(keys=keys)
 
     def Get(self, request: GetRequest, context: grpc.ServicerContext) -> GetResponse:
-        logging.info("Storage: Getting data")
+        logger.info("Storage: Getting data")
         data = self.__adapter.get(request.keys)
         return GetResponse(value=data)
 
     def Put(self, request: PutRequest, context: grpc.ServicerContext) -> PutResponse:
-        logging.info("Storage: Putting data")
+        logger.info("Storage: Putting data")
         self.__adapter.put(request.keys, request.value)
         return PutResponse()
 
@@ -48,7 +50,7 @@ def serve(config_dict: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_StorageServicer_to_server(
         StorageGRPCServer(config_dict), server)
-    logging.info(
+    logger.info(
         'Starting server. Listening on port .' +
         config_dict['storage']['port'])
     server.add_insecure_port('[::]:' + config_dict['storage']['port'])
@@ -65,5 +67,5 @@ if __name__ == '__main__':
 
     with open(sys.argv[1], "r") as f:
         config = yaml.safe_load(f)
-
+    print("moin")
     serve(config)

@@ -9,10 +9,12 @@ storage:
     type: "CSVDataSource"
     batch_size: 15
     batch_interval: 5
-    path: "storage/datasource/data/sample_train.csv"
+    path: "modyn/storage/datasource/data/sample_train.csv"
   adapter: "PostgreSQLAdapter"
   port: "50051"
-  hostname: "storage"
+  ports:
+    - 50051:50051
+  hostname: "localhost"
   dbm:
     path: "dbm"
   s3:
