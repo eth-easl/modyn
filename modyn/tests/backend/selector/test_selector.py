@@ -4,6 +4,7 @@ from modyn.backend.selector.selector import Selector
 from modyn.backend.selector.base_selector import BaseSelector
 from modyn.backend.selector.gdumb_selector import GDumbSelector
 
+from collections import Counter
 import pytest
 
 # We do not use the parameters in this empty mock constructor.
@@ -78,7 +79,10 @@ def test_base_selector_get_new_training_samples(test_get_from_odm, test_get_from
 @patch.object(Selector, 'get_from_odm')
 @patch.object(Selector, 'get_newqueue_size')
 @patch.object(Selector, 'get_odm_size')
-def test_adaptive_selector_get_new_training_samples(test_get_odm_size, test_get_newqueue_size, test_get_from_odm, test_get_from_newqueue):
+def test_adaptive_selector_get_new_training_samples(test_get_odm_size,
+                                                    test_get_newqueue_size,
+                                                    test_get_from_odm,
+                                                    test_get_from_newqueue):
     test_get_from_newqueue.return_value = ["a"]
     test_get_from_odm.return_value = ["b", "c", "d", "e"]
     test_get_odm_size.return_value = 80
@@ -107,7 +111,7 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_odm):
 
     samples, classes = selector._select_new_training_samples(0, 6)
 
-    assert set(classes) == {1, 1, 2, 2, 3, 3}
+    assert Counter(classes) == Counter([1, 1, 2, 2, 3, 3])
     original_samples = set(zip(all_samples, all_classes))
-    for s, c in zip(samples, classes):
-        assert (s, c) in original_samples
+    for sample, clss in zip(samples, classes):
+        assert (sample, clss) in original_samples

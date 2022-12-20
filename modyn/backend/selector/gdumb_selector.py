@@ -47,5 +47,5 @@ class GDumbSelector(BaseSelector):
 
         return np.concatenate(result_samples), np.concatenate(result_classes)
 
-    def _get_all_odm(self, training_id):
+    def _get_all_odm(self, training_id) -> list[str]:
         raise NotImplementedError
