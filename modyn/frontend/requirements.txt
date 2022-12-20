@@ -1,5 +1,5 @@
 grpcio
-psycopg2
+psycopg2-binary 
 tqdm
 torch
 torchvision

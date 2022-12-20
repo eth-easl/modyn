@@ -134,6 +134,20 @@ class Selector(ABC):
         Creates a new training object in the database with the given training_set_size and num_workers
         Returns:
             The id of the newly created training object
+        Throws:
+            ValueError if training_set_size or num_workers is not positive. 
+        """
+        if num_workers <= 0 or training_set_size <= 0:
+            raise ValueError(f'Tried to register training with {num_workers} workers and {training_set_size} data points.')
+        
+        return self._register_training(training_set_size, num_workers)
+
+    def _register_training(self, training_set_size: int,
+                          num_workers: int) -> int:
+        """
+        Creates a new training object in the database with the given training_set_size and num_workers
+        Returns:
+            The id of the newly created training object
         """
         assert self._con is not None, "No connection established"
 
@@ -216,6 +230,9 @@ class Selector(ABC):
         Returns:
             List of keys for the samples to be returned to that particular worker
         """
+        _, num_workers = self._get_info_for_training(training_id)
+        if worker_id < 0 or worker_id >= num_workers:
+            raise ValueError(f'Training {training_id} has {num_workers} workers, but queried for worker {worker_id}!')
 
         training_samples = self._create_or_fetch_existing_set(training_id, training_set_number)
 
@@ -223,3 +240,45 @@ class Selector(ABC):
             training_id, training_samples, worker_id)
 
         return training_samples_subset
+
+    def get_from_newqueue(self, training_id: int, num_samples: int) -> list[str]:
+        """
+        For a given training_id and number of samples, request that many samples from 
+        the new queue. 
+
+        Returns: 
+            List of keys for the samples in the new queue. 
+        """
+        raise NotImplementedError 
+
+    def get_from_odm(self, training_id: int, num_samples: int) -> list[str]:
+        """
+        For a given training_id and number of samples, request that many samples from 
+        the ODM service. 
+
+        Returns: 
+            List of keys for the samples in the ODM. 
+        """
+        raise NotImplementedError
+
+    def get_newqueue_size(self, training_id: int) -> int:
+        """For a given training_id, return how many samples are in the new queue. 
+
+        Args:
+            training_id (int): the queried training_id
+
+        Returns:
+            int: number of samples in the new queue. 
+        """
+        raise NotImplementedError 
+    
+    def get_odm_size(self, training_id: int) -> int:
+        """For a given training_id, return how many samples are in the ODM. 
+
+        Args:
+            training_id (int): the queried training_id
+
+        Returns:
+            int: number of samples in the ODM
+        """
+        raise NotImplementedError
