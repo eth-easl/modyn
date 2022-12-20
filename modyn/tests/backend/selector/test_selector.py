@@ -4,9 +4,11 @@ from modyn.backend.selector.selector import Selector
 from modyn.backend.selector.base_selector import BaseSelector
 from modyn.backend.selector.gdumb_selector import GDumbSelector
 
-import pytest 
+import pytest
 
 # We do not use the parameters in this empty mock constructor.
+
+
 def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argument
     pass
 
@@ -95,7 +97,7 @@ def test_adaptive_selector_get_new_training_samples(test_get_odm_size, test_get_
 @patch.object(BaseSelector, '__init__', noop_constructor_mock)
 @patch.object(GDumbSelector, '_get_all_odm')
 def test_gdumb_selector_get_new_training_samples(test__get_all_odm):
-    all_samples =  ["a", "b", "c", "d", "e", "f", "g", "h"]
+    all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
     all_classes = [1, 1, 1, 1, 2, 2, 3, 3]
 
     test__get_all_odm.return_value = all_samples, all_classes
@@ -108,8 +110,4 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_odm):
     assert set(classes) == {1, 1, 2, 2, 3, 3}
     original_samples = set(zip(all_samples, all_classes))
     for s, c in zip(samples, classes):
-        assert (s, c) in original_samples 
-
-
-
-
+        assert (s, c) in original_samples

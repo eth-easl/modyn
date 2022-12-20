@@ -2,6 +2,7 @@ import grpc
 
 from modyn.backend.selector.selector import Selector
 
+
 class BaseSelector(Selector):
     def __init__(self, config: dict):
         super().__init__(config)

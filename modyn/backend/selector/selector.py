@@ -138,12 +138,13 @@ class Selector(ABC):
             ValueError if training_set_size or num_workers is not positive. 
         """
         if num_workers <= 0 or training_set_size <= 0:
-            raise ValueError(f'Tried to register training with {num_workers} workers and {training_set_size} data points.')
-        
+            raise ValueError(
+                f'Tried to register training with {num_workers} workers and {training_set_size} data points.')
+
         return self._register_training(training_set_size, num_workers)
 
     def _register_training(self, training_set_size: int,
-                          num_workers: int) -> int:
+                           num_workers: int) -> int:
         """
         Creates a new training object in the database with the given training_set_size and num_workers
         Returns:
@@ -249,7 +250,7 @@ class Selector(ABC):
         Returns: 
             List of keys for the samples in the new queue. 
         """
-        raise NotImplementedError 
+        raise NotImplementedError
 
     def get_from_odm(self, training_id: int, num_samples: int) -> list[str]:
         """
@@ -270,8 +271,8 @@ class Selector(ABC):
         Returns:
             int: number of samples in the new queue. 
         """
-        raise NotImplementedError 
-    
+        raise NotImplementedError
+
     def get_odm_size(self, training_id: int) -> int:
         """For a given training_id, return how many samples are in the ODM. 
 
