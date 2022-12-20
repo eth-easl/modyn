@@ -135,7 +135,7 @@ class Selector(ABC):
         Returns:
             The id of the newly created training object
         Throws:
-            ValueError if training_set_size or num_workers is not positive. 
+            ValueError if training_set_size or num_workers is not positive.
         """
         if num_workers <= 0 or training_set_size <= 0:
             raise ValueError(
@@ -244,37 +244,37 @@ class Selector(ABC):
 
     def get_from_newqueue(self, training_id: int, num_samples: int) -> list[str]:
         """
-        For a given training_id and number of samples, request that many samples from 
-        the new queue. 
+        For a given training_id and number of samples, request that many samples from
+        the new queue.
 
-        Returns: 
-            List of keys for the samples in the new queue. 
+        Returns:
+            List of keys for the samples in the new queue.
         """
         raise NotImplementedError
 
     def get_from_odm(self, training_id: int, num_samples: int) -> list[str]:
         """
-        For a given training_id and number of samples, request that many samples from 
-        the ODM service. 
+        For a given training_id and number of samples, request that many samples from
+        the ODM service.
 
-        Returns: 
-            List of keys for the samples in the ODM. 
+        Returns:
+            List of keys for the samples in the ODM.
         """
         raise NotImplementedError
 
     def get_newqueue_size(self, training_id: int) -> int:
-        """For a given training_id, return how many samples are in the new queue. 
+        """For a given training_id, return how many samples are in the new queue.
 
         Args:
             training_id (int): the queried training_id
 
         Returns:
-            int: number of samples in the new queue. 
+            int: number of samples in the new queue.
         """
         raise NotImplementedError
 
     def get_odm_size(self, training_id: int) -> int:
-        """For a given training_id, return how many samples are in the ODM. 
+        """For a given training_id, return how many samples are in the ODM.
 
         Args:
             training_id (int): the queried training_id

@@ -109,7 +109,9 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_odm):
     # We need to instantiate an abstract class for the test
     selector = GDumbSelector(None)  # pylint: disable=abstract-class-instantiated
 
-    samples, classes = selector._select_new_training_samples(0, 6)
+    samples = selector._select_new_training_samples(0, 6)
+    classes = [clss for _, clss in samples]
+    samples = [sample for sample, _ in samples]
 
     assert Counter(classes) == Counter([1, 1, 2, 2, 3, 3])
     original_samples = set(zip(all_samples, all_classes))

@@ -15,22 +15,22 @@ class GDumbSelector(BaseSelector):
 
     def get_from_newqueue(self, training_id: int, num_samples: int) -> list[str]:
         """
-        For a given training_id and number of samples, request that many samples from 
-        the new queue. 
+        For a given training_id and number of samples, request that many samples from
+        the new queue.
 
-        Returns: 
-            List of keys for the samples in the new queue. 
+        Returns:
+            List of keys for the samples in the new queue.
         """
         # GDumb as a strategy does not take samples from new queue.
         return []
 
     def get_from_odm(self, training_id: int, num_samples: int) -> list[str]:
         """
-        For a given training_id and number of samples, request that many samples from 
-        the ODM service. 
+        For a given training_id and number of samples, request that many samples from
+        the ODM service.
 
-        Returns: 
-            List of keys for the samples in the ODM. 
+        Returns:
+            List of keys for the samples in the ODM.
         """
         result_samples, result_classes = [], []
 
@@ -45,7 +45,7 @@ class GDumbSelector(BaseSelector):
             result_samples.append(np.array(all_odm_samples)[class_indices])
             result_classes.append(np.array(all_odm_classes)[class_indices])
 
-        return np.concatenate(result_samples), np.concatenate(result_classes)
+        return zip(list(np.concatenate(result_samples)), list(np.concatenate(result_classes)))
 
-    def _get_all_odm(self, training_id) -> list[str]:
+    def _get_all_odm(self, training_id: int) -> list[str]:
         raise NotImplementedError

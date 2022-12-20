@@ -17,12 +17,12 @@ class BaseSelector(Selector):
         #     self._config['newqueue']['port'])
         # self.__newqueue_stub = NewQueueStub(newqueue_channel)
 
-    def _set_new_data_ratio(self, new_data_ratio) -> None:
+    def _set_new_data_ratio(self, new_data_ratio: float) -> None:
         assert new_data_ratio >= 0 and new_data_ratio <= 1
         self.new_data_ratio = new_data_ratio
         self.old_data_ratio = 1 - self.new_data_ratio
 
-    def _set_is_adaptive_ratio(self, is_adaptive_ratio) -> None:
+    def _set_is_adaptive_ratio(self, is_adaptive_ratio: float) -> None:
         self._is_adaptive_ratio = is_adaptive_ratio
 
     def _select_new_training_samples(
