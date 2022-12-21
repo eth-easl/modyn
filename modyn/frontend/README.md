@@ -4,15 +4,14 @@ This contains the functionality of GPU Node objects (trainer, dataset, metadata 
 
 ### Workflow
 
-The supervisor sends a configuration file containing:
+The supervisor sends a grpc request containing:
 * model (architecture) configuration
 * training hyperparameters (batch size, learning rate, epochs, etc.)
 * online data processing pipeline
 * checkpoint to load from (if any)
-* distributed training configuration, e.g. number of workers (could be a subsequent feature)
 
-1. We can have a form of Agent setting up the training. Would this (and basically the GPU resources) busy-wait for triggers from the supervisor? Or will they be stopped and relaunched (resources freed and GPU nodes spawned as requested) when the supervisor signals?
-2. Actual training loop may vary from case to case. The users should extend the training loop function.
+1. A grpc server listens for supervisor requests and spawns training when needed. Training is agnostic to selector policy.
+2. A model id is provided by the supervisor. This should correspond to a training function registered by the user.
 
 ### Dynamic Dataset
 
