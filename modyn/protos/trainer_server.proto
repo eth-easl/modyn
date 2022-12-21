@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package trainer;
+
+service TrainerServer {
+    rpc start_training(TrainerServerRequest) returns (TrainerServerResponse) {}
+}
+
+message TrainerServerRequest {
+    string model_id = 1;
+    TrainingHyperparameters hyperparameters = 2;
+    string checkpoint_path = 3;
+    map<string, int32> model_configuration = 4;
+}
+
+message TrainerServerResponse {
+    int32 training_id = 1;
+}
+
+message TrainingHyperparameters {
+    int32 batch_size = 1;
+    float learning_rate = 2;
+}
