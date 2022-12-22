@@ -32,14 +32,12 @@ def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool,
     # Implement as soon as required.
 
     assert schema_path.is_file(), f"Schema file does not exist: {schema_path}"
-    with open(schema_path, "r") as f:
-        schema = yaml.safe_load(f)
+    with open(schema_path, "r", encoding="utf-8") as schema_file:
+        schema = yaml.safe_load(schema_file)
 
     try:
         validate(concrete_file, schema)
-    except ValidationError as e:
-        #logger.error(f"Error while validating pipeline configuration file for schema-compliance: {e.message}")
-        # logger.error(e)
-        return False, e
+    except ValidationError as error:
+        return False, error
 
     return True, None

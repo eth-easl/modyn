@@ -2,4 +2,4 @@ from modyn.backend.supervisor import Supervisor
 
 
 def test_initialization() -> None:
-    test = Supervisor()  # noqa: F841 # pylint: disable=unused-variable
+    test = Supervisor({}, {}, None)  # noqa: F841 # pylint: disable=unused-variable

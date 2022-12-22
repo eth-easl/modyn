@@ -1,4 +1,6 @@
 from modyn.storage.storage_pb2_grpc import StorageStub
+# Pylint cannot handle the auto-generated gRPC files, apparently.
+# pylint: disable-next=no-name-in-module
 from modyn.storage.storage_pb2 import DatasetAvailableRequest
 
 import grpc
@@ -15,7 +17,7 @@ class GRPCHandler():
 
         self.init_storage()
 
-    def connection_established(self, channel) -> bool:
+    def connection_established(self, channel: grpc._channel.Channel) -> bool:
         try:
             grpc.channel_ready_future(channel).result(timeout=TIMEOUT_SEC)
             return True
