@@ -30,14 +30,14 @@ class ResNet():
         self._model.train()
         for _ in range(num_epochs):
 
-            train_iter = enumerate(self._train_loader)
-            for _, batch in train_iter:
-                self._optimizer.zero_grad()
-                data, target = batch[0].to(self._device), batch[1].to(self._device)
-                output = self._model(data)
-                loss = self._criterion(output, target)
-                loss.backward()
-                self._optimizer.step()
+             train_iter = enumerate(self._train_loader)
+             for _, batch in train_iter:
+                 self._optimizer.zero_grad()
+                 data, target = batch[0].to(self._device), batch[1].to(self._device)
+                 output = self._model(data)
+                 loss = self._criterion(output, target)
+                 loss.backward()
+                 self._optimizer.step()
 
 
     def evaluate(self):
@@ -46,7 +46,7 @@ class ResNet():
         running_loss = 0.0
 
         val_iter = enumerate(self._val_loader)
-        
+
         correct = 0
         total = 0
 
@@ -55,8 +55,8 @@ class ResNet():
             data, target = batch[0].to(self._device), batch[1].to(self._device)
             with torch.no_grad():
                 output = self._model(data)
-            
-             _, predicted = torch.max(output.data, 1)
+
+            _, predicted = torch.max(output.data, 1)
             total += target.size(0)
             correct += (predicted == target).sum().item()
 
@@ -64,4 +64,3 @@ class ResNet():
             running_loss += loss.item() * data.size(0)
 
         print(f'Accuracy is: {correct/total}')
-
