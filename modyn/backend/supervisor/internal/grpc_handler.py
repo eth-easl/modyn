@@ -17,7 +17,7 @@ class GRPCHandler():
 
         self.init_storage()
 
-    def connection_established(self, channel: grpc._channel.Channel) -> bool:
+    def connection_established(self, channel: grpc.Channel) -> bool:
         try:
             grpc.channel_ready_future(channel).result(timeout=TIMEOUT_SEC)
             return True
