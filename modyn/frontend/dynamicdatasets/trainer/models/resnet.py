@@ -1,7 +1,7 @@
 from torchvision import models
 import torch
 
-class ResNet18():
+class ResNet():
     def __init__(
         self,
         arch,
@@ -19,7 +19,7 @@ class ResNet18():
         optimizer_func = getattr(torch.optim, torch_optimizer)
         self._optimizer = optimizer_func(self._model.parameters(), **optimizer_args)
 
-        self._criterion = criterion
+        self._criterion = criterion()
 
         self._train_loader = train_loader
         self._val_loader = val_loader
@@ -46,10 +46,22 @@ class ResNet18():
         running_loss = 0.0
 
         val_iter = enumerate(self._val_loader)
+        
+        correct = 0
+        total = 0
+
         for _, batch in val_iter:
             self._optimizer.zero_grad()
             data, target = batch[0].to(self._device), batch[1].to(self._device)
             with torch.no_grad():
                 output = self._model(data)
+            
+             _, predicted = torch.max(output.data, 1)
+            total += target.size(0)
+            correct += (predicted == target).sum().item()
+
             loss = self._criterion(output, target)
             running_loss += loss.item() * data.size(0)
+
+        print(f'Accuracy is: {correct/total}')
+
