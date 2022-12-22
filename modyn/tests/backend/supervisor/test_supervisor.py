@@ -103,6 +103,11 @@ def test_validate_pipeline_config_content():
     sup.pipeline_config['model']['id'] = "UnknownModel"
     assert not sup.validate_pipeline_config_content()
 
+    # Check that training without GPUs gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config['training']['gpus'] = 0
+    assert not sup.validate_pipeline_config_content()
+
 
 @patch.object(Supervisor, '__init__', noop_constructor_mock)
 def test_validate_pipeline_config():
