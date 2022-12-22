@@ -23,6 +23,7 @@ def setup_argparser() -> argparse.ArgumentParser:
 
     return parser_
 
+
 def main() -> None:
     parser = setup_argparser()
     args = parser.parse_args()
@@ -30,11 +31,11 @@ def main() -> None:
     assert args.pipeline.is_file(), f"File does not exist: {args.pipeline}"
     assert args.config.is_file(), f"File does not exist: {args.config}"
 
-    with open(args.pipeline, "r", encoding="utf-8") as f:
-        pipeline_config = yaml.safe_load(f)
+    with open(args.pipeline, "r", encoding="utf-8") as pipeline_file:
+        pipeline_config = yaml.safe_load(pipeline_file)
 
-    with open(args.config, "r", encoding="utf-8") as f:
-        modyn_config = yaml.safe_load(f)
+    with open(args.config, "r", encoding="utf-8") as config_file:
+        modyn_config = yaml.safe_load(config_file)
 
     if args.start_replay_at is not None:
         logger.info(f"Starting supervisor in experiment mode. Replay timestamp is set to {args.start_replay_at}")
@@ -45,6 +46,7 @@ def main() -> None:
     supervisor.pipeline()
 
     logger.info("Supervisor returned, exiting.")
+
 
 if __name__ == '__main__':
     main()
