@@ -40,12 +40,15 @@ class TrainerServerRequest(google.protobuf.message.Message):
     HYPERPARAMETERS_FIELD_NUMBER: builtins.int
     CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
+    DATA_INFO_FIELD_NUMBER: builtins.int
     model_id: builtins.str
     @property
     def hyperparameters(self) -> global___TrainingHyperparameters: ...
     checkpoint_path: builtins.str
     @property
     def model_configuration(self) -> google.protobuf.internal.containers.ScalarMap[builtins.str, builtins.int]: ...
+    @property
+    def data_info(self) -> global___Data: ...
     def __init__(
         self,
         *,
@@ -53,9 +56,10 @@ class TrainerServerRequest(google.protobuf.message.Message):
         hyperparameters: global___TrainingHyperparameters | None = ...,
         checkpoint_path: builtins.str = ...,
         model_configuration: collections.abc.Mapping[builtins.str, builtins.int] | None = ...,
+        data_info: global___Data | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["hyperparameters", b"hyperparameters"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["checkpoint_path", b"checkpoint_path", "hyperparameters", b"hyperparameters", "model_configuration", b"model_configuration", "model_id", b"model_id"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["data_info", b"data_info", "hyperparameters", b"hyperparameters"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["checkpoint_path", b"checkpoint_path", "data_info", b"data_info", "hyperparameters", b"hyperparameters", "model_configuration", b"model_configuration", "model_id", b"model_id"]) -> None: ...
 
 global___TrainerServerRequest = TrainerServerRequest
 
@@ -91,3 +95,21 @@ class TrainingHyperparameters(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "learning_rate", b"learning_rate"]) -> None: ...
 
 global___TrainingHyperparameters = TrainingHyperparameters
+
+@typing_extensions.final
+class Data(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    DATASET_ID_FIELD_NUMBER: builtins.int
+    NUM_DATALOADERS_FIELD_NUMBER: builtins.int
+    dataset_id: builtins.str
+    num_dataloaders: builtins.int
+    def __init__(
+        self,
+        *,
+        dataset_id: builtins.str = ...,
+        num_dataloaders: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]) -> None: ...
+
+global___Data = Data

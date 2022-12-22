@@ -23,6 +23,10 @@ class TrainerGRPCServer:
         pass
 
     def start_training(self, request: TrainerServerRequest, context: grpc.ServicerContext) -> TrainerServerResponse:
+
+        data_info = request.data_info
+        print(data_info.dataset_id, data_info.num_dataloaders)
+
         return TrainerServerResponse(training_id=10)
 
 def serve(config: dict) -> None:
