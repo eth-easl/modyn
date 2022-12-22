@@ -24,19 +24,43 @@ def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict,  # py
 @patch.object(GRPCHandler, 'init_storage')
 @patch.object(GRPCHandler, 'connection_established')
 @patch.object(GRPCHandler, 'dataset_available')
-def get_non_connecting_supervisor(test_dataset_available,
+def get_non_connecting_supervisor(test_dataset_available,  # pylint: disable=redefined-outer-name
                                   test_connection_established, test_init_storage) -> Supervisor:
     test_init_storage.return_value = None
     test_connection_established.return_value = True
     test_dataset_available.return_value = True
-    supervisor = Supervisor(get_minimal_pipeline_config(),  # noqa: F841 # pylint: disable=unused-variable
+    supervisor = Supervisor(get_minimal_pipeline_config(),
                             get_minimal_system_config(), None)
 
     return supervisor
 
 
 def test_initialization() -> None:
-    supervisor = get_non_connecting_supervisor()  # noqa: F841 # pylint: disable=unused-variable
+    get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+
+
+@patch.object(GRPCHandler, 'init_storage')
+@patch.object(GRPCHandler, 'connection_established')
+@patch.object(GRPCHandler, 'dataset_available')
+def test_constructor_throws_on_invalid_system_config(test_dataset_available,  # pylint: disable=redefined-outer-name
+                                                     test_connection_established, test_init_storage) -> None:
+    test_init_storage.return_value = None
+    test_connection_established.return_value = False
+    test_dataset_available.return_value = False
+    with pytest.raises(ValueError, match="Invalid system configuration"):
+        Supervisor(get_minimal_pipeline_config(), {}, None)
+
+
+@patch.object(GRPCHandler, 'init_storage')
+@patch.object(GRPCHandler, 'connection_established')
+@patch.object(GRPCHandler, 'dataset_available')
+def test_constructor_throws_on_invalid_pipeline_config(test_dataset_available,  # pylint: disable=redefined-outer-name
+                                                       test_connection_established, test_init_storage) -> None:
+    test_init_storage.return_value = None
+    test_connection_established.return_value = True
+    test_dataset_available.return_value = True
+    with pytest.raises(ValueError, match="Invalid pipeline configuration"):
+        Supervisor({}, get_minimal_system_config(), None)
 
 
 @patch.object(Supervisor, '__init__', noop_constructor_mock)
@@ -101,7 +125,7 @@ def test_validate_pipeline_config():
 
 @patch.object(GRPCHandler, 'dataset_available', lambda self, did: did == "existing")
 def test_dataset_available():
-    sup = get_non_connecting_supervisor()
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     sup.pipeline_config = get_minimal_pipeline_config()
     sup.pipeline_config["data"]["dataset_id"] = "existing"
@@ -122,7 +146,7 @@ def test_trainer_available():
 
 @patch.object(GRPCHandler, 'dataset_available', lambda self, did: did == "existing")
 def test_validate_system():
-    sup = get_non_connecting_supervisor()
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     # TODO(MaxiBoether): implement a better test when trainer_available is implemented
     assert sup.trainer_available()
@@ -173,5 +197,5 @@ def test_end_pipeline():
 
 def test_pipeline():
     # TODO(MaxiBoether): implement a real test when func is implemented.
-    sup = get_non_connecting_supervisor()  # noqa: F841 # pylint: disable=unused-variable
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.pipeline()
