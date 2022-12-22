@@ -65,9 +65,8 @@ setup(
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
-    # 'mycli=mymodule:cli'
-    # entry_points={'console_scripts': ["script_name=modyn.scripts:main"],
-    #              },
+    # entry_points is is required for testing the Python scripts
+    entry_points={'console_scripts': ["_modyn_supervisor=modyn.backend.supervisor.entrypoint:main"]},
     scripts=['modyn/backend/supervisor/modyn-supervisor'],
     install_requires=REQUIRED,
     extras_require=EXTRAS,

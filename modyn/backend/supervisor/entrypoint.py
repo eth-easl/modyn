@@ -23,14 +23,12 @@ def setup_argparser() -> argparse.ArgumentParser:
 
     return parser_
 
-
-if __name__ == '__main__':
-
+def main() -> None:
     parser = setup_argparser()
     args = parser.parse_args()
 
     assert args.pipeline.is_file(), f"File does not exist: {args.pipeline}"
-    assert args.config.is_file(), f"File does not exist: {args.pipeline}"
+    assert args.config.is_file(), f"File does not exist: {args.config}"
 
     with open(args.pipeline, "r", encoding="utf-8") as f:
         pipeline_config = yaml.safe_load(f)
@@ -47,3 +45,6 @@ if __name__ == '__main__':
     supervisor.pipeline()
 
     logger.info("Supervisor returned, exiting.")
+
+if __name__ == '__main__':
+    main()
