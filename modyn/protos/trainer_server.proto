@@ -11,6 +11,7 @@ message TrainerServerRequest {
     TrainingHyperparameters hyperparameters = 2;
     string checkpoint_path = 3;
     map<string, int32> model_configuration = 4;
+    Data data_info = 5;
 }
 
 message TrainerServerResponse {
@@ -20,4 +21,9 @@ message TrainerServerResponse {
 message TrainingHyperparameters {
     int32 batch_size = 1;
     float learning_rate = 2;
+}
+
+message Data {
+    string dataset_id = 1;
+    int32 num_dataloaders = 2;
 }

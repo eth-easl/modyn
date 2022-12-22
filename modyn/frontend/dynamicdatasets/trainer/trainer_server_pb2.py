@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x14trainer_server.proto\x12\x07trainer\"\x8b\x02\n\x14TrainerServerRequest\x12\x10\n\x08model_id\x18\x01 \x01(\t\x12\x39\n\x0fhyperparameters\x18\x02 \x01(\x0b\x32 .trainer.TrainingHyperparameters\x12\x17\n\x0f\x63heckpoint_path\x18\x03 \x01(\t\x12R\n\x13model_configuration\x18\x04 \x03(\x0b\x32\x35.trainer.TrainerServerRequest.ModelConfigurationEntry\x1a\x39\n\x17ModelConfigurationEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\",\n\x15TrainerServerResponse\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"D\n\x17TrainingHyperparameters\x12\x12\n\nbatch_size\x18\x01 \x01(\x05\x12\x15\n\rlearning_rate\x18\x02 \x01(\x02\x32\x62\n\rTrainerServer\x12Q\n\x0estart_training\x12\x1d.trainer.TrainerServerRequest\x1a\x1e.trainer.TrainerServerResponse\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x14trainer_server.proto\x12\x07trainer\"\xad\x02\n\x14TrainerServerRequest\x12\x10\n\x08model_id\x18\x01 \x01(\t\x12\x39\n\x0fhyperparameters\x18\x02 \x01(\x0b\x32 .trainer.TrainingHyperparameters\x12\x17\n\x0f\x63heckpoint_path\x18\x03 \x01(\t\x12R\n\x13model_configuration\x18\x04 \x03(\x0b\x32\x35.trainer.TrainerServerRequest.ModelConfigurationEntry\x12 \n\tdata_info\x18\x05 \x01(\x0b\x32\r.trainer.Data\x1a\x39\n\x17ModelConfigurationEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\",\n\x15TrainerServerResponse\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"D\n\x17TrainingHyperparameters\x12\x12\n\nbatch_size\x18\x01 \x01(\x05\x12\x15\n\rlearning_rate\x18\x02 \x01(\x02\"3\n\x04\x44\x61ta\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\x32\x62\n\rTrainerServer\x12Q\n\x0estart_training\x12\x1d.trainer.TrainerServerRequest\x1a\x1e.trainer.TrainerServerResponse\"\x00\x62\x06proto3'
 )
 
 
@@ -59,8 +59,8 @@ _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=244,
-  serialized_end=301,
+  serialized_start=278,
+  serialized_end=335,
 )
 
 _TRAINERSERVERREQUEST = _descriptor.Descriptor(
@@ -99,6 +99,13 @@ _TRAINERSERVERREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='data_info', full_name='trainer.TrainerServerRequest.data_info', index=4,
+      number=5, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -112,7 +119,7 @@ _TRAINERSERVERREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=34,
-  serialized_end=301,
+  serialized_end=335,
 )
 
 
@@ -143,8 +150,8 @@ _TRAINERSERVERRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=303,
-  serialized_end=347,
+  serialized_start=337,
+  serialized_end=381,
 )
 
 
@@ -182,16 +189,57 @@ _TRAININGHYPERPARAMETERS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=349,
-  serialized_end=417,
+  serialized_start=383,
+  serialized_end=451,
+)
+
+
+_DATA = _descriptor.Descriptor(
+  name='Data',
+  full_name='trainer.Data',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='dataset_id', full_name='trainer.Data.dataset_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='num_dataloaders', full_name='trainer.Data.num_dataloaders', index=1,
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=453,
+  serialized_end=504,
 )
 
 _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY.containing_type = _TRAINERSERVERREQUEST
 _TRAINERSERVERREQUEST.fields_by_name['hyperparameters'].message_type = _TRAININGHYPERPARAMETERS
 _TRAINERSERVERREQUEST.fields_by_name['model_configuration'].message_type = _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY
+_TRAINERSERVERREQUEST.fields_by_name['data_info'].message_type = _DATA
 DESCRIPTOR.message_types_by_name['TrainerServerRequest'] = _TRAINERSERVERREQUEST
 DESCRIPTOR.message_types_by_name['TrainerServerResponse'] = _TRAINERSERVERRESPONSE
 DESCRIPTOR.message_types_by_name['TrainingHyperparameters'] = _TRAININGHYPERPARAMETERS
+DESCRIPTOR.message_types_by_name['Data'] = _DATA
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 TrainerServerRequest = _reflection.GeneratedProtocolMessageType('TrainerServerRequest', (_message.Message,), {
@@ -223,6 +271,13 @@ TrainingHyperparameters = _reflection.GeneratedProtocolMessageType('TrainingHype
   })
 _sym_db.RegisterMessage(TrainingHyperparameters)
 
+Data = _reflection.GeneratedProtocolMessageType('Data', (_message.Message,), {
+  'DESCRIPTOR' : _DATA,
+  '__module__' : 'trainer_server_pb2'
+  # @@protoc_insertion_point(class_scope:trainer.Data)
+  })
+_sym_db.RegisterMessage(Data)
+
 
 _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY._options = None
 
@@ -233,8 +288,8 @@ _TRAINERSERVER = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=419,
-  serialized_end=517,
+  serialized_start=506,
+  serialized_end=604,
   methods=[
   _descriptor.MethodDescriptor(
     name='start_training',
