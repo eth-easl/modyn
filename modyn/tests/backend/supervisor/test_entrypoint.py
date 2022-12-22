@@ -1,3 +1,6 @@
+""" This tests that the entry point script for the supervisor
+successfully runs through. This is _not_ the place for an integration test.
+"""
 import os
 import pathlib
 import typing
