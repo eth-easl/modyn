@@ -24,4 +24,5 @@ def test_initialization(test_dataset_available,  test_connection_established, te
     test_connection_established.return_value = True
     test_dataset_available.return_value = True
 
-    test = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)  # noqa: F841 # pylint: disable=unused-variable
+    test = Supervisor(get_minimal_pipeline_config(),  # noqa: F841 # pylint: disable=unused-variable
+                      get_minimal_system_config(), None)
