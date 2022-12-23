@@ -3,8 +3,8 @@ import time
 
 import grpc
 
-from storage.storage_pb2_grpc import StorageStub
-from storage.storage_pb2 import PutRequest
+from modyn.storage.storage_pb2_grpc import StorageStub
+from modyn.storage.storage_pb2 import PutRequest
 
 
 class BaseSource(ABC):

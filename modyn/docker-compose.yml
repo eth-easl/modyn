@@ -18,12 +18,12 @@ services:
     depends_on:
       - db
     build:
-      context: ./
-      dockerfile: ./storage/Dockerfile
+      context: ../
+      dockerfile: modyn/storage/Dockerfile
     ports:
-      - '5123:5123'
+      - '50051:50051'
     volumes:
-      - ./storage:/app
+      - ./modyn/storage:/app
 
   backend:
     image: backend
@@ -31,22 +31,9 @@ services:
       - db
       - storage
     build:
-      context: ./
-      dockerfile: ./backend/Dockerfile
+      context: ../
+      dockerfile: modyn/backend/Dockerfile
     ports:
       - '5124:5124'
     volumes:
       - ./backend:/app
-
-  frontend:
-    image: frontend
-    depends_on:
-      - backend
-    build:
-      context: ./
-      dockerfile: ./frontend/Dockerfile
-    ports:
-      - '3001:3001'
-    volumes:
-      - ./frontend:/app
-    command: tail -F anything

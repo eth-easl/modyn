@@ -1,10 +1,11 @@
 syntax = "proto3";
-package storage;
+package modyn.storage;
 
 service Storage {
   rpc Get (GetRequest) returns (GetResponse) {}
   rpc Query (QueryRequest) returns (QueryResponse) {}
   rpc Put (PutRequest) returns (PutResponse) {}
+  rpc CheckAvailability (DatasetAvailableRequest) returns (DatasetAvailableResponse) {}
 }
 
 message GetRequest {
@@ -28,4 +29,12 @@ message PutRequest {
 }
 
 message PutResponse {
+}
+
+message DatasetAvailableRequest {
+  string dataset_id = 1;
+}
+
+message DatasetAvailableResponse {
+  bool available = 1;
 }

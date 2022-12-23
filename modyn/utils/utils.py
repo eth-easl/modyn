@@ -1,4 +1,12 @@
 from types import ModuleType
+import modyn.models
+import inspect
+import importlib
+import yaml
+import pathlib
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError
+from typing import Optional
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -11,8 +19,25 @@ def dynamic_module_import(name: str) -> ModuleType:
     Returns:
         module: the imported module
     """
-    components = name.split('.')
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
+    return importlib.import_module(name)
+
+
+def model_available(model_id: str) -> bool:
+    available_models = list(x[0] for x in inspect.getmembers(modyn.models, inspect.isclass))
+    return model_id in available_models
+
+
+def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool, Optional[ValidationError]]:
+    # We might want to support different permutations here of loaded/unloaded data
+    # Implement as soon as required.
+
+    assert schema_path.is_file(), f"Schema file does not exist: {schema_path}"
+    with open(schema_path, "r", encoding="utf-8") as schema_file:
+        schema = yaml.safe_load(schema_file)
+
+    try:
+        validate(concrete_file, schema)
+    except ValidationError as error:
+        return False, error
+
+    return True, None

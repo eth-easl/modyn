@@ -103,3 +103,33 @@ class PutResponse(google.protobuf.message.Message):
     ) -> None: ...
 
 global___PutResponse = PutResponse
+
+@typing_extensions.final
+class DatasetAvailableRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    DATASET_ID_FIELD_NUMBER: builtins.int
+    dataset_id: builtins.str
+    def __init__(
+        self,
+        *,
+        dataset_id: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id"]) -> None: ...
+
+global___DatasetAvailableRequest = DatasetAvailableRequest
+
+@typing_extensions.final
+class DatasetAvailableResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    AVAILABLE_FIELD_NUMBER: builtins.int
+    available: builtins.bool
+    def __init__(
+        self,
+        *,
+        available: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["available", b"available"]) -> None: ...
+
+global___DatasetAvailableResponse = DatasetAvailableResponse
