@@ -13,8 +13,8 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from modyn.gpu_node.grpc.trainer_server_pb2_grpc import TrainerServerServicer, add_TrainerServerServicer_to_server
-from modyn.gpu_node.grpc.trainer_server_pb2 import TrainerServerRequest, TrainerServerResponse
+from modyn.gpu_node.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
+from modyn.gpu_node.grpc.trainer_server_pb2 import TrainerServerRequest, TrainerServerResponse, TrainerAvailableRequest, TrainerAvailableResponse
 
 # TODO(fotstrt): replace with dynamic loading
 from modyn.gpu_node.data.cifar_dataset import get_cifar_datasets
@@ -56,12 +56,14 @@ class TrainerGRPCServer:
 
         return train_dataloader, val_dataloader
 
-
     def register_with_selector(self, num_dataloaders):
         # TODO: replace this with grpc calls to the selector
         req = RegisterTrainingRequest(num_workers=num_dataloaders)
         response = self._selector.register_training(req)
         return response.training_id
+
+    def trainer_available(self, request: TrainerAvailableRequest, context: grpc.ServicerContext) -> TrainerAvailableResponse:
+        return TrainerAvailableResponse(available=True)
 
     def start_training(self, request: TrainerServerRequest, context: grpc.ServicerContext) -> TrainerServerResponse:
 
