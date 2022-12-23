@@ -27,39 +27,45 @@ class TrainerServerRequest(google.protobuf.message.Message):
         KEY_FIELD_NUMBER: builtins.int
         VALUE_FIELD_NUMBER: builtins.int
         key: builtins.str
-        value: builtins.int
+        value: builtins.str
         def __init__(
             self,
             *,
             key: builtins.str = ...,
-            value: builtins.int = ...,
+            value: builtins.str = ...,
         ) -> None: ...
         def ClearField(self, field_name: typing_extensions.Literal["key", b"key", "value", b"value"]) -> None: ...
 
     MODEL_ID_FIELD_NUMBER: builtins.int
-    HYPERPARAMETERS_FIELD_NUMBER: builtins.int
+    TORCH_OPTIMIZER_FIELD_NUMBER: builtins.int
+    BATCH_SIZE_FIELD_NUMBER: builtins.int
+    OPTIMIZER_PARAMETERS_FIELD_NUMBER: builtins.int
     CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     DATA_INFO_FIELD_NUMBER: builtins.int
     model_id: builtins.str
+    torch_optimizer: builtins.str
+    batch_size: builtins.int
     @property
-    def hyperparameters(self) -> global___TrainingHyperparameters: ...
+    def optimizer_parameters(self) -> global___OptimizerParameters: ...
     checkpoint_path: builtins.str
     @property
-    def model_configuration(self) -> google.protobuf.internal.containers.ScalarMap[builtins.str, builtins.int]: ...
+    def model_configuration(self) -> google.protobuf.internal.containers.ScalarMap[builtins.str, builtins.str]: ...
     @property
     def data_info(self) -> global___Data: ...
     def __init__(
         self,
         *,
         model_id: builtins.str = ...,
-        hyperparameters: global___TrainingHyperparameters | None = ...,
+        torch_optimizer: builtins.str = ...,
+        batch_size: builtins.int = ...,
+        optimizer_parameters: global___OptimizerParameters | None = ...,
         checkpoint_path: builtins.str = ...,
-        model_configuration: collections.abc.Mapping[builtins.str, builtins.int] | None = ...,
+        model_configuration: collections.abc.Mapping[builtins.str, builtins.str] | None = ...,
         data_info: global___Data | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["data_info", b"data_info", "hyperparameters", b"hyperparameters"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["checkpoint_path", b"checkpoint_path", "data_info", b"data_info", "hyperparameters", b"hyperparameters", "model_configuration", b"model_configuration", "model_id", b"model_id"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["data_info", b"data_info", "optimizer_parameters", b"optimizer_parameters"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_path", b"checkpoint_path", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_optimizer", b"torch_optimizer"]) -> None: ...
 
 global___TrainerServerRequest = TrainerServerRequest
 
@@ -79,22 +85,19 @@ class TrainerServerResponse(google.protobuf.message.Message):
 global___TrainerServerResponse = TrainerServerResponse
 
 @typing_extensions.final
-class TrainingHyperparameters(google.protobuf.message.Message):
+class OptimizerParameters(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    BATCH_SIZE_FIELD_NUMBER: builtins.int
     LEARNING_RATE_FIELD_NUMBER: builtins.int
-    batch_size: builtins.int
     learning_rate: builtins.float
     def __init__(
         self,
         *,
-        batch_size: builtins.int = ...,
         learning_rate: builtins.float = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "learning_rate", b"learning_rate"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["learning_rate", b"learning_rate"]) -> None: ...
 
-global___TrainingHyperparameters = TrainingHyperparameters
+global___OptimizerParameters = OptimizerParameters
 
 @typing_extensions.final
 class Data(google.protobuf.message.Message):

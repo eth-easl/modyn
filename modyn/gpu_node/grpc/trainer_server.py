@@ -6,6 +6,7 @@ from pathlib import Path
 import logging
 import torch
 import multiprocessing as mp
+import importlib
 
 import yaml
 
@@ -15,10 +16,11 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from modyn.gpu_node.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
 from modyn.gpu_node.grpc.trainer_server_pb2 import TrainerServerRequest, TrainerServerResponse, TrainerAvailableRequest, TrainerAvailableResponse
+import modyn.models as available_models
 
 # TODO(fotstrt): replace with dynamic loading
 from modyn.gpu_node.data.cifar_dataset import get_cifar_datasets
-from modyn.gpu_node.models.resnet import ResNet
+from modyn.gpu_node.models.resnet import ResNet18
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
@@ -75,18 +77,18 @@ class TrainerGRPCServer:
             training_id,
             request.data_info.dataset_id,
             request.data_info.num_dataloaders,
-            request.hyperparameters.batch_size
+            request.batch_size
         )
 
+        # model exists - has been validated by the supervisor
+        model_module = importlib.import_module("modyn.models." + request.model_id)
 
         # this is tailor-made for a specific example
         # TODO(fotstrt): generalize
-        model = ResNet(
-            'resnet18',
-            'SGD',
-            {'lr': 0.1},
-            torch.nn.CrossEntropyLoss,
-            10,
+        model = model_module.Model(
+            request.torch_optimizer,
+            {'lr': 0.1}, # TODO(fotstrt): how to get optimizer parameters?
+            request.model_configuration,
             train_dataloader,
             val_dataloader,
             0

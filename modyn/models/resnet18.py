@@ -1,24 +1,25 @@
 from torchvision import models
 import torch
 
-class ResNet18():
+class Model():
     def __init__(
         self,
         torch_optimizer,
         optimizer_args,
-        criterion,
-        num_classes,
+        model_configuration,
         train_loader,
         val_loader,
         device,
     ):
+
+        num_classes = int(model_configuration['num_classes'])
         self._model = models.__dict__['resnet18'](num_classes=num_classes)
-        self._model = self._model.to(device)
+        #self._model = self._model.to(device)
 
         optimizer_func = getattr(torch.optim, torch_optimizer)
         self._optimizer = optimizer_func(self._model.parameters(), **optimizer_args)
 
-        self._criterion = criterion()
+        self._criterion = torch.nn.CrossEntropyLoss()
 
         self._train_loader = train_loader
         self._val_loader = val_loader
