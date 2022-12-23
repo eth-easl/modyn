@@ -22,32 +22,55 @@ from modyn.gpu_node.models.resnet import ResNet
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
+from modyn.backend.selector.mock_selector_server import MockSelectorServer, RegisterTrainingRequest
+from modyn.gpu_node.data.online_dataset import OnlineDataset
+
 class TrainerGRPCServer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self):
-        pass
+        self._selector = MockSelectorServer()
 
-    def prepare_dataloaders(self, dataset_id, num_dataloaders, batch_size):
+    def prepare_dataloaders(self, training_id, dataset_id, num_dataloaders, batch_size):
 
         if dataset_id == "cifar10":
             train_set, val_set = get_cifar_datasets()
 
             train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
-                                            shuffle=True, num_workers=2)
+                                            shuffle=True, num_workers=num_dataloaders)
 
             val_dataloader = torch.utils.data.DataLoader(val_set, batch_size=batch_size,
-                                            shuffle=False, num_workers=2)
+                                            shuffle=False, num_workers=num_dataloaders)
 
-            return train_dataloader, val_dataloader
+        elif dataset_id == "online":
+            train_set = OnlineDataset(training_id, None)
+            # TODO(fotstrt): what to do with the val set?
+
+            train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
+                                                            num_workers=num_dataloaders)
+
+            val_dataloader = None
+
         else:
             return None, None
 
+        return train_dataloader, val_dataloader
+
+
+    def register_with_selector(self, num_dataloaders):
+        # TODO: replace this with grpc calls to the selector
+        req = RegisterTrainingRequest(num_workers=num_dataloaders)
+        response = self._selector.register_training(req)
+        return response.training_id
 
     def start_training(self, request: TrainerServerRequest, context: grpc.ServicerContext) -> TrainerServerResponse:
 
+        training_id = self.register_with_selector(request.data_info.num_dataloaders)
+        print(training_id)
+
         # TODO(fotstrt): generalize
         train_dataloader, val_dataloader = self.prepare_dataloaders(
+            training_id,
             request.data_info.dataset_id,
             request.data_info.num_dataloaders,
             request.hyperparameters.batch_size
@@ -71,7 +94,7 @@ class TrainerGRPCServer:
         p.start()
         p.join()
 
-        return TrainerServerResponse(training_id=10)
+        return TrainerServerResponse(training_id=training_id)
 
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))

@@ -16,7 +16,7 @@ def start_training():
         checkpoint_path="",
         model_configuration={},
         data_info=Data(
-            dataset_id="cifar10",
+            dataset_id="online",
             num_dataloaders=2
         )
     )
