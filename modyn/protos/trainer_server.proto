@@ -4,6 +4,7 @@ package trainer;
 
 service TrainerServer {
     rpc start_training(TrainerServerRequest) returns (TrainerServerResponse) {}
+    rpc trainer_available(TrainerAvailableRequest) returns (TrainerAvailableResponse) {}
 }
 
 message TrainerServerRequest {
@@ -26,4 +27,12 @@ message TrainingHyperparameters {
 message Data {
     string dataset_id = 1;
     int32 num_dataloaders = 2;
+}
+
+message TrainerAvailableRequest {
+
+}
+
+message TrainerAvailableResponse {
+    bool available = 1;
 }

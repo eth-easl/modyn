@@ -113,3 +113,28 @@ class Data(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]) -> None: ...
 
 global___Data = Data
+
+@typing_extensions.final
+class TrainerAvailableRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___TrainerAvailableRequest = TrainerAvailableRequest
+
+@typing_extensions.final
+class TrainerAvailableResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    AVAILABLE_FIELD_NUMBER: builtins.int
+    available: builtins.bool
+    def __init__(
+        self,
+        *,
+        available: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["available", b"available"]) -> None: ...
+
+global___TrainerAvailableResponse = TrainerAvailableResponse
