@@ -44,7 +44,7 @@ class TrainerClient:
 
         req = StartTrainingRequest(
             training_id=training_id,
-            #load_checkpoint_path="results/model_0.pt"
+            load_checkpoint_path="results/model_0.pt"
         )
         response = self._trainer_stub.start_training(req)
 
