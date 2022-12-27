@@ -2,7 +2,7 @@ import grpc
 import time
 
 from modyn.gpu_node.grpc.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.gpu_node.grpc.trainer_server_pb2 import TrainerServerRequest, Data, TrainerAvailableRequest, VarTypeParameter
+from modyn.gpu_node.grpc.trainer_server_pb2 import TrainerServerRequest, Data, TrainerAvailableRequest, VarTypeParameter, CheckpointInfo
 
 class TrainerClient:
 
@@ -23,13 +23,17 @@ class TrainerClient:
                 'lr': VarTypeParameter(float_value=0.1),
                 'momentum': VarTypeParameter(float_value=0.001)
             },
-            checkpoint_path="",
+            load_checkpoint_path="results/model_0.pt",
             model_configuration={
                 'num_classes': VarTypeParameter(int_value=10)
             },
             data_info=Data(
                 dataset_id="online",
                 num_dataloaders=2
+            ),
+            checkpoint_info=CheckpointInfo(
+                checkpoint_interval = 1,
+                checkpoint_path = "results"
             )
         )
         response = self._trainer_stub.start_training(req)

@@ -60,19 +60,22 @@ class TrainerServerRequest(google.protobuf.message.Message):
     TORCH_OPTIMIZER_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
     OPTIMIZER_PARAMETERS_FIELD_NUMBER: builtins.int
-    CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
+    LOAD_CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     DATA_INFO_FIELD_NUMBER: builtins.int
+    CHECKPOINT_INFO_FIELD_NUMBER: builtins.int
     model_id: builtins.str
     torch_optimizer: builtins.str
     batch_size: builtins.int
     @property
     def optimizer_parameters(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
-    checkpoint_path: builtins.str
+    load_checkpoint_path: builtins.str
     @property
     def model_configuration(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
     @property
     def data_info(self) -> global___Data: ...
+    @property
+    def checkpoint_info(self) -> global___CheckpointInfo: ...
     def __init__(
         self,
         *,
@@ -80,12 +83,13 @@ class TrainerServerRequest(google.protobuf.message.Message):
         torch_optimizer: builtins.str = ...,
         batch_size: builtins.int = ...,
         optimizer_parameters: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
-        checkpoint_path: builtins.str = ...,
+        load_checkpoint_path: builtins.str = ...,
         model_configuration: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
         data_info: global___Data | None = ...,
+        checkpoint_info: global___CheckpointInfo | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["data_info", b"data_info"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_path", b"checkpoint_path", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_optimizer", b"torch_optimizer"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["checkpoint_info", b"checkpoint_info", "data_info", b"data_info"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_info", b"checkpoint_info", "data_info", b"data_info", "load_checkpoint_path", b"load_checkpoint_path", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_optimizer", b"torch_optimizer"]) -> None: ...
 
 global___TrainerServerRequest = TrainerServerRequest
 
@@ -172,3 +176,21 @@ class TrainerAvailableResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["available", b"available"]) -> None: ...
 
 global___TrainerAvailableResponse = TrainerAvailableResponse
+
+@typing_extensions.final
+class CheckpointInfo(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    CHECKPOINT_INTERVAL_FIELD_NUMBER: builtins.int
+    CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
+    checkpoint_interval: builtins.int
+    checkpoint_path: builtins.str
+    def __init__(
+        self,
+        *,
+        checkpoint_interval: builtins.int = ...,
+        checkpoint_path: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["checkpoint_interval", b"checkpoint_interval", "checkpoint_path", b"checkpoint_path"]) -> None: ...
+
+global___CheckpointInfo = CheckpointInfo
