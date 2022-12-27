@@ -1,6 +1,7 @@
 import logging
 import torch
 
+
 class BaseModel():
     def __init__(
         self,
@@ -21,10 +22,9 @@ class BaseModel():
         self._checkpoint_path = checkpoint_path
         self._checkpoint_interval = checkpoint_interval
 
-
     def create_logger(self, log_path):
 
-        self._logger = logging.getLogger('test') #TODO(fotstrt): fix this 
+        self._logger = logging.getLogger('test')  # TODO(fotstrt): fix this
         self._logger.setLevel(logging.INFO)
 
         fileHandler = logging.FileHandler(log_path)
@@ -35,7 +35,6 @@ class BaseModel():
 
         self._logger.addHandler(fileHandler)
         self._logger.propagate = False
-
 
     def save_checkpoint(self, iteration):
 
@@ -52,7 +51,6 @@ class BaseModel():
         }
         torch.save(dict_to_save, checkpoint_file_name)
 
-
     def load_checkpoint(self, path):
 
         checkpoint_dict = torch.load(path)
@@ -60,7 +58,6 @@ class BaseModel():
         assert 'optimizer' in checkpoint_dict
         self._model.load_state_dict(checkpoint_dict['model'])
         self._optimizer.load_state_dict(checkpoint_dict['optimizer'])
-
 
     def train_and_log(self, log_path, load_checkpoint_path=None):
         self.create_logger(log_path)

@@ -1,8 +1,6 @@
-import logging
 from torchvision import models
 import torch
 import os
-import sys
 
 from modyn.models.base_model import BaseModel
 
@@ -33,7 +31,6 @@ class Model(BaseModel):
 
         self._criterion = torch.nn.CrossEntropyLoss()
 
-
     def train(self, load_checkpoint_path=None, num_epochs=1):
 
         self._logger.info('Process {} starts training'.format(os.getpid()))
@@ -45,8 +42,8 @@ class Model(BaseModel):
 
         for _ in range(num_epochs):
 
-             train_iter = enumerate(self._train_loader)
-             for i, batch in train_iter:
+            train_iter = enumerate(self._train_loader)
+            for i, batch in train_iter:
                 self._optimizer.zero_grad()
                 data, target = batch[0].to(self._device), batch[1].to(self._device)
                 output = self._model(data)

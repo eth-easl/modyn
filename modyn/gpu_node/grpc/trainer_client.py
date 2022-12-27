@@ -1,8 +1,15 @@
 import grpc
-import time
 
 from modyn.gpu_node.grpc.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.gpu_node.grpc.trainer_server_pb2 import RegisterTrainServerRequest, Data, TrainerAvailableRequest, VarTypeParameter, CheckpointInfo, StartTrainingRequest
+from modyn.gpu_node.grpc.trainer_server_pb2 import (
+    RegisterTrainServerRequest,
+    Data,
+    TrainerAvailableRequest,
+    VarTypeParameter,
+    CheckpointInfo,
+    StartTrainingRequest
+)
+
 
 class TrainerClient:
 
@@ -14,13 +21,12 @@ class TrainerClient:
         response = self._trainer_stub.trainer_available(req)
         return response.available
 
-
     def register_training(self):
         req = RegisterTrainServerRequest(
             model_id="resnet18",
             batch_size=32,
             torch_optimizer='SGD',
-            optimizer_parameters= {
+            optimizer_parameters={
                 'lr': VarTypeParameter(float_value=0.1),
                 'momentum': VarTypeParameter(float_value=0.001)
             },
@@ -32,8 +38,8 @@ class TrainerClient:
                 num_dataloaders=2
             ),
             checkpoint_info=CheckpointInfo(
-                checkpoint_interval = 10,
-                checkpoint_path = "results"
+                checkpoint_interval=10,
+                checkpoint_path="results"
             )
         )
 
@@ -49,6 +55,7 @@ class TrainerClient:
         response = self._trainer_stub.start_training(req)
 
         return response.training_started
+
 
 if __name__ == "__main__":
     client = TrainerClient()
