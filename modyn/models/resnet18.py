@@ -1,8 +1,11 @@
+import logging
 from torchvision import models
 import torch
 import os
+import sys
 
 from modyn.models.base_model import BaseModel
+
 
 class Model(BaseModel):
     def __init__(
@@ -33,6 +36,8 @@ class Model(BaseModel):
 
     def train(self, load_checkpoint_path=None, num_epochs=1):
 
+        self._logger.info('Process {} starts training'.format(os.getpid()))
+
         if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
             self.load_checkpoint(load_checkpoint_path)
 
@@ -42,16 +47,19 @@ class Model(BaseModel):
 
              train_iter = enumerate(self._train_loader)
              for i, batch in train_iter:
-                 self._optimizer.zero_grad()
-                 data, target = batch[0].to(self._device), batch[1].to(self._device)
-                 output = self._model(data)
-                 loss = self._criterion(output, target)
-                 loss.backward()
-                 self._optimizer.step()
+                self._optimizer.zero_grad()
+                data, target = batch[0].to(self._device), batch[1].to(self._device)
+                output = self._model(data)
+                loss = self._criterion(output, target)
+                loss.backward()
+                self._optimizer.step()
 
-                 if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
+                if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
                     self.save_checkpoint(i)
 
+                self._logger.info('Iteration {}'.format(i))
+
+        self._logger.info('Training complete!')
 
     def evaluate(self):
 
