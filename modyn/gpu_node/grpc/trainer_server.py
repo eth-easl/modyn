@@ -4,26 +4,32 @@ import sys
 from concurrent import futures
 from pathlib import Path
 import logging
-import torch
 import multiprocessing as mp
-import importlib
 
 import yaml
+
+from modyn.gpu_node.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
+from modyn.gpu_node.grpc.trainer_server_pb2 import (
+    RegisterTrainServerRequest,
+    RegisterTrainServerResponse,
+    TrainerAvailableRequest,
+    TrainerAvailableResponse,
+    StartTrainingRequest,
+    StartTrainingResponse
+)
+
+from modyn.gpu_node.models.utils import get_model
+
+from modyn.backend.selector.mock_selector_server import MockSelectorServer, RegisterTrainingRequest
+from modyn.gpu_node.data.utils import prepare_dataloaders
+from modyn.gpu_node.grpc.server_utils import process_complex_messages
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from modyn.gpu_node.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
-from modyn.gpu_node.grpc.trainer_server_pb2 import RegisterTrainServerRequest, RegisterTrainServerResponse, TrainerAvailableRequest, TrainerAvailableResponse, StartTrainingRequest, StartTrainingResponse
-
-from modyn.gpu_node.models.utils import get_model
-
 logging.basicConfig(format='%(asctime)s %(message)s')
 
-from modyn.backend.selector.mock_selector_server import MockSelectorServer, RegisterTrainingRequest
-from modyn.gpu_node.data.utils import prepare_dataloaders
-from modyn.gpu_node.grpc.server_utils import process_complex_messages
 
 class TrainerGRPCServer:
     """Implements necessary functionality in order to communicate with the supervisor."""
@@ -39,10 +45,18 @@ class TrainerGRPCServer:
         response = self._selector.register_training(req)
         return response.training_id
 
-    def trainer_available(self, request: TrainerAvailableRequest, context: grpc.ServicerContext) -> TrainerAvailableResponse:
+    def trainer_available(
+        self,
+        request: TrainerAvailableRequest,
+        context: grpc.ServicerContext
+    ) -> TrainerAvailableResponse:
         return TrainerAvailableResponse(available=True)
 
-    def register(self, request: RegisterTrainServerRequest, context: grpc.ServicerContext) -> RegisterTrainServerResponse:
+    def register(
+        self,
+        request: RegisterTrainServerRequest,
+        context: grpc.ServicerContext
+    ) -> RegisterTrainServerResponse:
 
         training_id = self.register_with_selector(request.data_info.num_dataloaders)
         print(training_id)
@@ -62,7 +76,6 @@ class TrainerGRPCServer:
 
         return RegisterTrainServerResponse(training_id=training_id)
 
-
     def start_training(self, request: StartTrainingRequest, context: grpc.ServicerContext) -> StartTrainingResponse:
 
         training_id = request.training_id
@@ -77,6 +90,7 @@ class TrainerGRPCServer:
         self._training_process_dict[training_id] = p
 
         return StartTrainingResponse(training_started=True)
+
 
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
