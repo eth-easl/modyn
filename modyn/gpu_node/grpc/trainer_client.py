@@ -2,7 +2,7 @@ import grpc
 import time
 
 from modyn.gpu_node.grpc.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.gpu_node.grpc.trainer_server_pb2 import TrainerServerRequest, Data, TrainerAvailableRequest, OptimizerParameters
+from modyn.gpu_node.grpc.trainer_server_pb2 import TrainerServerRequest, Data, TrainerAvailableRequest, VarTypeParameter
 
 class TrainerClient:
 
@@ -19,12 +19,13 @@ class TrainerClient:
             model_id="resnet18",
             batch_size=32,
             torch_optimizer='SGD',
-            optimizer_parameters=OptimizerParameters(
-                learning_rate=0.1
-            ),
+            optimizer_parameters= {
+                'lr': VarTypeParameter(float_value=0.1),
+                'momentum': VarTypeParameter(float_value=0.001)
+            },
             checkpoint_path="",
             model_configuration={
-                'num_classes': '10'
+                'num_classes': VarTypeParameter(int_value=10)
             },
             data_info=Data(
                 dataset_id="online",

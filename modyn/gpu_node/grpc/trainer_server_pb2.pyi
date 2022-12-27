@@ -21,19 +21,39 @@ class TrainerServerRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     @typing_extensions.final
+    class OptimizerParametersEntry(google.protobuf.message.Message):
+        DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+        KEY_FIELD_NUMBER: builtins.int
+        VALUE_FIELD_NUMBER: builtins.int
+        key: builtins.str
+        @property
+        def value(self) -> global___VarTypeParameter: ...
+        def __init__(
+            self,
+            *,
+            key: builtins.str = ...,
+            value: global___VarTypeParameter | None = ...,
+        ) -> None: ...
+        def HasField(self, field_name: typing_extensions.Literal["value", b"value"]) -> builtins.bool: ...
+        def ClearField(self, field_name: typing_extensions.Literal["key", b"key", "value", b"value"]) -> None: ...
+
+    @typing_extensions.final
     class ModelConfigurationEntry(google.protobuf.message.Message):
         DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
         KEY_FIELD_NUMBER: builtins.int
         VALUE_FIELD_NUMBER: builtins.int
         key: builtins.str
-        value: builtins.str
+        @property
+        def value(self) -> global___VarTypeParameter: ...
         def __init__(
             self,
             *,
             key: builtins.str = ...,
-            value: builtins.str = ...,
+            value: global___VarTypeParameter | None = ...,
         ) -> None: ...
+        def HasField(self, field_name: typing_extensions.Literal["value", b"value"]) -> builtins.bool: ...
         def ClearField(self, field_name: typing_extensions.Literal["key", b"key", "value", b"value"]) -> None: ...
 
     MODEL_ID_FIELD_NUMBER: builtins.int
@@ -47,10 +67,10 @@ class TrainerServerRequest(google.protobuf.message.Message):
     torch_optimizer: builtins.str
     batch_size: builtins.int
     @property
-    def optimizer_parameters(self) -> global___OptimizerParameters: ...
+    def optimizer_parameters(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
     checkpoint_path: builtins.str
     @property
-    def model_configuration(self) -> google.protobuf.internal.containers.ScalarMap[builtins.str, builtins.str]: ...
+    def model_configuration(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
     @property
     def data_info(self) -> global___Data: ...
     def __init__(
@@ -59,12 +79,12 @@ class TrainerServerRequest(google.protobuf.message.Message):
         model_id: builtins.str = ...,
         torch_optimizer: builtins.str = ...,
         batch_size: builtins.int = ...,
-        optimizer_parameters: global___OptimizerParameters | None = ...,
+        optimizer_parameters: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
         checkpoint_path: builtins.str = ...,
-        model_configuration: collections.abc.Mapping[builtins.str, builtins.str] | None = ...,
+        model_configuration: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
         data_info: global___Data | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["data_info", b"data_info", "optimizer_parameters", b"optimizer_parameters"]) -> builtins.bool: ...
+    def HasField(self, field_name: typing_extensions.Literal["data_info", b"data_info"]) -> builtins.bool: ...
     def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_path", b"checkpoint_path", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_optimizer", b"torch_optimizer"]) -> None: ...
 
 global___TrainerServerRequest = TrainerServerRequest
@@ -85,19 +105,30 @@ class TrainerServerResponse(google.protobuf.message.Message):
 global___TrainerServerResponse = TrainerServerResponse
 
 @typing_extensions.final
-class OptimizerParameters(google.protobuf.message.Message):
+class VarTypeParameter(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    LEARNING_RATE_FIELD_NUMBER: builtins.int
-    learning_rate: builtins.float
+    FLOAT_VALUE_FIELD_NUMBER: builtins.int
+    INT_VALUE_FIELD_NUMBER: builtins.int
+    BOOL_VALUE_FIELD_NUMBER: builtins.int
+    STRING_VALUE_FIELD_NUMBER: builtins.int
+    float_value: builtins.float
+    int_value: builtins.int
+    bool_value: builtins.bool
+    string_value: builtins.str
     def __init__(
         self,
         *,
-        learning_rate: builtins.float = ...,
+        float_value: builtins.float = ...,
+        int_value: builtins.int = ...,
+        bool_value: builtins.bool = ...,
+        string_value: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["learning_rate", b"learning_rate"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["bool_value", b"bool_value", "float_value", b"float_value", "int_value", b"int_value", "parameter", b"parameter", "string_value", b"string_value"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["bool_value", b"bool_value", "float_value", b"float_value", "int_value", b"int_value", "parameter", b"parameter", "string_value", b"string_value"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["parameter", b"parameter"]) -> typing_extensions.Literal["float_value", "int_value", "bool_value", "string_value"] | None: ...
 
-global___OptimizerParameters = OptimizerParameters
+global___VarTypeParameter = VarTypeParameter
 
 @typing_extensions.final
 class Data(google.protobuf.message.Message):

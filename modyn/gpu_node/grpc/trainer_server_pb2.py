@@ -13,29 +13,33 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14trainer_server.proto\x12\x07trainer\"\xdb\x02\n\x14TrainerServerRequest\x12\x10\n\x08model_id\x18\x01 \x01(\t\x12\x17\n\x0ftorch_optimizer\x18\x02 \x01(\t\x12\x12\n\nbatch_size\x18\x03 \x01(\x05\x12:\n\x14optimizer_parameters\x18\x04 \x01(\x0b\x32\x1c.trainer.OptimizerParameters\x12\x17\n\x0f\x63heckpoint_path\x18\x05 \x01(\t\x12R\n\x13model_configuration\x18\x06 \x03(\x0b\x32\x35.trainer.TrainerServerRequest.ModelConfigurationEntry\x12 \n\tdata_info\x18\x07 \x01(\x0b\x32\r.trainer.Data\x1a\x39\n\x17ModelConfigurationEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\",\n\x15TrainerServerResponse\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\",\n\x13OptimizerParameters\x12\x15\n\rlearning_rate\x18\x01 \x01(\x02\"3\n\x04\x44\x61ta\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\"\x19\n\x17TrainerAvailableRequest\"-\n\x18TrainerAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\x32\xbe\x01\n\rTrainerServer\x12Q\n\x0estart_training\x12\x1d.trainer.TrainerServerRequest\x1a\x1e.trainer.TrainerServerResponse\"\x00\x12Z\n\x11trainer_available\x12 .trainer.TrainerAvailableRequest\x1a!.trainer.TrainerAvailableResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14trainer_server.proto\x12\x07trainer\"\xe7\x03\n\x14TrainerServerRequest\x12\x10\n\x08model_id\x18\x01 \x01(\t\x12\x17\n\x0ftorch_optimizer\x18\x02 \x01(\t\x12\x12\n\nbatch_size\x18\x03 \x01(\x05\x12T\n\x14optimizer_parameters\x18\x04 \x03(\x0b\x32\x36.trainer.TrainerServerRequest.OptimizerParametersEntry\x12\x17\n\x0f\x63heckpoint_path\x18\x05 \x01(\t\x12R\n\x13model_configuration\x18\x06 \x03(\x0b\x32\x35.trainer.TrainerServerRequest.ModelConfigurationEntry\x12 \n\tdata_info\x18\x07 \x01(\x0b\x32\r.trainer.Data\x1aU\n\x18OptimizerParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12(\n\x05value\x18\x02 \x01(\x0b\x32\x19.trainer.VarTypeParameter:\x02\x38\x01\x1aT\n\x17ModelConfigurationEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12(\n\x05value\x18\x02 \x01(\x0b\x32\x19.trainer.VarTypeParameter:\x02\x38\x01\",\n\x15TrainerServerResponse\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"y\n\x10VarTypeParameter\x12\x15\n\x0b\x66loat_value\x18\x01 \x01(\x02H\x00\x12\x13\n\tint_value\x18\x02 \x01(\x05H\x00\x12\x14\n\nbool_value\x18\x03 \x01(\x08H\x00\x12\x16\n\x0cstring_value\x18\x04 \x01(\tH\x00\x42\x0b\n\tparameter\"3\n\x04\x44\x61ta\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\"\x19\n\x17TrainerAvailableRequest\"-\n\x18TrainerAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\x32\xbe\x01\n\rTrainerServer\x12Q\n\x0estart_training\x12\x1d.trainer.TrainerServerRequest\x1a\x1e.trainer.TrainerServerResponse\"\x00\x12Z\n\x11trainer_available\x12 .trainer.TrainerAvailableRequest\x1a!.trainer.TrainerAvailableResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'trainer_server_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
+  _TRAINERSERVERREQUEST_OPTIMIZERPARAMETERSENTRY._options = None
+  _TRAINERSERVERREQUEST_OPTIMIZERPARAMETERSENTRY._serialized_options = b'8\001'
   _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY._options = None
   _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY._serialized_options = b'8\001'
   _TRAINERSERVERREQUEST._serialized_start=34
-  _TRAINERSERVERREQUEST._serialized_end=381
-  _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY._serialized_start=324
-  _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY._serialized_end=381
-  _TRAINERSERVERRESPONSE._serialized_start=383
-  _TRAINERSERVERRESPONSE._serialized_end=427
-  _OPTIMIZERPARAMETERS._serialized_start=429
-  _OPTIMIZERPARAMETERS._serialized_end=473
-  _DATA._serialized_start=475
-  _DATA._serialized_end=526
-  _TRAINERAVAILABLEREQUEST._serialized_start=528
-  _TRAINERAVAILABLEREQUEST._serialized_end=553
-  _TRAINERAVAILABLERESPONSE._serialized_start=555
-  _TRAINERAVAILABLERESPONSE._serialized_end=600
-  _TRAINERSERVER._serialized_start=603
-  _TRAINERSERVER._serialized_end=793
+  _TRAINERSERVERREQUEST._serialized_end=521
+  _TRAINERSERVERREQUEST_OPTIMIZERPARAMETERSENTRY._serialized_start=350
+  _TRAINERSERVERREQUEST_OPTIMIZERPARAMETERSENTRY._serialized_end=435
+  _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY._serialized_start=437
+  _TRAINERSERVERREQUEST_MODELCONFIGURATIONENTRY._serialized_end=521
+  _TRAINERSERVERRESPONSE._serialized_start=523
+  _TRAINERSERVERRESPONSE._serialized_end=567
+  _VARTYPEPARAMETER._serialized_start=569
+  _VARTYPEPARAMETER._serialized_end=690
+  _DATA._serialized_start=692
+  _DATA._serialized_end=743
+  _TRAINERAVAILABLEREQUEST._serialized_start=745
+  _TRAINERAVAILABLEREQUEST._serialized_end=770
+  _TRAINERAVAILABLERESPONSE._serialized_start=772
+  _TRAINERAVAILABLERESPONSE._serialized_end=817
+  _TRAINERSERVER._serialized_start=820
+  _TRAINERSERVER._serialized_end=1010
 # @@protoc_insertion_point(module_scope)
