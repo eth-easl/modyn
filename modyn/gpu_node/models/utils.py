@@ -14,7 +14,6 @@ def get_model(request, optimizer_dict, model_conf_dict, train_dataloader, val_da
         train_dataloader,
         val_dataloader,
         device,
-        request.load_checkpoint_path,
         request.checkpoint_info.checkpoint_path,
         request.checkpoint_info.checkpoint_interval,
     )
