@@ -11,9 +11,9 @@ message TrainerServerRequest {
     string model_id = 1;
     string torch_optimizer = 2;
     int32 batch_size = 3;
-    OptimizerParameters optimizer_parameters = 4;
+    map<string, VarTypeParameter> optimizer_parameters = 4;
     string checkpoint_path = 5;
-    map<string, string> model_configuration = 6;
+    map<string, VarTypeParameter> model_configuration = 6;
     Data data_info = 7;
 }
 
@@ -21,8 +21,13 @@ message TrainerServerResponse {
     int32 training_id = 1;
 }
 
-message OptimizerParameters {
-    float learning_rate = 1;
+message VarTypeParameter {
+    oneof parameter {
+        float float_value = 1;
+        int32 int_value = 2;
+        bool bool_value = 3;
+        string string_value = 4;
+    }
 }
 
 message Data {

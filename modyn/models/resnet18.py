@@ -12,8 +12,10 @@ class Model():
         device,
     ):
 
-        num_classes = int(model_configuration['num_classes'])
-        self._model = models.__dict__['resnet18'](num_classes=num_classes)
+        print("------- optimizer args: ", optimizer_args)
+        print("------- model configuration: ", model_configuration)
+
+        self._model = models.__dict__['resnet18'](num_classes=model_configuration['num_classes'])
         #self._model = self._model.to(device)
 
         optimizer_func = getattr(torch.optim, torch_optimizer)
