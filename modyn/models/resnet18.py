@@ -11,7 +11,6 @@ class Model():
         train_loader,
         val_loader,
         device,
-        load_checkpoint_path,
         checkpoint_path,
         checkpoint_interval,
     ):
@@ -24,9 +23,6 @@ class Model():
 
         optimizer_func = getattr(torch.optim, torch_optimizer)
         self._optimizer = optimizer_func(self._model.parameters(), **optimizer_args)
-
-        if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
-            self.load_checkpoint(load_checkpoint_path)
 
         self._criterion = torch.nn.CrossEntropyLoss()
 
@@ -63,11 +59,12 @@ class Model():
         self._optimizer.load_state_dict(checkpoint_dict['optimizer'])
 
 
-    def train(self, num_epochs=1):
+    def train(self, load_checkpoint_path=None, num_epochs=1):
+
+        if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
+            self.load_checkpoint(load_checkpoint_path)
 
         self._model.train()
-
-        self.save_checkpoint(0)
 
         for _ in range(num_epochs):
 

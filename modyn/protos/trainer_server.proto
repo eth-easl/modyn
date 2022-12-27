@@ -3,22 +3,22 @@ syntax = "proto3";
 package trainer;
 
 service TrainerServer {
-    rpc start_training(TrainerServerRequest) returns (TrainerServerResponse) {}
+    rpc register(RegisterTrainServerRequest) returns (RegisterTrainServerResponse) {}
     rpc trainer_available(TrainerAvailableRequest) returns (TrainerAvailableResponse) {}
+    rpc start_training(StartTrainingRequest) returns (StartTrainingResponse) {}
 }
 
-message TrainerServerRequest {
+message RegisterTrainServerRequest {
     string model_id = 1;
     string torch_optimizer = 2;
     int32 batch_size = 3;
     map<string, VarTypeParameter> optimizer_parameters = 4;
-    Optional string load_checkpoint_path = 5;
     map<string, VarTypeParameter> model_configuration = 6;
     Data data_info = 7;
     CheckpointInfo checkpoint_info = 8;
 }
 
-message TrainerServerResponse {
+message RegisterTrainServerResponse {
     int32 training_id = 1;
 }
 
@@ -47,4 +47,13 @@ message TrainerAvailableResponse {
 message CheckpointInfo {
     int32 checkpoint_interval = 1;
     string checkpoint_path = 2;
+}
+
+message StartTrainingRequest {
+    int32 training_id = 1;
+    string load_checkpoint_path = 2;
+}
+
+message StartTrainingResponse {
+    bool training_started = 1;
 }

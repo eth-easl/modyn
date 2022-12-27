@@ -17,7 +17,7 @@ else:
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
 @typing_extensions.final
-class TrainerServerRequest(google.protobuf.message.Message):
+class RegisterTrainServerRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     @typing_extensions.final
@@ -60,7 +60,6 @@ class TrainerServerRequest(google.protobuf.message.Message):
     TORCH_OPTIMIZER_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
     OPTIMIZER_PARAMETERS_FIELD_NUMBER: builtins.int
-    LOAD_CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     DATA_INFO_FIELD_NUMBER: builtins.int
     CHECKPOINT_INFO_FIELD_NUMBER: builtins.int
@@ -69,7 +68,6 @@ class TrainerServerRequest(google.protobuf.message.Message):
     batch_size: builtins.int
     @property
     def optimizer_parameters(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
-    load_checkpoint_path: builtins.str
     @property
     def model_configuration(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
     @property
@@ -83,18 +81,17 @@ class TrainerServerRequest(google.protobuf.message.Message):
         torch_optimizer: builtins.str = ...,
         batch_size: builtins.int = ...,
         optimizer_parameters: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
-        load_checkpoint_path: builtins.str = ...,
         model_configuration: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
         data_info: global___Data | None = ...,
         checkpoint_info: global___CheckpointInfo | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["checkpoint_info", b"checkpoint_info", "data_info", b"data_info"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_info", b"checkpoint_info", "data_info", b"data_info", "load_checkpoint_path", b"load_checkpoint_path", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_optimizer", b"torch_optimizer"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_info", b"checkpoint_info", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_optimizer", b"torch_optimizer"]) -> None: ...
 
-global___TrainerServerRequest = TrainerServerRequest
+global___RegisterTrainServerRequest = RegisterTrainServerRequest
 
 @typing_extensions.final
-class TrainerServerResponse(google.protobuf.message.Message):
+class RegisterTrainServerResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     TRAINING_ID_FIELD_NUMBER: builtins.int
@@ -106,7 +103,7 @@ class TrainerServerResponse(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
 
-global___TrainerServerResponse = TrainerServerResponse
+global___RegisterTrainServerResponse = RegisterTrainServerResponse
 
 @typing_extensions.final
 class VarTypeParameter(google.protobuf.message.Message):
@@ -194,3 +191,36 @@ class CheckpointInfo(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["checkpoint_interval", b"checkpoint_interval", "checkpoint_path", b"checkpoint_path"]) -> None: ...
 
 global___CheckpointInfo = CheckpointInfo
+
+@typing_extensions.final
+class StartTrainingRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    TRAINING_ID_FIELD_NUMBER: builtins.int
+    LOAD_CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
+    training_id: builtins.int
+    load_checkpoint_path: builtins.str
+    def __init__(
+        self,
+        *,
+        training_id: builtins.int = ...,
+        load_checkpoint_path: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["load_checkpoint_path", b"load_checkpoint_path", "training_id", b"training_id"]) -> None: ...
+
+global___StartTrainingRequest = StartTrainingRequest
+
+@typing_extensions.final
+class StartTrainingResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    TRAINING_STARTED_FIELD_NUMBER: builtins.int
+    training_started: builtins.bool
+    def __init__(
+        self,
+        *,
+        training_started: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["training_started", b"training_started"]) -> None: ...
+
+global___StartTrainingResponse = StartTrainingResponse

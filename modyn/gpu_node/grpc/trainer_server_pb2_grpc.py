@@ -14,22 +14,27 @@ class TrainerServerStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.start_training = channel.unary_unary(
-                '/trainer.TrainerServer/start_training',
-                request_serializer=trainer__server__pb2.TrainerServerRequest.SerializeToString,
-                response_deserializer=trainer__server__pb2.TrainerServerResponse.FromString,
+        self.register = channel.unary_unary(
+                '/trainer.TrainerServer/register',
+                request_serializer=trainer__server__pb2.RegisterTrainServerRequest.SerializeToString,
+                response_deserializer=trainer__server__pb2.RegisterTrainServerResponse.FromString,
                 )
         self.trainer_available = channel.unary_unary(
                 '/trainer.TrainerServer/trainer_available',
                 request_serializer=trainer__server__pb2.TrainerAvailableRequest.SerializeToString,
                 response_deserializer=trainer__server__pb2.TrainerAvailableResponse.FromString,
                 )
+        self.start_training = channel.unary_unary(
+                '/trainer.TrainerServer/start_training',
+                request_serializer=trainer__server__pb2.StartTrainingRequest.SerializeToString,
+                response_deserializer=trainer__server__pb2.StartTrainingResponse.FromString,
+                )
 
 
 class TrainerServerServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def start_training(self, request, context):
+    def register(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -41,18 +46,29 @@ class TrainerServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def start_training(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_TrainerServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'start_training': grpc.unary_unary_rpc_method_handler(
-                    servicer.start_training,
-                    request_deserializer=trainer__server__pb2.TrainerServerRequest.FromString,
-                    response_serializer=trainer__server__pb2.TrainerServerResponse.SerializeToString,
+            'register': grpc.unary_unary_rpc_method_handler(
+                    servicer.register,
+                    request_deserializer=trainer__server__pb2.RegisterTrainServerRequest.FromString,
+                    response_serializer=trainer__server__pb2.RegisterTrainServerResponse.SerializeToString,
             ),
             'trainer_available': grpc.unary_unary_rpc_method_handler(
                     servicer.trainer_available,
                     request_deserializer=trainer__server__pb2.TrainerAvailableRequest.FromString,
                     response_serializer=trainer__server__pb2.TrainerAvailableResponse.SerializeToString,
+            ),
+            'start_training': grpc.unary_unary_rpc_method_handler(
+                    servicer.start_training,
+                    request_deserializer=trainer__server__pb2.StartTrainingRequest.FromString,
+                    response_serializer=trainer__server__pb2.StartTrainingResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -65,7 +81,7 @@ class TrainerServer(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def start_training(request,
+    def register(request,
             target,
             options=(),
             channel_credentials=None,
@@ -75,9 +91,9 @@ class TrainerServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/start_training',
-            trainer__server__pb2.TrainerServerRequest.SerializeToString,
-            trainer__server__pb2.TrainerServerResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/register',
+            trainer__server__pb2.RegisterTrainServerRequest.SerializeToString,
+            trainer__server__pb2.RegisterTrainServerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -95,5 +111,22 @@ class TrainerServer(object):
         return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/trainer_available',
             trainer__server__pb2.TrainerAvailableRequest.SerializeToString,
             trainer__server__pb2.TrainerAvailableResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def start_training(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/start_training',
+            trainer__server__pb2.StartTrainingRequest.SerializeToString,
+            trainer__server__pb2.StartTrainingResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
