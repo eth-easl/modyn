@@ -31,6 +31,7 @@ class TrainerGRPCServer:
     def __init__(self):
         self._selector = MockSelectorServer()
         self._training_dict = {}
+        self._training_process_dict = {}
 
     def register_with_selector(self, num_dataloaders):
         # TODO: replace this with grpc calls to the selector
@@ -64,15 +65,18 @@ class TrainerGRPCServer:
 
     def start_training(self, request: StartTrainingRequest, context: grpc.ServicerContext) -> StartTrainingResponse:
 
-        model = self._training_dict[request.training_id]
+        training_id = request.training_id
+        if training_id in self._training_process_dict:
+            if self._training_process_dict[training_id].is_alive():
+                return StartTrainingResponse(training_started=False)
 
-        # TODO(fotstrt): fix process handling here
-        p = mp.Process(target=model.train, args=(request.load_checkpoint_path,))
+        model = self._training_dict[training_id]
+
+        p = mp.Process(target=model.train_and_log, args=(f'log-{training_id}.txt', request.load_checkpoint_path,))
         p.start()
-        p.join()
+        self._training_process_dict[training_id] = p
 
         return StartTrainingResponse(training_started=True)
-
 
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))

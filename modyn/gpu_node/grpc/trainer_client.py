@@ -28,11 +28,11 @@ class TrainerClient:
                 'num_classes': VarTypeParameter(int_value=10)
             },
             data_info=Data(
-                dataset_id="online",
+                dataset_id="cifar10",
                 num_dataloaders=2
             ),
             checkpoint_info=CheckpointInfo(
-                checkpoint_interval = 1,
+                checkpoint_interval = 10,
                 checkpoint_path = "results"
             )
         )
@@ -55,5 +55,11 @@ if __name__ == "__main__":
     is_available = client.check_trainer_available()
     if is_available:
         training_id = client.register_training()
+    print(training_id)
     training_started = client.start_training(training_id)
     print(training_started)
+
+    while (not client.start_training(training_id)):
+        pass
+
+    print("started again!")
