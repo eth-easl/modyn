@@ -22,7 +22,7 @@ from modyn.gpu_node.models.utils import get_model
 
 from modyn.backend.selector.mock_selector_server import MockSelectorServer, RegisterTrainingRequest
 from modyn.gpu_node.data.utils import prepare_dataloaders
-from modyn.gpu_node.grpc.server_utils import process_complex_messages
+from modyn.gpu_node.grpc.server_utils import process_grpc_map
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -39,7 +39,7 @@ class TrainerGRPCServer:
         self._training_dict = {}
         self._training_process_dict = {}
 
-    def register_with_selector(self, num_dataloaders):
+    def register_with_selector(self, num_dataloaders: int) -> int:
         # TODO: replace this with grpc calls to the selector
         req = RegisterTrainingRequest(num_workers=num_dataloaders)
         response = self._selector.register_training(req)
@@ -61,8 +61,8 @@ class TrainerGRPCServer:
         training_id = self.register_with_selector(request.data_info.num_dataloaders)
         print(training_id)
 
-        optimizer_dict = process_complex_messages(request.optimizer_parameters)
-        model_conf_dict = process_complex_messages(request.model_configuration)
+        optimizer_dict = process_grpc_map(request.optimizer_parameters)
+        model_conf_dict = process_grpc_map(request.model_configuration)
 
         train_dataloader, val_dataloader = prepare_dataloaders(
             training_id,
@@ -70,6 +70,9 @@ class TrainerGRPCServer:
             request.data_info.num_dataloaders,
             request.batch_size
         )
+
+        if train_dataloader is None:
+            return RegisterTrainServerResponse(training_id=-1)
 
         model = get_model(request, optimizer_dict, model_conf_dict, train_dataloader, val_dataloader, 0)
         self._training_dict[training_id] = model

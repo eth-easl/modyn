@@ -2,7 +2,15 @@ import torchvision.transforms as transforms
 from torchvision import datasets
 
 
-def get_cifar_datasets():
+def get_cifar_datasets() -> tuple[datasets.CIFAR10]:
+
+    """
+    Provides the torchvision CIFAR10 datasets (for local testing).
+
+    Returns:
+        tuple(datasets.CIFAR10): train and validation CIFAR10 datasets.
+
+    """
 
     transform = transforms.Compose(
         [
