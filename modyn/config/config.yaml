@@ -9,10 +9,10 @@ storage:
     type: "CSVDataSource"
     batch_size: 15
     batch_interval: 5
-    path: "storage/datasource/data/sample_train.csv"
+    path: "modyn/storage/datasource/data/sample_train.csv"
   adapter: "PostgreSQLAdapter"
-  port: "50051"
-  hostname: "storage"
+  port: "50051" # TODO(#43): synchronize this with docker-compose file. this was off
+  hostname: "localhost"
   dbm:
     path: "dbm"
   s3:

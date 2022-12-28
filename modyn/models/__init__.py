@@ -1,7 +1,7 @@
-"""Supervisor module. The supervisor initiates a pipeline and coordinates all components.
+"""Models.
 
 """
-from .supervisor import Supervisor  # noqa: F401
+from .resnet18.resnet18 import ResNet18  # noqa: F401
 import os
 files = os.listdir(os.path.dirname(__file__))
 files.remove('__init__.py')

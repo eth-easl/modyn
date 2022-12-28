@@ -165,6 +165,7 @@ disable=raw-checker-failed,
         too-few-public-methods,         # noisy, e.g. exception classes, mixins etc
         no-member,                      # false positives, deals badly with django classes
         logging-format-interpolation,   # decided against the proposed change in favor of .format()
+        logging-fstring-interpolation,  # https://stackoverflow.com/questions/34619790/pylint-message-logging-format-interpolation
         too-many-ancestors,             # noisy, reported for all test classes
         missing-docstring,              # yeah... we don't have those
         protected-access,               # for us that means be careful, not don't do it
@@ -185,7 +186,7 @@ enable=c-extension-no-member
 
 # The type of string formatting that logging methods do. `old` means using %
 # formatting, `new` is for `{}` formatting.
-logging-format-style=old
+logging-format-style=new
 
 # Logging modules to check that the string format arguments are in logging
 # function parameter format.
