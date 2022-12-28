@@ -2,17 +2,19 @@
 from modyn.backend.selector.selector import Selector
 import numpy as np
 
+
 class BasicSelector(Selector):
     """
-    This class implements selection solely based on freshness of the data. 
-    Specifically, there is a "unseen_data_ratio" that controls 
+    This class implements selection solely based on freshness of the data.
+    Specifically, there is a "unseen_data_ratio" that controls
     how much of each batch is from unseen data, and how much is from previously
     seen data. If is_adaptive_ratio is set to True, then this ratio is automatically
-    set to the proportion of the size of the unseen vs. previously sen data. 
+    set to the proportion of the size of the unseen vs. previously sen data.
 
     Args:
-        Selector (dict): The configuration for the selector. 
+        Selector (dict): The configuration for the selector.
     """
+
     def __init__(self, config: dict):
         super().__init__(config)
 
@@ -44,7 +46,6 @@ class BasicSelector(Selector):
         new_samples.extend(old_samples)
         return new_samples
 
-
     def get_unseen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
         For a given training_id and number of samples, request that many previously unseen samples.
@@ -54,10 +55,9 @@ class BasicSelector(Selector):
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 0 AND training_id = {training_id}"
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
-        assert not np.array(seen).any()  
+        assert not np.array(seen).any()
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return keys[choice]
-
 
     def get_seen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
@@ -69,7 +69,7 @@ class BasicSelector(Selector):
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 1 AND training_id = {training_id}"
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
-        assert np.array(seen).all()  
+        assert np.array(seen).all()
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return keys[choice]
 
@@ -84,7 +84,7 @@ class BasicSelector(Selector):
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 0 AND training_id = {training_id}"
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
-        assert not np.array(seen).any()  
+        assert not np.array(seen).any()
         return len(keys)
 
     def get_unseen_data_size(self, training_id: int) -> int:
@@ -98,5 +98,5 @@ class BasicSelector(Selector):
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 1 AND training_id = {training_id}"
         keys, scores, seen, data = self.get_samples_by_metadata_query(query)
-        assert np.array(seen).all()  
+        assert np.array(seen).all()
         return len(keys)

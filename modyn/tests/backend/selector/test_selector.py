@@ -73,7 +73,7 @@ def test_base_selector_get_new_training_samples(test_get_seen_data, test_get_uns
 
     assert selector._select_new_training_samples(0, 4) == ["a", "b", "c", "d"]
     test_get_unseen_data.assert_called_with(0, 3)
-    test_get_seen_data.assert_called_with(0, 1) 
+    test_get_seen_data.assert_called_with(0, 1)
 
 
 @patch.multiple(Selector, __abstractmethods__=set())
@@ -121,6 +121,7 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
     for sample, clss in zip(samples, classes):
         assert (sample, clss) in original_samples
 
+
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(ScoreSelector, '__init__', noop_constructor_mock)
 @patch.object(ScoreSelector, '_get_all_metadata')
@@ -141,8 +142,7 @@ def test_score_selector_normal_mode(test__get_all_metadata):
     assert Counter(scores) == Counter([0.25, 0.25, 0.25, 0.25])
     original_samples = set(zip(all_samples, all_scores))
     for sample, score in zip(samples, scores):
-        assert (sample, score*4) in original_samples
-
+        assert (sample, score * 4) in original_samples
 
 
 @patch.multiple(Selector, __abstractmethods__=set())

@@ -4,7 +4,20 @@ import grpc
 from modyn.backend.metadata.metadata_pb2_grpc import MetadataStub
 from modyn.backend.metadata.metadata_pb2 import GetByQueryRequest
 
+
 class Selector(ABC):
+    """This class is the base class for selectors. In order to extend this class
+    to perform custom experiments, the most important thing is to implement the
+    _select_new_training_samples method, which should return a list of keys given
+    a training ID and the number of samples requested. To do so, make use of
+    get_samples_by_metadata_query, which will get samples from the metadata service
+    using a query.
+
+    Args:
+        Selector (config): the configurations for the selector
+
+
+    """
 
     _config: dict = dict()
     _con = None
@@ -62,7 +75,7 @@ class Selector(ABC):
             training_set_size: int
     ) -> list[str]:
         """
-        Selects a new training set of samples for the given training id. 
+        Selects a new training set of samples for the given training id.
 
         Returns:
             list(str): the training sample keys for the newly selected training_set

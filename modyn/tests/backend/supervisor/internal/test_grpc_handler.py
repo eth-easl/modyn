@@ -27,7 +27,7 @@ def test_init(test_insecure_channel, test_connection_established):
     assert handler.storage is not None
 
 
-@patch.object(GRPCHandler,  'init_storage', lambda self: None)
+@patch.object(GRPCHandler, 'init_storage', lambda self: None)
 @patch('modyn.backend.supervisor.internal.grpc_handler.TIMEOUT_SEC', 0.5)
 def test_connection_established_times_out():
     handler = GRPCHandler(get_simple_config())

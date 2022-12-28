@@ -6,10 +6,10 @@ from modyn.backend.selector.selector import Selector
 
 
 class GDumbSelector(Selector):
-    """Implements the GDumb selection policy. 
+    """Implements the GDumb selection policy.
 
     Args:
-        Selector (dict): the configuration for the selector. 
+        Selector (dict): the configuration for the selector.
     """
 
     def __init__(self, config: dict):
@@ -17,10 +17,10 @@ class GDumbSelector(Selector):
 
     def _select_new_training_samples(self, training_id: int, num_samples: int) -> list:
         """
-        For a given training_id and number of samples, request that many samples from the selector. 
+        For a given training_id and number of samples, request that many samples from the selector.
 
         Returns:
-            List of keys for the samples to be considered. 
+            List of keys for the samples to be considered.
         """
         result_samples, result_classes = [], []
 

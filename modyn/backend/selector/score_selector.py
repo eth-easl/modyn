@@ -1,10 +1,11 @@
 from modyn.backend.selector.selector import Selector
 import numpy as np
 
+
 class ScoreSelector(Selector):
-    """Implements a score based selector. Has two modes: softmax mode and normal mode. 
-    As the name suggests, softmax mode will apply softmax to the samples (so the scores 
-    can be negative). Defaults to softmax mode. 
+    """Implements a score based selector. Has two modes: softmax mode and normal mode.
+    As the name suggests, softmax mode will apply softmax to the samples (so the scores
+    can be negative). Defaults to softmax mode.
 
     Args:
         Selector (dict): configuration for the selector
@@ -35,7 +36,7 @@ class ScoreSelector(Selector):
         else:
             assert all_scores.min() >= 0, "Scores should be nonnegative if on normal mode!"
             all_scores = all_scores / np.sum(all_scores)
-        rand_indices = np.random.choice(all_samples.shape[0], size=num_samples, replace=False, p = all_scores)
+        rand_indices = np.random.choice(all_samples.shape[0], size=num_samples, replace=False, p=all_scores)
         samples = all_samples[rand_indices]
         scores = all_scores[rand_indices]
         return zip(list(samples), list(scores))
