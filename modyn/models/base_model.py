@@ -2,6 +2,8 @@ import logging
 from typing import Optional
 import torch
 
+from modyn.gpu_node.metadata.metadata_collector import MetadataCollector
+
 
 class BaseModel():
 
@@ -19,6 +21,7 @@ class BaseModel():
         device: int,
         checkpoint_path: str,
         checkpoint_interval: int,
+        metadata_collector: MetadataCollector
     ):
 
         self._model = None
@@ -30,6 +33,8 @@ class BaseModel():
 
         self._checkpoint_path = checkpoint_path
         self._checkpoint_interval = checkpoint_interval
+
+        self._metadata_collector = metadata_collector
 
     def create_logger(self, log_path: str):
 

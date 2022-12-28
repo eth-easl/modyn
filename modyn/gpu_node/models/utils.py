@@ -4,6 +4,7 @@ from typing import Any, Optional
 import torch
 
 from modyn.gpu_node.grpc.trainer_server_pb2 import RegisterTrainServerRequest
+from modyn.gpu_node.metadata.metadata_collector import MetadataCollector
 from modyn.models.base_model import BaseModel
 
 
@@ -13,7 +14,8 @@ def get_model(
     model_conf_dict: dict[str, Any],
     train_dataloader: torch.utils.data.DataLoader,
     val_dataloader: Optional[torch.utils.data.DataLoader],
-    device: int
+    device: int,
+    metadata_collector: MetadataCollector,
 ) -> BaseModel:
 
     """
@@ -38,6 +40,7 @@ def get_model(
         device,
         request.checkpoint_info.checkpoint_path,
         request.checkpoint_info.checkpoint_interval,
+        metadata_collector
     )
 
     return model

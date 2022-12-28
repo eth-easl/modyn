@@ -18,6 +18,7 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
     StartTrainingRequest,
     StartTrainingResponse
 )
+from modyn.gpu_node.metadata.metadata_collector import MetadataCollector
 
 from modyn.gpu_node.models.utils import get_model
 
@@ -74,7 +75,9 @@ class TrainerGRPCServer:
         if train_dataloader is None:
             return RegisterTrainServerResponse(training_id=-1)
 
-        model = get_model(request, optimizer_dict, model_conf_dict, train_dataloader, val_dataloader, 0)
+        metadata_collector = MetadataCollector("127.0.0.1:50055", training_id,) # TODO(fotstrt): fix address
+
+        model = get_model(request, optimizer_dict, model_conf_dict, train_dataloader, val_dataloader, 0, metadata_collector)
         self._training_dict[training_id] = model
 
         return RegisterTrainServerResponse(training_id=training_id)

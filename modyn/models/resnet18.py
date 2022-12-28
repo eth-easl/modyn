@@ -16,9 +16,10 @@ class Model(BaseModel):
         device,
         checkpoint_path,
         checkpoint_interval,
+        metadata_collector
     ):
 
-        super().__init__(train_loader, val_loader, device, checkpoint_path, checkpoint_interval)
+        super().__init__(train_loader, val_loader, device, checkpoint_path, checkpoint_interval, metadata_collector)
 
         print("------- optimizer args: ", optimizer_args)
         print("------- model configuration: ", model_configuration)
