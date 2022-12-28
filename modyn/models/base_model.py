@@ -1,15 +1,24 @@
 import logging
+from typing import Optional
 import torch
 
 
 class BaseModel():
+
+    """
+    Base class for the registered models.
+
+    It implements some common functionality such as checkpointing and logging.
+
+    """
+
     def __init__(
         self,
-        train_loader,
-        val_loader,
-        device,
-        checkpoint_path,
-        checkpoint_interval,
+        train_loader: torch.utils.data.DataLoader,
+        val_loader: Optional[torch.utils.data.DataLoader],
+        device: int,
+        checkpoint_path: str,
+        checkpoint_interval: int,
     ):
 
         self._model = None
@@ -22,7 +31,7 @@ class BaseModel():
         self._checkpoint_path = checkpoint_path
         self._checkpoint_interval = checkpoint_interval
 
-    def create_logger(self, log_path):
+    def create_logger(self, log_path: str):
 
         self._logger = logging.getLogger('test')  # TODO(fotstrt): fix this
         self._logger.setLevel(logging.INFO)
@@ -36,7 +45,7 @@ class BaseModel():
         self._logger.addHandler(fileHandler)
         self._logger.propagate = False
 
-    def save_checkpoint(self, iteration):
+    def save_checkpoint(self, iteration: int):
 
         # TODO(fotstrt): this might overwrite checkpoints from previous runs
         # we could have a counter for the specific training, and increment it
@@ -51,14 +60,17 @@ class BaseModel():
         }
         torch.save(dict_to_save, checkpoint_file_name)
 
-    def load_checkpoint(self, path):
+    def load_checkpoint(self, path: str):
 
         checkpoint_dict = torch.load(path)
+
         assert 'model' in checkpoint_dict
         assert 'optimizer' in checkpoint_dict
+
         self._model.load_state_dict(checkpoint_dict['model'])
         self._optimizer.load_state_dict(checkpoint_dict['optimizer'])
 
-    def train_and_log(self, log_path, load_checkpoint_path=None):
+    def train_and_log(self, log_path: str, load_checkpoint_path=Optional[str]):
+
         self.create_logger(log_path)
         self.train(load_checkpoint_path)

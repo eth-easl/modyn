@@ -1,4 +1,15 @@
-def process_complex_messages(grpc_dict):
+from typing import Any
+from modyn.gpu_node.grpc.trainer_server_pb2 import VarTypeParameter
+
+
+def process_grpc_map(grpc_dict: dict[str, VarTypeParameter]) -> dict[str, Any]:
+
+    """
+    Converts grpc map to python dict with proper casting.
+
+    Returns:
+        dict[str, Any]: a dict with values of different types.
+    """
 
     new_dict = {}
     for key, value in grpc_dict.items():

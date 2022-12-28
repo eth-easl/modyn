@@ -13,7 +13,8 @@ class OnlineDataset(IterableDataset):
         self._config = config
         self._trainining_set_number = 0
 
-        # TODO: remove these
+        # These mock the behavior of storage and selector servers.
+        # TODO: remove them when the storage and selector grpc servers are fixed.
         self._selector = MockSelectorServer()
         self._storage = MockStorageServer()
 

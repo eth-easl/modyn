@@ -13,6 +13,10 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
 
 class TrainerClient:
 
+    """
+    A class to test the grpc server of the gpu node.
+    """
+
     def __init__(self):
         self._trainer_stub = TrainerServerStub(grpc.insecure_channel("127.0.0.1:1222"))
 
@@ -34,7 +38,7 @@ class TrainerClient:
                 'num_classes': VarTypeParameter(int_value=10)
             },
             data_info=Data(
-                dataset_id="cifar10",
+                dataset_id="online",
                 num_dataloaders=2
             ),
             checkpoint_info=CheckpointInfo(
