@@ -13,10 +13,21 @@ services:
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
 
+  storage-db:
+    image: postgres:14.1-alpine
+    restart: always
+    env_file:
+      - ./storage/database/.env
+    ports:
+      - '5433:5433'
+    volumes:
+      - ./storage-postgres-data:/var/lib/postgresql/data
+      - ./storage/database/01_create_tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql
+
   storage:
     image: storage
     depends_on:
-      - db
+      - storage-db
     build:
       context: ../
       dockerfile: modyn/storage/Dockerfile

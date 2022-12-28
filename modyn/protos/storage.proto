@@ -2,33 +2,28 @@ syntax = "proto3";
 package modyn.storage;
 
 service Storage {
-  rpc Get (GetRequest) returns (GetResponse) {}
-  rpc Query (QueryRequest) returns (QueryResponse) {}
-  rpc Put (PutRequest) returns (PutResponse) {}
+  rpc Get (GetRequest) returns (stream GetResponse) {}
+  rpc GetNewDataSince (GetNewDataSinceRequest) returns (stream GetNewDataSinceResponse) {}
   rpc CheckAvailability (DatasetAvailableRequest) returns (DatasetAvailableResponse) {}
+  rpc RegisterNewDataset (RegisterNewDatasetRequest) returns (RegisterNewDatasetResponse) {}
 }
 
 message GetRequest {
-  repeated string keys = 1;
+  string dataset_id = 1;
+  repeated string keys = 2;
 }
 
 message GetResponse {
-  repeated string value = 1;
+  bytes chunk = 1;
 }
 
-message QueryRequest {
+message GetNewDataSinceRequest {
+  string dataset_id = 1;
+  int64 timestamp = 2;
 }
 
-message QueryResponse {
+message GetNewDataSinceResponse {
   repeated string keys = 1;
-}
-
-message PutRequest {
-  repeated string keys = 1;
-  repeated string value = 2;
-}
-
-message PutResponse {
 }
 
 message DatasetAvailableRequest {
@@ -37,4 +32,16 @@ message DatasetAvailableRequest {
 
 message DatasetAvailableResponse {
   bool available = 1;
+}
+
+message RegisterNewDatasetRequest {
+  string dataset_id = 1;
+  int32 file_system_wrapper_type = 2;
+  int32 file_wrapper_type = 3;
+  string description = 4;
+  string base_path = 5;
+}
+
+message RegisterNewDatasetResponse {
+  bool success = 1;
 }

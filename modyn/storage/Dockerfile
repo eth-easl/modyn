@@ -22,8 +22,8 @@ RUN python -m pip install -r requirements.txt
 RUN pip install --upgrade protobuf
 
 
-WORKDIR /src
-COPY . /src
+WORKDIR /modyn
+COPY . /modyn
 
 RUN pip install -e .
 
@@ -32,7 +32,6 @@ RUN pip install -e .
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /src
 USER appuser
 
-RUN chmod a+x modyn/storage/run.sh
+RUN chmod a+x modyn/storage/modyn-storage
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["modyn/storage/run.sh"]
+CMD ["./modyn/storage/modyn-storage"]
