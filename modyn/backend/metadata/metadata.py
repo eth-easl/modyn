@@ -80,14 +80,16 @@ class OptimalDatasetMetadata(object):
             list[tuple[str, float, str]]: List of keys, scores and data.
         """
         self.__cursor.execute(
-            "SELECT key, score, data FROM odm_storage WHERE key IN %s AND training_id = %s",
+            "SELECT key, score, seen, label, data FROM odm_storage WHERE key IN %s AND training_id = %s",
             (tuple(keys),
              training_id))
         data = self.__cursor.fetchall()
         return_keys = [d[0] for d in data]
         scores = [d[1] for d in data]
-        return_data = [d[2] for d in data]
-        return return_keys, scores, return_data
+        seen = [d[2] for d in data]
+        labels = [d[3] for d in data]
+        return_data = [d[4] for d in data]
+        return return_keys, scores, seen, labels, return_data
 
     def get_by_query(self, query: str) -> tuple[list[str], list[float], list[str]]:
         """
@@ -103,8 +105,10 @@ class OptimalDatasetMetadata(object):
         data = self.__cursor.fetchall()
         keys = [d[0] for d in data]
         scores = [d[1] for d in data]
-        return_data = [d[2] for d in data]
-        return keys, scores, return_data
+        seen = [d[2] for d in data]
+        labels = [d[3] for d in data]
+        return_data = [d[4] for d in data]
+        return keys, scores, seen, labels, return_data
 
     def get_keys_by_query(self, query: str) -> list[str]:
         """

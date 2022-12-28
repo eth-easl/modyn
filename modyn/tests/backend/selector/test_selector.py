@@ -3,9 +3,12 @@ from unittest.mock import patch
 from modyn.backend.selector.selector import Selector
 from modyn.backend.selector.base_selector import BasicSelector
 from modyn.backend.selector.gdumb_selector import GDumbSelector
+from modyn.backend.selector.score_selector import ScoreSelector
 
 from collections import Counter
 import pytest
+
+import numpy as np
 
 # We do not use the parameters in this empty mock constructor.
 
@@ -53,58 +56,58 @@ def test_register_training(test__register_training):
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
-@patch.object(Selector, 'get_from_newqueue')
-@patch.object(Selector, 'get_from_odm')
-def test_base_selector_get_new_training_samples(test_get_from_odm, test_get_from_newqueue):
-    test_get_from_newqueue.return_value = ["a", "b", "c"]
-    test_get_from_odm.return_value = ["d"]
+@patch.object(BasicSelector, 'get_unseen_data')
+@patch.object(BasicSelector, 'get_seen_data')
+def test_base_selector_get_new_training_samples(test_get_seen_data, test_get_unseen_data):
+    test_get_unseen_data.return_value = ["a", "b", "c"]
+    test_get_seen_data.return_value = ["d"]
 
     # We need to instantiate an abstract class for the test
     selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
-    selector._set_new_data_ratio(0.75)
+    selector._set_unseen_data_ratio(0.75)
     selector._set_is_adaptive_ratio(False)
     with pytest.raises(Exception):
-        selector._set_new_data_ratio(1.1)
+        selector._set_unseen_data_ratio(1.1)
     with pytest.raises(Exception):
-        selector._set_new_data_ratio(-0.1)
+        selector._set_unseen_data_ratio(-0.1)
 
     assert selector._select_new_training_samples(0, 4) == ["a", "b", "c", "d"]
-    test_get_from_newqueue.assert_called_with(0, 3)
-    test_get_from_odm.assert_called_with(0, 1)
+    test_get_unseen_data.assert_called_with(0, 3)
+    test_get_seen_data.assert_called_with(0, 1) 
 
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
-@patch.object(Selector, 'get_from_newqueue')
-@patch.object(Selector, 'get_from_odm')
-@patch.object(Selector, 'get_newqueue_size')
-@patch.object(Selector, 'get_odm_size')
-def test_adaptive_selector_get_new_training_samples(test_get_odm_size,
-                                                    test_get_newqueue_size,
-                                                    test_get_from_odm,
-                                                    test_get_from_newqueue):
-    test_get_from_newqueue.return_value = ["a"]
-    test_get_from_odm.return_value = ["b", "c", "d", "e"]
-    test_get_odm_size.return_value = 80
-    test_get_newqueue_size.return_value = 20
+@patch.object(BasicSelector, 'get_unseen_data')
+@patch.object(BasicSelector, 'get_seen_data')
+@patch.object(BasicSelector, 'get_unseen_data_size')
+@patch.object(BasicSelector, 'get_seen_data_size')
+def test_adaptive_selector_get_new_training_samples(test_get_seen_data_size,
+                                                    test_get_unseen_data_size,
+                                                    test_get_seen_data,
+                                                    test_get_unseen_data):
+    test_get_unseen_data.return_value = ["a"]
+    test_get_seen_data.return_value = ["b", "c", "d", "e"]
+    test_get_seen_data_size.return_value = 80
+    test_get_unseen_data_size.return_value = 20
 
     # We need to instantiate an abstract class for the test
     selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
     selector._set_is_adaptive_ratio(True)
 
     assert selector._select_new_training_samples(0, 5) == ["a", "b", "c", "d", "e"]
-    test_get_from_newqueue.assert_called_with(0, 1)
-    test_get_from_odm.assert_called_with(0, 4)
+    test_get_unseen_data.assert_called_with(0, 1)
+    test_get_seen_data.assert_called_with(0, 4)
 
 
 @patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(BasicSelector, '__init__', noop_constructor_mock)
-@patch.object(GDumbSelector, '_get_all_odm')
-def test_gdumb_selector_get_new_training_samples(test__get_all_odm):
+@patch.object(GDumbSelector, '__init__', noop_constructor_mock)
+@patch.object(GDumbSelector, '_get_all_metadata')
+def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
     all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
     all_classes = [1, 1, 1, 1, 2, 2, 3, 3]
 
-    test__get_all_odm.return_value = all_samples, all_classes
+    test__get_all_metadata.return_value = all_samples, all_classes
 
     # We need to instantiate an abstract class for the test
     selector = GDumbSelector(None)  # pylint: disable=abstract-class-instantiated
@@ -117,3 +120,49 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_odm):
     original_samples = set(zip(all_samples, all_classes))
     for sample, clss in zip(samples, classes):
         assert (sample, clss) in original_samples
+
+@patch.multiple(Selector, __abstractmethods__=set())
+@patch.object(ScoreSelector, '__init__', noop_constructor_mock)
+@patch.object(ScoreSelector, '_get_all_metadata')
+def test_score_selector_normal_mode(test__get_all_metadata):
+    all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    all_scores = [1, 0, 1, 0, 1, 0, 1, 0]
+
+    test__get_all_metadata.return_value = all_samples, all_scores
+
+    # We need to instantiate an abstract class for the test
+    selector = ScoreSelector(None)  # pylint: disable=abstract-class-instantiated
+    selector._set_is_softmax_mode(False)
+
+    samples = selector._select_new_training_samples(0, 4)
+    scores = [score for _, score in samples]
+    samples = [sample for sample, _ in samples]
+
+    assert Counter(scores) == Counter([0.25, 0.25, 0.25, 0.25])
+    original_samples = set(zip(all_samples, all_scores))
+    for sample, score in zip(samples, scores):
+        assert (sample, score*4) in original_samples
+
+
+
+@patch.multiple(Selector, __abstractmethods__=set())
+@patch.object(ScoreSelector, '__init__', noop_constructor_mock)
+@patch.object(ScoreSelector, '_get_all_metadata')
+def test_score_selector_softmax_mode(test__get_all_metadata):
+    all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    all_scores = [10, -10, 10, -10, 10, -10, 10, -10]
+
+    test__get_all_metadata.return_value = all_samples, all_scores
+
+    # We need to instantiate an abstract class for the test
+    selector = ScoreSelector(None)  # pylint: disable=abstract-class-instantiated
+    selector._set_is_softmax_mode(True)
+
+    samples = selector._select_new_training_samples(0, 4)
+    scores = [score for _, score in samples]
+    samples = [sample for sample, _ in samples]
+
+    assert (np.array(scores) - 88105.8633608).max() < 1e4
+    original_samples = set(all_samples)
+    for sample in samples:
+        assert sample in original_samples

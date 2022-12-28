@@ -29,7 +29,7 @@ storage:
     user: "postgres"
     password: "postgres"
 
-odm:
+metadata:
   port: "50054"
   hostname: "backend"
   postgresql:

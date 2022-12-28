@@ -1,7 +1,7 @@
 syntax = "proto3";
-package odm;
+package metadata;
 
-service ODM {
+service Metadata {
     rpc GetByKeys (GetByKeysRequest) returns (GetResponse) {}
     rpc GetByQuery (GetByQueryRequest) returns (GetResponse) {}
     rpc GetKeysByQuery (GetByQueryRequest) returns (GetKeysResponse) {}
@@ -22,6 +22,8 @@ message GetResponse {
     repeated string keys = 1;
     repeated float scores = 2;
     repeated string data = 3;
+    repeated bool seen = 4;
+    repeated int32 label = 5;
 }
 
 message GetKeysResponse {

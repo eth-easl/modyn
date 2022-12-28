@@ -1,5 +1,5 @@
-from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
-from backend.odm.odm import OptimalDatasetMetadata
+from backend.metadata.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
+from backend.metadata.metadata import OptimalDatasetMetadata
 from concurrent import futures
 import os
 import sys
@@ -13,12 +13,12 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from backend.odm.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501, E402
+from backend.metadata.odm_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse  # noqa: E501, E402
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
 
-class ODMGRPCServer(ODMServicer):
+class ODMGRPCServer(MetadataServicer):
     """Provides methods that implement functionality of the ODM server."""
 
     def __init__(self, config: dict):
@@ -59,7 +59,7 @@ class ODMGRPCServer(ODMServicer):
 
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    add_ODMServicer_to_server(ODMGRPCServer(config), server)
+    add_MetadataServicer_to_server(ODMGRPCServer(config), server)
     logging.info(
         'Starting server. Listening on port .' +
         config["odm"]["port"])

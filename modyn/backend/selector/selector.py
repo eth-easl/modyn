@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import psycopg2
-
+import grpc
+from modyn.backend.metadata.metadata_pb2_grpc import MetadataStub
+from modyn.backend.metadata.metadata_pb2 import GetByQueryRequest
 
 class Selector(ABC):
 
@@ -35,6 +37,13 @@ class Selector(ABC):
             password=config['selector']['postgresql']['password']
         )
         self._setup_database()
+
+        # Setup connection to the metadata server
+        metadata_channel = grpc.insecure_channel(
+            config['metadata']['hostname'] +
+            ':' +
+            config['metadata']['port'])
+        self.__metadata_stub = MetadataStub(metadata_channel)
 
     def _setup_database(self) -> None:
         """
@@ -242,44 +251,7 @@ class Selector(ABC):
 
         return training_samples_subset
 
-    def get_from_newqueue(self, training_id: int, num_samples: int) -> list[str]:
-        """
-        For a given training_id and number of samples, request that many samples from
-        the new queue.
-
-        Returns:
-            List of keys for the samples in the new queue.
-        """
-        raise NotImplementedError
-
-    def get_from_odm(self, training_id: int, num_samples: int) -> list[str]:
-        """
-        For a given training_id and number of samples, request that many samples from
-        the ODM service.
-
-        Returns:
-            List of keys for the samples in the ODM.
-        """
-        raise NotImplementedError
-
-    def get_newqueue_size(self, training_id: int) -> int:
-        """For a given training_id, return how many samples are in the new queue.
-
-        Args:
-            training_id (int): the queried training_id
-
-        Returns:
-            int: number of samples in the new queue.
-        """
-        raise NotImplementedError
-
-    def get_odm_size(self, training_id: int) -> int:
-        """For a given training_id, return how many samples are in the ODM.
-
-        Args:
-            training_id (int): the queried training_id
-
-        Returns:
-            int: number of samples in the ODM
-        """
-        raise NotImplementedError
+    def get_samples_by_metadata_query(self, query: str):
+        request = GetByQueryRequest(query=query)
+        samples = self.__metadata_stub.GetByQuery(request)
+        return samples
