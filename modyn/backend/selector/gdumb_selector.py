@@ -2,10 +2,10 @@ import grpc
 
 import numpy as np
 
-from modyn.backend.selector.base_selector import BaseSelector
+from modyn.backend.selector.base_selector import BasicSelector
 
 
-class GDumbSelector(BaseSelector):
+class GDumbSelector(BasicSelector):
 
     def __init__(self, config: dict):
         super().__init__(config)
@@ -24,7 +24,7 @@ class GDumbSelector(BaseSelector):
         # GDumb as a strategy does not take samples from new queue.
         return []
 
-    def get_from_odm(self, training_id: int, num_samples: int) -> list[str]:
+    def get_from_odm(self, training_id: int, num_samples: int) -> list:
         """
         For a given training_id and number of samples, request that many samples from
         the ODM service.

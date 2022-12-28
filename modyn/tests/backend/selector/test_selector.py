@@ -1,7 +1,7 @@
 
 from unittest.mock import patch
 from modyn.backend.selector.selector import Selector
-from modyn.backend.selector.base_selector import BaseSelector
+from modyn.backend.selector.base_selector import BasicSelector
 from modyn.backend.selector.gdumb_selector import GDumbSelector
 
 from collections import Counter
@@ -52,7 +52,7 @@ def test_register_training(test__register_training):
 
 
 @patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(BaseSelector, '__init__', noop_constructor_mock)
+@patch.object(BasicSelector, '__init__', noop_constructor_mock)
 @patch.object(Selector, 'get_from_newqueue')
 @patch.object(Selector, 'get_from_odm')
 def test_base_selector_get_new_training_samples(test_get_from_odm, test_get_from_newqueue):
@@ -60,7 +60,7 @@ def test_base_selector_get_new_training_samples(test_get_from_odm, test_get_from
     test_get_from_odm.return_value = ["d"]
 
     # We need to instantiate an abstract class for the test
-    selector = BaseSelector(None)  # pylint: disable=abstract-class-instantiated
+    selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
     selector._set_new_data_ratio(0.75)
     selector._set_is_adaptive_ratio(False)
     with pytest.raises(Exception):
@@ -74,7 +74,7 @@ def test_base_selector_get_new_training_samples(test_get_from_odm, test_get_from
 
 
 @patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(BaseSelector, '__init__', noop_constructor_mock)
+@patch.object(BasicSelector, '__init__', noop_constructor_mock)
 @patch.object(Selector, 'get_from_newqueue')
 @patch.object(Selector, 'get_from_odm')
 @patch.object(Selector, 'get_newqueue_size')
@@ -89,7 +89,7 @@ def test_adaptive_selector_get_new_training_samples(test_get_odm_size,
     test_get_newqueue_size.return_value = 20
 
     # We need to instantiate an abstract class for the test
-    selector = BaseSelector(None)  # pylint: disable=abstract-class-instantiated
+    selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
     selector._set_is_adaptive_ratio(True)
 
     assert selector._select_new_training_samples(0, 5) == ["a", "b", "c", "d", "e"]
@@ -98,7 +98,7 @@ def test_adaptive_selector_get_new_training_samples(test_get_odm_size,
 
 
 @patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(BaseSelector, '__init__', noop_constructor_mock)
+@patch.object(BasicSelector, '__init__', noop_constructor_mock)
 @patch.object(GDumbSelector, '_get_all_odm')
 def test_gdumb_selector_get_new_training_samples(test__get_all_odm):
     all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]

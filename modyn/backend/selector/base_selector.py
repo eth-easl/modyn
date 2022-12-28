@@ -2,8 +2,17 @@ import grpc
 
 from modyn.backend.selector.selector import Selector
 
+class BasicSelector(Selector):
+    """
+    This class implements selection solely based on freshness of the data. 
+    Specifically, there is a "unseen_data_ratio" that controls 
+    how much of each batch is from unseen data, and how much is from previously
+    seen data. If is_adaptive_ratio is set to True, then this ratio is automatically
+    set to the proportion of the size of the unseen vs. previously sen data. 
 
-class BaseSelector(Selector):
+    Args:
+        Selector (_type_): _description_
+    """
     def __init__(self, config: dict):
         super().__init__(config)
 
