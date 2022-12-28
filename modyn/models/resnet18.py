@@ -2,10 +2,10 @@ from torchvision import models
 import torch
 import os
 
-from modyn.models.base_model import BaseModel
+from modyn.models.base_trainer import BaseTrainer
 
 
-class Model(BaseModel):
+class ResNet18(BaseTrainer):
     def __init__(
         self,
         torch_optimizer,
@@ -31,32 +31,16 @@ class Model(BaseModel):
 
         self._criterion = torch.nn.CrossEntropyLoss()
 
-    def train(self, load_checkpoint_path=None, num_epochs=1):
+    def train_one_iteration(self, iteration, batch):
 
         self._logger.info('Process {} starts training'.format(os.getpid()))
 
-        if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
-            self.load_checkpoint(load_checkpoint_path)
-
-        self._model.train()
-
-        for _ in range(num_epochs):
-
-            train_iter = enumerate(self._train_loader)
-            for i, batch in train_iter:
-                self._optimizer.zero_grad()
-                data, target = batch[0].to(self._device), batch[1].to(self._device)
-                output = self._model(data)
-                loss = self._criterion(output, target)
-                loss.backward()
-                self._optimizer.step()
-
-                if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
-                    self.save_checkpoint(i)
-
-                self._logger.info('Iteration {}'.format(i))
-
-        self._logger.info('Training complete!')
+        self._optimizer.zero_grad()
+        data, target = batch[0].to(self._device), batch[1].to(self._device)
+        output = self._model(data)
+        loss = self._criterion(output, target)
+        loss.backward()
+        self._optimizer.step()
 
     def evaluate(self):
 

@@ -88,7 +88,7 @@ class TrainerGRPCServer:
 
         model = self._training_dict[training_id]
 
-        p = mp.Process(target=model.train_and_log, args=(f'log-{training_id}.txt', request.load_checkpoint_path,))
+        p = mp.Process(target=model.train, args=(f'log-{training_id}.txt', request.load_checkpoint_path,))
         p.start()
         self._training_process_dict[training_id] = p
 

@@ -3,7 +3,7 @@ from torchvision import transforms
 from modyn.gpu_node.data.online_dataset import OnlineDataset
 
 
-class Dataset(OnlineDataset):
+class MNISTDataset(OnlineDataset):
 
     """
     Dataset fot MNIST.
@@ -11,7 +11,7 @@ class Dataset(OnlineDataset):
 
     def _process(self, data: list) -> list:
 
-        transform=transforms.Compose(
+        transform = transforms.Compose(
             [
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))

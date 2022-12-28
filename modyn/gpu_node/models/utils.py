@@ -1,10 +1,10 @@
-import importlib
 from typing import Any, Optional
 
 import torch
 
 from modyn.gpu_node.grpc.trainer_server_pb2 import RegisterTrainServerRequest
-from modyn.models.base_model import BaseModel
+from modyn.models.base_trainer import BaseTrainer
+from modyn.utils import dynamic_module_import
 
 
 def get_model(
@@ -14,22 +14,22 @@ def get_model(
     train_dataloader: torch.utils.data.DataLoader,
     val_dataloader: Optional[torch.utils.data.DataLoader],
     device: int
-) -> BaseModel:
+) -> BaseTrainer:
 
     """
     Gets handler to the model specified by the 'model_id'.
-    The model should exist in the path "modyn/models/model_id",
-    and be defined in a 'Model' class, which extends the 'BaseModel' class.
+    The model should exist in the path "modyn/models/model_id"
 
     Returns:
-        BaseModel: the requested model
+        BaseTrainer: the requested model
 
     """
 
     # model exists - has been validated by the supervisor
-    model_module = importlib.import_module("modyn.models." + request.model_id)
+    model_module = dynamic_module_import("modyn.models")
+    model_handler = getattr(model_module, request.model_id)
 
-    model = model_module.Model(
+    model = model_handler(
         request.torch_optimizer,
         optimizer_dict,
         model_conf_dict,

@@ -1,9 +1,11 @@
+from abc import abstractmethod
 import logging
 from typing import Optional
 import torch
+import os
 
 
-class BaseModel():
+class BaseTrainer():
 
     """
     Base class for the registered models.
@@ -70,7 +72,30 @@ class BaseModel():
         self._model.load_state_dict(checkpoint_dict['model'])
         self._optimizer.load_state_dict(checkpoint_dict['optimizer'])
 
-    def train_and_log(self, log_path: str, load_checkpoint_path=Optional[str]):
+    @abstractmethod
+    def train_one_iteration(self, iteration, batch):
+        raise NotImplementedError
+
+    def train(self, log_path: str, load_checkpoint_path=Optional[str]):
 
         self.create_logger(log_path)
-        self.train(load_checkpoint_path)
+
+        self._logger.info('Process {} starts training'.format(os.getpid()))
+
+        if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
+            self.load_checkpoint(load_checkpoint_path)
+
+        self._model.train()
+
+        train_iter = enumerate(self._train_loader)
+
+        for i, batch in train_iter:
+
+            self.train_one_iteration(i, batch)
+
+            if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
+                self.save_checkpoint(i)
+
+            self._logger.info('Iteration {}'.format(i))
+
+        self._logger.info('Training complete!')

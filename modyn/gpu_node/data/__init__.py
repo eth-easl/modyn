@@ -1,8 +1,9 @@
-"""Models.
-
 """
-from .resnet18.resnet18 import ResNet18  # noqa: F401
+Data
+"""
+# flake8: noqa
 import os
+from .mnist_dataset import MNISTDataset
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove('__init__.py')

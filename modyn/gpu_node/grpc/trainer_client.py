@@ -32,18 +32,18 @@ class TrainerClient:
             'momentum': 0.001
         }
 
-        model_configuration={
+        model_configuration = {
             'num_classes': 10
         }
 
         req = RegisterTrainServerRequest(
-            model_id="resnet18",
+            model_id="ResNet18",
             batch_size=32,
             torch_optimizer='SGD',
             optimizer_parameters=json.dumps(optimizer_parameters),
             model_configuration=json.dumps(model_configuration),
             data_info=Data(
-                dataset_id="mnist",
+                dataset_id="MNISTDataset",
                 num_dataloaders=2
             ),
             checkpoint_info=CheckpointInfo(

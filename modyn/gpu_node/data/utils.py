@@ -1,7 +1,6 @@
-import importlib
 from typing import Optional
 import torch
-from modyn.gpu_node.data.cifar_dataset import get_cifar_datasets
+from modyn.utils import dynamic_module_import
 
 
 def prepare_dataloaders(
@@ -19,13 +18,12 @@ def prepare_dataloaders(
 
     """
 
-    dataset_module = importlib.import_module(f"gpu_node.data.{dataset_id}_dataset")
+    dataset_module = dynamic_module_import("modyn.gpu_node.data")
+    dataset_handler = getattr(dataset_module, dataset_id)
 
-    print(dataset_module)
-
-    train_set = dataset_module.Dataset(training_id)
+    train_set = dataset_handler(training_id)
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
-                                                    num_workers=num_dataloaders)
+                                                   num_workers=num_dataloaders)
 
     # TODO(#50): what to do with the val set in the general case?
     val_dataloader = None
