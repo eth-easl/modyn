@@ -12,8 +12,8 @@ message RegisterTrainServerRequest {
     string model_id = 1;
     string torch_optimizer = 2;
     int32 batch_size = 3;
-    map<string, VarTypeParameter> optimizer_parameters = 4;
-    map<string, VarTypeParameter> model_configuration = 6;
+    string optimizer_parameters = 4;
+    string model_configuration = 6;
     Data data_info = 7;
     CheckpointInfo checkpoint_info = 8;
 }

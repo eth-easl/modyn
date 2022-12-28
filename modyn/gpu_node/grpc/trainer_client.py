@@ -1,3 +1,4 @@
+import json
 import grpc
 
 from modyn.gpu_node.grpc.trainer_server_pb2_grpc import TrainerServerStub
@@ -5,7 +6,6 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
     RegisterTrainServerRequest,
     Data,
     TrainerAvailableRequest,
-    VarTypeParameter,
     CheckpointInfo,
     StartTrainingRequest
 )
@@ -26,17 +26,22 @@ class TrainerClient:
         return response.available
 
     def register_training(self):
+
+        optimizer_parameters = {
+            'lr': 0.1,
+            'momentum': 0.001
+        }
+
+        model_configuration={
+            'num_classes': 10
+        }
+
         req = RegisterTrainServerRequest(
             model_id="resnet18",
             batch_size=32,
             torch_optimizer='SGD',
-            optimizer_parameters={
-                'lr': VarTypeParameter(float_value=0.1),
-                'momentum': VarTypeParameter(float_value=0.001)
-            },
-            model_configuration={
-                'num_classes': VarTypeParameter(int_value=10)
-            },
+            optimizer_parameters=json.dumps(optimizer_parameters),
+            model_configuration=json.dumps(model_configuration),
             data_info=Data(
                 dataset_id="mnist",
                 num_dataloaders=2

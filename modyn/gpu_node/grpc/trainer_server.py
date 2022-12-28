@@ -1,3 +1,4 @@
+import json
 import grpc
 import os
 import sys
@@ -22,7 +23,6 @@ from modyn.gpu_node.models.utils import get_model
 
 from modyn.backend.selector.mock_selector_server import MockSelectorServer, RegisterTrainingRequest
 from modyn.gpu_node.data.utils import prepare_dataloaders
-from modyn.gpu_node.grpc.server_utils import process_grpc_map
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -61,8 +61,8 @@ class TrainerGRPCServer:
         training_id = self.register_with_selector(request.data_info.num_dataloaders)
         print(training_id)
 
-        optimizer_dict = process_grpc_map(request.optimizer_parameters)
-        model_conf_dict = process_grpc_map(request.model_configuration)
+        optimizer_dict = json.loads(request.optimizer_parameters)
+        model_conf_dict = json.loads(request.model_configuration)
 
         train_dataloader, val_dataloader = prepare_dataloaders(
             training_id,

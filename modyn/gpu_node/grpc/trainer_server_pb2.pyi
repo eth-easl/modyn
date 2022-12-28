@@ -3,9 +3,7 @@
 isort:skip_file
 """
 import builtins
-import collections.abc
 import google.protobuf.descriptor
-import google.protobuf.internal.containers
 import google.protobuf.message
 import sys
 
@@ -20,42 +18,6 @@ DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 class RegisterTrainServerRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    @typing_extensions.final
-    class OptimizerParametersEntry(google.protobuf.message.Message):
-        DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-        KEY_FIELD_NUMBER: builtins.int
-        VALUE_FIELD_NUMBER: builtins.int
-        key: builtins.str
-        @property
-        def value(self) -> global___VarTypeParameter: ...
-        def __init__(
-            self,
-            *,
-            key: builtins.str = ...,
-            value: global___VarTypeParameter | None = ...,
-        ) -> None: ...
-        def HasField(self, field_name: typing_extensions.Literal["value", b"value"]) -> builtins.bool: ...
-        def ClearField(self, field_name: typing_extensions.Literal["key", b"key", "value", b"value"]) -> None: ...
-
-    @typing_extensions.final
-    class ModelConfigurationEntry(google.protobuf.message.Message):
-        DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-        KEY_FIELD_NUMBER: builtins.int
-        VALUE_FIELD_NUMBER: builtins.int
-        key: builtins.str
-        @property
-        def value(self) -> global___VarTypeParameter: ...
-        def __init__(
-            self,
-            *,
-            key: builtins.str = ...,
-            value: global___VarTypeParameter | None = ...,
-        ) -> None: ...
-        def HasField(self, field_name: typing_extensions.Literal["value", b"value"]) -> builtins.bool: ...
-        def ClearField(self, field_name: typing_extensions.Literal["key", b"key", "value", b"value"]) -> None: ...
-
     MODEL_ID_FIELD_NUMBER: builtins.int
     TORCH_OPTIMIZER_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
@@ -66,10 +28,8 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
     model_id: builtins.str
     torch_optimizer: builtins.str
     batch_size: builtins.int
-    @property
-    def optimizer_parameters(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
-    @property
-    def model_configuration(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___VarTypeParameter]: ...
+    optimizer_parameters: builtins.str
+    model_configuration: builtins.str
     @property
     def data_info(self) -> global___Data: ...
     @property
@@ -80,8 +40,8 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
         model_id: builtins.str = ...,
         torch_optimizer: builtins.str = ...,
         batch_size: builtins.int = ...,
-        optimizer_parameters: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
-        model_configuration: collections.abc.Mapping[builtins.str, global___VarTypeParameter] | None = ...,
+        optimizer_parameters: builtins.str = ...,
+        model_configuration: builtins.str = ...,
         data_info: global___Data | None = ...,
         checkpoint_info: global___CheckpointInfo | None = ...,
     ) -> None: ...
