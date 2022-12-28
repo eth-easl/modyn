@@ -47,11 +47,10 @@ class BasicSelector(Selector):
 
     def get_unseen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
-        For a given training_id and number of samples, request that many samples from
-        the new queue.
+        For a given training_id and number of samples, request that many previously unseen samples.
 
         Returns:
-            List of keys for the samples in the new queue.
+            List of keys for the unseen samples.
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 0 AND training_id = {training_id}"
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
@@ -63,10 +62,10 @@ class BasicSelector(Selector):
     def get_seen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
         For a given training_id and number of samples, request that many samples from
-        the ODM service.
+        the previously seen data
 
         Returns:
-            List of keys for the samples in the ODM.
+            List of keys for the previously seen samples
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 1 AND training_id = {training_id}"
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
@@ -75,13 +74,13 @@ class BasicSelector(Selector):
         return keys[choice]
 
     def get_seen_data_size(self, training_id: int) -> int:
-        """For a given training_id, return how many samples are in the new queue.
+        """For a given training_id, return how many unseen samples there are
 
         Args:
             training_id (int): the queried training_id
 
         Returns:
-            int: number of samples in the new queue.
+            int: number of unseen samples
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 0 AND training_id = {training_id}"
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
@@ -89,13 +88,13 @@ class BasicSelector(Selector):
         return len(keys)
 
     def get_unseen_data_size(self, training_id: int) -> int:
-        """For a given training_id, return how many samples are in the ODM.
+        """For a given training_id, return how many previously seen samples there are
 
         Args:
             training_id (int): the queried training_id
 
         Returns:
-            int: number of samples in the ODM
+            int: number of previously seen samples
         """
         query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE seen = 1 AND training_id = {training_id}"
         keys, scores, seen, data = self.get_samples_by_metadata_query(query)

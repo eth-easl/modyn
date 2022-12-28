@@ -62,8 +62,7 @@ class Selector(ABC):
             training_set_size: int
     ) -> list[str]:
         """
-        Selects a new training set of samples for the given training id. Samples should be selected from
-        the new data queue service or the metadata service
+        Selects a new training set of samples for the given training id. 
 
         Returns:
             list(str): the training sample keys for the newly selected training_set

@@ -20,7 +20,7 @@ class ScoreSelector(Selector):
     def _select_new_training_samples(self, training_id: int, num_samples: int) -> list:
         """
         For a given training_id and number of samples, request that many samples from
-        the ODM service.
+        the selector.
 
         Returns:
             List of keys for the samples in the ODM.
