@@ -38,7 +38,7 @@ class TrainerClient:
                 'num_classes': VarTypeParameter(int_value=10)
             },
             data_info=Data(
-                dataset_id="online",
+                dataset_id="mnist",
                 num_dataloaders=2
             ),
             checkpoint_info=CheckpointInfo(

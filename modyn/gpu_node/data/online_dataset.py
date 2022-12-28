@@ -8,13 +8,13 @@ from modyn.storage.mock_storage_server import MockStorageServer, GetRequest
 
 class OnlineDataset(IterableDataset):
 
-    def __init__(self, training_id: int, config: dict):
+    def __init__(self, training_id: int):
         self._training_id = training_id
-        self._config = config
+        self._dataset_len = 0
         self._trainining_set_number = 0
 
         # These mock the behavior of storage and selector servers.
-        # TODO: remove them when the storage and selector grpc servers are fixed.
+        # TODO(fotstrt): remove them when the storage and selector grpc servers are fixed
         self._selector = MockSelectorServer()
         self._storage = MockStorageServer()
 
@@ -38,13 +38,16 @@ class OnlineDataset(IterableDataset):
         else:
             worker_id = worker_info.id
         self._trainining_set_number += 1
+
         keys = self._get_keys_from_selector(worker_id)
         raw_data = self._get_data_from_storage(keys)
+        self._dataset_len = len(raw_data)
+
         processed_data = self._process(raw_data)
         return iter(processed_data)
 
     def __len__(self) -> int:
-        return self._config['trainer']['train_set_size']
+        return self._dataset_len
 
     @abstractmethod
     def _process(self, data: list) -> list:
