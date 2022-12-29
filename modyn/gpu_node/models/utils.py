@@ -27,6 +27,8 @@ def get_model(
 
     # model exists - has been validated by the supervisor
     model_module = dynamic_module_import("modyn.models")
+    assert hasattr(model_module, request.model_id)
+
     model_handler = getattr(model_module, request.model_id)
 
     model = model_handler(

@@ -35,14 +35,14 @@ class TrainerGRPCServer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self):
-        self._selector = MockSelectorServer()
+        self._selector_stub = MockSelectorServer()
         self._training_dict = {}
         self._training_process_dict = {}
 
     def register_with_selector(self, num_dataloaders: int) -> int:
         # TODO: replace this with grpc calls to the selector
         req = RegisterTrainingRequest(num_workers=num_dataloaders)
-        response = self._selector.register_training(req)
+        response = self._selector_stub.register_training(req)
         return response.training_id
 
     def trainer_available(
@@ -59,7 +59,6 @@ class TrainerGRPCServer:
     ) -> RegisterTrainServerResponse:
 
         training_id = self.register_with_selector(request.data_info.num_dataloaders)
-        print(training_id)
 
         optimizer_dict = json.loads(request.optimizer_parameters)
         model_conf_dict = json.loads(request.model_configuration)
@@ -82,6 +81,9 @@ class TrainerGRPCServer:
     def start_training(self, request: StartTrainingRequest, context: grpc.ServicerContext) -> StartTrainingResponse:
 
         training_id = request.training_id
+
+        assert training_id in self._training_dict
+
         if training_id in self._training_process_dict:
             if self._training_process_dict[training_id].is_alive():
                 return StartTrainingResponse(training_started=False)

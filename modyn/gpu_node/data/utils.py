@@ -19,6 +19,8 @@ def prepare_dataloaders(
     """
 
     dataset_module = dynamic_module_import("modyn.gpu_node.data")
+    assert hasattr(dataset_module, dataset_id)
+
     dataset_handler = getattr(dataset_module, dataset_id)
 
     train_set = dataset_handler(training_id)

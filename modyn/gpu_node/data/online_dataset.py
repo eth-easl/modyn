@@ -15,19 +15,19 @@ class OnlineDataset(IterableDataset):
 
         # These mock the behavior of storage and selector servers.
         # TODO(fotstrt): remove them when the storage and selector grpc servers are fixed
-        self._selector = MockSelectorServer()
-        self._storage = MockStorageServer()
+        self._selectorstub = MockSelectorServer()
+        self._storagestub = MockStorageServer()
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         # TODO: replace this with grpc calls to the selector
         req = GetSamplesRequest(self._training_id, worker_id)
-        samples_response = self._selector.get_sample_keys(req)
+        samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
     def _get_data_from_storage(self, keys: list[str]) -> list[str]:
         # TODO: replace this with grpc calls to the selector
         req = GetRequest(keys=keys)
-        data = self._storage.Get(req).value
+        data = self._storagestub.Get(req).value
         return data
 
     def __iter__(self) -> typing.Iterator:

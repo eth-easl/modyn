@@ -55,6 +55,10 @@ class BaseTrainer():
 
         # TODO: we assume a local checkpoint for now,
         # should we add functionality for remote?
+
+        if not os.path.isdir(self._checkpoint_path):
+            os.mkdir(self._checkpoint_path)
+
         checkpoint_file_name = self._checkpoint_path + f'/model_{iteration}' + '.pt'
         dict_to_save = {
             'model': self._model.state_dict(),
