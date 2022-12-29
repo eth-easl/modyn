@@ -1,5 +1,7 @@
 """
-This package contains the database classes for the internal storage module. The database classes are used to abstract the database operations. This allows the storage module to be used with different databases.
+This package contains the database classes for the internal storage module.
+The database classes are used to abstract the database operations.
+This allows the storage module to be used with different databases.
 """
 
 import os

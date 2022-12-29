@@ -1,27 +1,30 @@
-from sqlalchemy import create_engine
-from sqlalchemy import URL
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 import logging
+import typing
 
-from modyn.storage.internal.database.database_connection import DatabaseConnection
+from sqlalchemy import create_engine, exc
+from sqlalchemy.engine import URL
+from sqlalchemy.orm import sessionmaker
+
 from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.file_system_wrapper.file_system_wrapper_type import FileSystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-
-Base = declarative_base()
+from modyn.storage.internal.database.base import Base
 
 logger = logging.getLogger(__name__)
 
-class DatabaseConnection(): 
+
+class DatabaseConnection():
     """
     Database connection context manager.
     """
+    session: sessionmaker = None
+    engine: create_engine = None
+    url = None
 
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
 
-    def __enter__(self) -> DatabaseConnection:
+    def __enter__(self) -> typing.Any:
         self.url = URL.create(
             drivername=self.modyn_config['database']['drivername'],
             username=self.modyn_config['database']['username'],
@@ -44,16 +47,20 @@ class DatabaseConnection():
     def create_all(self) -> None:
         Base.metadata.create_all(self.engine)
 
-    def add_dataset(self, name: str, base_path: str, file_system_wrapper_type: FileSystemWrapperType, file_wrapper_type: FileWrapperType, description: str) -> bool:
+    def add_dataset(self, name: str, base_path: str,
+                    filesystem_wrapper_type: FileSystemWrapperType,
+                    file_wrapper_type: FileWrapperType, description: str) -> bool:
         try:
             if self.session.query(Dataset).filter(Dataset.name == name).first() is not None:
-                logger.info('Dataset with name %s exists.', name)
+                logger.info(f'Dataset with name {name} exists.')
             else:
-                dataset = Dataset(name=name, base_path=base_path, file_system_wrapper_type=file_system_wrapper_type, file_wrapper_type=file_wrapper_type, description=description)
+                dataset = Dataset(name=name, base_path=base_path,
+                                  filesystem_wrapper_type=filesystem_wrapper_type,
+                                  file_wrapper_type=file_wrapper_type, description=description)
                 self.session.add(dataset)
                 self.session.commit()
-        except Exception as e:
-            logger.error('Error adding dataset: %s', e)
+        except exc.SQLAlchemyError as exception:
+            logger.error(f'Error adding dataset: {exception}')
             self.session.rollback()
             return False
         return True

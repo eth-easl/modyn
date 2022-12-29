@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import storage_pb2 as storage__pb2
+import modyn.storage.internal.grpc.generated.storage_pb2 as storage__pb2
 
 
 class StorageStub(object):

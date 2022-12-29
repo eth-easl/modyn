@@ -2,8 +2,9 @@ import os
 import typing
 import datetime
 
-from modyn.storage.internal.file_system_wrapper.abstract_file_system_wrapper import AbstractFileSystemWrapper
-from modyn.storage.internal.file_system_wrapper.file_system_wrapper_type import FileSystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
+
 
 class LocalFSWrapper(AbstractFileSystemWrapper):
     """

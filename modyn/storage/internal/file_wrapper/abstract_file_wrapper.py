@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
+
 class AbstractFileWrapper(ABC):
     file_wrapper_type: FileWrapperType = None
 

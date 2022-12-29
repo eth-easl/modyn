@@ -17,6 +17,7 @@ def setup_argparser() -> argparse.ArgumentParser:
 
     return parser_
 
+
 def main() -> None:
     parser = setup_argparser()
     args = parser.parse_args()
@@ -32,6 +33,7 @@ def main() -> None:
     storage.run()
 
     logger.info("Storage returned, exiting.")
+
 
 if __name__ == '__main__':
     main()
