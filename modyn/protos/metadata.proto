@@ -7,6 +7,26 @@ service Metadata {
     rpc GetKeysByQuery (GetByQueryRequest) returns (GetKeysResponse) {}
     rpc Set (SetRequest) returns (SetResponse) {}
     rpc DeleteTraining (DeleteRequest) returns (DeleteResponse) {}
+    rpc RegisterTraining (RegisterRequest) returns (RegisterResponse) {}
+    rpc GetTrainingInfo (GetTrainingRequest) returns (TrainingResponse) {}
+}
+
+message RegisterRequest {
+    int32 training_id = 1;
+    int32 training_set_size = 2;
+    int32 num_workers = 3;
+}
+
+message RegisterResponse {
+}
+
+message GetTrainingRequest {
+    int32 training_id = 1;
+}
+
+message TrainingResponse {
+    int32 training_set_size = 1;
+    int32 num_workers = 2;
 }
 
 message GetByKeysRequest {

@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import modyn.backend.metadata.metadata_pb2 as metadata__pb2
+import modyn.backend.metadata_database.metadata_pb2 as metadata__pb2
 
 
 class MetadataStub(object):
@@ -39,6 +39,16 @@ class MetadataStub(object):
                 request_serializer=metadata__pb2.DeleteRequest.SerializeToString,
                 response_deserializer=metadata__pb2.DeleteResponse.FromString,
                 )
+        self.RegisterTraining = channel.unary_unary(
+                '/metadata.Metadata/RegisterTraining',
+                request_serializer=metadata__pb2.RegisterRequest.SerializeToString,
+                response_deserializer=metadata__pb2.RegisterResponse.FromString,
+                )
+        self.GetTrainingInfo = channel.unary_unary(
+                '/metadata.Metadata/GetTrainingInfo',
+                request_serializer=metadata__pb2.GetTrainingRequest.SerializeToString,
+                response_deserializer=metadata__pb2.TrainingResponse.FromString,
+                )
 
 
 class MetadataServicer(object):
@@ -74,6 +84,18 @@ class MetadataServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RegisterTraining(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetTrainingInfo(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_MetadataServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -101,6 +123,16 @@ def add_MetadataServicer_to_server(servicer, server):
                     servicer.DeleteTraining,
                     request_deserializer=metadata__pb2.DeleteRequest.FromString,
                     response_serializer=metadata__pb2.DeleteResponse.SerializeToString,
+            ),
+            'RegisterTraining': grpc.unary_unary_rpc_method_handler(
+                    servicer.RegisterTraining,
+                    request_deserializer=metadata__pb2.RegisterRequest.FromString,
+                    response_serializer=metadata__pb2.RegisterResponse.SerializeToString,
+            ),
+            'GetTrainingInfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTrainingInfo,
+                    request_deserializer=metadata__pb2.GetTrainingRequest.FromString,
+                    response_serializer=metadata__pb2.TrainingResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -194,5 +226,39 @@ class Metadata(object):
         return grpc.experimental.unary_unary(request, target, '/metadata.Metadata/DeleteTraining',
             metadata__pb2.DeleteRequest.SerializeToString,
             metadata__pb2.DeleteResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def RegisterTraining(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/metadata.Metadata/RegisterTraining',
+            metadata__pb2.RegisterRequest.SerializeToString,
+            metadata__pb2.RegisterResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetTrainingInfo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/metadata.Metadata/GetTrainingInfo',
+            metadata__pb2.GetTrainingRequest.SerializeToString,
+            metadata__pb2.TrainingResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

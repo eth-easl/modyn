@@ -1,19 +1,19 @@
 import psycopg2
 
 
-class OptimalDatasetMetadata(object):
+class MetadataDatabase(object):
     """
-    Store the metadata of the optimal dataset for a given training.
+    Store the metadata for all the training samples for a given training.
     """
 
     def __init__(self, config: dict):
         self.__config = config
         self.__con = psycopg2.connect(
-            host=config['odm']['postgresql']['host'],
-            port=config['odm']['postgresql']['port'],
-            database=config['odm']['postgresql']['database'],
-            user=config['odm']['postgresql']['user'],
-            password=config['odm']['postgresql']['password']
+            host=config['metadata_database']['postgresql']['host'],
+            port=config['metadata_database']['postgresql']['port'],
+            database=config['metadata_database']['postgresql']['database'],
+            user=config['metadata_database']['postgresql']['user'],
+            password=config['metadata_database']['postgresql']['password']
         )
         self.__con.autocommit = False
         self.__cursor = self.__con.cursor()
@@ -24,7 +24,7 @@ class OptimalDatasetMetadata(object):
         Create tables if they do not exist.
         """
         self.__cursor.execute(
-            'CREATE TABLE IF NOT EXISTS odm_storage ('
+            'CREATE TABLE IF NOT EXISTS metadata_database ('
             'id SERIAL PRIMARY KEY,'
             'key varchar(255) NOT NULL,'
             'score float NOT NULL,'
@@ -32,12 +32,20 @@ class OptimalDatasetMetadata(object):
             'training_id int NOT NULL)'
         )
         self.__cursor.execute(
-            'CREATE INDEX IF NOT EXISTS storage_key_idx ON odm_storage (key)'
+            'CREATE INDEX IF NOT EXISTS storage_key_idx ON metadata_database (key)'
         )
         self.__cursor.execute(
-            'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON odm_storage (training_id)'
+            'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON metadata_database (training_id)'
         )
         self.__con.commit()
+
+        self.__cursor.execute(
+            'CREATE TABLE IF NOT EXISTS training_infos ('
+            'id SERIAL PRIMARY KEY, '
+            'training_id int NOT NULL'
+            'num_workers int NOT NULL'
+            'training_set_size int NOT NULL)'
+        )
 
     def set(
             self,
@@ -55,12 +63,12 @@ class OptimalDatasetMetadata(object):
             training_id (int): Training id.
         """
         self.__cursor.execute(
-            "DELETE FROM odm_storage WHERE key IN %s AND training_id = %s",
+            "DELETE FROM metadata_database WHERE key IN %s AND training_id = %s",
             (tuple(keys),
              training_id))
         for i in range(len(keys)):
             self.__cursor.execute(
-                "INSERT INTO odm_storage (key, score, data, training_id) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO metadata_database (key, score, data, training_id) VALUES (%s, %s, %s, %s)",
                 (keys[i],
                  score[i],
                     data[i],
@@ -80,7 +88,7 @@ class OptimalDatasetMetadata(object):
             list[tuple[str, float, str]]: List of keys, scores and data.
         """
         self.__cursor.execute(
-            "SELECT key, score, seen, label, data FROM odm_storage WHERE key IN %s AND training_id = %s",
+            "SELECT key, score, seen, label, data FROM metadata_database WHERE key IN %s AND training_id = %s",
             (tuple(keys),
              training_id))
         data = self.__cursor.fetchall()
@@ -133,5 +141,16 @@ class OptimalDatasetMetadata(object):
             training_id (int): Training id.
         """
         self.__cursor.execute(
-            "DELETE FROM odm_storage WHERE training_id = %s", (training_id,))
+            "DELETE FROM metadata_database WHERE training_id = %s", (training_id,))
         self.__con.commit()
+
+    def register_training(self, training_id: int, training_set_size: int, num_workers: int) -> None:
+        self.__cursor.execute(
+                "INSERT INTO training_infos (training_id, num_workers, training_set_size) VALUES (%s, %s, %s)",
+                (training_id, num_workers, training_set_size)) 
+
+    def get_training_info(self, training_id: int) -> tuple[int, int]:
+        self.__cursor.execute("SELECT training_set_size, num_workers FROM training_infos WHERE training_id = %s", (training_id, ))
+        data = self.__cursor.fetchall()
+        assert len(data) == 1
+        return data[0][0], data[0][1]
