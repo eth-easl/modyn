@@ -26,8 +26,6 @@ class ScoreSelector(Selector):
         Returns:
             List of keys for the samples in the ODM.
         """
-        result_samples, result_scores = [], []
-
         all_samples, all_scores = self._get_all_metadata(training_id)
         all_samples = np.array(all_samples)
         all_scores = np.array(all_scores)

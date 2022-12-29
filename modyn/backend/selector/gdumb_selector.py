@@ -1,5 +1,3 @@
-import grpc
-
 import numpy as np
 
 from modyn.backend.selector.selector import Selector
