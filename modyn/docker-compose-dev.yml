@@ -19,7 +19,7 @@ services:
     env_file:
       - ./storage/internal/database/.env
     ports:
-      - '5433:5433'
+      - '50060:50060'
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
 
@@ -34,16 +34,3 @@ services:
       - '50051:50051'
     volumes:
       - ./modyn/storage:/app
-
-  backend:
-    image: backend
-    depends_on:
-      - db
-      - storage
-    build:
-      context: ../
-      dockerfile: modyn/backend/Dockerfile
-    ports:
-      - '5124:5124'
-    volumes:
-      - ./backend:/app

@@ -40,6 +40,7 @@ message RegisterNewDatasetRequest {
   int32 file_wrapper_type = 3;
   string description = 4;
   string base_path = 5;
+  string version = 6;
 }
 
 message RegisterNewDatasetResponse {

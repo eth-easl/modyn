@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Enum
+from sqlalchemy import Column, String, Enum, Integer
 from sqlalchemy.orm import relationship
 
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
@@ -8,8 +8,11 @@ from modyn.storage.internal.database.base import Base
 
 
 class Dataset(Base):
+    __tablename__ = 'datasets'
+    id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(120), unique=False, nullable=True)
+    version = Column(String(80), unique=False, nullable=True)
     filesystem_wrapper_type = Column(Enum(FileSystemWrapperType), nullable=False)
     file_wrapper_type = Column(Enum(FileWrapperType), nullable=False)
     base_path = Column(String(120), unique=False, nullable=False)
@@ -22,9 +25,11 @@ class Dataset(Base):
                  description: str,
                  filesystem_wrapper_type: FileSystemWrapperType,
                  file_wrapper_type: FileWrapperType,
-                 base_path: str):
+                 base_path: str,
+                 version: str = None):
         self.name = name
         self.description = description
         self.filesystem_wrapper_type = filesystem_wrapper_type
         self.file_wrapper_type = file_wrapper_type
         self.base_path = base_path
+        self.version = version

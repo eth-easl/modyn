@@ -22,8 +22,8 @@ RUN python -m pip install -r requirements.txt
 RUN pip install --upgrade protobuf
 
 
-WORKDIR /modyn
-COPY . /modyn
+WORKDIR /src
+COPY . /src
 
 RUN pip install -e .
 
@@ -34,4 +34,4 @@ USER appuser
 
 RUN chmod a+x modyn/storage/modyn-storage
 
-CMD ["./modyn/storage/modyn-storage"]
+ENTRYPOINT ./modyn/storage/modyn-storage ./modyn/config/examples/modyn_config.yaml

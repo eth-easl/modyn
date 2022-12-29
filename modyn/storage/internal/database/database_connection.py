@@ -26,12 +26,12 @@ class DatabaseConnection():
 
     def __enter__(self) -> typing.Any:
         self.url = URL.create(
-            drivername=self.modyn_config['database']['drivername'],
-            username=self.modyn_config['database']['username'],
-            password=self.modyn_config['database']['password'],
-            host=self.modyn_config['database']['host'],
-            port=self.modyn_config['database']['port'],
-            database=self.modyn_config['database']['database']
+            drivername=self.modyn_config['storage']['database']['drivername'],
+            username=self.modyn_config['storage']['database']['username'],
+            password=self.modyn_config['storage']['database']['password'],
+            host=self.modyn_config['storage']['database']['host'],
+            port=self.modyn_config['storage']['database']['port'],
+            database=self.modyn_config['storage']['database']['database']
         )
         self.engine = create_engine(self.url, echo=True)
         self.session = sessionmaker(bind=self.engine)()
@@ -49,14 +49,17 @@ class DatabaseConnection():
 
     def add_dataset(self, name: str, base_path: str,
                     filesystem_wrapper_type: FileSystemWrapperType,
-                    file_wrapper_type: FileWrapperType, description: str) -> bool:
+                    file_wrapper_type: FileWrapperType, description: str, version: str) -> bool:
         try:
             if self.session.query(Dataset).filter(Dataset.name == name).first() is not None:
                 logger.info(f'Dataset with name {name} exists.')
             else:
-                dataset = Dataset(name=name, base_path=base_path,
+                dataset = Dataset(name=name,
+                                  base_path=base_path,
                                   filesystem_wrapper_type=filesystem_wrapper_type,
-                                  file_wrapper_type=file_wrapper_type, description=description)
+                                  file_wrapper_type=file_wrapper_type,
+                                  description=description,
+                                  version=version)
                 self.session.add(dataset)
                 self.session.commit()
         except exc.SQLAlchemyError as exception:

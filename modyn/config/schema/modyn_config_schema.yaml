@@ -27,10 +27,6 @@ properties:
   storage:
     type: object
     properties:
-      adapter:
-        type: string
-        description: |
-          The storage adapter to use for the tests.
       port:
         type: string
         description: |
@@ -39,86 +35,69 @@ properties:
         type: string
         description: |
           The hostname to use for the storage server.
-      data_source:
-        type: object
-        description: |
-          The data source to use for the storage server.
-        properties:
-          enabled:
-            type: boolean
-            description: |
-              Whether the data source is enabled.
-          type:
-            type: string
-            description: |
-              The name of the data source.
-            optional: true
-          batch_size:
-            type: integer
-            description: |
-              The batch size to use for the data source.
-            optional: true
-          batch_interval:
-            type: integer
-            description: |
-              The batch interval to use for the data source.
-            optional: true
-      dbm:
+      seeker:
         type: object
         properties:
-          path:
+          interval:
             type: string
             description: |
-              The path to the DBM file.
-      s3:
+              The interval to use for the seeker.
+      datasets:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the dataset.
+            description:
+              type: string
+              description: |
+                The description of the dataset.
+            version:
+              type: string
+              description: |
+                The version of the dataset.
+            base_path:
+              type: string
+              description: |
+                The base path of the dataset.
+            filesystem_wrapper_type:
+              type: string
+              description: |
+                The filesystem wrapper type of the dataset.
+            file_wrapper_type:
+              type: string
+              description: |
+                The file wrapper type of the dataset.
+      database:
         type: object
         properties:
-          bucket:
+          drivername:
             type: string
             description: |
-              The name of the S3 bucket.
-          access_key:
+              The drivername to use for the database.
+          username:
             type: string
             description: |
-              The access key to use for the S3 bucket.
-          secret_key:
-            type: string
-            description: |
-              The secret key to use for the S3 bucket.
-          endpoint_url:
-            type: string
-            description: |
-              The endpoint URL to use for the S3 bucket.
-      sqlite:
-        type: object
-        properties:
-          path:
-            type: string
-            description: |
-              The path to the SQLite file.
-      postgresql:
-        type: object
-        properties:
-          host:
-            type: string
-            description: |
-              The hostname to use for the PostgreSQL server.
-          port:
-            type: string
-            description: |
-              The port to use for the PostgreSQL server
-          database:
-            type: string
-            description: |
-              The name of the PostgreSQL database.
-          user:
-            type: string
-            description: |
-              The user to use for the PostgreSQL server.
+              The username to use for the database.
           password:
             type: string
             description: |
-              The password to use for the PostgreSQL server.
+              The password to use for the database.
+          host:
+            type: string
+            description: |
+              The host to use for the database.
+          port:
+            type: string
+            description: |
+              The port to use for the database.
+          database:
+            type: string
+            description: |
+              The database to use for the database.
   odm:
     type: object
     properties:
@@ -221,6 +200,4 @@ required:
   - project
   - input
   - storage
-  - newqueue
-  - preprocess
   - odm

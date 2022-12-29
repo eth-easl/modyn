@@ -2,3 +2,4 @@ webdataset
 sqlalchemy
 psycopg2
 grpcio
+jsonschema

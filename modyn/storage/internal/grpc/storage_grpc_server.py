@@ -108,5 +108,6 @@ class StorageGRPCServer(StorageServicer):
                                             request.base_path,
                                             request.file_wrapper_type,
                                             request.file_wrapper_type,
-                                            request.description)
+                                            request.description,
+                                            request.version)
         return RegisterNewDatasetResponse(success=success)

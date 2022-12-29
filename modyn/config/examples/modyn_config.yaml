@@ -4,30 +4,28 @@ project:
   version: "0.0.1"
 
 storage:
-  data_source: 
-    enabled: true
-    type: "CSVDataSource"
-    batch_size: 15
-    batch_interval: 5
-    path: "modyn/storage/datasource/data/sample_train.csv"
-  adapter: "PostgreSQLAdapter"
-  port: "50051" # TODO(#43): synchronize this with docker-compose file. this was off
+  port: "50051"
   hostname: "localhost"
-  dbm:
-    path: "dbm"
-  s3:
-    bucket: "test"
-    access_key: ""
-    secret_key: ""
-    endpoint_url: "http://localhost:9000"
-  sqlite:
-    path: "sqlite"
-  postgresql:
-    host: db
-    port: "5432"
-    database: "postgres"
-    user: "postgres"
+  seeker:
+    interval: 10
+  datasets:
+    [
+      {
+        name: "MNIST",
+        description: "MNIST Dataset",
+        version: "0.0.1",
+        base_path: "datasets/mnist",
+        filesystem_wrapper_type: 1,
+        file_wrapper_type: 1
+      }
+    ]
+  database:
+    drivername: "postgresql"
+    username: "postgres"
     password: "postgres"
+    host: "storage-db"
+    port: "50060"
+    database: "postgres"
 
 odm:
   port: "50054"

@@ -46,18 +46,20 @@ class GetResponse(_message.Message):
     def __init__(self, chunk: _Optional[bytes] = ...) -> None: ...
 
 class RegisterNewDatasetRequest(_message.Message):
-    __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_type", "filesystem_wrapper_type"]
+    __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_type", "filesystem_wrapper_type", "version"]
     BASE_PATH_FIELD_NUMBER: _ClassVar[int]
     DATASET_ID_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     FILESYSTEM_WRAPPER_TYPE_FIELD_NUMBER: _ClassVar[int]
     FILE_WRAPPER_TYPE_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
     base_path: str
     dataset_id: str
     description: str
     file_wrapper_type: int
     filesystem_wrapper_type: int
-    def __init__(self, dataset_id: _Optional[str] = ..., filesystem_wrapper_type: _Optional[int] = ..., file_wrapper_type: _Optional[int] = ..., description: _Optional[str] = ..., base_path: _Optional[str] = ...) -> None: ...
+    version: str
+    def __init__(self, dataset_id: _Optional[str] = ..., filesystem_wrapper_type: _Optional[int] = ..., file_wrapper_type: _Optional[int] = ..., description: _Optional[str] = ..., base_path: _Optional[str] = ..., version: _Optional[str] = ...) -> None: ...
 
 class RegisterNewDatasetResponse(_message.Message):
     __slots__ = ["success"]
