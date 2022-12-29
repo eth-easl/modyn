@@ -22,7 +22,7 @@ dummy_register_request = RegisterTrainServerRequest(
 
 dummy_start_training_request = StartTrainingRequest(
     training_id=1,
-    load_checkpoint_path = "test"
+    load_checkpoint_path="test"
 )
 
 
@@ -46,6 +46,7 @@ def test_register_with_selector(test_register_training):
     training_id = trainer_server.register_with_selector(num_dataloaders=1)
     assert training_id == 1
 
+
 @patch('modyn.gpu_node.grpc.trainer_server.prepare_dataloaders')
 @patch.object(TrainerGRPCServer, 'register_with_selector', return_value=1)
 def test_register_no_dataloader(test_register_training, test_prepare_dataloaders):
@@ -58,10 +59,11 @@ def test_register_no_dataloader(test_register_training, test_prepare_dataloaders
     assert response.training_id == -1
     assert trainer_server._training_dict == {}
 
+
 @patch('modyn.gpu_node.grpc.trainer_server.get_model')
 @patch('modyn.gpu_node.grpc.trainer_server.prepare_dataloaders')
 @patch.object(TrainerGRPCServer, 'register_with_selector', return_value=1)
-def test_register_no_dataloader(test_register_training, test_prepare_dataloaders, test_get_model):
+def test_register(test_register_training, test_prepare_dataloaders, test_get_model):
 
     trainer_server = TrainerGRPCServer()
     model = DummyModel()
@@ -73,11 +75,13 @@ def test_register_no_dataloader(test_register_training, test_prepare_dataloaders
     assert response.training_id == 1
     assert trainer_server._training_dict == {1: model}
 
+
 def test_start_training_not_registered():
 
     trainer_server = TrainerGRPCServer()
     with pytest.raises(AssertionError):
         trainer_server.start_training(dummy_start_training_request, None)
+
 
 def test_start_training():
 

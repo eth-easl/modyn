@@ -1,6 +1,5 @@
+# pylint: disable=unused-argument
 from typing import Optional
-import pytest
-from unittest.mock import patch
 import torch
 import os
 
@@ -10,6 +9,7 @@ from modyn.models.base_trainer import BaseTrainer
 class DummyDataset(torch.utils.data.dataset.Dataset):
     def __init__(self) -> None:
         super().__init__()
+
 
 class DummyStatefulObject():
     def __init__(self) -> None:
@@ -21,7 +21,9 @@ class DummyStatefulObject():
     def load_state_dict(self, state):
         self._state = state
 
+
 test_dataloader = torch.utils.data.DataLoader(DummyDataset(), batch_size=1)
+
 
 class DummyTrainer(BaseTrainer):
 
@@ -61,6 +63,7 @@ def test_save_checkpoint():
         'optimizer': {}
     }
 
+
 def test_load_checkpoint():
 
     trainer = DummyTrainer(
@@ -80,6 +83,3 @@ def test_load_checkpoint():
     trainer.load_checkpoint("checkpoint_test/model_20.pt")
     assert trainer._model.state_dict() == dict_to_save['model']
     assert trainer._optimizer.state_dict() == dict_to_save['optimizer']
-
-def test_train():
-    pass

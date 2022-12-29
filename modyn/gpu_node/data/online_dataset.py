@@ -41,6 +41,7 @@ class OnlineDataset(IterableDataset):
 
         keys = self._get_keys_from_selector(worker_id)
         raw_data = self._get_data_from_storage(keys)
+
         self._dataset_len = len(raw_data)
 
         processed_data = self._process(raw_data)

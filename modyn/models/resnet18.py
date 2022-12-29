@@ -1,6 +1,5 @@
 from torchvision import models
 import torch
-import os
 
 from modyn.models.base_trainer import BaseTrainer
 
@@ -32,8 +31,6 @@ class ResNet18(BaseTrainer):
         self._criterion = torch.nn.CrossEntropyLoss()
 
     def train_one_iteration(self, iteration, batch):
-
-        self._logger.info('Process {} starts training'.format(os.getpid()))
 
         self._optimizer.zero_grad()
         data, target = batch[0].to(self._device), batch[1].to(self._device)
