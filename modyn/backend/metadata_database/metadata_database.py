@@ -146,11 +146,12 @@ class MetadataDatabase(object):
 
     def register_training(self, training_id: int, training_set_size: int, num_workers: int) -> None:
         self.__cursor.execute(
-                "INSERT INTO training_infos (training_id, num_workers, training_set_size) VALUES (%s, %s, %s)",
-                (training_id, num_workers, training_set_size)) 
+            "INSERT INTO training_infos (training_id, num_workers, training_set_size) VALUES (%s, %s, %s)",
+            (training_id, num_workers, training_set_size))
 
     def get_training_info(self, training_id: int) -> tuple[int, int]:
-        self.__cursor.execute("SELECT training_set_size, num_workers FROM training_infos WHERE training_id = %s", (training_id, ))
+        self.__cursor.execute(
+            "SELECT training_set_size, num_workers FROM training_infos WHERE training_id = %s", (training_id, ))
         data = self.__cursor.fetchall()
         assert len(data) == 1
         return data[0][0], data[0][1]

@@ -67,8 +67,6 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
         return TrainingResponse(training_set_size=training_set_size, num_workers=num_workers)
 
 
-
-
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(MetadataDatabaseGRPCServer(config), server)
