@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: default_database
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
+  storage:
+    image: storage
+    depends_on:
+      - db
+    build:
+      context: ./
+      dockerfile: ./storage/Dockerfile
+    ports:
+      - '5123:5123'
+    volumes:
+      - ./storage:/app
+
+  backend:
+    image: backend
+    depends_on:
+      - db
+      - storage
+    build:
+      context: ./
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - '5124:5124'
+    volumes:
+      - ./backend:/app
+
+  gpu_node:
+    image: gpu_node
+    build:
+      context: ./
+      dockerfile: modyn/gpu_node/Dockerfile
+    ports:
+      - '5001:5001'
+    volumes:
+      - ./modyn/gpu_node:/app

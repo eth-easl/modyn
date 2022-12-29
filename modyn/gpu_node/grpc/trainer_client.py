@@ -18,7 +18,7 @@ class TrainerClient:
     """
 
     def __init__(self):
-        self._trainer_stub = TrainerServerStub(grpc.insecure_channel("127.0.0.1:1222"))
+        self._trainer_stub = TrainerServerStub(grpc.insecure_channel("127.0.0.1:5001"))
 
     def check_trainer_available(self):
         req = TrainerAvailableRequest()
