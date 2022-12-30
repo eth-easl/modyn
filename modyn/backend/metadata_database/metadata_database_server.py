@@ -1,5 +1,5 @@
-from backend.metadata_database.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
-from backend.metadata_database.metadata_database import MetadataDatabase
+from modyn.backend.metadata_database.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
+from modyn.backend.metadata_database.metadata_database import MetadataDatabase
 from concurrent import futures
 import os
 import sys

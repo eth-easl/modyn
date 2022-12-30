@@ -36,6 +36,6 @@ class GDumbSelector(Selector):
         return zip(list(np.concatenate(result_samples)), list(np.concatenate(result_classes)))
 
     def _get_all_metadata(self, training_id: int) -> list[str]:
-        query = f"SELECT key, score, seen, label, data FROM odm_storage WHERE training_id = {training_id}"
+        query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = {training_id}"
         keys, scores, seen, labels, data = self.get_samples_by_metadata_query(query)
         return data, labels

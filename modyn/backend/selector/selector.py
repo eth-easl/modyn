@@ -1,8 +1,5 @@
 from abc import ABC, abstractmethod
-# import psycopg2
-import grpc
-from modyn.backend.metadata_database.metadata_pb2_grpc import MetadataStub
-from modyn.backend.metadata_database.metadata_pb2 import GetByQueryRequest, GetTrainingRequest, RegisterRequest
+from modyn.backend.selector.internal.grpc_handler import GRPCHandler
 
 
 class Selector(ABC):
@@ -43,6 +40,7 @@ class Selector(ABC):
 
     def __init__(self, config: dict):
         self._config = config
+        self.grpc = GRPCHandler(config)
         # self._con = psycopg2.connect(
         #     host=config['selector']['postgresql']['host'],
         #     port=config['selector']['postgresql']['port'],
@@ -52,11 +50,11 @@ class Selector(ABC):
         # self._setup_database()
 
         # Setup connection to the metadata server
-        metadata_channel = grpc.insecure_channel(
-            config['metadata']['hostname'] +
-            ':' +
-            config['metadata']['port'])
-        self.__metadata_stub = MetadataStub(metadata_channel)
+        # metadata_channel = grpc.insecure_channel(
+        #     config['metadata']['hostname'] +
+        #     ':' +
+        #     config['metadata']['port'])
+        # self.__metadata_stub = MetadataStub(metadata_channel)
 
     # def _setup_database(self) -> None:
     #     """
@@ -175,11 +173,8 @@ class Selector(ABC):
         Returns:
             The id of the newly created training object
         """
-        request = RegisterRequest(training_id=training_id, training_set_size=training_set_size, num_workers=num_workers)
-        self.__metadata_stub.RegisterTraining(request)
-        return training_id
+        return self.grpc._register_training(training_id, training_set_size, num_workers)
 
-        # TODO this should be a set GRPC call to the metadata database
         # assert self._con is not None, "No connection established"
 
         # cur = self._con.cursor()
@@ -201,11 +196,7 @@ class Selector(ABC):
         Returns:
             Tuple of training set size and number of workers.
         """
-        request = GetTrainingRequest(training_id=training_id)
-        info = self.__metadata_stub.GetTrainingInfo(request)
-        training_set_size = info.training_set_size
-        num_workers = info.num_workers
-        return training_set_size, num_workers
+        return self.grpc._get_info_for_training(training_id)
 
         # assert self._con is not None, "No connection established"
         # cur = self._con.cursor()
@@ -279,6 +270,4 @@ class Selector(ABC):
         return training_samples_subset
 
     def get_samples_by_metadata_query(self, query: str):
-        request = GetByQueryRequest(query=query)
-        samples = self.__metadata_stub.GetByQuery(request)
-        return samples
+        return self.grpc.get_samples_by_metadata_query(query)

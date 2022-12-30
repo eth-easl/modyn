@@ -1,9 +1,9 @@
 
 from unittest.mock import patch
 from modyn.backend.selector.selector import Selector
-from modyn.backend.selector.base_selector import BasicSelector
-from modyn.backend.selector.gdumb_selector import GDumbSelector
-from modyn.backend.selector.score_selector import ScoreSelector
+from modyn.backend.selector.custom_selectors.base_selector import BasicSelector
+from modyn.backend.selector.custom_selectors.gdumb_selector import GDumbSelector
+from modyn.backend.selector.custom_selectors.score_selector import ScoreSelector
 
 from collections import Counter
 import pytest

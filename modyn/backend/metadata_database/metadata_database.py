@@ -28,6 +28,8 @@ class MetadataDatabase(object):
             'id SERIAL PRIMARY KEY,'
             'key varchar(255) NOT NULL,'
             'score float NOT NULL,'
+            'seen int NOT NULL,'
+            'label int NOT NULL,'
             'data text NOT NULL,'
             'training_id int NOT NULL)'
         )
@@ -51,10 +53,12 @@ class MetadataDatabase(object):
             self,
             keys: list[str],
             score: list[float],
+            seen: list[bool],
+            label: list[int],
             data: list[bytes],
             training_id: int) -> None:
         """
-        Set the optimal dataset metadata for a given training.
+        Set the metadata for a given training. Will replace keys where they exist!
 
         Args:
             keys (list[str]): List of keys.
@@ -68,9 +72,11 @@ class MetadataDatabase(object):
              training_id))
         for i in range(len(keys)):
             self.__cursor.execute(
-                "INSERT INTO metadata_database (key, score, data, training_id) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO metadata_database (key, score, seen, label, data, training_id) VALUES (%s, %s, %s, %s, %s, %s)",
                 (keys[i],
                  score[i],
+                 seen[i],
+                 label[i],
                     data[i],
                     training_id))
         self.__con.commit()
@@ -78,7 +84,7 @@ class MetadataDatabase(object):
     def get_by_keys(
             self, keys: list[str], training_id: int) -> tuple[list[str], list[float], list[str]]:
         """
-        Get the optimal dataset metadata for a given training and keys.
+        Get the metadata for a given training and keys.
 
         Args:
             keys (list[str]): List of keys.
@@ -101,7 +107,7 @@ class MetadataDatabase(object):
 
     def get_by_query(self, query: str) -> tuple[list[str], list[float], list[str]]:
         """
-        Get the optimal dataset metadata for a given training and a executable query.
+        Get the metadata for a given training and a executable query.
 
         Args:
             query (str): Executable query.
@@ -135,7 +141,7 @@ class MetadataDatabase(object):
 
     def delete_training(self, training_id: int) -> None:
         """
-        Delete the optimal dataset metadata for a given training.
+        Delete the metadata for a given training.
 
         Args:
             training_id (int): Training id.
