@@ -1,3 +1,4 @@
+# pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_database.metadata_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse, RegisterRequest, RegisterResponse, GetTrainingRequest, TrainingResponse  # noqa: E501, E402
 from modyn.backend.metadata_database.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
 from modyn.backend.metadata_database.metadata_database import MetadataDatabase
@@ -10,7 +11,6 @@ import logging
 import grpc
 import yaml
 
-# pylint: disable-next=no-name-in-module
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
