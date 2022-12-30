@@ -118,7 +118,11 @@ def test_get_samples_by_metadata_query(test_connection_established):
     label = [5, 6]
 
     with patch.object(handler.metadata_database, 'GetByQuery',
-                      return_value=GetResponse(keys=keys, scores=scores, data=data, seen=seen, label=label)) as avail_method:
+                      return_value=GetResponse(keys=keys,
+                                               scores=scores,
+                                               data=data,
+                                               een=seen,
+                                               label=label)) as avail_method:
         got = handler.get_samples_by_metadata_query('sample_query')
         expect = (keys, scores, seen, label, data)
         assert got == expect
