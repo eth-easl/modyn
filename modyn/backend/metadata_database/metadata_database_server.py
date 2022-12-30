@@ -27,18 +27,17 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
         super().__init__()
         self.__config = config
         self.__metadata_database = MetadataDatabase(self.__config)
-        # TODO pick this up tomorrow by fixing these methods. the responses especially should include the seens, and labels
 
     def GetByKeys(self, request: GetByKeysRequest, context: grpc.ServicerContext) -> GetResponse:
         logging.info("Getting data by keys")
         keys, score, seen, labels, data = self.__metadata_database.get_by_keys(
             request.keys, request.training_id)
-        return GetResponse(keys=keys, data=data, scores=score)
+        return GetResponse(keys=keys, data=data, scores=score, seen=seen, label=labels)
 
     def GetByQuery(self, request: GetByQueryRequest, context: grpc.ServicerContext) -> GetResponse:
         logging.info("Getting data by query")
         keys, score, seen, labels, data = self.__metadata_database.get_by_query(request.keys)
-        return GetResponse(keys=keys, data=data, scores=score)
+        return GetResponse(keys=keys, data=data, scores=score, seen=seen, label=labels)
 
     def GetKeysByQuery(self, request: GetByQueryRequest, context: grpc.ServicerContext) -> GetKeysResponse:
         logging.info("Getting keys by query")
