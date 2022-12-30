@@ -3,6 +3,8 @@ from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
 
+# pylint: skip-file
+
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DeleteRequest(_message.Message):

@@ -153,10 +153,11 @@ class MetadataDatabase():
 
     def register_training(self, training_set_size: int, num_workers: int) -> None:
         self.__cursor.execute(
-            """INSERT INTO trainings(training_set_size, num_workers) VALUES(%s,%s) RETURNING id;""", 
+            """INSERT INTO trainings(training_set_size, num_workers) VALUES(%s,%s) RETURNING id;""",
             (training_set_size, num_workers))
         training_set_id = self.__cursor.fetchone()
         self.__con.commit()
+        return training_set_id
 
     def get_training_info(self, training_id: int) -> tuple[int, int]:
         self.__cursor.execute(
