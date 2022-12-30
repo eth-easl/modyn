@@ -9,6 +9,8 @@ import logging
 import grpc
 import yaml
 
+# pylint: disable-next=no-name-in-module
+
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
