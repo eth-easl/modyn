@@ -86,7 +86,7 @@ if __name__ == '__main__':
         print("Usage: python metadata_database_server.py <config_file>")
         sys.exit(1)
 
-    with open(sys.argv[1], "r") as f:
+    with open(sys.argv[1], "r", encoding='utf-8') as f:
         modyn_config = yaml.safe_load(f)
 
     serve(modyn_config)

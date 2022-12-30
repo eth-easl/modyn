@@ -125,7 +125,7 @@ class Selector(ABC):
         if (len(training_samples) == 0):
             raise ValueError("No new samples selected")
 
-        self._insert_training_samples(training_samples, training_id, training_set_number)
+        # self._insert_training_samples(training_samples, training_id, training_set_number)
         return training_samples
 
     def _get_training_set_partition(
