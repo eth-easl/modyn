@@ -53,8 +53,8 @@ class BasicSelector(Selector):
         Returns:
             List of keys for the unseen samples.
         """
-        query = (f"SELECT key, score, seen, label, data FROM metadata_database"
-                 "WHERE seen = 0 AND training_id = {training_id}")
+        query = f"""SELECT key, score, seen, label, data FROM metadata_database
+                 WHERE seen = 0 AND training_id = {training_id}"""
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
         assert not np.array(seen).any()
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
@@ -68,8 +68,8 @@ class BasicSelector(Selector):
         Returns:
             List of keys for the previously seen samples
         """
-        query = (f"SELECT key, score, seen, label, data FROM metadata_database"
-                 "WHERE seen = 1 AND training_id = {training_id}")
+        query = f"""SELECT key, score, seen, label, data FROM metadata_database
+                 WHERE seen = 1 AND training_id = {training_id}"""
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
         assert np.array(seen).all()
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
@@ -84,8 +84,8 @@ class BasicSelector(Selector):
         Returns:
             int: number of unseen samples
         """
-        query = (f"SELECT key, score, seen, label, data FROM metadata_database"
-                 "WHERE seen = 0 AND training_id = {training_id}")
+        query = f"""SELECT key, score, seen, label, data FROM metadata_database
+                 WHERE seen = 0 AND training_id = {training_id}"""
         keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
         assert not np.array(seen).any()
         return len(keys)
@@ -99,8 +99,8 @@ class BasicSelector(Selector):
         Returns:
             int: number of previously seen samples
         """
-        query = (f"SELECT key, score, seen, label, data FROM metadata_database"
-                 "WHERE seen = 1 AND training_id = {training_id}")
+        query = f"""SELECT key, score, seen, label, data FROM metadata_database
+                 WHERE seen = 1 AND training_id = {training_id}"""
         keys, scores, seen, data = self.get_samples_by_metadata_query(query)
         assert np.array(seen).all()
         return len(keys)
