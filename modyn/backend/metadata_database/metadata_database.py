@@ -72,7 +72,8 @@ class MetadataDatabase(object):
              training_id))
         for i in range(len(keys)):
             self.__cursor.execute(
-                "INSERT INTO metadata_database (key, score, seen, label, data, training_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                ("INSERT INTO metadata_database (key, score, seen, label, data, training_id)"
+                    "VALUES (%s, %s, %s, %s, %s, %s)"),
                 (keys[i],
                  score[i],
                  seen[i],
