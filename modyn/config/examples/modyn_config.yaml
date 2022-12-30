@@ -15,8 +15,8 @@ storage:
         description: "MNIST Dataset",
         version: "0.0.1",
         base_path: "datasets/mnist",
-        filesystem_wrapper_type: 1,
-        file_wrapper_type: 1
+        filesystem_wrapper_type: "LOCAL",
+        file_wrapper_type: "MNIST_WEBDATASET"
       }
     ]
   database:
@@ -24,7 +24,7 @@ storage:
     username: "postgres"
     password: "postgres"
     host: "storage-db"
-    port: "50060"
+    port: "5432"
     database: "postgres"
 
 odm:

@@ -16,10 +16,12 @@ services:
   storage-db:
     image: postgres:14.1-alpine
     restart: always
-    env_file:
-      - ./storage/internal/database/.env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: default_database
     ports:
-      - '5433:5433'
+      - '5433:5432'
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
 

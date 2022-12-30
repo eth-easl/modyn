@@ -105,6 +105,7 @@ class Seeker:
         """
         Run the seeker.
         """
+        logger.info('Starting seeker.')
         threads = []
         try:
             while True:

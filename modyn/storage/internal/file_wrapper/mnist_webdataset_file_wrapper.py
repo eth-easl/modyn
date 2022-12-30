@@ -9,7 +9,7 @@ class MNISTWebdatasetFileWrapper(AbstractFileWrapper):
 
     def __init__(self, file_path: str):
         super().__init__(file_path)
-        self.file_wrapper_type = FileWrapperType.MNIST
+        self.file_wrapper_type = FileWrapperType.MNIST_WEBDATASET
 
     def get_size(self) -> int:
         return wds.WebDataset(self.file_path).len()

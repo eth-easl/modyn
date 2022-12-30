@@ -53,6 +53,13 @@ class DatabaseConnection():
         try:
             if self.session.query(Dataset).filter(Dataset.name == name).first() is not None:
                 logger.info(f'Dataset with name {name} exists.')
+                self.session.query(Dataset).filter(Dataset.name == name).update({
+                    'base_path': base_path,
+                    'filesystem_wrapper_type': filesystem_wrapper_type,
+                    'file_wrapper_type': file_wrapper_type,
+                    'description': description,
+                    'version': version
+                })
             else:
                 dataset = Dataset(name=name,
                                   base_path=base_path,

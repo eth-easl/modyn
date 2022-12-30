@@ -6,7 +6,7 @@ from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper impor
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
 
 
-class LocalFSWrapper(AbstractFileSystemWrapper):
+class LocalFilesystemWrapper(AbstractFileSystemWrapper):
     """
     Wrapper for local filesystem.
     """

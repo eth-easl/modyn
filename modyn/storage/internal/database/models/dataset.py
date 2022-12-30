@@ -8,7 +8,7 @@ from modyn.storage.internal.database.base import Base
 
 
 class Dataset(Base):
-    __tablename__ = 'datasets'
+    __tablename__ = 'dataset'
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(120), unique=False, nullable=True)
@@ -16,7 +16,6 @@ class Dataset(Base):
     filesystem_wrapper_type = Column(Enum(FileSystemWrapperType), nullable=False)
     file_wrapper_type = Column(Enum(FileWrapperType), nullable=False)
     base_path = Column(String(120), unique=False, nullable=False)
-    files = relationship('File', backref='dataset', lazy=True)
 
     def __repr__(self) -> str:
         return f'<Dataset {self.name}>'

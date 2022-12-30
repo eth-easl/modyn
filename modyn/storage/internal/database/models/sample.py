@@ -5,7 +5,7 @@ from modyn.storage.internal.database.base import Base
 
 
 class Sample(Base):
-    __tablename__ = 'samples'
+    __tablename__ = 'sample'
     id = Column(Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey('file.id'), nullable=False)
     file = relationship('File', backref=backref('samples', lazy=True))

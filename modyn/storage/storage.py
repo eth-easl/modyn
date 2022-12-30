@@ -37,6 +37,7 @@ class Storage():
 
         #  Start the seeker process in a different thread.
         seeker = Thread(target=Seeker(self.modyn_config).run)
+        seeker.start()
 
         #  Start the storage grpc server.
         with GRPCServer(self.modyn_config) as server:
