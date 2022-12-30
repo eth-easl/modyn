@@ -121,7 +121,7 @@ def test_get_samples_by_metadata_query(test_connection_established):
                       return_value=GetResponse(keys=keys,
                                                scores=scores,
                                                data=data,
-                                               een=seen,
+                                               seen=seen,
                                                label=label)) as avail_method:
         got = handler.get_samples_by_metadata_query('sample_query')
         expect = (keys, scores, seen, label, data)

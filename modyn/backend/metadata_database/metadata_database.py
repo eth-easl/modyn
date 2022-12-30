@@ -159,8 +159,7 @@ class MetadataDatabase():
         self.__con.commit()
         if training_id is None:
             raise Exception("Failed to register training!")
-        else:
-            return training_id[0]
+        return training_id[0]
 
     def get_training_info(self, training_id: int) -> tuple[int, int]:
         self.__cursor.execute(

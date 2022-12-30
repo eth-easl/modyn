@@ -29,12 +29,13 @@ class ScoreSelector(Selector):
         all_samples, all_scores = self._get_all_metadata(training_id)
         all_samples_np = np.array(all_samples)
         all_scores_np = np.array(all_scores)
+
         if self.is_softmax_mode:
             all_scores_np = np.exp(all_scores_np) / np.sum(np.exp(all_scores_np))
         else:
             assert all_scores_np.min() >= 0, "Scores should be nonnegative if on normal mode!"
             all_scores_np = all_scores_np / np.sum(all_scores_np)
-        rand_indices = np.random.choice(all_samples_np.shape[0], size=num_samples, replace=False, p=all_scores)
+        rand_indices = np.random.choice(all_samples_np.shape[0], size=num_samples, replace=False, p=all_scores_np)
         samples = all_samples_np[rand_indices]
         scores = all_scores_np[rand_indices]
         return list(zip(list(samples), list(scores)))
