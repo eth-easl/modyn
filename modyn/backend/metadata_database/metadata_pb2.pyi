@@ -3,7 +3,7 @@ from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
 
-# pylint: disable
+# pylint: skip-file
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
