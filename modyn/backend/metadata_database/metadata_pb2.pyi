@@ -3,8 +3,6 @@ from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
 
-# pylint: skip-file
-
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DeleteRequest(_message.Message):
@@ -58,14 +56,12 @@ class GetTrainingRequest(_message.Message):
     def __init__(self, training_id: _Optional[int] = ...) -> None: ...
 
 class RegisterRequest(_message.Message):
-    __slots__ = ["num_workers", "training_id", "training_set_size"]
+    __slots__ = ["num_workers", "training_set_size"]
     NUM_WORKERS_FIELD_NUMBER: _ClassVar[int]
-    TRAINING_ID_FIELD_NUMBER: _ClassVar[int]
     TRAINING_SET_SIZE_FIELD_NUMBER: _ClassVar[int]
     num_workers: int
-    training_id: int
     training_set_size: int
-    def __init__(self, training_id: _Optional[int] = ..., training_set_size: _Optional[int] = ..., num_workers: _Optional[int] = ...) -> None: ...
+    def __init__(self, training_set_size: _Optional[int] = ..., num_workers: _Optional[int] = ...) -> None: ...
 
 class RegisterResponse(_message.Message):
     __slots__ = []

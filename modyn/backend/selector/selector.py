@@ -166,14 +166,14 @@ class Selector(ABC):
 
         return self._register_training(training_set_size, num_workers)
 
-    def _register_training(self, training_id: int, training_set_size: int,
+    def _register_training(self, training_set_size: int,
                            num_workers: int) -> int:
         """
         Creates a new training object in the database with the given training_set_size and num_workers
         Returns:
             The id of the newly created training object
         """
-        return self.grpc._register_training(training_id, training_set_size, num_workers)
+        return self.grpc._register_training(training_set_size, num_workers)
 
         # assert self._con is not None, "No connection established"
 

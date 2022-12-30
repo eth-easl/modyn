@@ -151,10 +151,12 @@ class MetadataDatabase():
             "DELETE FROM metadata_database WHERE training_id = %s", (training_id,))
         self.__con.commit()
 
-    def register_training(self, training_id: int, training_set_size: int, num_workers: int) -> None:
+    def register_training(self, training_set_size: int, num_workers: int) -> None:
         self.__cursor.execute(
-            "INSERT INTO training_infos (training_id, num_workers, training_set_size) VALUES (%s, %s, %s)",
-            (training_id, num_workers, training_set_size))
+            """INSERT INTO trainings(training_set_size, num_workers) VALUES(%s,%s) RETURNING id;""", 
+            (training_set_size, num_workers))
+        training_set_id = self.__cursor.fetchone()
+        self.__con.commit()
 
     def get_training_info(self, training_id: int) -> tuple[int, int]:
         self.__cursor.execute(

@@ -4,7 +4,6 @@ import grpc
 
 import modyn.backend.metadata_database.metadata_pb2 as metadata__pb2
 
-# pylint: skip-file
 
 class MetadataStub(object):
     """Missing associated documentation comment in .proto file."""

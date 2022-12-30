@@ -12,9 +12,8 @@ service Metadata {
 }
 
 message RegisterRequest {
-    int32 training_id = 1;
-    int32 training_set_size = 2;
-    int32 num_workers = 3;
+    int32 training_set_size = 1;
+    int32 num_workers = 2;
 }
 
 message RegisterResponse {

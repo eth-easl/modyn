@@ -62,7 +62,7 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
 
     def RegisterTraining(self, request: RegisterRequest, context: grpc.ServicerContext) -> RegisterResponse:
         logging.info(f'Registering training {request.training_id}')
-        self.__metadata_database.register_training(request.training_id, request.training_set_size, request.num_workers)
+        self.__metadata_database.register_training(request.training_set_size, request.num_workers)
         return RegisterResponse()
 
     def GetTrainingInfo(self, request: GetTrainingRequest, context: grpc.ServicerContext) -> TrainingResponse:
