@@ -13,7 +13,7 @@ class GDumbSelector(Selector):
     def __init__(self, config: dict):
         super().__init__(config)
 
-    def _select_new_training_samples(self, training_id: int, num_samples: int) -> list:
+    def _select_new_training_samples(self, training_id: int, num_samples: int) -> list[tuple[str, int]]:
         """
         For a given training_id and number of samples, request that many samples from the selector.
 
@@ -33,9 +33,9 @@ class GDumbSelector(Selector):
             result_samples.append(np.array(all_samples)[class_indices])
             result_classes.append(np.array(all_classes)[class_indices])
 
-        return zip(list(np.concatenate(result_samples)), list(np.concatenate(result_classes)))
+        return list(zip(list(np.concatenate(result_samples)), list(np.concatenate(result_classes))))
 
-    def _get_all_metadata(self, training_id: int) -> list[str]:
+    def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[int]]:
         query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = {training_id}"
         keys, scores, seen, labels, data = self.get_samples_by_metadata_query(query)
         return data, labels

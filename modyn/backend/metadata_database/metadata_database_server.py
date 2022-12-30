@@ -36,12 +36,12 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
 
     def GetByQuery(self, request: GetByQueryRequest, context: grpc.ServicerContext) -> GetResponse:
         logging.info("Getting data by query")
-        keys, score, seen, labels, data = self.__metadata_database.get_by_query(request.keys)
+        keys, score, seen, labels, data = self.__metadata_database.get_by_query(request.query)
         return GetResponse(keys=keys, data=data, scores=score, seen=seen, label=labels)
 
     def GetKeysByQuery(self, request: GetByQueryRequest, context: grpc.ServicerContext) -> GetKeysResponse:
         logging.info("Getting keys by query")
-        keys = self.__metadata_database.get_keys_by_query(request.keys)
+        keys = self.__metadata_database.get_keys_by_query(request.query)
         return GetKeysResponse(keys=keys)
 
     def Set(self, request: SetRequest, context: grpc.ServicerContext) -> SetResponse:
