@@ -269,5 +269,6 @@ class Selector(ABC):
 
         return training_samples_subset
 
-    def get_samples_by_metadata_query(self, query: str):
+    def get_samples_by_metadata_query(
+            self, query: str) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
         return self.grpc.get_samples_by_metadata_query(query)

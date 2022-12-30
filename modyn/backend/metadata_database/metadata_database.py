@@ -83,7 +83,7 @@ class MetadataDatabase():
         self.__con.commit()
 
     def get_by_keys(
-            self, keys: list[str], training_id: int) -> tuple[list[str], list[float], list[str]]:
+            self, keys: list[str], training_id: int) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
         """
         Get the metadata for a given training and keys.
 
@@ -106,7 +106,7 @@ class MetadataDatabase():
         return_data = [d[4] for d in data]
         return return_keys, scores, seen, labels, return_data
 
-    def get_by_query(self, query: str) -> tuple[list[str], list[float], list[str]]:
+    def get_by_query(self, query: str) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
         """
         Get the metadata for a given training and a executable query.
 
@@ -151,13 +151,13 @@ class MetadataDatabase():
             "DELETE FROM metadata_database WHERE training_id = %s", (training_id,))
         self.__con.commit()
 
-    def register_training(self, training_set_size: int, num_workers: int) -> None:
+    def register_training(self, training_set_size: int, num_workers: int) -> int:
         self.__cursor.execute(
             """INSERT INTO trainings(training_set_size, num_workers) VALUES(%s,%s) RETURNING id;""",
             (training_set_size, num_workers))
-        training_set_id = self.__cursor.fetchone()
+        training_id = self.__cursor.fetchone()
         self.__con.commit()
-        return training_set_id
+        return training_id
 
     def get_training_info(self, training_id: int) -> tuple[int, int]:
         self.__cursor.execute(

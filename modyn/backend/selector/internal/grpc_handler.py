@@ -64,7 +64,8 @@ class GRPCHandler():
         num_workers = info.num_workers
         return training_set_size, num_workers
 
-    def get_samples_by_metadata_query(self, query: str):
+    def get_samples_by_metadata_query(
+            self, query: str) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
         assert self.connected_to_metadata, "Tried to query metadata server, but metadata server not connected. "
         request = GetByQueryRequest(query=query)
         samples = self.metadata_database.GetByQuery(request)
