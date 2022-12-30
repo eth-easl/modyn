@@ -119,6 +119,74 @@ def test_adaptive_selector_get_new_training_samples(test_get_seen_data_size,
     test_get_unseen_data.assert_called_with(0, 1)
     test_get_seen_data.assert_called_with(0, 4)
 
+@patch.multiple(Selector, __abstractmethods__=set())
+@patch.object(BasicSelector, '__init__', noop_constructor_mock)
+@patch.object(BasicSelector, 'get_samples_by_metadata_query')
+def test_base_selector_get_seen_data(test_get_samples_by_metadata_query):
+    test_get_samples_by_metadata_query.return_value = ['a', 'b'], [0, 1], [1, 1], [0, 0], ['a', 'b']
+
+    # We need to instantiate an abstract class for the test
+    selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
+    selector._set_is_adaptive_ratio(True)
+
+    for key in selector.get_seen_data(0, 1):
+        assert key in ['a', 'b'] 
+
+    query = """SELECT key, score, seen, label, data FROM metadata_database
+                 WHERE seen = 1 AND training_id = 0"""
+    test_get_samples_by_metadata_query.assert_called_with(query)
+
+    assert selector.get_seen_data_size(0) == 2
+    test_get_samples_by_metadata_query.assert_called_with(query)
+
+@patch.multiple(Selector, __abstractmethods__=set())
+@patch.object(BasicSelector, '__init__', noop_constructor_mock)
+@patch.object(BasicSelector, 'get_samples_by_metadata_query')
+def test_base_selector_get_unseen_data(test_get_samples_by_metadata_query):
+    test_get_samples_by_metadata_query.return_value = ['a', 'b'], [0, 1], [0, 0], [0, 0], ['a', 'b']
+
+    # We need to instantiate an abstract class for the test
+    selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
+    selector._set_is_adaptive_ratio(True)
+
+    for key in selector.get_unseen_data(0, 1):
+        assert key in ['a', 'b'] 
+
+    query = """SELECT key, score, seen, label, data FROM metadata_database
+                 WHERE seen = 0 AND training_id = 0"""
+    test_get_samples_by_metadata_query.assert_called_with(query)
+
+    assert selector.get_unseen_data_size(0) == 2
+    test_get_samples_by_metadata_query.assert_called_with(query)
+
+@patch.multiple(Selector, __abstractmethods__=set())
+@patch.object(GDumbSelector, '__init__', noop_constructor_mock)
+@patch.object(GDumbSelector, 'get_samples_by_metadata_query')
+def test_gdumb_selector_get_metadata(test_get_samples_by_metadata_query):
+    test_get_samples_by_metadata_query.return_value = ['a', 'b'], [0, 1], [0, 0], [0, 4], ['a', 'b']
+
+    # We need to instantiate an abstract class for the test
+    selector = GDumbSelector(None)  # pylint: disable=abstract-class-instantiated
+
+    assert selector._get_all_metadata(0) == (['a', 'b'], [0, 4])
+
+    query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = 0"
+    test_get_samples_by_metadata_query.assert_called_with(query)
+
+@patch.multiple(Selector, __abstractmethods__=set())
+@patch.object(ScoreSelector, '__init__', noop_constructor_mock)
+@patch.object(ScoreSelector, 'get_samples_by_metadata_query')
+def test_score_selector_get_metadata(test_get_samples_by_metadata_query):
+    test_get_samples_by_metadata_query.return_value = ['a', 'b'], [-1.5, 2.4], [0, 0], [0, 4], ['a', 'b']
+
+    # We need to instantiate an abstract class for the test
+    selector = ScoreSelector(None)  # pylint: disable=abstract-class-instantiated
+
+    assert selector._get_all_metadata(0) == (['a', 'b'], [-1.5, 2.4])
+
+    query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = 0"
+    test_get_samples_by_metadata_query.assert_called_with(query)
+
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(GDumbSelector, '__init__', noop_constructor_mock)
