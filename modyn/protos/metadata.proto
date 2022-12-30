@@ -54,7 +54,9 @@ message SetRequest {
     int32 training_id = 1;
     repeated string keys = 2;
     repeated float scores = 3;
-    repeated string data = 4;
+    repeated bool seen = 4;
+    repeated int32 label = 5;
+    repeated string data = 6;
 }
 
 message SetResponse {

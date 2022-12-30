@@ -1,7 +1,7 @@
 import psycopg2
 
 
-class MetadataDatabase(object):
+class MetadataDatabase():
     """
     Store the metadata for all the training samples for a given training.
     """
@@ -9,11 +9,11 @@ class MetadataDatabase(object):
     def __init__(self, config: dict):
         self.__config = config
         self.__con = psycopg2.connect(
-            host=config['metadata_database']['postgresql']['host'],
-            port=config['metadata_database']['postgresql']['port'],
-            database=config['metadata_database']['postgresql']['database'],
-            user=config['metadata_database']['postgresql']['user'],
-            password=config['metadata_database']['postgresql']['password']
+            host=self.__config['metadata_database']['postgresql']['host'],
+            port=self.__config['metadata_database']['postgresql']['port'],
+            database=self.__config['metadata_database']['postgresql']['database'],
+            user=self.__config['metadata_database']['postgresql']['user'],
+            password=self.__config['metadata_database']['postgresql']['password']
         )
         self.__con.autocommit = False
         self.__cursor = self.__con.cursor()
@@ -52,34 +52,34 @@ class MetadataDatabase(object):
     def set(
             self,
             keys: list[str],
-            score: list[float],
-            seen: list[bool],
-            label: list[int],
-            data: list[bytes],
+            scores: list[float],
+            seens: list[bool],
+            labels: list[int],
+            datas: list[bytes],
             training_id: int) -> None:
         """
         Set the metadata for a given training. Will replace keys where they exist!
 
         Args:
             keys (list[str]): List of keys.
-            score (list[float]): List of scores.
-            data (list[bytes]): List of data.
+            scores (list[float]): List of scores.
+            datas (list[bytes]): List of data.
             training_id (int): Training id.
         """
         self.__cursor.execute(
             "DELETE FROM metadata_database WHERE key IN %s AND training_id = %s",
             (tuple(keys),
              training_id))
-        for i in range(len(keys)):
+        for key, score, seen, label, data in zip(keys, scores, seens, labels, datas):
             self.__cursor.execute(
                 ("INSERT INTO metadata_database (key, score, seen, label, data, training_id)"
                     "VALUES (%s, %s, %s, %s, %s, %s)"),
-                (keys[i],
-                 score[i],
-                 seen[i],
-                 label[i],
-                    data[i],
-                    training_id))
+                (key,
+                 score,
+                 seen,
+                 label,
+                 data,
+                 training_id))
         self.__con.commit()
 
     def get_by_keys(

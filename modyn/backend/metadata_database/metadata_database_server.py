@@ -26,17 +26,18 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
     def __init__(self, config: dict):
         super().__init__()
         self.__config = config
-        self.__metadata_database = MetadataDatabase(config)
+        self.__metadata_database = MetadataDatabase(self.__config)
+        # TODO pick this up tomorrow by fixing these methods. the responses especially should include the seens, and labels
 
     def GetByKeys(self, request: GetByKeysRequest, context: grpc.ServicerContext) -> GetResponse:
         logging.info("Getting data by keys")
-        keys, score, data = self.__metadata_database.get_by_keys(
+        keys, score, seen, labels, data = self.__metadata_database.get_by_keys(
             request.keys, request.training_id)
         return GetResponse(keys=keys, data=data, scores=score)
 
     def GetByQuery(self, request: GetByQueryRequest, context: grpc.ServicerContext) -> GetResponse:
         logging.info("Getting data by query")
-        keys, score, data = self.__metadata_database.get_by_query(request.keys)
+        keys, score, seen, labels, data = self.__metadata_database.get_by_query(request.keys)
         return GetResponse(keys=keys, data=data, scores=score)
 
     def GetKeysByQuery(self, request: GetByQueryRequest, context: grpc.ServicerContext) -> GetKeysResponse:
@@ -49,6 +50,8 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
         self.__metadata_database.set(
             request.keys,
             request.scores,
+            request.seen, 
+            request.label, 
             request.data,
             request.training_id)
         return SetResponse()
@@ -72,9 +75,7 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(MetadataDatabaseGRPCServer(config), server)
-    logging.info(
-        'Starting server. Listening on port .' +
-        config["metadata_database"]["port"])
+    logging.info(f'Starting server. Listening on port {config["metadata_database"]["port"]}.')
     server.add_insecure_port(f'[::]:{config["metadata_database"]["port"]}')
     server.start()
     server.wait_for_termination()
@@ -87,6 +88,6 @@ if __name__ == '__main__':
         sys.exit(1)
 
     with open(sys.argv[1], "r") as f:
-        config = yaml.safe_load(f)
+        modyn_config = yaml.safe_load(f)
 
-    serve(config)
+    serve(modyn_config)

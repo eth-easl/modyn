@@ -72,16 +72,20 @@ class RegisterResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class SetRequest(_message.Message):
-    __slots__ = ["data", "keys", "scores", "training_id"]
+    __slots__ = ["data", "keys", "label", "scores", "seen", "training_id"]
     DATA_FIELD_NUMBER: _ClassVar[int]
     KEYS_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
     SCORES_FIELD_NUMBER: _ClassVar[int]
+    SEEN_FIELD_NUMBER: _ClassVar[int]
     TRAINING_ID_FIELD_NUMBER: _ClassVar[int]
     data: _containers.RepeatedScalarFieldContainer[str]
     keys: _containers.RepeatedScalarFieldContainer[str]
+    label: _containers.RepeatedScalarFieldContainer[int]
     scores: _containers.RepeatedScalarFieldContainer[float]
+    seen: _containers.RepeatedScalarFieldContainer[bool]
     training_id: int
-    def __init__(self, training_id: _Optional[int] = ..., keys: _Optional[_Iterable[str]] = ..., scores: _Optional[_Iterable[float]] = ..., data: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, training_id: _Optional[int] = ..., keys: _Optional[_Iterable[str]] = ..., scores: _Optional[_Iterable[float]] = ..., seen: _Optional[_Iterable[bool]] = ..., label: _Optional[_Iterable[int]] = ..., data: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SetResponse(_message.Message):
     __slots__ = []
