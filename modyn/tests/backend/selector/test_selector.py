@@ -19,6 +19,21 @@ def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argumen
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(Selector, '__init__', noop_constructor_mock)
+@patch.object(Selector, '_select_new_training_samples')
+def test_prepare_training_set(test__select_new_training_samples):
+    test__select_new_training_samples.return_value = ['a', 'b']
+
+    # We need to instantiate an abstract class for the test
+    selector = Selector(None)  # pylint: disable=abstract-class-instantiated
+    assert selector._prepare_training_set(0, 0, 0) == ['a', 'b']
+
+    test__select_new_training_samples.return_value = []
+    with pytest.raises(ValueError):
+        selector._prepare_training_set(0, 0, 3)
+
+
+@patch.multiple(Selector, __abstractmethods__=set())
+@patch.object(Selector, '__init__', noop_constructor_mock)
 @patch.object(Selector, '_get_info_for_training')
 def test_get_training_set_partition(test__get_info_for_training):
     test__get_info_for_training.return_value = tuple([10, 3])
@@ -51,10 +66,12 @@ def test_get_sample_keys(test__get_info_for_training, test__prepare_training_set
     assert selector.get_sample_keys(0, 0, 0) == ["a"]
     assert selector.get_sample_keys(0, 0, 1) == ["b"]
     assert selector.get_sample_keys(0, 0, 2) == ["c"]
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         selector.get_sample_keys(0, 0, -1)
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         selector.get_sample_keys(0, 0, 3)
+    with pytest.raises(NotImplementedError):
+        selector._select_new_training_samples(0, 0)
 
 
 @patch.multiple(Selector, __abstractmethods__=set())
@@ -119,6 +136,7 @@ def test_adaptive_selector_get_new_training_samples(test_get_seen_data_size,
     test_get_unseen_data.assert_called_with(0, 1)
     test_get_seen_data.assert_called_with(0, 4)
 
+
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
 @patch.object(BasicSelector, 'get_samples_by_metadata_query')
@@ -130,7 +148,7 @@ def test_base_selector_get_seen_data(test_get_samples_by_metadata_query):
     selector._set_is_adaptive_ratio(True)
 
     for key in selector.get_seen_data(0, 1):
-        assert key in ['a', 'b'] 
+        assert key in ['a', 'b']
 
     query = """SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = 0"""
@@ -138,6 +156,7 @@ def test_base_selector_get_seen_data(test_get_samples_by_metadata_query):
 
     assert selector.get_seen_data_size(0) == 2
     test_get_samples_by_metadata_query.assert_called_with(query)
+
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
@@ -150,7 +169,7 @@ def test_base_selector_get_unseen_data(test_get_samples_by_metadata_query):
     selector._set_is_adaptive_ratio(True)
 
     for key in selector.get_unseen_data(0, 1):
-        assert key in ['a', 'b'] 
+        assert key in ['a', 'b']
 
     query = """SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = 0"""
@@ -158,6 +177,7 @@ def test_base_selector_get_unseen_data(test_get_samples_by_metadata_query):
 
     assert selector.get_unseen_data_size(0) == 2
     test_get_samples_by_metadata_query.assert_called_with(query)
+
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(GDumbSelector, '__init__', noop_constructor_mock)
@@ -170,8 +190,9 @@ def test_gdumb_selector_get_metadata(test_get_samples_by_metadata_query):
 
     assert selector._get_all_metadata(0) == (['a', 'b'], [0, 4])
 
-    query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = 0"
+    query = "SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = 0"
     test_get_samples_by_metadata_query.assert_called_with(query)
+
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(ScoreSelector, '__init__', noop_constructor_mock)
@@ -184,7 +205,7 @@ def test_score_selector_get_metadata(test_get_samples_by_metadata_query):
 
     assert selector._get_all_metadata(0) == (['a', 'b'], [-1.5, 2.4])
 
-    query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = 0"
+    query = "SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = 0"
     test_get_samples_by_metadata_query.assert_called_with(query)
 
 

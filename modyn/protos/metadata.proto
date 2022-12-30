@@ -17,6 +17,7 @@ message RegisterRequest {
 }
 
 message RegisterResponse {
+    int32 training_id = 1;
 }
 
 message GetTrainingRequest {

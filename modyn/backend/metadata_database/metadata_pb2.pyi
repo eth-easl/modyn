@@ -66,8 +66,10 @@ class RegisterRequest(_message.Message):
     def __init__(self, training_set_size: _Optional[int] = ..., num_workers: _Optional[int] = ...) -> None: ...
 
 class RegisterResponse(_message.Message):
-    __slots__ = []
-    def __init__(self) -> None: ...
+    __slots__ = ["training_id"]
+    TRAINING_ID_FIELD_NUMBER: _ClassVar[int]
+    training_id: int
+    def __init__(self, training_id: _Optional[int] = ...) -> None: ...
 
 class SetRequest(_message.Message):
     __slots__ = ["data", "keys", "label", "scores", "seen", "training_id"]

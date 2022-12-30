@@ -16,8 +16,8 @@ class Selector(ABC):
 
     """
 
-    _config: dict = dict()
-    _con = None
+    # _config: dict = dict()
+    # _con = None
 
     # _create_trainings_table_sql = '''CREATE TABLE IF NOT EXISTS trainings (
     #         id SERIAL PRIMARY KEY,
@@ -39,7 +39,7 @@ class Selector(ABC):
     # _fetch_training_info_sql = '''SELECT training_set_size, num_workers FROM trainings where id = %s'''
 
     def __init__(self, config: dict):
-        self._config = config
+        # self._config = config
         self.grpc = GRPCHandler(config)
         # self._con = psycopg2.connect(
         #     host=config['selector']['postgresql']['host'],
