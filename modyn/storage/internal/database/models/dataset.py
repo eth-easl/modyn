@@ -1,5 +1,4 @@
 from sqlalchemy import Column, String, Enum, Integer
-from sqlalchemy.orm import relationship
 
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
@@ -25,7 +24,7 @@ class Dataset(Base):
                  filesystem_wrapper_type: FileSystemWrapperType,
                  file_wrapper_type: FileWrapperType,
                  base_path: str,
-                 version: str = None):
+                 version: str = '0.0.1'):
         self.name = name
         self.description = description
         self.filesystem_wrapper_type = filesystem_wrapper_type

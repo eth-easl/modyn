@@ -29,7 +29,7 @@ class AbstractFileSystemWrapper(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list(self, path: str) -> typing.List[str]:
+    def list(self, path: str, recursive: bool = False) -> typing.List[str]:
         """
         List all files in a directory.
         """
@@ -67,13 +67,6 @@ class AbstractFileSystemWrapper(ABC):
     def get_created(self, path: str) -> datetime.datetime:
         """
         Get the creation time of a file.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_accessed(self, path: str) -> datetime.datetime:
-        """
-        Get the last access time of a file.
         """
         raise NotImplementedError
 
