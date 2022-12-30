@@ -1,3 +1,4 @@
+from modyn.backend.metadata_database.metadata_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse, RegisterRequest, RegisterResponse, GetTrainingRequest, TrainingResponse  # noqa: E501, E402
 from modyn.backend.metadata_database.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server
 from modyn.backend.metadata_database.metadata_database import MetadataDatabase
 from concurrent import futures
@@ -15,7 +16,6 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from modyn.backend.metadata_database.metadata_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse, RegisterRequest, RegisterResponse, GetTrainingRequest, TrainingResponse  # noqa: E501, E402
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
