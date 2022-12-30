@@ -49,8 +49,8 @@ class MetadataDatabaseGRPCServer(MetadataServicer):
         self.__metadata_database.set(
             request.keys,
             request.scores,
-            request.seen, 
-            request.label, 
+            request.seen,
+            request.label,
             request.data,
             request.training_id)
         return SetResponse()
