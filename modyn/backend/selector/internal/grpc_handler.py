@@ -16,29 +16,29 @@ class GRPCHandler():
         self.config = modyn_config
         self.connected_to_metadata = False
 
-        self.init_metadata()
+        self._init_metadata()
 
-    def connection_established(self, channel: grpc.Channel) -> bool:
+    def _connection_established(self, channel: grpc.Channel) -> bool:
         try:
             grpc.channel_ready_future(channel).result(timeout=TIMEOUT_SEC)
             return True
         except grpc.FutureTimeoutError:
             return False
 
-    def init_metadata(self) -> None:
+    def _init_metadata(self) -> None:
         assert self.config is not None
         address = f"{self.config['metadata_database']['hostname']}:{self.config['metadata_database']['port']}"
         self.metadata_database_channel = grpc.insecure_channel(address)
 
-        if not self.connection_established(self.metadata_database_channel):
+        if not self._connection_established(self.metadata_database_channel):
             raise ConnectionError(f"Could not establish gRPC connection to metadata server at {address}.")
 
         self.metadata_database = MetadataStub(self.metadata_database_channel)
         logger.info("Successfully connected to storage.")
         self.connected_to_metadata = True
 
-    def _register_training(self, training_set_size: int,
-                           num_workers: int) -> int:
+    def register_training(self, training_set_size: int,
+                          num_workers: int) -> int:
         """
         Creates a new training object in the database with the given training_set_size and num_workers
         Returns:
@@ -49,7 +49,7 @@ class GRPCHandler():
         training_id = self.metadata_database.RegisterTraining(request).training_id
         return training_id
 
-    def _get_info_for_training(self, training_id: int) -> tuple[int, int]:
+    def get_info_for_training(self, training_id: int) -> tuple[int, int]:
         """
         Queries the database for the the training set size and number of workers for a given training.
 

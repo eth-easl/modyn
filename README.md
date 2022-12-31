@@ -34,5 +34,5 @@ in the project root.
 
 ### How to run:
 1. Install [Docker](https://docs.docker.com/get-docker/) 
-2. Run docker `docker compose -f "src/docker-compose.yml" up -d --build`
+2. Run docker `docker compose -f "modyn/docker-compose.yml" up -d --build`
 3. To read output [ssh](https://phase2.github.io/devtools/common-tasks/ssh-into-a-container/) into the docker container you are interested in

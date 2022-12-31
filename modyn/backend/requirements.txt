@@ -1,6 +1,6 @@
 grpcio
 pyyaml
-psycopg2-binary
+psycopg2
 boto3
 sqlitedict
 pandas

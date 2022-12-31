@@ -33,20 +33,26 @@ class BasicSelector(Selector):
             self,
             training_id: int,
             training_set_size: int
-    ) -> list:
+    ) -> list[str]:
+        """
+        Selects a new training set of samples for the given training id.
+
+        Returns:
+            list(str): the training sample keys for the newly selected training_set
+        """
         if self._is_adaptive_ratio:
-            seen_data_size = self.get_seen_data_size(training_id)
-            unseen_data_size = self.get_unseen_data_size(training_id)
+            seen_data_size = self._get_seen_data_size(training_id)
+            unseen_data_size = self._get_unseen_data_size(training_id)
             self.unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
 
         num_new_samples = int(training_set_size * self.unseen_data_ratio)
         num_old_samples = training_set_size - num_new_samples
-        new_samples = self.get_unseen_data(training_id, num_new_samples)
-        old_samples = self.get_seen_data(training_id, num_old_samples)
+        new_samples = self._get_unseen_data(training_id, num_new_samples)
+        old_samples = self._get_seen_data(training_id, num_old_samples)
         new_samples.extend(old_samples)
         return new_samples
 
-    def get_unseen_data(self, training_id: int, num_samples: int) -> list[str]:
+    def _get_unseen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
         For a given training_id and number of samples, request that many previously unseen samples.
 
@@ -60,7 +66,7 @@ class BasicSelector(Selector):
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return np.array(keys)[choice]
 
-    def get_seen_data(self, training_id: int, num_samples: int) -> list[str]:
+    def _get_seen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
         For a given training_id and number of samples, request that many samples from
         the previously seen data
@@ -76,7 +82,7 @@ class BasicSelector(Selector):
         print(choice)
         return np.array(keys)[choice]
 
-    def get_seen_data_size(self, training_id: int) -> int:
+    def _get_seen_data_size(self, training_id: int) -> int:
         """For a given training_id, return how many unseen samples there are
 
         Args:
@@ -91,7 +97,7 @@ class BasicSelector(Selector):
         assert np.array(seen).all()
         return len(keys)
 
-    def get_unseen_data_size(self, training_id: int) -> int:
+    def _get_unseen_data_size(self, training_id: int) -> int:
         """For a given training_id, return how many previously seen samples there are
 
         Args:
