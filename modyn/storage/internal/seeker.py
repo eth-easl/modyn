@@ -100,6 +100,9 @@ class Seeker:
                         continue
             elif filesystem_wrapper.isdir(file_path):
                 self._update_files_in_directory(filesystem_wrapper, file_path, timestamp, session, dataset)
+            else:
+                logger.warning(f'Path {file_path} is not a file or directory.')
+                raise ValueError(f'Path {file_path} is not a file or directory.')
 
     def run(self) -> None:
         """

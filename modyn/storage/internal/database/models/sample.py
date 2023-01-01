@@ -13,7 +13,7 @@ class Sample(Base):
     index = Column(Integer, nullable=False)
 
     def __repr__(self) -> str:
-        return f'<DatasetFileSample {self.id}>'
+        return f'<Sample {self.id}>'
 
     def __init__(self, file: str, external_key: str, index: int):
         self.file = file

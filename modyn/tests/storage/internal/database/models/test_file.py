@@ -1,76 +1,112 @@
 import datetime
+import pytest
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.dataset import Dataset
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
+from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
 
-SESSION = None
-ENGINE = None
+@pytest.fixture(autouse=True)
+def session():
+    engine = create_engine('sqlite:///:memory:', echo=True)
+    session = sessionmaker(bind=engine)()
+
+    Dataset.metadata.create_all(engine)
+    File.metadata.create_all(engine)
+    
+    yield session
+    
+    session.close()
+    engine.dispose()
 
 
-def setup():
-    global ENGINE, SESSION  # pylint: disable=global-statement # noqa: E262
-    ENGINE = create_engine('sqlite:///:memory:', echo=True)
-    SESSION = sessionmaker(bind=ENGINE)()
-
-    Dataset.metadata.create_all(ENGINE)
-    File.metadata.create_all(ENGINE)
-
-
-def teardown():
-    SESSION.close()
-    ENGINE.dispose()
-
-
-def test_add_file():
+def test_add_file(session):
     dataset = Dataset(name='test',
                       base_path='test',
-                      filesystem_wrapper_type='test',
-                      file_wrapper_type='test',
+                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
+                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
                       description='test',
                       version='test')
-    SESSION.add(dataset)
-    SESSION.commit()
+    session.add(dataset)
+    session.commit()
 
     now = datetime.datetime.now()
     file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
-    SESSION.add(file)
-    SESSION.commit()
+    session.add(file)
+    session.commit()
 
-    assert SESSION.query(File).filter(File.path == 'test').first() is not None
-    assert SESSION.query(File).filter(File.path == 'test').first().dataset == dataset
-    assert SESSION.query(File).filter(File.path == 'test').first().created_at == now
-    assert SESSION.query(File).filter(File.path == 'test').first().updated_at == now
+    assert session.query(File).filter(File.path == 'test').first() is not None
+    assert session.query(File).filter(File.path == 'test').first().dataset == dataset
+    assert session.query(File).filter(File.path == 'test').first().created_at == now
+    assert session.query(File).filter(File.path == 'test').first().updated_at == now
 
 
-def test_update_file():
+def test_update_file(session):
     dataset = Dataset(name='test',
                       base_path='test',
-                      filesystem_wrapper_type='test',
-                      file_wrapper_type='test',
+                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
+                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
                       description='test',
                       version='test')
-    SESSION.add(dataset)
-    SESSION.commit()
+    session.add(dataset)
+    session.commit()
 
     now = datetime.datetime.now()
     file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
-    SESSION.add(file)
-    SESSION.commit()
+    session.add(file)
+    session.commit()
 
     now = datetime.datetime.now()
 
-    SESSION.query(File).filter(File.path == 'test').update({
+    session.query(File).filter(File.path == 'test').update({
         'path': 'test2',
         'created_at': now,
         'updated_at': now
     })
-    SESSION.commit()
+    session.commit()
 
-    assert SESSION.query(File).filter(File.path == 'test2').first() is not None
-    assert SESSION.query(File).filter(File.path == 'test2').first().dataset == dataset
-    assert SESSION.query(File).filter(File.path == 'test2').first().created_at == now
-    assert SESSION.query(File).filter(File.path == 'test2').first().updated_at == now
+    assert session.query(File).filter(File.path == 'test2').first() is not None
+    assert session.query(File).filter(File.path == 'test2').first().dataset == dataset
+    assert session.query(File).filter(File.path == 'test2').first().created_at == now
+    assert session.query(File).filter(File.path == 'test2').first().updated_at == now
+
+def test_delete_file(session):
+    dataset = Dataset(name='test',
+                      base_path='test',
+                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
+                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
+                      description='test',
+                      version='test')
+    session.add(dataset)
+    session.commit()
+
+    now = datetime.datetime.now()
+    file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
+    session.add(file)
+    session.commit()
+
+    session.query(File).filter(File.path == 'test').delete()
+    session.commit()
+
+    assert session.query(File).filter(File.path == 'test').first() is None
+
+def test_repr_file(session):
+    dataset = Dataset(name='test',
+                      base_path='test',
+                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
+                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
+                      description='test',
+                      version='test')
+    session.add(dataset)
+    session.commit()
+
+    now = datetime.datetime.now()
+    file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
+    session.add(file)
+    session.commit()
+
+    assert repr(file) == '<File test>'

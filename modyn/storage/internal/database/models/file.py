@@ -17,7 +17,7 @@ class File(Base):
     updated_at = Column(DateTime, nullable=False)
 
     def __repr__(self) -> str:
-        return f'<DatasetFile {self.path}>'
+        return f'<File {self.path}>'
 
     def __init__(self,
                  dataset: Dataset,
