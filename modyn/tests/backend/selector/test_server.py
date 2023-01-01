@@ -2,14 +2,11 @@
 from unittest.mock import patch
 from modyn.backend.selector.selector_server import serve, SelectorGRPCServer
 from modyn.backend.selector.internal.grpc_handler import GRPCHandler
-from modyn.backend.selector.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest, SamplesResponse, TrainingResponse  # noqa: E402, E501
+from modyn.backend.selector.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest  # noqa: E402, E501
 
 from collections import Counter
-import pytest
 
-import numpy as np
-import grpc
-
+# pylint: skip-file
 
 # We do not use the parameters in this empty mock constructor.
 
