@@ -18,7 +18,8 @@ class Selector(ABC):
 
     def __init__(self, config: dict):
         self.grpc = GRPCHandler(config)
-
+        self._config = config
+    
     @abstractmethod
     def _select_new_training_samples(
             self,
@@ -63,7 +64,6 @@ class Selector(ABC):
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id
         """
-
         training_set_size, num_workers = self._get_info_for_training(training_id)
 
         if worker_id < 0 or worker_id >= num_workers:

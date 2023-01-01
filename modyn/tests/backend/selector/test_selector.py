@@ -103,7 +103,7 @@ def test_base_selector_get_new_training_samples(test__get_seen_data, test__get_u
     with pytest.raises(Exception):
         selector._set_unseen_data_ratio(-0.1)
 
-    assert selector._select_new_training_samples(0, 4) == ["a", "b", "c", "d"]
+    assert selector._select_new_training_samples(0, 4) == [("a",), ("b",), ("c",), ("d",)]
     test__get_unseen_data.assert_called_with(0, 3)
     test__get_seen_data.assert_called_with(0, 1)
 
@@ -126,7 +126,7 @@ def test_adaptive_selector_get_new_training_samples(test__get_seen_data_size,
     selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
     selector._set_is_adaptive_ratio(True)
 
-    assert selector._select_new_training_samples(0, 5) == ["a", "b", "c", "d", "e"]
+    assert selector._select_new_training_samples(0, 5) == [("a",), ("b",), ("c",), ("d",), ("e",)]
     test__get_unseen_data.assert_called_with(0, 1)
     test__get_seen_data.assert_called_with(0, 4)
 
