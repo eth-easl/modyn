@@ -8,7 +8,7 @@ from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper impor
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
-import modyn.storage.internal.database.storage_database_utils as storage_database_utils
+from modyn.storage.internal.database import storage_database_utils
 
 mock_config = {
     'database': {
@@ -32,6 +32,7 @@ def setup():
 
 class MockFileSystemWrapper(AbstractFileSystemWrapper):
     def __init__(self):
+        super().__init__('/path')
         self._exists = True
         self._list = ['file1', 'file2']
 
@@ -41,31 +42,31 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
         return self._exists
 
     def isdir(self, path: str) -> bool:
-        if path == '/path/file1' or path == '/path/file2':
+        if path in ('/path/file1', '/path/file2'):
             return False
         return True
 
     def isfile(self, path: str) -> bool:
-        if path == '/path/file1' or path == '/path/file2':
+        if path in ('/path/file1', '/path/file2'):
             return True
         return False
 
-    def list(self, path: str) -> typing.List[str]:
+    def list(self, path: str, recursive: bool = False) -> typing.List[str]:  # pylint: disable=unused-argument
         return self._list
 
-    def join(self, path1: str, path2: str) -> str:
-        return path1 + '/' + path2
+    def join(self, *paths: str) -> str:
+        return '/'.join(paths)
 
-    def get_modified(self, path: str) -> datetime.datetime:
+    def get_modified(self, path: str) -> datetime.datetime:  # pylint: disable=unused-argument
         return datetime.datetime(2021, 1, 1)
 
-    def get_created(self, path: str) -> datetime.datetime:
+    def get_created(self, path: str) -> datetime.datetime:  # pylint: disable=unused-argument
         return datetime.datetime(2021, 1, 1)
 
-    def get(self, path: str) -> typing.BinaryIO:
+    def get(self, path: str) -> typing.BinaryIO:  # pylint: disable=unused-argument
         return typing.BinaryIO()
 
-    def get_size(self, path: str) -> int:
+    def get_size(self, path: str) -> int:  # pylint: disable=unused-argument
         return 2
 
 
@@ -73,10 +74,10 @@ class MockFileWrapper:
     def __init__(self):
         self._timestamp = datetime.datetime(2021, 1, 1)
 
-    def get_modified(self, path: str) -> datetime.datetime:
+    def get_modified(self, path: str) -> datetime.datetime:  # pylint: disable=unused-argument
         return self._timestamp
 
-    def get_size(self, path: str) -> int:
+    def get_size(self, path: str) -> int:  # pylint: disable=unused-argument
         return 2
 
 
@@ -104,10 +105,10 @@ class MockSession:
     def __init__(self):
         self._query = MockQuery()
 
-    def query(self, *args, **kwargs) -> MockQuery:
+    def query(self, *args, **kwargs) -> MockQuery:  # pylint: disable=unused-argument
         return self._query
 
-    def add(self, *args, **kwargs) -> None:
+    def add(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument
         database.get_session().add(*args, **kwargs)
 
 
@@ -147,4 +148,3 @@ def test_update_files_in_directory_not_exists() -> None:
             session=MockSession(),
             dataset=MockDataset()
         )
-

@@ -17,7 +17,8 @@ def get_filesystem_wrapper(filesystem_wrapper_type: FileSystemWrapperType, base_
     if not isinstance(filesystem_wrapper_type, FileSystemWrapperType):
         raise InvalidFilesystemWrapperTypeException('Invalid filesystem wrapper type.')
     filesystem_wrapper_module = \
-        dynamic_module_import(f'modyn.storage.internal.filesystem_wrapper.{filesystem_wrapper_type.name.lower()}_filesystem_wrapper')
+        dynamic_module_import(
+            f'modyn.storage.internal.filesystem_wrapper.{filesystem_wrapper_type.name.lower()}_filesystem_wrapper')
     filesystem_wrapper = getattr(
         filesystem_wrapper_module,
         f'{filesystem_wrapper_type.name.capitalize()}FilesystemWrapper'

@@ -10,17 +10,17 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 @pytest.fixture(autouse=True)
 def session():
     engine = create_engine('sqlite:///:memory:', echo=True)
-    session = sessionmaker(bind=engine)()
+    sess = sessionmaker(bind=engine)()
 
     Dataset.metadata.create_all(engine)
-    
-    yield session
-    
-    session.close()
+
+    yield sess
+
+    sess.close()
     engine.dispose()
 
 
-def test_add_dataset(session):
+def test_add_dataset(session):  #  pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -32,13 +32,15 @@ def test_add_dataset(session):
 
     assert session.query(Dataset).filter(Dataset.name == 'test').first() is not None
     assert session.query(Dataset).filter(Dataset.name == 'test').first().base_path == 'test'
-    assert session.query(Dataset).filter(Dataset.name == 'test').first().filesystem_wrapper_type == FileSystemWrapperType.LOCAL
-    assert session.query(Dataset).filter(Dataset.name == 'test').first().file_wrapper_type == FileWrapperType.MNIST_WEBDATASET
+    assert session.query(Dataset).filter(Dataset.name == 'test') \
+                  .first().filesystem_wrapper_type == FileSystemWrapperType.LOCAL
+    assert session.query(Dataset).filter(Dataset.name == 'test') \
+                  .first().file_wrapper_type == FileWrapperType.MNIST_WEBDATASET
     assert session.query(Dataset).filter(Dataset.name == 'test').first().description == 'test'
     assert session.query(Dataset).filter(Dataset.name == 'test').first().version == 'test'
 
 
-def test_update_dataset(session):
+def test_update_dataset(session):  #  pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -57,14 +59,17 @@ def test_update_dataset(session):
     })
     session.commit()
 
-    assert session.query(Dataset).filter(Dataset.name == 'test').first().base_path == 'test2'
-    assert session.query(Dataset).filter(Dataset.name == 'test').first().filesystem_wrapper_type == FileSystemWrapperType.S3
-    assert session.query(Dataset).filter(Dataset.name == 'test').first().file_wrapper_type == FileWrapperType.PARQUET
+    assert session.query(Dataset).filter(Dataset.name == 'test') \
+                  .first().base_path == 'test2'
+    assert session.query(Dataset).filter(Dataset.name == 'test') \
+                  .first().filesystem_wrapper_type == FileSystemWrapperType.S3
+    assert session.query(Dataset).filter(Dataset.name == 'test') \
+                  .first().file_wrapper_type == FileWrapperType.PARQUET
     assert session.query(Dataset).filter(Dataset.name == 'test').first().description == 'test2'
     assert session.query(Dataset).filter(Dataset.name == 'test').first().version == 'test2'
 
 
-def test_repr(session):
+def test_repr(session):  #  pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -76,7 +81,8 @@ def test_repr(session):
 
     assert repr(dataset) == '<File test>'
 
-def test_delete_dataset(session):
+
+def test_delete_dataset(session):  #  pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,

@@ -1,7 +1,8 @@
 import pytest
 
 from modyn.storage.internal.database.storage_database_utils import get_filesystem_wrapper, get_file_wrapper
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import InvalidFilesystemWrapperTypeException, FileSystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import InvalidFilesystemWrapperTypeException, \
+    FileSystemWrapperType
 from modyn.storage.internal.file_wrapper.file_wrapper_type import InvalidFileWrapperTypeException, FileWrapperType
 
 

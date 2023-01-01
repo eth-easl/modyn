@@ -13,18 +13,18 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 @pytest.fixture(autouse=True)
 def session():
     engine = create_engine('sqlite:///:memory:', echo=True)
-    session = sessionmaker(bind=engine)()
+    sess = sessionmaker(bind=engine)()
 
     Dataset.metadata.create_all(engine)
     File.metadata.create_all(engine)
-    
-    yield session
-    
-    session.close()
+
+    yield sess
+
+    sess.close()
     engine.dispose()
 
 
-def test_add_file(session):
+def test_add_file(session):  #   pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -45,7 +45,7 @@ def test_add_file(session):
     assert session.query(File).filter(File.path == 'test').first().updated_at == now
 
 
-def test_update_file(session):
+def test_update_file(session):  #   pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -74,7 +74,8 @@ def test_update_file(session):
     assert session.query(File).filter(File.path == 'test2').first().created_at == now
     assert session.query(File).filter(File.path == 'test2').first().updated_at == now
 
-def test_delete_file(session):
+
+def test_delete_file(session):  #   pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -94,7 +95,8 @@ def test_delete_file(session):
 
     assert session.query(File).filter(File.path == 'test').first() is None
 
-def test_repr_file(session):
+
+def test_repr_file(session):  #   pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,

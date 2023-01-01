@@ -4,7 +4,7 @@ from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFi
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
 
-class Mnist_webdatasetFileWrapper(AbstractFileWrapper):
+class MNISTWebdatasetFileWrapper(AbstractFileWrapper):
     """MNIST Webdataset file wrapper."""
 
     def __init__(self, file_path: str):

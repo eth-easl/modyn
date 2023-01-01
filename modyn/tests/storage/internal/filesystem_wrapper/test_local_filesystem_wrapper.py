@@ -17,7 +17,7 @@ def setup():
     with open(test_file, 'w', encoding='utf8') as file:
         file.write('test1')
 
-    global TEST_FILE_MODIFIED_AT  # pylint: disable=global-statement # noqa: E262
+    global TEST_FILE_MODIFIED_AT  #  pylint: disable=global-statement # noqa: E262
     TEST_FILE_MODIFIED_AT = os.path.getmtime(test_file)
 
     os.makedirs(test_dir2, exist_ok=True)

@@ -14,17 +14,17 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 @pytest.fixture(autouse=True)
 def session():
     engine = create_engine('sqlite:///:memory:', echo=True)
-    session = sessionmaker(bind=engine)()
+    sess = sessionmaker(bind=engine)()
 
     Dataset.metadata.create_all(engine)
-    
-    yield session
-    
-    session.close()
+
+    yield sess
+
+    sess.close()
     engine.dispose()
 
 
-def test_add_sample(session):
+def test_add_sample(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -48,7 +48,7 @@ def test_add_sample(session):
     assert session.query(Sample).filter(Sample.external_key == 'test').first().index == 0
 
 
-def test_update_sample(session):
+def test_update_sample(session):  #  pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -73,7 +73,8 @@ def test_update_sample(session):
 
     assert session.query(Sample).filter(Sample.external_key == 'test').first().index == 1
 
-def test_delete_sample(session):
+
+def test_delete_sample(session):  #  pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
@@ -96,7 +97,8 @@ def test_delete_sample(session):
 
     assert session.query(Sample).filter(Sample.external_key == 'test').first() is None
 
-def test_repr(session):
+
+def test_repr(session):  #  pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FileSystemWrapperType.LOCAL,

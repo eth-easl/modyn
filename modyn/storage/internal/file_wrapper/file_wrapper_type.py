@@ -3,8 +3,8 @@ from enum import Enum
 
 class FileWrapperType(Enum):
     """Enum for the type of file system wrapper."""
-    MNIST_WEBDATASET = 1
-    PARQUET = 2
+    MNISTWebdatasetFileWrapper = 1  #  pylint: disable=invalid-name
+    Parquet = 2  #  pylint: disable=invalid-name
 
 
 class InvalidFileWrapperTypeException(Exception):
