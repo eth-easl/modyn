@@ -19,7 +19,7 @@ class Selector(ABC):
     def __init__(self, config: dict):
         self.grpc = GRPCHandler(config)
         self._config = config
-    
+
     @abstractmethod
     def _select_new_training_samples(
             self,

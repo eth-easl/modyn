@@ -24,7 +24,8 @@ class SelectorGRPCServer(SelectorServicer):
     """Provides methods that implement functionality of the metadata server."""
 
     def __init__(self, config: dict):
-        selector_module = dynamic_module_import(f"modyn.backend.selector.custom_selectors.{config['selector']['package']}")
+        selector_module = dynamic_module_import(
+            f"modyn.backend.selector.custom_selectors.{config['selector']['package']}")
         self._selector = getattr(selector_module, config['selector']['class'])(config)
 
     def register_training(self, request: RegisterTrainingRequest, context: grpc.ServicerContext) -> TrainingResponse:
