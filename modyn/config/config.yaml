@@ -47,6 +47,8 @@ ptmp:
 selector:
   hostname: "backend"
   port: "50056"
+  package: "score_selector"
+  class: "ScoreSelector"
   postgresql:
     host: db
     port: "5432"

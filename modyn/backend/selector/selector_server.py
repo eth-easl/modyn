@@ -50,8 +50,7 @@ def serve(config: dict, servicer: SelectorGRPCServer) -> None:
     server.start()
     server.wait_for_termination()
 
-
-if __name__ == '__main__':
+def main() -> None:
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
         print("Usage: python selector_server.py <config_file>")
@@ -61,3 +60,7 @@ if __name__ == '__main__':
         config = yaml.safe_load(f)
 
     serve(config, SelectorGRPCServer(config))
+
+if __name__ == '__main__':
+    main()
+
