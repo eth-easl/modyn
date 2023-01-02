@@ -1,6 +1,6 @@
 
 from unittest.mock import patch
-from modyn.backend.selector.selector_server import SelectorGRPCServer, main, serve
+from modyn.backend.selector.selector_server import SelectorGRPCServer, main
 from modyn.backend.selector.internal.grpc_handler import GRPCHandler
 from modyn.backend.selector.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest  # noqa: E402, E501
 import sys
