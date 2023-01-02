@@ -19,7 +19,7 @@ message GetResponse {
 
 message GetNewDataSinceRequest {
   string dataset_id = 1;
-  int64 timestamp = 2;
+  float timestamp = 2;
 }
 
 message GetNewDataSinceResponse {
@@ -36,8 +36,8 @@ message DatasetAvailableResponse {
 
 message RegisterNewDatasetRequest {
   string dataset_id = 1;
-  int32 filesystem_wrapper_type = 2;
-  int32 file_wrapper_type = 3;
+  string filesystem_wrapper_type = 2;
+  string file_wrapper_type = 3;
   string description = 4;
   string base_path = 5;
   string version = 6;

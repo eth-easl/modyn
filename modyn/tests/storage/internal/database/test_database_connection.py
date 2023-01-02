@@ -8,7 +8,7 @@ def get_minimal_modyn_config() -> dict:
     return {
         'storage': {
             'filesystem': {
-                'type': 'local',
+                'type': 'LocalFilesystemWrapper',
                 'base_path': '/tmp/modyn'
             },
             'database': {
@@ -49,13 +49,6 @@ def test_database_connection():
         assert database.add_dataset('test', '/tmp/modyn', 'local', 'local', 'test', '0.0.1') is True
 
 
-def test_database_connection_enter():
-    database = DatabaseConnection(get_minimal_modyn_config())
-    database.create_all()
-    assert database.get_session() is not None
-    assert database.add_dataset('test', '/tmp/modyn', 'local', 'local', 'test', '0.0.1') is True
-
-
 def test_get_session():
     with DatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_all()
@@ -67,16 +60,40 @@ def test_database_connection_with_existing_dataset():
     with DatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_all()
         assert database.get_session() is not None
-        assert database.add_dataset('test', '/tmp/modyn', 'LOCAL', 'MNIST_WEBDATASET', 'test', '0.0.1') is True
-        assert database.add_dataset('test', '/tmp/modyn', 'LOCAL', 'MNIST_WEBDATASET', 'test', '0.0.1') is True
+        assert database.add_dataset(
+            'test',
+            '/tmp/modyn',
+            'LocalFilesystemWrapper',
+            'MNISTWebdatasetFileWrapper',
+            'test',
+            '0.0.1') is True
+        assert database.add_dataset(
+            'test',
+            '/tmp/modyn',
+            'LocalFilesystemWrapper',
+            'MNISTWebdatasetFileWrapper',
+            'test',
+            '0.0.1') is True
 
 
 def test_database_connection_with_existing_dataset_and_different_base_path():
     with DatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_all()
         assert database.get_session() is not None
-        assert database.add_dataset('test', '/tmp/modyn', 'LOCAL', 'MNIST_WEBDATASET', 'test', '0.0.1') is True
-        assert database.add_dataset('test', '/tmp/modyn2', 'LOCAL', 'MNIST_WEBDATASET', 'test', '0.0.1') is True
+        assert database.add_dataset(
+            'test',
+            '/tmp/modyn',
+            'LocalFilesystemWrapper',
+            'MNISTWebdatasetFileWrapper',
+            'test',
+            '0.0.1') is True
+        assert database.add_dataset(
+            'test',
+            '/tmp/modyn2',
+            'LocalFilesystemWrapper',
+            'MNISTWebdatasetFileWrapper',
+            'test',
+            '0.0.1') is True
         assert database.get_session().query(Dataset).filter(Dataset.name == 'test').first().base_path == '/tmp/modyn2'
 
 
@@ -85,9 +102,21 @@ def test_database_connection_failure():
         with DatabaseConnection(get_invalid_modyn_config()) as database:
             database.create_all()
             assert database.get_session() is not None
-            assert database.add_dataset('test', '/tmp/modyn', 'LOCAL', 'MNIST_WEBDATASET', 'test', '0.0.1') is True
+            assert database.add_dataset(
+                'test',
+                '/tmp/modyn',
+                'LocalFilesystemWrapper',
+                'MNISTWebdatasetFileWrapper',
+                'test',
+                '0.0.1') is True
 
 
 def test_add_dataset_failure():
     with DatabaseConnection(get_minimal_modyn_config()) as database:
-        assert database.add_dataset('test', '/tmp/modyn', 'LOCAL', 'MNIST_WEBDATASET', 'test', '0.0.1') is False
+        assert database.add_dataset(
+            'test',
+            '/tmp/modyn',
+            'LocalFilesystemWrapper',
+            'MNISTWebdatasetFileWrapper',
+            'test',
+            '0.0.1') is False

@@ -39,7 +39,7 @@ properties:
         type: object
         properties:
           interval:
-            type: string
+            type: number
             description: |
               The interval to use for the seeker.
       datasets:

@@ -22,8 +22,8 @@ class GetNewDataSinceRequest(_message.Message):
     DATASET_ID_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     dataset_id: str
-    timestamp: int
-    def __init__(self, dataset_id: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    timestamp: float
+    def __init__(self, dataset_id: _Optional[str] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
 class GetNewDataSinceResponse(_message.Message):
     __slots__ = ["keys"]
@@ -56,10 +56,10 @@ class RegisterNewDatasetRequest(_message.Message):
     base_path: str
     dataset_id: str
     description: str
-    file_wrapper_type: int
-    filesystem_wrapper_type: int
+    file_wrapper_type: str
+    filesystem_wrapper_type: str
     version: str
-    def __init__(self, dataset_id: _Optional[str] = ..., filesystem_wrapper_type: _Optional[int] = ..., file_wrapper_type: _Optional[int] = ..., description: _Optional[str] = ..., base_path: _Optional[str] = ..., version: _Optional[str] = ...) -> None: ...
+    def __init__(self, dataset_id: _Optional[str] = ..., filesystem_wrapper_type: _Optional[str] = ..., file_wrapper_type: _Optional[str] = ..., description: _Optional[str] = ..., base_path: _Optional[str] = ..., version: _Optional[str] = ...) -> None: ...
 
 class RegisterNewDatasetResponse(_message.Message):
     __slots__ = ["success"]

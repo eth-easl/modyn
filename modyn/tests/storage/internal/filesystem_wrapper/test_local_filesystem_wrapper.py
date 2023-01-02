@@ -1,5 +1,6 @@
 import os
 import pytest
+import datetime
 
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
@@ -18,7 +19,7 @@ def setup():
         file.write('test1')
 
     global TEST_FILE_MODIFIED_AT  #  pylint: disable=global-statement # noqa: E262
-    TEST_FILE_MODIFIED_AT = os.path.getmtime(test_file)
+    TEST_FILE_MODIFIED_AT = datetime.datetime.fromtimestamp(os.path.getmtime(test_file))
 
     os.makedirs(test_dir2, exist_ok=True)
 
@@ -26,7 +27,7 @@ def setup():
         file.write('test2 long')
 
     global TEST_FILE2_MODIFIED_AT  #  pylint: disable=global-statement # noqa: E262
-    TEST_FILE2_MODIFIED_AT = os.path.getmtime(test_file2)
+    TEST_FILE2_MODIFIED_AT = datetime.datetime.fromtimestamp(os.path.getmtime(test_file2))
 
 
 def teardown():
@@ -38,34 +39,34 @@ def teardown():
 
 def test_init():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert filesystem_wrapper.base_dir == test_dir
+    assert filesystem_wrapper.base_path == test_dir
 
 
-def test_get_files():
+def test_get():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    file = filesystem_wrapper.get_file(test_file)
-    assert file == 'test1'
+    file = filesystem_wrapper.get(test_file)
+    assert file == b'test1'
 
-    file = filesystem_wrapper.get_file(test_file2)
-    assert file == 'test2 long'
+    file = filesystem_wrapper.get(test_file2)
+    assert file == b'test2 long'
 
 
-def test_get_file_not_found():
+def test_get_not_found():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(FileNotFoundError):
-        filesystem_wrapper.get_file('not_found')
+        filesystem_wrapper.get('not_found')
 
 
-def test_get_file_directory():
+def test_get_directory():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(IsADirectoryError):
-        filesystem_wrapper.get_file(test_dir2)
+        filesystem_wrapper.get(test_dir2)
 
 
-def test_get_file_not_in_base_dir():
+def test_get_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    with pytest.raises(ValueError):
-        filesystem_wrapper.get_file(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+    with pytest.raises(FileNotFoundError):
+        filesystem_wrapper.get(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 
 def test_exists():
@@ -81,20 +82,20 @@ def test_exists_not_found():
     assert not filesystem_wrapper.exists('not_found')
 
 
-def test_exists_not_in_base_dir():
+def test_exists_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert not filesystem_wrapper.exists(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+    assert not filesystem_wrapper.exists(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 
 def test_list():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert filesystem_wrapper.list(test_dir) == ['test_file', 'test_dir']
+    assert set(filesystem_wrapper.list(test_dir)) == set(['test_file', 'test_dir'])
     assert filesystem_wrapper.list(test_dir2) == ['test_file']
 
 
 def test_list_not_found():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         filesystem_wrapper.list('not_found')
 
 
@@ -104,21 +105,21 @@ def test_list_not_directory():
         filesystem_wrapper.list(test_file)
 
 
-def test_list_not_in_base_dir():
+def test_list_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(ValueError):
-        filesystem_wrapper.list(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+        filesystem_wrapper.list(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 
 def test_list_recursive():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert filesystem_wrapper.list(test_dir, recursive=True) == ['test_file', 'test_dir', 'test_dir' +
-                                                                 os.path.sep + 'test_file']
+    assert set(filesystem_wrapper.list(test_dir, recursive=True)) == \
+        set(['/tmp/modyn/test_dir/test_file', '/tmp/modyn/test_dir/test_dir/test_file'])
 
 
 def test_list_recursive_not_found():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         filesystem_wrapper.list('not_found', recursive=True)
 
 
@@ -128,10 +129,10 @@ def test_list_recursive_not_directory():
         filesystem_wrapper.list(test_file, recursive=True)
 
 
-def test_list_recursive_not_in_base_dir():
+def test_list_recursive_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(ValueError):
-        filesystem_wrapper.list(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'), recursive=True)
+        filesystem_wrapper.list(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'), recursive=True)
 
 
 def test_isdir():
@@ -150,9 +151,9 @@ def test_isdir_not_directory():
     assert not filesystem_wrapper.isdir(test_file)
 
 
-def test_isdir_not_in_base_dir():
+def test_isdir_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert not filesystem_wrapper.isdir(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+    assert not filesystem_wrapper.isdir(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 
 def test_isfile():
@@ -171,81 +172,81 @@ def test_isfile_not_directory():
     assert not filesystem_wrapper.isfile(test_dir)
 
 
-def test_isfile_not_in_base_dir():
+def test_isfile_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert not filesystem_wrapper.isfile(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+    assert not filesystem_wrapper.isfile(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 
-def test_getsize():
+def test_get_size():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert filesystem_wrapper.getsize(test_file) == 5
-    assert filesystem_wrapper.getsize(test_file2) == 9
+    assert filesystem_wrapper.get_size(test_file) == 5
+    assert filesystem_wrapper.get_size(test_file2) == 10
 
 
-def test_getsize_not_found():
-    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    with pytest.raises(FileNotFoundError):
-        filesystem_wrapper.getsize('not_found')
-
-
-def test_getsize_not_file():
-    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    with pytest.raises(IsADirectoryError):
-        filesystem_wrapper.getsize(test_dir)
-
-
-def test_getsize_not_in_base_dir():
+def test_get_size_not_found():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(ValueError):
-        filesystem_wrapper.getsize(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+        filesystem_wrapper.get_size('not_found')
 
 
-def test_getmodified():
-    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert filesystem_wrapper.getmodified(test_file) == TEST_FILE_MODIFIED_AT
-    assert filesystem_wrapper.getmodified(test_file2) == TEST_FILE2_MODIFIED_AT
-
-
-def test_getmodified_not_found():
-    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    with pytest.raises(FileNotFoundError):
-        filesystem_wrapper.getmodified('not_found')
-
-
-def test_getmodified_not_file():
+def test_get_size_not_file():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(IsADirectoryError):
-        filesystem_wrapper.getmodified(test_dir)
+        filesystem_wrapper.get_size(test_dir)
 
 
-def test_getmodified_not_in_base_dir():
+def test_get_size_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(ValueError):
-        filesystem_wrapper.getmodified(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+        filesystem_wrapper.get_size(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 
-def test_getcreated():
+def test_get_modified():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    assert filesystem_wrapper.getcreated(test_file) == TEST_FILE_MODIFIED_AT
-    assert filesystem_wrapper.getcreated(test_file2) == TEST_FILE2_MODIFIED_AT
+    assert filesystem_wrapper.get_modified(test_file) == TEST_FILE_MODIFIED_AT
+    assert filesystem_wrapper.get_modified(test_file2) == TEST_FILE2_MODIFIED_AT
 
 
-def test_getcreated_not_found():
+def test_get_modified_not_found():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
-    with pytest.raises(FileNotFoundError):
-        filesystem_wrapper.getcreated('not_found')
+    with pytest.raises(ValueError):
+        filesystem_wrapper.get_modified('not_found')
 
 
-def test_getcreated_not_file():
+def test_get_modified_not_file():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(IsADirectoryError):
-        filesystem_wrapper.getcreated(test_dir)
+        filesystem_wrapper.get_modified(test_dir)
 
 
-def test_getcreated_not_in_base_dir():
+def test_get_modified_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(test_dir)
     with pytest.raises(ValueError):
-        filesystem_wrapper.getcreated(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_dir'))
+        filesystem_wrapper.get_modified(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
+
+
+def test_get_created():
+    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
+    assert filesystem_wrapper.get_created(test_file) == TEST_FILE_MODIFIED_AT
+    assert filesystem_wrapper.get_created(test_file2) == TEST_FILE2_MODIFIED_AT
+
+
+def test_get_created_not_found():
+    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
+    with pytest.raises(ValueError):
+        filesystem_wrapper.get_created('not_found')
+
+
+def test_get_created_not_file():
+    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
+    with pytest.raises(IsADirectoryError):
+        filesystem_wrapper.get_created(test_dir)
+
+
+def test_get_created_not_in_base_path():
+    filesystem_wrapper = LocalFilesystemWrapper(test_dir)
+    with pytest.raises(ValueError):
+        filesystem_wrapper.get_created(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 
 def test_join():

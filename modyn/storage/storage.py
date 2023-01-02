@@ -2,6 +2,7 @@ import logging
 from threading import Thread
 import os
 import pathlib
+from typing import List, Tuple
 
 from modyn.utils import validate_yaml
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
@@ -15,10 +16,11 @@ class Storage():
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
 
-        if not self._validate_config():
-            raise ValueError("Invalid system configuration")
+        valid, errors = self._validate_config()
+        if not valid:
+            raise ValueError(f"Invalid configuration: {errors}")
 
-    def _validate_config(self) -> bool:
+    def _validate_config(self) -> Tuple[bool, List[str]]:
         schema_path = pathlib.Path(os.path.join(os.getcwd(), 'modyn', 'config', 'schema', 'modyn_config_schema.yaml'))
         return validate_yaml(self.modyn_config, schema_path)
 

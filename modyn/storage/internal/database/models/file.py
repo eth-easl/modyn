@@ -15,6 +15,7 @@ class File(Base):
     path = Column(String(120), unique=False, nullable=False)
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
+    number_of_samples = Column(Integer, nullable=False)
 
     def __repr__(self) -> str:
         return f'<File {self.path}>'
@@ -24,8 +25,10 @@ class File(Base):
                  path: str,
                  created_at:
                  datetime.datetime,
-                 updated_at: datetime.datetime):
+                 updated_at: datetime.datetime,
+                 number_of_samples: int):
         self.dataset = dataset
         self.path = path
         self.created_at = created_at
         self.updated_at = updated_at
+        self.number_of_samples = number_of_samples

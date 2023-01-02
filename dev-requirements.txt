@@ -8,3 +8,4 @@ types-psycopg2
 types-PyYAML
 pylint
 pytest-console-scripts
+pillow

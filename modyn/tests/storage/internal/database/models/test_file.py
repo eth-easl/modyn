@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
 
@@ -24,18 +24,18 @@ def session():
     engine.dispose()
 
 
-def test_add_file(session):  #   pylint: disable=redefined-outer-name
+def test_add_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
-                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
-                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
+                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
     session.commit()
 
     now = datetime.datetime.now()
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
+    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
@@ -45,18 +45,18 @@ def test_add_file(session):  #   pylint: disable=redefined-outer-name
     assert session.query(File).filter(File.path == 'test').first().updated_at == now
 
 
-def test_update_file(session):  #   pylint: disable=redefined-outer-name
+def test_update_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
-                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
-                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
+                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
     session.commit()
 
     now = datetime.datetime.now()
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
+    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
@@ -75,18 +75,18 @@ def test_update_file(session):  #   pylint: disable=redefined-outer-name
     assert session.query(File).filter(File.path == 'test2').first().updated_at == now
 
 
-def test_delete_file(session):  #   pylint: disable=redefined-outer-name
+def test_delete_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
-                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
-                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
+                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
     session.commit()
 
     now = datetime.datetime.now()
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
+    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
@@ -96,18 +96,18 @@ def test_delete_file(session):  #   pylint: disable=redefined-outer-name
     assert session.query(File).filter(File.path == 'test').first() is None
 
 
-def test_repr_file(session):  #   pylint: disable=redefined-outer-name
+def test_repr_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
-                      filesystem_wrapper_type=FileSystemWrapperType.LOCAL,
-                      file_wrapper_type=FileWrapperType.MNIST_WEBDATASET,
+                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
     session.commit()
 
     now = datetime.datetime.now()
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now)
+    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 

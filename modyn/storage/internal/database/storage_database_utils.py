@@ -3,25 +3,25 @@ import logging
 from modyn.utils import dynamic_module_import
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType, InvalidFileWrapperTypeException
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType, \
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType, \
     InvalidFilesystemWrapperTypeException
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 
 logger = logging.getLogger(__name__)
 
 
-def get_filesystem_wrapper(filesystem_wrapper_type: FileSystemWrapperType, base_path: str) -> AbstractFileSystemWrapper:
+def get_filesystem_wrapper(filesystem_wrapper_type: FilesystemWrapperType, base_path: str) -> AbstractFileSystemWrapper:
     """
     Get the filesystem wrapper.
     """
-    if not isinstance(filesystem_wrapper_type, FileSystemWrapperType):
+    if not isinstance(filesystem_wrapper_type, FilesystemWrapperType):
         raise InvalidFilesystemWrapperTypeException('Invalid filesystem wrapper type.')
     filesystem_wrapper_module = \
         dynamic_module_import(
-            f'modyn.storage.internal.filesystem_wrapper.{filesystem_wrapper_type.name.lower()}_filesystem_wrapper')
+            f'modyn.storage.internal.filesystem_wrapper.{filesystem_wrapper_type.value}')
     filesystem_wrapper = getattr(
         filesystem_wrapper_module,
-        f'{filesystem_wrapper_type.name.capitalize()}FilesystemWrapper'
+        f'{filesystem_wrapper_type.name}'
     )
     return filesystem_wrapper(base_path)
 
@@ -33,9 +33,9 @@ def get_file_wrapper(file_wrapper_type: FileWrapperType, path: str) -> AbstractF
     if not isinstance(file_wrapper_type, FileWrapperType):
         raise InvalidFileWrapperTypeException('Invalid file wrapper type.')
     file_wrapper_module = \
-        dynamic_module_import(f'modyn.storage.internal.file_wrapper.{file_wrapper_type.name.lower()}_file_wrapper')
+        dynamic_module_import(f'modyn.storage.internal.file_wrapper.{file_wrapper_type.value}')
     file_wrapper = getattr(
         file_wrapper_module,
-        f'{file_wrapper_type.name.capitalize()}FileWrapper'
+        f'{file_wrapper_type.name}'
     )
     return file_wrapper(path)

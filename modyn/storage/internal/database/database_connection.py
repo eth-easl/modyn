@@ -6,7 +6,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
 
 from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FileSystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.database.base import Base
 
@@ -48,7 +48,7 @@ class DatabaseConnection():
         Base.metadata.create_all(self.engine)
 
     def add_dataset(self, name: str, base_path: str,
-                    filesystem_wrapper_type: FileSystemWrapperType,
+                    filesystem_wrapper_type: FilesystemWrapperType,
                     file_wrapper_type: FileWrapperType, description: str, version: str) -> bool:
         try:
             if self.session.query(Dataset).filter(Dataset.name == name).first() is not None:

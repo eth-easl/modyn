@@ -14,18 +14,25 @@ class AbstractFileWrapper(ABC):
         """
         Get the size of the file in number of samples.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def get_samples(self, start: int, end: int) -> bytes:
         """
         Get the samples from the file.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def get_sample(self, index: int) -> bytes:
         """
         Get the sample at the given index.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
+
+    @abstractmethod
+    def get_samples_from_indices(self, indices: list) -> bytes:
+        """
+        Get the samples at the given indices.
+        """
+        raise NotImplementedError  # pragma: no cover

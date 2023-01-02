@@ -7,7 +7,7 @@ class ParquetFileWrapper(AbstractFileWrapper):
 
     def __init__(self, file_path: str):
         super().__init__(file_path)
-        self.file_wrapper_type = FileWrapperType.PARQUET
+        self.file_wrapper_type = FileWrapperType.ParquetFileWrapper
 
     def get_size(self) -> int:
         """Get the size of the file."""
@@ -19,4 +19,8 @@ class ParquetFileWrapper(AbstractFileWrapper):
 
     def get_sample(self, index: int) -> bytes:
         """Get a sample from the file."""
+        raise NotImplementedError
+
+    def get_samples_from_indices(self, indices: list) -> bytes:
+        """Get a sample from the file by its external key."""
         raise NotImplementedError

@@ -17,7 +17,7 @@ class GRPCServer():
 
     def __enter__(self) -> grpc.Server:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        add_StorageServicer_to_server(
+        self._add_storage_servicer_to_server(
             StorageGRPCServer(self.modyn_config), server)
         port = self.modyn_config['storage']['port']
         logger.info(f'Starting server. Listening on port {port}')
@@ -28,6 +28,7 @@ class GRPCServer():
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
         if self.server is not None:
-            for thread in self.server._state._threads:
-                thread.join()
             self.server.stop(0)
+
+    def _add_storage_servicer_to_server(self, storage_grpc_server: StorageGRPCServer, server: grpc.Server) -> None:
+        add_StorageServicer_to_server(storage_grpc_server, server)  # pragma: no cover
