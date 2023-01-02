@@ -9,3 +9,5 @@ types-PyYAML
 pylint
 pytest-console-scripts
 pillow
+sqlalchemy
+webdataset
