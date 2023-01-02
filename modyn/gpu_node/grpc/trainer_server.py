@@ -17,7 +17,7 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
     StartTrainingResponse
 )
 
-from modyn.gpu_node.models.utils import get_model
+from modyn.gpu_node.utils.model_utils import get_model
 
 from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer, RegisterTrainingRequest
 from modyn.gpu_node.data.utils import prepare_dataloaders
