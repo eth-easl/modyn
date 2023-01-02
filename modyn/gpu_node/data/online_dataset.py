@@ -1,6 +1,8 @@
 from torch.utils.data import IterableDataset, get_worker_info
 from abc import abstractmethod
 import typing
+import torchvision
+import json
 
 from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer, GetSamplesRequest
 from modyn.gpu_node.mocks.mock_storage_server import MockStorageServer, GetRequest
@@ -8,10 +10,12 @@ from modyn.gpu_node.mocks.mock_storage_server import MockStorageServer, GetReque
 
 class OnlineDataset(IterableDataset):
 
-    def __init__(self, training_id: int):
+    def __init__(self, training_id: int, transforms):
         self._training_id = training_id
         self._dataset_len = 0
         self._trainining_set_number = 0
+        self._transforms = transforms
+        self._deserialize_torchvision_transforms()
 
         # These mock the behavior of storage and selector servers.
         # TODO(fotstrt): remove them when the storage and selector grpc servers are fixed
@@ -29,6 +33,14 @@ class OnlineDataset(IterableDataset):
         req = GetRequest(keys=keys)
         data = self._storagestub.Get(req).value
         return data
+
+    def _deserialize_torchvision_transforms(self):
+        self._transform_list = []
+        for transform in self._transforms:
+            function = getattr(torchvision.transforms, transform['function'])
+            args = json.loads(transform['args'])
+            self._transform_list.append(function(**args))
+        self._transform = torchvision.transforms.Compose(self._transform_list)
 
     def __iter__(self) -> typing.Iterator:
         worker_info = get_worker_info()
@@ -50,15 +62,6 @@ class OnlineDataset(IterableDataset):
     def __len__(self) -> int:
         return self._dataset_len
 
-    @abstractmethod
     def _process(self, data: list) -> list:
-        """
-        Override to add custom data processing.
-
-        Args:
-            data: sequence of elements from storage, most likely as json strings
-
-        Returns:
-            sequence of processed elements
-        """
-        raise NotImplementedError
+        processed_data = [self._transform(sample) for sample in data]
+        return processed_data

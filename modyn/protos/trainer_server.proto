@@ -17,6 +17,7 @@ message RegisterTrainServerRequest {
     JsonString model_configuration = 6;
     Data data_info = 7;
     CheckpointInfo checkpoint_info = 8;
+    repeated TorchvisionTransform transform_list = 9;
 }
 
 message JsonString {
@@ -52,4 +53,9 @@ message StartTrainingRequest {
 
 message StartTrainingResponse {
     bool training_started = 1;
+}
+
+message TorchvisionTransform {
+    string function = 1;
+    JsonString args = 2;
 }

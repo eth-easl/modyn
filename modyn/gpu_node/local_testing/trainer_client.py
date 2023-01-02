@@ -6,6 +6,7 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
     JsonString,
     RegisterTrainServerRequest,
     Data,
+    TorchvisionTransform,
     TrainerAvailableRequest,
     CheckpointInfo,
     StartTrainingRequest
@@ -27,6 +28,11 @@ class TrainerClient:
         return response.available
 
     def register_training(self, training_id):
+
+        transforms = [
+            TorchvisionTransform(function="ToTensor", args=JsonString(value=json.dumps({}))),
+            TorchvisionTransform(function="Normalize", args=JsonString(value=json.dumps({"mean": (0.1307,), "std": (0.3081,)}))),
+        ]
 
         optimizer_parameters = {
             'lr': 0.1,
@@ -51,7 +57,8 @@ class TrainerClient:
             checkpoint_info=CheckpointInfo(
                 checkpoint_interval=10,
                 checkpoint_path="results"
-            )
+            ),
+            transform_list = transforms
         )
 
         response = self._trainer_stub.register(req)
@@ -79,7 +86,10 @@ if __name__ == "__main__":
             training_started = client.start_training(training_id)
             print(training_started)
 
-            while (not client.start_training(training_id)):
+            while (not client.check_trainer_available()):
                 pass
+
+            training_started = client.start_training(training_id)
+            print(training_started)
 
             print("started again!")

@@ -40,6 +40,12 @@ class TrainerGRPCServer:
         request: TrainerAvailableRequest,
         context: grpc.ServicerContext
     ) -> TrainerAvailableResponse:
+
+        # if there is already another training job running, the node is considered unavailable
+        for _, process in self._training_process_dict.items():
+            if process.is_alive():
+                return TrainerAvailableResponse(available=False)
+
         return TrainerAvailableResponse(available=True)
 
     def register(
@@ -51,11 +57,18 @@ class TrainerGRPCServer:
         optimizer_dict = json.loads(request.optimizer_parameters.value)
         model_conf_dict = json.loads(request.model_configuration.value)
 
+        # TODO(fotstrt): if we are keeping this way of passing transforms,
+        # find a clearer way to pass this (mp.spawn complains on proto structs)
+        transform_list = []
+        for x in request.transform_list:
+            transform_list.append({'function': x.function, 'args': x.args.value})
+
         train_dataloader, val_dataloader = prepare_dataloaders(
             request.training_id,
             request.data_info.dataset_id,
             request.data_info.num_dataloaders,
-            request.batch_size
+            request.batch_size,
+            transform_list
         )
 
         if train_dataloader is None:
@@ -72,10 +85,6 @@ class TrainerGRPCServer:
 
         if not training_id in self._training_dict:
             raise ValueError(f"Training with id {training_id} has not been registered")
-
-        if training_id in self._training_process_dict:
-            if self._training_process_dict[training_id].is_alive():
-                return StartTrainingResponse(training_started=False)
 
         model = self._training_dict[training_id]
 
