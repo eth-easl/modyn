@@ -1,37 +1,43 @@
-from abc import abstractmethod
-import logging
 from typing import Optional
 import torch
+import logging
 import os
 
+from modyn.gpu_node.data.utils import prepare_dataloaders
+from modyn.gpu_node.utils.model_utils import get_model
 
-class BaseTrainer():
 
-    """
-    Base class for the registered models.
-
-    It implements some common functionality such as checkpointing and logging.
-
-    """
-
+class PytorchTrainer:
     def __init__(
         self,
-        train_loader: torch.utils.data.DataLoader,
-        val_loader: Optional[torch.utils.data.DataLoader],
-        device: int,
-        checkpoint_path: str,
-        checkpoint_interval: int,
-    ):
+        training_info,
+        device,
+    ) -> None:
 
-        self._model = None
-        self._optimizer = None
+        # setup model and optimizer
 
-        self._train_loader = train_loader
-        self._val_loader = val_loader
+        self._model = get_model(training_info.model_id, training_info.model_configuration_dict, device)
+        self._model.model.to(device)
+
+        optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
+        self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
+
+        criterion_func = getattr(torch.nn, training_info.torch_criterion)
+        self._criterion = criterion_func(**training_info.criterion_dict)
+
+        # setup dataloaders
+        self._train_dataloader, self._val_dataloader = prepare_dataloaders(
+            training_info.training_id,
+            training_info.dataset_id,
+            training_info.num_dataloaders,
+            training_info.batch_size,
+            training_info.transform_list
+        )
+
+        # setup rest
         self._device = device
-
-        self._checkpoint_path = checkpoint_path
-        self._checkpoint_interval = checkpoint_interval
+        self._checkpoint_path = training_info.checkpoint_path
+        self._checkpoint_interval = training_info.checkpoint_interval
 
     def create_logger(self, log_path: str):
 
@@ -61,7 +67,7 @@ class BaseTrainer():
 
         checkpoint_file_name = self._checkpoint_path + f'/model_{iteration}' + '.pt'
         dict_to_save = {
-            'model': self._model.state_dict(),
+            'model': self._model.model.state_dict(),
             'optimizer': self._optimizer.state_dict(),
         }
         torch.save(dict_to_save, checkpoint_file_name)
@@ -73,12 +79,8 @@ class BaseTrainer():
         assert 'model' in checkpoint_dict
         assert 'optimizer' in checkpoint_dict
 
-        self._model.load_state_dict(checkpoint_dict['model'])
+        self._model.model.load_state_dict(checkpoint_dict['model'])
         self._optimizer.load_state_dict(checkpoint_dict['optimizer'])
-
-    @abstractmethod
-    def train_one_iteration(self, iteration, batch):
-        raise NotImplementedError
 
     def train(self, log_path: str, load_checkpoint_path=Optional[str]):
 
@@ -89,13 +91,15 @@ class BaseTrainer():
         if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
             self.load_checkpoint(load_checkpoint_path)
 
-        self._model.train()
+        self._model.model.train()
 
-        train_iter = enumerate(self._train_loader)
+        train_iter = enumerate(self._train_dataloader)
 
         for i, batch in train_iter:
 
-            self.train_one_iteration(i, batch)
+            self._optimizer.zero_grad()
+            self._model.train_one_iteration(batch, self._criterion)
+            self._optimizer.step()
 
             if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
                 self.save_checkpoint(i)
@@ -103,3 +107,8 @@ class BaseTrainer():
             self._logger.info('Iteration {}'.format(i))
 
         self._logger.info('Training complete!')
+
+
+def train(training_info, device, log_path, load_checkpoint_path):
+    trainer = PytorchTrainer(training_info, device)
+    trainer.train(log_path, load_checkpoint_path)

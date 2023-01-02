@@ -24,6 +24,8 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
     MODEL_ID_FIELD_NUMBER: builtins.int
     TORCH_OPTIMIZER_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
+    TORCH_CRITERION_FIELD_NUMBER: builtins.int
+    CRITERION_PARAMETERS_FIELD_NUMBER: builtins.int
     OPTIMIZER_PARAMETERS_FIELD_NUMBER: builtins.int
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     DATA_INFO_FIELD_NUMBER: builtins.int
@@ -33,6 +35,9 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
     model_id: builtins.str
     torch_optimizer: builtins.str
     batch_size: builtins.int
+    torch_criterion: builtins.str
+    @property
+    def criterion_parameters(self) -> global___JsonString: ...
     @property
     def optimizer_parameters(self) -> global___JsonString: ...
     @property
@@ -50,14 +55,16 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
         model_id: builtins.str = ...,
         torch_optimizer: builtins.str = ...,
         batch_size: builtins.int = ...,
+        torch_criterion: builtins.str = ...,
+        criterion_parameters: global___JsonString | None = ...,
         optimizer_parameters: global___JsonString | None = ...,
         model_configuration: global___JsonString | None = ...,
         data_info: global___Data | None = ...,
         checkpoint_info: global___CheckpointInfo | None = ...,
         transform_list: collections.abc.Iterable[global___TorchvisionTransform] | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["checkpoint_info", b"checkpoint_info", "data_info", b"data_info", "model_configuration", b"model_configuration", "optimizer_parameters", b"optimizer_parameters"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_info", b"checkpoint_info", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_optimizer", b"torch_optimizer", "training_id", b"training_id", "transform_list", b"transform_list"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "optimizer_parameters", b"optimizer_parameters"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_criterion", b"torch_criterion", "torch_optimizer", b"torch_optimizer", "training_id", b"training_id", "transform_list", b"transform_list"]) -> None: ...
 
 global___RegisterTrainServerRequest = RegisterTrainServerRequest
 

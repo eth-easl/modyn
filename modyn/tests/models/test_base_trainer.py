@@ -3,8 +3,6 @@ from typing import Optional
 import torch
 import os
 
-from modyn.models.base_trainer import BaseTrainer
-
 
 class DummyDataset(torch.utils.data.dataset.Dataset):
     def __init__(self) -> None:
@@ -25,7 +23,7 @@ class DummyStatefulObject():
 test_dataloader = torch.utils.data.DataLoader(DummyDataset(), batch_size=1)
 
 
-class DummyTrainer(BaseTrainer):
+class DummyTrainer:
 
     def __init__(
         self,

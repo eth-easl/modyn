@@ -1,5 +1,4 @@
 from torch.utils.data import IterableDataset, get_worker_info
-from abc import abstractmethod
 import typing
 import torchvision
 import json

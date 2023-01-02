@@ -30,8 +30,14 @@ class TrainerClient:
     def register_training(self, training_id):
 
         transforms = [
-            TorchvisionTransform(function="ToTensor", args=JsonString(value=json.dumps({}))),
-            TorchvisionTransform(function="Normalize", args=JsonString(value=json.dumps({"mean": (0.1307,), "std": (0.3081,)}))),
+            TorchvisionTransform(
+                function="ToTensor",
+                args=JsonString(value=json.dumps({}))
+            ),
+            TorchvisionTransform(
+                function="Normalize",
+                args=JsonString(value=json.dumps({"mean": (0.1307,), "std": (0.3081,)}))
+            ),
         ]
 
         optimizer_parameters = {
@@ -48,6 +54,8 @@ class TrainerClient:
             model_id="ResNet18",
             batch_size=32,
             torch_optimizer='SGD',
+            torch_criterion='CrossEntropyLoss',
+            criterion_parameters=JsonString(value=json.dumps({})),
             optimizer_parameters=JsonString(value=json.dumps(optimizer_parameters)),
             model_configuration=JsonString(value=json.dumps(model_configuration)),
             data_info=Data(
@@ -58,7 +66,7 @@ class TrainerClient:
                 checkpoint_interval=10,
                 checkpoint_path="results"
             ),
-            transform_list = transforms
+            transform_list=transforms
         )
 
         response = self._trainer_stub.register(req)
@@ -86,10 +94,10 @@ if __name__ == "__main__":
             training_started = client.start_training(training_id)
             print(training_started)
 
-            while (not client.check_trainer_available()):
-                pass
+            # while (not client.check_trainer_available()):
+            #     pass
 
-            training_started = client.start_training(training_id)
-            print(training_started)
+            # training_started = client.start_training(training_id)
+            # print(training_started)
 
-            print("started again!")
+            # print("started again!")

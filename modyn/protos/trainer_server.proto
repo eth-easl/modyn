@@ -13,11 +13,13 @@ message RegisterTrainServerRequest {
     string model_id = 2;
     string torch_optimizer = 3;
     int32 batch_size = 4;
-    JsonString optimizer_parameters = 5;
-    JsonString model_configuration = 6;
-    Data data_info = 7;
-    CheckpointInfo checkpoint_info = 8;
-    repeated TorchvisionTransform transform_list = 9;
+    string torch_criterion = 5;
+    JsonString criterion_parameters = 6;
+    JsonString optimizer_parameters = 7;
+    JsonString model_configuration = 8;
+    Data data_info = 9;
+    CheckpointInfo checkpoint_info = 10;
+    repeated TorchvisionTransform transform_list = 11;
 }
 
 message JsonString {

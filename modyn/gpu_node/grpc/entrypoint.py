@@ -2,11 +2,9 @@ import logging
 import grpc
 from concurrent import futures
 import multiprocessing as mp
-import sys
 import yaml
 import argparse
 import pathlib
-import os
 
 from modyn.gpu_node.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
 from modyn.gpu_node.grpc.trainer_server import TrainerGRPCServer
@@ -18,13 +16,14 @@ def setup_argparser() -> argparse.ArgumentParser:
 
     return parser_
 
+
 def main() -> None:
 
     mp.set_start_method('spawn')
 
     logging.basicConfig(level=logging.NOTSET,
-                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d:%H:%M:%S')
+                        format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d:%H:%M:%S')
     logger = logging.getLogger(__name__)
     logger.setLevel("INFO")
 

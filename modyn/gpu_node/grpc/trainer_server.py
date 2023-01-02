@@ -1,12 +1,8 @@
-import json
 import grpc
 import os
 import sys
 from pathlib import Path
-import logging
 import multiprocessing as mp
-
-import yaml
 
 from modyn.gpu_node.grpc.trainer_server_pb2 import (
     RegisterTrainServerRequest,
@@ -16,11 +12,10 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
     StartTrainingRequest,
     StartTrainingResponse
 )
+from modyn.gpu_node.trainer.pytorch_trainer import train
 
-from modyn.gpu_node.utils.model_utils import get_model
-
-from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer, RegisterTrainingRequest
-from modyn.gpu_node.data.utils import prepare_dataloaders
+from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer
+from modyn.gpu_node.utils.training_utils import TrainingInfo
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -54,28 +49,9 @@ class TrainerGRPCServer:
         context: grpc.ServicerContext
     ) -> RegisterTrainServerResponse:
 
-        optimizer_dict = json.loads(request.optimizer_parameters.value)
-        model_conf_dict = json.loads(request.model_configuration.value)
+        training_info = TrainingInfo(request)
 
-        # TODO(fotstrt): if we are keeping this way of passing transforms,
-        # find a clearer way to pass this (mp.spawn complains on proto structs)
-        transform_list = []
-        for x in request.transform_list:
-            transform_list.append({'function': x.function, 'args': x.args.value})
-
-        train_dataloader, val_dataloader = prepare_dataloaders(
-            request.training_id,
-            request.data_info.dataset_id,
-            request.data_info.num_dataloaders,
-            request.batch_size,
-            transform_list
-        )
-
-        if train_dataloader is None:
-            return RegisterTrainServerResponse(success=False)
-
-        model = get_model(request, optimizer_dict, model_conf_dict, train_dataloader, val_dataloader, 0)
-        self._training_dict[request.training_id] = model
+        self._training_dict[request.training_id] = training_info
 
         return RegisterTrainServerResponse(success=True)
 
@@ -83,12 +59,18 @@ class TrainerGRPCServer:
 
         training_id = request.training_id
 
-        if not training_id in self._training_dict:
+        if training_id not in self._training_dict:
             raise ValueError(f"Training with id {training_id} has not been registered")
 
-        model = self._training_dict[training_id]
-
-        p = mp.Process(target=model.train, args=(f'log-{training_id}.txt', request.load_checkpoint_path,))
+        p = mp.Process(
+            target=train,
+            args=(
+                self._training_dict[training_id],
+                0,
+                f'log-{training_id}.txt',
+                request.load_checkpoint_path
+            )
+        )
         p.start()
         self._training_process_dict[training_id] = p
 

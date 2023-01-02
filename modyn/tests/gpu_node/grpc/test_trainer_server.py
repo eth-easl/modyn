@@ -4,7 +4,7 @@ import pytest
 import json
 import torch
 
-from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer, TrainingResponse
+
 from modyn.gpu_node.grpc.trainer_server import TrainerGRPCServer
 from modyn.gpu_node.grpc.trainer_server_pb2 import Data, JsonString, RegisterTrainServerRequest, StartTrainingRequest
 
@@ -40,7 +40,6 @@ class DummyModel():
         pass
 
 
-
 @patch('modyn.gpu_node.grpc.trainer_server.prepare_dataloaders')
 def test_register_no_dataloader(test_prepare_dataloaders):
 
@@ -49,7 +48,7 @@ def test_register_no_dataloader(test_prepare_dataloaders):
     test_prepare_dataloaders.return_value = (None, None)
     response = trainer_server.register(dummy_register_request, None)
 
-    assert response.success == False
+    assert response.success is False
     assert trainer_server._training_dict == {}
 
 
@@ -64,7 +63,7 @@ def test_register(test_prepare_dataloaders, test_get_model):
     test_get_model.return_value = model
     response = trainer_server.register(dummy_register_request, None)
 
-    assert response.success == True
+    assert response.success is True
     assert trainer_server._training_dict == {1: model}
 
 
