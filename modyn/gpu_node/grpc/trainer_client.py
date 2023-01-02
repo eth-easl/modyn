@@ -3,6 +3,7 @@ import grpc
 
 from modyn.gpu_node.grpc.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.gpu_node.grpc.trainer_server_pb2 import (
+    JsonString,
     RegisterTrainServerRequest,
     Data,
     TrainerAvailableRequest,
@@ -25,7 +26,7 @@ class TrainerClient:
         response = self._trainer_stub.trainer_available(req)
         return response.available
 
-    def register_training(self):
+    def register_training(self, training_id):
 
         optimizer_parameters = {
             'lr': 0.1,
@@ -37,11 +38,12 @@ class TrainerClient:
         }
 
         req = RegisterTrainServerRequest(
+            training_id=training_id,
             model_id="ResNet18",
             batch_size=32,
             torch_optimizer='SGD',
-            optimizer_parameters=json.dumps(optimizer_parameters),
-            model_configuration=json.dumps(model_configuration),
+            optimizer_parameters=JsonString(value=json.dumps(optimizer_parameters)),
+            model_configuration=JsonString(value=json.dumps(model_configuration)),
             data_info=Data(
                 dataset_id="MNISTDataset",
                 num_dataloaders=2
@@ -53,7 +55,7 @@ class TrainerClient:
         )
 
         response = self._trainer_stub.register(req)
-        return response.training_id
+        return response.success
 
     def start_training(self, training_id):
 
@@ -69,13 +71,15 @@ class TrainerClient:
 if __name__ == "__main__":
     client = TrainerClient()
     is_available = client.check_trainer_available()
+    training_id = 10
     if is_available:
-        training_id = client.register_training()
-    print(training_id)
-    training_started = client.start_training(training_id)
-    print(training_started)
+        success = client.register_training(training_id)
+        print(success)
+        if success:
+            training_started = client.start_training(training_id)
+            print(training_started)
 
-    while (not client.start_training(training_id)):
-        pass
+            while (not client.start_training(training_id)):
+                pass
 
-    print("started again!")
+            print("started again!")

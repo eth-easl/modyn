@@ -2,8 +2,8 @@ from torch.utils.data import IterableDataset, get_worker_info
 from abc import abstractmethod
 import typing
 
-from modyn.backend.selector.mock_selector_server import MockSelectorServer, GetSamplesRequest
-from modyn.storage.mock_storage_server import MockStorageServer, GetRequest
+from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer, GetSamplesRequest
+from modyn.gpu_node.mocks.mock_storage_server import MockStorageServer, GetRequest
 
 
 class OnlineDataset(IterableDataset):

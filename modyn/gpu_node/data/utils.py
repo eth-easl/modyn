@@ -19,7 +19,8 @@ def prepare_dataloaders(
     """
 
     dataset_module = dynamic_module_import("modyn.gpu_node.data")
-    assert hasattr(dataset_module, dataset_id)
+    if not hasattr(dataset_module, dataset_id):
+        raise ValueError(f"Dataset {dataset_id} not exists")
 
     dataset_handler = getattr(dataset_module, dataset_id)
 

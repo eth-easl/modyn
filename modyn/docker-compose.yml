@@ -37,3 +37,13 @@ services:
       - '5124:5124'
     volumes:
       - ./backend:/app
+
+  gpu_node:
+    image: gpu_node
+    build:
+      context: ./
+      dockerfile: modyn/gpu_node/Dockerfile
+    ports:
+      - '5001:5001'
+    volumes:
+      - ./modyn/gpu_node:/app

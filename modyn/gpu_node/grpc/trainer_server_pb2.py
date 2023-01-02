@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14trainer_server.proto\x12\x07trainer\"\xea\x01\n\x1aRegisterTrainServerRequest\x12\x10\n\x08model_id\x18\x01 \x01(\t\x12\x17\n\x0ftorch_optimizer\x18\x02 \x01(\t\x12\x12\n\nbatch_size\x18\x03 \x01(\x05\x12\x1c\n\x14optimizer_parameters\x18\x04 \x01(\t\x12\x1b\n\x13model_configuration\x18\x06 \x01(\t\x12 \n\tdata_info\x18\x07 \x01(\x0b\x32\r.trainer.Data\x12\x30\n\x0f\x63heckpoint_info\x18\x08 \x01(\x0b\x32\x17.trainer.CheckpointInfo\"2\n\x1bRegisterTrainServerResponse\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"y\n\x10VarTypeParameter\x12\x15\n\x0b\x66loat_value\x18\x01 \x01(\x02H\x00\x12\x13\n\tint_value\x18\x02 \x01(\x05H\x00\x12\x14\n\nbool_value\x18\x03 \x01(\x08H\x00\x12\x16\n\x0cstring_value\x18\x04 \x01(\tH\x00\x42\x0b\n\tparameter\"3\n\x04\x44\x61ta\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\"\x19\n\x17TrainerAvailableRequest\"-\n\x18TrainerAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\"F\n\x0e\x43heckpointInfo\x12\x1b\n\x13\x63heckpoint_interval\x18\x01 \x01(\x05\x12\x17\n\x0f\x63heckpoint_path\x18\x02 \x01(\t\"I\n\x14StartTrainingRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x1c\n\x14load_checkpoint_path\x18\x02 \x01(\t\"1\n\x15StartTrainingResponse\x12\x18\n\x10training_started\x18\x01 \x01(\x08\x32\x97\x02\n\rTrainerServer\x12W\n\x08register\x12#.trainer.RegisterTrainServerRequest\x1a$.trainer.RegisterTrainServerResponse\"\x00\x12Z\n\x11trainer_available\x12 .trainer.TrainerAvailableRequest\x1a!.trainer.TrainerAvailableResponse\"\x00\x12Q\n\x0estart_training\x12\x1d.trainer.StartTrainingRequest\x1a\x1e.trainer.StartTrainingResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14trainer_server.proto\x12\x07trainer\"\xa9\x02\n\x1aRegisterTrainServerRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x10\n\x08model_id\x18\x02 \x01(\t\x12\x17\n\x0ftorch_optimizer\x18\x03 \x01(\t\x12\x12\n\nbatch_size\x18\x04 \x01(\x05\x12\x31\n\x14optimizer_parameters\x18\x05 \x01(\x0b\x32\x13.trainer.JsonString\x12\x30\n\x13model_configuration\x18\x06 \x01(\x0b\x32\x13.trainer.JsonString\x12 \n\tdata_info\x18\x07 \x01(\x0b\x32\r.trainer.Data\x12\x30\n\x0f\x63heckpoint_info\x18\x08 \x01(\x0b\x32\x17.trainer.CheckpointInfo\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\".\n\x1bRegisterTrainServerResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"3\n\x04\x44\x61ta\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\"\x19\n\x17TrainerAvailableRequest\"-\n\x18TrainerAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\"F\n\x0e\x43heckpointInfo\x12\x1b\n\x13\x63heckpoint_interval\x18\x01 \x01(\x05\x12\x17\n\x0f\x63heckpoint_path\x18\x02 \x01(\t\"I\n\x14StartTrainingRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x1c\n\x14load_checkpoint_path\x18\x02 \x01(\t\"1\n\x15StartTrainingResponse\x12\x18\n\x10training_started\x18\x01 \x01(\x08\x32\x97\x02\n\rTrainerServer\x12W\n\x08register\x12#.trainer.RegisterTrainServerRequest\x1a$.trainer.RegisterTrainServerResponse\"\x00\x12Z\n\x11trainer_available\x12 .trainer.TrainerAvailableRequest\x1a!.trainer.TrainerAvailableResponse\"\x00\x12Q\n\x0estart_training\x12\x1d.trainer.StartTrainingRequest\x1a\x1e.trainer.StartTrainingResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'trainer_server_pb2', globals())
@@ -21,23 +21,23 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _REGISTERTRAINSERVERREQUEST._serialized_start=34
-  _REGISTERTRAINSERVERREQUEST._serialized_end=268
-  _REGISTERTRAINSERVERRESPONSE._serialized_start=270
-  _REGISTERTRAINSERVERRESPONSE._serialized_end=320
-  _VARTYPEPARAMETER._serialized_start=322
-  _VARTYPEPARAMETER._serialized_end=443
-  _DATA._serialized_start=445
-  _DATA._serialized_end=496
-  _TRAINERAVAILABLEREQUEST._serialized_start=498
-  _TRAINERAVAILABLEREQUEST._serialized_end=523
-  _TRAINERAVAILABLERESPONSE._serialized_start=525
-  _TRAINERAVAILABLERESPONSE._serialized_end=570
-  _CHECKPOINTINFO._serialized_start=572
-  _CHECKPOINTINFO._serialized_end=642
-  _STARTTRAININGREQUEST._serialized_start=644
-  _STARTTRAININGREQUEST._serialized_end=717
-  _STARTTRAININGRESPONSE._serialized_start=719
-  _STARTTRAININGRESPONSE._serialized_end=768
-  _TRAINERSERVER._serialized_start=771
-  _TRAINERSERVER._serialized_end=1050
+  _REGISTERTRAINSERVERREQUEST._serialized_end=331
+  _JSONSTRING._serialized_start=333
+  _JSONSTRING._serialized_end=360
+  _REGISTERTRAINSERVERRESPONSE._serialized_start=362
+  _REGISTERTRAINSERVERRESPONSE._serialized_end=408
+  _DATA._serialized_start=410
+  _DATA._serialized_end=461
+  _TRAINERAVAILABLEREQUEST._serialized_start=463
+  _TRAINERAVAILABLEREQUEST._serialized_end=488
+  _TRAINERAVAILABLERESPONSE._serialized_start=490
+  _TRAINERAVAILABLERESPONSE._serialized_end=535
+  _CHECKPOINTINFO._serialized_start=537
+  _CHECKPOINTINFO._serialized_end=607
+  _STARTTRAININGREQUEST._serialized_start=609
+  _STARTTRAININGREQUEST._serialized_end=682
+  _STARTTRAININGRESPONSE._serialized_start=684
+  _STARTTRAININGRESPONSE._serialized_end=733
+  _TRAINERSERVER._serialized_start=736
+  _TRAINERSERVER._serialized_end=1015
 # @@protoc_insertion_point(module_scope)

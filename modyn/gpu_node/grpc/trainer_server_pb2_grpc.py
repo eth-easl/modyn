@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import modyn.gpu_node.grpc.trainer_server_pb2 as trainer__server__pb2
+import trainer_server_pb2 as trainer__server__pb2
 
 
 class TrainerServerStub(object):

@@ -1,9 +1,9 @@
 # pylint: disable=unused-argument
 from unittest.mock import patch
 
-from modyn.backend.selector.mock_selector_server import GetSamplesResponse, MockSelectorServer
+from modyn.gpu_node.mocks.mock_selector_server import GetSamplesResponse, MockSelectorServer
 from modyn.gpu_node.data.online_dataset import OnlineDataset
-from modyn.storage.mock_storage_server import GetResponse, MockStorageServer
+from modyn.gpu_node.mocks.mock_storage_server import GetResponse, MockStorageServer
 
 
 @patch.object(MockSelectorServer, 'get_sample_keys', return_value=GetSamplesResponse(training_samples_subset=[1, 2, 3]))

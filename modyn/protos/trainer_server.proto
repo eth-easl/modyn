@@ -9,26 +9,22 @@ service TrainerServer {
 }
 
 message RegisterTrainServerRequest {
-    string model_id = 1;
-    string torch_optimizer = 2;
-    int32 batch_size = 3;
-    string optimizer_parameters = 4;
-    string model_configuration = 6;
+    int32 training_id = 1;
+    string model_id = 2;
+    string torch_optimizer = 3;
+    int32 batch_size = 4;
+    JsonString optimizer_parameters = 5;
+    JsonString model_configuration = 6;
     Data data_info = 7;
     CheckpointInfo checkpoint_info = 8;
 }
 
-message RegisterTrainServerResponse {
-    int32 training_id = 1;
+message JsonString {
+    string value = 1;
 }
 
-message VarTypeParameter {
-    oneof parameter {
-        float float_value = 1;
-        int32 int_value = 2;
-        bool bool_value = 3;
-        string string_value = 4;
-    }
+message RegisterTrainServerResponse {
+    bool success = 1;
 }
 
 message Data {

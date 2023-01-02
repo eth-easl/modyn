@@ -7,7 +7,7 @@ from modyn.gpu_node.data.utils import prepare_dataloaders
 
 def test_prepare_dataloaders_dataset_missing():
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         prepare_dataloaders(1, "MissingDataset", 4, 128)
 
 
