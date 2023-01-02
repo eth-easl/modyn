@@ -3,7 +3,7 @@ from unittest.mock import patch
 from modyn.backend.selector.selector_server import SelectorGRPCServer, main, serve
 from modyn.backend.selector.internal.grpc_handler import GRPCHandler
 from modyn.backend.selector.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest  # noqa: E402, E501
-import sys 
+import sys
 import pytest
 import grpc
 # pylint: skip-file
@@ -51,7 +51,7 @@ def test_prepare_training_set(test_get_samples_by_metadata_query, test_get_info_
 
 class DummyServer:
     def __init__(self, arg):
-        pass 
+        pass
 
     def add_insecure_port(self, arg=None):
         pass
@@ -65,6 +65,7 @@ class DummyServer:
     def add_generic_rpc_handlers(self, arg=None):
         pass
 
+
 @patch.object(grpc, 'server', return_value=DummyServer(None))
 @patch.object(GRPCHandler, '_init_metadata', return_value=None)
 @patch.object(GRPCHandler, '_connection_established', return_value=True)
@@ -75,9 +76,9 @@ def test_main(get_info_for_training, register_training, _connection_established,
     with patch.object(sys, 'argv', testargs):
         main()
 
+
 def test_main_raise():
     testargs = ["selector_server.py", "modyn/config/config.yaml", "extra"]
     with patch.object(sys, 'argv', testargs):
         with pytest.raises(SystemExit):
             main()
-

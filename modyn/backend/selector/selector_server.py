@@ -50,6 +50,7 @@ def serve(config: dict, servicer: SelectorGRPCServer) -> None:
     server.start()
     server.wait_for_termination()
 
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
@@ -61,6 +62,6 @@ def main() -> None:
 
     serve(config, SelectorGRPCServer(config))
 
+
 if __name__ == '__main__':
     main()
-
