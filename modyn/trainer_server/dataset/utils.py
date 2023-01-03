@@ -19,7 +19,7 @@ def prepare_dataloaders(
 
     """
 
-    train_set = OnlineDataset(training_id, transform)
+    train_set = OnlineDataset(training_id, dataset_id, transform)
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                                    num_workers=num_dataloaders)
 

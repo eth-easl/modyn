@@ -8,8 +8,9 @@ from modyn.trainer_server.mocks.mock_storage_server import MockStorageServer, Ge
 
 class OnlineDataset(IterableDataset):
 
-    def __init__(self, training_id: int, serialized_transforms):
+    def __init__(self, training_id: int, dataset_id: str, serialized_transforms):
         self._training_id = training_id
+        self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
         self._serialized_transforms = serialized_transforms
@@ -28,7 +29,7 @@ class OnlineDataset(IterableDataset):
 
     def _get_data_from_storage(self, keys: list[str]) -> list[str]:
         # TODO: replace this with grpc calls to the selector
-        req = GetRequest(keys=keys)
+        req = GetRequest(dataset_id=self._dataset_id, keys=keys)
         data = self._storagestub.Get(req).value
         return data
 
