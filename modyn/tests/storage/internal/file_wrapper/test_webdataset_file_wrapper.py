@@ -8,14 +8,14 @@ from PIL import Image
 
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 
-test_dir = pathlib.Path(os.path.abspath(__file__)).parent / 'test_tmp' / 'modyn'
+TEST_DIR = pathlib.Path(os.path.abspath(__file__)).parent / 'test_tmp' / 'modyn'
 FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test_tmp' / 'modyn' / 'test.tar')
 
 
 def setup():
     width = 28
     height = 28
-    os.makedirs(test_dir, exist_ok=True)
+    os.makedirs(TEST_DIR, exist_ok=True)
 
     test_file = wds.TarWriter(FILE_PATH)
     for i in range(10000):
@@ -32,7 +32,7 @@ def setup():
 
 def teardown():
     os.remove(FILE_PATH)
-    shutil.rmtree(test_dir)
+    shutil.rmtree(TEST_DIR)
 
 
 def test_init():

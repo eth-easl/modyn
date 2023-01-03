@@ -12,7 +12,15 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 
 
 class WebdatasetFileWrapper(AbstractFileWrapper):
-    """Webdataset file wrapper."""
+    """
+    Webdataset file wrapper.
+
+    One file can contain multiple samples.
+
+    This file wrapper is used for files that are in the webdataset file format.
+    See here for more information about the webdataset file format:
+    https://webdataset.github.io/webdataset/
+    """
     indeces_cache: Dict[str, str] = {}
     tmp_dir: pathlib.Path = pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp"
 

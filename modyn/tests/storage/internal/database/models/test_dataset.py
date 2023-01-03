@@ -52,8 +52,7 @@ def test_update_dataset(session):  # pylint: disable=redefined-outer-name
 
     session.query(Dataset).filter(Dataset.name == 'test').update({
         'base_path': 'test2',
-        'filesystem_wrapper_type': FilesystemWrapperType.S3FileSystemWrapper,
-        'file_wrapper_type': FileWrapperType.ParquetFileWrapper,
+        'file_wrapper_type': FileWrapperType.SingleSampleFileWrapper,
         'description': 'test2',
         'version': 'test2'
     })
@@ -62,9 +61,7 @@ def test_update_dataset(session):  # pylint: disable=redefined-outer-name
     assert session.query(Dataset).filter(Dataset.name == 'test') \
                   .first().base_path == 'test2'
     assert session.query(Dataset).filter(Dataset.name == 'test') \
-                  .first().filesystem_wrapper_type == FilesystemWrapperType.S3FileSystemWrapper
-    assert session.query(Dataset).filter(Dataset.name == 'test') \
-                  .first().file_wrapper_type == FileWrapperType.ParquetFileWrapper
+                  .first().file_wrapper_type == FileWrapperType.SingleSampleFileWrapper
     assert session.query(Dataset).filter(Dataset.name == 'test').first().description == 'test2'
     assert session.query(Dataset).filter(Dataset.name == 'test').first().version == 'test2'
 
