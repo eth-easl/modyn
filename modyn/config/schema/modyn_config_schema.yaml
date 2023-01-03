@@ -35,13 +35,13 @@ properties:
         type: string
         description: |
           The hostname to use for the storage server.
-      seeker:
+      dataset_watcher:
         type: object
         properties:
           interval:
             type: number
             description: |
-              The interval to use for the seeker.
+              The interval in seconds to check for new files and samples for each dataset.
       datasets:
         type: array
         items:

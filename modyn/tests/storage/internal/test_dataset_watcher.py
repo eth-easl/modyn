@@ -3,7 +3,7 @@ import typing
 from unittest.mock import patch
 import pytest
 
-from modyn.storage.internal.seeker import Seeker
+from modyn.storage.internal.dataset_watcher import DatasetWatcher
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.file import File
@@ -30,7 +30,7 @@ def get_minimal_modyn_config() -> dict:
                 'port': 0,
                 'database': ':memory:'
             },
-            'seeker': {
+            'dataset_watcher': {
                 'interval': 1
             }
         }
@@ -130,10 +130,10 @@ class MockQuery:
         return self._all
 
 
-@patch.object(Seeker, '_update_files_in_directory', return_value=None)
-@patch.object(Seeker, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
+@patch.object(DatasetWatcher, '_update_files_in_directory', return_value=None)
+@patch.object(DatasetWatcher, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
 def test_seek(test__get_filesystem_wrapper, test__update_files_in_directory, session) -> None:  # pylint: disable=unused-argument, redefined-outer-name # noqa: E501
-    seeker = Seeker(get_minimal_modyn_config())
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
     session.add(
         Dataset(
             name='test',
@@ -142,14 +142,14 @@ def test_seek(test__get_filesystem_wrapper, test__update_files_in_directory, ses
             file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
             base_path='/path'))
     session.commit()
-    seeker._session = session
-    seeker._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher._session = session
+    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
     assert test__update_files_in_directory.called
 
 
-@patch.object(Seeker, '_update_files_in_directory', return_value=None)
+@patch.object(DatasetWatcher, '_update_files_in_directory', return_value=None)
 def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:  # pylint: disable=unused-argument, redefined-outer-name # noqa: E501
-    seeker = Seeker(get_minimal_modyn_config())
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
     session.add(
         Dataset(
             name='test',
@@ -158,15 +158,15 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
             file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
             base_path='/notexists'))
     session.commit()
-    seeker._session = session
-    seeker._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher._session = session
+    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
     assert not test__update_files_in_directory.called
 
 
-@patch.object(Seeker, '_update_files_in_directory', return_value=None)
-@patch.object(Seeker, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
+@patch.object(DatasetWatcher, '_update_files_in_directory', return_value=None)
+@patch.object(DatasetWatcher, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
 def test_seek_path_not_dir(test__get_filesystem_wrapper, test__update_files_in_directory, session):  # pylint: disable=unused-argument, redefined-outer-name # noqa: E501
-    seeker = Seeker(get_minimal_modyn_config())
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
     session.add(
         Dataset(
             name='test',
@@ -175,24 +175,24 @@ def test_seek_path_not_dir(test__get_filesystem_wrapper, test__update_files_in_d
             file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
             base_path='/path/file1'))
     session.commit()
-    seeker._session = session
-    seeker._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher._session = session
+    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
     assert not test__update_files_in_directory.called
 
 
-@patch.object(Seeker, '_update_files_in_directory', return_value=None)
-@patch.object(Seeker, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
+@patch.object(DatasetWatcher, '_update_files_in_directory', return_value=None)
+@patch.object(DatasetWatcher, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
 def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_directory, session) -> None:  # pylint: disable=unused-argument, redefined-outer-name # noqa: E501
-    seeker = Seeker(get_minimal_modyn_config())
-    seeker._session = session
-    seeker._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
+    dataset_watcher._session = session
+    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
     assert not test__update_files_in_directory.called
 
 
-@patch.object(Seeker, '_get_file_wrapper', return_value=MockFileWrapper())
-@patch.object(Seeker, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
+@patch.object(DatasetWatcher, '_get_file_wrapper', return_value=MockFileWrapper())
+@patch.object(DatasetWatcher, '_get_filesystem_wrapper', return_value=MockFileSystemWrapper())
 def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wrapper, session) -> None:  # pylint: disable=unused-argument, redefined-outer-name # noqa: E501
-    seeker = Seeker(get_minimal_modyn_config())
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
     dataset = Dataset(
         name='test',
         description='test description',
@@ -201,7 +201,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
         base_path='/path')
     session.add(dataset)
     session.commit()
-    seeker._update_files_in_directory(
+    dataset_watcher._update_files_in_directory(
         filesystem_wrapper=MockFileSystemWrapper(),
         file_wrapper_type=MockFileWrapper(),
         path='/path',
@@ -223,7 +223,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
     assert len(result) == 4
     assert result[0].file_id == 1
 
-    seeker._update_files_in_directory(
+    dataset_watcher._update_files_in_directory(
         filesystem_wrapper=MockFileSystemWrapper(),
         file_wrapper_type=MockFileWrapper(),
         path='/path',
@@ -247,9 +247,9 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
 
 
 def test_update_files_in_directory_not_exists(session) -> None:  # pylint: disable=unused-argument, redefined-outer-name
-    seeker = Seeker(get_minimal_modyn_config())
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
     with pytest.raises(ValueError):
-        seeker._update_files_in_directory(
+        dataset_watcher._update_files_in_directory(
             filesystem_wrapper=MockFileSystemWrapper(),
             file_wrapper_type=MockFileWrapper(),
             path='/notexists',
@@ -260,28 +260,28 @@ def test_update_files_in_directory_not_exists(session) -> None:  # pylint: disab
 
 
 def test_get_database_session() -> None:
-    seeker = Seeker(get_minimal_modyn_config())
-    sess = seeker._get_database_session()
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
+    sess = dataset_watcher._get_database_session()
     assert sess is not None
 
 
 def test_get_filesystem_wrapper() -> None:
-    seeker = Seeker(get_minimal_modyn_config())
-    filesystem_wrapper = seeker._get_filesystem_wrapper(FilesystemWrapperType.LocalFilesystemWrapper, '/path')
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
+    filesystem_wrapper = dataset_watcher._get_filesystem_wrapper(FilesystemWrapperType.LocalFilesystemWrapper, '/path')
     assert filesystem_wrapper is not None
     assert isinstance(filesystem_wrapper, LocalFilesystemWrapper)
 
 
 def test_get_file_wrapper() -> None:
-    seeker = Seeker(get_minimal_modyn_config())
-    file_wrapper = seeker._get_file_wrapper(FileWrapperType.WebdatasetFileWrapper, '/path')
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
+    file_wrapper = dataset_watcher._get_file_wrapper(FileWrapperType.WebdatasetFileWrapper, '/path')
     assert file_wrapper is not None
     assert isinstance(file_wrapper, WebdatasetFileWrapper)
 
 
-@patch.object(Seeker, '_seek', return_value=None)
+@patch.object(DatasetWatcher, '_seek', return_value=None)
 def test_run(mock_seek) -> None:  # pylint: disable=unused-argument
-    seeker = Seeker(get_minimal_modyn_config())
-    seeker._testing = True
-    seeker.run()
-    assert seeker._seek.called
+    dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
+    dataset_watcher._testing = True
+    dataset_watcher.run()
+    assert dataset_watcher._seek.called

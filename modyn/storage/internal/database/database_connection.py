@@ -47,11 +47,25 @@ class DatabaseConnection():
         return self.session
 
     def create_all(self) -> None:
+        """
+        Create all tables. Eacg table is represented by a class.
+
+        All classes that inherit from Base are mapped to tables
+        which are created in the database if they do not exist.
+
+        The metadata is a collection of Table objects that inherit from Base and their associated
+        schema constructs (such as Column objects, ForeignKey objects, and so on).
+        """
         Base.metadata.create_all(self.engine)
 
     def add_dataset(self, name: str, base_path: str,
                     filesystem_wrapper_type: FilesystemWrapperType,
                     file_wrapper_type: FileWrapperType, description: str, version: str) -> bool:
+        """
+        Add dataset to database.
+
+        If dataset with name already exists, it is updated.
+        """
         try:
             if self.session.query(Dataset).filter(Dataset.name == name).first() is not None:
                 logger.info(f'Dataset with name {name} exists.')

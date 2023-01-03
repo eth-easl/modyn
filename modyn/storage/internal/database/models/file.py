@@ -8,9 +8,9 @@ from modyn.storage.internal.database.models.dataset import Dataset
 
 
 class File(Base):
-    __tablename__ = 'file'
+    __tablename__ = 'files'
     id = Column(Integer, primary_key=True)
-    dataset_id = Column(Integer, ForeignKey('dataset.id'), nullable=False)
+    dataset_id = Column(Integer, ForeignKey('datasets.id'), nullable=False)
     dataset = relationship('Dataset', backref=backref('files', lazy=True))
     path = Column(String(120), unique=False, nullable=False)
     created_at = Column(DateTime, nullable=False)

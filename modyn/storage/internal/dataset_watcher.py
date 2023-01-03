@@ -22,7 +22,7 @@ from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import Fi
 logger = logging.getLogger(__name__)
 
 
-class Seeker:
+class DatasetWatcher:
     _session = None  # For testing purposes
     _testing = False  # For testing purposes
 
@@ -119,13 +119,13 @@ class Seeker:
 
     def run(self) -> None:
         """
-        Run the seeker.
+        Run the dataset watcher.
         """
-        logger.info('Starting seeker.')
+        logger.info('Starting dataset watcher.')
         threads = []
         try:
             while True:
-                time.sleep(self.modyn_config['storage']['seeker']['interval'])
+                time.sleep(self.modyn_config['storage']['dataset_watcher']['interval'])
                 thread = Thread(target=self._seek, args=(self._last_timestamp,))
                 thread.start()
                 threads.append(thread)
@@ -133,6 +133,6 @@ class Seeker:
                 if self._testing:
                     break
         finally:
-            logger.info('Stopping seeker.')
+            logger.info('Stopping dataset_watcher.')
             for thread in threads:
                 thread.join()

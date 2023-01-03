@@ -5,9 +5,9 @@ from modyn.storage.internal.database.base import Base
 
 
 class Sample(Base):
-    __tablename__ = 'sample'
+    __tablename__ = 'samples'
     id = Column(Integer, primary_key=True)
-    file_id = Column(Integer, ForeignKey('file.id'), nullable=False)
+    file_id = Column(Integer, ForeignKey('files.id'), nullable=False)
     file = relationship('File', backref=backref('samples', lazy=True))
     external_key = Column(String(120), unique=True, nullable=False)
     index = Column(Integer, nullable=False)

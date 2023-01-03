@@ -7,7 +7,7 @@ from modyn.storage.internal.database.base import Base
 
 
 class Dataset(Base):
-    __tablename__ = 'dataset'
+    __tablename__ = 'datasets'
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(120), unique=False, nullable=True)

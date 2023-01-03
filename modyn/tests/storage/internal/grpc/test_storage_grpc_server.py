@@ -35,7 +35,7 @@ def get_minimal_modyn_config() -> dict:
                 'port': '0',
                 'database': f'{DATABASE}'
             },
-            'seeker': {
+            'dataset_watcher': {
                 'interval': 1
             },
             'datasets': [

@@ -7,7 +7,7 @@ from multiprocessing import Process
 from modyn.utils import validate_yaml
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.internal.database.database_connection import DatabaseConnection
-from modyn.storage.internal.seeker import Seeker
+from modyn.storage.internal.dataset_watcher import DatasetWatcher
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +39,18 @@ class Storage():
                                             dataset['version']):
                     raise ValueError(f"Failed to add dataset {dataset['name']}")
 
-        #  Start the seeker process in a different thread.
-        seeker = Process(target=Seeker(self.modyn_config).run)
-        seeker.start()
+        #  Start the dataset watcher process in a different thread.
+        dataset_watcher = Process(target=DatasetWatcher(self.modyn_config).run)
+        dataset_watcher.start()
 
         #  Start the storage grpc server.
         with GRPCServer(self.modyn_config) as server:
             server.wait_for_termination()
 
-        #  Close the seeker process. This will cause a ValueError to be raised
-        #  in the seeker process (because it's still running), but we can ignore it.
+        #  Close the dataset_watcher process. This will cause a ValueError to be raised
+        #  in the dataset_watcher process (because it's still running), but we can ignore it.
         #  See https://docs.python.org/3/library/multiprocessing.html#:~:text=in%20version%203.7.-,close()%C2%B6,-Close%20the%20Process  # noqa
         try:
-            seeker.close()
+            dataset_watcher.close()
         except ValueError:
             pass

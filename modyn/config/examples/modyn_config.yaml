@@ -6,7 +6,7 @@ project:
 storage:
   port: "50051"
   hostname: "localhost"
-  seeker:
+  dataset_watcher:
     interval: 10
   datasets:
     [
