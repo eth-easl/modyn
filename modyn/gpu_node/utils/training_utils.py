@@ -15,9 +15,7 @@ class TrainingInfo:
         self.model_configuration_dict = json.loads(request.model_configuration.value)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
 
-        self.transform_list = []
-        for x in request.transform_list:
-            self.transform_list.append({'function': x.function, 'args': x.args.value})
+        self.transform_list = [x for x in request.transform_list]
 
         self.model_id = request.model_id
         self.torch_optimizer = request.torch_optimizer

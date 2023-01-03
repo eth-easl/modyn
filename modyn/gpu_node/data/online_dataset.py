@@ -1,6 +1,6 @@
 from torch.utils.data import IterableDataset, get_worker_info
 import typing
-import torchvision
+from torchvision import transforms
 import json
 
 from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer, GetSamplesRequest
@@ -9,11 +9,11 @@ from modyn.gpu_node.mocks.mock_storage_server import MockStorageServer, GetReque
 
 class OnlineDataset(IterableDataset):
 
-    def __init__(self, training_id: int, transforms):
+    def __init__(self, training_id: int, serialized_transforms):
         self._training_id = training_id
         self._dataset_len = 0
         self._trainining_set_number = 0
-        self._transforms = transforms
+        self._serialized_transforms = serialized_transforms
         self._deserialize_torchvision_transforms()
 
         # These mock the behavior of storage and selector servers.
@@ -35,11 +35,11 @@ class OnlineDataset(IterableDataset):
 
     def _deserialize_torchvision_transforms(self):
         self._transform_list = []
-        for transform in self._transforms:
-            function = getattr(torchvision.transforms, transform['function'])
-            args = json.loads(transform['args'])
-            self._transform_list.append(function(**args))
-        self._transform = torchvision.transforms.Compose(self._transform_list)
+        for transform in self._serialized_transforms:
+            function = eval(transform)
+            self._transform_list.append(function)
+            print(function)
+        self._transform = transforms.Compose(self._transform_list)
 
     def __iter__(self) -> typing.Iterator:
         worker_info = get_worker_info()

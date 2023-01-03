@@ -6,7 +6,6 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
     JsonString,
     RegisterTrainServerRequest,
     Data,
-    TorchvisionTransform,
     TrainerAvailableRequest,
     CheckpointInfo,
     StartTrainingRequest
@@ -29,16 +28,7 @@ class TrainerClient:
 
     def register_training(self, training_id):
 
-        transforms = [
-            TorchvisionTransform(
-                function="ToTensor",
-                args=JsonString(value=json.dumps({}))
-            ),
-            TorchvisionTransform(
-                function="Normalize",
-                args=JsonString(value=json.dumps({"mean": (0.1307,), "std": (0.3081,)}))
-            ),
-        ]
+        transforms = ["transforms.ToTensor()",  "transforms.Normalize((0.1307,), (0.3081,))"]
 
         optimizer_parameters = {
             'lr': 0.1,

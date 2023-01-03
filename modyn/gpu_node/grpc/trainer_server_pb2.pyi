@@ -47,7 +47,7 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
     @property
     def checkpoint_info(self) -> global___CheckpointInfo: ...
     @property
-    def transform_list(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___TorchvisionTransform]: ...
+    def transform_list(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     def __init__(
         self,
         *,
@@ -61,7 +61,7 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
         model_configuration: global___JsonString | None = ...,
         data_info: global___Data | None = ...,
         checkpoint_info: global___CheckpointInfo | None = ...,
-        transform_list: collections.abc.Iterable[global___TorchvisionTransform] | None = ...,
+        transform_list: collections.abc.Iterable[builtins.str] | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "optimizer_parameters", b"optimizer_parameters"]) -> builtins.bool: ...
     def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_criterion", b"torch_criterion", "torch_optimizer", b"torch_optimizer", "training_id", b"training_id", "transform_list", b"transform_list"]) -> None: ...
@@ -191,23 +191,3 @@ class StartTrainingResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["training_started", b"training_started"]) -> None: ...
 
 global___StartTrainingResponse = StartTrainingResponse
-
-@typing_extensions.final
-class TorchvisionTransform(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    FUNCTION_FIELD_NUMBER: builtins.int
-    ARGS_FIELD_NUMBER: builtins.int
-    function: builtins.str
-    @property
-    def args(self) -> global___JsonString: ...
-    def __init__(
-        self,
-        *,
-        function: builtins.str = ...,
-        args: global___JsonString | None = ...,
-    ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["args", b"args"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["args", b"args", "function", b"function"]) -> None: ...
-
-global___TorchvisionTransform = TorchvisionTransform
