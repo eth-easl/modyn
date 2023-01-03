@@ -2,10 +2,9 @@
 from modyn.backend.supervisor import Supervisor
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from unittest.mock import patch
-import unittest.mock
 import typing
 import pytest
-import time
+
 
 def get_minimal_pipeline_config() -> dict:
     return {'pipeline': {'name': 'Test'},
@@ -161,7 +160,7 @@ def test_validate_system():
 @patch.object(Supervisor, '__init__', noop_constructor_mock)
 def test_wait_for_new_data():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
-    
+
     sup.force_exit = True
 
     # TODO(MaxiBoether): implement a real test when func is implemented.

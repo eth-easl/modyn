@@ -37,7 +37,7 @@ class Supervisor():
 
     def _setup_trigger(self):
         trigger_id = self.pipeline_config["trigger"]["id"]
-        trigger_config = {} 
+        trigger_config = {}
         if "trigger_config" in self.pipeline_config["trigger"].keys():
             trigger_config = self.pipeline_config["trigger"]["trigger_config"]
 
