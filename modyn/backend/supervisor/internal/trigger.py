@@ -12,7 +12,8 @@ class Trigger(ABC):
         """The supervisor regularly informs the trigger.
         This method ahould get called regularly by the supervisor, even if there was no new data.
         If there was any new data, then len(new_data) > 0.
-        In case the concrete trigger decides to trigger, we call the callback as many times as the new data triggered training.
+        In case the concrete trigger decides to trigger, we call the callback
+        as many times as the new data triggered training.
         This blocks until training has finished.
 
                 Parameters:
@@ -37,4 +38,3 @@ class Trigger(ABC):
         We might trigger multiple times in case lots of new data came in since
         last inform.
         """
-        pass

@@ -32,9 +32,15 @@ class Supervisor():
 
         self._setup_trigger()
 
+        # only used in tests, currently
+        self.force_exit = False
+
     def _setup_trigger(self):
         trigger_id = self.pipeline_config["trigger"]["id"]
-        trigger_config = self.pipeline_config["trigger"]["trigger_config"]
+        trigger_config = {} 
+        if "trigger_config" in self.pipeline_config["trigger"].keys():
+            trigger_config = self.pipeline_config["trigger"]["trigger_config"]
+
         trigger_module = dynamic_module_import('modyn.backend.supervisor.internal.triggers')
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(self._on_trigger, trigger_config)
 
@@ -91,6 +97,7 @@ class Supervisor():
     def validate_system(self) -> bool:
         return self.dataset_available() and self.trainer_available()
 
+    # pylint: disable-next=unused-argument
     def _query_new_data_from_storage(self, last_query: int) -> list[tuple[str, int]]:
         """Fetches all new data point from storage that have been added since last_query.
         To be implemented as soon as storage is merged (#44/#11).
@@ -108,10 +115,10 @@ class Supervisor():
     def wait_for_new_data(self, start_timestamp: int) -> None:
         last_query = start_timestamp
 
-        logger.info("Press CTRL+C at any time to shut the supervisor down.")
+        logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
         try:
-            while True:
+            while not self.force_exit:
                 new_data = self._query_new_data_from_storage(last_query)
                 # TODO(MaxiBoether): Currently, we lose datapoints that come in between the beginning of the
                 # query and the return of the query, because their timestamp will be < last_query.
@@ -129,11 +136,9 @@ class Supervisor():
             return
 
     def _on_trigger(self) -> None:
-        '''
-        Function that gets called by the trigger. This should start training on the GPU node.
+        """Function that gets called by the trigger. This should start training on the GPU node.
         To be implemented.
-        '''
-        pass
+        """
 
     def initial_pass(self) -> None:
         # initial_data = self._query_new_data_from_storage(0)

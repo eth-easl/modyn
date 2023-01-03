@@ -2,15 +2,17 @@
 from modyn.backend.supervisor import Supervisor
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from unittest.mock import patch
+import unittest.mock
 import typing
 import pytest
-
+import time
 
 def get_minimal_pipeline_config() -> dict:
     return {'pipeline': {'name': 'Test'},
             'model': {'id': 'ResNet18'},
             'training': {'gpus': 1},
-            'data': {'dataset_id': 'test'}}
+            'data': {'dataset_id': 'test'},
+            'trigger': {'id': 'DataAmountTrigger', 'trigger_config': {'every': 1}}}
 
 
 def get_minimal_system_config() -> dict:
@@ -158,11 +160,12 @@ def test_validate_system():
 
 @patch.object(Supervisor, '__init__', noop_constructor_mock)
 def test_wait_for_new_data():
-    sup = Supervisor(get_minimal_pipeline_config(),
-                     get_minimal_system_config(), None)
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    
+    sup.force_exit = True
 
     # TODO(MaxiBoether): implement a real test when func is implemented.
-    sup.wait_for_new_data()
+    sup.wait_for_new_data(0)
 
 
 @patch.object(Supervisor, '__init__', noop_constructor_mock)
@@ -174,12 +177,11 @@ def test_initial_pass():
     sup.initial_pass()
 
 
-@patch.object(Supervisor, '__init__', noop_constructor_mock)
 def test_replay_data():
-    sup = Supervisor(get_minimal_pipeline_config(),
-                     get_minimal_system_config(), None)
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     # TODO(MaxiBoether): implement a real test when func is implemented.
+    sup.replay_at = 0
     sup.replay_data()
 
 
@@ -195,4 +197,5 @@ def test_end_pipeline():
 def test_pipeline():
     # TODO(MaxiBoether): implement a real test when func is implemented.
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.force_exit = True
     sup.pipeline()
