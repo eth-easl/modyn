@@ -35,7 +35,7 @@ class Supervisor():
         # only used in tests, currently
         self.force_exit = False
 
-    def _setup_trigger(self):
+    def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
         trigger_config = {}
         if "trigger_config" in self.pipeline_config["trigger"].keys():

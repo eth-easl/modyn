@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 
 class Trigger(ABC):
-    def __init__(self, callback: Callable, trigger_config: dict):
+    def __init__(self, callback: Callable, trigger_config: dict) -> None:
         assert callback is not None, "callback cannot be None."
         assert trigger_config is not None, "trigger_config cannot be None."
         self.callback = callback
@@ -33,7 +33,7 @@ class Trigger(ABC):
         return triggered
 
     @abstractmethod
-    def _decide_for_trigger(self, new_data: list[str, int]) -> int:
+    def _decide_for_trigger(self, new_data: list[tuple[str, int]]) -> int:
         """Returns how often we trigger, given the new data.
         We might trigger multiple times in case lots of new data came in since
         last inform.
