@@ -5,8 +5,8 @@ import json
 import torch
 
 
-from modyn.gpu_node.grpc.trainer_server import TrainerGRPCServer
-from modyn.gpu_node.grpc.trainer_server_pb2 import Data, JsonString, RegisterTrainServerRequest, StartTrainingRequest
+from modyn.trainer_server.grpc.trainer_server import TrainerGRPCServer
+from modyn.trainer_server.grpc.trainer_server_pb2 import Data, JsonString, RegisterTrainServerRequest, StartTrainingRequest
 
 dummy_register_request = RegisterTrainServerRequest(
     training_id=1,
@@ -40,7 +40,7 @@ class DummyModel():
         pass
 
 
-@patch('modyn.gpu_node.grpc.trainer_server.prepare_dataloaders')
+@patch('modyn.trainer_server.grpc.trainer_server.prepare_dataloaders')
 def test_register_no_dataloader(test_prepare_dataloaders):
 
     trainer_server = TrainerGRPCServer()
@@ -52,8 +52,8 @@ def test_register_no_dataloader(test_prepare_dataloaders):
     assert trainer_server._training_dict == {}
 
 
-@patch('modyn.gpu_node.grpc.trainer_server.get_model')
-@patch('modyn.gpu_node.grpc.trainer_server.prepare_dataloaders')
+@patch('modyn.trainer_server.grpc.trainer_server.get_model')
+@patch('modyn.trainer_server.grpc.trainer_server.prepare_dataloaders')
 def test_register(test_prepare_dataloaders, test_get_model):
 
     trainer_server = TrainerGRPCServer()

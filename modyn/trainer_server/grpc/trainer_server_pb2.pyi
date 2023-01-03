@@ -191,3 +191,33 @@ class StartTrainingResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["training_started", b"training_started"]) -> None: ...
 
 global___StartTrainingResponse = StartTrainingResponse
+
+@typing_extensions.final
+class IsRunningRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    TRAINING_ID_FIELD_NUMBER: builtins.int
+    training_id: builtins.int
+    def __init__(
+        self,
+        *,
+        training_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
+
+global___IsRunningRequest = IsRunningRequest
+
+@typing_extensions.final
+class IsRunningResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    IS_RUNNING_FIELD_NUMBER: builtins.int
+    is_running: builtins.bool
+    def __init__(
+        self,
+        *,
+        is_running: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["is_running", b"is_running"]) -> None: ...
+
+global___IsRunningResponse = IsRunningResponse

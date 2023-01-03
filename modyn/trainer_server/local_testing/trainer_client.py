@@ -1,8 +1,9 @@
 import json
 import grpc
 
-from modyn.gpu_node.grpc.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.gpu_node.grpc.trainer_server_pb2 import (
+from modyn.trainer_server.grpc.trainer_server_pb2_grpc import TrainerServerStub
+from modyn.trainer_server.grpc.trainer_server_pb2 import (
+    IsRunningRequest,
     JsonString,
     RegisterTrainServerRequest,
     Data,
@@ -36,7 +37,7 @@ class TrainerClient:
         }
 
         model_configuration = {
-            'num_classes': 10
+            'num_classes': 10,
         }
 
         req = RegisterTrainServerRequest(
@@ -72,6 +73,12 @@ class TrainerClient:
 
         return response.training_started
 
+    def is_running(self, training_id):
+
+        req = IsRunningRequest(training_id=training_id)
+        response = self._trainer_stub.is_running(req)
+        return response.is_running
+
 
 if __name__ == "__main__":
     client = TrainerClient()
@@ -83,6 +90,9 @@ if __name__ == "__main__":
         if success:
             training_started = client.start_training(training_id)
             print(training_started)
+
+            # while (client.is_running(training_id)):
+            #     print("is_running")
 
             # while (not client.check_trainer_available()):
             #     pass

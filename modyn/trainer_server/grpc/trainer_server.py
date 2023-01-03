@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 import multiprocessing as mp
 
-from modyn.gpu_node.grpc.trainer_server_pb2 import (
+from modyn.trainer_server.grpc.trainer_server_pb2 import (
+    IsRunningRequest,
+    IsRunningResponse,
     RegisterTrainServerRequest,
     RegisterTrainServerResponse,
     TrainerAvailableRequest,
@@ -12,10 +14,10 @@ from modyn.gpu_node.grpc.trainer_server_pb2 import (
     StartTrainingRequest,
     StartTrainingResponse
 )
-from modyn.gpu_node.trainer.pytorch_trainer import train
+from modyn.trainer_server.trainer.pytorch_trainer import train
 
-from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer
-from modyn.gpu_node.utils.training_utils import TrainingInfo
+from modyn.trainer_server.mocks.mock_selector_server import MockSelectorServer
+from modyn.trainer_server.utils.training_utils import TrainingInfo
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -75,3 +77,13 @@ class TrainerGRPCServer:
         self._training_process_dict[training_id] = p
 
         return StartTrainingResponse(training_started=True)
+
+    def is_running(self, request: IsRunningRequest, context: grpc.ServicerContext) -> IsRunningResponse:
+
+        training_id = request.training_id
+        if training_id in self._training_process_dict:
+            process_handler = self._training_process_dict[training_id]
+            if process_handler.is_alive():
+                return IsRunningResponse(is_running=True)
+
+        return IsRunningResponse(is_running=False)

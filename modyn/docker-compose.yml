@@ -38,12 +38,12 @@ services:
     volumes:
       - ./backend:/app
 
-  gpu_node:
-    image: gpu_node
+  trainer_server:
+    image: trainer_server
     build:
       context: ./
-      dockerfile: modyn/gpu_node/Dockerfile
+      dockerfile: modyn/trainer_server/Dockerfile
     ports:
       - '5001:5001'
     volumes:
-      - ./modyn/gpu_node:/app
+      - ./modyn/trainer_server:/app

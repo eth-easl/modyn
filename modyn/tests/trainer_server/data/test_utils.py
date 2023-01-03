@@ -1,8 +1,8 @@
 # pylint: disable=unused-argument
 import pytest
-from modyn.gpu_node.data.online_dataset import OnlineDataset
+from modyn.trainer_server.dataset.online_dataset import OnlineDataset
 
-from modyn.gpu_node.data.utils import prepare_dataloaders
+from modyn.trainer_server.dataset.utils import prepare_dataloaders
 
 
 def test_prepare_dataloaders_dataset_missing():

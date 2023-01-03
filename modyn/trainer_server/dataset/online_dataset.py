@@ -1,10 +1,9 @@
 from torch.utils.data import IterableDataset, get_worker_info
 import typing
 from torchvision import transforms
-import json
 
-from modyn.gpu_node.mocks.mock_selector_server import MockSelectorServer, GetSamplesRequest
-from modyn.gpu_node.mocks.mock_storage_server import MockStorageServer, GetRequest
+from modyn.trainer_server.mocks.mock_selector_server import MockSelectorServer, GetSamplesRequest
+from modyn.trainer_server.mocks.mock_storage_server import MockStorageServer, GetRequest
 
 
 class OnlineDataset(IterableDataset):
@@ -38,7 +37,6 @@ class OnlineDataset(IterableDataset):
         for transform in self._serialized_transforms:
             function = eval(transform)
             self._transform_list.append(function)
-            print(function)
         self._transform = transforms.Compose(self._transform_list)
 
     def __iter__(self) -> typing.Iterator:

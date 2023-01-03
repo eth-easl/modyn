@@ -16,7 +16,7 @@ RUN apt-get update -q \
   && rm -rf /var/lib/apt/lists/*
 
 # Install pip requirements
-COPY ./modyn/gpu_node/requirements.txt .
+COPY ./modyn/trainer_server/requirements.txt .
 RUN python -m pip install -r requirements.txt
 
 WORKDIR /src
@@ -29,7 +29,7 @@ RUN pip install -e .
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /src
 USER appuser
 
-RUN chmod a+x ./modyn/gpu_node/run.sh
+RUN chmod a+x ./modyn/trainer_server/run.sh
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["./modyn/gpu_node/run.sh"]
+CMD ["./modyn/trainer_server/run.sh"]

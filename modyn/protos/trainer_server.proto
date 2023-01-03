@@ -6,6 +6,8 @@ service TrainerServer {
     rpc register(RegisterTrainServerRequest) returns (RegisterTrainServerResponse) {}
     rpc trainer_available(TrainerAvailableRequest) returns (TrainerAvailableResponse) {}
     rpc start_training(StartTrainingRequest) returns (StartTrainingResponse) {}
+    rpc is_running(IsRunningRequest) returns (IsRunningResponse) {}
+
 }
 
 message RegisterTrainServerRequest {
@@ -55,4 +57,12 @@ message StartTrainingRequest {
 
 message StartTrainingResponse {
     bool training_started = 1;
+}
+
+message IsRunningRequest {
+    int32 training_id = 1;
+}
+
+message IsRunningResponse {
+    bool is_running = 1;
 }

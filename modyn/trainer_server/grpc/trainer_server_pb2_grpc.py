@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import modyn.gpu_node.grpc.trainer_server_pb2 as trainer__server__pb2
+import modyn.trainer_server.grpc.trainer_server_pb2 as trainer__server__pb2
 
 
 class TrainerServerStub(object):
@@ -29,6 +29,11 @@ class TrainerServerStub(object):
                 request_serializer=trainer__server__pb2.StartTrainingRequest.SerializeToString,
                 response_deserializer=trainer__server__pb2.StartTrainingResponse.FromString,
                 )
+        self.is_running = channel.unary_unary(
+                '/trainer.TrainerServer/is_running',
+                request_serializer=trainer__server__pb2.IsRunningRequest.SerializeToString,
+                response_deserializer=trainer__server__pb2.IsRunningResponse.FromString,
+                )
 
 
 class TrainerServerServicer(object):
@@ -52,6 +57,12 @@ class TrainerServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def is_running(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_TrainerServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -69,6 +80,11 @@ def add_TrainerServerServicer_to_server(servicer, server):
                     servicer.start_training,
                     request_deserializer=trainer__server__pb2.StartTrainingRequest.FromString,
                     response_serializer=trainer__server__pb2.StartTrainingResponse.SerializeToString,
+            ),
+            'is_running': grpc.unary_unary_rpc_method_handler(
+                    servicer.is_running,
+                    request_deserializer=trainer__server__pb2.IsRunningRequest.FromString,
+                    response_serializer=trainer__server__pb2.IsRunningResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -128,5 +144,22 @@ class TrainerServer(object):
         return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/start_training',
             trainer__server__pb2.StartTrainingRequest.SerializeToString,
             trainer__server__pb2.StartTrainingResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def is_running(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/is_running',
+            trainer__server__pb2.IsRunningRequest.SerializeToString,
+            trainer__server__pb2.IsRunningResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -91,7 +91,7 @@ jobs:
         pip install -r dev-requirements.txt
         pip install -r modyn/backend/requirements.txt
         pip install -e .
-        pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov=modyn/gpu_node --cov=modyn/models --cov-fail-under=90
+        pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov=modyn/trainer_server --cov=modyn/models --cov-fail-under=90
 
   integrationtests:
       runs-on: ubuntu-latest

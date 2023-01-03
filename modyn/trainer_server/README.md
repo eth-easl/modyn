@@ -1,6 +1,6 @@
-# GPU Node objects
+# Trainer server objects
 
-This contains the functionality of GPU Node objects (trainer, dataset, metadata collector).
+This contains the functionality of GPU objects (trainer, dataset, metadata collector).
 
 ### Workflow
 

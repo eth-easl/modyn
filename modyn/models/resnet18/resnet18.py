@@ -7,4 +7,4 @@ class ResNet18():
         model_configuration,
     ):
 
-        self.model = models.__dict__['resnet18'](num_classes=model_configuration['num_classes'])
+        self.model = models.__dict__['resnet18'](**model_configuration)

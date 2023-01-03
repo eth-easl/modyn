@@ -1,5 +1,5 @@
 """
-Data
+Online dataset and utils
 """
 # flake8: noqa
 import os

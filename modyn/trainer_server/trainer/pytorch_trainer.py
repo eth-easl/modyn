@@ -3,8 +3,8 @@ import torch
 import logging
 import os
 
-from modyn.gpu_node.data.utils import prepare_dataloaders
-from modyn.gpu_node.utils.model_utils import get_model
+from modyn.trainer_server.dataset.utils import prepare_dataloaders
+from modyn.trainer_server.utils.model_utils import get_model
 
 
 class PytorchTrainer:
@@ -15,9 +15,8 @@ class PytorchTrainer:
     ) -> None:
 
         # setup model and optimizer
-
         self._model = get_model(training_info.model_id, training_info.model_configuration_dict)
-        #self._model.model.to(device)
+        self._model.model.to(device)
 
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
         self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)

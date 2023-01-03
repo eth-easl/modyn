@@ -6,8 +6,8 @@ import yaml
 import argparse
 import pathlib
 
-from modyn.gpu_node.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
-from modyn.gpu_node.grpc.trainer_server import TrainerGRPCServer
+from modyn.trainer_server.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
+from modyn.trainer_server.grpc.trainer_server import TrainerGRPCServer
 
 
 def setup_argparser() -> argparse.ArgumentParser:

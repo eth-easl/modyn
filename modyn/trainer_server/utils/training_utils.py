@@ -1,5 +1,5 @@
 import json
-from modyn.gpu_node.grpc.trainer_server_pb2 import RegisterTrainServerRequest
+from modyn.trainer_server.grpc.trainer_server_pb2 import RegisterTrainServerRequest
 
 
 class TrainingInfo:
