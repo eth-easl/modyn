@@ -6,7 +6,6 @@ from modyn.utils import dynamic_module_import
 def get_model(
     model_id: str,
     model_conf_dict: dict[str, Any],
-    device: int,
 ) -> Any:
 
     """
@@ -24,6 +23,6 @@ def get_model(
 
     model_handler = getattr(model_module, model_id)
 
-    model = model_handler(model_conf_dict, device)
+    model = model_handler(model_conf_dict)
 
     return model

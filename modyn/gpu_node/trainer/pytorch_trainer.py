@@ -16,8 +16,8 @@ class PytorchTrainer:
 
         # setup model and optimizer
 
-        self._model = get_model(training_info.model_id, training_info.model_configuration_dict, device)
-        self._model.model.to(device)
+        self._model = get_model(training_info.model_id, training_info.model_configuration_dict)
+        #self._model.model.to(device)
 
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
         self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
@@ -98,7 +98,10 @@ class PytorchTrainer:
         for i, batch in train_iter:
 
             self._optimizer.zero_grad()
-            self._model.train_one_iteration(batch, self._criterion)
+            data, target = batch[0].to(self._device), batch[1].to(self._device)
+            output = self._model.model(data)
+            loss = self._criterion(output, target)
+            loss.backward()
             self._optimizer.step()
 
             if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
