@@ -21,6 +21,6 @@ training:
 data:
   dataset_id: "mnist"
 trigger:
-  type: timetrigger
+  id: DataAmountTrigger
   trigger_config:
-    every: 60s
+    every: 3
