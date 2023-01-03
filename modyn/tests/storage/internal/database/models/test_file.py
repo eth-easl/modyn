@@ -28,7 +28,7 @@ def test_add_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -49,7 +49,7 @@ def test_update_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -79,7 +79,7 @@ def test_delete_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -100,7 +100,7 @@ def test_repr_file(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)

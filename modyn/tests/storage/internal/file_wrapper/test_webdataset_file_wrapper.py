@@ -2,14 +2,14 @@ import os
 import shutil
 import json
 import pickle
-
+import pathlib
 import webdataset as wds
 from PIL import Image
 
-from modyn.storage.internal.file_wrapper.mnist_webdataset_file_wrapper import MNISTWebdatasetFileWrapper
+from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 
-test_dir = os.getcwd() + os.path.sep + os.path.join('test_tmp', 'modyn', 'mnist')
-file_path = os.getcwd() + os.path.sep + os.path.join('test_tmp', 'modyn', 'mnist', 'test.tar')
+test_dir = pathlib.Path(os.path.abspath(__file__)).parent / 'test_tmp' / 'modyn'
+FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test_tmp' / 'modyn' / 'test.tar')
 
 
 def setup():
@@ -17,7 +17,7 @@ def setup():
     height = 28
     os.makedirs(test_dir, exist_ok=True)
 
-    test_file = wds.TarWriter(file_path)
+    test_file = wds.TarWriter(FILE_PATH)
     for i in range(10000):
 
         test_jpg = Image.new('RGB', (width, height), color=(255, 255, 255))
@@ -31,22 +31,22 @@ def setup():
 
 
 def teardown():
-    os.remove(file_path)
-    shutil.rmtree(os.getcwd() + os.path.sep + 'test_tmp', )
+    os.remove(FILE_PATH)
+    shutil.rmtree(test_dir)
 
 
 def test_init():
-    file_wrapper = MNISTWebdatasetFileWrapper(file_path)
-    assert file_wrapper.file_path == file_path
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
+    assert file_wrapper.file_path == FILE_PATH
 
 
 def test_get_size():
-    file_wrapper = MNISTWebdatasetFileWrapper(file_path)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
     assert file_wrapper.get_size() == 10000
 
 
 def test_get_samples():
-    file_wrapper = MNISTWebdatasetFileWrapper(file_path)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
     samples = file_wrapper.get_samples(0, 1)
 
     samples = pickle.loads(samples)
@@ -73,7 +73,7 @@ def test_get_samples():
 
 
 def test_get_sample():
-    file_wrapper = MNISTWebdatasetFileWrapper(file_path)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
     sample = file_wrapper.get_sample(0)
 
     sample = pickle.loads(sample)
@@ -98,7 +98,7 @@ def test_get_sample():
 
 
 def test_get_samples_from_indices():
-    file_wrapper = MNISTWebdatasetFileWrapper(file_path)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
 
     indices = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45]
     samples = file_wrapper.get_samples_from_indices(indices)

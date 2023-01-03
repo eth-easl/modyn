@@ -24,7 +24,7 @@ def test_add_dataset(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -35,7 +35,7 @@ def test_add_dataset(session):  # pylint: disable=redefined-outer-name
     assert session.query(Dataset).filter(Dataset.name == 'test') \
                   .first().filesystem_wrapper_type == FilesystemWrapperType.LocalFilesystemWrapper
     assert session.query(Dataset).filter(Dataset.name == 'test') \
-                  .first().file_wrapper_type == FileWrapperType.MNISTWebdatasetFileWrapper
+                  .first().file_wrapper_type == FileWrapperType.WebdatasetFileWrapper
     assert session.query(Dataset).filter(Dataset.name == 'test').first().description == 'test'
     assert session.query(Dataset).filter(Dataset.name == 'test').first().version == 'test'
 
@@ -44,7 +44,7 @@ def test_update_dataset(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -73,7 +73,7 @@ def test_repr(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -86,7 +86,7 @@ def test_delete_dataset(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)

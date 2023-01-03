@@ -51,5 +51,3 @@ htmlcov/
 assets/
 report.html
 .coverage
-test_tmp/
-storage_tmp/

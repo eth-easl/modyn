@@ -3,6 +3,7 @@ import datetime
 import pickle
 from unittest.mock import patch
 from webdataset import WebDataset, TarWriter
+import pathlib
 
 from modyn.storage.internal.grpc.storage_grpc_server import StorageGRPCServer
 from modyn.storage.internal.database.database_connection import DatabaseConnection
@@ -11,11 +12,12 @@ from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, \
     GetNewDataSinceRequest, DatasetAvailableRequest, RegisterNewDatasetRequest  # pylint: disable=no-name-in-module
-from modyn.storage.internal.file_wrapper.mnist_webdataset_file_wrapper import MNISTWebdatasetFileWrapper
+from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
-tmp_file = os.path.join(os.getcwd(), 'modyn', 'tests', 'storage', 'test.tar')
-tmp_file2 = os.path.join(os.getcwd(), 'modyn', 'tests', 'storage', 'test2.tar')
+TMP_FILE = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test.tar')
+TMP_FILE2 = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test2.tar')
+DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / 'test_storage.database'
 
 
 def get_minimal_modyn_config() -> dict:
@@ -23,7 +25,7 @@ def get_minimal_modyn_config() -> dict:
         'storage': {
             'filesystem': {
                 'type': 'LocalFilesystemWrapper',
-                'base_path': os.path.dirname(tmp_file)
+                'base_path': os.path.dirname(TMP_FILE)
             },
             'database': {
                 'drivername': 'sqlite',
@@ -31,7 +33,7 @@ def get_minimal_modyn_config() -> dict:
                 'password': '',
                 'host': '',
                 'port': '0',
-                'database': os.path.join(os.getcwd(), 'modyn', 'tests', 'storage', 'test_storage.database')
+                'database': f'{DATABASE}'
             },
             'seeker': {
                 'interval': 1
@@ -39,9 +41,9 @@ def get_minimal_modyn_config() -> dict:
             'datasets': [
                 {
                     'name': 'test',
-                    'base_path': os.path.dirname(tmp_file),
+                    'base_path': os.path.dirname(TMP_FILE),
                     'filesystem_wrapper_type': LocalFilesystemWrapper,
-                    'file_wrapper_type': MNISTWebdatasetFileWrapper,
+                    'file_wrapper_type': WebdatasetFileWrapper,
                     'description': 'test',
                     'version': '0.0.1',
                 }
@@ -52,25 +54,24 @@ def get_minimal_modyn_config() -> dict:
             'version': '0.0.1'
         },
         'input': {
-            'type': 'MNIST',
-            'path': os.path.dirname(tmp_file)
+            'type': 'LOCAL',
+            'path': os.path.dirname(TMP_FILE)
         },
         'odm': {
-            'type': 'MNIST'
+            'type': 'LOCAL'
         }
     }
 
 
 def setup():
 
-    os.makedirs(os.path.dirname(tmp_file), exist_ok=True)
-    print('tmp_file: ' + tmp_file)
-    writer = TarWriter(tmp_file)
+    os.makedirs(os.path.dirname(TMP_FILE), exist_ok=True)
+    writer = TarWriter(TMP_FILE)
     writer.write({'__key__': '1', 'cls': [1, 2, 3], 'json': [1, 2, 3]})
     writer.write({'__key__': '2', 'cls': [1, 2, 3], 'json': [1, 2, 3]})
     writer.close()
 
-    writer = TarWriter(tmp_file2)
+    writer = TarWriter(TMP_FILE2)
     writer.write({'__key__': '3', 'cls': [1, 2, 3], 'json': [1, 2, 3]})
     writer.write({'__key__': '4', 'cls': [1, 2, 3], 'json': [1, 2, 3]})
     writer.close()
@@ -83,9 +84,9 @@ def setup():
 
         dataset = Dataset(
             name='test',
-            base_path=os.path.dirname(tmp_file),
+            base_path=os.path.dirname(TMP_FILE),
             filesystem_wrapper_type='LocalFilesystemWrapper',
-            file_wrapper_type='MNISTWebdatasetFileWrapper',
+            file_wrapper_type='WebdatasetFileWrapper',
             description='test',
             version='0.0.1'
         )
@@ -95,7 +96,7 @@ def setup():
         session.commit()
 
         file = File(
-            path=tmp_file,
+            path=TMP_FILE,
             dataset=dataset,
             created_at=now,
             updated_at=now,
@@ -105,7 +106,7 @@ def setup():
         session.add(file)
 
         file2 = File(
-            path=tmp_file2,
+            path=TMP_FILE2,
             dataset=dataset,
             created_at=now,
             updated_at=now,
@@ -150,9 +151,9 @@ def setup():
 
 
 def teardown():
-    os.remove(os.path.join(os.getcwd(), 'modyn', 'tests', 'storage', 'test_storage.database'))
-    os.remove(tmp_file)
-    os.remove(tmp_file2)
+    os.remove(DATABASE)
+    os.remove(TMP_FILE)
+    os.remove(TMP_FILE2)
 
 
 def test_init() -> None:
@@ -160,7 +161,7 @@ def test_init() -> None:
     assert server is not None
 
 
-@patch.object(MNISTWebdatasetFileWrapper, 'get_samples_from_indices', return_value=b'')
+@patch.object(WebdatasetFileWrapper, 'get_samples_from_indices', return_value=b'')
 def test_get(mock_get_samples_from_indices):
     server = StorageGRPCServer(get_minimal_modyn_config())
 
@@ -260,9 +261,9 @@ def test_register_new_dataset():
 
     request = RegisterNewDatasetRequest(
         dataset_id='test3',
-        base_path=os.path.dirname(tmp_file),
+        base_path=os.path.dirname(TMP_FILE),
         filesystem_wrapper_type='LocalFilesystemWrapper',
-        file_wrapper_type='MNISTWebdatasetFileWrapper',
+        file_wrapper_type='WebdatasetFileWrapper',
         description='test',
         version='0.0.1'
     )
@@ -278,6 +279,6 @@ def test_register_new_dataset():
 
         assert dataset is not None
         assert dataset.name == 'test3'
-        assert dataset.base_path == os.path.dirname(tmp_file)
+        assert dataset.base_path == os.path.dirname(TMP_FILE)
         assert dataset.description == 'test'
         assert dataset.version == '0.0.1'

@@ -11,7 +11,7 @@ from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
-from modyn.storage.internal.file_wrapper.mnist_webdataset_file_wrapper import MNISTWebdatasetFileWrapper
+from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
 
@@ -139,7 +139,7 @@ def test_seek(test__get_filesystem_wrapper, test__update_files_in_directory, ses
             name='test',
             description='test description',
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+            file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
             base_path='/path'))
     session.commit()
     seeker._session = session
@@ -155,7 +155,7 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
             name='test',
             description='test description',
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+            file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
             base_path='/notexists'))
     session.commit()
     seeker._session = session
@@ -172,7 +172,7 @@ def test_seek_path_not_dir(test__get_filesystem_wrapper, test__update_files_in_d
             name='test',
             description='test description',
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+            file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
             base_path='/path/file1'))
     session.commit()
     seeker._session = session
@@ -197,7 +197,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
         name='test',
         description='test description',
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
         base_path='/path')
     session.add(dataset)
     session.commit()
@@ -274,9 +274,9 @@ def test_get_filesystem_wrapper() -> None:
 
 def test_get_file_wrapper() -> None:
     seeker = Seeker(get_minimal_modyn_config())
-    file_wrapper = seeker._get_file_wrapper(FileWrapperType.MNISTWebdatasetFileWrapper, '/path')
+    file_wrapper = seeker._get_file_wrapper(FileWrapperType.WebdatasetFileWrapper, '/path')
     assert file_wrapper is not None
-    assert isinstance(file_wrapper, MNISTWebdatasetFileWrapper)
+    assert isinstance(file_wrapper, WebdatasetFileWrapper)
 
 
 @patch.object(Seeker, '_seek', return_value=None)

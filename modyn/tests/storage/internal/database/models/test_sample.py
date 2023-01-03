@@ -28,7 +28,7 @@ def test_add_sample(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -52,7 +52,7 @@ def test_update_sample(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -78,7 +78,7 @@ def test_delete_sample(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)
@@ -102,7 +102,7 @@ def test_repr(session):  # pylint: disable=redefined-outer-name
     dataset = Dataset(name='test',
                       base_path='test',
                       filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.MNISTWebdatasetFileWrapper,
+                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
                       description='test',
                       version='test')
     session.add(dataset)

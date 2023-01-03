@@ -3,6 +3,7 @@ import os
 from itertools import islice
 import uuid
 from typing import Dict
+import pathlib
 
 import webdataset as wds
 
@@ -10,13 +11,14 @@ from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFi
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
 
-class MNISTWebdatasetFileWrapper(AbstractFileWrapper):
-    """MNIST Webdataset file wrapper."""
+class WebdatasetFileWrapper(AbstractFileWrapper):
+    """Webdataset file wrapper."""
     indeces_cache: Dict[str, str] = {}
+    tmp_dir: pathlib.Path = pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp"
 
     def __init__(self, file_path: str):
         super().__init__(file_path)
-        self.file_wrapper_type = FileWrapperType.MNISTWebdatasetFileWrapper
+        self.file_wrapper_type = FileWrapperType.WebdatasetFileWrapper
 
     def get_size(self) -> int:
         """
@@ -42,15 +44,15 @@ class MNISTWebdatasetFileWrapper(AbstractFileWrapper):
         indices.sort()
 
         if str(indices) in self.indeces_cache:
-            file_path = self.indeces_cache[str(indices)]
-            return pickle.dumps(wds.WebDataset(file_path).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
+            file = self.indeces_cache[str(indices)]
+            return pickle.dumps(wds.WebDataset(file).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
         dataset = wds.WebDataset(self.file_path)
 
         file_name = uuid.uuid4().hex
-        file_path = os.getcwd() + os.path.sep + os.path.join('storage_tmp', 'modyn', 'mnist', f'{file_name}.tar')
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, "wb") as tmp_file:
+        file = str(pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp" / f"{file_name}.tar")
+        os.makedirs(os.path.dirname(file), exist_ok=True)
+        with open(file, "wb") as tmp_file:
             with wds.TarWriter(tmp_file) as dst:
                 index_start = indices[0]
                 index_end = indices[0] - 1
@@ -65,9 +67,9 @@ class MNISTWebdatasetFileWrapper(AbstractFileWrapper):
                     if i == len(indices) - 1:
                         self.write_samples(dst, index_start, index_end, dataset)
 
-        self.indeces_cache[str(indices)] = file_path
+        self.indeces_cache[str(indices)] = file
 
-        return pickle.dumps(wds.WebDataset(file_path).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
+        return pickle.dumps(wds.WebDataset(file).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
     def write_samples(self, dst: wds.TarWriter, index_start: int, index_end: int, dataset: wds.WebDataset) -> None:
         for sample in islice(dataset, index_start, index_end + 1):
@@ -84,3 +86,12 @@ class MNISTWebdatasetFileWrapper(AbstractFileWrapper):
             cls = sample["cls"]
             json = sample["json"]
             dst.write({"__key__": key, image_type: image, "cls": cls, "json": json})
+
+    def __del__(self) -> None:
+        try:
+            # It seems that sometimes in testing the files are deleted twice. This is a workaround.
+            for file in self.indeces_cache.values():
+                os.remove(file)
+            os.removedirs(self.tmp_dir)
+        except FileNotFoundError:
+            pass

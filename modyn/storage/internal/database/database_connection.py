@@ -1,6 +1,8 @@
+from __future__ import annotations
 import logging
-import typing
 
+from sqlalchemy.engine.base import Engine
+from sqlalchemy.orm.session import Session
 from sqlalchemy import create_engine, exc
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
@@ -17,14 +19,14 @@ class DatabaseConnection():
     """
     Database connection context manager.
     """
-    session: sessionmaker = None
-    engine: create_engine = None
+    session: Session = None
+    engine: Engine = None
     url = None
 
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
 
-    def __enter__(self) -> typing.Any:
+    def __enter__(self) -> DatabaseConnection:
         self.url = URL.create(
             drivername=self.modyn_config['storage']['database']['drivername'],
             username=self.modyn_config['storage']['database']['username'],
@@ -41,7 +43,7 @@ class DatabaseConnection():
         self.session.close()
         self.engine.dispose()
 
-    def get_session(self) -> sessionmaker:
+    def get_session(self) -> Session:
         return self.session
 
     def create_all(self) -> None:
@@ -60,6 +62,7 @@ class DatabaseConnection():
                     'description': description,
                     'version': version
                 })
+                self.session.commit()
             else:
                 dataset = Dataset(name=name,
                                   base_path=base_path,

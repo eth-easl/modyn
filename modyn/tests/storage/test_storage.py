@@ -1,11 +1,17 @@
 import os
 from unittest.mock import patch
 import pytest
+import pathlib
 
 from modyn.storage.storage import Storage
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.internal.seeker import Seeker
+
+
+database_path = pathlib.Path(os.path.abspath(__file__)).parent / 'test_storage.db'
+modyn_config = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent \
+                / "config" / "examples" / "modyn_config.yaml"
 
 
 def get_minimal_modyn_config() -> dict:
@@ -21,7 +27,7 @@ def get_minimal_modyn_config() -> dict:
                 'password': '',
                 'host': '',
                 'port': '0',
-                'database': os.path.join(os.getcwd(), 'modyn', 'tests', 'storage', 'test_storage.db')
+                'database': f'{database_path}'
             },
             'seeker': {
                 'interval': 1
@@ -31,7 +37,7 @@ def get_minimal_modyn_config() -> dict:
                     'name': 'test',
                     'base_path': '/tmp/modyn',
                     'filesystem_wrapper_type': 'LocalFilesystemWrapper',
-                    'file_wrapper_type': 'MNISTWebdatasetFileWrapper',
+                    'file_wrapper_type': 'WebdatasetFileWrapper',
                     'description': 'test',
                     'version': '0.0.1',
                 }
@@ -42,17 +48,17 @@ def get_minimal_modyn_config() -> dict:
             'version': '0.0.1'
         },
         'input': {
-            'type': 'MNIST',
+            'type': 'LOCAL',
             'path': '/tmp/modyn'
         },
         'odm': {
-            'type': 'MNIST'
+            'type': 'LOCAL'
         }
     }
 
 
 def teardown():
-    os.remove(os.path.join(os.getcwd(), 'modyn', 'tests', 'storage', 'test_storage.db'))
+    os.remove(database_path)
 
 
 def get_invalid_modyn_config() -> dict:
@@ -76,13 +82,11 @@ class MockGRPCServer(GRPCServer):
 
 
 def test_storage_init():
-    modyn_config = os.path.join(os.getcwd(), 'modyn', 'config', 'modyn_config.yaml')
     storage = Storage(modyn_config)
     assert storage.modyn_config == modyn_config
 
 
 def test_validate_config():
-    modyn_config = os.path.join(os.getcwd(), 'modyn', 'config', 'modyn_config.yaml')
     storage = Storage(modyn_config)
     assert storage._validate_config()[0]
 

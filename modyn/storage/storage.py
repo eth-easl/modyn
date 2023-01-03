@@ -1,8 +1,8 @@
 import logging
-from threading import Thread
 import os
 import pathlib
 from typing import List, Tuple
+from multiprocessing import Process
 
 from modyn.utils import validate_yaml
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
@@ -21,7 +21,8 @@ class Storage():
             raise ValueError(f"Invalid configuration: {errors}")
 
     def _validate_config(self) -> Tuple[bool, List[str]]:
-        schema_path = pathlib.Path(os.path.join(os.getcwd(), 'modyn', 'config', 'schema', 'modyn_config_schema.yaml'))
+        schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent \
+            / "config" / "schema" / "modyn_config_schema.yaml"
         return validate_yaml(self.modyn_config, schema_path)
 
     def run(self) -> None:
@@ -30,19 +31,26 @@ class Storage():
             database.create_all()
 
             for dataset in self.modyn_config['storage']['datasets']:
-                database.add_dataset(dataset['name'],
-                                     dataset['base_path'],
-                                     dataset['filesystem_wrapper_type'],
-                                     dataset['file_wrapper_type'],
-                                     dataset['description'],
-                                     dataset['version'])
+                if not database.add_dataset(dataset['name'],
+                                            dataset['base_path'],
+                                            dataset['filesystem_wrapper_type'],
+                                            dataset['file_wrapper_type'],
+                                            dataset['description'],
+                                            dataset['version']):
+                    raise ValueError(f"Failed to add dataset {dataset['name']}")
 
         #  Start the seeker process in a different thread.
-        seeker = Thread(target=Seeker(self.modyn_config).run)
+        seeker = Process(target=Seeker(self.modyn_config).run)
         seeker.start()
 
         #  Start the storage grpc server.
         with GRPCServer(self.modyn_config) as server:
             server.wait_for_termination()
 
-        seeker.join()
+        #  Close the seeker process. This will cause a ValueError to be raised
+        #  in the seeker process (because it's still running), but we can ignore it.
+        #  See https://docs.python.org/3/library/multiprocessing.html#:~:text=in%20version%203.7.-,close()%C2%B6,-Close%20the%20Process  # noqa
+        try:
+            seeker.close()
+        except ValueError:
+            pass
