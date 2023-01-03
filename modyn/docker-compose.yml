@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: default_database
     ports:
-      - '5432:5432'
+      - '50059:5432'
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
 
@@ -21,12 +21,13 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: default_database
     ports:
-      - '5433:5432'
+      - '50060:5432'
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
 
   storage:
     image: storage
+    restart: on-failure
     depends_on:
       - storage-db
     build:
@@ -34,8 +35,6 @@ services:
       dockerfile: modyn/storage/Dockerfile
     ports:
       - '50051:50051'
-    volumes:
-      - ./modyn/storage:/app
 
   backend:
     image: backend
