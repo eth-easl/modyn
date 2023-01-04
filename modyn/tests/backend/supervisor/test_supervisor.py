@@ -12,7 +12,7 @@ def get_minimal_pipeline_config() -> dict:
             'model': {'id': 'ResNet18'},
             'training': {'gpus': 1},
             'data': {'dataset_id': 'test'},
-            'trigger': {'id': 'DataAmountTrigger', 'trigger_config': {'every': 1}}}
+            'trigger': {'id': 'DataAmountTrigger', 'trigger_config': {'data_points_for_trigger': 1}}}
 
 
 def get_minimal_system_config() -> dict:
