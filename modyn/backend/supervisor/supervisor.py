@@ -32,9 +32,6 @@ class Supervisor():
 
         self._setup_trigger()
 
-        # only used in tests, currently
-        self.force_exit = False
-
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
         trigger_config = {}
@@ -118,7 +115,7 @@ class Supervisor():
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
         try:
-            while not self.force_exit:
+            while True:
                 new_data = self._query_new_data_from_storage(last_query)
                 # TODO(MaxiBoether): Currently, we lose datapoints that come in between the beginning of the
                 # query and the return of the query, because their timestamp will be < last_query.
