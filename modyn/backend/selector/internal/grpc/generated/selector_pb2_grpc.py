@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import modyn.backend.selector.selector_pb2 as selector__pb2
+import modyn.backend.selector.internal.grpc.generated.selector_pb2 as selector__pb2
 
 
 class SelectorStub(object):

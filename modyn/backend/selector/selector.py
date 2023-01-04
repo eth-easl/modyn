@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from modyn.backend.selector.internal.grpc_handler import GRPCHandler
+from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 
 
 class Selector(ABC):

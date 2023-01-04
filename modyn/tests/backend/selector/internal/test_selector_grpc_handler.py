@@ -1,12 +1,12 @@
 # pylint: disable=unused-argument
-from modyn.backend.selector.internal.grpc_handler import GRPCHandler
+from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 from unittest.mock import patch
 import grpc
 import pytest
 
-from modyn.backend.metadata_database.metadata_pb2_grpc import MetadataStub
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
 # # pylint: disable-next=no-name-in-module
-from modyn.backend.metadata_database.metadata_pb2 import GetResponse, RegisterResponse, TrainingResponse
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import GetResponse, RegisterResponse, TrainingResponse
 
 
 def noop_constructor_mock(self, channel: grpc.Channel) -> None:  # pylint: disable=unused-argument
@@ -28,7 +28,7 @@ def test_init(test_insecure_channel, test__connection_established):
 
 
 @patch.object(GRPCHandler, '_init_metadata', lambda self: None)
-@patch('modyn.backend.selector.internal.grpc_handler.TIMEOUT_SEC', 0.5)
+@patch('modyn.backend.selector.internal.grpc.grpc_handler.TIMEOUT_SEC', 0.5)
 def test_connection_established_times_out():
     handler = GRPCHandler(get_simple_config())
     assert not handler._connection_established(grpc.insecure_channel("1.2.3.4:42"))

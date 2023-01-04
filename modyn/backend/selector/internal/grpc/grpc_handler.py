@@ -1,5 +1,5 @@
-from modyn.backend.metadata_database.metadata_pb2_grpc import MetadataStub
-from modyn.backend.metadata_database.metadata_pb2 import GetByQueryRequest, GetTrainingRequest, RegisterRequest
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import GetByQueryRequest, GetTrainingRequest, RegisterRequest
 
 # Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module

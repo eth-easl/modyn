@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import modyn.backend.metadata_database.metadata_pb2 as metadata__pb2
+import modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 as metadata__pb2
 
 # pylint: skip-file
 
