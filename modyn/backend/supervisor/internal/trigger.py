@@ -10,7 +10,7 @@ class Trigger(ABC):
 
     def inform(self, new_data: list[tuple[str, int]]) -> bool:
         """The supervisor regularly informs the trigger.
-        This method ahould get called regularly by the supervisor, even if there was no new data.
+        This method should get called regularly by the supervisor, even if there was no new data.
         If there was any new data, then len(new_data) > 0.
         In case the concrete trigger decides to trigger, we call the callback
         as many times as the new data triggered training.
