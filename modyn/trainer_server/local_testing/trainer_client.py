@@ -1,5 +1,6 @@
 import json
 import grpc
+import time
 
 from modyn.trainer_server.grpc.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.trainer_server.grpc.trainer_server_pb2 import (
@@ -9,7 +10,8 @@ from modyn.trainer_server.grpc.trainer_server_pb2 import (
     Data,
     TrainerAvailableRequest,
     CheckpointInfo,
-    StartTrainingRequest
+    StartTrainingRequest,
+    TrainingStatusRequest
 )
 
 
@@ -79,6 +81,16 @@ class TrainerClient:
         response = self._trainer_stub.is_running(req)
         return response.is_running
 
+    def get_training_status(self, training_id):
+
+        req = TrainingStatusRequest(training_id=training_id)
+        response = self._trainer_stub.get_training_status(req)
+        print("------------ Response: ")
+        print(response.is_running)
+        print(response.exception)
+        print(response.iteration)
+        print(response.state)
+
 
 if __name__ == "__main__":
     client = TrainerClient()
@@ -90,6 +102,8 @@ if __name__ == "__main__":
         if success:
             training_started = client.start_training(training_id)
             print(training_started)
+            time.sleep(10)
+            client.get_training_status(training_id)
 
             # while (client.is_running(training_id)):
             #     print("is_running")

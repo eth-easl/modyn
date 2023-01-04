@@ -221,3 +221,44 @@ class IsRunningResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["is_running", b"is_running"]) -> None: ...
 
 global___IsRunningResponse = IsRunningResponse
+
+@typing_extensions.final
+class TrainingStatusRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    TRAINING_ID_FIELD_NUMBER: builtins.int
+    training_id: builtins.int
+    def __init__(
+        self,
+        *,
+        training_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
+
+global___TrainingStatusRequest = TrainingStatusRequest
+
+@typing_extensions.final
+class TrainingStatusResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    IS_RUNNING_FIELD_NUMBER: builtins.int
+    EXCEPTION_FIELD_NUMBER: builtins.int
+    ITERATION_FIELD_NUMBER: builtins.int
+    STATE_FIELD_NUMBER: builtins.int
+    is_running: builtins.bool
+    exception: builtins.str
+    iteration: builtins.int
+    state: builtins.str
+    def __init__(
+        self,
+        *,
+        is_running: builtins.bool = ...,
+        exception: builtins.str | None = ...,
+        iteration: builtins.int = ...,
+        state: builtins.str = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception", "is_running", b"is_running", "iteration", b"iteration", "state", b"state"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_exception", b"_exception"]) -> typing_extensions.Literal["exception"] | None: ...
+
+global___TrainingStatusResponse = TrainingStatusResponse

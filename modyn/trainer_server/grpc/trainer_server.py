@@ -12,7 +12,9 @@ from modyn.trainer_server.grpc.trainer_server_pb2 import (
     TrainerAvailableRequest,
     TrainerAvailableResponse,
     StartTrainingRequest,
-    StartTrainingResponse
+    StartTrainingResponse,
+    TrainingStatusRequest,
+    TrainingStatusResponse
 )
 from modyn.trainer_server.trainer.pytorch_trainer import train
 
@@ -87,3 +89,52 @@ class TrainerGRPCServer:
                 return IsRunningResponse(is_running=True)
 
         return IsRunningResponse(is_running=False)
+
+
+    def get_training_status(self, request: TrainingStatusRequest, context: grpc.ServicerContext) -> TrainingStatusResponse:
+
+        training_id = request.training_id
+
+        # TODO(fotstrt): send proper response here
+        assert training_id in self._training_process_dict
+
+        process_handler = self._training_process_dict[training_id]
+        if process_handler.is_alive():
+            # case 1
+            # TODO(fotstrt): what to do if blocked - add a timeout?
+            training_state, iteration = self.get_model(training_id)
+            return TrainingStatusResponse(
+                is_running=True,
+                iteration=iteration,
+                state=training_state
+            )
+        else:
+            # case 2
+            exception = self.get_child_exception(training_id)
+            training_state, iteration = self.get_latest_checkpoint(training_id)
+            if exception is None:
+                return TrainingStatusResponse(
+                    is_running=False,
+                    iteration=iteration,
+                    state=training_state
+                )
+            else:
+                return TrainingStatusResponse(
+                    is_running=False,
+                    exception=exception,
+                    iteration=iteration,
+                    state=training_state
+                )
+
+
+    def get_model(self, training_id):
+        # TODO(fotstrt): fill in the actual communication with trainer
+        pass
+
+    def get_child_exception(self, training_id):
+        # TODO(fotstrt): fill in the actual communication with trainer
+        pass
+
+    def get_latest_checkpoint(self, training_id):
+        # TODO(fotstrt): find latest checkpoint and load
+        pass
