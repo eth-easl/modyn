@@ -34,7 +34,7 @@ class DatasetWatcher:
         """
         Seek the filesystem for files with a timestamp that is equal or greater than the given timestamp.
         """
-        logger.info(f'Seeking for files with a timestamp that is equal or greater than {timestamp}')
+        logger.debug(f'Seeking for files with a timestamp that is equal or greater than {timestamp}')
         session = self._get_database_session()
         datasets: typing.Optional[typing.List[Dataset]] = session.query(Dataset).all()
 
