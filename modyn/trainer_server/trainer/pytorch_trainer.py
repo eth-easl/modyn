@@ -16,7 +16,7 @@ class PytorchTrainer:
 
         # setup model and optimizer
         self._model = get_model(training_info.model_id, training_info.model_configuration_dict)
-        self._model.model.to(device)
+        #self._model.model.to(device)
 
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
         self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
@@ -38,6 +38,9 @@ class PytorchTrainer:
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
 
+        if not os.path.isdir(self._checkpoint_path):
+            os.mkdir(self._checkpoint_path)
+
     def create_logger(self, log_path: str):
 
         self._logger = logging.getLogger('test')  # TODO(fotstrt): fix this
@@ -52,7 +55,7 @@ class PytorchTrainer:
         self._logger.addHandler(fileHandler)
         self._logger.propagate = False
 
-    def save_checkpoint(self, iteration: int):
+    def save_checkpoint(self, checkpoint_file_name: str):
 
         # TODO(fotstrt): this might overwrite checkpoints from previous runs
         # we could have a counter for the specific training, and increment it
@@ -61,10 +64,6 @@ class PytorchTrainer:
         # TODO: we assume a local checkpoint for now,
         # should we add functionality for remote?
 
-        if not os.path.isdir(self._checkpoint_path):
-            os.mkdir(self._checkpoint_path)
-
-        checkpoint_file_name = self._checkpoint_path + f'/model_{iteration}' + '.pt'
         dict_to_save = {
             'model': self._model.model.state_dict(),
             'optimizer': self._optimizer.state_dict(),
@@ -104,7 +103,8 @@ class PytorchTrainer:
             self._optimizer.step()
 
             if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
-                self.save_checkpoint(i)
+                checkpoint_file_name = self._checkpoint_path + f'/model_{i}' + '.pt'
+                self.save_checkpoint(checkpoint_file_name)
 
             self._logger.info('Iteration {}'.format(i))
 
