@@ -3,7 +3,7 @@ from typing import Callable
 
 
 class DataAmountTrigger(Trigger):
-    """Triggers when a certain number of data point has been seen.
+    """Triggers when a certain number of data points have been seen.
     """
 
     def __init__(self, callback: Callable, trigger_config: dict):
