@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 """ This tests that the entry point script for the supervisor
 successfully runs through. This is _not_ the place for an integration test.
 """
@@ -15,12 +16,12 @@ EXAMPLE_SYSTEM_CONFIG = SCRIPT_PATH.parent.parent.parent.parent / "config" / "co
 NO_FILE = SCRIPT_PATH.parent / "thisshouldnot.exist"
 
 
-def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict,  # pylint: disable=unused-argument
-                          replay_at: typing.Optional[int]) -> None:  # pylint: disable=unused-argument
+def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict,
+                          replay_at: typing.Optional[int]) -> None:
     pass
 
 
-def noop_pipeline(self) -> None:  # pylint: disable=unused-argument
+def noop_pipeline(self) -> None:
     pass
 
 
