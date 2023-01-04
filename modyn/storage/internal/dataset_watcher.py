@@ -113,7 +113,7 @@ class DatasetWatcher:
                             session.add(sample)
                         session.commit()
                     except exc.SQLAlchemyError as exception:
-                        logger.warning(f'Could not create file {file_path}: {exception}')
+                        logger.warning(f'Could not create file {file_path} in database: {exception}')
                         session.rollback()
                         continue
 
