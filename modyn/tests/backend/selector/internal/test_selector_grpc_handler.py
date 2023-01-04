@@ -6,7 +6,7 @@ import pytest
 
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
 # # pylint: disable-next=no-name-in-module
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import GetResponse, RegisterResponse, TrainingResponse # noqa: E501, E402
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import GetResponse, RegisterResponse, TrainingResponse  # noqa: E501, E402
 
 
 def noop_constructor_mock(self, channel: grpc.Channel) -> None:  # pylint: disable=unused-argument

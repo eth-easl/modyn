@@ -1,6 +1,6 @@
 # pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import GetByKeysRequest, GetByQueryRequest, GetResponse, SetRequest, SetResponse, GetKeysResponse, DeleteRequest, DeleteResponse, RegisterRequest, RegisterResponse, GetTrainingRequest, TrainingResponse  # noqa: E501, E402
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server # noqa: E501, E402
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataServicer, add_MetadataServicer_to_server  # noqa: E501, E402
 from modyn.backend.metadata_database.metadata_database import MetadataDatabase
 from concurrent import futures
 import os

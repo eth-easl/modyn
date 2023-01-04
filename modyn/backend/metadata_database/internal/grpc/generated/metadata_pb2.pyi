@@ -2,9 +2,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
-
-# pylint: skip-file
 # type: ignore
+# pylint: skip-file
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -15,7 +14,7 @@ class DeleteRequest(_message.Message):
     def __init__(self, training_id: _Optional[int] = ...) -> None: ...
 
 class DeleteResponse(_message.Message):
-    __slots__ = []
+    __slots__: list = []
     def __init__(self) -> None: ...
 
 class GetByKeysRequest(_message.Message):
@@ -89,7 +88,7 @@ class SetRequest(_message.Message):
     def __init__(self, training_id: _Optional[int] = ..., keys: _Optional[_Iterable[str]] = ..., scores: _Optional[_Iterable[float]] = ..., seen: _Optional[_Iterable[bool]] = ..., label: _Optional[_Iterable[int]] = ..., data: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SetResponse(_message.Message):
-    __slots__ = []
+    __slots__: list = []
     def __init__(self) -> None: ...
 
 class TrainingResponse(_message.Message):
