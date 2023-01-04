@@ -48,7 +48,7 @@ class DatabaseConnection():
 
     def create_all(self) -> None:
         """
-        Create all tables. Eacg table is represented by a class.
+        Create all tables. Each table is represented by a class.
 
         All classes that inherit from Base are mapped to tables
         which are created in the database if they do not exist.
