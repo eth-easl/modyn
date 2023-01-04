@@ -29,7 +29,6 @@ class Supervisor():
             self.replay_at = replay_at
 
     def validate_pipeline_config_schema(self) -> bool:
-        # TODO(MaxiBoether): Actually write the schema.
         schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "pipeline-schema.yaml"
         valid_yaml, exception = validate_yaml(self.pipeline_config, schema_path)
 
@@ -51,7 +50,42 @@ class Supervisor():
             logger.error("Currently, only single GPU training is supported.")
             return False
 
-        # TODO(MaxiBoether): More checks.
+        batch_size = self.pipeline_config["training"]["batch_size"]
+        if batch_size < 1:
+            logger.error("Invalid batch size: {batch_size}")
+            return False
+
+        supported_strategies = ["finetune"]
+        strategy = self.pipeline_config["training"]["strategy"]
+        if strategy not in supported_strategies:
+            logger.error("Unsupported strategy: {strategy}. Supported strategies = {supported_strategies}")
+
+        if strategy == "finetune" and ("strategy_config" not in self.pipeline_config["training"].keys() or "limit" not in self.pipeline_config["training"]["strategy_config"].keys()):
+            logger.warning("Did not give any explicit limit on finetuning strategy. Assuming no limit.")
+        elif strategy == "finetune":
+            limit = self.pipeline_config["training"]["strategy_config"]["limit"]
+            if limit != "none" or not limit.isdigit():
+                logger.error(f"Invalid limit: {limit} (valid are none or integer values)")
+                return False
+
+        supported_initial_models = ["random"]
+        initial_model = self.pipeline_config["training"]["initial_model"]
+        if initial_model not in supported_initial_models:
+            logger.error("Unsupported initial model: {initial_model}. Supported initial models = {supported_initial_models}")
+            return False
+
+        if self.pipeline_config["training"]["initial_pass"]["activated"]:
+            reference = self.pipeline_config["training"]["initial_pass"]["reference"]
+            if reference != "amount" and reference != "timestamp":
+                logger.error(f"Invalid reference for initial pass: {reference} (valid are 'amount' or 'timestamp')")
+                return False
+
+            if reference == "amount":
+                amount = self.pipeline_config["training"]["initial_pass"]["amount"]
+                if float(amount) > 1.0 or float(amount) < 0:
+                    logger.error(f"Invalid initial pass amount: {amount}")
+
+
 
         return True
 

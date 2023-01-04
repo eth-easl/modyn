@@ -1,11 +1,9 @@
-# Example pipeline configuration for the supervisor. Neither complete nor fully implemented yet.
-
 pipeline:
-  name: "Example Pipeline"
-  description: "Example pipeline"
-  version: "1.0.0"
+  name: Example Pipeline
+  description: Example pipeline
+  version: 1.0.0
 model:
-  id: "ResNet18"
+  id: ResNet18
   model_config:
     dropout: 0.3
 training:
@@ -13,14 +11,17 @@ training:
   dataloader_workers: 2
   learning_rate: 0.001
   batch_size: 64
-  initial_model: random
   strategy: finetune
   strategy_config:
-    foo: bar
-  initial_mode: ignore
+    limit: none
+  initial_model: random
+  initial_pass:
+    activated: True
+    reference: amount
+    amount: 0.5
 data:
-  dataset_id: "mnist"
+  dataset_id: mnist
 trigger:
-  type: timetrigger
+  type: DataAmountTrigger
   trigger_config:
-    every: 60s
+    data_points_for_trigger: 100

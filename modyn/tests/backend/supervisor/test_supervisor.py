@@ -9,8 +9,11 @@ import pytest
 def get_minimal_pipeline_config() -> dict:
     return {'pipeline': {'name': 'Test'},
             'model': {'id': 'ResNet18'},
-            'training': {'gpus': 1},
-            'data': {'dataset_id': 'test'}}
+            'training': {'gpus': 1, 'dataloader_workers': 1, 'learning_rate': 0.1,
+                         'batch_size': 42, 'strategy': 'finetune', 'initial_model': 'random',
+                         'initial_pass': {'activated': False}},
+            'data': {'dataset_id': 'test'},
+            'trigger': {'type': 'DataAmountTrigger'}}
 
 
 def get_minimal_system_config() -> dict:
