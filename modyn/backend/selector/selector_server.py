@@ -9,10 +9,11 @@ import yaml
 
 from modyn.utils import dynamic_module_import
 
-from backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402, E501
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402, E501
 # Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
-from backend.selector.internal.grpc.generated.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest, SamplesResponse, TrainingResponse  # noqa: E402, E501
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest, SamplesResponse, TrainingResponse  # noqa: E402, E501
+
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
