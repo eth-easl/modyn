@@ -19,12 +19,12 @@ def get_minimal_system_config() -> dict:
     return {}
 
 
-def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict,  # pylint: disable=unused-argument
-                          replay_at: typing.Optional[int]) -> None:  # pylint: disable=unused-argument
+def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict,
+                          replay_at: typing.Optional[int]) -> None:
     pass
 
 
-def sleep_mock(duration: int):  # pylint: disable=unused-argument
+def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
 
