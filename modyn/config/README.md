@@ -225,7 +225,6 @@ required:
   - project
   - input
   - storage
-  - newqueue
   - preprocess
   - odm
 ```
