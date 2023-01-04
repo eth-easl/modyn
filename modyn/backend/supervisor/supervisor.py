@@ -109,9 +109,7 @@ class Supervisor():
         trigger_id = self.pipeline_config["trigger"]["id"]
         if not trigger_available(trigger_id):
             logger.error(f"Trigger {trigger_id} is not available within Modyn.")
-            return False
-
-
+            is_valid = False
 
         return is_valid
 
