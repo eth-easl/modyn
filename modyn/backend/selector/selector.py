@@ -50,8 +50,8 @@ class Selector(ABC):
         training_samples = self._select_new_training_samples(training_id, training_set_size)
 
         # Throw error if no new samples are selected
-        if (len(training_samples) == 0):
-            raise ValueError("No new samples selected")
+        if len(training_samples) == 0:
+            raise ValueError(f"No new samples selected for training set {training_set_number}")
 
         return training_samples
 

@@ -18,11 +18,13 @@ class BasicSelector(Selector):
     def __init__(self, config: dict):
         super().__init__(config)
 
+        self.unseen_data_ratio = 1.0
+        self.old_data_ratio = 0.0
         self._set_unseen_data_ratio(self._config['selector']['unseen_data_ratio'])
         self._set_is_adaptive_ratio(self._config['selector']['is_adaptive_ratio'])
 
     def _set_unseen_data_ratio(self, unseen_data_ratio: float) -> None:
-        assert unseen_data_ratio >= 0 and unseen_data_ratio <= 1
+        assert 0 <= unseen_data_ratio <= 1
         self.unseen_data_ratio = unseen_data_ratio
         self.old_data_ratio = 1 - self.unseen_data_ratio
 
@@ -61,7 +63,7 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
-        keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or not np.array(seen).any()
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return np.array(keys)[choice]
@@ -76,7 +78,7 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
-        keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or np.array(seen).all()
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return np.array(keys)[choice]
@@ -92,7 +94,7 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
-        keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
         assert np.array(seen).all()
         return len(keys)
 
@@ -107,6 +109,6 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
-        keys, scores, seen, label, data = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
         assert not np.array(seen).any()
         return len(keys)

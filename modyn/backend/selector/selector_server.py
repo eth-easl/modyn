@@ -9,12 +9,14 @@ import yaml
 
 from modyn.utils import dynamic_module_import
 
+from backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402, E501
+# Pylint cannot handle the auto-generated gRPC files, apparently.
+# pylint: disable-next=no-name-in-module
+from backend.selector.internal.grpc.generated.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest, SamplesResponse, TrainingResponse  # noqa: E402, E501
+
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
-
-from backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402
-from backend.selector.internal.grpc.generated.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest, SamplesResponse, TrainingResponse  # noqa: E402, E501
 
 
 logging.basicConfig(format='%(asctime)s %(message)s')
@@ -29,13 +31,13 @@ class SelectorGRPCServer(SelectorServicer):
         self._selector = getattr(selector_module, config['selector']['class'])(config)
 
     def register_training(self, request: RegisterTrainingRequest, context: grpc.ServicerContext) -> TrainingResponse:
-        logging.info("Registering training with request - " + str(request))
+        logging.info(f"Registering training with request - {str(request)}")
         training_id = self._selector.register_training(
             request.training_set_size, request.num_workers)
         return TrainingResponse(training_id=training_id)
 
     def get_sample_keys(self, request: GetSamplesRequest, context: grpc.ServicerContext) -> SamplesResponse:
-        logging.info("Fetching samples for request - " + str(request))
+        logging.info(f"Fetching samples for request - {str(request)}")
         samples_keys = self._selector.get_sample_keys(
             request.training_id, request.training_set_number, request.worker_id)
         samples_keys = [sample[0] for sample in samples_keys]
@@ -57,8 +59,8 @@ def main() -> None:
         print("Usage: python selector_server.py <config_file>")
         sys.exit(1)
 
-    with open(sys.argv[1], "r") as f:
-        config = yaml.safe_load(f)
+    with open(sys.argv[1], "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file)
 
     serve(config, SelectorGRPCServer(config))
 
