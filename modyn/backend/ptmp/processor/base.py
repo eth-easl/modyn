@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from concurrent import futures
 
-import grpc
-
-from backend.odm.odm_pb2 import SetRequest
-from backend.odm.odm_pb2_grpc import ODMStub
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import SetRequest
 
 
 class PostTrainingMetadataProcessor(ABC):
@@ -18,11 +16,12 @@ class PostTrainingMetadataProcessor(ABC):
         super().__init__()
         self.__config = config
         self.__thread_pool = futures.ThreadPoolExecutor(max_workers=10)
+        self.grpc = GRPCHandler(config)
 
     def process_post_training_metadata(
             self, training_id: int, data: str) -> None:
         """
-        Add the task to process the post training metadata and send it to the ODM to the thread pool.
+        Add the task to process the post training metadata and write it to database to the thread pool.
 
         Args:
             training_id (str): The training id.
@@ -30,29 +29,30 @@ class PostTrainingMetadataProcessor(ABC):
         """
         self.__thread_pool.submit(self.__process_and_send, training_id, data)
 
-    def __process_and_send(self, training_id: int, data: str) -> None:
+    def __process_and_save(self, training_id: int, data: str) -> None:
         """
-        Process the post training metadata and send it to the ODM.
+        Process the post training metadata and write it to the metadata database.
 
         Args:
             training_id (str): The training id.
             data (str): The post training metadata.
         """
-        set_request = self._process_post_training_metadata(training_id, data)
-        self.__send_to_odm(training_id, set_request)
+        enriched_data = self._process_post_training_metadata(training_id, data)
+        self.__write_to_db(training_id, enriched_data)
 
-    def __send_to_odm(self, training_id: int, set_request: SetRequest) -> None:
+    def __write_to_db(self, set_request: SetRequest) -> None:
         """
-        Send the set request to the ODM.
+        Write data to metadata database.
 
         Args:
             training_id (str): The training id.
-            set_request (SetRequest): The set request.
+            set_request (dict): The metadata.
         """
-        channel = grpc.insecure_channel(self.__config['odm']['hostname'] +
+        channel = grpc.insecure_channel(self.__config['metadata_database']['hostname'] +
                                         ':' +
-                                        self.__config['odm']['port'])
-        stub = ODMStub(channel)
+                                        self.__config['metadata_database']['port'])
+
+        stub = MetadataStub(channel)
         stub.Set(set_request)
 
     @abstractmethod
@@ -65,6 +65,6 @@ class PostTrainingMetadataProcessor(ABC):
             data: The data to process.
 
         Returns:
-            The processed data.
+            The processed data
         """
         raise NotImplementedError()
