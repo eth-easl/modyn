@@ -1,0 +1,130 @@
+%YAML 1.1
+---
+$schema: "http://json-schema.org/draft-04/schema"
+id: "http://stsci.edu/schemas/yaml-schema/draft-01"
+title:
+  Modyn Pipeline Configuration
+description: |
+  This is a configuration file for a pipeline to be run by Modyn.
+properties:
+  pipeline:
+    type: object
+    properties:
+      name:
+        type: string
+        description: |
+          The name of the pipeline.
+      description:
+        type: string
+        description: |
+          The description of the pipeline.
+      version:
+        type: string
+        description: |
+          The version of the pipeline.
+    required:
+      - name
+  model:
+    type: object
+    properties:
+      id:
+        type: string
+        description: |
+          The ID of the model that should be trained.
+      model_config:
+        type: object
+        description: |
+          Configuration dictionary that will be passed to the model on initialization.
+    required:
+      - id
+  training:
+    type: object
+    properties:
+      gpus:
+        type: number
+        description: |
+          The number of GPUs that should be used for training.
+      dataloader_workers:
+        type: number
+        description: |
+          The number of data loader workers on the trainer node that fetch data from storage.
+      learning_rate:
+        type: number
+        description: |
+          The learning rate to be used during training.
+      batch_size:
+        type: number
+        description: |
+          The batch size to be used during training.
+      strategy:
+        type: string
+        description: |
+          The Selector strategy that the pipeline should use.
+      strategy_config:
+        type: object
+        description: |
+          Configuration dictionary that will be passed to the Selector
+        properties:
+          limit:
+            type: number
+            description: |
+              When strategy is finetune, this limits how many data points we finetune on at maximum per triggered training. Set to -1 to disable limit.
+      initial_model:
+        type: string
+        description: |
+          What type of initial model should be used (random or pretrained).
+      initial_pass:
+        type: object
+        description: |
+          Setting of initial pass through data
+        properties:
+          activated:
+            type: boolean
+            description: |
+              Whether we do an initial pass through the data
+          reference:
+            type: string
+            description: |
+              If we do an initial pass, we define whether we reference a certain percentage of all data (= amount) or all data newer than a timestamp (= timestamp)
+        required:
+          - activated
+    required:
+      - gpus
+      - dataloader_workers
+      - learning_rate
+      - batch_size
+      - strategy
+      - initial_model
+      - initial_pass
+  data:
+    type: object
+    description: |
+      Dataset configuration
+    properties:
+      dataset_id:
+        type: string
+        description: |
+          ID of dataset to be used for training.
+    required:
+      - dataset_id
+  trigger:
+    type: object
+    description: |
+      Defines the trigger to be used for training.
+    properties:
+      id:
+        type: string
+        description: |
+          Datatype of concrete trigger to be used.
+      trigger_config:
+        type: object
+        description:  |
+          Configuration dictionary that will be passed to the trigger on initialization.
+    required:
+      - id
+required:
+  - pipeline
+  - model
+  - training
+  - data
+  - trigger

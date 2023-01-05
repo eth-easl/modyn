@@ -9,7 +9,7 @@ from modyn.storage.storage_pb2_grpc import StorageStub
 from modyn.storage.storage_pb2 import DatasetAvailableResponse
 
 
-def noop_constructor_mock(self, channel: grpc.Channel) -> None:  # pylint: disable=unused-argument
+def noop_constructor_mock(self, channel: grpc.Channel) -> None:
     pass
 
 
@@ -39,7 +39,7 @@ def test_connection_established_works_mocked(test_channel_ready_future):
     # Pretty dumb test, needs E2E test with running server.
 
     class MockFuture():
-        def result(self, timeout):  # pylint: disable=unused-argument
+        def result(self, timeout):
             return True
 
     test_channel_ready_future.return_value = MockFuture()

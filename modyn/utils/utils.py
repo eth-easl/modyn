@@ -7,6 +7,7 @@ import pathlib
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from typing import Optional
+import time
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -27,6 +28,12 @@ def model_available(model_id: str) -> bool:
     return model_id in available_models
 
 
+def trigger_available(trigger_id: str) -> bool:
+    trigger_module = dynamic_module_import("modyn.backend.supervisor.internal.triggers")
+    available_triggers = list(x[0] for x in inspect.getmembers(trigger_module, inspect.isclass))
+    return trigger_id in available_triggers
+
+
 def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool, Optional[ValidationError]]:
     # We might want to support different permutations here of loaded/unloaded data
     # Implement as soon as required.
@@ -41,3 +48,8 @@ def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool,
         return False, error
 
     return True, None
+
+
+def current_time_millis() -> int:
+    timestamp = time.time() * 1000
+    return int(round(timestamp))
