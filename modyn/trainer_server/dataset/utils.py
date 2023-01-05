@@ -8,11 +8,18 @@ def prepare_dataloaders(
     dataset_id: str,
     num_dataloaders: int,
     batch_size: int,
-    transform
+    transform: list[str],
 ) -> tuple[Optional[torch.utils.data.DataLoader]]:
 
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
+
+    Parameters:
+        training_id (int): ID of the training experiment
+        dataset_id (str): ID of the dataset
+        num_dataloaders (int): Number of PyTorch data workers for the dataloader
+        batch_size (int): Batch size used for training
+        transform (list[str]): List of serialized torchvision transforms for the samples, before loading.
 
     Returns:
         tuple[Optional[torch.utils.data.DataLoader]]: Dataloaders for train and validation

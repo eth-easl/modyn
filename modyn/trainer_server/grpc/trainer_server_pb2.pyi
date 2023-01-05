@@ -8,6 +8,7 @@ import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.message
 import sys
+import typing
 
 if sys.version_info >= (3, 8):
     import typing as typing_extensions
@@ -212,10 +213,12 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     IS_RUNNING_FIELD_NUMBER: builtins.int
+    STATE_AVAILABLE_FIELD_NUMBER: builtins.int
     EXCEPTION_FIELD_NUMBER: builtins.int
     ITERATION_FIELD_NUMBER: builtins.int
     STATE_FIELD_NUMBER: builtins.int
     is_running: builtins.bool
+    state_available: builtins.bool
     exception: builtins.str
     iteration: builtins.int
     state: builtins.bytes
@@ -223,12 +226,18 @@ class TrainingStatusResponse(google.protobuf.message.Message):
         self,
         *,
         is_running: builtins.bool = ...,
+        state_available: builtins.bool = ...,
         exception: builtins.str | None = ...,
-        iteration: builtins.int = ...,
-        state: builtins.bytes = ...,
+        iteration: builtins.int | None = ...,
+        state: builtins.bytes | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception", "is_running", b"is_running", "iteration", b"iteration", "state", b"state"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "_iteration", b"_iteration", "_state", b"_state", "exception", b"exception", "iteration", b"iteration", "state", b"state"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "_iteration", b"_iteration", "_state", b"_state", "exception", b"exception", "is_running", b"is_running", "iteration", b"iteration", "state", b"state", "state_available", b"state_available"]) -> None: ...
+    @typing.overload
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_exception", b"_exception"]) -> typing_extensions.Literal["exception"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_iteration", b"_iteration"]) -> typing_extensions.Literal["iteration"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_state", b"_state"]) -> typing_extensions.Literal["state"] | None: ...
 
 global___TrainingStatusResponse = TrainingStatusResponse

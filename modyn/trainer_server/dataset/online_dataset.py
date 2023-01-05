@@ -8,7 +8,7 @@ from modyn.trainer_server.mocks.mock_storage_server import MockStorageServer, Ge
 
 class OnlineDataset(IterableDataset):
 
-    def __init__(self, training_id: int, dataset_id: str, serialized_transforms):
+    def __init__(self, training_id: int, dataset_id: str, serialized_transforms: list[str]):
         self._training_id = training_id
         self._dataset_id = dataset_id
         self._dataset_len = 0
@@ -33,7 +33,7 @@ class OnlineDataset(IterableDataset):
         data = self._storagestub.Get(req).value
         return data
 
-    def _deserialize_torchvision_transforms(self):
+    def _deserialize_torchvision_transforms(self) -> None:
         self._transform_list = []
         for transform in self._serialized_transforms:
             function = eval(transform)

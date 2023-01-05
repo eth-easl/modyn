@@ -1,12 +1,13 @@
 import json
+import multiprocessing as mp
+
 from modyn.trainer_server.grpc.trainer_server_pb2 import RegisterTrainServerRequest
+from modyn.utils.utils import dynamic_module_import
 
 STATUS_QUERY_MESSAGE = "get_status"
 
 class TrainingInfo:
     def __init__(self, request: RegisterTrainServerRequest) -> None:
-
-        # TODO(fotstrt): add checks here
 
         self.training_id = request.training_id
         self.dataset_id = request.data_info.dataset_id,
@@ -19,6 +20,10 @@ class TrainingInfo:
         self.transform_list = [x for x in request.transform_list]
 
         self.model_id = request.model_id
+        model_module = dynamic_module_import("modyn.models")
+        if not hasattr(model_module, self.model_id):
+            raise ValueError(f"Model {self.model_id} not available!")
+
         self.torch_optimizer = request.torch_optimizer
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
@@ -28,7 +33,13 @@ class TrainingInfo:
 
 
 class TrainingProcessInfo:
-    def __init__(self, process_handler, exception_queue, status_query_queue, status_response_queue):
+    def __init__(
+        self,
+        process_handler: mp.Process,
+        exception_queue: mp.Queue,
+        status_query_queue: mp.Queue,
+        status_response_queue: mp.Queue
+    ):
 
         self.process_handler = process_handler
         self.exception_queue = exception_queue

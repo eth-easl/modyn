@@ -1,5 +1,6 @@
 import glob
 import io
+from typing import Union
 import grpc
 import os
 import sys
@@ -9,8 +10,6 @@ import multiprocessing as mp
 import torch
 
 from modyn.trainer_server.grpc.trainer_server_pb2 import (
-    IsRunningRequest,
-    IsRunningResponse,
     RegisterTrainServerRequest,
     RegisterTrainServerResponse,
     TrainerAvailableRequest,
@@ -35,8 +34,8 @@ class TrainerGRPCServer:
 
     def __init__(self):
         self._selector_stub = MockSelectorServer()
-        self._training_dict = {}
-        self._training_process_dict = {}
+        self._training_dict: dict[str, TrainingInfo] = {}
+        self._training_process_dict: dict[str, TrainingProcessInfo] = {}
 
     def trainer_available(
         self,
@@ -45,8 +44,8 @@ class TrainerGRPCServer:
     ) -> TrainerAvailableResponse:
 
         # if there is already another training job running, the node is considered unavailable
-        for _, process in self._training_process_dict.items():
-            if process.is_alive():
+        for _, training in self._training_process_dict.items():
+            if training.process_handler.is_alive():
                 return TrainerAvailableResponse(available=False)
 
         return TrainerAvailableResponse(available=True)
@@ -91,54 +90,58 @@ class TrainerGRPCServer:
 
         return StartTrainingResponse(training_started=True)
 
-    def is_running(self, request: IsRunningRequest, context: grpc.ServicerContext) -> IsRunningResponse:
-
-        training_id = request.training_id
-        if training_id in self._training_process_dict:
-            process_handler = self._training_process_dict[training_id].process_handler
-            if process_handler.is_alive():
-                return IsRunningResponse(is_running=True)
-
-        return IsRunningResponse(is_running=False)
-
 
     def get_training_status(self, request: TrainingStatusRequest, context: grpc.ServicerContext) -> TrainingStatusResponse:
 
         training_id = request.training_id
 
-        # TODO(fotstrt): send proper response here
-        assert training_id in self._training_process_dict
+        if training_id not in self._training_dict:
+            raise ValueError(f"Training with id {training_id} has not been registered")
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
-            # case 1
             # TODO(fotstrt): what to do if blocked - add a timeout?
             training_state, iteration = self.get_model(training_id)
             return TrainingStatusResponse(
                 is_running=True,
+                state_available=True,
                 iteration=iteration,
                 state=training_state
             )
         else:
-            # case 2
             exception = self.get_child_exception(training_id)
             training_state, iteration = self.get_latest_checkpoint(training_id)
             if exception is None:
-                return TrainingStatusResponse(
-                    is_running=False,
-                    iteration=iteration,
-                    state=training_state
-                )
+                if training_state is not None:
+                    return TrainingStatusResponse(
+                        is_running=False,
+                        state_available=True,
+                        iteration=iteration,
+                        state=training_state
+                    )
+                else:
+                    return TrainingStatusResponse(
+                        is_running=False,
+                        state_available=False,
+                    )
             else:
-                return TrainingStatusResponse(
-                    is_running=False,
-                    exception=exception,
-                    iteration=iteration,
-                    state=training_state
-                )
+                if training_state is not None:
+                    return TrainingStatusResponse(
+                        is_running=False,
+                        state_available=True,
+                        exception=exception,
+                        iteration=iteration,
+                        state=training_state
+                    )
+                else:
+                    return TrainingStatusResponse(
+                        is_running=False,
+                        state_available=False,
+                        exception=exception,
+                    )
 
 
-    def get_model(self, training_id):
+    def get_model(self, training_id: int) -> tuple[bytes, int]:
 
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(STATUS_QUERY_MESSAGE)
@@ -146,7 +149,7 @@ class TrainerGRPCServer:
         return response['state'], response['iteration']
 
 
-    def get_child_exception(self, training_id):
+    def get_child_exception(self, training_id: int) -> Union[str, None]:
 
         exception_queue = self._training_process_dict[training_id].exception_queue
         if not exception_queue.empty():
@@ -155,16 +158,21 @@ class TrainerGRPCServer:
         else:
             return None
 
-    def get_latest_checkpoint(self, training_id):
+    def get_latest_checkpoint(self, training_id: int) -> tuple[Union[bytes, None], int]:
 
-        # this might be useful in case that the training has finished,
+        # this might be useful in case that the training has already finished,
         # either successfully or not, and allow to access the last state
 
         checkpoint_path = self._training_dict[training_id].checkpoint_path
         checkpoints = list(filter(os.path.isfile, glob.glob(checkpoint_path + "/*")))
         checkpoints.sort(key=lambda x: os.path.getmtime(x))
-        checkpoint = checkpoints[-1]
 
+        print(checkpoints)
+        if len(checkpoints)==0:
+            return None, -1
+
+        # TODO(fotstrt): add checks/actions in case checkpoint is corrupted
+        checkpoint = checkpoints[-1]
         state = torch.load(checkpoint)
         iteration = state.pop('iteration')
         buffer = io.BytesIO()

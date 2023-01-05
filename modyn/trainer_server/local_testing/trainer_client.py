@@ -6,7 +6,6 @@ import torch
 
 from modyn.trainer_server.grpc.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.trainer_server.grpc.trainer_server_pb2 import (
-    IsRunningRequest,
     JsonString,
     RegisterTrainServerRequest,
     Data,
@@ -93,13 +92,15 @@ class TrainerClient:
         print(response.is_running)
         print(response.exception)
         print(response.iteration)
+        print(response.state_available)
         #print(response.state)
 
         # load
-        from io import BytesIO
-        file_like = BytesIO(response.state)
-        s=torch.load(file_like)
-        print(s)
+        if response.state_available==True:
+            from io import BytesIO
+            file_like = BytesIO(response.state)
+            s=torch.load(file_like)
+            print(s)
 
 
 if __name__ == "__main__":
