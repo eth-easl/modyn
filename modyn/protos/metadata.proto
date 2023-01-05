@@ -1,7 +1,7 @@
 syntax = "proto3";
 package metadata;
 
-service Metadata {
+service MetadataDatabase {
     rpc GetByKeys (GetByKeysRequest) returns (GetResponse) {}
     rpc GetByQuery (GetByQueryRequest) returns (GetResponse) {}
     rpc GetKeysByQuery (GetByQueryRequest) returns (GetKeysResponse) {}

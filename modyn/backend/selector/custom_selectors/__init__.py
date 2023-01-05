@@ -1,5 +1,6 @@
 """
-TODO: Describe what is in this directory/submodule.
+This submodule contains extensions of the Selector class that implement
+concrete selection strategies. 
 """
 import os
 files = os.listdir(os.path.dirname(__file__))
