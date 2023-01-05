@@ -4,10 +4,8 @@ from modyn.backend.selector.selector import Selector
 
 
 class GDumbSelector(Selector):
-    """Implements the GDumb selection policy.
-
-    Args:
-        Selector (dict): the configuration for the selector.
+    """
+    Implements the GDumb selection policy.
     """
 
     def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, int]]:

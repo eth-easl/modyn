@@ -12,7 +12,7 @@ class BasicSelector(Selector):
     set to the proportion of the size of the unseen vs. previously seen data.
 
     Args:
-        Selector (dict): The configuration for the selector.
+        config (dict): The configuration for the selector.
     """
 
     def __init__(self, config: dict):
@@ -64,7 +64,7 @@ class BasicSelector(Selector):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
-        assert len(seen) == 0 or not np.array(seen).any()
+        assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return np.array(keys)[choice]
 
@@ -79,7 +79,7 @@ class BasicSelector(Selector):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
-        assert len(seen) == 0 or np.array(seen).all()
+        assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return np.array(keys)[choice]
 
@@ -95,7 +95,7 @@ class BasicSelector(Selector):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
-        assert np.array(seen).all()
+        assert np.array(seen).all(), "Queried seen data, but got unseen data."
         return len(keys)
 
     def _get_unseen_data_size(self, training_id: int) -> int:
@@ -110,5 +110,5 @@ class BasicSelector(Selector):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
-        assert not np.array(seen).any()
+        assert not np.array(seen).any(), "Queried unseen data, but got seen data."
         return len(keys)
