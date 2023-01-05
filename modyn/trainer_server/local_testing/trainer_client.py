@@ -2,6 +2,8 @@ import json
 import grpc
 import time
 
+import torch
+
 from modyn.trainer_server.grpc.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.trainer_server.grpc.trainer_server_pb2 import (
     IsRunningRequest,
@@ -14,6 +16,7 @@ from modyn.trainer_server.grpc.trainer_server_pb2 import (
     TrainingStatusRequest
 )
 
+MAX_MESSAGE_LENGTH=1024 * 1024 * 1024
 
 class TrainerClient:
 
@@ -22,7 +25,14 @@ class TrainerClient:
     """
 
     def __init__(self):
-        self._trainer_stub = TrainerServerStub(grpc.insecure_channel("127.0.0.1:5001"))
+        self._trainer_stub = TrainerServerStub(
+            grpc.insecure_channel(
+                "127.0.0.1:5001",
+                options=[
+                    ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
+                ],
+            ),
+        )
 
     def check_trainer_available(self):
         req = TrainerAvailableRequest()
@@ -75,12 +85,6 @@ class TrainerClient:
 
         return response.training_started
 
-    def is_running(self, training_id):
-
-        req = IsRunningRequest(training_id=training_id)
-        response = self._trainer_stub.is_running(req)
-        return response.is_running
-
     def get_training_status(self, training_id):
 
         req = TrainingStatusRequest(training_id=training_id)
@@ -89,7 +93,13 @@ class TrainerClient:
         print(response.is_running)
         print(response.exception)
         print(response.iteration)
-        print(response.state)
+        #print(response.state)
+
+        # load
+        from io import BytesIO
+        file_like = BytesIO(response.state)
+        s=torch.load(file_like)
+        print(s)
 
 
 if __name__ == "__main__":
@@ -104,9 +114,6 @@ if __name__ == "__main__":
             print(training_started)
             time.sleep(10)
             client.get_training_status(training_id)
-
-            # while (client.is_running(training_id)):
-            #     print("is_running")
 
             # while (not client.check_trainer_available()):
             #     pass

@@ -1,6 +1,7 @@
 import json
 from modyn.trainer_server.grpc.trainer_server_pb2 import RegisterTrainServerRequest
 
+STATUS_QUERY_MESSAGE = "get_status"
 
 class TrainingInfo:
     def __init__(self, request: RegisterTrainServerRequest) -> None:
@@ -24,3 +25,12 @@ class TrainingInfo:
 
         self.checkpoint_path = request.checkpoint_info.checkpoint_path
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
+
+
+class TrainingProcessInfo:
+    def __init__(self, process_handler, exception_queue, status_query_queue, status_response_queue):
+
+        self.process_handler = process_handler
+        self.exception_queue = exception_queue
+        self.status_query_queue = status_query_queue
+        self.status_response_queue = status_response_queue

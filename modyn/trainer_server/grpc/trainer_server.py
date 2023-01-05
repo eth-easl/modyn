@@ -1,8 +1,12 @@
+import glob
+import io
 import grpc
 import os
 import sys
 from pathlib import Path
 import multiprocessing as mp
+
+import torch
 
 from modyn.trainer_server.grpc.trainer_server_pb2 import (
     IsRunningRequest,
@@ -19,7 +23,7 @@ from modyn.trainer_server.grpc.trainer_server_pb2 import (
 from modyn.trainer_server.trainer.pytorch_trainer import train
 
 from modyn.trainer_server.mocks.mock_selector_server import MockSelectorServer
-from modyn.trainer_server.utils.training_utils import TrainingInfo
+from modyn.trainer_server.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo, TrainingProcessInfo
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -66,17 +70,24 @@ class TrainerGRPCServer:
         if training_id not in self._training_dict:
             raise ValueError(f"Training with id {training_id} has not been registered")
 
+        exception_queue = mp.Queue()
+        status_query_queue = mp.Queue()
+        status_response_queue = mp.Queue()
+
         p = mp.Process(
             target=train,
             args=(
                 self._training_dict[training_id],
                 0,
                 f'log-{training_id}.txt',
-                request.load_checkpoint_path
+                request.load_checkpoint_path,
+                exception_queue,
+                status_query_queue,
+                status_response_queue
             )
         )
         p.start()
-        self._training_process_dict[training_id] = p
+        self._training_process_dict[training_id] = TrainingProcessInfo(p, exception_queue, status_query_queue, status_response_queue)
 
         return StartTrainingResponse(training_started=True)
 
@@ -84,7 +95,7 @@ class TrainerGRPCServer:
 
         training_id = request.training_id
         if training_id in self._training_process_dict:
-            process_handler = self._training_process_dict[training_id]
+            process_handler = self._training_process_dict[training_id].process_handler
             if process_handler.is_alive():
                 return IsRunningResponse(is_running=True)
 
@@ -98,7 +109,7 @@ class TrainerGRPCServer:
         # TODO(fotstrt): send proper response here
         assert training_id in self._training_process_dict
 
-        process_handler = self._training_process_dict[training_id]
+        process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
             # case 1
             # TODO(fotstrt): what to do if blocked - add a timeout?
@@ -128,13 +139,36 @@ class TrainerGRPCServer:
 
 
     def get_model(self, training_id):
-        # TODO(fotstrt): fill in the actual communication with trainer
-        pass
+
+        status_query_queue = self._training_process_dict[training_id].status_query_queue
+        status_query_queue.put(STATUS_QUERY_MESSAGE)
+        response = self._training_process_dict[training_id].status_response_queue.get()
+        return response['state'], response['iteration']
+
 
     def get_child_exception(self, training_id):
-        # TODO(fotstrt): fill in the actual communication with trainer
-        pass
+
+        exception_queue = self._training_process_dict[training_id].exception_queue
+        if not exception_queue.empty():
+            exception_msg = exception_queue.get()
+            return exception_msg
+        else:
+            return None
 
     def get_latest_checkpoint(self, training_id):
-        # TODO(fotstrt): find latest checkpoint and load
-        pass
+
+        # this might be useful in case that the training has finished,
+        # either successfully or not, and allow to access the last state
+
+        checkpoint_path = self._training_dict[training_id].checkpoint_path
+        checkpoints = list(filter(os.path.isfile, glob.glob(checkpoint_path + "/*")))
+        checkpoints.sort(key=lambda x: os.path.getmtime(x))
+        checkpoint = checkpoints[-1]
+
+        state = torch.load(checkpoint)
+        iteration = state.pop('iteration')
+        buffer = io.BytesIO()
+        torch.save(state, buffer)
+        buffer.seek(0)
+        bytes = buffer.read()
+        return bytes, iteration

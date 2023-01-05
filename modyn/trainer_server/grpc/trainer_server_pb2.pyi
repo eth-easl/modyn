@@ -193,36 +193,6 @@ class StartTrainingResponse(google.protobuf.message.Message):
 global___StartTrainingResponse = StartTrainingResponse
 
 @typing_extensions.final
-class IsRunningRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    TRAINING_ID_FIELD_NUMBER: builtins.int
-    training_id: builtins.int
-    def __init__(
-        self,
-        *,
-        training_id: builtins.int = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
-
-global___IsRunningRequest = IsRunningRequest
-
-@typing_extensions.final
-class IsRunningResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    IS_RUNNING_FIELD_NUMBER: builtins.int
-    is_running: builtins.bool
-    def __init__(
-        self,
-        *,
-        is_running: builtins.bool = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["is_running", b"is_running"]) -> None: ...
-
-global___IsRunningResponse = IsRunningResponse
-
-@typing_extensions.final
 class TrainingStatusRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -248,14 +218,14 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     is_running: builtins.bool
     exception: builtins.str
     iteration: builtins.int
-    state: builtins.str
+    state: builtins.bytes
     def __init__(
         self,
         *,
         is_running: builtins.bool = ...,
         exception: builtins.str | None = ...,
         iteration: builtins.int = ...,
-        state: builtins.str = ...,
+        state: builtins.bytes = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
     def ClearField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception", "is_running", b"is_running", "iteration", b"iteration", "state", b"state"]) -> None: ...
