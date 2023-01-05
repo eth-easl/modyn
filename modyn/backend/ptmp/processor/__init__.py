@@ -3,7 +3,7 @@ TODO: Describe what is in this directory/submodule.
 """
 
 # flake8: noqa
-from .base import PostTrainingMetadataProcessor
+from .base import MetadataProcessor
 from .simple_processor import SimpleProcessor
 import os
 

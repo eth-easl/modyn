@@ -13,15 +13,15 @@ SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from backend.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse  # noqa: E402
-from backend.ptmp.ptmp_pb2_grpc import PostTrainingMetadataProcessorServicer, \
-    add_PostTrainingMetadataProcessorServicer_to_server  # noqa: E402
+from backend.ptmp.ptmp_pb2_grpc import MetadataProcessorServicer, \
+    add_MetadataProcessorServicer_to_server  # noqa: E402
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
 
-class PostTrainingMetadataProcessor(
-        PostTrainingMetadataProcessorServicer):
-    """Provides methods that implement functionality of PostTrainingMetadataProcessor server."""
+class MetadataProcessor(
+        MetadataProcessorServicer):
+    """Provides methods that implement functionality of MetadataProcessor server."""
 
     def __init__(self, config: dict) -> None:
         super().__init__()
@@ -40,8 +40,8 @@ class PostTrainingMetadataProcessor(
 
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    add_PostTrainingMetadataProcessorServicer_to_server(
-        PostTrainingMetadataProcessor(config), server)
+    add_MetadataProcessorServicer_to_server(
+        MetadataProcessor(config), server)
     logging.info(
         'Starting server. Listening on port .' +
         config["ptmp"]["port"])

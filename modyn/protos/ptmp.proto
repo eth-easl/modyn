@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ptmp;
 
-service PostTrainingMetadataProcessor {
+service MetadataProcessor {
     rpc ProcessPostTrainingMetadata (PostTrainingMetadataRequest) returns (PostTrainingMetadataResponse) {}
 }
 

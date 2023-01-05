@@ -5,9 +5,9 @@ from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc i
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import SetRequest
 
 
-class PostTrainingMetadataProcessor(ABC):
+class MetadataProcessor(ABC):
     """
-    This method is called when the PostTrainingMetadataProcessor receives a
+    This method is called when the MetadataProcessor receives a
     PostTrainingMetadataRequest. It should process the data and return a
     SetRequest.
     """
@@ -16,7 +16,6 @@ class PostTrainingMetadataProcessor(ABC):
         super().__init__()
         self.__config = config
         self.__thread_pool = futures.ThreadPoolExecutor(max_workers=10)
-        self.grpc = GRPCHandler(config)
 
     def process_post_training_metadata(
             self, training_id: int, data: str) -> None:

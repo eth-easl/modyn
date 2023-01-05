@@ -5,7 +5,7 @@ import grpc
 import ptmp_pb2 as ptmp__pb2
 
 
-class PostTrainingMetadataProcessorStub(object):
+class MetadataProcessorStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -15,13 +15,13 @@ class PostTrainingMetadataProcessorStub(object):
             channel: A grpc.Channel.
         """
         self.ProcessPostTrainingMetadata = channel.unary_unary(
-            '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
+            '/ptmp.MetadataProcessor/ProcessPostTrainingMetadata',
             request_serializer=ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
             response_deserializer=ptmp__pb2.PostTrainingMetadataResponse.FromString,
         )
 
 
-class PostTrainingMetadataProcessorServicer(object):
+class MetadataProcessorServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def ProcessPostTrainingMetadata(self, request, context):
@@ -31,7 +31,7 @@ class PostTrainingMetadataProcessorServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_PostTrainingMetadataProcessorServicer_to_server(servicer, server):
+def add_MetadataProcessorServicer_to_server(servicer, server):
     rpc_method_handlers = {
         'ProcessPostTrainingMetadata': grpc.unary_unary_rpc_method_handler(
             servicer.ProcessPostTrainingMetadata,
@@ -40,13 +40,13 @@ def add_PostTrainingMetadataProcessorServicer_to_server(servicer, server):
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        'ptmp.PostTrainingMetadataProcessor', rpc_method_handlers)
+        'ptmp.MetadataProcessor', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
  # This class is part of an EXPERIMENTAL API.
 
 
-class PostTrainingMetadataProcessor(object):
+class MetadataProcessor(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -60,7 +60,7 @@ class PostTrainingMetadataProcessor(object):
                                     wait_for_ready=None,
                                     timeout=None,
                                     metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/ptmp.PostTrainingMetadataProcessor/ProcessPostTrainingMetadata',
+        return grpc.experimental.unary_unary(request, target, '/ptmp.MetadataProcessor/ProcessPostTrainingMetadata',
                                              ptmp__pb2.PostTrainingMetadataRequest.SerializeToString,
                                              ptmp__pb2.PostTrainingMetadataResponse.FromString,
                                              options, channel_credentials,

@@ -1,11 +1,11 @@
 import json
 import random
 
-from backend.ptmp.processor.base import PostTrainingMetadataProcessor
+from backend.ptmp.processor.base import MetadataProcessor
 from backend.odm.odm_pb2 import SetRequest
 
 
-class SimpleProcessor(PostTrainingMetadataProcessor):
+class SimpleProcessor(MetadataProcessor):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
 
