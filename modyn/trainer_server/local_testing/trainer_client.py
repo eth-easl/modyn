@@ -78,6 +78,7 @@ class TrainerClient:
 
         req = StartTrainingRequest(
             training_id=training_id,
+            trigger_point="new",
             load_checkpoint_path="results/model_0.pt"
         )
         response = self._trainer_stub.start_training(req)

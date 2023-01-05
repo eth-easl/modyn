@@ -80,6 +80,7 @@ class TrainerGRPCServer:
                 0, # TODO: fix device number when working with multi-gpu settings
                 f'log-{training_id}.txt',
                 request.load_checkpoint_path,
+                request.trigger_point,
                 exception_queue,
                 status_query_queue,
                 status_response_queue

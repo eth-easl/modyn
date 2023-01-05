@@ -17,13 +17,14 @@ class PytorchTrainer:
         self,
         training_info: TrainingInfo,
         device: int,
+        trigger_point: str,
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
     ) -> None:
 
         # setup model and optimizer
         self._model = get_model(training_info.model_id, training_info.model_configuration_dict)
-        self._model.model.to(device)
+        #self._model.model.to(device)
 
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
         self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
@@ -37,7 +38,8 @@ class PytorchTrainer:
             training_info.dataset_id,
             training_info.num_dataloaders,
             training_info.batch_size,
-            training_info.transform_list
+            training_info.transform_list,
+            trigger_point,
         )
 
         # setup rest
@@ -138,13 +140,14 @@ def train(
     device: int,
     log_path: str,
     load_checkpoint_path: Optional[str],
+    trigger_point: str,
     exception_queue: mp.Queue,
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue
 ):
 
     try:
-        trainer = PytorchTrainer(training_info, device, status_query_queue, status_response_queue)
+        trainer = PytorchTrainer(training_info, device, trigger_point, status_query_queue, status_response_queue)
         trainer.train(log_path, load_checkpoint_path)
     except Exception as e:
         exception_msg = traceback.format_exc()

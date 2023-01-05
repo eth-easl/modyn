@@ -8,13 +8,14 @@ from modyn.trainer_server.mocks.mock_storage_server import MockStorageServer, Ge
 
 class OnlineDataset(IterableDataset):
 
-    def __init__(self, training_id: int, dataset_id: str, serialized_transforms: list[str]):
+    def __init__(self, training_id: int, dataset_id: str, serialized_transforms: list[str], trigger_point:str):
         self._training_id = training_id
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
         self._serialized_transforms = serialized_transforms
         self._deserialize_torchvision_transforms()
+        self._trigger_point = trigger_point
 
         # These mock the behavior of storage and selector servers.
         # TODO(fotstrt): remove them when the storage and selector grpc servers are fixed
@@ -23,7 +24,7 @@ class OnlineDataset(IterableDataset):
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         # TODO: replace this with grpc calls to the selector
-        req = GetSamplesRequest(self._training_id, worker_id)
+        req = GetSamplesRequest(self._training_id, self._trigger_point, worker_id)
         samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
