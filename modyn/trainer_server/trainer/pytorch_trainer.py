@@ -4,20 +4,21 @@ from typing import Optional
 import torch
 import logging
 import os
-import time
+import multiprocessing as mp
+
 
 from modyn.trainer_server.dataset.utils import prepare_dataloaders
 from modyn.trainer_server.utils.model_utils import get_model
-from modyn.trainer_server.utils.training_utils import STATUS_QUERY_MESSAGE
+from modyn.trainer_server.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo
 
 
 class PytorchTrainer:
     def __init__(
         self,
-        training_info,
-        device,
-        status_query_queue,
-        status_response_queue,
+        training_info: TrainingInfo,
+        device: int,
+        status_query_queue: mp.Queue,
+        status_response_queue: mp.Queue,
     ) -> None:
 
         # setup model and optimizer
@@ -65,13 +66,6 @@ class PytorchTrainer:
         self._logger.propagate = False
 
     def save_checkpoint(self, checkpoint_file_name: str, iteration: int):
-
-        # TODO(fotstrt): this might overwrite checkpoints from previous runs
-        # we could have a counter for the specific training, and increment it
-        # every time a new checkpoint is saved.
-
-        # TODO: we assume a local checkpoint for now,
-        # should we add functionality for remote?
 
         dict_to_save = {
             'model': self._model.model.state_dict(),
@@ -139,7 +133,15 @@ class PytorchTrainer:
         self._logger.info('Training complete!')
 
 
-def train(training_info, device, log_path, load_checkpoint_path, exception_queue, status_query_queue, status_response_queue):
+def train(
+    training_info: TrainingInfo,
+    device: int,
+    log_path: str,
+    load_checkpoint_path: Optional[str],
+    exception_queue: mp.Queue,
+    status_query_queue: mp.Queue,
+    status_response_queue: mp.Queue
+):
 
     try:
         trainer = PytorchTrainer(training_info, device, status_query_queue, status_response_queue)

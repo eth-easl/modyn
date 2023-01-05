@@ -4,8 +4,8 @@ import time
 
 import torch
 
-from modyn.trainer_server.grpc.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.trainer_server.grpc.trainer_server_pb2 import (
+from modyn.trainer_server.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
+from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
     JsonString,
     RegisterTrainServerRequest,
     Data,

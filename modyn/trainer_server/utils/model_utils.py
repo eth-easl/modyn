@@ -12,6 +12,10 @@ def get_model(
     Gets handler to the model specified by the 'model_id'.
     The model should exist in the path "modyn/models/model_id"
 
+    Parameters:
+        model_id (str): the model id
+        model_conf_dict (dict[str, Any]): dictionary with model-specific parameters
+
     Returns:
         the requested model
 

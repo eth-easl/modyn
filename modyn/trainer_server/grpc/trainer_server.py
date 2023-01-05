@@ -9,7 +9,7 @@ import multiprocessing as mp
 
 import torch
 
-from modyn.trainer_server.grpc.trainer_server_pb2 import (
+from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
     RegisterTrainServerRequest,
     RegisterTrainServerResponse,
     TrainerAvailableRequest,
@@ -77,7 +77,7 @@ class TrainerGRPCServer:
             target=train,
             args=(
                 self._training_dict[training_id],
-                0,
+                0, # TODO: fix device number when working with multi-gpu settings
                 f'log-{training_id}.txt',
                 request.load_checkpoint_path,
                 exception_queue,

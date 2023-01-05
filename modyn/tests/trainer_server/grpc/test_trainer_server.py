@@ -6,7 +6,7 @@ import torch
 
 
 from modyn.trainer_server.grpc.trainer_server import TrainerGRPCServer
-from modyn.trainer_server.grpc.trainer_server_pb2 import Data, JsonString, RegisterTrainServerRequest, StartTrainingRequest
+from modyn.trainer_server.grpc.generated.trainer_server_pb2 import Data, JsonString, RegisterTrainServerRequest, StartTrainingRequest
 
 dummy_register_request = RegisterTrainServerRequest(
     training_id=1,

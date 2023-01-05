@@ -6,7 +6,7 @@ import yaml
 import argparse
 import pathlib
 
-from modyn.trainer_server.grpc.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
+from modyn.trainer_server.grpc.generated.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
 from modyn.trainer_server.grpc.trainer_server import TrainerGRPCServer
 
 
