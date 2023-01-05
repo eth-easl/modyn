@@ -10,7 +10,7 @@ from modyn.backend.supervisor import Supervisor
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
-EXAMPLE_PIPELINE = SCRIPT_PATH.parent.parent.parent.parent / "config" / "example-pipeline.yaml"
+EXAMPLE_PIPELINE = SCRIPT_PATH.parent.parent.parent.parent / "config" / "examples" / "example-pipeline.yaml"
 EXAMPLE_SYSTEM_CONFIG = SCRIPT_PATH.parent.parent.parent.parent / "config" / "config.yaml"
 
 NO_FILE = SCRIPT_PATH.parent / "thisshouldnot.exist"

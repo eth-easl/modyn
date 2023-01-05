@@ -11,6 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class Supervisor():
+
+    # TODO(#63): Get these from the Trainer and Selector, as soon as that functionality is merged.
+    supported_strategies: list[str] = ["finetune"]
+    supported_initial_models: list[str] = ["random"]
+
     def __init__(self, pipeline_config: dict, modyn_config: dict, replay_at: typing.Optional[int]) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
@@ -44,8 +49,8 @@ class Supervisor():
         assert self.trigger is not None, "Error during trigger initialization"
 
     def validate_pipeline_config_schema(self) -> bool:
-        # TODO(MaxiBoether): Actually write the schema.
-        schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "pipeline-schema.yaml"
+        schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" \
+            / "schema" / "pipeline-schema.yaml"
         valid_yaml, exception = validate_yaml(self.pipeline_config, schema_path)
 
         if not valid_yaml:
@@ -56,24 +61,63 @@ class Supervisor():
 
         return True
 
-    def validate_pipeline_config_content(self) -> bool:
-        model_id = self.pipeline_config["model"]["id"]
-        if not model_available(model_id):
-            logger.error(f"Model {model_id} is not available within Modyn.")
-            return False
+    def _validate_training_options(self) -> bool:
+        is_valid = True
+        batch_size = self.pipeline_config["training"]["batch_size"]
+        strategy = self.pipeline_config["training"]["strategy"]
+        initial_model = self.pipeline_config["training"]["initial_model"]
 
         if self.pipeline_config["training"]["gpus"] != 1:
             logger.error("Currently, only single GPU training is supported.")
-            return False
+            is_valid = False
+
+        if batch_size < 1:
+            logger.error("Invalid batch size: {batch_size}")
+            is_valid = False
+
+        if strategy not in Supervisor.supported_strategies:
+            logger.error(f"Unsupported strategy: {strategy}. Supported strategies = {Supervisor.supported_strategies}")
+            is_valid = False
+
+        if strategy == "finetune":
+            if "strategy_config" not in self.pipeline_config["training"].keys() \
+                    or "limit" not in self.pipeline_config["training"]["strategy_config"].keys():
+                logger.warning("Did not give any explicit limit on finetuning strategy. Assuming no limit.")
+
+        if initial_model not in Supervisor.supported_initial_models:
+            logger.error(
+                f"Unsupported initial model: {initial_model}."
+                f"Supported initial models = {Supervisor.supported_initial_models}")
+            is_valid = False
+
+        if self.pipeline_config["training"]["initial_pass"]["activated"]:
+            reference = self.pipeline_config["training"]["initial_pass"]["reference"]
+            if reference not in ('amount', 'timestamp'):
+                logger.error(f"Invalid reference for initial pass: {reference} (valid are 'amount' or 'timestamp')")
+                is_valid = False
+
+            if reference == "amount":
+                amount = self.pipeline_config["training"]["initial_pass"]["amount"]
+                if float(amount) > 1.0 or float(amount) < 0:
+                    logger.error(f"Invalid initial pass amount: {amount}")
+                    is_valid = False
+
+        return is_valid
+
+    def validate_pipeline_config_content(self) -> bool:
+        is_valid = self._validate_training_options()
+
+        model_id = self.pipeline_config["model"]["id"]
+        if not model_available(model_id):
+            logger.error(f"Model {model_id} is not available within Modyn.")
+            is_valid = False
 
         trigger_id = self.pipeline_config["trigger"]["id"]
         if not trigger_available(trigger_id):
             logger.error(f"Trigger {trigger_id} is not available within Modyn.")
-            return False
+            is_valid = False
 
-        # TODO(MaxiBoether): More checks.
-
-        return True
+        return is_valid
 
     def validate_pipeline_config(self) -> bool:
         return self.validate_pipeline_config_schema() and self.validate_pipeline_config_content()

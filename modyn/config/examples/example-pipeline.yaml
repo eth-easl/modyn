@@ -1,0 +1,27 @@
+pipeline:
+  name: Example Pipeline
+  description: Example pipeline
+  version: 1.0.0
+model:
+  id: ResNet18
+  model_config:
+    dropout: 0.3
+training:
+  gpus: 1
+  dataloader_workers: 2
+  learning_rate: 0.001
+  batch_size: 64
+  strategy: finetune
+  strategy_config:
+    limit: none
+  initial_model: random
+  initial_pass:
+    activated: True
+    reference: amount
+    amount: 0.5
+data:
+  dataset_id: mnist
+trigger:
+  type: DataAmountTrigger
+  trigger_config:
+    data_points_for_trigger: 100
