@@ -49,7 +49,8 @@ class Supervisor():
         assert self.trigger is not None, "Error during trigger initialization"
 
     def validate_pipeline_config_schema(self) -> bool:
-        schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "schema" / "pipeline-schema.yaml"
+        schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" \
+            / "schema" / "pipeline-schema.yaml"
         valid_yaml, exception = validate_yaml(self.pipeline_config, schema_path)
 
         if not valid_yaml:
