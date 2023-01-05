@@ -9,7 +9,7 @@ class BasicSelector(Selector):
     Specifically, there is a "unseen_data_ratio" that controls
     how much of each batch is from unseen data, and how much is from previously
     seen data. If is_adaptive_ratio is set to True, then this ratio is automatically
-    set to the proportion of the size of the unseen vs. previously sen data.
+    set to the proportion of the size of the unseen vs. previously seen data.
 
     Args:
         Selector (dict): The configuration for the selector.
