@@ -64,6 +64,11 @@ properties:
         type: object
         description: |
           Configuration dictionary that will be passed to the Selector
+        properties:
+          limit:
+            type: number
+            description: |
+              When strategy is finetune, this limits how many data points we finetune on at maximum per triggered training. Set to -1 to disable limit.
       initial_model:
         type: string
         description: |
@@ -107,7 +112,7 @@ properties:
     description: |
       Defines the trigger to be used for training.
     properties:
-      type:
+      id:
         type: string
         description: |
           Datatype of concrete trigger to be used.
@@ -116,7 +121,7 @@ properties:
         description:  |
           Configuration dictionary that will be passed to the trigger on initialization.
     required:
-      - type
+      - id
 required:
   - pipeline
   - model

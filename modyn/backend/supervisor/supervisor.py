@@ -11,6 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class Supervisor():
+
+    # TODO(#63): Get these from the Trainer and Selector, as soon as that functionality is merged.
+    supported_strategies: list[str] = ["finetune"]
+    supported_initial_models: list[str] = ["random"]
+
     def __init__(self, pipeline_config: dict, modyn_config: dict, replay_at: typing.Optional[int]) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
@@ -55,43 +60,33 @@ class Supervisor():
 
         return True
 
-    def validate_pipeline_config_content(self) -> bool:
+    def _validate_training_options(self) -> bool:
         is_valid = True
-
-        model_id = self.pipeline_config["model"]["id"]
-        if not model_available(model_id):
-            logger.error(f"Model {model_id} is not available within Modyn.")
-            is_valid = False
+        batch_size = self.pipeline_config["training"]["batch_size"]
+        strategy = self.pipeline_config["training"]["strategy"]
+        initial_model = self.pipeline_config["training"]["initial_model"]
 
         if self.pipeline_config["training"]["gpus"] != 1:
             logger.error("Currently, only single GPU training is supported.")
             is_valid = False
 
-        batch_size = self.pipeline_config["training"]["batch_size"]
         if batch_size < 1:
             logger.error("Invalid batch size: {batch_size}")
             is_valid = False
 
-        supported_strategies = ["finetune"]
-        strategy = self.pipeline_config["training"]["strategy"]
-        if strategy not in supported_strategies:
-            logger.error("Unsupported strategy: {strategy}. Supported strategies = {supported_strategies}")
+        if strategy not in Supervisor.supported_strategies:
+            logger.error(f"Unsupported strategy: {strategy}. Supported strategies = {Supervisor.supported_strategies}")
             is_valid = False
 
-        if strategy == "finetune" and ("strategy_config" not in self.pipeline_config["training"].keys()
-                                       or "limit" not in self.pipeline_config["training"]["strategy_config"].keys()):
-            logger.warning("Did not give any explicit limit on finetuning strategy. Assuming no limit.")
-        elif strategy == "finetune":
-            limit = self.pipeline_config["training"]["strategy_config"]["limit"]
-            if limit != "none" or not limit.isdigit():
-                logger.error(f"Invalid limit: {limit} (valid are none or integer values)")
-                is_valid = False
+        if strategy == "finetune":
+            if "strategy_config" not in self.pipeline_config["training"].keys() \
+                    or "limit" not in self.pipeline_config["training"]["strategy_config"].keys():
+                logger.warning("Did not give any explicit limit on finetuning strategy. Assuming no limit.")
 
-        supported_initial_models = ["random"]
-        initial_model = self.pipeline_config["training"]["initial_model"]
-        if initial_model not in supported_initial_models:
+        if initial_model not in Supervisor.supported_initial_models:
             logger.error(
-                "Unsupported initial model: {initial_model}. Supported initial models = {supported_initial_models}")
+                f"Unsupported initial model: {initial_model}."
+                f"Supported initial models = {Supervisor.supported_initial_models}")
             is_valid = False
 
         if self.pipeline_config["training"]["initial_pass"]["activated"]:
@@ -105,6 +100,16 @@ class Supervisor():
                 if float(amount) > 1.0 or float(amount) < 0:
                     logger.error(f"Invalid initial pass amount: {amount}")
                     is_valid = False
+
+        return is_valid
+
+    def validate_pipeline_config_content(self) -> bool:
+        is_valid = self._validate_training_options()
+
+        model_id = self.pipeline_config["model"]["id"]
+        if not model_available(model_id):
+            logger.error(f"Model {model_id} is not available within Modyn.")
+            is_valid = False
 
         trigger_id = self.pipeline_config["trigger"]["id"]
         if not trigger_available(trigger_id):
