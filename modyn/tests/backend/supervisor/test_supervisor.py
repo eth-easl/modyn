@@ -84,6 +84,56 @@ def test_validate_pipeline_config_schema():
 
 
 @patch.object(Supervisor, '__init__', noop_constructor_mock)
+def test__validate_training_options():
+    sup = Supervisor(get_minimal_pipeline_config(),
+                     get_minimal_system_config(), None)
+
+    # Check that our minimal pipeline config gets accepted
+    sup.pipeline_config = get_minimal_pipeline_config()
+    assert sup._validate_training_options()
+
+    # Check that training without GPUs gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config['training']['gpus'] = 0
+    assert not sup._validate_training_options()
+
+    # Check that training with an invalid batch size gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config['training']['batch_size'] = -1
+    assert not sup._validate_training_options()
+
+    # Check that training with an invalid strategy gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config['training']['strategy'] = "UnknownStrategy"
+    assert not sup._validate_training_options()
+
+    # Check that training with an invalid initial model gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config['training']['initial_model'] = "UnknownInitialModel"
+    assert not sup._validate_training_options()
+
+    # Check that training with an invalid reference for initial pass gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config["training"]["initial_pass"]["activated"] = True
+    sup.pipeline_config["training"]["initial_pass"]["reference"] = "UnknownRef"
+    assert not sup._validate_training_options()
+
+    # Check that training with an invalid amount for initial pass gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config["training"]["initial_pass"]["activated"] = True
+    sup.pipeline_config["training"]["initial_pass"]["reference"] = "amount"
+    sup.pipeline_config["training"]["initial_pass"]["amount"] = 2
+    assert not sup._validate_training_options()
+
+    # Check that training with an valid amount for initial pass gets accepted
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config["training"]["initial_pass"]["activated"] = True
+    sup.pipeline_config["training"]["initial_pass"]["reference"] = "amount"
+    sup.pipeline_config["training"]["initial_pass"]["amount"] = 0.5
+    assert sup._validate_training_options()
+
+
+@patch.object(Supervisor, '__init__', noop_constructor_mock)
 def test_validate_pipeline_config_content():
     sup = Supervisor(get_minimal_pipeline_config(),
                      get_minimal_system_config(), None)
@@ -103,7 +153,13 @@ def test_validate_pipeline_config_content():
     sup.pipeline_config['model']['id'] = "UnknownModel"
     assert not sup.validate_pipeline_config_content()
 
+    # Check that an unknown trigger gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config['trigger']['id'] = "UnknownTrigger"
+    assert not sup.validate_pipeline_config_content()
+
     # Check that training without GPUs gets rejected
+    # (testing that _validate_training_options gets called)
     sup.pipeline_config = get_minimal_pipeline_config()
     sup.pipeline_config['training']['gpus'] = 0
     assert not sup.validate_pipeline_config_content()
