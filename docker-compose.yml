@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  modynbase:
+    image: modynbase
+    build:
+      context: .
+      dockerfile: docker/Base/Dockerfile
+  storage:
+    depends_on:
+      - db
+    build:
+      context: .
+      dockerfile: docker/Storage/Dockerfile
+    ports:
+      - '50051:50051'
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: default_database
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
