@@ -33,7 +33,7 @@ odm:
   port: "50054"
   hostname: "backend"
   postgresql:
-    host: db
+    host: 127.0.0.1
     port: "5432"
     database: "postgres"
     user: "postgres"

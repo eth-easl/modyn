@@ -31,9 +31,8 @@ ADD . /src
 WORKDIR /src
 
 # Create modyn environment
-RUN conda env create -f ./environment.yml
+RUN conda update -n base -c defaults conda && conda update --all && conda env create -f ./environment.yml && conda init bash
 ENV CONDA_DEFAULT_ENV modyn
-RUN conda init bash
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers

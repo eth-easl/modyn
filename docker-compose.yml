@@ -22,6 +22,6 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: default_database
     ports:
-      - '5432:5432'
+      - '5435:5432'
     volumes:
       - ./postgres-data:/var/lib/postgresql/data

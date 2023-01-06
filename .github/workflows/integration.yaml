@@ -1,0 +1,47 @@
+name: Integration tests
+
+# We trigger integration tests only if the code linting and unit tests run through
+on:
+  workflow_run:
+    workflows: ["Linting & Tests"]
+    types:
+      - completed
+
+jobs:
+# Checks whether the base container works correctly.
+  dockerized-unittests:
+      runs-on: ubuntu-latest
+      
+      steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup base container
+        uses: ./.github/actions/base
+
+      - name: Setup dev-requirements and run pytest within container
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
+
+
+# Tests whether docker-compose up starts all components successfully
+  system-runs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup base container
+        uses: ./.github/actions/base
+
+      - name: Setup dev-requirements and run pytest within container
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running connection tests && python integrationtests/test_docker_compose.py"
+
+
+# TODO(): runs example pipeline 
+  example-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3

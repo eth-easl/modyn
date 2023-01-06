@@ -20,6 +20,8 @@ jobs:
 
       - name: Flake8
         run: |
+          conda update -n base -c defaults conda
+          conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
           conda run -n modyn flake8 --version
@@ -39,6 +41,8 @@ jobs:
 
       - name: Mypy
         run: |
+          conda update -n base -c defaults conda
+          conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
           conda run -n modyn mypy --version
@@ -58,6 +62,8 @@ jobs:
 
       - name: Pylint
         run: |
+          conda update -n base -c defaults conda
+          conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
           conda run -n modyn pylint --version
@@ -77,6 +83,8 @@ jobs:
 
       - name: Pytest
         run: |
+          conda update -n base -c defaults conda
+          conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
           conda run -n modyn pytest
@@ -101,28 +109,8 @@ jobs:
 
       - name: Pytest
         run: |
+          conda update -n base -c defaults conda
+          conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
           conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
-
-
-# Checks whether the base container works correctly.
-  dockerized-unittests:
-      runs-on: ubuntu-latest
-      
-      steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup base container
-        uses: ./.github/actions/base
-
-      - name: Setup dev-requirements and run pytest within container
-        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
-
-  integrationtests:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
