@@ -1,14 +1,14 @@
-from modyn.backend.selector.selector import Selector
+from modyn.backend.selector.selector_strategy import SelectorStrategy
 import numpy as np
 
 
-class ScoreSelector(Selector):
+class ScoreSelector(SelectorStrategy):
     """Implements a score based selector. Has two modes: softmax mode and normal mode.
     As the name suggests, softmax mode will apply softmax to the samples (so the scores
     can be negative). Defaults to softmax mode.
 
     Args:
-        Selector (dict): configuration for the selector
+        config (dict): configuration for the selector
     """
 
     def __init__(self, config: dict):
@@ -24,7 +24,7 @@ class ScoreSelector(Selector):
         the selector.
 
         Returns:
-            List of keys for the samples in the ODM.
+            List of keys for the samples that we want to select.
         """
         all_samples, all_scores = self._get_all_metadata(training_id)
         all_samples_np = np.array(all_samples)

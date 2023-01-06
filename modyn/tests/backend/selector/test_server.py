@@ -1,12 +1,15 @@
 
 from unittest.mock import patch
-from modyn.backend.selector.selector_server import SelectorGRPCServer, main
+from modyn.backend.selector.selector import Selector
+from modyn.backend.selector.selector_server import SelectorGRPCServer
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest  # noqa: E402, E501
+from modyn.backend.selector.selector_entrypoint import main
 import modyn.utils
 import sys
 import pytest
 import grpc
+import yaml
 # pylint: skip-file
 
 # We do not use the parameters in this empty mock constructor.
@@ -25,8 +28,6 @@ def test_prepare_training_set(test_get_samples_by_metadata_query, test_get_info_
                               test_register_training, test__connection_established, test__init_metadata):
     sample_cfg = {
         'selector': {
-            'package': 'score_selector',
-            'class': 'ScoreSelector',
             'port': '50056',
         },
         'metadata_database': {
@@ -35,16 +36,21 @@ def test_prepare_training_set(test_get_samples_by_metadata_query, test_get_info_
         }
     }
 
-    servicer = SelectorGRPCServer(sample_cfg)
-    assert servicer.register_training(RegisterTrainingRequest(
-        training_set_size=8, num_workers=1), None).training_id == 0
+    with open('modyn/config/examples/example-pipeline.yaml', "r", encoding="utf-8") as pipeline_file:
+        pipeline_cfg = yaml.safe_load(pipeline_file)
+
+    selector = Selector(pipeline_cfg, sample_cfg)
+    servicer = selector.grpc_server
+
+    assert selector.strategy.register_training(training_set_size=8, num_workers=1) == 0
 
     all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
     all_classes = [1, 1, 1, 1, 2, 2, 3, 3]
     all_scores = [1] * 8
     all_seens = [False] * 8
 
-    test_get_samples_by_metadata_query.return_value = all_samples, all_scores, all_seens, all_classes, all_samples
+    test_get_samples_by_metadata_query.side_effect = [
+        (all_samples, all_scores, all_seens, all_classes, all_samples), ([], [], [], [], [])]
 
     assert set(servicer.get_sample_keys(GetSamplesRequest(training_id=0, training_set_number=0, worker_id=0),
                None).training_samples_subset) == set(["a", "b", "c", "d", "e", "f", "g", "h"])
@@ -73,13 +79,15 @@ class DummyServer:
 @patch.object(GRPCHandler, 'register_training', return_value=0)
 @patch.object(GRPCHandler, 'get_info_for_training', return_value=(8, 1))
 def test_main(get_info_for_training, register_training, _connection_established, _init_metadata, wait_for_terination):
-    testargs = ["selector_server.py", "modyn/config/config.yaml"]
+    # testargs = ["selector_entrypoint.py", "modyn/config/config.yaml"]
+    testargs = ["selector_entrypoint.py", "modyn/config/config.yaml", "modyn/config/examples/example-pipeline.yaml"]
     with patch.object(sys, 'argv', testargs):
         main()
 
 
 def test_main_raise():
-    testargs = ["selector_server.py", "modyn/config/config.yaml", "extra"]
+    testargs = ["selector_entrypoint.py", "modyn/config/examples/example-pipeline.yaml",
+                "modyn/config/config.yaml", "extra"]
     with patch.object(sys, 'argv', testargs):
         with pytest.raises(SystemExit):
             main()

@@ -1,6 +1,6 @@
 
 from unittest.mock import patch
-from modyn.backend.selector.selector import Selector
+from modyn.backend.selector.selector_strategy import SelectorStrategy
 from modyn.backend.selector.custom_selectors.basic_selector import BasicSelector
 from modyn.backend.selector.custom_selectors.gdumb_selector import GDumbSelector
 from modyn.backend.selector.custom_selectors.score_selector import ScoreSelector
@@ -29,13 +29,13 @@ def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argumen
     pass
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(Selector, '__init__', noop_constructor_mock)
-@patch.object(Selector, '_select_new_training_samples')
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
+@patch.object(SelectorStrategy, '__init__', noop_constructor_mock)
+@patch.object(SelectorStrategy, '_select_new_training_samples')
 def test_prepare_training_set(test__select_new_training_samples):
     test__select_new_training_samples.return_value = ['a', 'b']
 
-    selector = Selector(None)  # pylint: disable=abstract-class-instantiated
+    selector = SelectorStrategy(None)  # pylint: disable=abstract-class-instantiated
     assert selector._prepare_training_set(0, 0, 0) == ['a', 'b']
 
     test__select_new_training_samples.return_value = []
@@ -43,13 +43,13 @@ def test_prepare_training_set(test__select_new_training_samples):
         selector._prepare_training_set(0, 0, 3)
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(Selector, '__init__', noop_constructor_mock)
-@patch.object(Selector, '_get_info_for_training')
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
+@patch.object(SelectorStrategy, '__init__', noop_constructor_mock)
+@patch.object(SelectorStrategy, '_get_info_for_training')
 def test_get_training_set_partition(test__get_info_for_training):
     test__get_info_for_training.return_value = tuple([10, 3])
 
-    selector = Selector(None)  # pylint: disable=abstract-class-instantiated
+    selector = SelectorStrategy(None)  # pylint: disable=abstract-class-instantiated
 
     training_samples = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
     assert selector._get_training_set_partition(0, training_samples, 0) == ['a', 'b', 'c', 'd']
@@ -62,15 +62,15 @@ def test_get_training_set_partition(test__get_info_for_training):
         selector._get_training_set_partition(0, training_samples, -1)
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(Selector, '__init__', noop_constructor_mock)
-@patch.object(Selector, '_prepare_training_set')
-@patch.object(Selector, '_get_info_for_training')
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
+@patch.object(SelectorStrategy, '__init__', noop_constructor_mock)
+@patch.object(SelectorStrategy, '_prepare_training_set')
+@patch.object(SelectorStrategy, '_get_info_for_training')
 def test_get_sample_keys(test__get_info_for_training, test__prepare_training_set):
     test__prepare_training_set.return_value = ["a", "b", "c"]
     test__get_info_for_training.return_value = tuple([3, 3])
 
-    selector = Selector(None)  # pylint: disable=abstract-class-instantiated
+    selector = SelectorStrategy(None)  # pylint: disable=abstract-class-instantiated
 
     assert selector.get_sample_keys(0, 0, 0) == ["a"]
     assert selector.get_sample_keys(0, 0, 1) == ["b"]
@@ -83,10 +83,10 @@ def test_get_sample_keys(test__get_info_for_training, test__prepare_training_set
         selector._select_new_training_samples(0, 0)
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
-@patch.object(Selector, '__init__', noop_constructor_mock)
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
+@patch.object(SelectorStrategy, '__init__', noop_constructor_mock)
 def test_register_training():
-    selector = Selector(None)  # pylint: disable=abstract-class-instantiated
+    selector = SelectorStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector.grpc = MockGRPCHandler(None)
 
     assert selector.register_training(1000, 1) == 5
@@ -98,7 +98,7 @@ def test_register_training():
         selector.register_training(-1000, 1)
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
 @patch.object(BasicSelector, '_get_unseen_data')
 @patch.object(BasicSelector, '_get_seen_data')
@@ -119,7 +119,7 @@ def test_base_selector_get_new_training_samples(test__get_seen_data, test__get_u
     test__get_seen_data.assert_called_with(0, 1)
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
 @patch.object(BasicSelector, '_get_unseen_data')
 @patch.object(BasicSelector, '_get_seen_data')
@@ -143,7 +143,7 @@ def test_adaptive_selector_get_new_training_samples(test__get_seen_data_size,
     test__get_seen_data.assert_called_with(0, 4)
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
 def test_base_selector_get_seen_data():
     test_metadata_response = ['a', 'b'], [0, 1], [1, 1], [0, 0], ['a', 'b']
@@ -158,7 +158,7 @@ def test_base_selector_get_seen_data():
     assert selector._get_seen_data_size(0) == 2
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(BasicSelector, '__init__', noop_constructor_mock)
 def test_base_selector_get_unseen_data():
     test_metadata_response = ['a', 'b'], [0, 1], [0, 0], [0, 0], ['a', 'b']
@@ -173,7 +173,7 @@ def test_base_selector_get_unseen_data():
     assert selector._get_unseen_data_size(0) == 2
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(GDumbSelector, '__init__', noop_constructor_mock)
 def test_gdumb_selector_get_metadata():
     test_metadata_response = ['a', 'b'], [0, 1], [0, 0], [0, 4], ['a', 'b']
@@ -184,7 +184,7 @@ def test_gdumb_selector_get_metadata():
     assert selector._get_all_metadata(0) == (['a', 'b'], [0, 4])
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(ScoreSelector, '__init__', noop_constructor_mock)
 def test_score_selector_get_metadata():
     test_metadata_response = ['a', 'b'], [-1.5, 2.4], [0, 0], [0, 4], ['a', 'b']
@@ -195,7 +195,7 @@ def test_score_selector_get_metadata():
     assert selector._get_all_metadata(0) == (['a', 'b'], [-1.5, 2.4])
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(GDumbSelector, '__init__', noop_constructor_mock)
 @patch.object(GDumbSelector, '_get_all_metadata')
 def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
@@ -216,7 +216,7 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
         assert (sample, clss) in original_samples
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(ScoreSelector, '__init__', noop_constructor_mock)
 @patch.object(ScoreSelector, '_get_all_metadata')
 def test_score_selector_normal_mode(test__get_all_metadata):
@@ -238,7 +238,7 @@ def test_score_selector_normal_mode(test__get_all_metadata):
         assert (sample, score * 4) in original_samples
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(SelectorStrategy, __abstractmethods__=set())
 @patch.object(ScoreSelector, '__init__', noop_constructor_mock)
 @patch.object(ScoreSelector, '_get_all_metadata')
 def test_score_selector_softmax_mode(test__get_all_metadata):

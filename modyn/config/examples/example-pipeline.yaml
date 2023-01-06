@@ -13,7 +13,7 @@ training:
   batch_size: 64
   strategy: finetune
   strategy_config:
-    limit: none
+    limit: 100
   initial_model: random
   initial_pass:
     activated: True
@@ -22,6 +22,6 @@ training:
 data:
   dataset_id: mnist
 trigger:
-  type: DataAmountTrigger
+  id: DataAmountTrigger
   trigger_config:
     data_points_for_trigger: 100
