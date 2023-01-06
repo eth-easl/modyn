@@ -58,7 +58,7 @@ class BasicSelector(SelectorStrategy):
 
         Args:
             training_id (int): The training ID of the current training.
-            training_set_size (int): The size of the training set queried. 
+            training_set_size (int): The size of the training set queried.
 
         Returns:
             list(str): the training sample keys for the newly selected training_set
@@ -96,7 +96,7 @@ class BasicSelector(SelectorStrategy):
         """
         For a given training_id and number of samples, request that many samples from
         the previously seen data
-        
+
         Args:
             training_id (int): The training ID of the current training.
             num_samples (int): Number of samples queried
