@@ -1,9 +1,8 @@
-name: Integration tests
-
-# We trigger integration tests only if the code linting and unit tests run through
+name: integration-tets
 on:
   workflow_run:
-    workflows: ["Linting & Tests"]
+    workflows: 
+      - linting-and-tests
     types:
       - completed
 

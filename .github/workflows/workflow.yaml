@@ -1,4 +1,4 @@
-name: Linting & Tests
+name: linting-and-tests
 on: [pull_request]
 
 defaults:
@@ -18,12 +18,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Flake8
+      - name: Setup requirements
         run: |
           conda update -n base -c defaults conda
           conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
+      
+      - name: Flake8
+        run: |
           conda run -n modyn flake8 --version
           conda run -n modyn flake8 --statistics
 
@@ -39,12 +42,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Mypy
+      - name: Setup requirements
         run: |
           conda update -n base -c defaults conda
           conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
+
+      - name: Mypy
+        run: |
           conda run -n modyn mypy --version
           conda run -n modyn mypy modyn
 
@@ -60,12 +66,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Pylint
+      - name: Setup requirements
         run: |
           conda update -n base -c defaults conda
           conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
+
+      - name: Pylint
+        run: |
           conda run -n modyn pylint --version
           conda run -n modyn pylint modyn
 
@@ -81,12 +90,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Pytest
+      - name: Setup requirements
         run: |
           conda update -n base -c defaults conda
           conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
+
+      - name: Pytest
+        run: |
           conda run -n modyn pytest
           conda run -n modyn pytest > pytest-coverage.txt
 
@@ -107,10 +119,12 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Pytest
+      - name: Setup requirements
         run: |
           conda update -n base -c defaults conda
           conda update --all
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
-          conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
+
+      - name: Pytest
+        run: conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90

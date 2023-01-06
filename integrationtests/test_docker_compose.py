@@ -28,6 +28,7 @@ def get_modyn_config() -> dict:
 
 
 def storage_running() -> bool:
+    # TODO(MaxiBoether): implement this when storage is merged and docker entrypoint works
     return True
 
 
@@ -53,13 +54,11 @@ def storage_db_running() -> bool:
 
 
 def selector_running() -> bool:
-    # TODO(MaxiBoether): implement this when storage is merged and docker entrypoint works
+    # TODO(MaxiBoether): implement this when selector is merged and docker entrypoint works
     return True
-
 
 def system_running() -> bool:
     return storage_db_running() and storage_running() and selector_running()
-
 
 def main() -> None:
     start_time = round(time.time())
