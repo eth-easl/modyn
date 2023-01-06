@@ -8,33 +8,42 @@ defaults:
 jobs:
   flake8:
     runs-on: ubuntu-latest
-    uses: ./.github/workflows/base.yml
+    uses: 
 
     steps:
+    - name: Setup Docker
+      uses: actions/base
+
     - name: Setup dev-requirements and run flake within container
       run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && flake8 --version && flake8 --statistics
 
   mypy-typechecking:
     runs-on: ubuntu-latest
-    uses: ./.github/workflows/base.yml
 
     steps:
+    - name: Setup Docker
+      uses: actions/base
+
     - name: Setup dev-requirements and run mypy within container
       run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && mypy --version && mypy modyn
 
   pylint:
     runs-on: ubuntu-latest
-    uses: ./.github/workflows/base.yml
 
     steps:
+    - name: Setup Docker
+      uses: actions/base
+
     - name: Setup dev-requirements and run pylint within container
       run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pylint --version && pylint modyn
 
   unittests:
     runs-on: ubuntu-latest
-    uses: ./.github/workflows/base.yml
 
     steps:
+    - name: Setup Docker
+      uses: actions/base
+
     - name: Setup dev-requirements and run pytest within container
       run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pytest && pytest > pytest-coverage.txt
 
@@ -45,7 +54,10 @@ jobs:
 # Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
   coverage-newarchitecture:
     runs-on: ubuntu-latest
-    uses: ./.github/workflows/base.yml
+
+    steps:
+    - name: Setup Docker
+      uses: actions/base
 
     steps:
     - name: Setup dev-requirements and run pytest within container

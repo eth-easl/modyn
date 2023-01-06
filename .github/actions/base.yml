@@ -1,15 +1,11 @@
-name: Modyn base workflow
-on: [workflow_call]
+name: Modyn base action
 
 defaults:
   run:
     shell: bash
 
-jobs:
-  baseimage:
-    runs-on: ubuntu-latest
-
-    steps:
+runs:
+  steps:
     - name: Check out code
       uses: actions/checkout@v3
 
