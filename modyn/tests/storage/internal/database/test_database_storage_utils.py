@@ -20,12 +20,12 @@ def test_get_filesystem_wrapper_with_invalid_type():
 
 
 def test_get_file_wrapper():
-    file_wrapper = get_file_wrapper(FileWrapperType.WebdatasetFileWrapper, '/tmp/modyn')
+    file_wrapper = get_file_wrapper(FileWrapperType.WebdatasetFileWrapper, '/tmp/modyn', '{}')
     assert file_wrapper is not None
     assert file_wrapper.file_wrapper_type == FileWrapperType.WebdatasetFileWrapper
 
 
 def test_get_file_wrapper_with_invalid_type():
     with pytest.raises(InvalidFileWrapperTypeException):
-        file_wrapper = get_file_wrapper('invalid', '/tmp/modyn')
+        file_wrapper = get_file_wrapper('invalid', '/tmp/modyn', '{}')
         assert file_wrapper is None

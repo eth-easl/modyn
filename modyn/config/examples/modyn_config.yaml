@@ -6,7 +6,7 @@ project:
 storage:
   port: "50051"
   hostname: "localhost"
-  dataset_watcher:
+  new_file_watcher:
     interval: 10
   datasets:
     [
@@ -16,7 +16,12 @@ storage:
         version: "0.0.1",
         base_path: "datasets/mnist",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
-        file_wrapper_type: "SimpleFileWrapper"
+        file_wrapper_type: "SimpleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".png",
+            label_file_extension: ".json"
+          }
       }
     ]
   database:

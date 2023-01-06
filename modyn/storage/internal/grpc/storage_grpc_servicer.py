@@ -1,7 +1,6 @@
 import grpc
 import logging
-import typing
-from typing import List
+from typing import Iterable, Tuple
 
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 # pylint: disable-next=no-name-in-module
@@ -25,7 +24,7 @@ class StorageGRPCServicer(StorageServicer):
         super().__init__()
 
     # pylint: disable-next=unused-argument,invalid-name
-    def Get(self, request: GetRequest, context: grpc.ServicerContext) -> typing.Iterable[GetResponse]:
+    def Get(self, request: GetRequest, context: grpc.ServicerContext) -> Iterable[GetResponse]:
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
@@ -35,7 +34,7 @@ class StorageGRPCServicer(StorageServicer):
                 yield GetResponse()
                 return
 
-            samples: typing.List[Sample] = session.query(Sample) \
+            samples: list[Sample] = session.query(Sample) \
                 .filter(Sample.external_key.in_(request.keys)).order_by(Sample.file_id).all()
 
             if len(samples) == 0:
@@ -48,17 +47,22 @@ class StorageGRPCServicer(StorageServicer):
                 not_found_keys = {s for s in request.keys if s not in [sample.external_key for sample in samples]}
                 logger.error(f'Keys: {not_found_keys}')
 
-            file_id = samples[0].file_id
-            samples_per_file: List[int] = []
+            current_file = samples[0].file
+            samples_per_file: list[Tuple[int, str]] = []
 
+            # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:
-                if sample.file_id != file_id:
-                    file_id = sample.file_id
-                    file: File = sample.file
-                    file_wrapper = get_file_wrapper(dataset.file_wrapper_type, file.path)
-                    yield GetResponse(chunk=file_wrapper.get_samples_from_indices(samples_per_file))
+                if sample.file_id != current_file.id:
+                    file_wrapper = get_file_wrapper(dataset.file_wrapper_type,
+                                                    current_file.path,
+                                                    dataset.file_wrapper_config)
+                    yield GetResponse(chunk=file_wrapper
+                                      .get_samples_from_indices([index for index, _ in samples_per_file]),
+                                      keys=[external_key for _, external_key in samples_per_file])
+                    samples_per_file = [(sample.index, sample.external_key)]
+                    current_file = sample.file
                 else:
-                    samples_per_file.append(sample.index)
+                    samples_per_file.append((sample.index, sample.external_key))
 
     # pylint: disable-next=unused-argument,invalid-name
     def GetNewDataSince(self, request: GetNewDataSinceRequest, context: grpc.ServicerContext)\
@@ -133,5 +137,6 @@ class StorageGRPCServicer(StorageServicer):
                                            request.filesystem_wrapper_type,
                                            request.file_wrapper_type,
                                            request.description,
-                                           request.version)
+                                           request.version,
+                                           request.file_wrapper_config)
             return RegisterNewDatasetResponse(success=success)

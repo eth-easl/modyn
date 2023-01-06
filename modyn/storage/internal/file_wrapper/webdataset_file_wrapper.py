@@ -22,14 +22,14 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
     See here for more information about the webdataset file format:
     https://webdataset.github.io/webdataset/
     """
-    indeces_cache: Dict[str, str] = {}
     tmp_dir: pathlib.Path = pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp"
 
-    def __init__(self, file_path: str):
-        super().__init__(file_path)
+    def __init__(self, file_path: str, file_wrapper_config: dict):
+        super().__init__(file_path, file_wrapper_config)
+        self.indeces_cache: Dict[str, str] = {}
         self.file_wrapper_type = FileWrapperType.WebdatasetFileWrapper
 
-    def get_size(self) -> int:
+    def get_number_of_samples(self) -> int:
         """
         This is a very slow operation. It is recommended to only use this method for testing purposes
         and for the initial loading of the dataset into the database.
@@ -96,7 +96,5 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
             dst.write({"__key__": key, image_type: image, "cls": cls, "json": json})
 
     def __del__(self) -> None:
-        try:
+        if os.path.exists(self.tmp_dir):
             shutil.rmtree(self.tmp_dir)
-        except FileNotFoundError:
-            pass

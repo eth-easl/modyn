@@ -1,13 +1,12 @@
 import logging
 import os
 import pathlib
-from typing import List, Tuple
-from multiprocessing import Process
+from typing import Tuple
+import json
 
 from modyn.utils import validate_yaml
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.internal.database.database_connection import DatabaseConnection
-from modyn.storage.internal.dataset_watcher import DatasetWatcher
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ class Storage():
         if not valid:
             raise ValueError(f"Invalid configuration: {errors}")
 
-    def _validate_config(self) -> Tuple[bool, List[str]]:
+    def _validate_config(self) -> Tuple[bool, list[str]]:
         schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent \
             / "config" / "schema" / "modyn_config_schema.yaml"
         return validate_yaml(self.modyn_config, schema_path)
@@ -36,21 +35,12 @@ class Storage():
                                             dataset['filesystem_wrapper_type'],
                                             dataset['file_wrapper_type'],
                                             dataset['description'],
-                                            dataset['version']):
+                                            dataset['version'],
+                                            json.dumps(dataset['file_wrapper_config'])):
                     raise ValueError(f"Failed to add dataset {dataset['name']}")
 
         #  Start the dataset watcher process in a different thread.
-        dataset_watcher = Process(target=DatasetWatcher(self.modyn_config).run)
-        dataset_watcher.start()
 
         #  Start the storage grpc server.
         with GRPCServer(self.modyn_config) as server:
             server.wait_for_termination()
-
-        #  Close the dataset_watcher process. This will cause a ValueError to be raised
-        #  in the dataset_watcher process (because it's still running), but we can ignore it.
-        #  See https://docs.python.org/3/library/multiprocessing.html#:~:text=in%20version%203.7.-,close()%C2%B6,-Close%20the%20Process  # noqa
-        try:
-            dataset_watcher.close()
-        except ValueError:
-            pass

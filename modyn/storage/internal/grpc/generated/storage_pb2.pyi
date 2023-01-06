@@ -56,26 +56,30 @@ class GetRequest(_message.Message):
     def __init__(self, dataset_id: _Optional[str] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetResponse(_message.Message):
-    __slots__ = ["chunk"]
+    __slots__ = ["chunk", "keys"]
     CHUNK_FIELD_NUMBER: _ClassVar[int]
+    KEYS_FIELD_NUMBER: _ClassVar[int]
     chunk: bytes
-    def __init__(self, chunk: _Optional[bytes] = ...) -> None: ...
+    keys: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class RegisterNewDatasetRequest(_message.Message):
-    __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_type", "filesystem_wrapper_type", "version"]
+    __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_config", "file_wrapper_type", "filesystem_wrapper_type", "version"]
     BASE_PATH_FIELD_NUMBER: _ClassVar[int]
     DATASET_ID_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     FILESYSTEM_WRAPPER_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILE_WRAPPER_CONFIG_FIELD_NUMBER: _ClassVar[int]
     FILE_WRAPPER_TYPE_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     base_path: str
     dataset_id: str
     description: str
+    file_wrapper_config: str
     file_wrapper_type: str
     filesystem_wrapper_type: str
     version: str
-    def __init__(self, dataset_id: _Optional[str] = ..., filesystem_wrapper_type: _Optional[str] = ..., file_wrapper_type: _Optional[str] = ..., description: _Optional[str] = ..., base_path: _Optional[str] = ..., version: _Optional[str] = ...) -> None: ...
+    def __init__(self, dataset_id: _Optional[str] = ..., filesystem_wrapper_type: _Optional[str] = ..., file_wrapper_type: _Optional[str] = ..., description: _Optional[str] = ..., base_path: _Optional[str] = ..., version: _Optional[str] = ..., file_wrapper_config: _Optional[str] = ...) -> None: ...
 
 class RegisterNewDatasetResponse(_message.Message):
     __slots__ = ["success"]

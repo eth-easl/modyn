@@ -60,7 +60,8 @@ class DatabaseConnection():
 
     def add_dataset(self, name: str, base_path: str,
                     filesystem_wrapper_type: FilesystemWrapperType,
-                    file_wrapper_type: FileWrapperType, description: str, version: str) -> bool:
+                    file_wrapper_type: FileWrapperType, description: str, version: str,
+                    file_wrapper_config: str) -> bool:
         """
         Add dataset to database.
 
@@ -74,18 +75,19 @@ class DatabaseConnection():
                     'filesystem_wrapper_type': filesystem_wrapper_type,
                     'file_wrapper_type': file_wrapper_type,
                     'description': description,
-                    'version': version
+                    'version': version,
+                    'file_wrapper_config': file_wrapper_config
                 })
-                self.session.commit()
             else:
                 dataset = Dataset(name=name,
                                   base_path=base_path,
                                   filesystem_wrapper_type=filesystem_wrapper_type,
                                   file_wrapper_type=file_wrapper_type,
                                   description=description,
-                                  version=version)
+                                  version=version,
+                                  file_wrapper_config=file_wrapper_config)
                 self.session.add(dataset)
-                self.session.commit()
+            self.session.commit()
         except exc.SQLAlchemyError as exception:
             logger.error(f'Error adding dataset: {exception}')
             self.session.rollback()

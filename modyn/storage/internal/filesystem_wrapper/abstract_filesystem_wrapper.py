@@ -1,4 +1,3 @@
-import typing
 from abc import ABC, abstractmethod
 
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
@@ -37,7 +36,7 @@ class AbstractFileSystemWrapper(ABC):
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
-    def list(self, path: str, recursive: bool = False) -> typing.List[str]:
+    def list(self, path: str, recursive: bool = False) -> list[str]:
         """
         Returns a list of files in the given path.
 

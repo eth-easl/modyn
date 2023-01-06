@@ -6,17 +6,19 @@ import pathlib
 from modyn.storage.storage import Storage
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
-from modyn.storage.internal.dataset_watcher import DatasetWatcher
+from modyn.storage.internal.new_file_watcher import NewFileWatcher
 
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / 'test_storage.db'
 modyn_config = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent \
-                / "config" / "examples" / "modyn_config.yaml"
+    / "config" / "examples" / "modyn_config.yaml"
 
 
 def get_minimal_modyn_config() -> dict:
     return {
         'storage': {
+            'port': '50051',
+            'hostname': 'localhost',
             'filesystem': {
                 'type': 'LocalFilesystemWrapper',
                 'base_path': '/tmp/modyn'
@@ -29,7 +31,7 @@ def get_minimal_modyn_config() -> dict:
                 'port': '0',
                 'database': f'{database_path}'
             },
-            'dataset_watcher': {
+            'new_file_watcher': {
                 'interval': 1
             },
             'datasets': [
@@ -40,6 +42,7 @@ def get_minimal_modyn_config() -> dict:
                     'file_wrapper_type': 'WebdatasetFileWrapper',
                     'description': 'test',
                     'version': '0.0.1',
+                    'file_wrapper_config': {}
                 }
             ]
         },
@@ -91,7 +94,7 @@ def test_validate_config():
     assert storage._validate_config()[0]
 
 
-@patch.object(DatasetWatcher, 'run', lambda *args, **kwargs: None)
+@patch.object(NewFileWatcher, 'run', lambda *args, **kwargs: None)
 @patch('modyn.storage.storage.GRPCServer', MockGRPCServer)
 def test_run():
     with DatabaseConnection(get_minimal_modyn_config()) as database:

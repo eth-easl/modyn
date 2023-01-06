@@ -4,13 +4,14 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 
 
 class AbstractFileWrapper(ABC):
-    file_wrapper_type: FileWrapperType = None
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, file_wrapper_config: dict):
+        self.file_wrapper_type: FileWrapperType = None
         self.file_path = file_path
+        self.file_wrapper_config = file_wrapper_config
 
     @abstractmethod
-    def get_size(self) -> int:
+    def get_number_of_samples(self) -> int:
         """
         Get the size of the file in number of samples.
         """

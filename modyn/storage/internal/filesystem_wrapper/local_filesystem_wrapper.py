@@ -1,5 +1,4 @@
 import os
-import typing
 
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
@@ -28,7 +27,7 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
     def exists(self, path: str) -> bool:
         return os.path.exists(path)
 
-    def list(self, path: str, recursive: bool = False) -> typing.List[str]:
+    def list(self, path: str, recursive: bool = False) -> list[str]:
         if not self.__is_valid_path(path):
             raise ValueError(f'Path {path} is not valid.')
         if not self.isdir(path):
@@ -55,14 +54,14 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             raise ValueError(f'Path {path} is not valid.')
         if not self.isfile(path):
             raise IsADirectoryError(f'Path {path} is a directory.')
-        return os.path.getmtime(path) * 1000
+        return int(os.path.getmtime(path) * 1000)
 
     def get_created(self, path: str) -> int:
         if not self.__is_valid_path(path):
             raise ValueError(f'Path {path} is not valid.')
         if not self.isfile(path):
             raise IsADirectoryError(f'Path {path} is a directory.')
-        return os.path.getctime(path) * 1000
+        return int(os.path.getctime(path) * 1000)
 
     def join(self, *paths: str) -> str:
         return os.path.join(*paths)

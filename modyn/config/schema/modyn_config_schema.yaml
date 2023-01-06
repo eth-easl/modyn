@@ -35,13 +35,15 @@ properties:
         type: string
         description: |
           The hostname to use for the storage server.
-      dataset_watcher:
+      new_file_watcher:
         type: object
         properties:
           interval:
             type: number
             description: |
               The interval in seconds to check for new files and samples for each dataset.
+        required:
+          - interval
       datasets:
         type: array
         items:
@@ -71,6 +73,27 @@ properties:
               type: string
               description: |
                 The file wrapper type of the dataset.
+            file_wrapper_config:
+              type: object
+              description: |
+                The file wrapper config of the dataset.
+              properties:
+                file_extension:
+                  type: string
+                  description: |
+                    The file extension of the dataset. Starts with a dot.
+                label_file_extension:
+                  type: string
+                  description: |
+                    The label file extension of the dataset. Starts with a dot.
+          required:
+            - name
+            - description
+            - version
+            - base_path
+            - filesystem_wrapper_type
+            - file_wrapper_type
+            - file_wrapper_config
       database:
         type: object
         properties:
@@ -98,6 +121,18 @@ properties:
             type: string
             description: |
               The database to use for the database.
+        required:
+          - drivername
+          - username
+          - password
+          - host
+          - port
+          - database
+    required:
+      - port
+      - hostname
+      - new_file_watcher
+      - database
   odm:
     type: object
     properties:

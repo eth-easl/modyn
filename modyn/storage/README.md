@@ -57,9 +57,9 @@ There are two ways to add a dataset to the storage abstraction:
 
 ---
 
-## How to add a file to a dataset (DatasetWatcher):
+## How to add a file to a dataset (NewFileWatcher):
 
-A file is added to the storage abstraction automatically when the file is created in the underlying storage system. The storage abstraction will periodically check the underlying storage system for new files. If a new file is found, it will be added to the database. The component that is responsible for checking the underlying storage system is called the `DatasetWatcher`. The `DatasetWatcher` is started automatically when the storage component is started. The `DatasetWatcher` is defined in `modyn/storage/internal/dataset_watcher.py`. The `DatasetWatcher` periodically checks for each dataset if there are new files in the underlying storage system. If a new file is found, it and the samples in the file are added to the database.
+A file is added to the storage abstraction automatically when the file is created in the underlying storage system. The storage abstraction will periodically check the underlying storage system for new files. If a new file is found, it will be added to the database. The component that is responsible for checking the underlying storage system is called the `NewFileWatcher`. The `NewFileWatcher` is started automatically when the storage component is started. The `NewFileWatcher` is defined in `modyn/storage/internal/new_file_watcher.py`. The `NewFileWatcher` periodically checks for each dataset if there are new files in the underlying storage system. If a new file is found, it and the samples in the file are added to the database.
 
 Files and samples are expected to be added by a separate component or an altogether different system. The `Storage` component is only responsible for checking for new files and adding them to the database as well as providing the samples to the GPU nodes. It is thus a read-only component.
 

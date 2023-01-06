@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument, no-name-in-module
 import os
 import time
 import pickle
@@ -12,7 +13,7 @@ from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, \
     GetNewDataSinceRequest, DatasetAvailableRequest, RegisterNewDatasetRequest, \
-        GetDataInIntervalRequest  # pylint: disable=no-name-in-module
+    GetDataInIntervalRequest
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
@@ -38,7 +39,7 @@ def get_minimal_modyn_config() -> dict:
                 'port': '0',
                 'database': f'{DATABASE}'
             },
-            'dataset_watcher': {
+            'new_file_watcher': {
                 'interval': 1
             },
             'datasets': [
@@ -49,6 +50,8 @@ def get_minimal_modyn_config() -> dict:
                     'file_wrapper_type': WebdatasetFileWrapper,
                     'description': 'test',
                     'version': '0.0.1',
+                    'file_wrapper_config': {
+                    }
                 }
             ]
         },
@@ -196,10 +199,12 @@ def test_get(mock_get_samples_from_indices):
 
     request = GetRequest(dataset_id='test', keys=['test', 'test3', 'test4'])
 
-    for response in server.Get(request, None):
+    expetect_responses = [(b'', ['test']), (b'', ['test3', 'test4'])]
+
+    for response, expetect_response in zip(server.Get(request, None), expetect_responses):
         assert response is not None
-        assert response.chunk == b''
-        mock_get_samples_from_indices.assert_called_once_with([0])
+        assert response.chunk == expetect_response[0]
+        assert response.keys == expetect_response[1]
 
 
 def test_get_invalid_dataset():
@@ -289,7 +294,6 @@ def test_get_data_in_interval():
                                        start_timestamp=0,
                                        end_timestamp=NOW - 1)
 
-    
     response = server.GetDataInInterval(request, None)
     assert response is not None
     assert response.keys == ['test5']
@@ -336,7 +340,8 @@ def test_register_new_dataset():
         filesystem_wrapper_type='LocalFilesystemWrapper',
         file_wrapper_type='WebdatasetFileWrapper',
         description='test',
-        version='0.0.1'
+        version='0.0.1',
+        file_wrapper_config='{}'
     )
 
     response = server.RegisterNewDataset(request, None)

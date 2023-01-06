@@ -36,17 +36,17 @@ def teardown():
 
 
 def test_init():
-    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH, {})
     assert file_wrapper.file_path == FILE_PATH
 
 
-def test_get_size():
-    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
-    assert file_wrapper.get_size() == 150
+def test_get_number_of_samples():
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH, {})
+    assert file_wrapper.get_number_of_samples() == 150
 
 
 def test_get_samples():
-    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH, {})
     samples = file_wrapper.get_samples(0, 1)
 
     samples = pickle.loads(samples)
@@ -73,7 +73,7 @@ def test_get_samples():
 
 
 def test_get_sample():
-    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH, {})
     sample = file_wrapper.get_sample(0)
 
     sample = pickle.loads(sample)
@@ -98,7 +98,7 @@ def test_get_sample():
 
 
 def test_get_samples_from_indices():
-    file_wrapper = WebdatasetFileWrapper(FILE_PATH)
+    file_wrapper = WebdatasetFileWrapper(FILE_PATH, {})
 
     indices = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45]
     samples = file_wrapper.get_samples_from_indices(indices)

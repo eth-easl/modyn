@@ -16,6 +16,7 @@ message GetRequest {
 
 message GetResponse {
   bytes chunk = 1;
+  repeated string keys = 2;
 }
 
 message GetNewDataSinceRequest {
@@ -52,6 +53,7 @@ message RegisterNewDatasetRequest {
   string description = 4;
   string base_path = 5;
   string version = 6;
+  string file_wrapper_config = 7;
 }
 
 message RegisterNewDatasetResponse {

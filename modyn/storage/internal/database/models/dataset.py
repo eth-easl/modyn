@@ -15,6 +15,7 @@ class Dataset(Base):
     filesystem_wrapper_type = Column(Enum(FilesystemWrapperType), nullable=False)
     file_wrapper_type = Column(Enum(FileWrapperType), nullable=False)
     base_path = Column(String(120), unique=False, nullable=False)
+    file_wrapper_config = Column(String(240), unique=False, nullable=True)
 
     def __repr__(self) -> str:
         return f'<Dataset {self.name}>'
@@ -24,10 +25,12 @@ class Dataset(Base):
                  filesystem_wrapper_type: FilesystemWrapperType,
                  file_wrapper_type: FileWrapperType,
                  base_path: str,
-                 version: str = '0.0.1'):
+                 version: str = '0.0.1',
+                 file_wrapper_config: str = '{}'):
         self.name = name
         self.description = description
         self.filesystem_wrapper_type = filesystem_wrapper_type
         self.file_wrapper_type = file_wrapper_type
         self.base_path = base_path
         self.version = version
+        self.file_wrapper_config = file_wrapper_config

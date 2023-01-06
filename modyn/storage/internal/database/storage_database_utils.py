@@ -1,4 +1,5 @@
 import logging
+import json
 
 from modyn.utils import dynamic_module_import
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
@@ -26,16 +27,17 @@ def get_filesystem_wrapper(filesystem_wrapper_type: FilesystemWrapperType, base_
     return filesystem_wrapper(base_path)
 
 
-def get_file_wrapper(file_wrapper_type: FileWrapperType, path: str) -> AbstractFileWrapper:
+def get_file_wrapper(file_wrapper_type: FileWrapperType, path: str, file_wrapper_config: str) -> AbstractFileWrapper:
     """
     Get the file wrapper.
     """
     if not isinstance(file_wrapper_type, FileWrapperType):
         raise InvalidFileWrapperTypeException('Invalid file wrapper type.')
+    file_wrapper_config = json.loads(file_wrapper_config)
     file_wrapper_module = \
         dynamic_module_import(f'modyn.storage.internal.file_wrapper.{file_wrapper_type.value}')
     file_wrapper = getattr(
         file_wrapper_module,
         f'{file_wrapper_type.name}'
     )
-    return file_wrapper(path)
+    return file_wrapper(path, file_wrapper_config)
