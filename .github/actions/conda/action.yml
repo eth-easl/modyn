@@ -11,9 +11,11 @@ runs:
 
       - name: Set cache date
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+        shell: bash
       
       - name: Get conda path
         run: echo "CONDAPATH=${CONDA_PREFIX}" >> $GITHUB_ENV 
+        shell: bash
 
       - uses: actions/cache@v3
         with:
@@ -28,3 +30,4 @@ runs:
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
         if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
