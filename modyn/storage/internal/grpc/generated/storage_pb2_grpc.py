@@ -24,6 +24,11 @@ class StorageStub(object):
                 request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
                 response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
                 )
+        self.GetDataInInterval = channel.unary_stream(
+                '/modyn.storage.Storage/GetDataInInterval',
+                request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
+                response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
+                )
         self.CheckAvailability = channel.unary_unary(
                 '/modyn.storage.Storage/CheckAvailability',
                 request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
@@ -46,6 +51,12 @@ class StorageServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetNewDataSince(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetDataInInterval(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -75,6 +86,11 @@ def add_StorageServicer_to_server(servicer, server):
                     servicer.GetNewDataSince,
                     request_deserializer=storage__pb2.GetNewDataSinceRequest.FromString,
                     response_serializer=storage__pb2.GetNewDataSinceResponse.SerializeToString,
+            ),
+            'GetDataInInterval': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetDataInInterval,
+                    request_deserializer=storage__pb2.GetDataInIntervalRequest.FromString,
+                    response_serializer=storage__pb2.GetDataInIntervalResponse.SerializeToString,
             ),
             'CheckAvailability': grpc.unary_unary_rpc_method_handler(
                     servicer.CheckAvailability,
@@ -127,6 +143,23 @@ class Storage(object):
         return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetNewDataSince',
             storage__pb2.GetNewDataSinceRequest.SerializeToString,
             storage__pb2.GetNewDataSinceResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetDataInInterval(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetDataInInterval',
+            storage__pb2.GetDataInIntervalRequest.SerializeToString,
+            storage__pb2.GetDataInIntervalResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

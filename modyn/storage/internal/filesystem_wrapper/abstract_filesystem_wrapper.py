@@ -1,4 +1,3 @@
-import datetime
 import typing
 from abc import ABC, abstractmethod
 
@@ -76,7 +75,7 @@ class AbstractFileSystemWrapper(ABC):
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
-    def get_modified(self, path: str) -> datetime.datetime:
+    def get_modified(self, path: str) -> int:
         """
         Returns the last modified time of the file.
 
@@ -85,7 +84,7 @@ class AbstractFileSystemWrapper(ABC):
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
-    def get_created(self, path: str) -> datetime.datetime:
+    def get_created(self, path: str) -> int:
         """
         Returns the creation time of the file.
 

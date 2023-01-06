@@ -4,6 +4,7 @@ package modyn.storage;
 service Storage {
   rpc Get (GetRequest) returns (stream GetResponse) {}
   rpc GetNewDataSince (GetNewDataSinceRequest) returns (stream GetNewDataSinceResponse) {}
+  rpc GetDataInInterval (GetDataInIntervalRequest) returns (stream GetDataInIntervalResponse) {}
   rpc CheckAvailability (DatasetAvailableRequest) returns (DatasetAvailableResponse) {}
   rpc RegisterNewDataset (RegisterNewDatasetRequest) returns (RegisterNewDatasetResponse) {}
 }
@@ -19,10 +20,20 @@ message GetResponse {
 
 message GetNewDataSinceRequest {
   string dataset_id = 1;
-  float timestamp = 2;
+  int64 timestamp = 2;
 }
 
 message GetNewDataSinceResponse {
+  repeated string keys = 1;
+}
+
+message GetDataInIntervalRequest {
+  string dataset_id = 1;
+  int64 start_timestamp = 2;
+  int64 end_timestamp = 3;
+}
+
+message GetDataInIntervalResponse {
   repeated string keys = 1;
 }
 

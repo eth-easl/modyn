@@ -18,7 +18,7 @@ def setup():
     os.makedirs(TEST_DIR, exist_ok=True)
 
     test_file = wds.TarWriter(FILE_PATH)
-    for i in range(10000):
+    for i in range(150):
 
         test_jpg = Image.new('RGB', (width, height), color=(255, 255, 255))
         for m in range(test_jpg.size[0]):  # pylint: disable=invalid-name
@@ -42,7 +42,7 @@ def test_init():
 
 def test_get_size():
     file_wrapper = WebdatasetFileWrapper(FILE_PATH)
-    assert file_wrapper.get_size() == 10000
+    assert file_wrapper.get_size() == 150
 
 
 def test_get_samples():

@@ -1,6 +1,6 @@
-import datetime
 import typing
 from unittest.mock import patch
+import time
 import pytest
 
 from modyn.storage.internal.dataset_watcher import DatasetWatcher
@@ -14,6 +14,8 @@ from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import Fi
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
+
+FILE_TIMESTAMP = 1600000000
 
 def get_minimal_modyn_config() -> dict:
     return {
@@ -91,11 +93,11 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
     def join(self, *paths: str) -> str:
         return '/'.join(paths)
 
-    def get_modified(self, path: str) -> datetime.datetime:  # pylint: disable=unused-argument
-        return datetime.datetime(2021, 1, 1)
+    def get_modified(self, path: str) -> int:  # pylint: disable=unused-argument
+        return FILE_TIMESTAMP
 
-    def get_created(self, path: str) -> datetime.datetime:  # pylint: disable=unused-argument
-        return datetime.datetime(2021, 1, 1)
+    def get_created(self, path: str) -> int:  # pylint: disable=unused-argument
+        return FILE_TIMESTAMP
 
     def get(self, path: str) -> typing.BinaryIO:  # pylint: disable=unused-argument
         return typing.BinaryIO()
@@ -119,7 +121,7 @@ class MockDataset:
 class MockFile:
     def __init__(self):
         self.path = '/path/file1'
-        self.timestamp = datetime.datetime(2021, 1, 1)
+        self.timestamp = FILE_TIMESTAMP
 
 
 class MockQuery:
@@ -143,7 +145,7 @@ def test_seek(test__get_filesystem_wrapper, test__update_files_in_directory, ses
             base_path='/path'))
     session.commit()
     dataset_watcher._session = session
-    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher._seek(FILE_TIMESTAMP - 1)
     assert test__update_files_in_directory.called
 
 
@@ -159,7 +161,7 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
             base_path='/notexists'))
     session.commit()
     dataset_watcher._session = session
-    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher._seek(FILE_TIMESTAMP - 1)
     assert not test__update_files_in_directory.called
 
 
@@ -176,7 +178,7 @@ def test_seek_path_not_dir(test__get_filesystem_wrapper, test__update_files_in_d
             base_path='/path/file1'))
     session.commit()
     dataset_watcher._session = session
-    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher._seek(FILE_TIMESTAMP - 1)
     assert not test__update_files_in_directory.called
 
 
@@ -185,7 +187,7 @@ def test_seek_path_not_dir(test__get_filesystem_wrapper, test__update_files_in_d
 def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_directory, session) -> None:  # pylint: disable=unused-argument, redefined-outer-name # noqa: E501
     dataset_watcher = DatasetWatcher(get_minimal_modyn_config())
     dataset_watcher._session = session
-    dataset_watcher._seek(datetime.datetime(2020, 1, 1))
+    dataset_watcher._seek(FILE_TIMESTAMP - 1)
     assert not test__update_files_in_directory.called
 
 
@@ -205,7 +207,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
         filesystem_wrapper=MockFileSystemWrapper(),
         file_wrapper_type=MockFileWrapper(),
         path='/path',
-        timestamp=datetime.datetime(2020, 1, 1),
+        timestamp=FILE_TIMESTAMP - 1,
         session=session,
         dataset=dataset
     )
@@ -214,7 +216,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
     assert result is not None
     assert len(result) == 2
     assert result[0].path == '/path/file1'
-    assert result[0].created_at == datetime.datetime(2021, 1, 1)
+    assert result[0].created_at == FILE_TIMESTAMP
     assert result[0].number_of_samples == 2
     assert result[0].dataset_id == 1
 
@@ -227,7 +229,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
         filesystem_wrapper=MockFileSystemWrapper(),
         file_wrapper_type=MockFileWrapper(),
         path='/path',
-        timestamp=datetime.datetime(2020, 1, 1),
+        timestamp=FILE_TIMESTAMP - 1,
         session=session,
         dataset=dataset
     )
@@ -236,7 +238,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
     assert result is not None
     assert len(result) == 2
     assert result[0].path == '/path/file1'
-    assert result[0].created_at == datetime.datetime(2021, 1, 1)
+    assert result[0].created_at == FILE_TIMESTAMP
     assert result[0].number_of_samples == 2
     assert result[0].dataset_id == 1
 
@@ -253,7 +255,7 @@ def test_update_files_in_directory_not_exists(session) -> None:  # pylint: disab
             filesystem_wrapper=MockFileSystemWrapper(),
             file_wrapper_type=MockFileWrapper(),
             path='/notexists',
-            timestamp=datetime.datetime(2020, 1, 1),
+            timestamp=FILE_TIMESTAMP - 1,
             session=session,
             dataset=MockDataset()
         )

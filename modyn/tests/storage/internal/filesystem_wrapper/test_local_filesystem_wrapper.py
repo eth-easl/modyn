@@ -1,6 +1,6 @@
 import os
 import pytest
-import datetime
+import time
 
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
@@ -19,7 +19,7 @@ def setup():
         file.write('test1')
 
     global TEST_FILE_MODIFIED_AT  #  pylint: disable=global-statement # noqa: E262
-    TEST_FILE_MODIFIED_AT = datetime.datetime.fromtimestamp(os.path.getmtime(test_file))
+    TEST_FILE_MODIFIED_AT = os.path.getmtime(test_file) * 1000
 
     os.makedirs(test_dir2, exist_ok=True)
 
@@ -27,7 +27,7 @@ def setup():
         file.write('test2 long')
 
     global TEST_FILE2_MODIFIED_AT  #  pylint: disable=global-statement # noqa: E262
-    TEST_FILE2_MODIFIED_AT = datetime.datetime.fromtimestamp(os.path.getmtime(test_file2))
+    TEST_FILE2_MODIFIED_AT = os.path.getmtime(test_file2) * 1000
 
 
 def teardown():

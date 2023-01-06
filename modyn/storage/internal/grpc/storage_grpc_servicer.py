@@ -1,14 +1,14 @@
 import grpc
 import logging
 import typing
-import datetime
 from typing import List
 
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, GetResponse, \
     GetNewDataSinceRequest, GetNewDataSinceResponse, DatasetAvailableRequest, \
-    DatasetAvailableResponse, RegisterNewDatasetRequest, RegisterNewDatasetResponse
+    DatasetAvailableResponse, RegisterNewDatasetRequest, RegisterNewDatasetResponse, \
+    GetDataInIntervalRequest, GetDataInIntervalResponse
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
@@ -18,7 +18,7 @@ from modyn.storage.internal.database.storage_database_utils import get_file_wrap
 logger = logging.getLogger(__name__)
 
 
-class StorageGRPCServer(StorageServicer):
+class StorageGRPCServicer(StorageServicer):
     def __init__(self, config: dict):
         self.modyn_config = config
         self.database = DatabaseConnection(config)
@@ -72,12 +72,12 @@ class StorageGRPCServer(StorageServicer):
                 logger.error(f'Dataset with name {request.dataset_id} does not exist.')
                 return GetNewDataSinceResponse()
 
-            timestamp = datetime.datetime.fromtimestamp(request.timestamp)
+            timestamp = request.timestamp
 
             external_keys = session.query(Sample.external_key) \
                 .join(File) \
                 .filter(File.dataset_id == dataset.id) \
-                .filter(File.updated_at > timestamp) \
+                .filter(File.updated_at >= timestamp) \
                 .all()
 
             if len(external_keys) == 0:
@@ -85,6 +85,30 @@ class StorageGRPCServer(StorageServicer):
                 return GetNewDataSinceResponse()
 
             return GetNewDataSinceResponse(keys=[external_key[0] for external_key in external_keys])
+
+    def GetDataInInterval(self, request: GetDataInIntervalRequest, context: grpc.ServicerContext)\
+            -> GetDataInIntervalResponse:
+        with DatabaseConnection(self.modyn_config) as database:
+            session = database.get_session()
+
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
+
+            if dataset is None:
+                logger.error(f'Dataset with name {request.dataset_id} does not exist.')
+                return GetDataInIntervalResponse()
+
+            external_keys = session.query(Sample.external_key) \
+                .join(File) \
+                .filter(File.dataset_id == dataset.id) \
+                .filter(File.updated_at >= request.start_timestamp) \
+                .filter(File.updated_at <= request.end_timestamp) \
+                .all()
+
+            if len(external_keys) == 0:
+                logger.info(f'No data between timestamp {request.start_timestamp} and {request.end_timestamp}')
+                return GetDataInIntervalResponse()
+
+            return GetDataInIntervalResponse(keys=[external_key[0] for external_key in external_keys])
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(self, request: DatasetAvailableRequest, context: grpc.ServicerContext) \

@@ -1,4 +1,4 @@
-import datetime
+import time
 import pytest
 
 from sqlalchemy import create_engine
@@ -9,6 +9,8 @@ from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+
+NOW = int(time.time() * 1000)
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +36,7 @@ def test_add_sample(session):  # pylint: disable=redefined-outer-name
     session.add(dataset)
     session.commit()
 
-    now = datetime.datetime.now()
+    now = NOW
     file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
@@ -58,7 +60,7 @@ def test_update_sample(session):  # pylint: disable=redefined-outer-name
     session.add(dataset)
     session.commit()
 
-    now = datetime.datetime.now()
+    now = NOW
     file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
@@ -84,7 +86,7 @@ def test_delete_sample(session):  # pylint: disable=redefined-outer-name
     session.add(dataset)
     session.commit()
 
-    now = datetime.datetime.now()
+    now = NOW
     file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
@@ -108,7 +110,7 @@ def test_repr(session):  # pylint: disable=redefined-outer-name
     session.add(dataset)
     session.commit()
 
-    now = datetime.datetime.now()
+    now = NOW
     file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()

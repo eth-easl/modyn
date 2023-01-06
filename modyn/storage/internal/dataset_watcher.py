@@ -1,7 +1,6 @@
 import typing
 import logging
 import time
-import datetime
 import uuid
 from threading import Thread
 
@@ -28,9 +27,9 @@ class DatasetWatcher:
 
     def __init__(self, modyn_config: dict):
         self.modyn_config = modyn_config
-        self._last_timestamp: datetime.datetime = datetime.datetime.min
+        self._last_timestamp: int = 0
 
-    def _seek(self, timestamp: datetime.datetime) -> None:
+    def _seek(self, timestamp: int) -> None:
         """
         Seek the filesystem for files with a timestamp that is equal or greater than the given timestamp.
         """
@@ -46,8 +45,6 @@ class DatasetWatcher:
             filesystem_wrapper = self._get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
 
             if filesystem_wrapper.exists(dataset.base_path):
-                print(f'Path {dataset.base_path} exists.')
-                print(filesystem_wrapper.isdir(dataset.base_path))
                 if filesystem_wrapper.isdir(dataset.base_path):
                     self._update_files_in_directory(filesystem_wrapper,
                                                     dataset.file_wrapper_type,
@@ -78,7 +75,7 @@ class DatasetWatcher:
                                    filesystem_wrapper: AbstractFileSystemWrapper,
                                    file_wrapper_type: str,
                                    path: str,
-                                   timestamp: datetime.datetime,
+                                   timestamp: int,
                                    session: sessionmaker,
                                    dataset: Dataset) -> None:
         """
@@ -129,7 +126,7 @@ class DatasetWatcher:
                 thread = Thread(target=self._seek, args=(self._last_timestamp,))
                 thread.start()
                 threads.append(thread)
-                self._last_timestamp = datetime.datetime.now()
+                self._last_timestamp = int(time.time() * 1000)
                 if self._testing:
                     break
         finally:

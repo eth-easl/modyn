@@ -1,6 +1,5 @@
 import os
 import typing
-import datetime
 
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
@@ -51,19 +50,19 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             raise IsADirectoryError(f'Path {path} is a directory.')
         return os.path.getsize(path)
 
-    def get_modified(self, path: str) -> datetime.datetime:
+    def get_modified(self, path: str) -> int:
         if not self.__is_valid_path(path):
             raise ValueError(f'Path {path} is not valid.')
         if not self.isfile(path):
             raise IsADirectoryError(f'Path {path} is a directory.')
-        return datetime.datetime.fromtimestamp(os.path.getmtime(path))
+        return os.path.getmtime(path) * 1000
 
-    def get_created(self, path: str) -> datetime.datetime:
+    def get_created(self, path: str) -> int:
         if not self.__is_valid_path(path):
             raise ValueError(f'Path {path} is not valid.')
         if not self.isfile(path):
             raise IsADirectoryError(f'Path {path} is a directory.')
-        return datetime.datetime.fromtimestamp(os.path.getctime(path))
+        return os.path.getctime(path) * 1000
 
     def join(self, *paths: str) -> str:
         return os.path.join(*paths)

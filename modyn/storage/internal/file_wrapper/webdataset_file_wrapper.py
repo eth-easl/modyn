@@ -4,6 +4,7 @@ from itertools import islice
 import uuid
 from typing import Dict
 import pathlib
+import shutil
 
 import webdataset as wds
 
@@ -65,7 +66,6 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
                 index_start = indices[0]
                 index_end = indices[0] - 1
                 for i, index in enumerate(indices):
-                    print(f"index: {index}")
                     if index - index_end == 1:
                         index_end = index
                     else:
@@ -97,9 +97,6 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
 
     def __del__(self) -> None:
         try:
-            # It seems that sometimes in testing the files are deleted twice. This is a workaround.
-            for file in self.indeces_cache.values():
-                os.remove(file)
-            os.removedirs(self.tmp_dir)
+            shutil.rmtree(self.tmp_dir)
         except FileNotFoundError:
             pass

@@ -4,7 +4,7 @@ from concurrent import futures
 import grpc
 
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import add_StorageServicer_to_server
-from modyn.storage.internal.grpc.storage_grpc_server import StorageGRPCServer
+from modyn.storage.internal.grpc.storage_grpc_servicer import StorageGRPCServicer
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class GRPCServer():
     def __enter__(self) -> grpc.Server:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         self._add_storage_servicer_to_server(
-            StorageGRPCServer(self.modyn_config), server)
+            StorageGRPCServicer(self.modyn_config), server)
         port = self.modyn_config['storage']['port']
         logger.info(f'Starting server. Listening on port {port}')
         server.add_insecure_port('[::]:' + port)
@@ -30,5 +30,5 @@ class GRPCServer():
         if self.server is not None:
             self.server.stop(0)
 
-    def _add_storage_servicer_to_server(self, storage_grpc_server: StorageGRPCServer, server: grpc.Server) -> None:
+    def _add_storage_servicer_to_server(self, storage_grpc_server: StorageGRPCServicer, server: grpc.Server) -> None:
         add_StorageServicer_to_server(storage_grpc_server, server)  # pragma: no cover

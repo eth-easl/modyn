@@ -1,23 +1,26 @@
 import os
-import datetime
+import time
 import pickle
 from unittest.mock import patch
 from webdataset import WebDataset, TarWriter
 import pathlib
 
-from modyn.storage.internal.grpc.storage_grpc_server import StorageGRPCServer
+from modyn.storage.internal.grpc.storage_grpc_servicer import StorageGRPCServicer
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, \
-    GetNewDataSinceRequest, DatasetAvailableRequest, RegisterNewDatasetRequest  # pylint: disable=no-name-in-module
+    GetNewDataSinceRequest, DatasetAvailableRequest, RegisterNewDatasetRequest, \
+        GetDataInIntervalRequest  # pylint: disable=no-name-in-module
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
 TMP_FILE = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test.tar')
 TMP_FILE2 = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test2.tar')
+TMP_FILE3 = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test3.tar')
 DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / 'test_storage.database'
+NOW = int(time.time() * 1000)
 
 
 def get_minimal_modyn_config() -> dict:
@@ -76,8 +79,15 @@ def setup():
     writer.write({'__key__': '4', 'cls': [1, 2, 3], 'json': [1, 2, 3]})
     writer.close()
 
+    writer = TarWriter(TMP_FILE3)
+    writer.write({'__key__': '5', 'cls': [1, 2, 3], 'json': [1, 2, 3]})
+    writer.write({'__key__': '6', 'cls': [1, 2, 3], 'json': [1, 2, 3]})
+    writer.close()
+
     with DatabaseConnection(get_minimal_modyn_config()) as database:
-        now = datetime.datetime.now()
+        now = NOW
+        before_now = now - 1
+
         database.create_all()
 
         session = database.get_session()
@@ -110,6 +120,16 @@ def setup():
             dataset=dataset,
             created_at=now,
             updated_at=now,
+            number_of_samples=2
+        )
+
+        session.add(file2)
+
+        file3 = File(
+            path=TMP_FILE3,
+            dataset=dataset,
+            created_at=before_now,
+            updated_at=before_now,
             number_of_samples=2
         )
 
@@ -147,6 +167,14 @@ def setup():
 
         session.add(sample4)
 
+        sample5 = Sample(
+            file=file3,
+            index=0,
+            external_key='test5'
+        )
+
+        session.add(sample5)
+
         session.commit()
 
 
@@ -154,16 +182,17 @@ def teardown():
     os.remove(DATABASE)
     os.remove(TMP_FILE)
     os.remove(TMP_FILE2)
+    os.remove(TMP_FILE3)
 
 
 def test_init() -> None:
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
     assert server is not None
 
 
 @patch.object(WebdatasetFileWrapper, 'get_samples_from_indices', return_value=b'')
 def test_get(mock_get_samples_from_indices):
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = GetRequest(dataset_id='test', keys=['test', 'test3', 'test4'])
 
@@ -174,7 +203,7 @@ def test_get(mock_get_samples_from_indices):
 
 
 def test_get_invalid_dataset():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = GetRequest(dataset_id='test2', keys=['test', 'test3', 'test4'])
 
@@ -184,7 +213,7 @@ def test_get_invalid_dataset():
 
 
 def test_get_invalid_key():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = GetRequest(dataset_id='test', keys=['test5'])
 
@@ -194,9 +223,9 @@ def test_get_invalid_key():
 
 
 def test_get_not_all_keys_found():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetRequest(dataset_id='test', keys=['test', 'test5'])
+    request = GetRequest(dataset_id='test', keys=['test', 'test6'])
 
     for response in server.Get(request, None):
         assert response is not None
@@ -204,18 +233,28 @@ def test_get_not_all_keys_found():
         assert isinstance(result, WebDataset)
 
 
+def test_get_no_keys_providesd():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+
+    request = GetRequest(dataset_id='test', keys=[])
+
+    for response in server.Get(request, None):
+        assert response is not None
+        assert response.chunk == b''
+
+
 def test_get_new_data_since():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = GetNewDataSinceRequest(dataset_id='test', timestamp=0)
 
     response = server.GetNewDataSince(request, None)
     assert response is not None
-    assert response.keys == ['test', 'test2', 'test3', 'test4']
+    assert response.keys == ['test', 'test2', 'test3', 'test4', 'test5']
 
 
 def test_get_new_data_since_invalid_dataset():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = GetNewDataSinceRequest(dataset_id='test2', timestamp=0)
 
@@ -224,20 +263,52 @@ def test_get_new_data_since_invalid_dataset():
     assert response.keys == []
 
 
-def test_get_new_data_since_now_new_data():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+def test_get_new_data_since_no_new_data():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = GetNewDataSinceRequest(dataset_id='test',
-                                     timestamp=datetime.datetime.timestamp(datetime.datetime.now() +
-                                                                           datetime.timedelta(seconds=1000)))
+                                     timestamp=NOW + 100000)
 
     response = server.GetNewDataSince(request, None)
     assert response is not None
     assert response.keys == []
 
 
+def test_get_data_in_interval():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+
+    request = GetDataInIntervalRequest(dataset_id='test',
+                                       start_timestamp=0,
+                                       end_timestamp=NOW + 100000)
+
+    response = server.GetDataInInterval(request, None)
+    assert response is not None
+    assert response.keys == ['test', 'test2', 'test3', 'test4', 'test5']
+
+    request = GetDataInIntervalRequest(dataset_id='test',
+                                       start_timestamp=0,
+                                       end_timestamp=NOW - 1)
+
+    
+    response = server.GetDataInInterval(request, None)
+    assert response is not None
+    assert response.keys == ['test5']
+
+
+def test_get_data_in_interval_invalid_dataset():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+
+    request = GetDataInIntervalRequest(dataset_id='test2',
+                                       start_timestamp=0,
+                                       end_timestamp=NOW + 100000)
+
+    response = server.GetDataInInterval(request, None)
+    assert response is not None
+    assert response.keys == []
+
+
 def test_check_availability():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = DatasetAvailableRequest(dataset_id='test')
 
@@ -247,7 +318,7 @@ def test_check_availability():
 
 
 def test_check_availability_invalid_dataset():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = DatasetAvailableRequest(dataset_id='test2')
 
@@ -257,7 +328,7 @@ def test_check_availability_invalid_dataset():
 
 
 def test_register_new_dataset():
-    server = StorageGRPCServer(get_minimal_modyn_config())
+    server = StorageGRPCServicer(get_minimal_modyn_config())
 
     request = RegisterNewDatasetRequest(
         dataset_id='test3',

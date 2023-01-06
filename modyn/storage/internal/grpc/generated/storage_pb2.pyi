@@ -17,13 +17,29 @@ class DatasetAvailableResponse(_message.Message):
     available: bool
     def __init__(self, available: bool = ...) -> None: ...
 
+class GetDataInIntervalRequest(_message.Message):
+    __slots__ = ["dataset_id", "end_timestamp", "start_timestamp"]
+    DATASET_ID_FIELD_NUMBER: _ClassVar[int]
+    END_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    START_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    dataset_id: str
+    end_timestamp: int
+    start_timestamp: int
+    def __init__(self, dataset_id: _Optional[str] = ..., start_timestamp: _Optional[int] = ..., end_timestamp: _Optional[int] = ...) -> None: ...
+
+class GetDataInIntervalResponse(_message.Message):
+    __slots__ = ["keys"]
+    KEYS_FIELD_NUMBER: _ClassVar[int]
+    keys: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, keys: _Optional[_Iterable[str]] = ...) -> None: ...
+
 class GetNewDataSinceRequest(_message.Message):
     __slots__ = ["dataset_id", "timestamp"]
     DATASET_ID_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     dataset_id: str
-    timestamp: float
-    def __init__(self, dataset_id: _Optional[str] = ..., timestamp: _Optional[float] = ...) -> None: ...
+    timestamp: int
+    def __init__(self, dataset_id: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...
 
 class GetNewDataSinceResponse(_message.Message):
     __slots__ = ["keys"]
