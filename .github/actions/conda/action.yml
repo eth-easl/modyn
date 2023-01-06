@@ -19,6 +19,10 @@ runs:
         run: echo "CONDAPATH=/usr/share/miniconda/envs" >> $GITHUB_ENV 
         shell: bash
 
+      - name: Fix directory permissions
+        run: sudo chown -R $(whoami):$(id -ng) ${CONDAPATH}
+        shell: bash
+
       - uses: actions/cache@v3
         with:
           path: ${{ env.CONDAPATH }}
