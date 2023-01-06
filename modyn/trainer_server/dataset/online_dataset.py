@@ -14,6 +14,7 @@ class OnlineDataset(IterableDataset):
         self._dataset_len = 0
         self._trainining_set_number = 0
         self._serialized_transforms = serialized_transforms
+        self._transform = lambda x: x # identity as default
         self._deserialize_torchvision_transforms()
         self._trigger_point = trigger_point
 
@@ -39,7 +40,8 @@ class OnlineDataset(IterableDataset):
         for transform in self._serialized_transforms:
             function = eval(transform)
             self._transform_list.append(function)
-        self._transform = transforms.Compose(self._transform_list)
+        if len(self._transform_list) > 0:
+            self._transform = transforms.Compose(self._transform_list)
 
     def __iter__(self) -> typing.Iterator:
         worker_info = get_worker_info()

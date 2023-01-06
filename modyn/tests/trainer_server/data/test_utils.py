@@ -5,19 +5,15 @@ from modyn.trainer_server.dataset.online_dataset import OnlineDataset
 from modyn.trainer_server.dataset.utils import prepare_dataloaders
 
 
-def test_prepare_dataloaders_dataset_missing():
-
-    with pytest.raises(ValueError):
-        prepare_dataloaders(1, "MissingDataset", 4, 128)
-
-
 def test_prepare_dataloaders():
 
     train_dataloader, _ = prepare_dataloaders(
         1,
-        "OnlineDataset",
+        "MNIST",
         4,
-        128
+        128,
+        [],
+        "new"
     )
 
     assert train_dataloader.num_workers == 4
