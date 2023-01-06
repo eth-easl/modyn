@@ -5,6 +5,7 @@ defaults:
     shell: bash
 
 runs:
+  using: "composite"
   steps:
     - name: Check out code
       uses: actions/checkout@v3
