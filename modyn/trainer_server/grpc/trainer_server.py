@@ -21,7 +21,6 @@ from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
 )
 from modyn.trainer_server.trainer.pytorch_trainer import train
 
-from modyn.trainer_server.mocks.mock_selector_server import MockSelectorServer
 from modyn.trainer_server.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo, TrainingProcessInfo
 
 path = Path(os.path.abspath(__file__))
@@ -33,7 +32,6 @@ class TrainerGRPCServer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self):
-        self._selector_stub = MockSelectorServer()
         self._training_dict: dict[str, TrainingInfo] = {}
         self._training_process_dict: dict[str, TrainingProcessInfo] = {}
 
@@ -77,7 +75,7 @@ class TrainerGRPCServer:
             target=train,
             args=(
                 self._training_dict[training_id],
-                0, # TODO: fix device number when working with multi-gpu settings
+                'cuda:0', # TODO: fix device number when working with multi-gpu settings
                 f'log-{training_id}.txt',
                 request.load_checkpoint_path,
                 request.trigger_point,
@@ -102,7 +100,7 @@ class TrainerGRPCServer:
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
             # TODO(fotstrt): what to do if blocked - add a timeout?
-            training_state, iteration = self.get_model(training_id)
+            training_state, iteration = self.get_status(training_id)
             return TrainingStatusResponse(
                 is_running=True,
                 state_available=True,
@@ -142,7 +140,7 @@ class TrainerGRPCServer:
                     )
 
 
-    def get_model(self, training_id: int) -> tuple[bytes, int]:
+    def get_status(self, training_id: int) -> tuple[bytes, int]:
 
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(STATUS_QUERY_MESSAGE)
@@ -153,7 +151,7 @@ class TrainerGRPCServer:
     def get_child_exception(self, training_id: int) -> Union[str, None]:
 
         exception_queue = self._training_process_dict[training_id].exception_queue
-        if not exception_queue.empty():
+        if exception_queue.qsize() > 0:
             exception_msg = exception_queue.get()
             return exception_msg
         else:
@@ -168,7 +166,6 @@ class TrainerGRPCServer:
         checkpoints = list(filter(os.path.isfile, glob.glob(checkpoint_path + "/*")))
         checkpoints.sort(key=lambda x: os.path.getmtime(x))
 
-        print(checkpoints)
         if len(checkpoints)==0:
             return None, -1
 

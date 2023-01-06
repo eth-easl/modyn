@@ -16,7 +16,7 @@ class PytorchTrainer:
     def __init__(
         self,
         training_info: TrainingInfo,
-        device: int,
+        device: str,
         trigger_point: str,
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
@@ -55,7 +55,7 @@ class PytorchTrainer:
 
     def create_logger(self, log_path: str):
 
-        self._logger = logging.getLogger('test')  # TODO(fotstrt): fix this
+        self._logger = logging.getLogger('trainer')
         self._logger.setLevel(logging.INFO)
 
         fileHandler = logging.FileHandler(log_path)
@@ -137,7 +137,7 @@ class PytorchTrainer:
 
 def train(
     training_info: TrainingInfo,
-    device: int,
+    device: str,
     log_path: str,
     load_checkpoint_path: Optional[str],
     trigger_point: str,
