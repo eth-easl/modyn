@@ -1,17 +1,62 @@
-name: Modyn base workflow
-on: [workflow_call]
+name: Linting & Tests
+on: [pull_request]
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  baseimage:
+  flake8:
     runs-on: ubuntu-latest
+    uses: ./.github/workflows/base.yml
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3
+    - name: Setup dev-requirements and run flake within container
+      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && flake8 --version && flake8 --statistics
 
-    - name: Build Docker modyn image
-      run: docker build --progress=plain -t modyn -f docker/Base/Dockerfile .
+  mypy-typechecking:
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/base.yml
+
+    steps:
+    - name: Setup dev-requirements and run mypy within container
+      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && mypy --version && mypy modyn
+
+  pylint:
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/base.yml
+
+    steps:
+    - name: Setup dev-requirements and run pylint within container
+      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pylint --version && pylint modyn
+
+  unittests:
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/base.yml
+
+    steps:
+    - name: Setup dev-requirements and run pytest within container
+      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pytest && pytest > pytest-coverage.txt
+
+    - name: Comment coverage
+      uses: coroo/pytest-coverage-commentator@v1.0.2
+
+# TODO(create issue): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
+# Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
+  coverage-newarchitecture:
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/base.yml
+
+    steps:
+    - name: Setup dev-requirements and run pytest within container
+      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
+
+  integrationtests:
+      runs-on: ubuntu-latest
+      
+      steps:
+      - uses: actions/checkout@v1
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.10'
