@@ -42,5 +42,5 @@ class ScoreSelector(Selector):
 
     def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[float]]:
         query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = {training_id}"
-        _, scores, _, _, data = self.get_samples_by_metadata_query(query)
+        _, scores, _, _, data = self.grpc.get_samples_by_metadata_query(query)
         return data, scores

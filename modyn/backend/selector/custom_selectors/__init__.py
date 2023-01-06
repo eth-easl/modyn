@@ -1,6 +1,6 @@
 """
 This submodule contains extensions of the Selector class that implement
-concrete selection strategies. 
+concrete selection strategies.
 """
 import os
 files = os.listdir(os.path.dirname(__file__))

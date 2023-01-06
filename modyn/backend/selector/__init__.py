@@ -1,5 +1,5 @@
 """
-This submodule provides the base functionality for the selector server component. 
+This submodule provides the base functionality for the selector server component.
 """
 import os
 files = os.listdir(os.path.dirname(__file__))

@@ -11,6 +11,10 @@ class BasicSelector(Selector):
     seen data. If is_adaptive_ratio is set to True, then this ratio is automatically
     set to the proportion of the size of the unseen vs. previously seen data.
 
+    For example, if is_adaptive_ratio is set to True, and there are 600 previously 
+    seen data points and 200 previously unseen data points, we will set unseen_data_ratio
+    to 0.25, since there are 200 unseen points and 800 total points, so 200/800=0.25
+
     Args:
         config (dict): The configuration for the selector.
     """
@@ -21,15 +25,15 @@ class BasicSelector(Selector):
         self.unseen_data_ratio = 1.0
         self.old_data_ratio = 0.0
         self._set_unseen_data_ratio(self._config['selector']['unseen_data_ratio'])
-        self._set_is_adaptive_ratio(self._config['selector']['is_adaptive_ratio'])
+        self._is_adaptive_ratio = self._config['selector']['is_adaptive_ratio']
 
     def _set_unseen_data_ratio(self, unseen_data_ratio: float) -> None:
         assert 0 <= unseen_data_ratio <= 1
         self.unseen_data_ratio = unseen_data_ratio
         self.old_data_ratio = 1 - self.unseen_data_ratio
 
-    def _set_is_adaptive_ratio(self, is_adaptive_ratio: bool) -> None:
-        self._is_adaptive_ratio = is_adaptive_ratio
+    # def _set_is_adaptive_ratio(self, is_adaptive_ratio: bool) -> None:
+    #     self._is_adaptive_ratio = is_adaptive_ratio
 
     def _select_new_training_samples(
             self,
@@ -63,7 +67,7 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return np.array(keys)[choice]
@@ -78,7 +82,7 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return np.array(keys)[choice]
@@ -94,7 +98,7 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
         assert np.array(seen).all(), "Queried seen data, but got unseen data."
         return len(keys)
 
@@ -109,6 +113,6 @@ class BasicSelector(Selector):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
         assert not np.array(seen).any(), "Queried unseen data, but got seen data."
         return len(keys)

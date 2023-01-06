@@ -13,7 +13,6 @@ class Selector(ABC):
     Args:
         Selector (config): the configurations for the selector
 
-
     """
 
     def __init__(self, config: dict):
@@ -90,16 +89,16 @@ class Selector(ABC):
             raise ValueError(
                 f'Tried to register training with {num_workers} workers and {training_set_size} data points.')
 
-        return self._register_training(training_set_size, num_workers)
-
-    def _register_training(self, training_set_size: int,
-                           num_workers: int) -> int:
-        """
-        Creates a new training object in the database with the given training_set_size and num_workers
-        Returns:
-            The id of the newly created training object
-        """
         return self.grpc.register_training(training_set_size, num_workers)
+
+    # def _register_training(self, training_set_size: int,
+    #                        num_workers: int) -> int:
+    #     """
+    #     Creates a new training object in the database with the given training_set_size and num_workers
+    #     Returns:
+    #         The id of the newly created training object
+    #     """
+    #     return self.grpc.register_training(training_set_size, num_workers)
 
     def _get_info_for_training(self, training_id: int) -> tuple[int, int]:
         """
@@ -130,6 +129,6 @@ class Selector(ABC):
 
         return training_samples_subset
 
-    def get_samples_by_metadata_query(
-            self, query: str) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
-        return self.grpc.get_samples_by_metadata_query(query)
+    # def get_samples_by_metadata_query(
+    #         self, query: str) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
+    #     return self.grpc.get_samples_by_metadata_query(query)
