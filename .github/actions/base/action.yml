@@ -1,7 +1,3 @@
-defaults:
-  run:
-    shell: bash
-
 runs:
   using: "composite"
   steps: 
@@ -22,3 +18,4 @@ runs:
       run: |
         docker load --input /tmp/modynimage.tar
         docker image ls -a
+      shell: bash
