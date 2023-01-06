@@ -57,8 +57,10 @@ def selector_running() -> bool:
     # TODO(MaxiBoether): implement this when selector is merged and docker entrypoint works
     return True
 
+
 def system_running() -> bool:
     return storage_db_running() and storage_running() and selector_running()
+
 
 def main() -> None:
     start_time = round(time.time())
