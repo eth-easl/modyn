@@ -1,3 +1,3 @@
 # Custom models
 
-The custom class needs to set the model and optimizer objetcs, and populate the 'train_one_iteration' function. As an example, see the 'ResNet18' model.
+The user can define models here. The model definition should take as a parameter a 'model_configuration' dictionary with architecture-specific parameters. As an example, see the 'ResNet18' model.

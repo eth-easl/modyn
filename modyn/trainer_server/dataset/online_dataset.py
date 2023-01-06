@@ -24,13 +24,13 @@ class OnlineDataset(IterableDataset):
         self._storagestub = MockStorageServer()
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
-        # TODO: replace this with grpc calls to the selector
+        # TODO(fotstrt): replace this with grpc calls to the selector
         req = GetSamplesRequest(self._training_id, self._trigger_point, worker_id)
         samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
     def _get_data_from_storage(self, keys: list[str]) -> list[str]:
-        # TODO: replace this with grpc calls to the selector
+        # TODO(fotstrt): replace this with grpc calls to the selector
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)
         data = self._storagestub.Get(req).value
         return data

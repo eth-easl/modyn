@@ -75,7 +75,7 @@ class TrainerGRPCServer:
             target=train,
             args=(
                 self._training_dict[training_id],
-                'cuda:0', # TODO: fix device number when working with multi-gpu settings
+                'cuda:0', # TODO(): fix device number when working with multi-gpu settings
                 f'log-{training_id}.txt',
                 request.load_checkpoint_path,
                 request.trigger_point,
