@@ -1,6 +1,3 @@
-env:
-  CACHE_NUMBER: 0  # increase to reset cache manually
-
 runs:
   using: "composite"
   steps: 
@@ -13,14 +10,19 @@ runs:
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
         shell: bash
       
+      # increase to reset cache manually
+      - name: Set cache number
+        run: echo "CACHE_NUMBER=0" >> $GITHUB_ENV 
+        shell: bash
+
       - name: Get conda path
-        run: echo "CONDAPATH=${CONDA_PREFIX}" >> $GITHUB_ENV 
+        run: echo "CONDAPATH=$(dirname "$(which python)")/../../../" >> $GITHUB_ENV 
         shell: bash
 
       - uses: actions/cache@v3
         with:
           path: ${{ env.CONDAPATH }}
-          key: $conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          key: conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         id: cache
 
       - name: Setup requirements
