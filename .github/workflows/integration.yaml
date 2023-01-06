@@ -37,6 +37,20 @@ jobs:
       - name: Setup dev-requirements and run pytest within container
         run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running connection tests && python integrationtests/test_docker_compose.py"
 
+# TODO(): Run integration tests for storage gRPC service
+  storage-integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup base container
+        uses: ./.github/actions/base
+
+      - name: Setup dev-requirements and run pytest within container
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running storage integration tests && python integrationtests/storage/test_storage.py"
+
 
 # TODO(): runs example pipeline 
   example-pipeline:
