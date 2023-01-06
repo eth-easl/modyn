@@ -3,6 +3,7 @@ from unittest.mock import patch
 from modyn.backend.selector.selector_server import SelectorGRPCServer, main
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest  # noqa: E402, E501
+import modyn.utils
 import sys
 import pytest
 import grpc
@@ -16,7 +17,7 @@ def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argumen
 
 
 @patch.object(GRPCHandler, '_init_metadata', return_value=None)
-@patch.object(GRPCHandler, '_connection_established', return_value=True)
+@patch.object(modyn.utils, 'connection_established', return_value=True)
 @patch.object(GRPCHandler, 'register_training', return_value=0)
 @patch.object(GRPCHandler, 'get_info_for_training', return_value=(8, 1))
 @patch.object(GRPCHandler, 'get_samples_by_metadata_query')
@@ -68,7 +69,7 @@ class DummyServer:
 
 @patch.object(grpc, 'server', return_value=DummyServer(None))
 @patch.object(GRPCHandler, '_init_metadata', return_value=None)
-@patch.object(GRPCHandler, '_connection_established', return_value=True)
+@patch.object(modyn.utils, 'connection_established', return_value=True)
 @patch.object(GRPCHandler, 'register_training', return_value=0)
 @patch.object(GRPCHandler, 'get_info_for_training', return_value=(8, 1))
 def test_main(get_info_for_training, register_training, _connection_established, _init_metadata, wait_for_terination):

@@ -11,7 +11,7 @@ class BasicSelector(Selector):
     seen data. If is_adaptive_ratio is set to True, then this ratio is automatically
     set to the proportion of the size of the unseen vs. previously seen data.
 
-    For example, if is_adaptive_ratio is set to True, and there are 600 previously 
+    For example, if is_adaptive_ratio is set to True, and there are 600 previously
     seen data points and 200 previously unseen data points, we will set unseen_data_ratio
     to 0.25, since there are 200 unseen points and 800 total points, so 200/800=0.25
 
@@ -35,6 +35,22 @@ class BasicSelector(Selector):
     # def _set_is_adaptive_ratio(self, is_adaptive_ratio: bool) -> None:
     #     self._is_adaptive_ratio = is_adaptive_ratio
 
+    def _get_adaptive_unseen_ratio(self, training_id: int) -> float:
+        """Returns the proper adaptive unseen data ratio. For example, if there are 200
+        unseen data points and 600 previously unseen data points, it will return
+        a ratio of 200 (unseen) / 800 (total) = 0.25
+
+        Args:
+            training_id (int): The training ID of the current training.
+
+        Returns:
+            float: The unseen ratio.
+        """
+        seen_data_size = self._get_seen_data_size(training_id)
+        unseen_data_size = self._get_unseen_data_size(training_id)
+        unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
+        return unseen_data_ratio
+
     def _select_new_training_samples(
             self,
             training_id: int,
@@ -46,12 +62,11 @@ class BasicSelector(Selector):
         Returns:
             list(str): the training sample keys for the newly selected training_set
         """
+        unseen_data_ratio = self.unseen_data_ratio
         if self._is_adaptive_ratio:
-            seen_data_size = self._get_seen_data_size(training_id)
-            unseen_data_size = self._get_unseen_data_size(training_id)
-            self.unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
+            unseen_data_ratio = self._get_adaptive_unseen_ratio(training_id)
 
-        num_new_samples = int(training_set_size * self.unseen_data_ratio)
+        num_new_samples = int(training_set_size * unseen_data_ratio)
         num_old_samples = training_set_size - num_new_samples
         new_samples = self._get_unseen_data(training_id, num_new_samples)
         old_samples = self._get_seen_data(training_id, num_old_samples)
@@ -70,7 +85,7 @@ class BasicSelector(Selector):
         keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
-        return np.array(keys)[choice]
+        return list(np.array(keys)[choice])
 
     def _get_seen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
@@ -85,7 +100,7 @@ class BasicSelector(Selector):
         keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
-        return np.array(keys)[choice]
+        return list(np.array(keys)[choice])
 
     def _get_seen_data_size(self, training_id: int) -> int:
         """For a given training_id, return how many unseen samples there are

@@ -8,6 +8,7 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from typing import Optional
 import time
+import grpc
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -53,3 +54,20 @@ def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool,
 def current_time_millis() -> int:
     timestamp = time.time() * 1000
     return int(round(timestamp))
+
+
+def connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> bool:
+    """Establishes a connection to a given GRPC channel. Returns the connection status.
+
+    Args:
+        channel (grpc.Channel): The GRPC to connect to.
+        timeout_sec (int): The desired timeout, in seconds.
+
+    Returns:
+        bool: The connection status of the GRPC channel.
+    """
+    try:
+        grpc.channel_ready_future(channel).result(timeout=timeout_sec)
+        return True
+    except grpc.FutureTimeoutError:
+        return False

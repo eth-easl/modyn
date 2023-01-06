@@ -2,7 +2,7 @@ from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc i
 # Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import GetByQueryRequest, GetTrainingRequest, RegisterRequest  # noqa: E501, E402
-
+from modyn import utils
 
 import grpc
 import logging
@@ -18,19 +18,12 @@ class GRPCHandler():
 
         self._init_metadata()
 
-    def _connection_established(self, channel: grpc.Channel) -> bool:
-        try:
-            grpc.channel_ready_future(channel).result(timeout=TIMEOUT_SEC)
-            return True
-        except grpc.FutureTimeoutError:
-            return False
-
     def _init_metadata(self) -> None:
         assert self.config is not None
         address = f"{self.config['metadata_database']['hostname']}:{self.config['metadata_database']['port']}"
         self.metadata_database_channel = grpc.insecure_channel(address)
 
-        if not self._connection_established(self.metadata_database_channel):
+        if not utils.connection_established(self.metadata_database_channel, timeout_sec=TIMEOUT_SEC):
             raise ConnectionError(f"Could not establish gRPC connection to metadata server at {address}.")
 
         self.metadata_database = MetadataStub(self.metadata_database_channel)

@@ -10,6 +10,7 @@ import pytest
 
 import numpy as np
 
+
 class MockGRPCHandler:
 
     def __init__(self, metadata_response):
@@ -22,8 +23,11 @@ class MockGRPCHandler:
         return self.metadata_response
 
 # We do not use the parameters in this empty mock constructor.
+
+
 def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argument
     pass
+
 
 @patch.multiple(Selector, __abstractmethods__=set())
 @patch.object(Selector, '__init__', noop_constructor_mock)
@@ -132,6 +136,7 @@ def test_adaptive_selector_get_new_training_samples(test__get_seen_data_size,
 
     selector = BasicSelector(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
+    selector.unseen_data_ratio = 0.0
 
     assert selector._select_new_training_samples(0, 5) == [("a",), ("b",), ("c",), ("d",), ("e",)]
     test__get_unseen_data.assert_called_with(0, 1)

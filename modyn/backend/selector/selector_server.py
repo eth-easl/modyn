@@ -56,8 +56,8 @@ def serve(config: dict, servicer: SelectorGRPCServer) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.NOTSET,
-                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d:%H:%M:%S')
+                        format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d:%H:%M:%S')
     logger = logging.getLogger(__name__)
     if len(sys.argv) != 2:
         logger.error("Usage: python selector_server.py <config_file>")

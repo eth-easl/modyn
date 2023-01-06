@@ -82,8 +82,8 @@ def serve(config: dict) -> None:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.NOTSET,
-                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d:%H:%M:%S')
+                        format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d:%H:%M:%S')
     logger = logging.getLogger(__name__)
     if len(sys.argv) != 2:
         logger.error("Usage: python metadata_database_server.py <config_file>")
