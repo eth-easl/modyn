@@ -1,8 +1,0 @@
-grpcio
-psycopg2-binary 
-tqdm
-torch
-torchvision
-boto3
-sqlitedict
-pyaml
