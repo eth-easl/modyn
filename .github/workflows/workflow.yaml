@@ -50,6 +50,7 @@ jobs:
       run: |
         pip install -r dev-requirements.txt
         pip install -r modyn/backend/requirements.txt
+        pip install -r modyn/trainer_server/requirements.txt
         pip install -e .
     - name: pylint
       run: |
@@ -69,6 +70,7 @@ jobs:
       run: |
         pip install -r dev-requirements.txt
         pip install -r modyn/backend/requirements.txt
+        pip install -r modyn/trainer_server/requirements.txt
         pip install -e .
         pytest
         pytest > pytest-coverage.txt
@@ -90,6 +92,7 @@ jobs:
       run: |
         pip install -r dev-requirements.txt
         pip install -r modyn/backend/requirements.txt
+        pip install -r modyn/trainer_server/requirements.txt
         pip install -e .
         pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov=modyn/trainer_server --cov=modyn/models --cov-fail-under=90
 

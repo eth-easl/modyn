@@ -1,3 +1,4 @@
+# pylint: disable=too-many-instance-attributes, eval-used, abstract-method
 from torch.utils.data import IterableDataset, get_worker_info
 import typing
 from torchvision import transforms

@@ -23,7 +23,7 @@ class TrainerClient:
     TODO(fotstrt): remove when the supervisor-gpu node communication is fixed
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._trainer_stub = TrainerServerStub(
             grpc.insecure_channel(
                 "127.0.0.1:5001",
@@ -33,12 +33,12 @@ class TrainerClient:
             ),
         )
 
-    def check_trainer_available(self):
+    def check_trainer_available(self) -> bool:
         req = TrainerAvailableRequest()
         response = self._trainer_stub.trainer_available(req)
         return response.available
 
-    def register_training(self, training_id):
+    def register_training(self, training_id: int) -> bool:
 
         transforms = ["transforms.ToTensor()",  "transforms.Normalize((0.1307,), (0.3081,))"]
 
@@ -74,7 +74,7 @@ class TrainerClient:
         response = self._trainer_stub.register(req)
         return response.success
 
-    def start_training(self, training_id):
+    def start_training(self, training_id: int) -> bool:
 
         req = StartTrainingRequest(
             training_id=training_id,
@@ -85,7 +85,7 @@ class TrainerClient:
 
         return response.training_started
 
-    def get_training_status(self, training_id):
+    def get_training_status(self, training_id: int) -> None:
 
         req = TrainingStatusRequest(training_id=training_id)
         self._trainer_stub.get_training_status(req)

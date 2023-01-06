@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 import pytest
 from unittest.mock import patch
 

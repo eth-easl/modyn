@@ -26,7 +26,7 @@ class TrainingResponse:
 
 class GetSamplesRequest:
 
-    def __init__(self, training_id: int, trigger_point: str, worker_id: int):
+    def __init__(self, training_id: int, trigger_point: str, worker_id: int) -> None:
         self.training_id = training_id
         self.trigger_point = trigger_point
         self.worker_id = worker_id
@@ -34,14 +34,14 @@ class GetSamplesRequest:
 
 class GetSamplesResponse:
 
-    def __init__(self, training_samples_subset: list[Any]):
+    def __init__(self, training_samples_subset: list[Any]) -> None:
         self.training_samples_subset = training_samples_subset
 
 
 class MockSelectorServer:
     """Mocks the functionality of the grpc selector server."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def register_training(self, request: RegisterTrainingRequest) -> TrainingResponse:

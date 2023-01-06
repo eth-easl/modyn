@@ -38,9 +38,7 @@ def main() -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
     add_TrainerServerServicer_to_server(
         TrainerGRPCServer(), server)
-    logger.info(
-        'Starting trainer server. Listening on port .' +
-        config['trainer']['port'])
+    logger.info(f"Starting trainer server. Listening on port {config['trainer']['port']}")
     server.add_insecure_port('[::]:' + config['trainer']['port'])
     logger.info("start serving!")
 

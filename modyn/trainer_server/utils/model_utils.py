@@ -7,7 +7,6 @@ def get_model(
     model_id: str,
     model_conf_dict: dict[str, Any],
 ) -> Any:
-
     """
     Gets handler to the model specified by the 'model_id'.
     The model should exist in the path "modyn/models/model_id"

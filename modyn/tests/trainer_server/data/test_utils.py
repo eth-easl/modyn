@@ -17,4 +17,4 @@ def test_prepare_dataloaders():
 
     assert train_dataloader.num_workers == 4
     assert train_dataloader.batch_size == 128
-    assert type(train_dataloader.dataset) == OnlineDataset
+    assert isinstance(train_dataloader.dataset, OnlineDataset)

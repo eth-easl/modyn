@@ -1,3 +1,4 @@
+# pylint: disable=no-name-in-module, too-many-instance-attributes
 import json
 import multiprocessing as mp
 
@@ -11,14 +12,14 @@ class TrainingInfo:
     def __init__(self, request: RegisterTrainServerRequest) -> None:
 
         self.training_id = request.training_id
-        self.dataset_id = request.data_info.dataset_id,
+        self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders
 
         self.optimizer_dict = json.loads(request.optimizer_parameters.value)
         self.model_configuration_dict = json.loads(request.model_configuration.value)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
 
-        self.transform_list = [x for x in request.transform_list]
+        self.transform_list = list(request.transform_list)
 
         self.model_id = request.model_id
         model_module = dynamic_module_import("modyn.models")

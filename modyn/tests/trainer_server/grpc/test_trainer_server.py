@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument, no-name-in-module
 from io import BytesIO
 import tempfile
 from unittest.mock import patch
@@ -50,7 +51,7 @@ register_request = RegisterTrainServerRequest(
 get_status_request = TrainingStatusRequest(training_id=1)
 
 
-def foo():
+def noop():
     return
 
 
@@ -69,7 +70,7 @@ def get_training_process_info():
 
 
 @patch('modyn.trainer_server.utils.training_utils.hasattr', return_value=True)
-def get_training_info(temp, test_hasattr):
+def get_training_info(temp, test_hasattr=None):
     request = RegisterTrainServerRequest(
         training_id=1,
         data_info=Data(dataset_id="MNIST", num_dataloaders=2),
@@ -81,7 +82,7 @@ def get_training_info(temp, test_hasattr):
         torch_optimizer="SGD",
         batch_size=32,
         torch_criterion="CrossEntropyLoss",
-        checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=temp.name)
+        checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=temp)
     )
     training_info = TrainingInfo(request)
     return training_info
@@ -98,7 +99,7 @@ def test_trainer_not_available(test_is_alive):
     trainer_server = TrainerGRPCServer()
     trainer_server._training_process_dict[10] = TrainingProcessInfo(mp.Process(), mp.Queue(), mp.Queue(), mp.Queue())
     response = trainer_server.trainer_available(trainer_available_request, None)
-    assert response.available
+    assert not response.available
 
 
 @patch('modyn.trainer_server.utils.training_utils.hasattr', return_value=False)
@@ -125,10 +126,10 @@ def test_start_training_not_registered():
 
 def test_start_training():
     trainer_server = TrainerGRPCServer()
-    m = mock.Mock()
-    m.side_effect = foo
+    mock_start = mock.Mock()
+    mock_start.side_effect = noop
     trainer_server._training_dict[1] = None
-    with patch("multiprocessing.Process.start", m):
+    with patch("multiprocessing.Process.start", mock_start):
         trainer_server.start_training(start_training_request, None)
         assert 1 in trainer_server._training_process_dict
 
@@ -209,7 +210,7 @@ def test_get_training_status_finished_no_checkpoint(
     test_get_status.assert_not_called()
 
 
-def test_get_status():
+def test_get_training_status():
     trainer_server = TrainerGRPCServer()
     state_dict = {
         'state': {},
@@ -236,7 +237,7 @@ def test_get_child_exception_not_found():
     assert child_exception is None
 
 
-def test_get_child_exception():
+def test_get_child_exception_found():
     trainer_server = TrainerGRPCServer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
@@ -250,30 +251,31 @@ def test_get_child_exception():
 
 def test_get_latest_checkpoint_not_found():
     trainer_server = TrainerGRPCServer()
-    trainer_server._training_dict[1] = get_training_info(tempfile.TemporaryDirectory())
+    with tempfile.TemporaryDirectory() as temp:
+        trainer_server._training_dict[1] = get_training_info(temp)
 
     training_state, iteration = trainer_server.get_latest_checkpoint(1)
     assert training_state is None
     assert iteration == -1
 
 
-def test_get_latest_checkpoint():
+def test_get_latest_checkpoint_found():
     trainer_server = TrainerGRPCServer()
-    temp = tempfile.TemporaryDirectory()
+    with tempfile.TemporaryDirectory() as temp:
 
-    training_info = get_training_info(temp)
-    trainer_server._training_dict[1] = training_info
+        training_info = get_training_info(temp)
+        trainer_server._training_dict[1] = training_info
 
-    dict_to_save = {
-        'state': {'weight': 10},
-        'iteration': 10
-    }
+        dict_to_save = {
+            'state': {'weight': 10},
+            'iteration': 10
+        }
 
-    checkpoint_file = training_info.checkpoint_path + '/checkp'
-    torch.save(dict_to_save, checkpoint_file)
+        checkpoint_file = training_info.checkpoint_path + '/checkp'
+        torch.save(dict_to_save, checkpoint_file)
 
-    training_state, iteration = trainer_server.get_latest_checkpoint(1)
-    assert iteration == 10
+        training_state, iteration = trainer_server.get_latest_checkpoint(1)
+        assert iteration == 10
 
-    dict_to_save.pop('iteration')
-    assert torch.load(BytesIO(training_state))['state'] == dict_to_save['state']
+        dict_to_save.pop('iteration')
+        assert torch.load(BytesIO(training_state))['state'] == dict_to_save['state']

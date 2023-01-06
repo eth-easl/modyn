@@ -1,3 +1,4 @@
+# pylint: disable=too-many-instance-attributes, broad-except
 import io
 import traceback
 from typing import Optional
@@ -46,6 +47,7 @@ class PytorchTrainer:
         self._device = device
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
+        self._logger = logging.getLogger()
 
         if not os.path.isdir(self._checkpoint_path):
             os.mkdir(self._checkpoint_path)
@@ -53,21 +55,21 @@ class PytorchTrainer:
         self._status_query_queue = status_query_queue
         self._status_response_queue = status_response_queue
 
-    def create_logger(self, log_path: str):
+    def create_logger(self, log_path: str) -> None:
 
         self._logger = logging.getLogger('trainer')
         self._logger.setLevel(logging.INFO)
 
-        fileHandler = logging.FileHandler(log_path)
-        fileHandler.setLevel(logging.INFO)
+        file_handler = logging.FileHandler(log_path)
+        file_handler.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s – %(message)s')
-        fileHandler.setFormatter(formatter)
+        file_handler.setFormatter(formatter)
 
-        self._logger.addHandler(fileHandler)
+        self._logger.addHandler(file_handler)
         self._logger.propagate = False
 
-    def save_checkpoint(self, checkpoint_file_name: str, iteration: int):
+    def save_checkpoint(self, checkpoint_file_name: str, iteration: int) -> None:
 
         dict_to_save = {
             'model': self._model.model.state_dict(),
@@ -76,7 +78,7 @@ class PytorchTrainer:
         }
         torch.save(dict_to_save, checkpoint_file_name)
 
-    def load_checkpoint(self, path: str):
+    def load_checkpoint(self, path: str) -> None:
 
         checkpoint_dict = torch.load(path)
 
@@ -86,7 +88,7 @@ class PytorchTrainer:
         self._model.model.load_state_dict(checkpoint_dict['model'])
         self._optimizer.load_state_dict(checkpoint_dict['optimizer'])
 
-    def send_state_to_server(self, iteration: int):
+    def send_state_to_server(self, iteration: int) -> None:
 
         dict_to_send = {
             'model': self._model.model.state_dict(),
@@ -96,14 +98,14 @@ class PytorchTrainer:
         buffer = io.BytesIO()
         torch.save(dict_to_send, buffer)
         buffer.seek(0)
-        bytes = buffer.read()
-        self._status_response_queue.put({'state': bytes, 'iteration': iteration})
+        bytes_state = buffer.read()
+        self._status_response_queue.put({'state': bytes_state, 'iteration': iteration})
 
-    def train(self, log_path: str, load_checkpoint_path=Optional[str]):
+    def train(self, log_path: str, load_checkpoint_path: Optional[str] = None) -> None:
 
         self.create_logger(log_path)
 
-        self._logger.info('Process {} starts training'.format(os.getpid()))
+        self._logger.info(f'Process {os.getpid()} starts training')
 
         if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
             self.load_checkpoint(load_checkpoint_path)
@@ -130,7 +132,7 @@ class PytorchTrainer:
                 checkpoint_file_name = self._checkpoint_path + f'/model_{i}' + '.pt'
                 self.save_checkpoint(checkpoint_file_name, i)
 
-            self._logger.info('Iteration {}'.format(i))
+            self._logger.info(f'Iteration {i}')
 
         self._logger.info('Training complete!')
 
@@ -144,7 +146,7 @@ def train(
     exception_queue: mp.Queue,
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue
-):
+) -> None:
 
     try:
         trainer = PytorchTrainer(training_info, device, trigger_point, status_query_queue, status_response_queue)

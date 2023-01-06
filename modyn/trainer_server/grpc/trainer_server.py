@@ -1,6 +1,7 @@
+# pylint: disable=unused-argument, no-name-in-module, unnecessary-lambda, unsubscriptable-object
 import glob
 import io
-from typing import Union
+from typing import Any, Optional, Union
 import grpc
 import os
 import sys
@@ -31,9 +32,9 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 class TrainerGRPCServer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
-    def __init__(self):
-        self._training_dict: dict[str, TrainingInfo] = {}
-        self._training_process_dict: dict[str, TrainingProcessInfo] = {}
+    def __init__(self) -> None:
+        self._training_dict: dict[int, TrainingInfo] = {}
+        self._training_process_dict: dict[int, TrainingProcessInfo] = {}
 
     def trainer_available(
         self,
@@ -67,11 +68,11 @@ class TrainerGRPCServer:
         if training_id not in self._training_dict:
             raise ValueError(f"Training with id {training_id} has not been registered")
 
-        exception_queue = mp.Queue()
-        status_query_queue = mp.Queue()
-        status_response_queue = mp.Queue()
+        exception_queue: mp.Queue[str] = mp.Queue()
+        status_query_queue: mp.Queue[str] = mp.Queue()
+        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()
 
-        p = mp.Process(
+        process = mp.Process(
             target=train,
             args=(
                 self._training_dict[training_id],
@@ -84,9 +85,9 @@ class TrainerGRPCServer:
                 status_response_queue
             )
         )
-        p.start()
+        process.start()
         self._training_process_dict[training_id] = TrainingProcessInfo(
-            p,
+            process,
             exception_queue,
             status_query_queue,
             status_response_queue
@@ -108,44 +109,40 @@ class TrainerGRPCServer:
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
             # TODO(fotstrt): what to do if blocked - add a timeout?
-            training_state, iteration = self.get_status(training_id)
+            training_state_running, iteration = self.get_status(training_id)
             return TrainingStatusResponse(
                 is_running=True,
                 state_available=True,
                 iteration=iteration,
-                state=training_state
+                state=training_state_running
             )
-        else:
-            exception = self.get_child_exception(training_id)
-            training_state, iteration = self.get_latest_checkpoint(training_id)
-            if exception is None:
-                if training_state is not None:
-                    return TrainingStatusResponse(
-                        is_running=False,
-                        state_available=True,
-                        iteration=iteration,
-                        state=training_state
-                    )
-                else:
-                    return TrainingStatusResponse(
-                        is_running=False,
-                        state_available=False,
-                    )
-            else:
-                if training_state is not None:
-                    return TrainingStatusResponse(
-                        is_running=False,
-                        state_available=True,
-                        exception=exception,
-                        iteration=iteration,
-                        state=training_state
-                    )
-                else:
-                    return TrainingStatusResponse(
-                        is_running=False,
-                        state_available=False,
-                        exception=exception,
-                    )
+        exception = self.get_child_exception(training_id)
+        training_state_finished, iteration = self.get_latest_checkpoint(training_id)
+        if exception is None:
+            if training_state_finished is not None:
+                return TrainingStatusResponse(
+                    is_running=False,
+                    state_available=True,
+                    iteration=iteration,
+                    state=training_state_finished
+                )
+            return TrainingStatusResponse(
+                is_running=False,
+                state_available=False,
+            )
+        if training_state_finished is not None:
+            return TrainingStatusResponse(
+                is_running=False,
+                state_available=True,
+                exception=exception,
+                iteration=iteration,
+                state=training_state_finished
+            )
+        return TrainingStatusResponse(
+            is_running=False,
+            state_available=False,
+            exception=exception,
+        )
 
     def get_status(self, training_id: int) -> tuple[bytes, int]:
 
@@ -160,10 +157,9 @@ class TrainerGRPCServer:
         if exception_queue.qsize() > 0:
             exception_msg = exception_queue.get()
             return exception_msg
-        else:
-            return None
+        return None
 
-    def get_latest_checkpoint(self, training_id: int) -> tuple[Union[bytes, None], int]:
+    def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[bytes], int]:
 
         # this might be useful in case that the training has already finished,
         # either successfully or not, and allow to access the last state
@@ -182,5 +178,5 @@ class TrainerGRPCServer:
         buffer = io.BytesIO()
         torch.save(state, buffer)
         buffer.seek(0)
-        bytes = buffer.read()
-        return bytes, iteration
+        state_bytes = buffer.read()
+        return state_bytes, iteration

@@ -10,8 +10,7 @@ def prepare_dataloaders(
     batch_size: int,
     transform: list[str],
     trigger_point: str,
-) -> tuple[Optional[torch.utils.data.DataLoader]]:
-
+) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
 
