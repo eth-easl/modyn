@@ -12,11 +12,11 @@ runs:
       
       # increase to reset cache manually
       - name: Set cache number
-        run: echo "CACHE_NUMBER=5" >> $GITHUB_ENV 
+        run: echo "CACHE_NUMBER=4" >> $GITHUB_ENV 
         shell: bash
 
       - name: Get conda path
-        run: echo "CONDAPATH=/usr/share/miniconda" >> $GITHUB_ENV 
+        run: echo "CONDAPATH=/usr/share/miniconda/envs" >> $GITHUB_ENV 
         shell: bash
 
       - name: Fix directory permissions
@@ -36,4 +36,9 @@ runs:
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
         if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+
+      - name: Reinstall modyn in case of cache
+        run: conda run -n modyn pip install -e .
+        if: steps.cache.outputs.cache-hit == 'true'
         shell: bash
