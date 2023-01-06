@@ -1,0 +1,17 @@
+name: Modyn base workflow
+on: [workflow_call]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  baseimage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Build Docker modyn image
+      run: docker build --progress=plain -t modyn -f docker/Base/Dockerfile .
