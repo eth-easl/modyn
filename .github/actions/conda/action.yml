@@ -1,0 +1,30 @@
+env:
+  CACHE_NUMBER: 0  # increase to reset cache manually
+
+runs:
+  using: "composite"
+  steps: 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      
+      - name: Get conda path
+        run: echo "CONDAPATH=${CONDA_PREFIX}" >> $GITHUB_ENV 
+
+      - uses: actions/cache@v3
+        with:
+          path: ${{ env.CONDAPATH }}
+          key: $conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        id: cache
+
+      - name: Setup requirements
+        run: |
+          conda update -n base -c defaults conda
+          conda update --all
+          conda env create -f ./environment.yml
+          conda run -n modyn pip install -r dev-requirements.txt
+        if: steps.cache.outputs.cache-hit != 'true'
