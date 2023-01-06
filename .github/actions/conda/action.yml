@@ -16,7 +16,7 @@ runs:
         shell: bash
 
       - name: Get conda path
-        run: echo "CONDAPATH=$(realpath $(dirname "$(which python)")/../../../)" >> $GITHUB_ENV 
+        run: conda run -n base echo "CONDAPATH=$(realpath $(dirname "$(which python)")/../../../)" >> $GITHUB_ENV 
         shell: bash
 
       - uses: actions/cache@v3
