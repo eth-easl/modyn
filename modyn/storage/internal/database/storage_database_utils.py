@@ -1,3 +1,5 @@
+"""Storage database utilities."""
+
 import logging
 import json
 
@@ -12,8 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 def get_filesystem_wrapper(filesystem_wrapper_type: FilesystemWrapperType, base_path: str) -> AbstractFileSystemWrapper:
-    """
-    Get the filesystem wrapper.
+    """Get the filesystem wrapper.
+
+    Args:
+        filesystem_wrapper_type (FilesystemWrapperType): filesystem wrapper type
+        base_path (str): base path of the filesystem wrapper
+
+    Raises:
+        InvalidFilesystemWrapperTypeException: Invalid filesystem wrapper type.
+
+    Returns:
+        AbstractFileSystemWrapper: filesystem wrapper
     """
     if not isinstance(filesystem_wrapper_type, FilesystemWrapperType):
         raise InvalidFilesystemWrapperTypeException('Invalid filesystem wrapper type.')
@@ -28,8 +39,19 @@ def get_filesystem_wrapper(filesystem_wrapper_type: FilesystemWrapperType, base_
 
 
 def get_file_wrapper(file_wrapper_type: FileWrapperType, path: str, file_wrapper_config: str) -> AbstractFileWrapper:
-    """
-    Get the file wrapper.
+    """Get the file wrapper.
+
+    Args:
+        file_wrapper_type (FileWrapperType): file wrapper type
+        path (str): path of the file wrapper
+        file_wrapper_config (str): file wrapper configuration as json string.
+
+
+    Raises:
+        InvalidFileWrapperTypeException: Invalid file wrapper type.
+
+    Returns:
+        AbstractFileWrapper: file wrapper
     """
     if not isinstance(file_wrapper_type, FileWrapperType):
         raise InvalidFileWrapperTypeException('Invalid file wrapper type.')

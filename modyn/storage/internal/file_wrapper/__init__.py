@@ -1,5 +1,5 @@
-"""
-This module contains the file wrapper classes for the internal storage module.
+"""This module contains the file wrapper classes for the internal storage module.
+
 The file wrapper classes are used to abstract the file operations.
 This allows the storage module to be used with different file formats.
 """

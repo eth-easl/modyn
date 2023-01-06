@@ -1,5 +1,5 @@
-"""
-This package contains the file system wrapper classes.
+"""This package contains the file system wrapper classes.
+
 The file system wrapper classes are used to abstract the file system
 operations. This allows the storage module to be used with different file systems.
 """

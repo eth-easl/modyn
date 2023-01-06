@@ -60,7 +60,7 @@ def test_get():
 
 def test_get_not_found():
     filesystem_wrapper = LocalFilesystemWrapper(TEST_DIR)
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         filesystem_wrapper.get('not_found')
 
 
@@ -72,7 +72,7 @@ def test_get_directory():
 
 def test_get_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(TEST_DIR)
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         filesystem_wrapper.get(os.path.sep + os.path.join('tmp', 'modyn', 'not_in_base_path'))
 
 

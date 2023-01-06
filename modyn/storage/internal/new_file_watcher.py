@@ -1,7 +1,9 @@
+"""New file watcher."""
+
 import logging
 import time
 import uuid
-from typing import Optional
+from typing import Optional, Any
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import exc
@@ -19,14 +21,27 @@ logger = logging.getLogger(__name__)
 
 
 class NewFileWatcher:
+    """New file watcher.
 
-    def __init__(self, modyn_config: dict):
+    This class is responsible for watching all the filesystems of the datasets for new files. If a new file is found, it
+    will be added to the database.
+    """
+
+    def __init__(self, modyn_config: dict, should_stop: Any):  # See https://github.com/python/typeshed/issues/8799
+        """Initialize the new file watcher.
+
+        Args:
+            modyn_config (dict): Configuration of the modyn module.
+        """
         self.modyn_config = modyn_config
         self._last_timestamp: int = 0
+        self.should_stop = should_stop
 
     def _seek(self, timestamp: int) -> None:
-        """
-        Seek the filesystem for files with a timestamp that is equal or greater than the given timestamp.
+        """Seek the filesystem for files with a timestamp that is equal or greater than the given timestamp.
+
+        Args:
+            timestamp (int): Timestamp to compare the files with.
         """
         logger.debug(f'Seeking for files with a timestamp that is equal or greater than {timestamp}')
         with DatabaseConnection(self.modyn_config) as database:
@@ -73,10 +88,9 @@ class NewFileWatcher:
                                    timestamp: int,
                                    session: sessionmaker,
                                    dataset: Dataset) -> None:
-        """
-        Recursively get all files in a directory that have a timestamp that is equal or greater
-        than the given timestamp.
-        """
+        """Recursively get all files in a directory.
+
+        Get all files that have a timestamp that is equal or greater than the given timestamp."""
         if not filesystem_wrapper.isdir(path):
             logger.critical(f'Path {path} is not a directory.')
             return
@@ -108,11 +122,20 @@ class NewFileWatcher:
                     continue
 
     def run(self) -> None:
-        """
-        Run the dataset watcher.
-        """
+        """Run the dataset watcher."""
         logger.info('Starting dataset watcher.')
-        while self._last_timestamp >= 0:
+        while self._last_timestamp >= 0 and not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
             time.sleep(self.modyn_config['storage']['new_file_watcher']['interval'])
             self._seek(self._last_timestamp)
             self._last_timestamp = int(time.time() * 1000)
+
+
+def run_watcher(modyn_config: dict, should_stop: Any) -> None:  # See https://github.com/python/typeshed/issues/8799
+    """Run the new file watcher.
+
+    Args:
+        modyn_config (dict): Configuration of the modyn module.
+        should_stop (Value): Value that indicates if the watcher should stop.
+    """
+    watcher = NewFileWatcher(modyn_config, should_stop)
+    watcher.run()

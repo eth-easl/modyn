@@ -1,99 +1,152 @@
+"""Abstract filesystem wrapper class."""
+
 from abc import ABC, abstractmethod
 
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 
 
 class AbstractFileSystemWrapper(ABC):
-    """
-    Base class for all filesystem wrappers.
-    """
+    """Base class for all filesystem wrappers."""
+
     filesystem_wrapper_type: FilesystemWrapperType = None
 
     def __init__(self, base_path: str):
-        """
-        The `base_path` is the base path of the dataset.
+        """Init filesystem wrapper.
 
-        It is expected that the constructor also initializes the filesystem_wrapper_type.
+        Args:
+            base_path (str): Base path of filesystem
         """
         self.base_path = base_path
 
     @abstractmethod
     def get(self, path: str) -> bytes:
-        """
-        Returns the file object at the given path.
+        """Get file content.
 
-        The path is absolute and starts with the base path of the dataset.
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            bytes: File content
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def exists(self, path: str) -> bool:
-        """
-        Returns `True` if the file exists at the given path.
+        """Exists checks whether the given path exists or not.
 
-        The path is absolute and starts with the base path of the dataset.
+        Args:
+            path (str): Absolute path to file or directory
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            bool: True if path exists, False otherwise
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def list(self, path: str, recursive: bool = False) -> list[str]:
-        """
-        Returns a list of files in the given path.
+        """List files in directory.
 
-        The path is absolute and starts with the base path of the dataset.
-        If `recursive` is `True`, the list should be recursively iterated through
-        all subdirectories. The list should contain the absolute paths of the files.
+        Args:
+            path (str): Absolute path to directory
+            recursive (bool, optional): Recursively list files. Defaults to False.
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            list[str]: List of files
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def isdir(self, path: str) -> bool:
-        """
-        Returns `True` if the path is a directory.
+        """Return `True` if the path is a directory.
 
-        The path is absolute and starts with the base path of the dataset.
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            bool: True if path is a directory, False otherwise
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def isfile(self, path: str) -> bool:
-        """
-        Returns `True` if the path is a file.
+        """Return `True` if the path is a file.
 
-        The path is absolute and starts with the base path of the dataset.
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            bool: True if path is a file, False otherwise
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def get_size(self, path: str) -> int:
-        """
-        Returns the size of the file.
+        """Return the size of the file.
 
-        The path is absolute and starts with the base path of the dataset.
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            int: Size of file
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def get_modified(self, path: str) -> int:
-        """
-        Returns the last modified time of the file.
+        """Return the last modified time of the file.
 
-        The path is absolute and starts with the base path of the dataset.
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            int: Last modified time
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def get_created(self, path: str) -> int:
-        """
-        Returns the creation time of the file.
+        """Return the creation time of the file.
 
-        The path is absolute and starts with the base path of the dataset.
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            int: Creation time
         """
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def join(self, *paths: str) -> str:
-        """
-        Joins the given paths together.
+        """Join paths.
+
+        Raises:
+            NotImplementedError: If not implemented
+
+        Returns:
+            str: Joined path
         """
         raise NotImplementedError  # pragma: no cover

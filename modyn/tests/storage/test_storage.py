@@ -6,7 +6,6 @@ import pathlib
 from modyn.storage.storage import Storage
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
-from modyn.storage.internal.new_file_watcher import NewFileWatcher
 
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / 'test_storage.db'
@@ -94,7 +93,6 @@ def test_validate_config():
     assert storage._validate_config()[0]
 
 
-@patch.object(NewFileWatcher, 'run', lambda *args, **kwargs: None)
 @patch('modyn.storage.storage.GRPCServer', MockGRPCServer)
 def test_run():
     with DatabaseConnection(get_minimal_modyn_config()) as database:

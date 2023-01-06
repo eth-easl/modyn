@@ -1,3 +1,5 @@
+"""Storage GRPC servicer."""
+
 import grpc
 import logging
 from typing import Iterable, Tuple
@@ -18,13 +20,32 @@ logger = logging.getLogger(__name__)
 
 
 class StorageGRPCServicer(StorageServicer):
+    """GRPC servicer for the storage module."""
+
     def __init__(self, config: dict):
+        """Initialize the storage GRPC servicer.
+
+        Args:
+            config (dict): Configuration of the storage module.
+        """
         self.modyn_config = config
         self.database = DatabaseConnection(config)
         super().__init__()
 
     # pylint: disable-next=unused-argument,invalid-name
     def Get(self, request: GetRequest, context: grpc.ServicerContext) -> Iterable[GetResponse]:
+        """Return the data for the given keys.
+
+        Args:
+            request (GetRequest): Request containing the dataset name and the keys.
+            context (grpc.ServicerContext): Context of the request.
+
+        Returns:
+            Iterable[GetResponse]: Response containing the data for the given keys.
+
+        Yields:
+            Iterator[Iterable[GetResponse]]: Response containing the data for the given keys.
+        """
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
@@ -67,6 +88,11 @@ class StorageGRPCServicer(StorageServicer):
     # pylint: disable-next=unused-argument,invalid-name
     def GetNewDataSince(self, request: GetNewDataSinceRequest, context: grpc.ServicerContext)\
             -> GetNewDataSinceResponse:
+        """Get all new data since the given timestamp.
+
+        Returns:
+            GetNewDataSinceResponse: A response containing all external keys since the given timestamp.
+        """
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
@@ -92,6 +118,11 @@ class StorageGRPCServicer(StorageServicer):
 
     def GetDataInInterval(self, request: GetDataInIntervalRequest, context: grpc.ServicerContext)\
             -> GetDataInIntervalResponse:
+        """Get all data in the given interval.
+
+        Returns:
+            GetDataInIntervalResponse: A response containing all external keys in the given interval.
+        """
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
@@ -117,6 +148,11 @@ class StorageGRPCServicer(StorageServicer):
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(self, request: DatasetAvailableRequest, context: grpc.ServicerContext) \
             -> DatasetAvailableResponse:
+        """Check if a dataset is available in the database.
+
+        Returns:
+            DatasetAvailableResponse: True if the dataset is available, False otherwise.
+        """
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
@@ -131,6 +167,11 @@ class StorageGRPCServicer(StorageServicer):
     # pylint: disable-next=unused-argument,invalid-name
     def RegisterNewDataset(self, request: RegisterNewDatasetRequest, context: grpc.ServicerContext)\
             -> RegisterNewDatasetResponse:
+        """Register a new dataset in the database.
+
+        Returns:
+            RegisterNewDatasetResponse: True if the dataset was successfully registered, False otherwise.
+        """
         with DatabaseConnection(self.modyn_config) as database:
             success = database.add_dataset(request.dataset_id,
                                            request.base_path,

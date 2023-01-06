@@ -1,3 +1,5 @@
+"""Webdataset file wrapper."""
+
 import pickle
 import os
 from itertools import islice
@@ -13,8 +15,7 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 
 
 class WebdatasetFileWrapper(AbstractFileWrapper):
-    """
-    Webdataset file wrapper.
+    """Webdataset file wrapper.
 
     One file can contain multiple samples.
 
@@ -22,17 +23,28 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
     See here for more information about the webdataset file format:
     https://webdataset.github.io/webdataset/
     """
+
     tmp_dir: pathlib.Path = pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp"
 
     def __init__(self, file_path: str, file_wrapper_config: dict):
+        """Init webdataset file wrapper.
+
+        Args:
+            file_path (str): Path to file
+            file_wrapper_config (dict): File wrapper config
+        """
         super().__init__(file_path, file_wrapper_config)
         self.indeces_cache: Dict[str, str] = {}
         self.file_wrapper_type = FileWrapperType.WebdatasetFileWrapper
 
     def get_number_of_samples(self) -> int:
-        """
+        """Get number of samples in file.
+
         This is a very slow operation. It is recommended to only use this method for testing purposes
         and for the initial loading of the dataset into the database.
+
+        Returns:
+            int: Number of samples in file
         """
         dataset = wds.WebDataset(self.file_path)
         length = 0
@@ -41,15 +53,39 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
         return length
 
     def get_samples(self, start: int, end: int) -> bytes:
+        """Get samples from start to end.
+
+        Args:
+            start (int): start index
+            end (int): end index
+
+        Returns:
+            bytes: Pickled list of samples
+        """
         return pickle.dumps(wds.WebDataset(self.file_path)
                             .slice(start, end).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
     def get_sample(self, index: int) -> bytes:
+        """Get sample from index.
+
+        Args:
+            index (int): Index of sample
+
+        Returns:
+            bytes: Pickled sample
+        """
         return pickle.dumps(wds.WebDataset(self.file_path)
                             .slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
     def get_samples_from_indices(self, indices: list) -> bytes:
+        """Get samples from indices.
 
+        Args:
+            indices (list): List of indices
+
+        Returns:
+            bytes: Pickled list of samples
+        """
         indices.sort()
 
         if str(indices) in self.indeces_cache:
@@ -80,6 +116,14 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
         return pickle.dumps(wds.WebDataset(file).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
     def write_samples(self, dst: wds.TarWriter, index_start: int, index_end: int, dataset: wds.WebDataset) -> None:
+        """Write samples to a tar file.
+
+        Args:
+            dst (wds.TarWriter): destination tar file
+            index_start (int): index of the first sample to write
+            index_end (int): index of the last sample to write
+            dataset (wds.WebDataset): dataset to read the samples from
+        """
         for sample in islice(dataset, index_start, index_end + 1):
             key = sample["__key__"]
             if "jpg" in sample:
@@ -96,5 +140,6 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
             dst.write({"__key__": key, image_type: image, "cls": cls, "json": json})
 
     def __del__(self) -> None:
+        """Delete the temporary files."""
         if os.path.exists(self.tmp_dir):
             shutil.rmtree(self.tmp_dir)

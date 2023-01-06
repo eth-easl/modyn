@@ -9,7 +9,7 @@ class StorageStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
-        """Constructor.
+        """Initialize the stub.
 
         Args:
             channel: A grpc.Channel.

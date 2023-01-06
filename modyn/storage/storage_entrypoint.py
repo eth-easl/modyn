@@ -1,3 +1,5 @@
+"""Entrypoint for the storage service."""
+
 import logging
 import yaml
 import argparse
@@ -12,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 def setup_argparser() -> argparse.ArgumentParser:
+    """Set up the argument parser.
+
+    Returns:
+        argparse.ArgumentParser: Argument parser
+    """
     parser_ = argparse.ArgumentParser(description='Modyn Storage')
     parser_.add_argument('config', type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
 
@@ -19,6 +26,7 @@ def setup_argparser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    """Entrypoint for the storage service."""
     parser = setup_argparser()
     args = parser.parse_args()
 

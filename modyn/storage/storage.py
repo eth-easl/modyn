@@ -1,18 +1,41 @@
+"""Storage module.
+
+The storage module contains all classes and functions related to the retrieval of data from the
+various storage backends.
+"""
+
 import logging
 import os
 import pathlib
 from typing import Tuple
 import json
+from multiprocessing import Value, Process
+from ctypes import c_bool
+
 
 from modyn.utils import validate_yaml
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.internal.database.database_connection import DatabaseConnection
+from modyn.storage.internal.new_file_watcher import run_watcher
 
 logger = logging.getLogger(__name__)
 
 
 class Storage():
+    """Storage server.
+
+    The storage server is responsible for the retrieval of data from the various storage backends.
+    """
+
     def __init__(self, modyn_config: dict) -> None:
+        """Initialize the storage server.
+
+        Args:
+            modyn_config (dict): Configuration of the modyn module.
+
+        Raises:
+            ValueError: Invalid configuration.
+        """
         self.modyn_config = modyn_config
 
         valid, errors = self._validate_config()
@@ -25,6 +48,11 @@ class Storage():
         return validate_yaml(self.modyn_config, schema_path)
 
     def run(self) -> None:
+        """Run the storage server.
+
+        Raises:
+            ValueError: Failed to add dataset.
+        """
         #  Create the database tables.
         with DatabaseConnection(self.modyn_config) as database:
             database.create_all()
@@ -40,7 +68,13 @@ class Storage():
                     raise ValueError(f"Failed to add dataset {dataset['name']}")
 
         #  Start the dataset watcher process in a different thread.
+        should_stop = Value(c_bool, False)
+        watcher_process = Process(target=run_watcher, args=(self.modyn_config, should_stop))
+        watcher_process.start()
 
         #  Start the storage grpc server.
         with GRPCServer(self.modyn_config) as server:
             server.wait_for_termination()
+
+        should_stop.value = True  # type: ignore  # See https://github.com/python/typeshed/issues/8799
+        watcher_process.join()

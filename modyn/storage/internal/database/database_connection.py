@@ -1,3 +1,5 @@
+"""Database connection context manager."""
+
 from __future__ import annotations
 import logging
 
@@ -16,17 +18,26 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseConnection():
-    """
-    Database connection context manager.
-    """
+    """Database connection context manager."""
+
     session: Session = None
     engine: Engine = None
     url = None
 
     def __init__(self, modyn_config: dict) -> None:
+        """Initialize the database connection.
+
+        Args:
+            modyn_config (dict): Configuration of the modyn module.
+        """
         self.modyn_config = modyn_config
 
     def __enter__(self) -> DatabaseConnection:
+        """Create the engine and session.
+
+        Returns:
+            DatabaseConnection: DatabaseConnection.
+        """
         self.url = URL.create(
             drivername=self.modyn_config['storage']['database']['drivername'],
             username=self.modyn_config['storage']['database']['username'],
@@ -40,10 +51,22 @@ class DatabaseConnection():
         return self
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
+        """Close the session and dispose the engine.
+
+        Args:
+            exc_type (type): exception type
+            exc_val (Exception): exception value
+            exc_tb (Exception): exception traceback
+        """
         self.session.close()
         self.engine.dispose()
 
     def get_session(self) -> Session:
+        """Get the session.
+
+        Returns:
+            Session: Session.
+        """
         return self.session
 
     def create_all(self) -> None:
