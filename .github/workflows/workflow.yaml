@@ -20,7 +20,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: modyn:latest
+          tags: modyn
           outputs: type=docker,dest=/tmp/modynimage.tar
 
        - name: Upload artifact
@@ -34,35 +34,91 @@ jobs:
     needs: build
 
     steps:
-    - name: Setup dev-requirements and run flake within container
-      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && flake8 --version && flake8 --statistics
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: modynimage
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/modynimage.tar
+          docker image ls -a
+
+      - name: Setup dev-requirements and run flake within container
+        run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && flake8 --version && flake8 --statistics
 
   mypy-typechecking:
     runs-on: ubuntu-latest
     needs: build
 
     steps:
-    - name: Setup dev-requirements and run mypy within container
-      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && mypy --version && mypy modyn
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: modynimage
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/modynimage.tar
+          docker image ls -a
+
+      - name: Setup dev-requirements and run mypy within container
+        run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && mypy --version && mypy modyn
 
   pylint:
     runs-on: ubuntu-latest
     needs: build
 
     steps:
-    - name: Setup dev-requirements and run pylint within container
-      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pylint --version && pylint modyn
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: modynimage
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/modynimage.tar
+          docker image ls -a
+    
+      - name: Setup dev-requirements and run pylint within container
+        run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pylint --version && pylint modyn
 
   unittests:
     runs-on: ubuntu-latest
     needs: build
 
     steps:
-    - name: Setup dev-requirements and run pytest within container
-      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pytest && pytest > pytest-coverage.txt
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
 
-    - name: Comment coverage
-      uses: coroo/pytest-coverage-commentator@v1.0.2
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: modynimage
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/modynimage.tar
+          docker image ls -a
+
+      - name: Setup dev-requirements and run pytest within container
+        run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pytest && pytest > pytest-coverage.txt
+
+      - name: Comment coverage
+        uses: coroo/pytest-coverage-commentator@v1.0.2
 
 # TODO(create issue): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
 # Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
@@ -72,8 +128,22 @@ jobs:
     needs: build
 
     steps:
-    - name: Setup dev-requirements and run pytest within container
-      run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: modynimage
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/modynimage.tar
+          docker image ls -a
+
+      - name: Setup dev-requirements and run pytest within container
+        run: docker run -it modyn conda run -n modyn pip install -r dev-requirements.txt && pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
 
   integrationtests:
       runs-on: ubuntu-latest
