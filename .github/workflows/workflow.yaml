@@ -17,7 +17,7 @@ jobs:
         uses: ./.github/actions/base
 
       - name: Setup dev-requirements and run flake within container
-        run: docker run modyn conda run -n modyn pip install -r dev-requirements.txt && flake8 --version && flake8 --statistics
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && flake8 --version && flake8 --statistics"
 
   mypy-typechecking:
     runs-on: ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
         uses: ./.github/actions/base
 
       - name: Setup dev-requirements and run mypy within container
-        run: docker run modyn conda run -n modyn pip install -r dev-requirements.txt && mypy --version && mypy modyn
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && mypy --version && mypy modyn"
 
   pylint:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
         uses: ./.github/actions/base
     
       - name: Setup dev-requirements and run pylint within container
-        run: docker run modyn conda run -n modyn pip install -r dev-requirements.txt && pylint --version && pylint modyn
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && pylint --version && pylint modyn"
 
   unittests:
     runs-on: ubuntu-latest
@@ -56,7 +56,7 @@ jobs:
         uses: ./.github/actions/base
 
       - name: Setup dev-requirements and run pytest within container
-        run: docker run modyn conda run -n modyn pip install -r dev-requirements.txt && pytest && pytest > pytest-coverage.txt
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && pytest && pytest > pytest-coverage.txt"
 
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
@@ -74,7 +74,7 @@ jobs:
         uses: ./.github/actions/base
 
       - name: Setup dev-requirements and run pytest within container
-        run: docker run modyn conda run -n modyn pip install -r dev-requirements.txt && pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90"
 
   integrationtests:
       runs-on: ubuntu-latest
