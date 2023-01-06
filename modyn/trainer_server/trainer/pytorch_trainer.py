@@ -149,6 +149,6 @@ def train(
     try:
         trainer = PytorchTrainer(training_info, device, trigger_point, status_query_queue, status_response_queue)
         trainer.train(log_path, load_checkpoint_path)
-    except Exception as e:
+    except Exception:
         exception_msg = traceback.format_exc()
         exception_queue.put(exception_msg)

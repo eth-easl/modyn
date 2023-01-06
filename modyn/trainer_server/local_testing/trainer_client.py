@@ -2,8 +2,6 @@ import json
 import grpc
 import time
 
-import torch
-
 from modyn.trainer_server.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
     JsonString,
@@ -15,12 +13,14 @@ from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
     TrainingStatusRequest
 )
 
-MAX_MESSAGE_LENGTH=1024 * 1024 * 1024
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
+
 
 class TrainerClient:
 
     """
     A class to test the grpc server of the gpu node.
+    TODO(fotstrt): remove when the supervisor-gpu node communication is fixed
     """
 
     def __init__(self):
@@ -88,20 +88,7 @@ class TrainerClient:
     def get_training_status(self, training_id):
 
         req = TrainingStatusRequest(training_id=training_id)
-        response = self._trainer_stub.get_training_status(req)
-        print("------------ Response: ")
-        print(response.is_running)
-        print(response.exception)
-        print(response.iteration)
-        print(response.state_available)
-        #print(response.state)
-
-        # load
-        if response.state_available==True:
-            from io import BytesIO
-            file_like = BytesIO(response.state)
-            s=torch.load(file_like)
-            print(s)
+        self._trainer_stub.get_training_status(req)
 
 
 if __name__ == "__main__":
@@ -116,11 +103,3 @@ if __name__ == "__main__":
             print(training_started)
             time.sleep(10)
             client.get_training_status(training_id)
-
-            # while (not client.check_trainer_available()):
-            #     pass
-
-            # training_started = client.start_training(training_id)
-            # print(training_started)
-
-            # print("started again!")

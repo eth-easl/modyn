@@ -1,5 +1,4 @@
 # pylint: disable=unused-argument
-import pytest
 from modyn.trainer_server.dataset.online_dataset import OnlineDataset
 
 from modyn.trainer_server.dataset.utils import prepare_dataloaders

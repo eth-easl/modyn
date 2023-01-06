@@ -8,13 +8,13 @@ from modyn.trainer_server.mocks.mock_storage_server import MockStorageServer, Ge
 
 class OnlineDataset(IterableDataset):
 
-    def __init__(self, training_id: int, dataset_id: str, serialized_transforms: list[str], trigger_point:str):
+    def __init__(self, training_id: int, dataset_id: str, serialized_transforms: list[str], trigger_point: str):
         self._training_id = training_id
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
         self._serialized_transforms = serialized_transforms
-        self._transform = lambda x: x # identity as default
+        self._transform = lambda x: x  # identity as default
         self._deserialize_torchvision_transforms()
         self._trigger_point = trigger_point
 

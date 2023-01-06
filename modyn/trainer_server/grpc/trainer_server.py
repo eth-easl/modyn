@@ -75,7 +75,7 @@ class TrainerGRPCServer:
             target=train,
             args=(
                 self._training_dict[training_id],
-                'cuda:0', # TODO(): fix device number when working with multi-gpu settings
+                'cuda:0',  # TODO(): fix device number for multi-gpu settings
                 f'log-{training_id}.txt',
                 request.load_checkpoint_path,
                 request.trigger_point,
@@ -85,12 +85,20 @@ class TrainerGRPCServer:
             )
         )
         p.start()
-        self._training_process_dict[training_id] = TrainingProcessInfo(p, exception_queue, status_query_queue, status_response_queue)
+        self._training_process_dict[training_id] = TrainingProcessInfo(
+            p,
+            exception_queue,
+            status_query_queue,
+            status_response_queue
+        )
 
         return StartTrainingResponse(training_started=True)
 
-
-    def get_training_status(self, request: TrainingStatusRequest, context: grpc.ServicerContext) -> TrainingStatusResponse:
+    def get_training_status(
+        self,
+        request: TrainingStatusRequest,
+        context: grpc.ServicerContext
+    ) -> TrainingStatusResponse:
 
         training_id = request.training_id
 
@@ -139,14 +147,12 @@ class TrainerGRPCServer:
                         exception=exception,
                     )
 
-
     def get_status(self, training_id: int) -> tuple[bytes, int]:
 
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(STATUS_QUERY_MESSAGE)
         response = self._training_process_dict[training_id].status_response_queue.get()
         return response['state'], response['iteration']
-
 
     def get_child_exception(self, training_id: int) -> Union[str, None]:
 
@@ -166,7 +172,7 @@ class TrainerGRPCServer:
         checkpoints = list(filter(os.path.isfile, glob.glob(checkpoint_path + "/*")))
         checkpoints.sort(key=lambda x: os.path.getmtime(x))
 
-        if len(checkpoints)==0:
+        if len(checkpoints) == 0:
             return None, -1
 
         # TODO(fotstrt): add checks/actions in case checkpoint is corrupted

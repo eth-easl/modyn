@@ -6,6 +6,7 @@ from modyn.utils.utils import dynamic_module_import
 
 STATUS_QUERY_MESSAGE = "get_status"
 
+
 class TrainingInfo:
     def __init__(self, request: RegisterTrainServerRequest) -> None:
 

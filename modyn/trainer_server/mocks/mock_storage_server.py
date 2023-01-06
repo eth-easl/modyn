@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 class GetRequest:
     def __init__(self, dataset_id: str, keys: list[Any]):
-        self.dataset_id=dataset_id
+        self.dataset_id = dataset_id
         self.keys = keys
 
 

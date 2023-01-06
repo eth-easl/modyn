@@ -1,7 +1,6 @@
 # pylint: disable=unused-argument
 from collections import OrderedDict
 import json
-from typing import Optional
 from unittest.mock import patch
 import torch
 import os
@@ -9,7 +8,12 @@ import multiprocessing as mp
 import tempfile
 from io import BytesIO
 
-from modyn.trainer_server.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data, JsonString, RegisterTrainServerRequest
+from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
+    CheckpointInfo,
+    Data,
+    JsonString,
+    RegisterTrainServerRequest
+)
 
 from modyn.trainer_server.trainer.pytorch_trainer import PytorchTrainer
 from modyn.trainer_server.utils.training_utils import TrainingInfo
@@ -17,18 +21,22 @@ from modyn.trainer_server.utils.training_utils import TrainingInfo
 query_queue = mp.Queue()
 response_queue = mp.Queue()
 
+
 class DummyModule:
     def __init__(self) -> None:
         self.model = DummyModelWrapper()
+
 
 class DummyModelWrapper:
     def __init__(self, model_configuration=None) -> None:
         self.model = DummyModel()
 
+
 class DummyModel(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self._weight =  torch.nn.Parameter(torch.ones(1))
+        self._weight = torch.nn.Parameter(torch.ones(1))
+
 
 @patch('modyn.trainer_server.utils.training_utils.dynamic_module_import')
 def get_training_info(dynamic_module_patch):
@@ -48,6 +56,7 @@ def get_training_info(dynamic_module_patch):
     )
     training_info = TrainingInfo(request)
     return training_info
+
 
 @patch('modyn.trainer_server.trainer.pytorch_trainer.get_model')
 def get_dummy_trainer(test_get_model):
@@ -70,7 +79,16 @@ def test_save_checkpoint():
         'optimizer': {
             'state': {},
             'param_groups': [
-                {'lr': 0.1, 'momentum': 0, 'dampening': 0, 'weight_decay': 0, 'nesterov': False, 'maximize': False, 'foreach': None, 'differentiable': False, 'params': [0]
+                {
+                    'lr': 0.1,
+                    'momentum': 0,
+                    'dampening': 0,
+                    'weight_decay': 0,
+                    'nesterov': False,
+                    'maximize': False,
+                    'foreach': None,
+                    'differentiable': False,
+                    'params': [0]
                 }
             ]
         },
@@ -87,7 +105,16 @@ def test_load_checkpoint():
         'optimizer': {
             'state': {},
             'param_groups': [
-                {'lr': 0.1, 'momentum': 0, 'dampening': 0, 'weight_decay': 0, 'nesterov': False, 'maximize': False, 'foreach': None, 'differentiable': False, 'params': [0]
+                {
+                    'lr': 0.1,
+                    'momentum': 0,
+                    'dampening': 0,
+                    'weight_decay': 0,
+                    'nesterov': False,
+                    'maximize': False,
+                    'foreach': None,
+                    'differentiable': False,
+                    'params': [0]
                 }
             ]
         },
@@ -118,7 +145,16 @@ def test_send_state_to_server():
         'optimizer': {
             'state': {},
             'param_groups': [
-                {'lr': 0.1, 'momentum': 0, 'dampening': 0, 'weight_decay': 0, 'nesterov': False, 'maximize': False, 'foreach': None, 'differentiable': False, 'params': [0]
+                {
+                    'lr': 0.1,
+                    'momentum': 0,
+                    'dampening': 0,
+                    'weight_decay': 0,
+                    'nesterov': False,
+                    'maximize': False,
+                    'foreach': None,
+                    'differentiable': False,
+                    'params': [0]
                 }
             ]
         }

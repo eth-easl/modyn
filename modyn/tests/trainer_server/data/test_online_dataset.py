@@ -47,7 +47,7 @@ def test_get_data_from_storage(test_get):
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                      std=[0.229, 0.224, 0.225])
+                                     std=[0.229, 0.224, 0.225])
             ]
         ),
     ],
@@ -62,7 +62,7 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
     )
     online_dataset._deserialize_torchvision_transforms()
     assert type(online_dataset._transform.transforms) == list
-    for t1,t2 in zip(online_dataset._transform.transforms, transforms_list):
+    for t1, t2 in zip(online_dataset._transform.transforms, transforms_list):
         assert t1.__dict__ == t2.__dict__
 
 
@@ -74,7 +74,8 @@ def test_process():
         trigger_point="new"
     )
     online_dataset._transform: lambda x: x*2
-    online_dataset._process([1,2,3]) == [2,4,6]
+    online_dataset._process([1, 2, 3]) == [2, 4, 6]
+
 
 @patch.object(OnlineDataset, '_process', return_value=list(range(10)))
 @patch.object(OnlineDataset, '_get_data_from_storage', return_value=list(range(10)))
