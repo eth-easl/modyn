@@ -158,13 +158,13 @@ jobs:
 # Tests whether docker-compose up starts all components successfully
   system-runs:
     runs-on: ubuntu-latest
-      needs:
-        - flake8
-        - mypy-typechecking
-        - pylint
-        - unittests
-        - coverage-newarchitecture
-        - dockerized-unittests
+    needs:
+      - flake8
+      - mypy-typechecking
+      - pylint
+      - unittests
+      - coverage-newarchitecture
+      - dockerized-unittests
 
     steps:
       - name: Check out code
@@ -179,14 +179,14 @@ jobs:
 # TODO(): Run integration tests for storage gRPC service
   storage-integration:
     runs-on: ubuntu-latest
-      needs:
-        - flake8
-        - mypy-typechecking
-        - pylint
-        - unittests
-        - coverage-newarchitecture
-        - dockerized-unittests
-        
+    needs:
+      - flake8
+      - mypy-typechecking
+      - pylint
+      - unittests
+      - coverage-newarchitecture
+      - dockerized-unittests
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
