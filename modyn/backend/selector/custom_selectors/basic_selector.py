@@ -32,9 +32,6 @@ class BasicSelector(SelectorStrategy):
         self.unseen_data_ratio = unseen_data_ratio
         self.old_data_ratio = 1 - self.unseen_data_ratio
 
-    # def _set_is_adaptive_ratio(self, is_adaptive_ratio: bool) -> None:
-    #     self._is_adaptive_ratio = is_adaptive_ratio
-
     def _get_adaptive_unseen_ratio(self, training_id: int) -> float:
         """Returns the proper adaptive unseen data ratio. For example, if there are 200
         unseen data points and 600 previously unseen data points, it will return
@@ -59,6 +56,10 @@ class BasicSelector(SelectorStrategy):
         """
         Selects a new training set of samples for the given training id.
 
+        Args:
+            training_id (int): The training ID of the current training.
+            training_set_size (int): The size of the training set queried. 
+
         Returns:
             list(str): the training sample keys for the newly selected training_set
         """
@@ -77,6 +78,10 @@ class BasicSelector(SelectorStrategy):
         """
         For a given training_id and number of samples, request that many previously unseen samples.
 
+        Args:
+            training_id (int): The training ID of the current training.
+            num_samples (int): Number of samples queried
+
         Returns:
             List of keys for the unseen samples.
         """
@@ -91,6 +96,10 @@ class BasicSelector(SelectorStrategy):
         """
         For a given training_id and number of samples, request that many samples from
         the previously seen data
+        
+        Args:
+            training_id (int): The training ID of the current training.
+            num_samples (int): Number of samples queried
 
         Returns:
             List of keys for the previously seen samples
