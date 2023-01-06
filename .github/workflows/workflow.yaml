@@ -8,7 +8,6 @@ defaults:
 jobs:
   flake8:
     runs-on: ubuntu-latest
-    uses: 
 
     steps:
     - name: Setup Docker
