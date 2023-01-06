@@ -1,3 +1,7 @@
+defaults:
+  run:
+    shell: bash
+
 runs:
   using: "composite"
   steps: 
@@ -11,6 +15,8 @@ runs:
         file: ./docker/Base/Dockerfile
         tags: modyn
         outputs: type=docker,dest=/tmp/modynimage.tar
+        cache-from: type=gha
+        cache-to: type=gha
 
     - name: Load Docker image locally
       run: |
