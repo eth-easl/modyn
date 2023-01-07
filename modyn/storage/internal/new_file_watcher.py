@@ -15,6 +15,7 @@ from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.storage_database_utils import get_filesystem_wrapper, get_file_wrapper
+from modyn.utils import current_time_millis
 
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class NewFileWatcher:
             modyn_config (dict): Configuration of the modyn module.
         """
         self.modyn_config = modyn_config
-        self._last_timestamp: int = 0
+        self._last_timestamp: int = -1
         self.should_stop = should_stop
 
     def _seek(self, timestamp: int) -> None:
@@ -108,6 +109,11 @@ class NewFileWatcher:
                     )
                     session.add(file)
                     session.commit()
+                except exc.SQLAlchemyError as exception:
+                    logger.warning(f'Could not create file {file_path} in database: {exception}')
+                    session.rollback()
+                    continue
+                try:
                     for i in range(number_of_samples):
                         sample: Sample = Sample(
                             file=file,
@@ -117,17 +123,18 @@ class NewFileWatcher:
                         session.add(sample)
                     session.commit()
                 except exc.SQLAlchemyError as exception:
-                    logger.warning(f'Could not create file {file_path} in database: {exception}')
+                    logger.warning(f'Could not create samples for file {file_path} in database: {exception}')
                     session.rollback()
+                    session.delete(file)
                     continue
 
     def run(self) -> None:
         """Run the dataset watcher."""
         logger.info('Starting dataset watcher.')
-        while self._last_timestamp >= 0 and not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
+        while self._last_timestamp >= -1 and not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
             time.sleep(self.modyn_config['storage']['new_file_watcher']['interval'])
             self._seek(self._last_timestamp)
-            self._last_timestamp = int(time.time() * 1000)
+            self._last_timestamp = current_time_millis()
 
 
 def run_watcher(modyn_config: dict, should_stop: Any) -> None:  # See https://github.com/python/typeshed/issues/8799

@@ -1,5 +1,4 @@
 import pytest
-import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -8,8 +7,9 @@ from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+from modyn.utils import current_time_millis
 
-NOW = int(time.time() * 1000)
+NOW = current_time_millis()
 
 
 @pytest.fixture(autouse=True)

@@ -1,6 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module
 import os
-import time
 import pickle
 from unittest.mock import patch
 from webdataset import WebDataset, TarWriter
@@ -16,12 +15,13 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, \
     GetDataInIntervalRequest
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
+from modyn.utils import current_time_millis
 
 TMP_FILE = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test.tar')
 TMP_FILE2 = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test2.tar')
 TMP_FILE3 = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test3.tar')
 DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / 'test_storage.database'
-NOW = int(time.time() * 1000)
+NOW = current_time_millis()
 
 
 def get_minimal_modyn_config() -> dict:
