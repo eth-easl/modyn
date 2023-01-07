@@ -1,0 +1,72 @@
+project:
+  name: "Dynamic Datasets DSL Project"
+  description: "Instance of Dynamic Datasets DSL Project"
+  version: "0.0.1"
+
+storage:
+  port: "50051"
+  hostname: "localhost"
+  new_file_watcher:
+    interval: 10
+  datasets:
+    [
+      {
+        name: "mnist",
+        description: "MNIST Dataset",
+        version: "0.0.1",
+        base_path: "datasets/mnist",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "SimpleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".png",
+            label_file_extension: ".json"
+          }
+      }
+    ]
+  database:
+    drivername: "postgresql"
+    username: "postgres"
+    password: "postgres"
+    host: "storage-db"
+    port: "5432"
+    database: "postgres"
+
+odm:
+  port: "50054"
+  hostname: "backend"
+  postgresql:
+    host: db
+    port: "5432"
+    database: "postgres"
+    user: "postgres"
+    password: "postgres"
+
+ptmp:
+  port: "50055"
+  hostname: "backend"
+  processor: "SimpleProcessor"
+
+selector:
+  hostname: "backend"
+  port: "50056"
+  postgresql:
+    host: db
+    port: "5432"
+    database: "postgres"
+    user: "postgres"
+    password: "postgres"
+
+# TODO(MaxiBoether): remove this from config as soon as GPU nodes receive tasks from Supervisor
+trainer:
+  epochs: 10
+  lr: 0.001
+  batch_size: 100
+  train_set_size: 1000
+  num_dataloader_workers: 2
+  model_config:
+    name: smallconv
+    in_channels: 1
+    num_classes: 10
+    dropout: 0.3
+    fc_in: 3136
