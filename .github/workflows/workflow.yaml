@@ -126,7 +126,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Disable buildkit. TODO(MaxiBoether): Reevaluate this in some days, I get some permissions errors without this currently.
+      - name: Disable buildkit. Reevaluate this in some days, I get some permissions errors without this currently.
         run: echo "DOCKER_BUILDKIT=0" >> $GITHUB_ENV 
         shell: bash
 
