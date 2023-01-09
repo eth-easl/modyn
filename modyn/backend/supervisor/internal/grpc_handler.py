@@ -4,7 +4,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import DatasetAvailableRequest
 from modyn.utils import grpc_connection_established
 
-
 import grpc
 import logging
 
