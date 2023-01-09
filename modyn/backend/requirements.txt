@@ -1,8 +1,0 @@
-grpcio
-pyyaml
-psycopg2
-boto3
-sqlitedict
-pandas
-jsonschema
-protobuf

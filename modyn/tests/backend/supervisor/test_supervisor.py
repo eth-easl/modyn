@@ -31,7 +31,7 @@ def sleep_mock(duration: int):
 
 
 @patch.object(GRPCHandler, 'init_storage', return_value=None)
-@patch.object(GRPCHandler, 'connection_established', return_value=True)
+@patch('modyn.utils.grpc_connection_established', return_value=True)
 @patch.object(GRPCHandler, 'dataset_available', return_value=True)
 def get_non_connecting_supervisor(test_dataset_available,
                                   test_connection_established, test_init_storage) -> Supervisor:
@@ -46,7 +46,7 @@ def test_initialization() -> None:
 
 
 @patch.object(GRPCHandler, 'init_storage', return_value=None)
-@patch.object(GRPCHandler, 'connection_established', return_value=False)
+@patch('modyn.utils.grpc_connection_established', return_value=True)
 @patch.object(GRPCHandler, 'dataset_available', return_value=False)
 def test_constructor_throws_on_invalid_system_config(test_dataset_available,
                                                      test_connection_established, test_init_storage) -> None:
@@ -55,7 +55,7 @@ def test_constructor_throws_on_invalid_system_config(test_dataset_available,
 
 
 @patch.object(GRPCHandler, 'init_storage', return_value=None)
-@patch.object(GRPCHandler, 'connection_established', return_value=True)
+@patch('modyn.utils.grpc_connection_established', return_value=True)
 @patch.object(GRPCHandler, 'dataset_available', return_value=True)
 def test_constructor_throws_on_invalid_pipeline_config(test_dataset_available,
                                                        test_connection_established, test_init_storage) -> None:

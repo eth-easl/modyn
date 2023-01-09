@@ -1,0 +1,27 @@
+# Environment file for modyn
+# This contains all dependencies to run modyn and modyn itself, but not the dependencies to run the tests/development
+
+name: modyn
+
+channels:
+  - conda-forge
+  - anaconda
+
+dependencies:
+  - python>=3.9
+  - pip
+  - tqdm
+  - protobuf
+  - grpcio
+  - jsonschema
+  - psycopg2
+  - sqlalchemy
+  - pyaml
+  - numpy
+  - types-protobuf
+  - types-psycopg2
+  - types-PyYAML
+  - pip:
+      - webdataset
+      - "-e ."
+
