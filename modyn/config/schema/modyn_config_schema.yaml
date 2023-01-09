@@ -1,0 +1,238 @@
+# TODO: Add more description to the schema and complete the schema
+%YAML 1.1
+---
+$schema: "http://json-schema.org/draft-04/schema"
+id: "http://stsci.edu/schemas/yaml-schema/draft-01"
+title:
+  Dynamic Datasets DSL Project Configuration
+description: |
+  This is the configuration file for the Dynamic Datasets DSL Project.
+  It contains the configuration for the system, adapt as required.
+properties:
+  project:
+    type: object
+    properties:
+      name:
+        type: string
+        description: |
+          The name of the project.
+      description:
+        type: string
+        description: |
+          The description of the project.
+      version:
+        type: string
+        description: |
+          The version of the project.
+  storage:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the storage server.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the storage server.
+      new_file_watcher:
+        type: object
+        properties:
+          interval:
+            type: number
+            description: |
+              The interval in seconds to check for new files and samples for each dataset.
+        required:
+          - interval
+      datasets:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the dataset.
+            description:
+              type: string
+              description: |
+                The description of the dataset.
+            version:
+              type: string
+              description: |
+                The version of the dataset.
+            base_path:
+              type: string
+              description: |
+                The base path of the dataset.
+            filesystem_wrapper_type:
+              type: string
+              description: |
+                The filesystem wrapper type of the dataset.
+            file_wrapper_type:
+              type: string
+              description: |
+                The file wrapper type of the dataset.
+            file_wrapper_config:
+              type: object
+              description: |
+                The file wrapper config of the dataset.
+              properties:
+                file_extension:
+                  type: string
+                  description: |
+                    The file extension of the dataset. Starts with a dot.
+                label_file_extension:
+                  type: string
+                  description: |
+                    The label file extension of the dataset. Starts with a dot.
+          required:
+            - name
+            - description
+            - version
+            - base_path
+            - filesystem_wrapper_type
+            - file_wrapper_type
+            - file_wrapper_config
+      database:
+        type: object
+        properties:
+          drivername:
+            type: string
+            description: |
+              The drivername to use for the database.
+          username:
+            type: string
+            description: |
+              The username to use for the database.
+          password:
+            type: string
+            description: |
+              The password to use for the database.
+          host:
+            type: string
+            description: |
+              The host to use for the database.
+          port:
+            type: string
+            description: |
+              The port to use for the database.
+          database:
+            type: string
+            description: |
+              The database to use for the database.
+        required:
+          - drivername
+          - username
+          - password
+          - host
+          - port
+          - database
+    required:
+      - port
+      - hostname
+      - new_file_watcher
+      - database
+  odm:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the odm server.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the odm server.
+      postgresql:
+        type: object
+        properties:
+          host:
+            type: string
+            description: |
+              The hostname to use for the PostgreSQL server.
+          port:
+            type: string
+            description: |
+              The port to use for the PostgreSQL server
+          database:
+            type: string
+            description: |
+              The name of the PostgreSQL database.
+          user:
+            type: string
+            description: |
+              The user to use for the PostgreSQL server.
+          password:
+            type: string
+            description: |
+              The password to use for the PostgreSQL server.
+  ptmp:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the ptmp server.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the ptmp server.
+      processor:
+        type: string
+        description: |
+          The processor to use for the ptmp server.
+
+  trainer:
+    type: object
+    properties:
+      epochs:
+        type: string
+        description: |
+          Number of epochs to run the trainer for
+      lr:
+        type: string
+        description: |
+          The learning rate for the optimizer used for the training 
+      batch_size:
+        type: string
+        description: |
+          Number of elements to process in one batch
+      train_set_size:
+        type: string
+        description: |
+          The number of elements to be processed in one 'epoch'
+      num_dataloader_workers:
+        type: string
+        description: |
+          The number of data loaders to be used to fetch the training data
+      model_config:
+        type: object
+        description: |
+          Config used by the ML model
+        properties:
+          name:
+            type: string
+            description: |
+              The model name to be used
+          in_channels:
+            type: string
+            description: |
+              Model specific property for the input number of channels
+          num_classes:
+            type: string
+            description: |
+              Model specific property for the number of output classes
+          dropout:
+            type: string
+            description: |
+              Model specific property for the dropout probability in the layers
+          fc_in:
+            type: string
+            description: |
+              Model specific property for the fc input
+required:
+  - project
+  - input
+  - storage
+  - odm

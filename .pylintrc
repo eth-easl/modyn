@@ -50,8 +50,8 @@ ignore-paths=^modyn/frontend/.*$,
              ^modyn/backend/ptmp/.*$,
              ^modyn/backend/selector/internal/grpc/generated.*$,
              ^modyn/backend/metadata_database/internal/grpc/generated.*$,
-             ^modyn/storage/.*$
-
+             ^modyn/storage/internal/grpc/generated/.*$
+             
 # Files or directories matching the regex patterns are skipped. The regex
 # matches against base names, not paths. The default value ignores Emacs file
 # locks

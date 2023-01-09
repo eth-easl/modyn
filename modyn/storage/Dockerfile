@@ -32,7 +32,6 @@ RUN pip install -e .
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /src
 USER appuser
 
-RUN chmod a+x modyn/storage/run.sh
+RUN chmod a+x modyn/storage/modyn-storage
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["modyn/storage/run.sh"]
+ENTRYPOINT ./modyn/storage/modyn-storage ./modyn/config/examples/modyn_config.yaml
