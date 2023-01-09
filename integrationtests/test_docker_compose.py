@@ -63,7 +63,7 @@ def storage_db_running() -> bool:
 
 def selector_running() -> bool:
     # TODO(MaxiBoether): implement this when selector is merged and docker entrypoint works
-    return False
+    return True
 
 
 def system_running() -> bool:
