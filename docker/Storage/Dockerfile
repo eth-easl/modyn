@@ -1,6 +1,6 @@
 FROM modynbase
 
-RUN chmod a+x /src/modyn/storage/run.sh
+RUN chmod a+x /src/modyn/storage/modyn-storage
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD conda run -n modyn /src/modyn/storage/run.sh # TODO(MaxiBoether): replace with storage entrypoint as soon as storage PR is merged
+CMD conda run -n modyn ./modyn/storage/modyn-storage ./modyn/config/examples/modyn_config.yaml

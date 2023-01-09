@@ -15,11 +15,13 @@ dependencies:
   - grpcio
   - jsonschema
   - psycopg2
+  - sqlalchemy
   - pyaml
   - numpy
   - types-protobuf
   - types-psycopg2
   - types-PyYAML
   - pip:
+      - webdataset
       - "-e ."
 

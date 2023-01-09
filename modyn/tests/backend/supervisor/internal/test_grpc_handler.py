@@ -4,9 +4,9 @@ from unittest.mock import patch
 import grpc
 import pytest
 
-from modyn.storage.storage_pb2_grpc import StorageStub
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 # pylint: disable-next=no-name-in-module
-from modyn.storage.storage_pb2 import DatasetAvailableResponse
+from modyn.storage.internal.grpc.generated.storage_pb2 import DatasetAvailableResponse
 
 
 def noop_constructor_mock(self, channel: grpc.Channel) -> None:
@@ -27,7 +27,7 @@ def test_init(test_insecure_channel, test_connection_established):
     assert handler.storage is not None
 
 
-@patch.object(GRPCHandler,  'init_storage', lambda self: None)
+@patch.object(GRPCHandler, 'init_storage', lambda self: None)
 @patch('modyn.backend.supervisor.internal.grpc_handler.TIMEOUT_SEC', 0.5)
 def test_connection_established_times_out():
     handler = GRPCHandler(get_simple_config())
