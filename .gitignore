@@ -50,4 +50,4 @@ reports/
 htmlcov/
 assets/
 report.html
-.coverage
+.coverage*
