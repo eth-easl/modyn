@@ -79,7 +79,8 @@ class DummyServer:
 @patch.object(GRPCHandler, 'get_info_for_training', return_value=(8, 1))
 def test_main(get_info_for_training, register_training, _connection_established, _init_metadata, wait_for_terination):
     # testargs = ["selector_entrypoint.py", "modyn/config/config.yaml"]
-    testargs = ["selector_entrypoint.py", "modyn/config/examples/modyn_config.yaml", "modyn/config/examples/example-pipeline.yaml"]
+    testargs = ["selector_entrypoint.py", "modyn/config/examples/modyn_config.yaml",
+                "modyn/config/examples/example-pipeline.yaml"]
     with patch.object(sys, 'argv', testargs):
         main()
 
