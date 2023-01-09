@@ -69,7 +69,7 @@ jobs:
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
 
-# TODO(create issue): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
+# TODO(#51): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
 # Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
   coverage-newarchitecture:
     runs-on: ubuntu-latest
@@ -86,8 +86,7 @@ jobs:
 
 
 ### Integration Tests ###
-# The following tests should depend on the previous ones.
-# I tried to use two workflows and let the second workflow depend on the first, but it doesn't trigger for some reason.
+# We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
 
 # Checks whether the base container works correctly.
   dockerized-unittests:
