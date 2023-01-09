@@ -6,3 +6,4 @@ mypy
 pylint
 pytest-console-scripts
 pillow
+autopep8

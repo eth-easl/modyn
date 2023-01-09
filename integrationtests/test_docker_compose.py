@@ -4,11 +4,14 @@ import os
 import pathlib
 import yaml
 import psycopg2
+import grpc
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub  # noqa: F401
+from modyn.utils import grpc_connection_established
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
-TIMEOUT = 10  # seconds
-CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "config.yaml"
+TIMEOUT = 60  # seconds
+CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
 
 
 def terminate_on_timeout(start_time: int) -> None:
@@ -28,34 +31,39 @@ def get_modyn_config() -> dict:
 
 
 def storage_running() -> bool:
-    # TODO(MaxiBoether): implement this when storage is merged and docker entrypoint works
+    config = get_modyn_config()
+
+    storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
+    storage_channel = grpc.insecure_channel(storage_address)
+
+    if not grpc_connection_established(storage_channel):
+        print(f"Could not establish gRPC connection to storage at {storage_address}. Retrying.")
+        return False
+
     return True
 
 
 def storage_db_running() -> bool:
-    # config = get_modyn_config()
-    # conn = None
+    config = get_modyn_config()
     try:
-        # psycopg2.connect(
-        #                host=config['odm']['postgresql']['host'],
-        #                port=config['odm']['postgresql']['port'],
-        #                database=config['odm']['postgresql']['database'],
-        #                user=config['odm']['postgresql']['user'],
-        #                password=config['odm']['postgresql']['password'],
-        #                connect_timeout=5
-        #            )
-
-        # TODO(Maxiboether): replace with storage DB after merge of storage PR
+        psycopg2.connect(
+                        host=config['storage']['database']['host'],
+                        port=config['storage']['database']['port'],
+                        database=config['storage']['database']['database'],
+                        user=config['storage']['database']['username'],
+                        password=config['storage']['database']['password'],
+                        connect_timeout=5
+                    )
 
         return True
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
+        print("Error while connecting to the database: " + str(error))
         return False
 
 
 def selector_running() -> bool:
     # TODO(MaxiBoether): implement this when selector is merged and docker entrypoint works
-    return True
+    return False
 
 
 def system_running() -> bool:

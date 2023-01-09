@@ -5,7 +5,7 @@ project:
 
 storage:
   port: "50051"
-  hostname: "localhost"
+  hostname: "storage"
   new_file_watcher:
     interval: 10
   datasets:

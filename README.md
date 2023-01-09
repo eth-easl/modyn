@@ -32,7 +32,17 @@ in the project root.
 
 ![Current architecture diagram](docs/images/Architecture.png)
 
-### How to run:
-1. Install [Docker](https://docs.docker.com/get-docker/) 
-2. Run docker `docker compose -f "src/docker-compose.yml" up -d --build`
-3. To read output [ssh](https://phase2.github.io/devtools/common-tasks/ssh-into-a-container/) into the docker container you are interested in
+### Conda and Docker Setup
+We manage dependency required to run Modyn using conda. All dependencies are listed in the `environment.yml` file in the project root.
+Development dependencies are managed in the `dev-requirements.txt` file in the project root.
+There are two ways to develop modyn.
+First, you can install all dependencies on your local machine via `conda env create -f ./environment.yml` and `pip install -r dev-dependencies.txt`. Modyn itself should be installed via conda, but if you run into problems try `pip install -e .` in the project root.
+
+Second, you can use a Docker container. We provide a Modyn base container where the conda setup is already done. You can find the Dockerfile in `docker/Base/Dockerfile` and build the image using `docker build -t modyn -f docker/Base/Dockerfile .`. Then, you can run a container for example using `docker run modyn /bin/bash`.
+
+### Docker-Compose Setup
+We use docker-compose to manage the system setup.
+The `docker-compose.yml` file describes our setup. 
+Use `docker compose up --build` to start all containers and `docker compose up --build --abort-on-container-exit --exit-code-from tests` to run the integration tests.
+The `tests` service runs integration tests, if started (e.g., in the Github Workflow).
+Last, on macOS, you might be required to set the `DOCKER_BUILDKIT` environment variable to 0, if you run into problems during the build process.

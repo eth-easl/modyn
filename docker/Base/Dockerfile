@@ -45,4 +45,5 @@ RUN /bin/bash -c "conda init"
 RUN echo "conda activate modyn" >> /home/appuser/.bashrc
 
 # The base container is just used as a base image for docker-compose and doesn't require anything else.
-RUN echo "This is the base container."
+# We cannot quit here, as our test setup would break if the base container exits.
+CMD tail -f /dev/null

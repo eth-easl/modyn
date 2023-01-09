@@ -38,3 +38,12 @@ services:
       dockerfile: docker/Storage/Dockerfile
     ports:
       - '50051:50051'
+  tests:
+    depends_on:
+      - modynbase
+      - storage
+      - db
+      - storage-db
+    build:
+      context: .
+      dockerfile: docker/Tests/Dockerfile
