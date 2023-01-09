@@ -31,6 +31,7 @@ services:
   storage:
     restart: on-failure
     depends_on:
+      - modynbase
       - storage-db
     build:
       context: .

@@ -16,7 +16,7 @@ storage:
         version: "0.0.1",
         base_path: "datasets/mnist",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
-        file_wrapper_type: "SimpleFileWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
           {
             file_extension: ".png",
@@ -56,17 +56,3 @@ selector:
     database: "postgres"
     user: "postgres"
     password: "postgres"
-
-# TODO(MaxiBoether): remove this from config as soon as GPU nodes receive tasks from Supervisor
-trainer:
-  epochs: 10
-  lr: 0.001
-  batch_size: 100
-  train_set_size: 1000
-  num_dataloader_workers: 2
-  model_config:
-    name: smallconv
-    in_channels: 1
-    num_classes: 10
-    dropout: 0.3
-    fc_in: 3136
