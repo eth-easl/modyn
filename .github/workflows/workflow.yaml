@@ -1,4 +1,4 @@
-name: Python package
+name: linting-and-tests
 on: [pull_request]
 
 defaults:
@@ -10,95 +10,124 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.10'
-    - name: Flake8
-      run: |
-        pip install -r dev-requirements.txt
-        flake8 --version
-        flake8 --statistics
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Conda
+        uses: ./.github/actions/conda
+      
+      - name: Flake8
+        run: |
+          conda run -n modyn flake8 --version
+          conda run -n modyn flake8 --statistics
 
   mypy-typechecking:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.10'
-    - name: pip
-      run: pip install -r dev-requirements.txt
-    - name: mypy
-      run: |
-        mypy --version
-        mypy modyn
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Conda
+        uses: ./.github/actions/conda
+
+      - name: Mypy
+        run: |
+          conda run -n modyn mypy --version
+          conda run -n modyn mypy modyn
 
   pylint:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.10'
-    - name: pip
-      run: | 
-        pip install -r dev-requirements.txt
-        pip install -r modyn/backend/requirements.txt
-        pip install -e .
-    - name: pylint
-      run: |
-        pylint --version
-        pylint modyn
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Conda
+        uses: ./.github/actions/conda
+
+      - name: Pylint
+        run: |
+          conda run -n modyn pylint --version
+          conda run -n modyn pylint modyn
 
   unittests:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.10'
-    - name: Pytest
-      run: |
-        pip install -r dev-requirements.txt
-        pip install -r modyn/backend/requirements.txt
-        pip install -e .
-        pytest
-        pytest > pytest-coverage.txt
-    - name: Comment coverage
-      uses: coroo/pytest-coverage-commentator@v1.0.2
+      - name: Check out code
+        uses: actions/checkout@v3
 
-# TODO(create issue): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
+      - name: Setup Conda
+        uses: ./.github/actions/conda
+
+      - name: Pytest
+        run: |
+          conda run -n modyn pytest
+          conda run -n modyn pytest > pytest-coverage.txt
+
+      - name: Comment coverage
+        uses: coroo/pytest-coverage-commentator@v1.0.2
+
+# TODO(#51): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
 # Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
   coverage-newarchitecture:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.10'
-    - name: Pytest
-      run: |
-        pip install -r dev-requirements.txt
-        pip install -r modyn/backend/requirements.txt
-        pip install -e .
-        pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov-fail-under=90
+      - name: Check out code
+        uses: actions/checkout@v3
 
-  integrationtests:
+      - name: Setup Conda
+        uses: ./.github/actions/conda
+
+      - name: Pytest
+        run: conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov=modyn/storage --cov-fail-under=90
+
+
+### Integration Tests ###
+# We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
+
+# Checks whether the base container works correctly.
+  dockerized-unittests:
       runs-on: ubuntu-latest
+      needs:
+        - flake8
+        - mypy-typechecking
+        - pylint
+        - unittests
+        - coverage-newarchitecture
       
       steps:
-      - uses: actions/checkout@v1
-      - name: Set up Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: '3.10'
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup base container
+        uses: ./.github/actions/base
+
+      - name: Setup dev-requirements and run pytest within container
+        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
+
+
+# Tests whether docker-compose up starts all components successfully and integration tests run through
+# Only one job to reduce Github CI usage
+  integrationtests:
+    runs-on: ubuntu-latest
+    needs:
+      - flake8
+      - mypy-typechecking
+      - pylint
+      - unittests
+      - coverage-newarchitecture
+      - dockerized-unittests
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Disable buildkit. Reevaluate this in some days, I get some permissions errors without this currently.
+        run: echo "DOCKER_BUILDKIT=0" >> $GITHUB_ENV 
+        shell: bash
+
+      - name: Start docker compose and exit when tests run through
+        run: docker compose up --build --abort-on-container-exit --exit-code-from tests

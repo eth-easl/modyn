@@ -37,6 +37,7 @@ var/
 
 # postgresql
 postgres-data/
+storage-postgres-data/
 
 # Trainer output data
 src/data/*
@@ -50,3 +51,5 @@ htmlcov/
 assets/
 report.html
 .coverage
+# Pytest creates files that have the name of the local desktop included, so we need to wildcard here
+.coverage.*

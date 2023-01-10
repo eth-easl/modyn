@@ -1,6 +1,9 @@
+"""Storage module.
+
+The storage module contains all classes and functions related to the storage and retrieval of data.
 """
-TODO: Describe what is in this directory/submodule.
-"""
+
+from .storage import Storage  # noqa: F401
 import os
 files = os.listdir(os.path.dirname(__file__))
 files.remove('__init__.py')
