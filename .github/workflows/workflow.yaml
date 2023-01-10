@@ -78,7 +78,7 @@ jobs:
 
       - name: Black
         run: |
-          conda run -n black --version
+          conda run -n modyn black --version
           conda run -n modyn black --check modyn --verbose --config black.toml
 
   unittests:
@@ -126,6 +126,8 @@ jobs:
         - mypy-typechecking
         - pylint
         - unittests
+        - isort
+        - black
         - coverage-newarchitecture
       
       steps:
@@ -148,6 +150,8 @@ jobs:
       - mypy-typechecking
       - pylint
       - unittests
+      - isort
+      - black
       - coverage-newarchitecture
       - dockerized-unittests
 
