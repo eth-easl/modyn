@@ -1,23 +1,23 @@
 """Database connection context manager."""
 
 from __future__ import annotations
+
 import logging
 
-from sqlalchemy.engine.base import Engine
-from sqlalchemy.orm.session import Session
+from modyn.storage.internal.database.base import Base
+from modyn.storage.internal.database.models.dataset import Dataset
+from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import create_engine, exc
 from sqlalchemy.engine import URL
+from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import sessionmaker
-
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
-from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-from modyn.storage.internal.database.base import Base
+from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
 
 
-class DatabaseConnection():
+class DatabaseConnection:
     """Database connection context manager."""
 
     session: Session = None
@@ -39,12 +39,12 @@ class DatabaseConnection():
             DatabaseConnection: DatabaseConnection.
         """
         self.url = URL.create(
-            drivername=self.modyn_config['storage']['database']['drivername'],
-            username=self.modyn_config['storage']['database']['username'],
-            password=self.modyn_config['storage']['database']['password'],
-            host=self.modyn_config['storage']['database']['host'],
-            port=self.modyn_config['storage']['database']['port'],
-            database=self.modyn_config['storage']['database']['database']
+            drivername=self.modyn_config["storage"]["database"]["drivername"],
+            username=self.modyn_config["storage"]["database"]["username"],
+            password=self.modyn_config["storage"]["database"]["password"],
+            host=self.modyn_config["storage"]["database"]["host"],
+            port=self.modyn_config["storage"]["database"]["port"],
+            database=self.modyn_config["storage"]["database"]["database"],
         )
         self.engine = create_engine(self.url, echo=True)
         self.session = sessionmaker(bind=self.engine)()
@@ -81,10 +81,16 @@ class DatabaseConnection():
         """
         Base.metadata.create_all(self.engine)
 
-    def add_dataset(self, name: str, base_path: str,
-                    filesystem_wrapper_type: FilesystemWrapperType,
-                    file_wrapper_type: FileWrapperType, description: str, version: str,
-                    file_wrapper_config: str) -> bool:
+    def add_dataset(
+        self,
+        name: str,
+        base_path: str,
+        filesystem_wrapper_type: FilesystemWrapperType,
+        file_wrapper_type: FileWrapperType,
+        description: str,
+        version: str,
+        file_wrapper_config: str,
+    ) -> bool:
         """
         Add dataset to database.
 
@@ -92,27 +98,31 @@ class DatabaseConnection():
         """
         try:
             if self.session.query(Dataset).filter(Dataset.name == name).first() is not None:
-                logger.info(f'Dataset with name {name} exists.')
-                self.session.query(Dataset).filter(Dataset.name == name).update({
-                    'base_path': base_path,
-                    'filesystem_wrapper_type': filesystem_wrapper_type,
-                    'file_wrapper_type': file_wrapper_type,
-                    'description': description,
-                    'version': version,
-                    'file_wrapper_config': file_wrapper_config
-                })
+                logger.info(f"Dataset with name {name} exists.")
+                self.session.query(Dataset).filter(Dataset.name == name).update(
+                    {
+                        "base_path": base_path,
+                        "filesystem_wrapper_type": filesystem_wrapper_type,
+                        "file_wrapper_type": file_wrapper_type,
+                        "description": description,
+                        "version": version,
+                        "file_wrapper_config": file_wrapper_config,
+                    }
+                )
             else:
-                dataset = Dataset(name=name,
-                                  base_path=base_path,
-                                  filesystem_wrapper_type=filesystem_wrapper_type,
-                                  file_wrapper_type=file_wrapper_type,
-                                  description=description,
-                                  version=version,
-                                  file_wrapper_config=file_wrapper_config)
+                dataset = Dataset(
+                    name=name,
+                    base_path=base_path,
+                    filesystem_wrapper_type=filesystem_wrapper_type,
+                    file_wrapper_type=file_wrapper_type,
+                    description=description,
+                    version=version,
+                    file_wrapper_config=file_wrapper_config,
+                )
                 self.session.add(dataset)
             self.session.commit()
         except exc.SQLAlchemyError as exception:
-            logger.error(f'Error adding dataset: {exception}')
+            logger.error(f"Error adding dataset: {exception}")
             self.session.rollback()
             return False
         return True
