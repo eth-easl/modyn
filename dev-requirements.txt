@@ -1,10 +1,9 @@
 pytest
 pytest-cov
-flake8
 pytest-html
+flake8
 mypy
-types-protobuf
-types-psycopg2
-types-PyYAML
 pylint
 pytest-console-scripts
+pillow
+autopep8
