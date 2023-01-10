@@ -15,7 +15,7 @@ dependencies:
   - grpcio
   - jsonschema
   - psycopg2
-  - sqlalchemy
+  - sqlalchemy<2.0
   - pyaml
   - numpy
   - types-protobuf
