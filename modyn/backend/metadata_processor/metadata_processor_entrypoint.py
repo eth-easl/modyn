@@ -23,6 +23,8 @@ def setup_argparser() -> argparse.ArgumentParser:
     parser_.add_argument('config', type=pathlib.Path, action="store",
         help="Modyn infrastructure configuration file")
 
+    return parser
+
 def main() -> None:
     """Entrypoint for the storage service."""
     parser = setup_argparser()

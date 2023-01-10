@@ -1,4 +1,4 @@
-
+"""GRPC Servicer for Metadata Processor"""
 
 import grpc
 import logging
@@ -12,26 +12,26 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
-	"""GRPC Servicer for the MetadataProcessor module."""
+    """GRPC Servicer for the MetadataProcessor module."""
 
-	def __init__(self, config: dict, strategy: MetadataProcessorStrategy) -> None:
-		super().__init__()
-		self.__config = config
-		self.processor_strategy = strategy
+    def __init__(self, config: dict, strategy: MetadataProcessorStrategy) -> None:
+        super().__init__()
+        self.__config = config
+        self.processor_strategy = strategy
 
-	def ProcessPostTrainingMetadata(
-			self, request: PostTrainingMetadataRequest, context: grpc.ServicerContext
-			) -> PostTrainingMetadataResponse:
-		"""Process post training metadata.
-		
-		Args:
-			request (PostTrainingMetadataRequest): Request containing the training ID
-				and the metadata
-			context (grpc.ServicerContext): Context of the request.
-		
-		Returns:
-			response (PostTrainingMetadataResponse): Empty response, to confirm.
-		"""
-		logger.info(f'Processing post-training metadata for training ID {request.training_id}')
-		self.processor_strategy.process_post_training_metadata(request.training_id, request.data)
-		return PostTrainingMetadataResponse()
+    def ProcessPostTrainingMetadata(
+            self, request: PostTrainingMetadataRequest, context: grpc.ServicerContext
+            ) -> PostTrainingMetadataResponse:
+        """Process post training metadata.
+
+        Args:
+            request (PostTrainingMetadataRequest): Request containing the training ID
+                and the metadata
+            context (grpc.ServicerContext): Context of the request.
+
+        Returns:
+            response (PostTrainingMetadataResponse): Empty response, to confirm.
+        """
+        logger.info(f'Processing post-training metadata for training ID {request.training_id}')
+        self.processor_strategy.process_post_training_metadata(request.training_id, request.data)
+        return PostTrainingMetadataResponse()

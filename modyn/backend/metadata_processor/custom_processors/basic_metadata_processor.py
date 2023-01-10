@@ -3,10 +3,10 @@ from modyn.backend.metadata_processor.metadata_processor_strategy import Metadat
 
 class BasicMetadataProcessor(MetadataProcessorStrategy):
 
-	def __init__(self, config: dict) -> None:
-		super().__init__(config)
+    def __init__(self, config: dict) -> None:
+        super().__init__(config)
 
-	def _process_post_training_metadata(
+    def _process_post_training_metadata(
             self, training_id: int, data: str) -> SetRequest:
         data_dict = json.loads(data)
 
@@ -22,7 +22,7 @@ class BasicMetadataProcessor(MetadataProcessorStrategy):
                 output_scores.append(score)
 
         return {
-        	'data': output_data,
-        	'keys': output_keys,
-        	'scores': output_scores
+            'data': output_data,
+            'keys': output_keys,
+            'scores': output_scores
         }
