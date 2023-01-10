@@ -1,5 +1,3 @@
-# black only support toml configuration...
-
 [tool.black]
 line-length = 120
 target-version = ['py39']

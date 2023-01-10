@@ -79,7 +79,7 @@ jobs:
       - name: Black
         run: |
           conda run -n black --version
-          conda run -n modyn black --check modyn
+          conda run -n modyn black --check modyn --verbose --config black.toml
 
   unittests:
     runs-on: ubuntu-latest
