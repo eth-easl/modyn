@@ -13,8 +13,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: default_database
-    ports:
-      - '5435:5432'
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
   storage-db:
@@ -24,8 +22,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: default_database
-    ports:
-      - '50060:5432'
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
   storage:
@@ -36,8 +32,6 @@ services:
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
-    ports:
-      - '50051:50051'
   tests:
     depends_on:
       - modynbase
