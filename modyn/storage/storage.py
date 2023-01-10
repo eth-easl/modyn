@@ -21,7 +21,7 @@ from modyn.storage.internal.new_file_watcher import run_watcher
 logger = logging.getLogger(__name__)
 
 
-class Storage():
+class Storage:
     """Storage server.
 
     The storage server is responsible for the retrieval of data from the various storage backends.
@@ -43,8 +43,9 @@ class Storage():
             raise ValueError(f"Invalid configuration: {errors}")
 
     def _validate_config(self) -> Tuple[bool, list[str]]:
-        schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent \
-            / "config" / "schema" / "modyn_config_schema.yaml"
+        schema_path = (
+            pathlib.Path(os.path.abspath(__file__)).parent.parent / "config" / "schema" / "modyn_config_schema.yaml"
+        )
         return validate_yaml(self.modyn_config, schema_path)
 
     def run(self) -> None:
@@ -57,14 +58,16 @@ class Storage():
         with DatabaseConnection(self.modyn_config) as database:
             database.create_all()
 
-            for dataset in self.modyn_config['storage']['datasets']:
-                if not database.add_dataset(dataset['name'],
-                                            dataset['base_path'],
-                                            dataset['filesystem_wrapper_type'],
-                                            dataset['file_wrapper_type'],
-                                            dataset['description'],
-                                            dataset['version'],
-                                            json.dumps(dataset['file_wrapper_config'])):
+            for dataset in self.modyn_config["storage"]["datasets"]:
+                if not database.add_dataset(
+                    dataset["name"],
+                    dataset["base_path"],
+                    dataset["filesystem_wrapper_type"],
+                    dataset["file_wrapper_type"],
+                    dataset["description"],
+                    dataset["version"],
+                    json.dumps(dataset["file_wrapper_config"]),
+                ):
                     raise ValueError(f"Failed to add dataset {dataset['name']}")
 
         #  Start the dataset watcher process in a different thread.

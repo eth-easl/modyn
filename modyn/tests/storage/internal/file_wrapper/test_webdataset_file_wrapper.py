@@ -8,8 +8,8 @@ from PIL import Image
 
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 
-TEST_DIR = pathlib.Path(os.path.abspath(__file__)).parent / 'test_tmp' / 'modyn'
-FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / 'test_tmp' / 'modyn' / 'test.tar')
+TEST_DIR = pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn"
+FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.tar")
 
 
 def setup():
@@ -20,13 +20,13 @@ def setup():
     test_file = wds.TarWriter(FILE_PATH)
     for i in range(150):
 
-        test_jpg = Image.new('RGB', (width, height), color=(255, 255, 255))
+        test_jpg = Image.new("RGB", (width, height), color=(255, 255, 255))
         for m in range(test_jpg.size[0]):  # pylint: disable=invalid-name
             for n in range(test_jpg.size[1]):  # pylint: disable=invalid-name
                 if m * 28 + n == i:
                     test_jpg.putpixel((m, n), (0, 0, 0))
-        test_json = json.dumps({'__key__': str(i), 'id': i})
-        test_file.write({'__key__': str(i), 'jpg': test_jpg, 'json': test_json, 'cls': str(i)})
+        test_json = json.dumps({"__key__": str(i), "id": i})
+        test_file.write({"__key__": str(i), "jpg": test_jpg, "json": test_json, "cls": str(i)})
     test_file.close()
 
 
@@ -57,7 +57,7 @@ def test_get_samples():
         n = i // 28  # pylint: disable=invalid-name
         assert sample[0][m, n].tolist() == [0, 0, 0]
         assert sample[1] == i
-        assert sample[2]['id'] == i
+        assert sample[2]["id"] == i
 
     samples = file_wrapper.get_samples(100, 102)
 
@@ -69,7 +69,7 @@ def test_get_samples():
         n = (i + 100) // 28  # pylint: disable=invalid-name
         assert sample[0][m, n].tolist() == [0, 0, 0]
         assert sample[1] == i + 100
-        assert sample[2]['id'] == i + 100
+        assert sample[2]["id"] == i + 100
 
 
 def test_get_sample():
@@ -83,7 +83,7 @@ def test_get_sample():
         m = label % 28  # pylint: disable=invalid-name
         n = label // 28  # pylint: disable=invalid-name
         assert image[m, n].tolist() == [0, 0, 0]
-        assert json_file['id'] == label
+        assert json_file["id"] == label
 
     sample = file_wrapper.get_sample(100)
 
@@ -94,7 +94,7 @@ def test_get_sample():
         m = label % 28  # pylint: disable=invalid-name
         n = label // 28  # pylint: disable=invalid-name
         assert image[m, n].tolist() == [0, 0, 0]
-        assert json_file['id'] == label
+        assert json_file["id"] == label
 
 
 def test_get_samples_from_indices():
@@ -112,7 +112,7 @@ def test_get_samples_from_indices():
         n = indices[i] // 28  # pylint: disable=invalid-name
         assert image[m, n].tolist() == [0, 0, 0]
         assert label == indices[i]
-        assert json_file['id'] == label
+        assert json_file["id"] == label
         i += 1
 
     assert i == 10
@@ -129,7 +129,7 @@ def test_get_samples_from_indices():
         n = indices[i] // 28  # pylint: disable=invalid-name
         assert image[m, n].tolist() == [0, 0, 0]
         assert label == indices[i]
-        assert json_file['id'] == label
+        assert json_file["id"] == label
         i += 1
 
     assert i == 10
@@ -146,7 +146,7 @@ def test_get_samples_from_indices():
         n = indices[i] // 28  # pylint: disable=invalid-name
         assert image[m, n].tolist() == [0, 0, 0]
         assert label == indices[i]
-        assert json_file['id'] == label
+        assert json_file["id"] == label
         i += 1
 
     assert i == 10

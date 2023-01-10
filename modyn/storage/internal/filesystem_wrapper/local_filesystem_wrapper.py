@@ -38,10 +38,10 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             bytes: File content
         """
         if not self.__is_valid_path(path):
-            raise ValueError(f'Path {path} is not valid.')
+            raise ValueError(f"Path {path} is not valid.")
         if not self.isfile(path):
-            raise IsADirectoryError(f'Path {path} is a directory.')
-        with open(path, 'rb') as file:
+            raise IsADirectoryError(f"Path {path} is a directory.")
+        with open(path, "rb") as file:
             return file.read()
 
     def exists(self, path: str) -> bool:
@@ -70,9 +70,9 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             list[str]: List of files in directory
         """
         if not self.__is_valid_path(path):
-            raise ValueError(f'Path {path} is not valid.')
+            raise ValueError(f"Path {path} is not valid.")
         if not self.isdir(path):
-            raise NotADirectoryError(f'Path {path} is not a directory.')
+            raise NotADirectoryError(f"Path {path} is not a directory.")
         if recursive:
             return [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(path)) for f in fn]
         return os.listdir(path)
@@ -113,9 +113,9 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             int: Size of file in bytes
         """
         if not self.__is_valid_path(path):
-            raise ValueError(f'Path {path} is not valid.')
+            raise ValueError(f"Path {path} is not valid.")
         if not self.isfile(path):
-            raise IsADirectoryError(f'Path {path} is a directory.')
+            raise IsADirectoryError(f"Path {path} is a directory.")
         return os.path.getsize(path)
 
     def get_modified(self, path: str) -> int:
@@ -132,9 +132,9 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             int: Modification time in milliseconds rounded to the nearest integer
         """
         if not self.__is_valid_path(path):
-            raise ValueError(f'Path {path} is not valid.')
+            raise ValueError(f"Path {path} is not valid.")
         if not self.isfile(path):
-            raise IsADirectoryError(f'Path {path} is a directory.')
+            raise IsADirectoryError(f"Path {path} is a directory.")
         return int(os.path.getmtime(path) * 1000)
 
     def get_created(self, path: str) -> int:
@@ -151,9 +151,9 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             int: Creation time in milliseconds rounded to the nearest integer
         """
         if not self.__is_valid_path(path):
-            raise ValueError(f'Path {path} is not valid.')
+            raise ValueError(f"Path {path} is not valid.")
         if not self.isfile(path):
-            raise IsADirectoryError(f'Path {path} is a directory.')
+            raise IsADirectoryError(f"Path {path} is a directory.")
         return int(os.path.getctime(path) * 1000)
 
     def join(self, *paths: str) -> str:

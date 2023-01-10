@@ -19,7 +19,7 @@ def test_initialization() -> None:
     assert trigger.callback == callback  # pylint: disable=comparison-with-callable
 
 
-@patch.object(Trigger, '_decide_for_trigger', return_value=0)
+@patch.object(Trigger, "_decide_for_trigger", return_value=0)
 def test_inform_does_nothing_on_no_trigger(test__decide_for_trigger) -> None:
     callback = MagicMock()
 
@@ -31,7 +31,7 @@ def test_inform_does_nothing_on_no_trigger(test__decide_for_trigger) -> None:
 
 @pytest.mark.parametrize("num_callbacks", [1, 2, 3, 4, 5])
 def test_inform_calls_callback(num_callbacks) -> None:
-    with patch.object(Trigger, '_decide_for_trigger', return_value=num_callbacks):
+    with patch.object(Trigger, "_decide_for_trigger", return_value=num_callbacks):
         callback = MagicMock()
 
         trigger = get_trigger(callback)

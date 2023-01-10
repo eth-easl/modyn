@@ -28,36 +28,40 @@ class MNISTDataset(Dataset):
         return False
 
     def __repr__(self) -> str:
-        return 'MNIST-Normal'
+        return "MNIST-Normal"
 
 
 def get_mnist_dataset(
-        train_aug: Optional[torch.nn.Module] = None,
-        val_aug: Optional[torch.nn.Module] = None,
-        version: str = 'normal') -> dict:
+    train_aug: Optional[torch.nn.Module] = None, val_aug: Optional[torch.nn.Module] = None, version: str = "normal"
+) -> dict:
     if train_aug is None:
-        train_aug = transforms.Compose([
-            transforms.RandomAffine(degrees=30),
-            transforms.RandomPerspective(),
-            transforms.ToTensor(),
-        ])
+        train_aug = transforms.Compose(
+            [
+                transforms.RandomAffine(degrees=30),
+                transforms.RandomPerspective(),
+                transforms.ToTensor(),
+            ]
+        )
 
     if val_aug is None:
-        val_aug = transforms.Compose([
-            transforms.ToTensor(),
-        ])
+        val_aug = transforms.Compose(
+            [
+                transforms.ToTensor(),
+            ]
+        )
 
     traindt = dts.MNIST(
-        root='data', train=True, transform=train_aug, download=True,
+        root="data",
+        train=True,
+        transform=train_aug,
+        download=True,
     )
-    testdt = dts.MNIST(
-        root='data', train=False, transform=val_aug
-    )
+    testdt = dts.MNIST(root="data", train=False, transform=val_aug)
 
-    if version == 'normal':
+    if version == "normal":
         return {
-            'train': traindt,
-            'test': testdt,
+            "train": traindt,
+            "test": testdt,
         }
     # elif version == 'split':
     #     return {

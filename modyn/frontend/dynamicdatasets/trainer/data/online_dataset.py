@@ -11,7 +11,6 @@ import Typing
 
 
 class OnlineDataset(IterableDataset):
-
     def __init__(self, training_id: int, config: dict):
         self._training_id = training_id
         self._config = config
@@ -19,23 +18,20 @@ class OnlineDataset(IterableDataset):
 
     def __selector_stub(self) -> SelectorStub:
         selector_channel = grpc.insecure_channel(
-            self._config['selector']['hostname'] +
-            ':' +
-            self._config['selector']['port'])
+            self._config["selector"]["hostname"] + ":" + self._config["selector"]["port"]
+        )
         return SelectorStub(selector_channel)
 
     def __storage_stub(self) -> StorageStub:
         storage_channel = grpc.insecure_channel(
-            self._config['storage']['hostname'] +
-            ':' +
-            self._config['storage']['port'])
+            self._config["storage"]["hostname"] + ":" + self._config["storage"]["port"]
+        )
         return StorageStub(storage_channel)
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         req = GetSamplesRequest(
-            training_id=self._training_id,
-            training_set_number=self._trainining_set_number,
-            worker_id=worker_id)
+            training_id=self._training_id, training_set_number=self._trainining_set_number, worker_id=worker_id
+        )
         samples_response = self.__selector_stub().get_sample_keys(req)
         keys = samples_response.training_samples_subset
         return keys
@@ -59,7 +55,7 @@ class OnlineDataset(IterableDataset):
         return iter(processed_data)
 
     def __len__(self) -> int:
-        return self._config['trainer']['train_set_size']
+        return self._config["trainer"]["train_set_size"]
 
     @abstractmethod
     def _process(self, data: list) -> list:

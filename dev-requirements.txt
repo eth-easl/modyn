@@ -7,3 +7,5 @@ pylint
 pytest-console-scripts
 pillow
 autopep8
+isort
+black

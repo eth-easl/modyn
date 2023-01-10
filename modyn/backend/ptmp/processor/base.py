@@ -19,8 +19,7 @@ class PostTrainingMetadataProcessor(ABC):
         self.__config = config
         self.__thread_pool = futures.ThreadPoolExecutor(max_workers=10)
 
-    def process_post_training_metadata(
-            self, training_id: int, data: str) -> None:
+    def process_post_training_metadata(self, training_id: int, data: str) -> None:
         """
         Add the task to process the post training metadata and send it to the ODM to the thread pool.
 
@@ -49,15 +48,12 @@ class PostTrainingMetadataProcessor(ABC):
             training_id (str): The training id.
             set_request (SetRequest): The set request.
         """
-        channel = grpc.insecure_channel(self.__config['odm']['hostname'] +
-                                        ':' +
-                                        self.__config['odm']['port'])
+        channel = grpc.insecure_channel(self.__config["odm"]["hostname"] + ":" + self.__config["odm"]["port"])
         stub = ODMStub(channel)
         stub.Set(set_request)
 
     @abstractmethod
-    def _process_post_training_metadata(
-            self, training_id: int, data: str) -> SetRequest:
+    def _process_post_training_metadata(self, training_id: int, data: str) -> SetRequest:
         """Processes post training metadata for the given training_id and data.
 
         Args:

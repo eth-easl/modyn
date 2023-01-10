@@ -15,7 +15,7 @@ NOW = current_time_millis()
 
 @pytest.fixture(autouse=True)
 def session():
-    engine = create_engine('sqlite:///:memory:', echo=True)
+    engine = create_engine("sqlite:///:memory:", echo=True)
     sess = sessionmaker(bind=engine)()
 
     Dataset.metadata.create_all(engine)
@@ -27,96 +27,102 @@ def session():
 
 
 def test_add_sample(session):  # pylint: disable=redefined-outer-name
-    dataset = Dataset(name='test',
-                      base_path='test',
-                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
-                      description='test',
-                      version='test')
+    dataset = Dataset(
+        name="test",
+        base_path="test",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        description="test",
+        version="test",
+    )
     session.add(dataset)
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key='test', index=0)
+    sample = Sample(file=file, external_key="test", index=0)
     session.add(sample)
     session.commit()
 
-    assert session.query(Sample).filter(Sample.external_key == 'test').first() is not None
-    assert session.query(Sample).filter(Sample.external_key == 'test').first().file == file
-    assert session.query(Sample).filter(Sample.external_key == 'test').first().index == 0
+    assert session.query(Sample).filter(Sample.external_key == "test").first() is not None
+    assert session.query(Sample).filter(Sample.external_key == "test").first().file == file
+    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 0
 
 
 def test_update_sample(session):  # pylint: disable=redefined-outer-name
-    dataset = Dataset(name='test',
-                      base_path='test',
-                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
-                      description='test',
-                      version='test')
+    dataset = Dataset(
+        name="test",
+        base_path="test",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        description="test",
+        version="test",
+    )
     session.add(dataset)
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key='test', index=0)
+    sample = Sample(file=file, external_key="test", index=0)
     session.add(sample)
     session.commit()
 
-    session.query(Sample).filter(Sample.external_key == 'test').update({
-        'index': 1
-    })
+    session.query(Sample).filter(Sample.external_key == "test").update({"index": 1})
 
-    assert session.query(Sample).filter(Sample.external_key == 'test').first().index == 1
+    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 1
 
 
 def test_delete_sample(session):  # pylint: disable=redefined-outer-name
-    dataset = Dataset(name='test',
-                      base_path='test',
-                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
-                      description='test',
-                      version='test')
+    dataset = Dataset(
+        name="test",
+        base_path="test",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        description="test",
+        version="test",
+    )
     session.add(dataset)
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key='test', index=0)
+    sample = Sample(file=file, external_key="test", index=0)
     session.add(sample)
     session.commit()
 
-    session.query(Sample).filter(Sample.external_key == 'test').delete()
+    session.query(Sample).filter(Sample.external_key == "test").delete()
 
-    assert session.query(Sample).filter(Sample.external_key == 'test').first() is None
+    assert session.query(Sample).filter(Sample.external_key == "test").first() is None
 
 
 def test_repr(session):  # pylint: disable=redefined-outer-name
-    dataset = Dataset(name='test',
-                      base_path='test',
-                      filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-                      file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
-                      description='test',
-                      version='test')
+    dataset = Dataset(
+        name="test",
+        base_path="test",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        description="test",
+        version="test",
+    )
     session.add(dataset)
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path='test', created_at=now, updated_at=now, number_of_samples=0)
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key='test', index=0)
+    sample = Sample(file=file, external_key="test", index=0)
     session.add(sample)
     session.commit()
 
-    assert repr(sample) == '<Sample 1>'
+    assert repr(sample) == "<Sample 1>"

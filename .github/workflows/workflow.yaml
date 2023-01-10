@@ -51,6 +51,36 @@ jobs:
           conda run -n modyn pylint --version
           conda run -n modyn pylint modyn
 
+  isort:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Conda
+        uses: ./.github/actions/conda
+
+      - name: Isort
+        run: |
+          conda run -n modyn isort --version
+          conda run -n modyn isort . --check --diff
+
+  black:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Conda
+        uses: ./.github/actions/conda
+
+      - name: Black
+        run: |
+          conda run -n black --version
+          conda run -n modyn black --check modyn
+
   unittests:
     runs-on: ubuntu-latest
 

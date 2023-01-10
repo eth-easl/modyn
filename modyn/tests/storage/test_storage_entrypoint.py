@@ -22,15 +22,15 @@ def noop_run(self) -> None:  # pylint: disable=unused-argument
     pass
 
 
-@patch.object(Storage, '__init__', noop_constructor_mock)
-@patch.object(Storage, 'run', noop_run)
+@patch.object(Storage, "__init__", noop_constructor_mock)
+@patch.object(Storage, "run", noop_run)
 def test_storage_script_runs(script_runner):
-    ret = script_runner.run('_modyn_storage', str(EXAMPLE_SYSTEM_CONFIG))
+    ret = script_runner.run("_modyn_storage", str(EXAMPLE_SYSTEM_CONFIG))
     assert ret.success
 
 
-@patch.object(Storage, '__init__', noop_constructor_mock)
+@patch.object(Storage, "__init__", noop_constructor_mock)
 def test_storage_script_fails_on_non_existing_system_config(script_runner):
     assert not NO_FILE.is_file(), "File that shouldn't exist exists."
-    ret = script_runner.run('_modyn_storage', str(NO_FILE))
+    ret = script_runner.run("_modyn_storage", str(NO_FILE))
     assert not ret.success

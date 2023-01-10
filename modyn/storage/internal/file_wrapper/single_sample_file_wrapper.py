@@ -31,7 +31,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         Returns:
             int: Number of samples
         """
-        if not self.file_path.endswith(self.file_wrapper_config['file_extension']):
+        if not self.file_path.endswith(self.file_wrapper_config["file_extension"]):
             return 0
         return 1
 
@@ -49,7 +49,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             bytes: Samples
         """
         if start != 0 or end != 1:
-            raise IndexError('SingleSampleFileWrapper contains only one sample.')
+            raise IndexError("SingleSampleFileWrapper contains only one sample.")
         return self.get_sample(0)
 
     def get_sample(self, index: int) -> bytes:
@@ -69,14 +69,14 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             bytes: Sample
         """
         if self.get_number_of_samples() == 0:
-            raise ValueError('File has wrong file extension.')
+            raise ValueError("File has wrong file extension.")
         if index != 0:
-            raise IndexError('SingleSampleFileWrapper contains only one sample.')
-        with open(self.file_path, 'rb') as file:
-            label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config['label_file_extension'])
-            with open(label_path, 'rb') as label_file:
+            raise IndexError("SingleSampleFileWrapper contains only one sample.")
+        with open(self.file_path, "rb") as file:
+            label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
+            with open(label_path, "rb") as label_file:
                 label = label_file.read()
-                return file.read() + b'\n' + label + b'\n' + len(label).to_bytes(4, 'big')
+                return file.read() + b"\n" + label + b"\n" + len(label).to_bytes(4, "big")
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get the samples from the file.
@@ -91,5 +91,5 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             bytes: Samples
         """
         if len(indices) != 1 or indices[0] != 0:
-            raise IndexError('SingleSampleFileWrapper contains only one sample.')
+            raise IndexError("SingleSampleFileWrapper contains only one sample.")
         return self.get_sample(0)

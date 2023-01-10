@@ -44,7 +44,7 @@ class NewFileWatcher:
         Args:
             timestamp (int): Timestamp to compare the files with.
         """
-        logger.debug(f'Seeking for files with a timestamp that is equal or greater than {timestamp}')
+        logger.debug(f"Seeking for files with a timestamp that is equal or greater than {timestamp}")
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
@@ -58,23 +58,20 @@ class NewFileWatcher:
 
         if filesystem_wrapper.exists(dataset.base_path):
             if filesystem_wrapper.isdir(dataset.base_path):
-                print(f'Path {dataset.base_path} is a directory.')
-                self._update_files_in_directory(filesystem_wrapper,
-                                                dataset.file_wrapper_type,
-                                                dataset.base_path,
-                                                timestamp,
-                                                session,
-                                                dataset)
+                print(f"Path {dataset.base_path} is a directory.")
+                self._update_files_in_directory(
+                    filesystem_wrapper, dataset.file_wrapper_type, dataset.base_path, timestamp, session, dataset
+                )
             else:
-                logger.critical(f'Path {dataset.base_path} is not a directory.')
+                logger.critical(f"Path {dataset.base_path} is not a directory.")
         else:
-            logger.warning(f'Path {dataset.base_path} does not exist.')
+            logger.warning(f"Path {dataset.base_path} does not exist.")
 
     def _get_datasets(self, session: Session) -> list[Dataset]:
         datasets: Optional[list[Dataset]] = session.query(Dataset).all()
 
         if datasets is None or len(datasets) == 0:
-            logger.warning('No datasets found.')
+            logger.warning("No datasets found.")
             return []
 
         return datasets
@@ -82,18 +79,20 @@ class NewFileWatcher:
     def _file_unknown(self, session: Session, file_path: str) -> bool:
         return session.query(File).filter(File.path == file_path).first() is None
 
-    def _update_files_in_directory(self,
-                                   filesystem_wrapper: AbstractFileSystemWrapper,
-                                   file_wrapper_type: str,
-                                   path: str,
-                                   timestamp: int,
-                                   session: sessionmaker,
-                                   dataset: Dataset) -> None:
+    def _update_files_in_directory(
+        self,
+        filesystem_wrapper: AbstractFileSystemWrapper,
+        file_wrapper_type: str,
+        path: str,
+        timestamp: int,
+        session: sessionmaker,
+        dataset: Dataset,
+    ) -> None:
         """Recursively get all files in a directory.
 
         Get all files that have a timestamp that is equal or greater than the given timestamp."""
         if not filesystem_wrapper.isdir(path):
-            logger.critical(f'Path {path} is not a directory.')
+            logger.critical(f"Path {path} is not a directory.")
             return
         for file_path in filesystem_wrapper.list(path, recursive=True):
             file_wrapper = get_file_wrapper(file_wrapper_type, file_path, dataset.file_wrapper_config)
@@ -105,34 +104,30 @@ class NewFileWatcher:
                         path=file_path,
                         created_at=filesystem_wrapper.get_created(file_path),
                         updated_at=filesystem_wrapper.get_modified(file_path),
-                        number_of_samples=number_of_samples
+                        number_of_samples=number_of_samples,
                     )
                     session.add(file)
                     session.commit()
                 except exc.SQLAlchemyError as exception:
-                    logger.warning(f'Could not create file {file_path} in database: {exception}')
+                    logger.warning(f"Could not create file {file_path} in database: {exception}")
                     session.rollback()
                     continue
                 try:
                     for i in range(number_of_samples):
-                        sample: Sample = Sample(
-                            file=file,
-                            external_key=str(uuid.uuid4()),
-                            index=i
-                        )
+                        sample: Sample = Sample(file=file, external_key=str(uuid.uuid4()), index=i)
                         session.add(sample)
                     session.commit()
                 except exc.SQLAlchemyError as exception:
-                    logger.warning(f'Could not create samples for file {file_path} in database: {exception}')
+                    logger.warning(f"Could not create samples for file {file_path} in database: {exception}")
                     session.rollback()
                     session.delete(file)
                     continue
 
     def run(self) -> None:
         """Run the dataset watcher."""
-        logger.info('Starting dataset watcher.')
+        logger.info("Starting dataset watcher.")
         while self._last_timestamp >= -1 and not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
-            time.sleep(self.modyn_config['storage']['new_file_watcher']['interval'])
+            time.sleep(self.modyn_config["storage"]["new_file_watcher"]["interval"])
             self._seek(self._last_timestamp)
             self._last_timestamp = current_time_millis()
 

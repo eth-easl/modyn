@@ -11,7 +11,7 @@ from modyn.storage.internal.grpc.storage_grpc_servicer import StorageGRPCService
 logger = logging.getLogger(__name__)
 
 
-class GRPCServer():
+class GRPCServer:
     """GRPC server context manager."""
 
     def __init__(self, modyn_config: dict) -> None:
@@ -29,11 +29,10 @@ class GRPCServer():
         Returns:
             grpc.Server: GRPC server
         """
-        add_StorageServicer_to_server(
-            StorageGRPCServicer(self.modyn_config), self.server)
-        port = self.modyn_config['storage']['port']
-        logger.info(f'Starting server. Listening on port {port}')
-        self.server.add_insecure_port('[::]:' + port)
+        add_StorageServicer_to_server(StorageGRPCServicer(self.modyn_config), self.server)
+        port = self.modyn_config["storage"]["port"]
+        logger.info(f"Starting server. Listening on port {port}")
+        self.server.add_insecure_port("[::]:" + port)
         self.server.start()
         return self.server
 

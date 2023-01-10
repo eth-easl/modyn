@@ -1,4 +1,5 @@
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+
 # Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2 import DatasetAvailableRequest
@@ -10,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class GRPCHandler():
+class GRPCHandler:
     def __init__(self, modyn_config: dict):
         self.config = modyn_config
         self.connected_to_storage = False

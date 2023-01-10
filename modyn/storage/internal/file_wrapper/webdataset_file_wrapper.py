@@ -62,8 +62,9 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
         Returns:
             bytes: Pickled list of samples
         """
-        return pickle.dumps(wds.WebDataset(self.file_path)
-                            .slice(start, end).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
+        return pickle.dumps(
+            wds.WebDataset(self.file_path).slice(start, end).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
+        )
 
     def get_sample(self, index: int) -> bytes:
         """Get sample from index.
@@ -74,8 +75,9 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
         Returns:
             bytes: Pickled sample
         """
-        return pickle.dumps(wds.WebDataset(self.file_path)
-                            .slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
+        return pickle.dumps(
+            wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
+        )
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get samples from indices.
