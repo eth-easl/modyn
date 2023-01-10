@@ -10,8 +10,8 @@ class FileWrapperType(Enum):
     The name of the enum must be the same as the name of the class.
     """
 
-    WebdatasetFileWrapper = 'webdataset_file_wrapper'  # pylint: disable=invalid-name
-    SingleSampleFileWrapper = 'single_sample_file_wrapper'  # pylint: disable=invalid-name
+    WebdatasetFileWrapper = "webdataset_file_wrapper"  # pylint: disable=invalid-name
+    SingleSampleFileWrapper = "single_sample_file_wrapper"  # pylint: disable=invalid-name
 
 
 class InvalidFileWrapperTypeException(Exception):

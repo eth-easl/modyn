@@ -1,25 +1,31 @@
-import logging
-import yaml
 import argparse
+import logging
 import pathlib
 
+import yaml
 from modyn.backend.supervisor import Supervisor
 
-logging.basicConfig(level=logging.NOTSET,
-                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d:%H:%M:%S')
+logging.basicConfig(
+    level=logging.NOTSET,
+    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
 def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description='Modyn Training Supervisor')
-    parser_.add_argument('pipeline', type=pathlib.Path, action="store", help="Pipeline configuration file")
-    parser_.add_argument('config', type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
+    parser_ = argparse.ArgumentParser(description="Modyn Training Supervisor")
+    parser_.add_argument("pipeline", type=pathlib.Path, action="store", help="Pipeline configuration file")
+    parser_.add_argument("config", type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
 
-    parser_.add_argument('--start-replay-at', type=int, action="store",
-                         help='This mode does not trigger on new data but just '
-                         'replays data starting at `TIMESTAMP` and ends all training afterwards. '
-                         '`TIMESTAMP` can be 0 and then just replays all data. See README for more.')
+    parser_.add_argument(
+        "--start-replay-at",
+        type=int,
+        action="store",
+        help="This mode does not trigger on new data but just "
+        "replays data starting at `TIMESTAMP` and ends all training afterwards. "
+        "`TIMESTAMP` can be 0 and then just replays all data. See README for more.",
+    )
 
     return parser_
 
@@ -48,5 +54,5 @@ def main() -> None:
     logger.info("Supervisor returned, exiting.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

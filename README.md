@@ -17,13 +17,27 @@ How to [contribute](CONTRIBUTING.md).
 
 Make sure that you installed modyn as a development module as stated above. Then, in the project root you can run `flake8 --statistics` and `pytest` to run unit tests and the flake8 linter.
 
-### Running autopep8
+### Automatic linting and import sorting
 
-autopep8 is an automatic linter for pep8 compliance that can fix many issues automatically. Make sure to commit/backup before running autopep8 inplace. Then, run
+autopep8 and black are automatic linters for pep8 compliance that can fix many issues automatically.
+isort is an automatic import sorting tool.
+Make sure to commit/backup before running them inplace. Then, in order to automatically fix issues, run
 ```
+isort .
 autopep8 modyn --recursive --in-place --pep8-passes 2000 --verbose
+black modyn
 ```
 in the project root.
+
+You can make sure that the code you have is compliant by running
+```
+flake8
+isort . --check --diff
+black --check modyn
+pylint modyn
+```
+
+Remember to make sure that the tests still work after running linting.
 
 ### Configuration:
 - In `src/config/config.yaml` you will find a test configuration for the system, adapt as required
