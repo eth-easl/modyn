@@ -1,10 +1,11 @@
 # After running docker-compose up, this script checks whether all services are reachable within a reasonable timeout
-import time
 import os
 import pathlib
-import yaml
-import psycopg2
+import time
+
 import grpc
+import psycopg2
+import yaml
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub  # noqa: F401
 from modyn.utils import grpc_connection_established
 

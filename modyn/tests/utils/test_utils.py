@@ -1,9 +1,9 @@
 # pylint: disable=unused-argument,redefined-outer-name
-from modyn.utils import grpc_connection_established
-
-from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from unittest.mock import patch
+
 import grpc
+from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
+from modyn.utils import grpc_connection_established
 
 
 @patch.object(GRPCHandler, "init_storage", lambda self: None)

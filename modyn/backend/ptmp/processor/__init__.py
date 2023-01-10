@@ -2,10 +2,11 @@
 TODO: Describe what is in this directory/submodule.
 """
 
+import os
+
 # flake8: noqa
 from .base import PostTrainingMetadataProcessor
 from .simple_processor import SimpleProcessor
-import os
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

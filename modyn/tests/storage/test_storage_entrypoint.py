@@ -5,6 +5,7 @@ successfully runs through. This is _not_ the place for an integration test.
 import os
 import pathlib
 from unittest.mock import patch
+
 from modyn.storage import Storage
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))

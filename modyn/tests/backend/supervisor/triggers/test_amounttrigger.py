@@ -1,5 +1,5 @@
-from modyn.backend.supervisor.internal.triggers import DataAmountTrigger
 import pytest
+from modyn.backend.supervisor.internal.triggers import DataAmountTrigger
 
 
 def test_initialization() -> None:

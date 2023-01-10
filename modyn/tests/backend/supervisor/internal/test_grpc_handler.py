@@ -1,13 +1,13 @@
 # pylint: disable=unused-argument
-from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from unittest.mock import patch
+
 import grpc
 import pytest
-
-from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2 import DatasetAvailableResponse
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 
 
 def noop_constructor_mock(self, channel: grpc.Channel) -> None:

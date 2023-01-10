@@ -1,8 +1,9 @@
 """Supervisor module. The supervisor initiates a pipeline and coordinates all components.
 
 """
-from .amounttrigger import DataAmountTrigger  # noqa: F401
 import os
+
+from .amounttrigger import DataAmountTrigger  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

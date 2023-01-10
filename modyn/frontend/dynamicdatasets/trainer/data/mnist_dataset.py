@@ -1,9 +1,10 @@
-from torch.utils.data import Dataset
-from torchvision import transforms
-from torchvision import datasets as dts
+from typing import Optional
+
 import torch.nn.Module
 import torch.Tesnor
-from typing import Optional
+from torch.utils.data import Dataset
+from torchvision import datasets as dts
+from torchvision import transforms
 
 
 class MNISTDataset(Dataset):

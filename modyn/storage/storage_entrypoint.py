@@ -1,10 +1,10 @@
 """Entrypoint for the storage service."""
 
-import logging
-import yaml
 import argparse
+import logging
 import pathlib
 
+import yaml
 from modyn.storage.storage import Storage
 
 logging.basicConfig(

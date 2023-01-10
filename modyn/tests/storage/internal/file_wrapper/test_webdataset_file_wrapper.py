@@ -1,12 +1,12 @@
-import os
-import shutil
 import json
-import pickle
+import os
 import pathlib
-import webdataset as wds
-from PIL import Image
+import pickle
+import shutil
 
+import webdataset as wds
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
+from PIL import Image
 
 TEST_DIR = pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn"
 FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.tar")

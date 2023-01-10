@@ -1,5 +1,6 @@
-from modyn.backend.supervisor.internal.trigger import Trigger
 from typing import Callable
+
+from modyn.backend.supervisor.internal.trigger import Trigger
 
 
 class DataAmountTrigger(Trigger):

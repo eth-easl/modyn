@@ -1,13 +1,12 @@
 import copy
-import time
-from tqdm import tqdm
-import torch
 import logging
 import sys
+import time
+
+import torch
 import Typing
-
 import yaml
-
+from tqdm import tqdm
 from trainer import Trainer
 
 logging.basicConfig(format="%(asctime)s %(message)s")

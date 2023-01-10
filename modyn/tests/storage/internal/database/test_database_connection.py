@@ -1,5 +1,4 @@
 import pytest
-
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 

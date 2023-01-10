@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from concurrent import futures
 
 import grpc
-
 from backend.odm.odm_pb2 import SetRequest
 from backend.odm.odm_pb2_grpc import ODMStub
 

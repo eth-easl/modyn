@@ -1,7 +1,7 @@
-from frontend.dynamicdatasets.trainer.data.online_dataset import OnlineDataset
+import json
 
 import torch
-import json
+from frontend.dynamicdatasets.trainer.data.online_dataset import OnlineDataset
 
 
 class OnlineMNISTDataset(OnlineDataset):

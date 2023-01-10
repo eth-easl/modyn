@@ -1,16 +1,16 @@
 """Storage database utilities."""
 
-import logging
 import json
+import logging
 
-from modyn.utils import dynamic_module_import
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType, InvalidFileWrapperTypeException
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
     FilesystemWrapperType,
     InvalidFilesystemWrapperTypeException,
 )
-from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 

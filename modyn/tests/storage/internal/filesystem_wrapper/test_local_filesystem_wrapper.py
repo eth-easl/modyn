@@ -1,7 +1,7 @@
 import os
-import pytest
 import pathlib
 
+import pytest
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 
 TEST_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "modyn" / "test_dir")

@@ -1,10 +1,11 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import typing
+from unittest.mock import MagicMock, patch
+
+import pytest
 from modyn.backend.supervisor import Supervisor
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.triggers.amounttrigger import DataAmountTrigger
-from unittest.mock import patch, MagicMock
-import typing
-import pytest
 
 
 def get_minimal_pipeline_config() -> dict:

@@ -1,25 +1,25 @@
 # pylint: disable=unused-argument, no-name-in-module
 import os
+import pathlib
 import pickle
 from unittest.mock import patch
-from webdataset import WebDataset, TarWriter
-import pathlib
 
-from modyn.storage.internal.grpc.storage_grpc_servicer import StorageGRPCServicer
 from modyn.storage.internal.database.database_connection import DatabaseConnection
+from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.grpc.generated.storage_pb2 import (
-    GetRequest,
-    GetNewDataSinceRequest,
-    DatasetAvailableRequest,
-    RegisterNewDatasetRequest,
-    GetDataInIntervalRequest,
-)
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
+from modyn.storage.internal.grpc.generated.storage_pb2 import (
+    DatasetAvailableRequest,
+    GetDataInIntervalRequest,
+    GetNewDataSinceRequest,
+    GetRequest,
+    RegisterNewDatasetRequest,
+)
+from modyn.storage.internal.grpc.storage_grpc_servicer import StorageGRPCServicer
 from modyn.utils import current_time_millis
+from webdataset import TarWriter, WebDataset
 
 TMP_FILE = str(pathlib.Path(os.path.abspath(__file__)).parent / "test.tar")
 TMP_FILE2 = str(pathlib.Path(os.path.abspath(__file__)).parent / "test2.tar")

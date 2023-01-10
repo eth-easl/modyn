@@ -1,25 +1,24 @@
-import grpc
+import logging
 import os
 import sys
 from concurrent import futures
 from pathlib import Path
-import logging
 
+import grpc
 import yaml
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from backend.selector.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402
-from backend.selector.selector_pb2 import (  # noqa: E402
-    RegisterTrainingRequest,
+from backend.selector.new_data_selector import NewDataSelector  # noqa: E402
+from backend.selector.selector_pb2 import (  # noqa: E402; noqa: E402, E501
     GetSamplesRequest,
+    RegisterTrainingRequest,
     SamplesResponse,
     TrainingResponse,
-)  # noqa: E402, E501
-from backend.selector.new_data_selector import NewDataSelector  # noqa: E402
-
+)
+from backend.selector.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402
 
 logging.basicConfig(format="%(asctime)s %(message)s")
 

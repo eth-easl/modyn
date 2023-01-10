@@ -1,8 +1,8 @@
-import logging
-import yaml
 import argparse
+import logging
 import pathlib
 
+import yaml
 from modyn.backend.supervisor import Supervisor
 
 logging.basicConfig(

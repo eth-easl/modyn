@@ -1,8 +1,9 @@
 # pylint: disable=abstract-class-instantiated,unused-argument
-from modyn.backend.supervisor.internal.trigger import Trigger
-from unittest.mock import patch, MagicMock
 from typing import Callable
+from unittest.mock import MagicMock, patch
+
 import pytest
+from modyn.backend.supervisor.internal.trigger import Trigger
 
 
 @patch.multiple(Trigger, __abstractmethods__=set())

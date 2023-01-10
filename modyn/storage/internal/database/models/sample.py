@@ -1,9 +1,8 @@
 """Sample model."""
 
-from sqlalchemy import Column, String, Integer, ForeignKey
-from sqlalchemy.orm import relationship, backref
-
 from modyn.storage.internal.database.base import Base
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.orm import backref, relationship
 
 
 class Sample(Base):

@@ -1,29 +1,29 @@
 """Storage GRPC servicer."""
 
-import grpc
 import logging
 from typing import Iterable, Tuple
 
-from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
-
-# pylint: disable-next=no-name-in-module
-from modyn.storage.internal.grpc.generated.storage_pb2 import (
-    GetRequest,
-    GetResponse,
-    GetNewDataSinceRequest,
-    GetNewDataSinceResponse,
-    DatasetAvailableRequest,
-    DatasetAvailableResponse,
-    RegisterNewDatasetRequest,
-    RegisterNewDatasetResponse,
-    GetDataInIntervalRequest,
-    GetDataInIntervalResponse,
-)
+import grpc
 from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper
+
+# pylint: disable-next=no-name-in-module
+from modyn.storage.internal.grpc.generated.storage_pb2 import (
+    DatasetAvailableRequest,
+    DatasetAvailableResponse,
+    GetDataInIntervalRequest,
+    GetDataInIntervalResponse,
+    GetNewDataSinceRequest,
+    GetNewDataSinceResponse,
+    GetRequest,
+    GetResponse,
+    RegisterNewDatasetRequest,
+    RegisterNewDatasetResponse,
+)
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 
 logger = logging.getLogger(__name__)
 

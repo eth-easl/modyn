@@ -1,4 +1,5 @@
 from unittest.mock import patch
+
 from modyn.backend.selector.selector import Selector
 
 # We do not use the parameters in this empty mock constructor.

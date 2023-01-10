@@ -1,12 +1,12 @@
-from utils import dynamic_module_import
-import grpc
-from concurrent import futures
+import logging
 import os
 import sys
+from concurrent import futures
 from pathlib import Path
-import logging
 
+import grpc
 import yaml
+from utils import dynamic_module_import
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()

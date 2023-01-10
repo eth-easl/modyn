@@ -1,21 +1,21 @@
 # pylint: disable=unused-argument, redefined-outer-name
-import typing
-from unittest.mock import patch
-import pytest
 import os
-import shutil
 import pathlib
-from multiprocessing import Value
+import shutil
+import typing
 from ctypes import c_bool
+from multiprocessing import Value
+from unittest.mock import patch
 
-from modyn.storage.internal.new_file_watcher import NewFileWatcher
-from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+import pytest
 from modyn.storage.internal.database.database_connection import DatabaseConnection
+from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
-from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
+from modyn.storage.internal.new_file_watcher import NewFileWatcher
 
 FILE_TIMESTAMP = 1600000000
 TEST_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp")

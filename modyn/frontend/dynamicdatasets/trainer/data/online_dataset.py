@@ -1,13 +1,12 @@
+from abc import abstractmethod
+
+import grpc
+import Typing
 from backend.selector.selector_pb2 import GetSamplesRequest
 from backend.selector.selector_pb2_grpc import SelectorStub
-
 from modyn.storage.storage_pb2 import GetRequest
 from modyn.storage.storage_pb2_grpc import StorageStub
-
 from torch.utils.data import IterableDataset, get_worker_info
-import grpc
-from abc import abstractmethod
-import Typing
 
 
 class OnlineDataset(IterableDataset):

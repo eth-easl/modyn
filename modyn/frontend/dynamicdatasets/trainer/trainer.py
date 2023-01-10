@@ -1,22 +1,22 @@
-import grpc
-from models.small_conv import SmallConv
-from torch.optim import lr_scheduler, Adam, Optimizer
-import torch
-from abc import ABC, abstractmethod
+import logging
 import os
 import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
-import logging
+
+import grpc
+import torch
+from models.small_conv import SmallConv
+from torch.optim import Adam, Optimizer, lr_scheduler
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
+from backend.selector.selector_pb2 import RegisterTrainingRequest  # noqa: E402
+from backend.selector.selector_pb2_grpc import SelectorStub  # noqa: E402
 from frontend.dynamicdatasets.trainer.data.mnist_dataset import get_mnist_dataset  # noqa: E402
 from frontend.dynamicdatasets.trainer.data.online_mnistdataset import OnlineMNISTDataset  # noqa: E402
-from backend.selector.selector_pb2_grpc import SelectorStub  # noqa: E402
-from backend.selector.selector_pb2 import RegisterTrainingRequest  # noqa: E402
-
 
 logging.basicConfig(format="%(asctime)s %(message)s")
 

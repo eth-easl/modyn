@@ -3,8 +3,9 @@
 The storage module contains all classes and functions related to the storage and retrieval of data.
 """
 
-from .storage import Storage  # noqa: F401
 import os
+
+from .storage import Storage  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

@@ -1,27 +1,27 @@
-from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
-from backend.odm.odm import OptimalDatasetMetadata
-from concurrent import futures
+import logging
 import os
 import sys
+from concurrent import futures
 from pathlib import Path
-import logging
 
 import grpc
 import yaml
+from backend.odm.odm import OptimalDatasetMetadata
+from backend.odm.odm_pb2_grpc import ODMServicer, add_ODMServicer_to_server
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from backend.odm.odm_pb2 import (  # noqa: E501, E402
+    DeleteRequest,
+    DeleteResponse,
     GetByKeysRequest,
     GetByQueryRequest,
+    GetKeysResponse,
     GetResponse,
     SetRequest,
     SetResponse,
-    GetKeysResponse,
-    DeleteRequest,
-    DeleteResponse,
 )
 
 logging.basicConfig(format="%(asctime)s %(message)s")

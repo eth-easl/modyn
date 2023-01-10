@@ -1,5 +1,4 @@
 import pytest
-
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 
 

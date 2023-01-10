@@ -6,6 +6,7 @@ import os
 import pathlib
 import typing
 from unittest.mock import patch
+
 from modyn.backend.supervisor import Supervisor
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))

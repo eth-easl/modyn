@@ -4,19 +4,18 @@ The storage module contains all classes and functions related to the retrieval o
 various storage backends.
 """
 
+import json
 import logging
 import os
 import pathlib
-from typing import Tuple
-import json
-from multiprocessing import Value, Process
 from ctypes import c_bool
+from multiprocessing import Process, Value
+from typing import Tuple
 
-
-from modyn.utils import validate_yaml
-from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.internal.database.database_connection import DatabaseConnection
+from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.internal.new_file_watcher import run_watcher
+from modyn.utils import validate_yaml
 
 logger = logging.getLogger(__name__)
 
