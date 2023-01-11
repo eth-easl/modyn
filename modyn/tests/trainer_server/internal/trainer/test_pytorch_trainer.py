@@ -16,15 +16,12 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
 )
 
 from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer
-from modyn.trainer_server.internal.utils.training_utils import TrainingInfo
-
-query_queue = mp.Queue()
-response_queue = mp.Queue()
+from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
 
 class DummyModule:
     def __init__(self) -> None:
-        self.model = DummyModelWrapper()
+        self.model = DummyModelWrapper
 
 
 class DummyModelWrapper:
@@ -41,7 +38,7 @@ class DummyModel(torch.nn.Module):
         return data
 
 
-@patch('modyn.trainer_server.internal.utils.training_utils.dynamic_module_import')
+@patch('modyn.trainer_server.internal.utils.training_info.dynamic_module_import')
 def get_training_info(dynamic_module_patch: MagicMock):
     dynamic_module_patch.return_value = DummyModule()
     request = RegisterTrainServerRequest(
@@ -61,16 +58,16 @@ def get_training_info(dynamic_module_patch: MagicMock):
     return training_info
 
 
-@patch('modyn.trainer_server.internal.trainer.pytorch_trainer.get_model')
-def get_dummy_trainer(test_get_model: MagicMock):
-    test_get_model.return_value = DummyModelWrapper()
+@patch('modyn.trainer_server.internal.utils.training_info.dynamic_module_import')
+def get_dummy_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), dynamic_module_patch: MagicMock):
+    dynamic_module_patch.return_value = DummyModule()
     training_info = get_training_info()
     trainer = PytorchTrainer(training_info, 'cpu', "new", query_queue, response_queue)
     return trainer
 
 
 def test_save_checkpoint():
-    trainer = get_dummy_trainer()
+    trainer = get_dummy_trainer(mp.Queue(), mp.Queue())
     with tempfile.NamedTemporaryFile() as temp:
         trainer.save_checkpoint(temp.name, 10)
         assert os.path.exists(temp.name)
@@ -99,7 +96,7 @@ def test_save_checkpoint():
 
 
 def test_load_checkpoint():
-    trainer = get_dummy_trainer()
+    trainer = get_dummy_trainer(mp.Queue(), mp.Queue())
 
     dict_to_save = {
         'model': OrderedDict([('_weight', torch.tensor([100.]))]),
@@ -130,14 +127,16 @@ def test_load_checkpoint():
 
 
 def test_create_logger():
-    trainer = get_dummy_trainer()
+    trainer = get_dummy_trainer(mp.Queue(), mp.Queue())
     with tempfile.NamedTemporaryFile() as temp:
         trainer.create_logger(temp.name)
         assert os.path.exists(temp.name)
 
 
 def test_send_state_to_server():
-    trainer = get_dummy_trainer()
+    response_queue = mp.Queue()
+    query_queue = mp.Queue()
+    trainer = get_dummy_trainer(query_queue, response_queue)
     trainer.send_state_to_server(20)
     response = response_queue.get()
     assert response['iteration'] == 20

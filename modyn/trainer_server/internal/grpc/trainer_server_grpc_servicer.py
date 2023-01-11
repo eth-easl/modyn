@@ -1,6 +1,7 @@
 import glob
+import logging
 import io
-from typing import Any, Optional, Union
+from typing import Any, Optional
 import grpc
 import os
 import sys
@@ -8,6 +9,8 @@ from pathlib import Path
 import multiprocessing as mp
 
 import torch
+
+logger = logging.getLogger(__name__)
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -21,8 +24,9 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse
 )
 from modyn.trainer_server.internal.trainer.pytorch_trainer import train
+from modyn.trainer_server.internal.utils.training_info import STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 
-from modyn.trainer_server.internal.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo, TrainingProcessInfo
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -70,7 +74,8 @@ class TrainerServerGRPCServicer:
         training_id = request.training_id
 
         if training_id not in self._training_dict:
-            raise ValueError(f"Training with id {training_id} has not been registered")
+            logger.error(f"Training with id {training_id} has not been registered")
+            return StartTrainingResponse(training_started=False)
 
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
         status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
@@ -80,7 +85,7 @@ class TrainerServerGRPCServicer:
             target=train,
             args=(
                 self._training_dict[training_id],
-                'cuda:0',  # TODO(): fix device number for multi-gpu settings
+                request.device,
                 f'log-{training_id}.txt',
                 request.load_checkpoint_path,
                 request.train_until_sample_id,
@@ -108,7 +113,8 @@ class TrainerServerGRPCServicer:
         training_id = request.training_id
 
         if training_id not in self._training_dict:
-            raise ValueError(f"Training with id {training_id} has not been registered")
+            logger.error(f"Training with id {training_id} has not been registered")
+            return
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
@@ -120,7 +126,7 @@ class TrainerServerGRPCServicer:
                 iteration=iteration,
                 state=training_state_running
             )
-        exception = self.get_child_exception(training_id)
+        exception = self.check_for_training_exception(training_id)
         training_state_finished, iteration = self.get_latest_checkpoint(training_id)
         if exception is None:
             if training_state_finished is not None:
@@ -155,7 +161,7 @@ class TrainerServerGRPCServicer:
         response = self._training_process_dict[training_id].status_response_queue.get()
         return response['state'], response['iteration']
 
-    def get_child_exception(self, training_id: int) -> Union[str, None]:
+    def check_for_training_exception(self, training_id: int) -> Optional[str]:
 
         exception_queue = self._training_process_dict[training_id].exception_queue
         if exception_queue.qsize() > 0:

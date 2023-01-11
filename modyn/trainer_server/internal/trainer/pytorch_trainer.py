@@ -8,8 +8,7 @@ import multiprocessing as mp
 
 
 from modyn.trainer_server.internal.dataset.utils import prepare_dataloaders
-from modyn.trainer_server.internal.utils.model_utils import get_model
-from modyn.trainer_server.internal.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_info import STATUS_QUERY_MESSAGE, TrainingInfo
 
 
 class PytorchTrainer:
@@ -25,7 +24,7 @@ class PytorchTrainer:
     ) -> None:
 
         # setup model and optimizer
-        self._model = get_model(training_info.model_id, training_info.model_configuration_dict)
+        self._model = training_info.model_handler(training_info.model_configuration_dict)
         self._model.model.to(device)
 
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)

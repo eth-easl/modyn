@@ -78,6 +78,7 @@ class TrainerClient:
 
         req = StartTrainingRequest(
             training_id=training_id,
+            device='cpu',
             train_until_sample_id="new",
             load_checkpoint_path="results/model_0.pt"
         )

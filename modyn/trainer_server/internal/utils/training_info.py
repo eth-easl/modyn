@@ -1,5 +1,4 @@
 import json
-import multiprocessing as mp
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import RegisterTrainServerRequest
@@ -27,6 +26,7 @@ class TrainingInfo:
         model_module = dynamic_module_import("modyn.models")
         if not hasattr(model_module, self.model_id):
             raise ValueError(f"Model {self.model_id} not available!")
+        self.model_handler = getattr(model_module, self.model_id)
 
         self.torch_optimizer = request.torch_optimizer
         self.batch_size = request.batch_size
@@ -34,18 +34,3 @@ class TrainingInfo:
 
         self.checkpoint_path = request.checkpoint_info.checkpoint_path
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
-
-
-class TrainingProcessInfo:
-    def __init__(
-        self,
-        process_handler: mp.Process,
-        exception_queue: mp.Queue,
-        status_query_queue: mp.Queue,
-        status_response_queue: mp.Queue
-    ):
-
-        self.process_handler = process_handler
-        self.exception_queue = exception_queue
-        self.status_query_queue = status_query_queue
-        self.status_response_queue = status_response_queue

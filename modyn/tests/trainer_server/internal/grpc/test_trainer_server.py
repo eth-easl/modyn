@@ -19,10 +19,12 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainerAvailableRequest,
     TrainingStatusRequest
 )
-from modyn.trainer_server.internal.utils.training_utils import TrainingProcessInfo, STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_info import STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 
 start_training_request = StartTrainingRequest(
     training_id=1,
+    device='cpu',
     train_until_sample_id="new",
     load_checkpoint_path="test"
 )
@@ -50,6 +52,9 @@ register_request = RegisterTrainServerRequest(
 
 get_status_request = TrainingStatusRequest(training_id=1)
 
+class DummyModelWrapper:
+    def __init__(self, model_configuration=None) -> None:
+        self.model = None
 
 def noop():
     return
@@ -69,8 +74,9 @@ def get_training_process_info():
     return training_process_info
 
 
-@patch('modyn.trainer_server.internal.utils.training_utils.hasattr', return_value=True)
-def get_training_info(temp, test_hasattr=None):
+@patch('modyn.trainer_server.internal.utils.training_info.hasattr', return_value=True)
+@patch('modyn.trainer_server.internal.utils.training_info.getattr', return_value=DummyModelWrapper)
+def get_training_info(temp, test_getattr=None, test_hasattr=None):
     request = RegisterTrainServerRequest(
         training_id=1,
         data_info=Data(dataset_id="MNIST", num_dataloaders=2),
@@ -102,15 +108,16 @@ def test_trainer_not_available(test_is_alive):
     assert not response.available
 
 
-@patch('modyn.trainer_server.internal.utils.training_utils.hasattr', return_value=False)
+@patch('modyn.trainer_server.internal.utils.training_info.hasattr', return_value=False)
 def test_register_invalid(test_hasattr):
     trainer_server = TrainerServerGRPCServicer()
     with pytest.raises(ValueError, match=r"Model \w+ not available"):
         trainer_server.register(register_request, None)
 
 
-@patch('modyn.trainer_server.internal.utils.training_utils.hasattr', return_value=True)
-def test_register(test_hasattr):
+@patch('modyn.trainer_server.internal.utils.training_info.hasattr', return_value=True)
+@patch('modyn.trainer_server.internal.utils.training_info.getattr', return_value=DummyModelWrapper)
+def test_register(test_getattr, test_hasattr):
     trainer_server = TrainerServerGRPCServicer()
     response = trainer_server.register(register_request, None)
     assert response.success is True
@@ -120,9 +127,8 @@ def test_register(test_hasattr):
 def test_start_training_not_registered():
 
     trainer_server = TrainerServerGRPCServicer()
-    with pytest.raises(ValueError, match=r"Training with id \d has not been registered"):
-        trainer_server.start_training(start_training_request, None)
-
+    response = trainer_server.start_training(start_training_request, None)
+    assert not response.training_started
 
 def test_start_training():
     trainer_server = TrainerServerGRPCServicer()
@@ -136,17 +142,16 @@ def test_start_training():
 
 def test_get_training_status_not_registered():
     trainer_server = TrainerServerGRPCServicer()
-    with pytest.raises(ValueError, match=r"Training with id \d has not been registered"):
-        trainer_server.get_training_status(get_status_request, None)
-
+    response = trainer_server.get_training_status(get_status_request, None)
+    assert response is None
 
 @patch.object(mp.Process, 'is_alive', return_value=True)
 @patch.object(TrainerServerGRPCServicer, 'get_status', return_value=(b'state', 10))
-@patch.object(TrainerServerGRPCServicer, 'get_child_exception')
+@patch.object(TrainerServerGRPCServicer, 'check_for_training_exception')
 @patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint')
 def test_get_training_status_alive(
     test_get_latest_checkpoint,
-    test_get_child_exception,
+    test_check_for_training_exception,
     test_get_status,
     test_is_alive
 ):
@@ -161,16 +166,16 @@ def test_get_training_status_alive(
     assert response.iteration == 10
     assert response.state == b'state'
     test_get_latest_checkpoint.assert_not_called()
-    test_get_child_exception.assert_not_called()
+    test_check_for_training_exception.assert_not_called()
 
 
 @patch.object(mp.Process, 'is_alive', return_value=False)
 @patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(b'state', 10))
-@patch.object(TrainerServerGRPCServicer, 'get_child_exception', return_value="exception")
+@patch.object(TrainerServerGRPCServicer, 'check_for_training_exception', return_value="exception")
 @patch.object(TrainerServerGRPCServicer, 'get_status')
 def test_get_training_status_finished_with_exception(
     test_get_status,
-    test_get_child_exception,
+    test_check_for_training_exception,
     test_get_latest_checkpoint,
     test_is_alive
 ):
@@ -190,11 +195,11 @@ def test_get_training_status_finished_with_exception(
 
 @patch.object(mp.Process, 'is_alive', return_value=False)
 @patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(None, -1))
-@patch.object(TrainerServerGRPCServicer, 'get_child_exception', return_value="exception")
+@patch.object(TrainerServerGRPCServicer, 'check_for_training_exception', return_value="exception")
 @patch.object(TrainerServerGRPCServicer, 'get_status')
 def test_get_training_status_finished_no_checkpoint(
     test_get_status,
-    test_get_child_exception,
+    test_check_for_training_exception,
     test_get_latest_checkpoint,
     test_is_alive
 ):
@@ -229,15 +234,15 @@ def test_get_training_status():
     assert query == STATUS_QUERY_MESSAGE
 
 
-def test_get_child_exception_not_found():
+def test_check_for_training_exception_not_found():
     trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
-    child_exception = trainer_server.get_child_exception(1)
+    child_exception = trainer_server.check_for_training_exception(1)
     assert child_exception is None
 
 
-def test_get_child_exception_found():
+def test_check_for_training_exception_found():
     trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
@@ -245,7 +250,7 @@ def test_get_child_exception_found():
     exception_msg = "exception"
     training_process_info.exception_queue.put(exception_msg)
 
-    child_exception = trainer_server.get_child_exception(1)
+    child_exception = trainer_server.check_for_training_exception(1)
     assert child_exception == exception_msg
 
 
