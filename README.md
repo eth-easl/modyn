@@ -25,7 +25,7 @@ Make sure to commit/backup before running them inplace. Then, in order to automa
 ```
 isort .
 autopep8 modyn --recursive --in-place --pep8-passes 2000 --verbose
-black modyn
+black modyn --config black.toml
 ```
 in the project root.
 
