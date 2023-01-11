@@ -7,9 +7,9 @@ import os
 import multiprocessing as mp
 
 
-from modyn.trainer_server.dataset.utils import prepare_dataloaders
-from modyn.trainer_server.utils.model_utils import get_model
-from modyn.trainer_server.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.dataset.utils import prepare_dataloaders
+from modyn.trainer_server.internal.utils.model_utils import get_model
+from modyn.trainer_server.internal.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo
 
 
 class PytorchTrainer:

@@ -9,8 +9,8 @@ import torch
 import multiprocessing as mp
 from unittest import mock
 
-from modyn.trainer_server.grpc.trainer_server import TrainerGRPCServer
-from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
+from modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer import TrainerServerGRPCServicer
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     JsonString,
@@ -19,7 +19,7 @@ from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
     TrainerAvailableRequest,
     TrainingStatusRequest
 )
-from modyn.trainer_server.utils.training_utils import TrainingProcessInfo, STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_utils import TrainingProcessInfo, STATUS_QUERY_MESSAGE, TrainingInfo
 
 start_training_request = StartTrainingRequest(
     training_id=1,
@@ -69,7 +69,7 @@ def get_training_process_info():
     return training_process_info
 
 
-@patch('modyn.trainer_server.utils.training_utils.hasattr', return_value=True)
+@patch('modyn.trainer_server.internal.utils.training_utils.hasattr', return_value=True)
 def get_training_info(temp, test_hasattr=None):
     request = RegisterTrainServerRequest(
         training_id=1,
@@ -89,29 +89,29 @@ def get_training_info(temp, test_hasattr=None):
 
 
 def test_trainer_available():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     response = trainer_server.trainer_available(trainer_available_request, None)
     assert response.available
 
 
 @patch.object(mp.Process, 'is_alive', return_value=True)
 def test_trainer_not_available(test_is_alive):
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     trainer_server._training_process_dict[10] = TrainingProcessInfo(mp.Process(), mp.Queue(), mp.Queue(), mp.Queue())
     response = trainer_server.trainer_available(trainer_available_request, None)
     assert not response.available
 
 
-@patch('modyn.trainer_server.utils.training_utils.hasattr', return_value=False)
+@patch('modyn.trainer_server.internal.utils.training_utils.hasattr', return_value=False)
 def test_register_invalid(test_hasattr):
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     with pytest.raises(ValueError, match=r"Model \w+ not available"):
         trainer_server.register(register_request, None)
 
 
-@patch('modyn.trainer_server.utils.training_utils.hasattr', return_value=True)
+@patch('modyn.trainer_server.internal.utils.training_utils.hasattr', return_value=True)
 def test_register(test_hasattr):
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     response = trainer_server.register(register_request, None)
     assert response.success is True
     assert register_request.training_id in trainer_server._training_dict
@@ -119,13 +119,13 @@ def test_register(test_hasattr):
 
 def test_start_training_not_registered():
 
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     with pytest.raises(ValueError, match=r"Training with id \d has not been registered"):
         trainer_server.start_training(start_training_request, None)
 
 
 def test_start_training():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     mock_start = mock.Mock()
     mock_start.side_effect = noop
     trainer_server._training_dict[1] = None
@@ -135,22 +135,22 @@ def test_start_training():
 
 
 def test_get_training_status_not_registered():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     with pytest.raises(ValueError, match=r"Training with id \d has not been registered"):
         trainer_server.get_training_status(get_status_request, None)
 
 
 @patch.object(mp.Process, 'is_alive', return_value=True)
-@patch.object(TrainerGRPCServer, 'get_status', return_value=(b'state', 10))
-@patch.object(TrainerGRPCServer, 'get_child_exception')
-@patch.object(TrainerGRPCServer, 'get_latest_checkpoint')
+@patch.object(TrainerServerGRPCServicer, 'get_status', return_value=(b'state', 10))
+@patch.object(TrainerServerGRPCServicer, 'get_child_exception')
+@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint')
 def test_get_training_status_alive(
     test_get_latest_checkpoint,
     test_get_child_exception,
     test_get_status,
     test_is_alive
 ):
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
     trainer_server._training_dict[1] = None
@@ -165,16 +165,16 @@ def test_get_training_status_alive(
 
 
 @patch.object(mp.Process, 'is_alive', return_value=False)
-@patch.object(TrainerGRPCServer, 'get_latest_checkpoint', return_value=(b'state', 10))
-@patch.object(TrainerGRPCServer, 'get_child_exception', return_value="exception")
-@patch.object(TrainerGRPCServer, 'get_status')
+@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(b'state', 10))
+@patch.object(TrainerServerGRPCServicer, 'get_child_exception', return_value="exception")
+@patch.object(TrainerServerGRPCServicer, 'get_status')
 def test_get_training_status_finished_with_exception(
     test_get_status,
     test_get_child_exception,
     test_get_latest_checkpoint,
     test_is_alive
 ):
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
     trainer_server._training_dict[1] = None
@@ -189,16 +189,16 @@ def test_get_training_status_finished_with_exception(
 
 
 @patch.object(mp.Process, 'is_alive', return_value=False)
-@patch.object(TrainerGRPCServer, 'get_latest_checkpoint', return_value=(None, -1))
-@patch.object(TrainerGRPCServer, 'get_child_exception', return_value="exception")
-@patch.object(TrainerGRPCServer, 'get_status')
+@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(None, -1))
+@patch.object(TrainerServerGRPCServicer, 'get_child_exception', return_value="exception")
+@patch.object(TrainerServerGRPCServicer, 'get_status')
 def test_get_training_status_finished_no_checkpoint(
     test_get_status,
     test_get_child_exception,
     test_get_latest_checkpoint,
     test_is_alive
 ):
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
     trainer_server._training_dict[1] = None
@@ -211,7 +211,7 @@ def test_get_training_status_finished_no_checkpoint(
 
 
 def test_get_training_status():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     state_dict = {
         'state': {},
         'iteration': 10
@@ -230,7 +230,7 @@ def test_get_training_status():
 
 
 def test_get_child_exception_not_found():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
     child_exception = trainer_server.get_child_exception(1)
@@ -238,7 +238,7 @@ def test_get_child_exception_not_found():
 
 
 def test_get_child_exception_found():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
 
@@ -250,7 +250,7 @@ def test_get_child_exception_found():
 
 
 def test_get_latest_checkpoint_not_found():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
         trainer_server._training_dict[1] = get_training_info(temp)
 
@@ -260,7 +260,7 @@ def test_get_latest_checkpoint_not_found():
 
 
 def test_get_latest_checkpoint_found():
-    trainer_server = TrainerGRPCServer()
+    trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
 
         training_info = get_training_info(temp)

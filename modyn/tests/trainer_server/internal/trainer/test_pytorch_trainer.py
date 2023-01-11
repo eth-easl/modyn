@@ -8,15 +8,15 @@ import multiprocessing as mp
 import tempfile
 from io import BytesIO
 
-from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     JsonString,
     RegisterTrainServerRequest
 )
 
-from modyn.trainer_server.trainer.pytorch_trainer import PytorchTrainer
-from modyn.trainer_server.utils.training_utils import TrainingInfo
+from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer
+from modyn.trainer_server.internal.utils.training_utils import TrainingInfo
 
 query_queue = mp.Queue()
 response_queue = mp.Queue()
@@ -41,7 +41,7 @@ class DummyModel(torch.nn.Module):
         return data
 
 
-@patch('modyn.trainer_server.utils.training_utils.dynamic_module_import')
+@patch('modyn.trainer_server.internal.utils.training_utils.dynamic_module_import')
 def get_training_info(dynamic_module_patch: MagicMock):
     dynamic_module_patch.return_value = DummyModule()
     request = RegisterTrainServerRequest(
@@ -61,7 +61,7 @@ def get_training_info(dynamic_module_patch: MagicMock):
     return training_info
 
 
-@patch('modyn.trainer_server.trainer.pytorch_trainer.get_model')
+@patch('modyn.trainer_server.internal.trainer.pytorch_trainer.get_model')
 def get_dummy_trainer(test_get_model: MagicMock):
     test_get_model.return_value = DummyModelWrapper()
     training_info = get_training_info()

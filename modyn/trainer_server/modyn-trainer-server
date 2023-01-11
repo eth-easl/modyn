@@ -2,4 +2,4 @@
 
 MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
 # TODO(#31): activate conda environment here
-python $MODYNPATH/trainer_server/grpc/entrypoint.py "$@"
+python $MODYNPATH/trainer_server/entrypoint.py "$@"

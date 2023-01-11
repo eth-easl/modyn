@@ -3,9 +3,9 @@ from unittest.mock import patch
 import pytest
 from torchvision import transforms
 
-from modyn.trainer_server.mocks.mock_selector_server import GetSamplesResponse, MockSelectorServer
-from modyn.trainer_server.dataset.online_dataset import OnlineDataset
-from modyn.trainer_server.mocks.mock_storage_server import GetResponse, MockStorageServer
+from modyn.trainer_server.internal.mocks.mock_selector_server import GetSamplesResponse, MockSelectorServer
+from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
+from modyn.trainer_server.internal.mocks.mock_storage_server import GetResponse, MockStorageServer
 
 
 @patch.object(MockSelectorServer, 'get_sample_keys', return_value=GetSamplesResponse(training_samples_subset=[1, 2, 3]))

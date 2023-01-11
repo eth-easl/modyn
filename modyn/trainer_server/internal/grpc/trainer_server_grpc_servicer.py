@@ -10,7 +10,7 @@ import multiprocessing as mp
 import torch
 
 # pylint: disable=no-name-in-module
-from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     RegisterTrainServerRequest,
     RegisterTrainServerResponse,
     TrainerAvailableRequest,
@@ -20,16 +20,16 @@ from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
     TrainingStatusRequest,
     TrainingStatusResponse
 )
-from modyn.trainer_server.trainer.pytorch_trainer import train
+from modyn.trainer_server.internal.trainer.pytorch_trainer import train
 
-from modyn.trainer_server.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo, TrainingProcessInfo
+from modyn.trainer_server.internal.utils.training_utils import STATUS_QUERY_MESSAGE, TrainingInfo, TrainingProcessInfo
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 
-class TrainerGRPCServer:
+class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self) -> None:

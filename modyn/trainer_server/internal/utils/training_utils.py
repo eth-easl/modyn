@@ -2,7 +2,7 @@ import json
 import multiprocessing as mp
 
 # pylint: disable=no-name-in-module
-from modyn.trainer_server.grpc.generated.trainer_server_pb2 import RegisterTrainServerRequest
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import RegisterTrainServerRequest
 from modyn.utils.utils import dynamic_module_import
 
 STATUS_QUERY_MESSAGE = "get_status"

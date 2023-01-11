@@ -1,6 +1,6 @@
 from typing import Optional
 import torch
-from modyn.trainer_server.dataset.online_dataset import OnlineDataset
+from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
 
 def prepare_dataloaders(
