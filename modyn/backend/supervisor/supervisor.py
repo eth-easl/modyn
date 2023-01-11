@@ -32,6 +32,7 @@ class Supervisor:
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
+        self.current_training_id = None
 
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
@@ -155,9 +156,9 @@ class Supervisor:
     def validate_system(self) -> bool:
         return self.dataset_available() and self.grpc.trainer_available()
 
-    def shutdown_training(self) -> None:
-        # TODO(MaxiBoether): implement
-        pass
+    def shutdown_trainer(self) -> None:
+        if self.current_training_id is not None:
+            self.grpc.shutdown_trainer_server(self.current_training_id)
 
     def wait_for_new_data(self, start_timestamp: int, pipeline_id: int) -> None:
         last_timestamp = start_timestamp
@@ -232,9 +233,9 @@ class Supervisor:
         """Run training for trigger on GPU and block until done.
         """
         assert self.pipeline_id is not None, "Callback called without a registered pipeline."
-        # TODO(MaxiBoether): implement (maybe only in GRPCHandler)
-        return
+        self.current_training_id = self.grpc.start_training_server(self.pipeline_id, self.pipeline_config)
 
+        self.grpc.wait_for_training_completion(self.current_training_id)
 
     def initial_pass(self) -> None:
         # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
@@ -257,17 +258,9 @@ class Supervisor:
         # deregister etc
         pass
 
-    def register_pipeline(self, start_timestamp: int) -> int:
-        # register at selector service (start selector instance) and gpu node
-        # returns pipeline identifier
-
-        # at selector, we should inform it about the start_timestamp so that the first trigger can be handeled correctly
-        # if self.experimentmode, inform selector about self.start_replay_at instead.
-        pass
-
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
-        self.pipeline_id = self.register_pipeline(start_timestamp)
+        self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
 
         self.initial_pass()
 
@@ -276,4 +269,4 @@ class Supervisor:
         else:
             self.wait_for_new_data(start_timestamp)
 
-        self.end_pipeline()
+        self.grpc.unregister_pipeline_at_selector(self.pipeline_id)

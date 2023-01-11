@@ -76,10 +76,37 @@ class GRPCHandler:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
-        # TOOD(MaxiBoether): Implement actual gRPC call.
-
+        # TODO(MaxiBoether): Implement gRPC call.
         return current_time_millis()
 
-    def trainer_available(self) -> bool:
+    def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
+        # TODO(MaxiBoether): Implement gRPC call.
+        return 42
+
+    def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
+        # TODO(MaxiBoether): Implement gRPC call.
+        pass
+
+    def inform_selector(self, pipeline_id: int, data: list[tuple[str, int]]) -> None:
+        # TODO(MaxiBoether): Implement gRPC call.
+        pass    
+
+    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int]]) -> None:
+        # TODO(MaxiBoether): Implement gRPC call.
+        pass    
+
+    def trainer_server_available(self) -> bool:
         # TODO(MaxiBoether): implement.
         return True 
+
+    def shutdown_trainer_server(self, training_id: int) -> None:
+        # TODO(MaxiBoether): implement.
+        pass
+
+   def start_trainer_server(self, pipeline_id: int, pipeline_config: dict) -> int:
+        # TODO(MaxiBoether): implement.
+        return 42 
+
+   def wait_for_training_completion(self, training_id: int) -> None:
+        # TODO(MaxiBoether): implement.
+        pass
