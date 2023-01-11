@@ -6,6 +6,7 @@ class Trigger(ABC):
     def __init__(self, trigger_config: dict) -> None:
         assert trigger_config is not None, "trigger_config cannot be None."
 
+    @abstractmethod
     def inform(self, new_data: list[tuple[str, int]]) -> list[int]:
         """The supervisor informs the trigger about new data.
            In case the concrete trigger implementation decides to trigger, we return a list
@@ -17,12 +18,4 @@ class Trigger(ABC):
 
                 Returns:
                         triggering_indices (list[int]): List of all indices that trigger training
-        """
-        
-        # TODO(MaxiBoether): Find out whether we still need _decide_for_trigger or can just override inform.
-        return self._decide_for_trigger(new_data)
-
-    @abstractmethod
-    def _decide_for_trigger(self, new_data: list[tuple[str, int]]) -> list[int]:
-        """Returns a list of the indices of data points that cause a trigger.
         """

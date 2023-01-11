@@ -18,10 +18,10 @@ class DataAmountTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def _decide_for_trigger(self, new_data: list[tuple[str, int]]) -> list[int]:
+    def inform(self, new_data: list[tuple[str, int]]) -> list[int]:
         # TODO(Maxiboether): find numpy to do this directly, if possible
         triggering = np.array(range(self.remaining_data_points, len(new_data) + self.remaining_data_points)) % self.data_points_for_trigger
-        triggering_indices = list(np.where(triggering))
+        triggering_indices = list(np.where(triggering)[0])
 
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger
 
