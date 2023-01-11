@@ -11,7 +11,7 @@ from modyn.trainer_server.grpc.trainer_server import TrainerGRPCServer
 
 
 def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description='Modyn GRPC server of gpu node')
+    parser_ = argparse.ArgumentParser(description='Modyn Training Server')
     parser_.add_argument('config', type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
 
     return parser_

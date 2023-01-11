@@ -155,8 +155,7 @@ class TrainerGRPCServer:
 
         exception_queue = self._training_process_dict[training_id].exception_queue
         if exception_queue.qsize() > 0:
-            exception_msg = exception_queue.get()
-            return exception_msg
+            return exception_queue.get()
         return None
 
     def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[bytes], int]:

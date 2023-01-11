@@ -47,7 +47,7 @@ class OnlineDataset(IterableDataset):
     def __iter__(self) -> typing.Iterator:
         worker_info = get_worker_info()
         if worker_info is None:
-            # this is the main process. Give it worker_id 0
+            # Non-multithreaded data loading. We use worker_id 0.
             worker_id = 0
         else:
             worker_id = worker_info.id

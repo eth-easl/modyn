@@ -15,7 +15,7 @@ When registering a training configuration, the supervisor sends a grpc request c
 * checkpoint information
 * dataset information
 
-For starting a new training session, the supervision needs to provide the training_id, some trigger point required bt the selector,  and (optionally) a checkpoint to load from.
+For starting a new training session, the supervision needs to provide the training_id, some trigger point required by the selector,  and (optionally) a checkpoint to load from.
 
 ### OnlineDataset
 

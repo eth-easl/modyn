@@ -43,7 +43,6 @@ class PytorchTrainer:
             trigger_point,
         )
 
-        # setup rest
         self._device = device
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
