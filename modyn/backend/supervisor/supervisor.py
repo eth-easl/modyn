@@ -6,7 +6,13 @@ from time import sleep
 
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
-from modyn.utils import current_time_millis, dynamic_module_import, model_available, trigger_available, validate_yaml
+from modyn.utils import (
+    current_time_millis,
+    dynamic_module_import,
+    model_available,
+    trigger_available,
+    validate_yaml,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +23,13 @@ class Supervisor:
     supported_strategies: list[str] = ["finetune"]
     supported_initial_models: list[str] = ["random"]
 
-    def __init__(self, pipeline_config: dict, modyn_config: dict, replay_at: typing.Optional[int]) -> None:
+    def __init__(
+        self,
+        pipeline_config: dict,
+        modyn_config: dict,
+        start_replay_at: typing.Optional[int],
+        stop_replay_at: typing.Optional[int],
+    ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
 
@@ -30,11 +42,14 @@ class Supervisor:
         if not self.validate_system():
             raise ValueError("Invalid system configuration")
 
-        if replay_at is None:
+        if start_replay_at is None:
             self.experiment_mode = False
+            if stop_replay_at is not None:
+                raise ValueError("stop_replay_at can only be used in conjunction with start_replay_at.")
         else:
             self.experiment_mode = True
-            self.replay_at = replay_at
+            self.start_replay_at = start_replay_at
+            self.stop_replay_at = stop_replay_at
 
         self._setup_trigger()
 
@@ -144,69 +159,76 @@ class Supervisor:
     def validate_system(self) -> bool:
         return self.dataset_available() and self.trainer_available()
 
-    # pylint: disable-next=unused-argument
-    def _query_new_data_from_storage(self, last_query: int) -> list[tuple[str, int]]:
-        """Fetches all new data point from storage that have been added since last_query.
-        To be implemented as soon as storage is merged (#44/#11).
+    def shutdown_training(self) -> None:
+        # TODO(MaxiBoether): implement
+        pass
 
-                Parameters:
-                        last_query (int): Timestamp (utils.current_time_millis) of last query
-
-                Returns:
-                        result_data (list[tuple[str, int]]): List of tuples containing new samples.
-                            There is one tuple per sample, containing the sample key (str) and the
-                            timestamp of the sample (int).
-        """
-        return []
-
-    def wait_for_new_data(self, start_timestamp: int) -> None:
-        last_query = start_timestamp
+    def wait_for_new_data(self, start_timestamp: int, training_id: int) -> None:
+        last_timestamp = start_timestamp
+        dataset_id = self.pipeline_config["data"]["dataset_id"]
 
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
         try:
             while True:
-                new_data = self._query_new_data_from_storage(last_query)
-                # TODO(MaxiBoether): Currently, we lose datapoints that come in between the beginning of the
-                # query and the return of the query, because their timestamp will be < last_query.
-                # Needs to be fixed together with clock synchronization between storage and supervisor.
-                # Probably, we will need to use the timestamp at storage.
+                # TODO(MaxiBoether): is get_new_data_since inclusive or exclusive? If inclusive, we need to filter out the data points we have already seen
+                # i.e., last_timestamp will get set to 42, and then if we receive all keys with 42 again, we need to remove the keys that we saw in the last iteration
+                # If it is exclusive, we might lose new data with the same timestamp that came in while the gRPC request was being processed
+                # Best solution would probably be inclusive + filtering out the keys that we processed at the supervisor.
+                new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
 
-                last_query = current_time_millis()
+                last_timestamp = max([timestamp for (_, timestamp) in new_data])
                 if not self.trigger.inform(new_data):
-                    # If the information didn't trigger, wait 2 seconds before querying storage again.
                     sleep(2)
 
         except KeyboardInterrupt:
-            logger.info("Initiating supervisor shutdown.")
-            # This might happen during training! We need to coordinate the shutdown here.
-            return
+            logger.info("Initiating shutdown.")
+            self.shutdown_training()
+            logger.info("Shutdown successful.")
 
-    def _on_trigger(self) -> None:
-        """Function that gets called by the trigger. This should start training on the GPU node.
+    def _on_trigger(self, triggering_key: str, key_timestamp: int) -> None:
+        """Function that gets called by the trigger. This should inform the selector, start training on the GPU node and block until it has finished.
         To be implemented.
         """
 
-    def initial_pass(self) -> None:
+    def initial_pass(self, training_id: int) -> None:
         # initial_data = self._query_new_data_from_storage(0)
         # then: remove all samples that are too new (e.g., that we want to replay on)
         pass
 
-    def replay_data(self) -> None:
-        replay_data = self._query_new_data_from_storage(self.replay_at)
+    def replay_data(self, training_id: int) -> None:
+        # TODO(MaxiBoether): Think about inclusivity/exclusivity of get_data functions
+        assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
+        dataset_id = self.pipeline_config["data"]["dataset_id"]
+
+        if self.stop_replay_at is None:
+            replay_data = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
+        else:
+            replay_data = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
+
         self.trigger.inform(replay_data)
 
-    def end_pipeline(self) -> None:
+    def end_pipeline(self, training_id: int) -> None:
         # deregister etc
         pass
 
+    def register_training(self, start_timestamp: int) -> int:
+        # register at selector and gpu node, check what foteini has done here
+        # returns training identifier
+
+        # at selector, we should inform it about the start_timestamp so that the first trigger can be handeled correctly
+        # if self.experimentmode, inform selector about self.start_replay_at instead.
+        pass
+
     def pipeline(self) -> None:
-        start_timestamp = current_time_millis()
-        self.initial_pass()
+        start_timestamp = self.grpc.get_time_at_storage()
+        training_id = self.register_training(start_timestamp)
+
+        self.initial_pass(training_id)
 
         if self.experiment_mode:
-            self.replay_data()
+            self.replay_data(training_id)
         else:
-            self.wait_for_new_data(start_timestamp)
+            self.wait_for_new_data(start_timestamp, training_id)
 
-        self.end_pipeline()
+        self.end_pipeline(training_id)

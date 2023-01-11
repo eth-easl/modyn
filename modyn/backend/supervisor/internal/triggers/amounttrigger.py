@@ -13,12 +13,25 @@ class DataAmountTrigger(Trigger):
 
         self.data_points_for_trigger: int = trigger_config["data_points_for_trigger"]
         assert self.data_points_for_trigger > 0, "data_points_for_trigger needs to be at least 1"
-        self.seen_data_points = 0
+        self.leftover_data: list[tuple[str, int]] = []
+
         super().__init__(callback, trigger_config)
 
-    def _decide_for_trigger(self, new_data: list[tuple[str, int]]) -> int:
-        self.seen_data_points += len(new_data)
-        num_triggers = int(self.seen_data_points / self.data_points_for_trigger)
-        self.seen_data_points -= self.data_points_for_trigger * num_triggers
+    def _decide_for_trigger(self, new_data: list[tuple[str, int]]) -> list[tuple[str, int]]:
+        new_data.sort(key=lambda tup: tup[1])
+        self.leftover_data.extend(new_data)
 
-        return num_triggers
+        result: list[tuple[str, int]] = []
+
+        for i in range(0, len(self.leftover_data), self.data_points_for_trigger):
+            sublist = self.leftover_data[i : i + self.data_points_for_trigger]
+
+            if len(sublist) == self.data_points_for_trigger:
+                # We got a trigger
+                result.append(sublist[-1])
+            else:
+                # Last iteration, update leftover data
+                assert i == len(self.leftover_data) - 1, "Data slicing failed"
+                self.leftover_data = sublist
+
+        return result
