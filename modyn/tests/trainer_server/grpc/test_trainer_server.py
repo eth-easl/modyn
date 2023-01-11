@@ -23,7 +23,7 @@ from modyn.trainer_server.utils.training_utils import TrainingProcessInfo, STATU
 
 start_training_request = StartTrainingRequest(
     training_id=1,
-    trigger_point="new",
+    train_until_sample_id="new",
     load_checkpoint_path="test"
 )
 trainer_available_request = TrainerAvailableRequest()

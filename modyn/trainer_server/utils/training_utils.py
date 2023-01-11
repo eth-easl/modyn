@@ -1,7 +1,7 @@
-# pylint: disable=no-name-in-module, too-many-instance-attributes
 import json
 import multiprocessing as mp
 
+# pylint: disable=no-name-in-module
 from modyn.trainer_server.grpc.generated.trainer_server_pb2 import RegisterTrainServerRequest
 from modyn.utils.utils import dynamic_module_import
 
@@ -9,6 +9,8 @@ STATUS_QUERY_MESSAGE = "get_status"
 
 
 class TrainingInfo:
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self, request: RegisterTrainServerRequest) -> None:
 
         self.training_id = request.training_id

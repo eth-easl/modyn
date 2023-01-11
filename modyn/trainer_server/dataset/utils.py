@@ -9,7 +9,7 @@ def prepare_dataloaders(
     num_dataloaders: int,
     batch_size: int,
     transform: list[str],
-    trigger_point: str,
+    train_until_sample_id: str,
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -26,7 +26,7 @@ def prepare_dataloaders(
 
     """
 
-    train_set = OnlineDataset(training_id, dataset_id, transform, trigger_point)
+    train_set = OnlineDataset(training_id, dataset_id, transform, train_until_sample_id)
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                                    num_workers=num_dataloaders)
 

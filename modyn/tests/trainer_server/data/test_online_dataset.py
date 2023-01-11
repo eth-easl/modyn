@@ -15,7 +15,7 @@ def test_get_keys_from_selector(test_get_sample_keys):
         training_id=1,
         dataset_id="MNIST",
         serialized_transforms=[],
-        trigger_point="new"
+        train_until_sample_id="new"
     )
     assert online_dataset._get_keys_from_selector(0) == [1, 2, 3]
 
@@ -27,7 +27,7 @@ def test_get_data_from_storage(test_get):
         training_id=1,
         dataset_id="MNIST",
         serialized_transforms=[],
-        trigger_point="new"
+        train_until_sample_id="new"
     )
     assert online_dataset._get_data_from_storage([]) == ["sample0", "sample1"]
 
@@ -58,7 +58,7 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
         training_id=1,
         dataset_id="MNIST",
         serialized_transforms=serialized_transforms,
-        trigger_point="new"
+        train_until_sample_id="new"
     )
     online_dataset._deserialize_torchvision_transforms()
     assert isinstance(online_dataset._transform.transforms, list)
@@ -66,27 +66,18 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
         assert transform1.__dict__ == transform2.__dict__
 
 
-def test_process_data():
-    online_dataset = OnlineDataset(
-        training_id=1,
-        dataset_id="MNIST",
-        serialized_transforms=[],
-        trigger_point="new"
-    )
-    online_dataset._transform = lambda x: x*2
-    assert online_dataset._process([1, 2, 3]) == [2, 4, 6]
-
-
-@patch.object(OnlineDataset, '_process', return_value=list(range(10)))
 @patch.object(OnlineDataset, '_get_data_from_storage', return_value=list(range(10)))
 @patch.object(OnlineDataset, '_get_keys_from_selector', return_value=list(range(10)))
-def test_dataset_iter(test_process, test_get_data, test_get_keys):
+def test_dataset_iter(test_get_data, test_get_keys):
 
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
         serialized_transforms=[],
-        trigger_point="new"
+        train_until_sample_id="new"
     )
     dataset_iter = iter(online_dataset)
     assert list(dataset_iter) == list(range(10))
+
+# TODO(fotstrt):
+# add test for batches

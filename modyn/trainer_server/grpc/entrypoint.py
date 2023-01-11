@@ -9,6 +9,11 @@ import pathlib
 from modyn.trainer_server.grpc.generated.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
 from modyn.trainer_server.grpc.trainer_server import TrainerGRPCServer
 
+logging.basicConfig(level=logging.NOTSET,
+                        format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d:%H:%M:%S')
+logger = logging.getLogger(__name__)
+
 
 def setup_argparser() -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description='Modyn Training Server')
@@ -20,12 +25,6 @@ def setup_argparser() -> argparse.ArgumentParser:
 def main() -> None:
 
     mp.set_start_method('spawn')
-
-    logging.basicConfig(level=logging.NOTSET,
-                        format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d:%H:%M:%S')
-    logger = logging.getLogger(__name__)
-    logger.setLevel("INFO")
 
     parser = setup_argparser()
     args = parser.parse_args()

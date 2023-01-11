@@ -1,4 +1,3 @@
-# pylint: disable=unused-argument, no-name-in-module, unnecessary-lambda, unsubscriptable-object
 import glob
 import io
 from typing import Any, Optional, Union
@@ -10,6 +9,7 @@ import multiprocessing as mp
 
 import torch
 
+# pylint: disable=no-name-in-module
 from modyn.trainer_server.grpc.generated.trainer_server_pb2 import (
     RegisterTrainServerRequest,
     RegisterTrainServerResponse,
@@ -38,8 +38,8 @@ class TrainerGRPCServer:
 
     def trainer_available(
         self,
-        request: TrainerAvailableRequest,
-        context: grpc.ServicerContext
+        request: TrainerAvailableRequest,   # pylint: disable=unused-argument
+        context: grpc.ServicerContext   # pylint: disable=unused-argument
     ) -> TrainerAvailableResponse:
 
         # if there is already another training job running, the node is considered unavailable
@@ -52,7 +52,7 @@ class TrainerGRPCServer:
     def register(
         self,
         request: RegisterTrainServerRequest,
-        context: grpc.ServicerContext
+        context: grpc.ServicerContext   # pylint: disable=unused-argument
     ) -> RegisterTrainServerResponse:
 
         training_info = TrainingInfo(request)
@@ -61,16 +61,20 @@ class TrainerGRPCServer:
 
         return RegisterTrainServerResponse(success=True)
 
-    def start_training(self, request: StartTrainingRequest, context: grpc.ServicerContext) -> StartTrainingResponse:
+    def start_training(
+        self,
+        request: StartTrainingRequest,
+        context: grpc.ServicerContext   # pylint: disable=unused-argument
+    ) -> StartTrainingResponse:
 
         training_id = request.training_id
 
         if training_id not in self._training_dict:
             raise ValueError(f"Training with id {training_id} has not been registered")
 
-        exception_queue: mp.Queue[str] = mp.Queue()
-        status_query_queue: mp.Queue[str] = mp.Queue()
-        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()
+        exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
         process = mp.Process(
             target=train,
@@ -79,7 +83,7 @@ class TrainerGRPCServer:
                 'cuda:0',  # TODO(): fix device number for multi-gpu settings
                 f'log-{training_id}.txt',
                 request.load_checkpoint_path,
-                request.trigger_point,
+                request.train_until_sample_id,
                 exception_queue,
                 status_query_queue,
                 status_response_queue
@@ -98,7 +102,7 @@ class TrainerGRPCServer:
     def get_training_status(
         self,
         request: TrainingStatusRequest,
-        context: grpc.ServicerContext
+        context: grpc.ServicerContext   # pylint: disable=unused-argument
     ) -> TrainingStatusResponse:
 
         training_id = request.training_id
@@ -165,7 +169,7 @@ class TrainerGRPCServer:
 
         checkpoint_path = self._training_dict[training_id].checkpoint_path
         checkpoints = list(filter(os.path.isfile, glob.glob(checkpoint_path + "/*")))
-        checkpoints.sort(key=lambda x: os.path.getmtime(x))
+        checkpoints.sort(key=os.path.getmtime)
 
         if len(checkpoints) == 0:
             return None, -1

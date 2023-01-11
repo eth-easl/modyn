@@ -165,19 +165,19 @@ class StartTrainingRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     TRAINING_ID_FIELD_NUMBER: builtins.int
-    TRIGGER_POINT_FIELD_NUMBER: builtins.int
+    TRAIN_UNTIL_SAMPLE_ID_FIELD_NUMBER: builtins.int
     LOAD_CHECKPOINT_PATH_FIELD_NUMBER: builtins.int
     training_id: builtins.int
-    trigger_point: builtins.str
+    train_until_sample_id: builtins.str
     load_checkpoint_path: builtins.str
     def __init__(
         self,
         *,
         training_id: builtins.int = ...,
-        trigger_point: builtins.str = ...,
+        train_until_sample_id: builtins.str = ...,
         load_checkpoint_path: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["load_checkpoint_path", b"load_checkpoint_path", "training_id", b"training_id", "trigger_point", b"trigger_point"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["load_checkpoint_path", b"load_checkpoint_path", "train_until_sample_id", b"train_until_sample_id", "training_id", b"training_id"]) -> None: ...
 
 global___StartTrainingRequest = StartTrainingRequest
 

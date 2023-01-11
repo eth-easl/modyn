@@ -1,7 +1,6 @@
 """
 ResNet18
 """
-# flake8: noqa
 import os
 
 files = os.listdir(os.path.dirname(__file__))

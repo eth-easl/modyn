@@ -51,7 +51,7 @@ message CheckpointInfo {
 
 message StartTrainingRequest {
     int32 training_id = 1;
-    string trigger_point = 2;
+    string train_until_sample_id = 2;
     string load_checkpoint_path = 3;
 }
 

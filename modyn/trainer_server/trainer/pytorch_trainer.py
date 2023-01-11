@@ -1,4 +1,3 @@
-# pylint: disable=too-many-instance-attributes, broad-except
 import io
 import traceback
 from typing import Optional
@@ -14,11 +13,13 @@ from modyn.trainer_server.utils.training_utils import STATUS_QUERY_MESSAGE, Trai
 
 
 class PytorchTrainer:
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(
         self,
         training_info: TrainingInfo,
         device: str,
-        trigger_point: str,
+        train_until_sample_id: str,
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
     ) -> None:
@@ -40,7 +41,7 @@ class PytorchTrainer:
             training_info.num_dataloaders,
             training_info.batch_size,
             training_info.transform_list,
-            trigger_point,
+            train_until_sample_id,
         )
 
         self._device = device
@@ -141,15 +142,15 @@ def train(
     device: str,
     log_path: str,
     load_checkpoint_path: Optional[str],
-    trigger_point: str,
+    train_until_sample_id: str,
     exception_queue: mp.Queue,
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue
 ) -> None:
 
     try:
-        trainer = PytorchTrainer(training_info, device, trigger_point, status_query_queue, status_response_queue)
+        trainer = PytorchTrainer(training_info, device, train_until_sample_id, status_query_queue, status_response_queue)
         trainer.train(log_path, load_checkpoint_path)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
         exception_queue.put(exception_msg)
