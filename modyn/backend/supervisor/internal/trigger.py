@@ -8,10 +8,8 @@ class Trigger(ABC):
         assert trigger_config is not None, "trigger_config cannot be None."
         self.callback = callback
 
-    def inform(self, new_data: list[tuple[str, int]]) -> bool:
-        """The supervisor regularly informs the trigger.
-        This method should get called regularly by the supervisor, even if there was no new data.
-        If there was any new data, then len(new_data) > 0.
+    def inform(self, new_data: list[tuple[str, int]]) -> tuple[bool, int]:
+        """The supervisor informs the trigger about new data.
         In case the concrete trigger decides to trigger, we call the callback
         as many times as the new data triggered training, with the data points that triggered the training.
         This blocks until training has finished, assuming that the callback blocks.

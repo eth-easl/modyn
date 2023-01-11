@@ -152,18 +152,14 @@ class Supervisor:
 
         return available
 
-    def trainer_available(self) -> bool:
-        # TODO(MaxiBoether): implement
-        return True
-
     def validate_system(self) -> bool:
-        return self.dataset_available() and self.trainer_available()
+        return self.dataset_available() and self.grpc.trainer_available()
 
     def shutdown_training(self) -> None:
         # TODO(MaxiBoether): implement
         pass
 
-    def wait_for_new_data(self, start_timestamp: int, training_id: int) -> None:
+    def wait_for_new_data(self, start_timestamp: int, pipeline_id: int) -> None:
         last_timestamp = start_timestamp
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
@@ -176,9 +172,9 @@ class Supervisor:
                 # If it is exclusive, we might lose new data with the same timestamp that came in while the gRPC request was being processed
                 # Best solution would probably be inclusive + filtering out the keys that we processed at the supervisor.
                 new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
-
                 last_timestamp = max([timestamp for (_, timestamp) in new_data])
-                if not self.trigger.inform(new_data):
+
+                if not self._handle_new_data(new_data):
                     sleep(2)
 
         except KeyboardInterrupt:
@@ -186,17 +182,46 @@ class Supervisor:
             self.shutdown_training()
             logger.info("Shutdown successful.")
 
-    def _on_trigger(self, triggering_key: str, key_timestamp: int) -> None:
-        """Function that gets called by the trigger. This should inform the selector, start training on the GPU node and block until it has finished.
-        To be implemented.
+    def _handle_new_data(self, new_data: list[tuple[str, int]], selector_batch_size: int = 128) -> bool:
+        """ This function handles new data during experiments or actual pipeline execution.
+            We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
+            If a data point within a batch causes a trigger, we inform the selector about all data points including that data point.
+            Otherwise, the selector is informed
         """
+        new_data.sort(key=lambda tup: tup[1])
 
-    def initial_pass(self, training_id: int) -> None:
-        # initial_data = self._query_new_data_from_storage(0)
-        # then: remove all samples that are too new (e.g., that we want to replay on)
+        any_training_triggered = False
+
+        for i in range(0, len(new_data), selector_batch_size):
+            batch = new_data[i : i + selector_batch_size]
+            triggered, triggering_idx = self.trigger.inform(batch) # TODO(MaxiBoether): what if we have multiple triggers within a batch? return list of indices instead!
+
+            if triggered:
+                triggering_data = batch [ : triggering_idx + 1]
+                remaining_data = batch [ triggering_idx : ]
+                trigger_id = self.grpc.inform_selector_and_trigger(triggering_data)
+                self._run_training(trigger_id) # Blocks until training is done.
+                self.grpc.inform_selector(remaining_data)
+                any_training_triggered = True
+            else:
+                self.grpc.inform_selector(batch)
+
+        return any_training_triggered
+
+    def _run_training(self, trigger_id: int) -> None:
+        """Run training for trigger on GPU and block until done.
+        """
+        assert self.pipeline_id is not None, "Callback called without a registered pipeline."
+        # TODO(MaxiBoether): implement (maybe only in GRPCHandler)
+        return
+
+
+    def initial_pass(self) -> None:
+        # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
+        # for reference = amount, we need support from the storage module to return the required keys
         pass
 
-    def replay_data(self, training_id: int) -> None:
+    def replay_data(self) -> None:
         # TODO(MaxiBoether): Think about inclusivity/exclusivity of get_data functions
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
@@ -206,15 +231,15 @@ class Supervisor:
         else:
             replay_data = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
 
-        self.trigger.inform(replay_data)
+        self._handle_new_data(replay_data)
 
-    def end_pipeline(self, training_id: int) -> None:
+    def end_pipeline(self) -> None:
         # deregister etc
         pass
 
-    def register_training(self, start_timestamp: int) -> int:
-        # register at selector and gpu node, check what foteini has done here
-        # returns training identifier
+    def register_pipeline(self, start_timestamp: int) -> int:
+        # register at selector service (start selector instance) and gpu node
+        # returns pipeline identifier
 
         # at selector, we should inform it about the start_timestamp so that the first trigger can be handeled correctly
         # if self.experimentmode, inform selector about self.start_replay_at instead.
@@ -222,13 +247,13 @@ class Supervisor:
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
-        training_id = self.register_training(start_timestamp)
+        self.pipeline_id = self.register_pipeline(start_timestamp)
 
-        self.initial_pass(training_id)
+        self.initial_pass()
 
         if self.experiment_mode:
-            self.replay_data(training_id)
+            self.replay_data()
         else:
-            self.wait_for_new_data(start_timestamp, training_id)
+            self.wait_for_new_data(start_timestamp)
 
-        self.end_pipeline(training_id)
+        self.end_pipeline()

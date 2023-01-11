@@ -79,3 +79,7 @@ class GRPCHandler:
         # TOOD(MaxiBoether): Implement actual gRPC call.
 
         return current_time_millis()
+
+    def trainer_available(self) -> bool:
+        # TODO(MaxiBoether): implement.
+        return True 
