@@ -189,24 +189,44 @@ class Supervisor:
             Otherwise, the selector is informed
         """
         new_data.sort(key=lambda tup: tup[1])
-
         any_training_triggered = False
 
         for i in range(0, len(new_data), selector_batch_size):
             batch = new_data[i : i + selector_batch_size]
-            triggered, triggering_idx = self.trigger.inform(batch) # TODO(MaxiBoether): what if we have multiple triggers within a batch? return list of indices instead!
-
-            if triggered:
-                triggering_data = batch [ : triggering_idx + 1]
-                remaining_data = batch [ triggering_idx : ]
-                trigger_id = self.grpc.inform_selector_and_trigger(triggering_data)
-                self._run_training(trigger_id) # Blocks until training is done.
-                self.grpc.inform_selector(remaining_data)
-                any_training_triggered = True
-            else:
-                self.grpc.inform_selector(batch)
+            triggered = self._handle_new_data_batch(batch)
+            any_training_triggered = any_training_triggered or triggered
 
         return any_training_triggered
+
+    def _handle_new_data_batch(self, batch: list[tuple[str, int]]) -> bool:
+        triggering_indices = self.trigger.inform(batch) 
+
+        if len(triggering_indices) > 0:
+            self._handle_triggers_within_batch(batch, triggering_indices)
+            return True
+        else:
+            self.grpc.inform_selector(self.pipeline_id, batch)
+            return False
+
+    def _handle_triggers_within_batch(self, batch: list[tuple[str, int]], triggering_indices: list[int]) -> None:
+        previous_trigger_idx = 0
+        for i, triggering_idx in enumerate(triggering_indices):
+            triggering_data = batch [previous_trigger_idx : triggering_idx + 1]
+            previous_trigger_idx = triggering_idx
+
+            # This call informs the selector about the data until (and including) the data point that caused the trigger and then also notifies it about the triggering.
+            # This means the next training call on trigger_id will guarantee that all data until that point has been processed by the selector.
+            trigger_id = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
+            self._run_training(trigger_id) # Blocks until training is done.
+
+            # If no other trigger is coming in this batch, we have to inform the Selector about the remaining data in this batch.
+            if i == len(triggering_indices) - 1:
+                remaining_data = batch [ triggering_idx + 1 : ]
+
+                if len(remaining_data) > 0:
+                    # These data points will be included in the next trigger because we inform the Selector about them, just like other batches with no trigger at all are included.
+                    self.grpc.inform_selector(self.pipeline_id, remaining_data)
+
 
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done.

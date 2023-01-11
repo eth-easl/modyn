@@ -13,25 +13,20 @@ class DataAmountTrigger(Trigger):
 
         self.data_points_for_trigger: int = trigger_config["data_points_for_trigger"]
         assert self.data_points_for_trigger > 0, "data_points_for_trigger needs to be at least 1"
-        self.leftover_data: list[tuple[str, int]] = []
+        self.seen_data_points = 0
 
         super().__init__(callback, trigger_config)
 
-    def _decide_for_trigger(self, new_data: list[tuple[str, int]]) -> list[tuple[str, int]]:
-        new_data.sort(key=lambda tup: tup[1])
-        self.leftover_data.extend(new_data)
+    def _decide_for_trigger(self, new_data: list[tuple[str, int]]) -> list[int]:
+        result: list[int] = []
 
-        result: list[tuple[str, int]] = []
-
-        for i in range(0, len(self.leftover_data), self.data_points_for_trigger):
-            sublist = self.leftover_data[i : i + self.data_points_for_trigger]
-
-            if len(sublist) == self.data_points_for_trigger:
-                # We got a trigger
-                result.append(sublist[-1])
-            else:
-                # Last iteration, update leftover data
-                assert i == len(self.leftover_data) - 1, "Data slicing failed"
-                self.leftover_data = sublist
+        # TODO(MaxiBoether): efficiently implement triggering logic here.
+        # Consider seen_data_points and then decide what data points in new_data cause a trigger
+        # return the indices accordingly
+        # Idea: cerate a numpy array where each entry represents its index (0, 1, 2,3,...) of length len(new_data)
+        # Then add self.seen_data_points on each element (brotkasten)
+        # Then do a modulo dpft on each element, get indices where True (= result)
+        # self.seen_data_points = (self.seen_data_points + len(new_data)) mod self.data_points_for_trigger
+        # fertig.
 
         return result
