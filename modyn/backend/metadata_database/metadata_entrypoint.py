@@ -20,7 +20,7 @@ def setup_argparser() -> argparse.ArgumentParser:
     parser_.add_argument('config', type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
     return parser_
 
-
+# TODO(vGsteiger): This not yet 100% aligned with the other components (encapsulation of servicer etc). This should be done in the next metadata database PR
 def run(database: MetadataDatabase, config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(MetadataDatabaseGRPCServer(database), server)
