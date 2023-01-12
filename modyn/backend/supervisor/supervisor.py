@@ -159,7 +159,7 @@ class Supervisor:
         if self.current_training_id is not None:
             self.grpc.shutdown_trainer_server(self.current_training_id)
 
-    def wait_for_new_data(self, start_timestamp: int, pipeline_id: int) -> None:
+    def wait_for_new_data(self, start_timestamp: int) -> None:
         last_timestamp = start_timestamp
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
@@ -172,7 +172,7 @@ class Supervisor:
                 new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
                 # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
                 new_data = [(key, timestamp) for (key, timestamp) in new_data if key not in last_keys]
-                last_timestamp = max([timestamp for (_, timestamp) in new_data])
+                last_timestamp = max([timestamp for (_, timestamp) in new_data]) if len(new_data) > 0 else last_timestamp
 
                 # Remember all data points with last_timestamp so we do not process them again in the next iteration
                 last_keys = set([key for (key, timestamp) in new_data if timestamp == last_timestamp])
@@ -182,7 +182,7 @@ class Supervisor:
 
         except KeyboardInterrupt:
             logger.info("Initiating shutdown.")
-            self.shutdown_training()
+            self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
     def _handle_new_data(self, new_data: list[tuple[str, int]], selector_batch_size: int = 128) -> bool:

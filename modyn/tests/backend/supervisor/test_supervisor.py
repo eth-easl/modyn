@@ -1,6 +1,6 @@
 # pylint: disable=unused-argument,redefined-outer-name
 import typing
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 
 import pytest
 from modyn.backend.supervisor import Supervisor
@@ -201,11 +201,9 @@ def test_dataset_available():
 
 
 @patch.object(GRPCHandler, "dataset_available", lambda self, did: did == "existing")
-def test_validate_system():
+@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+def test_validate_system(test_trainer_server_available):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
-
-    # TODO(MaxiBoether): implement a better test when trainer_available is implemented
-    assert sup.trainer_available()
 
     sup.pipeline_config = get_minimal_pipeline_config()
     sup.pipeline_config["data"]["dataset_id"] = "existing"
@@ -214,33 +212,69 @@ def test_validate_system():
     sup.pipeline_config["data"]["dataset_id"] = "nonexisting"
     assert not sup.validate_system()
 
+def test_shutdown_trainer():
+    # TODO(MaxiBoether): implement
+    pass
 
-@patch.object(Supervisor, "__init__", noop_constructor_mock)
-def test__query_new_data_from_storage():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
-
-    # TODO(MaxiBoether): implement a real test when func is implemented.
-    assert not sup._query_new_data_from_storage(0)
-
-
-@patch.object(Supervisor, "_query_new_data_from_storage", return_value=[("a", 42), ("b", 43)])
-@patch.object(DataAmountTrigger, "inform", return_value=False, side_effect=KeyboardInterrupt)
-def test_wait_for_new_data(test_inform: MagicMock, test__query_new_data_from_storage: MagicMock):
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[("a", 42), ("b", 43)])
+@patch.object(Supervisor, "_handle_new_data", return_value=False, side_effect=KeyboardInterrupt)
+def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
+    # This is a simple test and does not the inclusivity filtering!
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
-    sup.wait_for_new_data(42)
+    sup.wait_for_new_data(21)
+    test_get_new_data_since.assert_called_once_with("test", 21)
+    test__handle_new_data.assert_called_once_with([("a", 42), ("b", 43)])
 
-    test__query_new_data_from_storage.assert_called_once_with(42)
-    test_inform.assert_called_once_with([("a", 42), ("b", 43)])
+def test_wait_for_new_data_filtering():
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+
+    #def mocked_get_new_data_since(dataset_id: str, last_timestamp: int):
+    #    assert dataset_id == "test"
+#
+ #       if last_timestamp == 21:
+  #          return 
+   #     elif last_timestamp == 43:
+    #        return 
+     #   elif last_timestamp == 45:
+      #      return []
+       # else:
+        #    assert False, "Should not happen."
 
 
-@patch.object(Supervisor, "__init__", noop_constructor_mock)
-def test__on_trigger():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
+    mocked__handle_new_data_return_vals = [True, True, KeyboardInterrupt]
+    mocked_get_new_data_since = [[("a", 42), ("b", 43), ("c", 43)], [("b", 43), ("c", 43), ("d", 43), ("e", 45)], [], ValueError]
 
-    # TODO(MaxiBoether): implement a real test when func is implemented.
-    sup._on_trigger()
+    handle_mock: MagicMock
+    with patch.object(sup, "_handle_new_data", side_effect=mocked__handle_new_data_return_vals) as handle_mock:
+        get_new_data_mock: MagicMock
+        with patch.object(sup.grpc, "get_new_data_since", side_effect=mocked_get_new_data_since) as get_new_data_mock:
+            sup.wait_for_new_data(21)
 
+            assert handle_mock.call_count == 3
+            assert get_new_data_mock.call_count == 3
+
+            expected_handle_mock_arg_list = [call([("a", 42), ("b", 43), ("c", 43)]), call([("d", 43), ("e", 45)]), call([])]
+            assert handle_mock.call_args_list == expected_handle_mock_arg_list
+
+            expected_get_new_data_arg_list = [call("test", 21), call("test", 43), call("test", 45)]
+            assert get_new_data_mock.call_args_list == expected_get_new_data_arg_list
+
+def test__handle_new_data():
+    # TODO(MaxiBoether): implement
+    pass
+
+def test__handle_new_data_batch():
+    # TODO(MaxiBoether): implement
+    pass
+
+def test__handle_triggers_within_batch():
+    # TODO(MaxiBoether): implement
+    pass
+
+def test__run_training():
+    # TODO(MaxiBoether): implement
+    pass
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_initial_pass():
@@ -250,15 +284,10 @@ def test_initial_pass():
     sup.initial_pass()
 
 
-@patch.object(Supervisor, "_query_new_data_from_storage", return_value=[("a", 42), ("b", 43)])
-@patch.object(DataAmountTrigger, "inform")
-def test_replay_data(test_inform: MagicMock, test__query_new_data_from_storage: MagicMock):
-    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
-    sup.replay_at = 42
-    sup.replay_data()
 
-    test__query_new_data_from_storage.assert_called_once()
-    test_inform.assert_called_once_with([("a", 42), ("b", 43)])
+def test_replay_data():
+    # TODO(MaxiBoether): implement
+    pass
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
@@ -268,42 +297,53 @@ def test_end_pipeline():
     # TODO(MaxiBoether): implement a real test when func is implemented.
     sup.end_pipeline()
 
-
+@patch.object(GRPCHandler, "get_time_at_storage", return_value = 21)
+@patch.object(GRPCHandler, "register_pipeline_at_selector", return_value = 42)
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(Supervisor, "end_pipeline")
+@patch.object(GRPCHandler, "unregister_pipeline_at_selector")
 def test_non_experiment_pipeline(
-    test_end_pipeline: MagicMock,
+    test_unregister_pipeline_at_selector: MagicMock,
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
+    test_register_pipeline_at_selector: MagicMock,
+    test_get_time_at_storage: MagicMock,
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.experiment_mode = False
     sup.pipeline()
 
+    test_get_time_at_storage.assert_called_once()
+    test_register_pipeline_at_selector.assert_called_once()
     test_initial_pass.assert_called_once()
-    test_wait_for_new_data.assert_called_once()
+    test_wait_for_new_data.assert_called_once_with(21)
     test_replay_data.assert_not_called()
-    test_end_pipeline.assert_called_once()
+    test_unregister_pipeline_at_selector.assert_called_once_with(42)
 
 
+@patch.object(GRPCHandler, "get_time_at_storage", return_value = 21)
+@patch.object(GRPCHandler, "register_pipeline_at_selector", return_value = 42)
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(Supervisor, "end_pipeline")
+@patch.object(GRPCHandler, "unregister_pipeline_at_selector")
 def test_experiment_pipeline(
-    test_end_pipeline: MagicMock,
+    test_unregister_pipeline_at_selector: MagicMock,
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
+    test_register_pipeline_at_selector: MagicMock,
+    test_get_time_at_storage: MagicMock,
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.experiment_mode = True
     sup.pipeline()
 
+    test_get_time_at_storage.assert_called_once()
+    test_register_pipeline_at_selector.assert_called_once()
     test_initial_pass.assert_called_once()
     test_wait_for_new_data.assert_not_called()
     test_replay_data.assert_called_once()
-    test_end_pipeline.assert_called_once()
+    test_unregister_pipeline_at_selector.assert_called_once_with(42)
