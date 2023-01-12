@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 
 
 class Selector:
@@ -9,9 +10,9 @@ class Selector:
     This class defines the interface of interest, namely the .
     """
 
-    def __init__(self, strategy: AbstractSelectionStrategy, modyn_config: dict) -> None:
+    def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
         self.grpc = GRPCHandler(modyn_config)
-        self._strategy = strategy
+        self._strategy = self._get_strategy(pipeline_config)
 
     def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, ...]]:
         """
@@ -104,3 +105,10 @@ class Selector:
         training_samples_subset = self._get_training_set_partition(training_id, training_samples, worker_id)
 
         return training_samples_subset
+
+    def _get_strategy(self, pipeline_config) -> AbstractSelectionStrategy:
+        strategy_name = pipeline_config["training"]["strategy"]
+        if strategy_name == "finetune":
+            config = {"selector": {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}}
+            return DataFreshnessStrategy(config, self.grpc)
+        raise NotImplementedError(f"{strategy_name} is not implemented")

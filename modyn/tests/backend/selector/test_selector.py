@@ -1,3 +1,4 @@
+# pylint: disable=no-value-for-parameter
 from collections import Counter
 from unittest.mock import patch
 
@@ -7,6 +8,7 @@ from modyn.backend.selector.internal.selector_strategies.abstract_selection_stra
 from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 from modyn.backend.selector.internal.selector_strategies.gdumb_strategy import GDumbStrategy
 from modyn.backend.selector.internal.selector_strategies.score_strategy import ScoreStrategy
+from modyn.backend.selector.selector import Selector
 
 
 class MockGRPCHandler:
@@ -23,20 +25,20 @@ class MockGRPCHandler:
         return tuple([10, 3])
 
 
-# We do not use the parameters in this empty mock constructor.
-
-
-def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argument
+def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
     pass
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
+@patch.object(Selector, "__init__", noop_constructor_mock)
 @patch.object(AbstractSelectionStrategy, "_select_new_training_samples")
 def test_prepare_training_set(test__select_new_training_samples):
     test__select_new_training_samples.return_value = ["a", "b"]
 
-    selector = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = Selector(None)
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
     assert selector._prepare_training_set(0, 0, 0) == ["a", "b"]
 
     test__select_new_training_samples.return_value = []
@@ -45,10 +47,14 @@ def test_prepare_training_set(test__select_new_training_samples):
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(Selector, "__init__", noop_constructor_mock)
 @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
 def test_get_training_set_partition():
-    selector = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = Selector(None)
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
     selector.grpc = MockGRPCHandler(None)
+    strategy._grpc = MockGRPCHandler(None)
 
     training_samples = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
     assert selector._get_training_set_partition(0, training_samples, 0) == [
@@ -73,15 +79,17 @@ def test_get_training_set_partition():
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
-@patch.object(AbstractSelectionStrategy, "_prepare_training_set")
-# @patch.object(AbstractSelectionStrategy, '_get_info_for_training')
+@patch.object(Selector, "__init__", noop_constructor_mock)
+@patch.object(Selector, "_prepare_training_set")
 def test_get_sample_keys(test__prepare_training_set):
     training_samples = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
     test__prepare_training_set.return_value = training_samples
-    # test__get_info_for_training.return_value = tuple([3, 3])
 
-    selector = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = Selector()
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
     selector.grpc = MockGRPCHandler(None)
+    strategy._grpc = MockGRPCHandler(None)
 
     assert selector.get_sample_keys(0, 0, 0) == ["a", "b", "c", "d"]
     assert selector.get_sample_keys(0, 0, 1) == ["e", "f", "g", "h"]
@@ -91,14 +99,18 @@ def test_get_sample_keys(test__prepare_training_set):
     with pytest.raises(ValueError):
         selector.get_sample_keys(0, 0, 10)
     with pytest.raises(NotImplementedError):
-        selector._select_new_training_samples(0, 0)
+        selector.select_new_training_samples(0, 0)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
+@patch.object(Selector, "__init__", noop_constructor_mock)
 def test_register_training():
-    selector = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = Selector()
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
     selector.grpc = MockGRPCHandler(None)
+    strategy._grpc = MockGRPCHandler(None)
 
     assert selector.register_training(1000, 1) == 5
     with pytest.raises(Exception):
@@ -120,6 +132,7 @@ def test_base_selector_get_new_training_samples(test__get_seen_data, test__get_u
     selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._set_unseen_data_ratio(0.75)
     selector._is_adaptive_ratio = False
+    selector._grpc = MockGRPCHandler(None)
     with pytest.raises(Exception):
         selector._set_unseen_data_ratio(1.1)
     with pytest.raises(Exception):
@@ -174,7 +187,7 @@ def test_base_selector_get_seen_data():
 
     selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
-    selector.grpc = MockGRPCHandler(test_metadata_response)
+    selector._grpc = MockGRPCHandler(test_metadata_response)
 
     for key in selector._get_seen_data(0, 1):
         assert key in ["a", "b"]
@@ -189,7 +202,7 @@ def test_base_selector_get_unseen_data():
 
     selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
-    selector.grpc = MockGRPCHandler(test_metadata_response)
+    selector._grpc = MockGRPCHandler(test_metadata_response)
 
     for key in selector._get_unseen_data(0, 1):
         assert key in ["a", "b"]
@@ -203,7 +216,7 @@ def test_gdumb_selector_get_metadata():
     test_metadata_response = ["a", "b"], [0, 1], [0, 0], [0, 4], ["a", "b"]
 
     selector = GDumbStrategy(None)  # pylint: disable=abstract-class-instantiated
-    selector.grpc = MockGRPCHandler(test_metadata_response)
+    selector._grpc = MockGRPCHandler(test_metadata_response)
 
     assert selector._get_all_metadata(0) == (["a", "b"], [0, 4])
 
@@ -214,7 +227,7 @@ def test_score_selector_get_metadata():
     test_metadata_response = ["a", "b"], [-1.5, 2.4], [0, 0], [0, 4], ["a", "b"]
 
     selector = ScoreStrategy(None)  # pylint: disable=abstract-class-instantiated
-    selector.grpc = MockGRPCHandler(test_metadata_response)
+    selector._grpc = MockGRPCHandler(test_metadata_response)
 
     assert selector._get_all_metadata(0) == (["a", "b"], [-1.5, 2.4])
 

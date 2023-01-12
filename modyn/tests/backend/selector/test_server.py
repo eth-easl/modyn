@@ -44,7 +44,7 @@ def test_prepare_training_set(
     selector_server = SelectorServer(pipeline_cfg, sample_cfg)
     servicer = selector_server.grpc_server
 
-    assert selector_server.selector._strategy.register_training(training_set_size=8, num_workers=1) == 0
+    assert selector_server.selector.register_training(training_set_size=8, num_workers=1) == 0
 
     all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
     all_classes = [1, 1, 1, 1, 2, 2, 3, 3]

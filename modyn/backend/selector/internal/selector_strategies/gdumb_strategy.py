@@ -36,5 +36,5 @@ class GDumbStrategy(AbstractSelectionStrategy):
 
     def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[int]]:
         query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = {training_id}"
-        _, _, _, labels, data = self.grpc.get_samples_by_metadata_query(query)
+        _, _, _, labels, data = self._grpc.get_samples_by_metadata_query(query)
         return data, labels

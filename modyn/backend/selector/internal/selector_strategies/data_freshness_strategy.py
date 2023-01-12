@@ -1,4 +1,5 @@
 import numpy as np
+from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 
@@ -18,8 +19,8 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict):
-        super().__init__(config)
+    def __init__(self, config: dict, grpc: GRPCHandler):
+        super().__init__(config, grpc)
 
         self.unseen_data_ratio = 1.0
         self.old_data_ratio = 0.0
@@ -82,7 +83,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
@@ -101,7 +102,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
         assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
@@ -117,7 +118,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
         assert np.array(seen).all(), "Queried seen data, but got unseen data."
         return len(keys)
 
@@ -132,6 +133,6 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
+        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
         assert not np.array(seen).any(), "Queried unseen data, but got seen data."
         return len(keys)

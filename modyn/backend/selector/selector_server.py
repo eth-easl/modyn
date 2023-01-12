@@ -9,8 +9,6 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import (  
     add_SelectorServicer_to_server,
 )
 from modyn.backend.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
-from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 from modyn.backend.selector.selector import Selector
 from modyn.utils import validate_yaml
 
@@ -26,7 +24,7 @@ class SelectorServer:
         if not valid:
             raise ValueError(f"Invalid configuration: {errors}")
 
-        self.selector = Selector(self._get_strategy(), modyn_config)
+        self.selector = Selector(modyn_config, pipeline_config)
         self.grpc_server = SelectorGRPCServicer(self.selector)
 
     def _validate_pipeline(self) -> Tuple[bool, List[str]]:
@@ -42,10 +40,3 @@ class SelectorServer:
         server.add_insecure_port("[::]:" + self.modyn_config["selector"]["port"])
         server.start()
         server.wait_for_termination()
-
-    def _get_strategy(self) -> AbstractSelectionStrategy:
-        strategy_name = self.pipeline_config["training"]["strategy"]
-        if strategy_name == "finetune":
-            config = {"selector": {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}}
-            return DataFreshnessStrategy(config)
-        raise NotImplementedError(f"{strategy_name} is not implemented")
