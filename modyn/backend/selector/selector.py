@@ -106,7 +106,7 @@ class Selector:
 
         return training_samples_subset
 
-    def _get_strategy(self, pipeline_config) -> AbstractSelectionStrategy:
+    def _get_strategy(self, pipeline_config: dict) -> AbstractSelectionStrategy:
         strategy_name = pipeline_config["training"]["strategy"]
         if strategy_name == "finetune":
             config = {"selector": {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}}
