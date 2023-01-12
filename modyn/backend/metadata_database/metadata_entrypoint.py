@@ -1,3 +1,6 @@
+# TODO(vGsteiger): The next metadata database PR should add a `modyn-metadata` shell script similar to storage/supervisor
+import logging
+import yaml
 import argparse
 import logging
 import pathlib
@@ -31,7 +34,7 @@ def setup_argparser() -> argparse.ArgumentParser:
     )
     return parser_
 
-
+# TODO(vGsteiger): This not yet 100% aligned with the other components (encapsulation of servicer etc). This should be done in the next metadata database PR
 def run(database: MetadataDatabase, config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(MetadataDatabaseGRPCServicer(database), server)
