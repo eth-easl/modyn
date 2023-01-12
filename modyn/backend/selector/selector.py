@@ -34,19 +34,14 @@ class Selector:
 
     def _validate_pipeline(self) -> Tuple[bool, List[str]]:
         schema_path = (
-            pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
-            / "config"
-            / "schema"
-            / "pipeline-schema.yaml"
+            pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "schema" / "pipeline-schema.yaml"
         )
         return validate_yaml(self.pipeline_config, schema_path)
 
     def run(self) -> None:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
         add_SelectorServicer_to_server(self.grpc_server, server)
-        logging.info(
-            f"Starting server. Listening on port {self.modyn_config['selector']['port']}."
-        )
+        logging.info(f"Starting server. Listening on port {self.modyn_config['selector']['port']}.")
         server.add_insecure_port("[::]:" + self.modyn_config["selector"]["port"])
         server.start()
         server.wait_for_termination()
@@ -54,8 +49,6 @@ class Selector:
     def _get_strategy(self) -> SelectorStrategy:
         strategy_name = self.pipeline_config["training"]["strategy"]
         if strategy_name == "finetune":
-            config = {
-                "selector": {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}
-            }
+            config = {"selector": {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}}
             return DataFreshnessStrategy(config)
         raise NotImplementedError(f"{strategy_name} is not implemented")

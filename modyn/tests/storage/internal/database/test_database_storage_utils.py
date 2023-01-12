@@ -14,15 +14,10 @@ from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
 
 
 def test_get_filesystem_wrapper():
-    filesystem_wrapper = get_filesystem_wrapper(
-        FilesystemWrapperType.LocalFilesystemWrapper, "/tmp/modyn"
-    )
+    filesystem_wrapper = get_filesystem_wrapper(FilesystemWrapperType.LocalFilesystemWrapper, "/tmp/modyn")
     assert filesystem_wrapper is not None
     assert filesystem_wrapper.base_path == "/tmp/modyn"
-    assert (
-        filesystem_wrapper.filesystem_wrapper_type
-        == FilesystemWrapperType.LocalFilesystemWrapper
-    )
+    assert filesystem_wrapper.filesystem_wrapper_type == FilesystemWrapperType.LocalFilesystemWrapper
 
 
 def test_get_filesystem_wrapper_with_invalid_type():
@@ -32,9 +27,7 @@ def test_get_filesystem_wrapper_with_invalid_type():
 
 
 def test_get_file_wrapper():
-    file_wrapper = get_file_wrapper(
-        FileWrapperType.WebdatasetFileWrapper, "/tmp/modyn", "{}"
-    )
+    file_wrapper = get_file_wrapper(FileWrapperType.WebdatasetFileWrapper, "/tmp/modyn", "{}")
     assert file_wrapper is not None
     assert file_wrapper.file_wrapper_type == FileWrapperType.WebdatasetFileWrapper
 

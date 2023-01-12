@@ -18,9 +18,7 @@ class ScoreStrategy(SelectorStrategy):
     def _set_is_softmax_mode(self, is_softmax_mode: bool) -> None:
         self.is_softmax_mode = is_softmax_mode
 
-    def _select_new_training_samples(
-        self, training_id: int, training_set_size: int
-    ) -> list[tuple[str, float]]:
+    def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
         """
         For a given training_id and number of samples, request that many samples from
         the selector.
@@ -35,9 +33,7 @@ class ScoreStrategy(SelectorStrategy):
         if self.is_softmax_mode:
             all_scores_np = np.exp(all_scores_np) / np.sum(np.exp(all_scores_np))
         else:
-            assert (
-                all_scores_np.min() >= 0
-            ), "Scores should be nonnegative if on normal mode!"
+            assert all_scores_np.min() >= 0, "Scores should be nonnegative if on normal mode!"
             all_scores_np = all_scores_np / np.sum(all_scores_np)
         rand_indices = np.random.choice(
             all_samples_np.shape[0],

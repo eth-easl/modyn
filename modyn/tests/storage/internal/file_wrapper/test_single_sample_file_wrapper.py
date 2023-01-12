@@ -9,12 +9,8 @@ from modyn.storage.internal.file_wrapper.single_sample_file_wrapper import (
 )
 
 TMP_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn")
-FILE_PATH = str(
-    pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.png"
-)
-METADATA_PATH = str(
-    pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.json"
-)
+FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.png")
+METADATA_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.json")
 FILE_WRAPPER_CONFIG = {"file_extension": ".png", "label_file_extension": ".json"}
 
 

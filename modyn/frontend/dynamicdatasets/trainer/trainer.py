@@ -35,26 +35,20 @@ class Trainer(ABC):
         self._setup_selector_stub(config)
 
     def _setup_selector_stub(self, config: dict) -> None:
-        selector_channel = grpc.insecure_channel(
-            config["selector"]["hostname"] + ":" + config["selector"]["port"]
-        )
+        selector_channel = grpc.insecure_channel(config["selector"]["hostname"] + ":" + config["selector"]["port"])
         self.__selector_stub = SelectorStub(selector_channel)
 
     def _register_training(self, config: dict) -> int:
         batch_size = config["trainer"]["train_set_size"]
         num_workers = config["trainer"]["num_dataloader_workers"]
-        req = RegisterTrainingRequest(
-            training_set_size=batch_size, num_workers=num_workers
-        )
+        req = RegisterTrainingRequest(training_set_size=batch_size, num_workers=num_workers)
         selector_response = self.__selector_stub.register_training(req)
         return selector_response.training_id
 
     def _setup_model(self) -> None:
         self._model = SmallConv(self._config["trainer"]["model_config"])
 
-    def _scheduler_factory(
-        self, optimizer: Optimizer
-    ) -> lr_scheduler.CosineAnnealingLR:
+    def _scheduler_factory(self, optimizer: Optimizer) -> lr_scheduler.CosineAnnealingLR:
         return lr_scheduler.CosineAnnealingLR(optimizer, 32)
 
     @abstractmethod
@@ -64,9 +58,7 @@ class Trainer(ABC):
     def train(self) -> None:
         self._num_epochs = self._config["trainer"]["epochs"]
         self._criterion = torch.nn.CrossEntropyLoss()
-        self._optimizer = Adam(
-            self._model.parameters(), lr=self._config["trainer"]["lr"]
-        )
+        self._optimizer = Adam(self._model.parameters(), lr=self._config["trainer"]["lr"])
         self._scheduler = self._scheduler_factory(self._optimizer)
 
         # Training from selector

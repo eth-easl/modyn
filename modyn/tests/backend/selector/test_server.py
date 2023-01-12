@@ -40,9 +40,7 @@ def test_prepare_training_set(
         },
     }
 
-    with open(
-        "modyn/config/examples/example-pipeline.yaml", "r", encoding="utf-8"
-    ) as pipeline_file:
+    with open("modyn/config/examples/example-pipeline.yaml", "r", encoding="utf-8") as pipeline_file:
         pipeline_cfg = yaml.safe_load(pipeline_file)
 
     selector = Selector(pipeline_cfg, sample_cfg)

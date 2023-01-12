@@ -11,9 +11,7 @@ from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import (
 from PIL import Image
 
 TEST_DIR = pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn"
-FILE_PATH = str(
-    pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.tar"
-)
+FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.tar")
 
 
 def setup():
@@ -30,9 +28,7 @@ def setup():
                 if m * 28 + n == i:
                     test_jpg.putpixel((m, n), (0, 0, 0))
         test_json = json.dumps({"__key__": str(i), "id": i})
-        test_file.write(
-            {"__key__": str(i), "jpg": test_jpg, "json": test_json, "cls": str(i)}
-        )
+        test_file.write({"__key__": str(i), "jpg": test_jpg, "json": test_json, "cls": str(i)})
     test_file.close()
 
 

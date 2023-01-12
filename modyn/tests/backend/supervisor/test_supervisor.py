@@ -33,9 +33,7 @@ def get_minimal_system_config() -> dict:
     return {}
 
 
-def noop_constructor_mock(
-    self, pipeline_config: dict, modyn_config: dict, replay_at: typing.Optional[int]
-) -> None:
+def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict, replay_at: typing.Optional[int]) -> None:
     pass
 
 
@@ -46,12 +44,8 @@ def sleep_mock(duration: int):
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
-def get_non_connecting_supervisor(
-    test_dataset_available, test_connection_established, test_init_storage
-) -> Supervisor:
-    supervisor = Supervisor(
-        get_minimal_pipeline_config(), get_minimal_system_config(), None
-    )
+def get_non_connecting_supervisor(test_dataset_available, test_connection_established, test_init_storage) -> Supervisor:
+    supervisor = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
 
     return supervisor
 
@@ -240,15 +234,9 @@ def test__query_new_data_from_storage():
     assert not sup._query_new_data_from_storage(0)
 
 
-@patch.object(
-    Supervisor, "_query_new_data_from_storage", return_value=[("a", 42), ("b", 43)]
-)
-@patch.object(
-    DataAmountTrigger, "inform", return_value=False, side_effect=KeyboardInterrupt
-)
-def test_wait_for_new_data(
-    test_inform: MagicMock, test__query_new_data_from_storage: MagicMock
-):
+@patch.object(Supervisor, "_query_new_data_from_storage", return_value=[("a", 42), ("b", 43)])
+@patch.object(DataAmountTrigger, "inform", return_value=False, side_effect=KeyboardInterrupt)
+def test_wait_for_new_data(test_inform: MagicMock, test__query_new_data_from_storage: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     sup.wait_for_new_data(42)
@@ -273,13 +261,9 @@ def test_initial_pass():
     sup.initial_pass()
 
 
-@patch.object(
-    Supervisor, "_query_new_data_from_storage", return_value=[("a", 42), ("b", 43)]
-)
+@patch.object(Supervisor, "_query_new_data_from_storage", return_value=[("a", 42), ("b", 43)])
 @patch.object(DataAmountTrigger, "inform")
-def test_replay_data(
-    test_inform: MagicMock, test__query_new_data_from_storage: MagicMock
-):
+def test_replay_data(test_inform: MagicMock, test__query_new_data_from_storage: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.replay_at = 42
     sup.replay_data()

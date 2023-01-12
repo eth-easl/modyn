@@ -17,9 +17,7 @@ class OnlineDataset(IterableDataset):
 
     def __selector_stub(self) -> SelectorStub:
         selector_channel = grpc.insecure_channel(
-            self._config["selector"]["hostname"]
-            + ":"
-            + self._config["selector"]["port"]
+            self._config["selector"]["hostname"] + ":" + self._config["selector"]["port"]
         )
         return SelectorStub(selector_channel)
 

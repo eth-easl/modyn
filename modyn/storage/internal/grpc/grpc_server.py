@@ -30,9 +30,7 @@ class GRPCServer:
         Returns:
             grpc.Server: GRPC server
         """
-        add_StorageServicer_to_server(
-            StorageGRPCServicer(self.modyn_config), self.server
-        )
+        add_StorageServicer_to_server(StorageGRPCServicer(self.modyn_config), self.server)
         port = self.modyn_config["storage"]["port"]
         logger.info(f"Starting server. Listening on port {port}")
         self.server.add_insecure_port("[::]:" + port)

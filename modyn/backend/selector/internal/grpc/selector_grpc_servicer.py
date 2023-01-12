@@ -32,18 +32,12 @@ class SelectorGRPCServicer(SelectorServicer):
     def __init__(self, strategy: SelectorStrategy):
         self.selector_strategy = strategy
 
-    def register_training(
-        self, request: RegisterTrainingRequest, context: grpc.ServicerContext
-    ) -> TrainingResponse:
+    def register_training(self, request: RegisterTrainingRequest, context: grpc.ServicerContext) -> TrainingResponse:
         logger.info(f"Registering training with request - {str(request)}")
-        training_id = self.selector_strategy.register_training(
-            request.training_set_size, request.num_workers
-        )
+        training_id = self.selector_strategy.register_training(request.training_set_size, request.num_workers)
         return TrainingResponse(training_id=training_id)
 
-    def get_sample_keys(
-        self, request: GetSamplesRequest, context: grpc.ServicerContext
-    ) -> SamplesResponse:
+    def get_sample_keys(self, request: GetSamplesRequest, context: grpc.ServicerContext) -> SamplesResponse:
         logger.info(f"Fetching samples for request - {str(request)}")
         samples_keys = self.selector_strategy.get_sample_keys(
             request.training_id, request.training_set_number, request.worker_id

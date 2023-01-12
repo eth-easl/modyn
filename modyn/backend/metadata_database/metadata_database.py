@@ -33,12 +33,8 @@ class MetadataDatabase:
             "data text NOT NULL,"
             "training_id int NOT NULL)"
         )
-        self.__cursor.execute(
-            "CREATE INDEX IF NOT EXISTS storage_key_idx ON metadata_database (key)"
-        )
-        self.__cursor.execute(
-            "CREATE INDEX IF NOT EXISTS storage_training_id_idx ON metadata_database (training_id)"
-        )
+        self.__cursor.execute("CREATE INDEX IF NOT EXISTS storage_key_idx ON metadata_database (key)")
+        self.__cursor.execute("CREATE INDEX IF NOT EXISTS storage_training_id_idx ON metadata_database (training_id)")
         self.__con.commit()
 
         self.__cursor.execute(
@@ -106,9 +102,7 @@ class MetadataDatabase:
         return_data = [d[4] for d in data]
         return return_keys, scores, seen, labels, return_data
 
-    def get_by_query(
-        self, query: str
-    ) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
+    def get_by_query(self, query: str) -> tuple[list[str], list[float], list[bool], list[int], list[str]]:
         """
         Get the metadata for a given training and a executable query.
 
@@ -149,9 +143,7 @@ class MetadataDatabase:
         Args:
             training_id (int): Training id.
         """
-        self.__cursor.execute(
-            "DELETE FROM metadata_database WHERE training_id = %s", (training_id,)
-        )
+        self.__cursor.execute("DELETE FROM metadata_database WHERE training_id = %s", (training_id,))
         self.__con.commit()
 
     def register_training(self, training_set_size: int, num_workers: int) -> int:

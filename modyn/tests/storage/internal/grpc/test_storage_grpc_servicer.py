@@ -178,9 +178,7 @@ def test_get(mock_get_samples_from_indices):
 
     expetect_responses = [(b"", ["test"]), (b"", ["test3", "test4"])]
 
-    for response, expetect_response in zip(
-        server.Get(request, None), expetect_responses
-    ):
+    for response, expetect_response in zip(server.Get(request, None), expetect_responses):
         assert response is not None
         assert response.chunk == expetect_response[0]
         assert response.keys == expetect_response[1]
@@ -260,17 +258,13 @@ def test_get_new_data_since_no_new_data():
 def test_get_data_in_interval():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetDataInIntervalRequest(
-        dataset_id="test", start_timestamp=0, end_timestamp=NOW + 100000
-    )
+    request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW + 100000)
 
     response = server.GetDataInInterval(request, None)
     assert response is not None
     assert response.keys == ["test", "test2", "test3", "test4", "test5"]
 
-    request = GetDataInIntervalRequest(
-        dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1
-    )
+    request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1)
 
     response = server.GetDataInInterval(request, None)
     assert response is not None
@@ -280,9 +274,7 @@ def test_get_data_in_interval():
 def test_get_data_in_interval_invalid_dataset():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetDataInIntervalRequest(
-        dataset_id="test2", start_timestamp=0, end_timestamp=NOW + 100000
-    )
+    request = GetDataInIntervalRequest(dataset_id="test2", start_timestamp=0, end_timestamp=NOW + 100000)
 
     response = server.GetDataInInterval(request, None)
     assert response is not None

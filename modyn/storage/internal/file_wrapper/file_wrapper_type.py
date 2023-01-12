@@ -11,9 +11,7 @@ class FileWrapperType(Enum):
     """
 
     WebdatasetFileWrapper = "webdataset_file_wrapper"  # pylint: disable=invalid-name
-    SingleSampleFileWrapper = (  # pylint: disable=invalid-name
-        "single_sample_file_wrapper"
-    )
+    SingleSampleFileWrapper = "single_sample_file_wrapper"  # pylint: disable=invalid-name
 
 
 class InvalidFileWrapperTypeException(Exception):

@@ -80,9 +80,7 @@ def test_update_file(session):  # pylint: disable=redefined-outer-name
 
     now = NOW
 
-    session.query(File).filter(File.path == "test").update(
-        {"path": "test2", "created_at": now, "updated_at": now}
-    )
+    session.query(File).filter(File.path == "test").update({"path": "test2", "created_at": now, "updated_at": now})
     session.commit()
 
     assert session.query(File).filter(File.path == "test2").first() is not None

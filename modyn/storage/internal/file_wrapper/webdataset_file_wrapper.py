@@ -25,9 +25,7 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
     https://webdataset.github.io/webdataset/
     """
 
-    tmp_dir: pathlib.Path = (
-        pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp"
-    )
+    tmp_dir: pathlib.Path = pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp"
 
     def __init__(self, file_path: str, file_wrapper_config: dict):
         """Init webdataset file wrapper.
@@ -66,10 +64,7 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
             bytes: Pickled list of samples
         """
         return pickle.dumps(
-            wds.WebDataset(self.file_path)
-            .slice(start, end)
-            .decode("rgb")
-            .to_tuple("jpg;png;jpeg", "cls", "json")
+            wds.WebDataset(self.file_path).slice(start, end).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
         )
 
     def get_sample(self, index: int) -> bytes:
@@ -82,10 +77,7 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
             bytes: Pickled sample
         """
         return pickle.dumps(
-            wds.WebDataset(self.file_path)
-            .slice(index, index + 1)
-            .decode("rgb")
-            .to_tuple("jpg;png;jpeg", "cls", "json")
+            wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
         )
 
     def get_samples_from_indices(self, indices: list) -> bytes:
@@ -101,20 +93,12 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
 
         if str(indices) in self.indeces_cache:
             file = self.indeces_cache[str(indices)]
-            return pickle.dumps(
-                wds.WebDataset(file)
-                .decode("rgb")
-                .to_tuple("jpg;png;jpeg", "cls", "json")
-            )
+            return pickle.dumps(wds.WebDataset(file).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
         dataset = wds.WebDataset(self.file_path)
 
         file_name = uuid.uuid4().hex
-        file = str(
-            pathlib.Path(os.path.abspath(__file__)).parent
-            / "storage_tmp"
-            / f"{file_name}.tar"
-        )
+        file = str(pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp" / f"{file_name}.tar")
         os.makedirs(os.path.dirname(file), exist_ok=True)
         with open(file, "wb") as tmp_file:
             with wds.TarWriter(tmp_file) as dst:
@@ -132,9 +116,7 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
 
         self.indeces_cache[str(indices)] = file
 
-        return pickle.dumps(
-            wds.WebDataset(file).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
-        )
+        return pickle.dumps(wds.WebDataset(file).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
     def write_samples(
         self,

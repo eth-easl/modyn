@@ -7,9 +7,7 @@ class GDumbStrategy(SelectorStrategy):
     Implements the GDumb selection policy.
     """
 
-    def _select_new_training_samples(
-        self, training_id: int, training_set_size: int
-    ) -> list[tuple[str, int]]:
+    def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, int]]:
         """
         For a given training_id and number of samples, request that many samples from the selector.
 
@@ -24,9 +22,7 @@ class GDumbStrategy(SelectorStrategy):
         num_classes = classes.shape[0]
         for clss in range(num_classes):
             num_class_samples = counts[clss]
-            rand_indices = np.random.choice(
-                num_class_samples, size=training_set_size // num_classes, replace=False
-            )
+            rand_indices = np.random.choice(num_class_samples, size=training_set_size // num_classes, replace=False)
             class_indices = np.where(all_classes == classes[clss])[0][rand_indices]
             result_samples.append(np.array(all_samples)[class_indices])
             result_classes.append(np.array(all_classes)[class_indices])

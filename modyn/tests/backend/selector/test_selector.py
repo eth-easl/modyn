@@ -19,9 +19,7 @@ class MockGRPCHandler:
     def __init__(self, metadata_response):
         self.metadata_response = metadata_response
 
-    def register_training(
-        self, training_set_size, num_workers
-    ):  # pylint: disable=unused-argument
+    def register_training(self, training_set_size, num_workers):  # pylint: disable=unused-argument
         return 5
 
     def get_samples_by_metadata_query(self, query):  # pylint: disable=unused-argument
@@ -121,15 +119,11 @@ def test_register_training():
 @patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
 @patch.object(DataFreshnessStrategy, "_get_unseen_data")
 @patch.object(DataFreshnessStrategy, "_get_seen_data")
-def test_base_selector_get_new_training_samples(
-    test__get_seen_data, test__get_unseen_data
-):
+def test_base_selector_get_new_training_samples(test__get_seen_data, test__get_unseen_data):
     test__get_unseen_data.return_value = ["a", "b", "c"]
     test__get_seen_data.return_value = ["d"]
 
-    selector = DataFreshnessStrategy(
-        None
-    )  # pylint: disable=abstract-class-instantiated
+    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._set_unseen_data_ratio(0.75)
     selector._is_adaptive_ratio = False
     with pytest.raises(Exception):
@@ -164,9 +158,7 @@ def test_adaptive_selector_get_new_training_samples(
     test__get_seen_data_size.return_value = 80
     test__get_unseen_data_size.return_value = 20
 
-    selector = DataFreshnessStrategy(
-        None
-    )  # pylint: disable=abstract-class-instantiated
+    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
     selector.unseen_data_ratio = 0.0
 
@@ -186,9 +178,7 @@ def test_adaptive_selector_get_new_training_samples(
 def test_base_selector_get_seen_data():
     test_metadata_response = ["a", "b"], [0, 1], [1, 1], [0, 0], ["a", "b"]
 
-    selector = DataFreshnessStrategy(
-        None
-    )  # pylint: disable=abstract-class-instantiated
+    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
     selector.grpc = MockGRPCHandler(test_metadata_response)
 
@@ -203,9 +193,7 @@ def test_base_selector_get_seen_data():
 def test_base_selector_get_unseen_data():
     test_metadata_response = ["a", "b"], [0, 1], [0, 0], [0, 0], ["a", "b"]
 
-    selector = DataFreshnessStrategy(
-        None
-    )  # pylint: disable=abstract-class-instantiated
+    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
     selector.grpc = MockGRPCHandler(test_metadata_response)
 

@@ -43,10 +43,7 @@ class Storage:
 
     def _validate_config(self) -> Tuple[bool, list[str]]:
         schema_path = (
-            pathlib.Path(os.path.abspath(__file__)).parent.parent
-            / "config"
-            / "schema"
-            / "modyn_config_schema.yaml"
+            pathlib.Path(os.path.abspath(__file__)).parent.parent / "config" / "schema" / "modyn_config_schema.yaml"
         )
         return validate_yaml(self.modyn_config, schema_path)
 
@@ -74,9 +71,7 @@ class Storage:
 
         #  Start the dataset watcher process in a different thread.
         should_stop = Value(c_bool, False)
-        watcher_process = Process(
-            target=run_watcher, args=(self.modyn_config, should_stop)
-        )
+        watcher_process = Process(target=run_watcher, args=(self.modyn_config, should_stop))
         watcher_process.start()
 
         #  Start the storage grpc server.

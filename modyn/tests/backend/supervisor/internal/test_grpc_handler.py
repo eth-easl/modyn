@@ -41,9 +41,7 @@ def test_init_storage(test_insecure_channel, test_connection_established):
     handler = None
 
     with patch.object(GRPCHandler, "init_storage", return_value=None):
-        handler = GRPCHandler(
-            get_simple_config()
-        )  # don't call init storage in constructor
+        handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -64,9 +62,7 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
     handler = None
 
     with patch.object(GRPCHandler, "init_storage", return_value=None):
-        handler = GRPCHandler(
-            get_simple_config()
-        )  # don't call init storage in constructor
+        handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage

@@ -42,9 +42,7 @@ def setup_argparser() -> argparse.ArgumentParser:
 def run(database: MetadataDatabase, config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(MetadataDatabaseGRPCServicer(database), server)
-    logger.info(
-        f'Starting server. Listening on port {config["metadata_database"]["port"]}.'
-    )
+    logger.info(f'Starting server. Listening on port {config["metadata_database"]["port"]}.')
     server.add_insecure_port(f'[::]:{config["metadata_database"]["port"]}')
     server.start()
     server.wait_for_termination()

@@ -42,9 +42,7 @@ class StorageGRPCServicer(StorageServicer):
         super().__init__()
 
     # pylint: disable-next=unused-argument,invalid-name
-    def Get(
-        self, request: GetRequest, context: grpc.ServicerContext
-    ) -> Iterable[GetResponse]:
+    def Get(self, request: GetRequest, context: grpc.ServicerContext) -> Iterable[GetResponse]:
         """Return the data for the given keys.
 
         Args:
@@ -60,21 +58,14 @@ class StorageGRPCServicer(StorageServicer):
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
-            dataset: Dataset = (
-                session.query(Dataset)
-                .filter(Dataset.name == request.dataset_id)
-                .first()
-            )
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
                 yield GetResponse()
                 return
 
             samples: list[Sample] = (
-                session.query(Sample)
-                .filter(Sample.external_key.in_(request.keys))
-                .order_by(Sample.file_id)
-                .all()
+                session.query(Sample).filter(Sample.external_key.in_(request.keys)).order_by(Sample.file_id).all()
             )
 
             if len(samples) == 0:
@@ -84,11 +75,7 @@ class StorageGRPCServicer(StorageServicer):
 
             if len(samples) != len(request.keys):
                 logger.error("Not all keys were found in the database.")
-                not_found_keys = {
-                    s
-                    for s in request.keys
-                    if s not in [sample.external_key for sample in samples]
-                }
+                not_found_keys = {s for s in request.keys if s not in [sample.external_key for sample in samples]}
                 logger.error(f"Keys: {not_found_keys}")
 
             current_file = samples[0].file
@@ -103,9 +90,7 @@ class StorageGRPCServicer(StorageServicer):
                         dataset.file_wrapper_config,
                     )
                     yield GetResponse(
-                        chunk=file_wrapper.get_samples_from_indices(
-                            [index for index, _ in samples_per_file]
-                        ),
+                        chunk=file_wrapper.get_samples_from_indices([index for index, _ in samples_per_file]),
                         keys=[external_key for _, external_key in samples_per_file],
                     )
                     samples_per_file = [(sample.index, sample.external_key)]
@@ -125,11 +110,7 @@ class StorageGRPCServicer(StorageServicer):
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
-            dataset: Dataset = (
-                session.query(Dataset)
-                .filter(Dataset.name == request.dataset_id)
-                .first()
-            )
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
@@ -149,9 +130,7 @@ class StorageGRPCServicer(StorageServicer):
                 logger.info(f"No new data since {timestamp}")
                 return GetNewDataSinceResponse()
 
-            return GetNewDataSinceResponse(
-                keys=[external_key[0] for external_key in external_keys]
-            )
+            return GetNewDataSinceResponse(keys=[external_key[0] for external_key in external_keys])
 
     def GetDataInInterval(
         self, request: GetDataInIntervalRequest, context: grpc.ServicerContext
@@ -164,11 +143,7 @@ class StorageGRPCServicer(StorageServicer):
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
-            dataset: Dataset = (
-                session.query(Dataset)
-                .filter(Dataset.name == request.dataset_id)
-                .first()
-            )
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
@@ -184,14 +159,10 @@ class StorageGRPCServicer(StorageServicer):
             )
 
             if len(external_keys) == 0:
-                logger.info(
-                    f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}"
-                )
+                logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
                 return GetDataInIntervalResponse()
 
-            return GetDataInIntervalResponse(
-                keys=[external_key[0] for external_key in external_keys]
-            )
+            return GetDataInIntervalResponse(keys=[external_key[0] for external_key in external_keys])
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(
@@ -205,11 +176,7 @@ class StorageGRPCServicer(StorageServicer):
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
-            dataset: Dataset = (
-                session.query(Dataset)
-                .filter(Dataset.name == request.dataset_id)
-                .first()
-            )
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")

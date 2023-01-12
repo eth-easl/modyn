@@ -78,11 +78,7 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
         if not self.isdir(path):
             raise NotADirectoryError(f"Path {path} is not a directory.")
         if recursive:
-            return [
-                os.path.join(dp, f)
-                for dp, dn, fn in os.walk(os.path.expanduser(path))
-                for f in fn
-            ]
+            return [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(path)) for f in fn]
         return os.listdir(path)
 
     def isdir(self, path: str) -> bool:

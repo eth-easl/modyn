@@ -10,16 +10,12 @@ from modyn.storage import Storage
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
-EXAMPLE_SYSTEM_CONFIG = (
-    SCRIPT_PATH.parent.parent.parent / "config" / "examples" / "modyn_config.yaml"
-)
+EXAMPLE_SYSTEM_CONFIG = SCRIPT_PATH.parent.parent.parent / "config" / "examples" / "modyn_config.yaml"
 
 NO_FILE = SCRIPT_PATH.parent / "thisshouldnot.exist"
 
 
-def noop_constructor_mock(
-    self, modyn_config: dict  # pylint: disable=unused-argument
-) -> None:
+def noop_constructor_mock(self, modyn_config: dict) -> None:  # pylint: disable=unused-argument
     pass
 
 

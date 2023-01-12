@@ -39,24 +39,14 @@ def test_database_connection():
     with DatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_all()
         assert database.get_session() is not None
-        assert (
-            database.add_dataset(
-                "test", "/tmp/modyn", "local", "local", "test", "0.0.1", "{}"
-            )
-            is True
-        )
+        assert database.add_dataset("test", "/tmp/modyn", "local", "local", "test", "0.0.1", "{}") is True
 
 
 def test_get_session():
     with DatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_all()
         assert database.get_session() is not None
-        assert (
-            database.add_dataset(
-                "test", "/tmp/modyn", "local", "local", "test", "0.0.1", "{}"
-            )
-            is True
-        )
+        assert database.add_dataset("test", "/tmp/modyn", "local", "local", "test", "0.0.1", "{}") is True
 
 
 def test_database_connection_with_existing_dataset():
@@ -117,14 +107,7 @@ def test_database_connection_with_existing_dataset_and_different_base_path():
             )
             is True
         )
-        assert (
-            database.get_session()
-            .query(Dataset)
-            .filter(Dataset.name == "test")
-            .first()
-            .base_path
-            == "/tmp/modyn2"
-        )
+        assert database.get_session().query(Dataset).filter(Dataset.name == "test").first().base_path == "/tmp/modyn2"
 
 
 def test_database_connection_failure():

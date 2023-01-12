@@ -47,9 +47,7 @@ class DataFreshnessStrategy(SelectorStrategy):
         unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
         return unseen_data_ratio
 
-    def _select_new_training_samples(
-        self, training_id: int, training_set_size: int
-    ) -> list[tuple[str]]:
+    def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str]]:
         """
         Selects a new training set of samples for the given training id.
 
@@ -85,9 +83,7 @@ class DataFreshnessStrategy(SelectorStrategy):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
-        assert (
-            len(seen) == 0 or not np.array(seen).any()
-        ), "Queried unseen data, but got seen data."
+        assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
 
@@ -106,9 +102,7 @@ class DataFreshnessStrategy(SelectorStrategy):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
-        assert (
-            len(seen) == 0 or np.array(seen).all()
-        ), "Queried seen data, but got unseen data."
+        assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
 

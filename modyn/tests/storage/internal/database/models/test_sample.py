@@ -53,15 +53,9 @@ def test_add_sample(session):  # pylint: disable=redefined-outer-name
     session.add(sample)
     session.commit()
 
-    assert (
-        session.query(Sample).filter(Sample.external_key == "test").first() is not None
-    )
-    assert (
-        session.query(Sample).filter(Sample.external_key == "test").first().file == file
-    )
-    assert (
-        session.query(Sample).filter(Sample.external_key == "test").first().index == 0
-    )
+    assert session.query(Sample).filter(Sample.external_key == "test").first() is not None
+    assert session.query(Sample).filter(Sample.external_key == "test").first().file == file
+    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 0
 
 
 def test_update_sample(session):  # pylint: disable=redefined-outer-name
@@ -93,9 +87,7 @@ def test_update_sample(session):  # pylint: disable=redefined-outer-name
 
     session.query(Sample).filter(Sample.external_key == "test").update({"index": 1})
 
-    assert (
-        session.query(Sample).filter(Sample.external_key == "test").first().index == 1
-    )
+    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 1
 
 
 def test_delete_sample(session):  # pylint: disable=redefined-outer-name

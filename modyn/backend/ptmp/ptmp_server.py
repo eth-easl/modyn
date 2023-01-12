@@ -31,24 +31,18 @@ class PostTrainingMetadataProcessor(PostTrainingMetadataProcessorServicer):
         super().__init__()
         self.__config = config
         processor_module = dynamic_module_import("backend.ptmp.processor")
-        self.__processor = getattr(processor_module, config["ptmp"]["processor"])(
-            config
-        )
+        self.__processor = getattr(processor_module, config["ptmp"]["processor"])(config)
 
     def ProcessPostTrainingMetadata(
         self, request: PostTrainingMetadataRequest, context: grpc.ServicerContext
     ) -> PostTrainingMetadataResponse:
-        self.__processor.process_post_training_metadata(
-            request.training_id, request.data
-        )
+        self.__processor.process_post_training_metadata(request.training_id, request.data)
         return PostTrainingMetadataResponse()
 
 
 def serve(config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    add_PostTrainingMetadataProcessorServicer_to_server(
-        PostTrainingMetadataProcessor(config), server
-    )
+    add_PostTrainingMetadataProcessorServicer_to_server(PostTrainingMetadataProcessor(config), server)
     logging.info("Starting server. Listening on port ." + config["ptmp"]["port"])
     server.add_insecure_port(f'[::]:{config["ptmp"]["port"]}')
     server.start()

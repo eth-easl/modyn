@@ -17,9 +17,7 @@ from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc i
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 
 
-def noop_constructor_mock(
-    self, channel: grpc.Channel
-) -> None:  # pylint: disable=unused-argument
+def noop_constructor_mock(self, channel: grpc.Channel) -> None:  # pylint: disable=unused-argument
     pass
 
 
@@ -40,9 +38,7 @@ def test_init(test_insecure_channel, test__grpc_connection_established):
 
 
 def test_grpc_connection_established_times_out():
-    assert not modyn.utils.grpc_connection_established(
-        grpc.insecure_channel("1.2.3.4:42"), 0.5
-    )
+    assert not modyn.utils.grpc_connection_established(grpc.insecure_channel("1.2.3.4:42"), 0.5)
 
 
 @patch("grpc.channel_ready_future")
@@ -64,9 +60,7 @@ def test_init_metadata(test_insecure_channel, test__grpc_connection_established)
     handler = None
 
     with patch.object(GRPCHandler, "_init_metadata", return_value=None):
-        handler = GRPCHandler(
-            get_simple_config()
-        )  # don't call init storage in constructor
+        handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_metadata
@@ -84,9 +78,7 @@ def test_init_metadata_throws(test_insecure_channel, test__grpc_connection_estab
     handler = None
 
     with patch.object(GRPCHandler, "_init_metadata", return_value=None):
-        handler = GRPCHandler(
-            get_simple_config()
-        )  # don't call init storage in constructor
+        handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_metadata
@@ -140,9 +132,7 @@ def test_get_samples_by_metadata_query(test__grpc_connection_established):
     with patch.object(
         handler.metadata_database,
         "GetByQuery",
-        return_value=GetResponse(
-            keys=keys, scores=scores, data=data, seen=seen, label=label
-        ),
+        return_value=GetResponse(keys=keys, scores=scores, data=data, seen=seen, label=label),
     ) as avail_method:
         got = handler.get_samples_by_metadata_query("sample_query")
         expect = (keys, scores, seen, label, data)

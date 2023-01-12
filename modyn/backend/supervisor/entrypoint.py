@@ -54,9 +54,7 @@ def main() -> None:
         modyn_config = yaml.safe_load(config_file)
 
     if args.start_replay_at is not None:
-        logger.info(
-            f"Starting supervisor in experiment mode. Replay timestamp is set to {args.start_replay_at}"
-        )
+        logger.info(f"Starting supervisor in experiment mode. Replay timestamp is set to {args.start_replay_at}")
 
     logger.info("Initializing supervisor.")
     supervisor = Supervisor(pipeline_config, modyn_config, args.start_replay_at)

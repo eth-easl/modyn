@@ -22,9 +22,7 @@ def test_init_fails_if_invalid() -> None:
     ):
         DataAmountTrigger(callback, {})
 
-    with pytest.raises(
-        AssertionError, match="data_points_for_trigger needs to be at least 1"
-    ):
+    with pytest.raises(AssertionError, match="data_points_for_trigger needs to be at least 1"):
         DataAmountTrigger(callback, {"data_points_for_trigger": 0})
 
 
