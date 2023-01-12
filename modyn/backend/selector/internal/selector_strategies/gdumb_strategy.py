@@ -3,7 +3,7 @@ import numpy as np
 from modyn.backend.selector.selector_strategy import SelectorStrategy
 
 
-class GDumbSelector(SelectorStrategy):
+class GDumbStrategy(SelectorStrategy):
     """
     Implements the GDumb selection policy.
     """

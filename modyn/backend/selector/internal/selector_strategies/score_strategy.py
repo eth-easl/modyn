@@ -2,7 +2,7 @@ from modyn.backend.selector.selector_strategy import SelectorStrategy
 import numpy as np
 
 
-class ScoreSelector(SelectorStrategy):
+class ScoreStrategy(SelectorStrategy):
     """Implements a score based selector. Has two modes: softmax mode and normal mode.
     As the name suggests, softmax mode will apply softmax to the samples (so the scores
     can be negative). Defaults to softmax mode.

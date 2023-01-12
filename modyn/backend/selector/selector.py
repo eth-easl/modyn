@@ -6,8 +6,8 @@ from concurrent import futures
 import grpc
 
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import add_SelectorServicer_to_server  # noqa: E402, E501
-from modyn.backend.selector.selector_server import SelectorGRPCServer
-from modyn.backend.selector.custom_selectors.basic_selector import BasicSelector
+from modyn.backend.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
+from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 from modyn.backend.selector.selector_strategy import SelectorStrategy
 
 from modyn.utils import validate_yaml
@@ -25,7 +25,7 @@ class Selector():
             raise ValueError(f"Invalid configuration: {errors}")
 
         self.strategy = self._get_strategy()
-        self.grpc_server = SelectorGRPCServer(self.strategy)
+        self.grpc_server = SelectorGRPCServicer(self.strategy)
 
     def _validate_pipeline(self) -> Tuple[bool, List[str]]:
         schema_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent \
@@ -49,5 +49,5 @@ class Selector():
                     'is_adaptive_ratio': False
                 }
             }
-            return BasicSelector(config)
+            return DataFreshnessStrategy(config)
         raise NotImplementedError(f'{strategy_name} is not implemented')

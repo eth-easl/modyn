@@ -1,20 +1,17 @@
-
+# pylint: disable=unused-argument
 from unittest.mock import patch
 from modyn.backend.selector.selector import Selector
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest  # noqa: E402, E501
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest  # noqa: E402, E501, E611
 from modyn.backend.selector.selector_entrypoint import main
 import modyn.utils
 import sys
 import pytest
 import grpc
 import yaml
-# pylint: skip-file
-
-# We do not use the parameters in this empty mock constructor.
 
 
-def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argument
+def noop_constructor_mock(self, config: dict):  
     pass
 
 

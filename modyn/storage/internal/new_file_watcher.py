@@ -56,7 +56,6 @@ class NewFileWatcher:
 
         if filesystem_wrapper.exists(dataset.base_path):
             if filesystem_wrapper.isdir(dataset.base_path):
-                print(f"Path {dataset.base_path} is a directory.")
                 self._update_files_in_directory(
                     filesystem_wrapper, dataset.file_wrapper_type, dataset.base_path, timestamp, session, dataset
                 )

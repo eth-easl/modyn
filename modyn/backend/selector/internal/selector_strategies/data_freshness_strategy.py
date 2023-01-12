@@ -3,7 +3,7 @@ from modyn.backend.selector.selector_strategy import SelectorStrategy
 import numpy as np
 
 
-class BasicSelector(SelectorStrategy):
+class DataFreshnessStrategy(SelectorStrategy):
     """
     This class implements selection solely based on freshness of the data.
     Specifically, there is a "unseen_data_ratio" that controls

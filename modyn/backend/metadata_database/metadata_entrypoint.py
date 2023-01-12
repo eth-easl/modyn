@@ -6,7 +6,7 @@ import grpc
 from concurrent import futures
 
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import add_MetadataServicer_to_server  # noqa: E501, E402
-from modyn.backend.metadata_database.internal.grpc.metadata_database_server import MetadataDatabaseGRPCServer
+from modyn.backend.metadata_database.internal.grpc.metadata_database_grpc_servicer import MetadataDatabaseGRPCServicer
 from modyn.backend.metadata_database.metadata_database import MetadataDatabase
 
 logging.basicConfig(level=logging.NOTSET,
@@ -23,8 +23,8 @@ def setup_argparser() -> argparse.ArgumentParser:
 
 def run(database: MetadataDatabase, config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    add_MetadataServicer_to_server(MetadataDatabaseGRPCServer(database), server)
-    logging.info(f'Starting server. Listening on port {config["metadata_database"]["port"]}.')
+    add_MetadataServicer_to_server(MetadataDatabaseGRPCServicer(database), server)
+    logger.info(f'Starting server. Listening on port {config["metadata_database"]["port"]}.')
     server.add_insecure_port(f'[::]:{config["metadata_database"]["port"]}')
     server.start()
     server.wait_for_termination()
