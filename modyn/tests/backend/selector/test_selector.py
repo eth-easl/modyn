@@ -3,16 +3,10 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import (
-    DataFreshnessStrategy,
-)
-from modyn.backend.selector.internal.selector_strategies.gdumb_strategy import (
-    GDumbStrategy,
-)
-from modyn.backend.selector.internal.selector_strategies.score_strategy import (
-    ScoreStrategy,
-)
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
+from modyn.backend.selector.internal.selector_strategies.gdumb_strategy import GDumbStrategy
+from modyn.backend.selector.internal.selector_strategies.score_strategy import ScoreStrategy
 
 
 class MockGRPCHandler:

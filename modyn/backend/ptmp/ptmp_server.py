@@ -12,10 +12,7 @@ path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from backend.ptmp.ptmp_pb2 import (  # noqa: E402
-    PostTrainingMetadataRequest,
-    PostTrainingMetadataResponse,
-)
+from backend.ptmp.ptmp_pb2 import PostTrainingMetadataRequest, PostTrainingMetadataResponse  # noqa: E402
 from backend.ptmp.ptmp_pb2_grpc import (  # noqa: E402
     PostTrainingMetadataProcessorServicer,
     add_PostTrainingMetadataProcessorServicer_to_server,

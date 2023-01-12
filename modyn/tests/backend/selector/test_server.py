@@ -6,12 +6,10 @@ import grpc
 import modyn.utils
 import pytest
 import yaml
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
-    GetSamplesRequest,
-)  # noqa: E402, E501, E611
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest  # noqa: E402, E501, E611
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
-from modyn.backend.selector.selector_server import SelectorServer
 from modyn.backend.selector.selector_entrypoint import main
+from modyn.backend.selector.selector_server import SelectorServer
 
 
 def noop_constructor_mock(self, config: dict):

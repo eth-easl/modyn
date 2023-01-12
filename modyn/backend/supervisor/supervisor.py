@@ -6,13 +6,7 @@ from time import sleep
 
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
-from modyn.utils import (
-    current_time_millis,
-    dynamic_module_import,
-    model_available,
-    trigger_available,
-    validate_yaml,
-)
+from modyn.utils import current_time_millis, dynamic_module_import, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
 

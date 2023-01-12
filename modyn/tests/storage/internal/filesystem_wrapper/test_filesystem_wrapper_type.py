@@ -1,7 +1,5 @@
 import pytest
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
-    FilesystemWrapperType,
-)
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 
 
 def test_invalid_filesystem_wrapper_type():

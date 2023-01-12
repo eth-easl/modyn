@@ -10,9 +10,7 @@ from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import
     GetTrainingRequest,
     RegisterRequest,
 )
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (
-    MetadataStub,
-)
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
 
 TIMEOUT_SEC = 5
 logger = logging.getLogger(__name__)

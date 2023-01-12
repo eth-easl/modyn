@@ -4,9 +4,7 @@ import logging
 from concurrent import futures
 
 import grpc
-from modyn.storage.internal.grpc.generated.storage_pb2_grpc import (
-    add_StorageServicer_to_server,
-)
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import add_StorageServicer_to_server
 from modyn.storage.internal.grpc.storage_grpc_servicer import StorageGRPCServicer
 
 logger = logging.getLogger(__name__)

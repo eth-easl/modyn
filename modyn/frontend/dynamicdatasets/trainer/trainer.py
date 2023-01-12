@@ -15,12 +15,8 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from backend.selector.selector_pb2 import RegisterTrainingRequest  # noqa: E402
 from backend.selector.selector_pb2_grpc import SelectorStub  # noqa: E402
-from frontend.dynamicdatasets.trainer.data.mnist_dataset import (  # noqa: E402
-    get_mnist_dataset,
-)
-from frontend.dynamicdatasets.trainer.data.online_mnistdataset import (  # noqa: E402
-    OnlineMNISTDataset,
-)
+from frontend.dynamicdatasets.trainer.data.mnist_dataset import get_mnist_dataset  # noqa: E402
+from frontend.dynamicdatasets.trainer.data.online_mnistdataset import OnlineMNISTDataset  # noqa: E402
 
 logging.basicConfig(format="%(asctime)s %(message)s")
 

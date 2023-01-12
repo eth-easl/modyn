@@ -8,12 +8,8 @@ from modyn.storage.internal.database.database_connection import DatabaseConnecti
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
-from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import (
-    WebdatasetFileWrapper,
-)
-from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import (
-    LocalFilesystemWrapper,
-)
+from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
+from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetDataInIntervalRequest,

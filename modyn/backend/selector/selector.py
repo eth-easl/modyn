@@ -1,6 +1,7 @@
 from __future__ import annotations
-from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
+from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 
 class Selector:

@@ -11,9 +11,7 @@ from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import
     RegisterResponse,
     TrainingResponse,
 )
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (
-    MetadataStub,
-)
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 
 

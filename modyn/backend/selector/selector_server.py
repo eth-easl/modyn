@@ -5,17 +5,13 @@ from concurrent import futures
 from typing import List, Tuple
 
 import grpc
-from modyn.backend.selector.selector import Selector
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import (  # noqa: E402, E501
     add_SelectorServicer_to_server,
 )
-from modyn.backend.selector.internal.grpc.selector_grpc_servicer import (
-    SelectorGRPCServicer,
-)
-from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import (
-    DataFreshnessStrategy,
-)
+from modyn.backend.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
+from modyn.backend.selector.selector import Selector
 from modyn.utils import validate_yaml
 
 logger = logging.getLogger(__name__)

@@ -10,9 +10,7 @@ import yaml
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (  # noqa: E501, E402
     add_MetadataServicer_to_server,
 )
-from modyn.backend.metadata_database.internal.grpc.metadata_database_grpc_servicer import (
-    MetadataDatabaseGRPCServicer,
-)
+from modyn.backend.metadata_database.internal.grpc.metadata_database_grpc_servicer import MetadataDatabaseGRPCServicer
 from modyn.backend.metadata_database.metadata_database import MetadataDatabase
 
 logging.basicConfig(

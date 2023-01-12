@@ -13,12 +13,8 @@ from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import (
-    AbstractFileSystemWrapper,
-)
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
-    FilesystemWrapperType,
-)
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from modyn.storage.internal.new_file_watcher import NewFileWatcher
 
 FILE_TIMESTAMP = 1600000000

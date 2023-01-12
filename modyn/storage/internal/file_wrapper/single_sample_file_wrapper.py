@@ -2,9 +2,7 @@
 
 import pathlib
 
-from modyn.storage.internal.file_wrapper.abstract_file_wrapper import (
-    AbstractFileWrapper,
-)
+from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
 

@@ -5,9 +5,7 @@ import pickle
 import shutil
 
 import webdataset as wds
-from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import (
-    WebdatasetFileWrapper,
-)
+from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from PIL import Image
 
 TEST_DIR = pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn"

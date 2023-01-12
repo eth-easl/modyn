@@ -5,12 +5,8 @@ It is used to access files on the local filesystem.
 """
 import os
 
-from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import (
-    AbstractFileSystemWrapper,
-)
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
-    FilesystemWrapperType,
-)
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 
 
 class LocalFilesystemWrapper(AbstractFileSystemWrapper):
