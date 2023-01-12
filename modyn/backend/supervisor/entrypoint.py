@@ -49,7 +49,7 @@ def setup_argparser() -> argparse.ArgumentParser:
     return parser_
 
 
-def validate_args(args: Any) -> bool:
+def validate_args(args: Any) -> None:
     assert args.pipeline.is_file(), f"File does not exist: {args.pipeline}"
     assert args.config.is_file(), f"File does not exist: {args.config}"
 
