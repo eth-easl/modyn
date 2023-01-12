@@ -49,7 +49,8 @@ class GRPCHandler:
         response: GetNewDataSinceResponse = self.storage.GetNewDataSince(request)
 
         keys = response.keys
-        # TODO(#76): We want to return the keys _and_ the timestamp of the data from the storage. For now, manual timestamp 42
+        # TODO(#76): We want to return the keys _and_ the timestamp of the data from the storage.
+        # For now, manual timestamp 42
         keys_timestamped = [(key, 42) for key in keys]
         return keys_timestamped
 
@@ -66,7 +67,8 @@ class GRPCHandler:
 
         keys = response.keys
 
-        # TODO(#76): We want to return the keys _and_ the timestamp of the data from the storage. For now, manual timestamp 42
+        # TODO(#76): We want to return the keys _and_ the timestamp of the data from the storage.
+        #  For now, manual timestamp 42
         keys_timestamped = [(key, 42) for key in keys]
         return keys_timestamped
 

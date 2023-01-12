@@ -1,6 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Callable
-
 
 class Trigger(ABC):
     def __init__(self, trigger_config: dict) -> None:

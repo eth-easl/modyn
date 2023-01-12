@@ -1,5 +1,4 @@
 # pylint: disable=abstract-class-instantiated,unused-argument
-from typing import Callable
 from unittest.mock import patch
 
 from modyn.backend.supervisor.internal.trigger import Trigger
@@ -11,4 +10,4 @@ def get_trigger() -> Trigger:
 
 
 def test_initialization() -> None:
-    trigger = get_trigger()
+    _ = get_trigger()

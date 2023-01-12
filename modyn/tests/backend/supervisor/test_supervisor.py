@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 from modyn.backend.supervisor import Supervisor
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.backend.supervisor.internal.triggers.amounttrigger import DataAmountTrigger
 
 
 def get_minimal_pipeline_config() -> dict:

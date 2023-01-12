@@ -1,5 +1,5 @@
 # pylint: disable=unused-argument
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import grpc
 import pytest
@@ -184,7 +184,7 @@ def test_shutdown_trainer_server():
     training_id = 42
 
     # TODO(#78): implement a real test when func is implemented.
-    handler.shutdown_trainer_server(42)
+    handler.shutdown_trainer_server(training_id)
 
 
 def test_start_trainer_server():

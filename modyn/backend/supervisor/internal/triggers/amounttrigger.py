@@ -1,5 +1,3 @@
-from typing import Callable
-
 import numpy as np
 from modyn.backend.supervisor.internal.trigger import Trigger
 
@@ -23,7 +21,8 @@ class DataAmountTrigger(Trigger):
         # The idea is to get the indices as follows:
         # 0 1 2 3 4 5 6 7 8 9 10 => data point 2, 5, and 8 should trigger
         # We add 1 onto that index array: 1 2 3 4 5 6 7 8 9 10 11
-        # We take that mod 3: 1 2 0 1 2 0 1 2 0 1 2. We see that all indices that are 0 mod 3 are the indices we are searching for.
+        # We take that mod 3: 1 2 0 1 2 0 1 2 0 1 2.
+        # We see that all indices that are 0 mod 3 are the indices we are searching for.
         # This also works with remaining data, just add 1 + remaining data.
 
         triggering = (
