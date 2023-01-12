@@ -185,7 +185,7 @@ class Supervisor:
     def _handle_new_data(self, new_data: list[tuple[str, int]], selector_batch_size: int = 128) -> bool:
         """This function handles new data during experiments or actual pipeline execution.
         We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
-        If a data point within a batch causes a trigger, 
+        If a data point within a batch causes a trigger,
         we inform the selector about all data points including that data point.
         Otherwise, the selector is informed
         """
@@ -215,20 +215,20 @@ class Supervisor:
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
-            # This call informs the selector about the data until (and including) 
+            # This call informs the selector about the data until (and including)
             # the data point that caused the trigger and then also notifies it about the triggering.
-            # This means the next training call on trigger_id will guarantee 
+            # This means the next training call on trigger_id will guarantee
             # that all data until that point has been processed by the selector.
             trigger_id = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
             self._run_training(trigger_id)  # Blocks until training is done.
 
-            # If no other trigger is coming in this batch, 
+            # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
                 remaining_data = batch[triggering_idx + 1 :]
 
                 if len(remaining_data) > 0:
-                    # These data points will be included in the next trigger 
+                    # These data points will be included in the next trigger
                     # because we inform the Selector about them,
                     # just like other batches with no trigger at all are included.
                     self.grpc.inform_selector(self.pipeline_id, remaining_data)

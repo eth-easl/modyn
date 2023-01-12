@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class Trigger(ABC):
     def __init__(self, trigger_config: dict) -> None:
         assert trigger_config is not None, "trigger_config cannot be None."
