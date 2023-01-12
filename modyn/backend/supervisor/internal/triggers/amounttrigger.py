@@ -19,8 +19,8 @@ class DataAmountTrigger(Trigger):
         super().__init__(trigger_config)
 
     def inform(self, new_data: list[tuple[str, int]]) -> list[int]:
-        # TODO(Maxiboether): find numpy to do this directly, if possible
-        triggering = np.array(range(self.remaining_data_points, len(new_data) + self.remaining_data_points)) % self.data_points_for_trigger
+        # TODO(Maxiboether): this is wrong. for example, we dont want to trigger on the very first data point at index 0, which is mod % always false. rethink logic and check why tests are not run!
+        triggering = np.arange(self.remaining_data_points, len(new_data) + self.remaining_data_points) % self.data_points_for_trigger
         triggering_indices = list(np.where(triggering)[0])
 
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger

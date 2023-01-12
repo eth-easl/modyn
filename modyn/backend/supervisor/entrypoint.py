@@ -42,7 +42,7 @@ def setup_argparser() -> argparse.ArgumentParser:
         "--stop-replay-at",
         type=int,
         action="store",
-        help="Optional addition to `start-replay-at`. Defines the end of the replay interval. "
+        help="Optional addition to `start-replay-at`. Defines the end of the replay interval (inclusive). "
         "If not given, all data is replayed.",
     )
 

@@ -164,16 +164,19 @@ class Supervisor:
         last_timestamp = start_timestamp
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
+        last_keys = set()
+
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
         try:
             while True:
-                # TODO(MaxiBoether): is get_new_data_since inclusive or exclusive? If inclusive, we need to filter out the data points we have already seen
-                # i.e., last_timestamp will get set to 42, and then if we receive all keys with 42 again, we need to remove the keys that we saw in the last iteration
-                # If it is exclusive, we might lose new data with the same timestamp that came in while the gRPC request was being processed
-                # Best solution would probably be inclusive + filtering out the keys that we processed at the supervisor.
                 new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
+                # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
+                new_data = [(key, timestamp) for (key, timestamp) in new_data if key not in last_keys]
                 last_timestamp = max([timestamp for (_, timestamp) in new_data])
+
+                # Remember all data points with last_timestamp so we do not process them again in the next iteration
+                last_keys = set([key for (key, timestamp) in new_data if timestamp == last_timestamp])
 
                 if not self._handle_new_data(new_data):
                     sleep(2)
@@ -243,7 +246,6 @@ class Supervisor:
         pass
 
     def replay_data(self) -> None:
-        # TODO(MaxiBoether): Think about inclusivity/exclusivity of get_data functions
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
