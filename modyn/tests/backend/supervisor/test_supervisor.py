@@ -229,19 +229,6 @@ def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_s
 def test_wait_for_new_data_filtering():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
-    #def mocked_get_new_data_since(dataset_id: str, last_timestamp: int):
-    #    assert dataset_id == "test"
-#
- #       if last_timestamp == 21:
-  #          return 
-   #     elif last_timestamp == 43:
-    #        return 
-     #   elif last_timestamp == 45:
-      #      return []
-       # else:
-        #    assert False, "Should not happen."
-
-
     mocked__handle_new_data_return_vals = [True, True, KeyboardInterrupt]
     mocked_get_new_data_since = [[("a", 42), ("b", 43), ("c", 43)], [("b", 43), ("c", 43), ("d", 43), ("e", 45)], [], ValueError]
 
@@ -261,35 +248,100 @@ def test_wait_for_new_data_filtering():
             assert get_new_data_mock.call_args_list == expected_get_new_data_arg_list
 
 def test__handle_new_data():
-    # TODO(MaxiBoether): implement
-    pass
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
-def test__handle_new_data_batch():
-    # TODO(MaxiBoether): implement
-    pass
+    batching_return_vals = [False, True, False]
+    batch_size = 2
+    new_data = [("a", 1), ("b", 2), ("c", 3), ("d", 4), ("e", 5)]
 
-def test__handle_triggers_within_batch():
-    # TODO(MaxiBoether): implement
-    pass
+    batch_mock: MagicMock
+    with patch.object(sup, "_handle_new_data_batch", side_effect=batching_return_vals) as batch_mock:
+        result = sup._handle_new_data(new_data, batch_size)
+        assert result
 
-def test__run_training():
-    # TODO(MaxiBoether): implement
-    pass
+        expected_handle_new_data_batch_arg_list = [call([("a", 1), ("b", 2)]), call([("c", 3), ("d", 4)]), call([("e", 5)])]
+        assert batch_mock.call_count == 3
+        assert batch_mock.call_args_list == expected_handle_new_data_batch_arg_list
+
+@patch.object(GRPCHandler, "inform_selector")
+def test__handle_new_data_batch_no_triggers(test_inform_selector: MagicMock):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.pipeline_id = 42
+    batch = [("a", 1), ("b", 2)]
+
+    with patch.object(sup.trigger, "inform", return_value = []) as inform_mock:
+        assert not sup._handle_new_data_batch(batch)
+
+        inform_mock.assert_called_once_with(batch)
+        test_inform_selector.assert_called_once_with(42, batch)
+
+@patch.object(Supervisor, "_run_training")
+@patch.object(GRPCHandler, "inform_selector_and_trigger")
+@patch.object(GRPCHandler, "inform_selector")
+def test__handle_triggers_within_batch(test_inform_selector: MagicMock, test_inform_selector_and_trigger: MagicMock, test__run_training: MagicMock):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.pipeline_id = 42
+    batch = [("a", 1), ("b", 2), ("c", 3), ("d", 4), ("e", 5), ("f", 6), ("g", 7)]
+    triggering_indices = [1, 3, 5]
+    trigger_ids = [0,1,2]
+    test_inform_selector_and_trigger.side_effect = trigger_ids
+
+    sup._handle_triggers_within_batch(batch, triggering_indices)
+
+    inform_selector_and_trigger_expected_args = [ call(42, [("a", 1), ("b", 2)]), call(42, [("c", 3), ("d", 4)]), call(42, [("e", 5), ("f", 6)]) ]
+    assert test_inform_selector_and_trigger.call_count == 3
+    assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
+
+    run_training_expected_args = [call(0), call(1), call(2)]
+    assert test__run_training.call_count == 3
+    assert test__run_training.call_args_list == run_training_expected_args
+
+    assert test_inform_selector.call_count == 1
+    test_inform_selector.assert_called_once_with(42, [("g", 7)])   
+
+@patch.object(GRPCHandler, "start_trainer_server", return_value=1337)
+@patch.object(GRPCHandler, "wait_for_training_completion")
+def test__run_training(test_wait_for_training_completion: MagicMock, test_start_trainer_server: MagicMock):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.pipeline_id = 42
+
+    sup._run_training(21)
+
+    assert sup.current_training_id == 1337
+
+    test_wait_for_training_completion.assert_called_once_with(1337)
+    test_start_trainer_server.assert_called_once_with(42, 21, get_minimal_pipeline_config())
+
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_initial_pass():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
 
-    # TODO(MaxiBoether): implement a real test when func is implemented.
+    # TODO(#10): implement a real test when func is implemented.
     sup.initial_pass()
 
+@patch.object(GRPCHandler, "get_data_in_interval", return_value=[("a", 1), ("b", 2)])
+@patch.object(Supervisor, "_handle_new_data")
+def test_replay_data_closed_inteval(test__handle_new_data: MagicMock, test_get_data_in_interval: MagicMock):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.start_replay_at = 0
+    sup.stop_replay_at = 42
+    sup.replay_data()
 
+    test_get_data_in_interval.assert_called_once_with("test", 0, 42)
+    test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)])
 
-def test_replay_data():
-    # TODO(MaxiBoether): implement
-    pass
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[("a", 1), ("b", 2)])
+@patch.object(Supervisor, "_handle_new_data")
+def test_replay_data_open_inteval(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.start_replay_at = 0
+    sup.stop_replay_at = None
+    sup.replay_data()
 
-
+    test_get_new_data_since.assert_called_once_with("test", 0)
+    test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)])
+    
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_end_pipeline():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)

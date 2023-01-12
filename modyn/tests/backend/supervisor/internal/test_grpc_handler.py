@@ -170,10 +170,11 @@ def test_shutdown_trainer_server():
 def test_start_trainer_server():
     handler = get_non_connecting_handler()
     pipeline_id = 42
+    trigger_id = 21
     pipeline_config = dict()
 
     # TODO(#78): implement a real test when func is implemented.
-    assert handler.start_trainer_server(pipeline_id, pipeline_config)
+    assert handler.start_trainer_server(pipeline_id, trigger_id, pipeline_config) == 42
 
 def test_wait_for_training_completion():
     handler = get_non_connecting_handler()

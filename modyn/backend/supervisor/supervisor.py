@@ -215,7 +215,7 @@ class Supervisor:
         previous_trigger_idx = 0
         for i, triggering_idx in enumerate(triggering_indices):
             triggering_data = batch [previous_trigger_idx : triggering_idx + 1]
-            previous_trigger_idx = triggering_idx
+            previous_trigger_idx = triggering_idx + 1
 
             # This call informs the selector about the data until (and including) the data point that caused the trigger and then also notifies it about the triggering.
             # This means the next training call on trigger_id will guarantee that all data until that point has been processed by the selector.
@@ -235,11 +235,12 @@ class Supervisor:
         """Run training for trigger on GPU and block until done.
         """
         assert self.pipeline_id is not None, "Callback called without a registered pipeline."
-        self.current_training_id = self.grpc.start_training_server(self.pipeline_id, self.pipeline_config)
+        self.current_training_id = self.grpc.start_trainer_server(self.pipeline_id, trigger_id, self.pipeline_config)
 
         self.grpc.wait_for_training_completion(self.current_training_id)
 
     def initial_pass(self) -> None:
+        # TODO(##10): Implement initial pass.
         # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
         # for reference = amount, we need support from the storage module to return the required keys
         pass

@@ -101,7 +101,7 @@ class GRPCHandler:
         # TODO(#78): implement.
         pass
 
-    def start_trainer_server(self, pipeline_id: int, pipeline_config: dict) -> int:
+    def start_trainer_server(self, pipeline_id: int, trigger_id: int, pipeline_config: dict) -> int:
         # TODO(#78): implement.
         return 42 
 
