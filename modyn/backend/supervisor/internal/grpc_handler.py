@@ -79,34 +79,42 @@ class GRPCHandler:
         # TODO(#77): Implement gRPC call.
         return current_time_millis()
 
+    # pylint: disable-next=unused-argument
     def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
         # TODO(#64): Implement gRPC call.
         return 42
 
+    # pylint: disable-next=unused-argument
     def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
         # TODO(#64): Implement gRPC call.
         pass
 
+    # pylint: disable-next=unused-argument
     def inform_selector(self, pipeline_id: int, data: list[tuple[str, int]]) -> None:
         # TODO(#64): Implement gRPC call.
         pass
 
-    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int]]) -> None:
+    # pylint: disable-next=unused-argument
+    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int]]) -> int:
         # TODO(#64): Implement gRPC call.
-        pass
+        return 42
 
+    # pylint: disable-next=unused-argument
     def trainer_server_available(self) -> bool:
         # TODO(#78): implement.
         return True
 
+    # pylint: disable-next=unused-argument
     def shutdown_trainer_server(self, training_id: int) -> None:
         # TODO(#78): implement.
         pass
 
+    # pylint: disable-next=unused-argument
     def start_trainer_server(self, pipeline_id: int, trigger_id: int, pipeline_config: dict) -> int:
         # TODO(#78): implement.
         return 42
 
+    # pylint: disable-next=unused-argument
     def wait_for_training_completion(self, training_id: int) -> None:
         # TODO(#78): implement.
         pass

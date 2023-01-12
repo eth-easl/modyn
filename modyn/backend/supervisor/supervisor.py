@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 class Supervisor:
+    # pylint: disable=too-many-instance-attributes
+    # This is a core class and we require the attributes.
 
     # TODO(#63): Get these from the Trainer and Selector, as soon as that functionality is merged.
     supported_strategies: list[str] = ["finetune"]
@@ -27,6 +29,7 @@ class Supervisor:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
         self.current_training_id = None
+        self.pipeline_id = None
 
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
@@ -168,11 +171,12 @@ class Supervisor:
                 # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
                 new_data = [(key, timestamp) for (key, timestamp) in new_data if key not in last_keys]
                 last_timestamp = (
-                    max([timestamp for (_, timestamp) in new_data]) if len(new_data) > 0 else last_timestamp
+                    max((timestamp for (_, timestamp) in new_data)) if len(new_data) > 0 else last_timestamp
                 )
 
                 # Remember all data points with last_timestamp so we do not process them again in the next iteration
-                last_keys = set([key for (key, timestamp) in new_data if timestamp == last_timestamp])
+                # We use a set to have a O(1) check in the line above.
+                last_keys = {key for (key, timestamp) in new_data if timestamp == last_timestamp}
 
                 if not self._handle_new_data(new_data):
                     sleep(2)
@@ -205,9 +209,9 @@ class Supervisor:
         if len(triggering_indices) > 0:
             self._handle_triggers_within_batch(batch, triggering_indices)
             return True
-        else:
-            self.grpc.inform_selector(self.pipeline_id, batch)
-            return False
+
+        self.grpc.inform_selector(self.pipeline_id, batch)
+        return False
 
     def _handle_triggers_within_batch(self, batch: list[tuple[str, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0

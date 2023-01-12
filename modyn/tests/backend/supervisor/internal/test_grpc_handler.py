@@ -1,4 +1,4 @@
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,no-value-for-parameter
 from unittest.mock import patch
 
 import grpc
@@ -140,7 +140,7 @@ def test_get_data_in_interval(test_grpc_connection_established):
 
 def test_register_pipeline_at_selector():
     handler = get_non_connecting_handler()
-    pipeline_config = dict()
+    pipeline_config = {}
 
     # TODO(#64): implement a real test when func is implemented.
     assert handler.register_pipeline_at_selector(pipeline_config) == 42
@@ -191,7 +191,7 @@ def test_start_trainer_server():
     handler = get_non_connecting_handler()
     pipeline_id = 42
     trigger_id = 21
-    pipeline_config = dict()
+    pipeline_config = {}
 
     # TODO(#78): implement a real test when func is implemented.
     assert handler.start_trainer_server(pipeline_id, trigger_id, pipeline_config) == 42
