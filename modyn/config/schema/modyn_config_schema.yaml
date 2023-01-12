@@ -185,4 +185,4 @@ properties:
 required:
   - project
   - storage
-  - odm
+  - metadata_database
