@@ -1,4 +1,3 @@
-
 from unittest.mock import patch
 from modyn.backend.selector.selector_strategy import SelectorStrategy
 from modyn.backend.selector.custom_selectors.basic_selector import BasicSelector

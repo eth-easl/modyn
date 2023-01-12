@@ -1,14 +1,16 @@
 """Storage database utilities."""
 
-import logging
 import json
+import logging
 
-from modyn.utils import dynamic_module_import
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType, InvalidFileWrapperTypeException
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType, \
-    InvalidFilesystemWrapperTypeException
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
+    FilesystemWrapperType,
+    InvalidFilesystemWrapperTypeException,
+)
+from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +29,11 @@ def get_filesystem_wrapper(filesystem_wrapper_type: FilesystemWrapperType, base_
         AbstractFileSystemWrapper: filesystem wrapper
     """
     if not isinstance(filesystem_wrapper_type, FilesystemWrapperType):
-        raise InvalidFilesystemWrapperTypeException('Invalid filesystem wrapper type.')
-    filesystem_wrapper_module = \
-        dynamic_module_import(
-            f'modyn.storage.internal.filesystem_wrapper.{filesystem_wrapper_type.value}')
-    filesystem_wrapper = getattr(
-        filesystem_wrapper_module,
-        f'{filesystem_wrapper_type.name}'
+        raise InvalidFilesystemWrapperTypeException("Invalid filesystem wrapper type.")
+    filesystem_wrapper_module = dynamic_module_import(
+        f"modyn.storage.internal.filesystem_wrapper.{filesystem_wrapper_type.value}"
     )
+    filesystem_wrapper = getattr(filesystem_wrapper_module, f"{filesystem_wrapper_type.name}")
     return filesystem_wrapper(base_path)
 
 
@@ -54,12 +53,8 @@ def get_file_wrapper(file_wrapper_type: FileWrapperType, path: str, file_wrapper
         AbstractFileWrapper: file wrapper
     """
     if not isinstance(file_wrapper_type, FileWrapperType):
-        raise InvalidFileWrapperTypeException('Invalid file wrapper type.')
+        raise InvalidFileWrapperTypeException("Invalid file wrapper type.")
     file_wrapper_config = json.loads(file_wrapper_config)
-    file_wrapper_module = \
-        dynamic_module_import(f'modyn.storage.internal.file_wrapper.{file_wrapper_type.value}')
-    file_wrapper = getattr(
-        file_wrapper_module,
-        f'{file_wrapper_type.name}'
-    )
+    file_wrapper_module = dynamic_module_import(f"modyn.storage.internal.file_wrapper.{file_wrapper_type.value}")
+    file_wrapper = getattr(file_wrapper_module, f"{file_wrapper_type.name}")
     return file_wrapper(path, file_wrapper_config)

@@ -1,8 +1,7 @@
-import grpc
+import logging
 import os
 import sys
 from pathlib import Path
-import logging
 
 from modyn.backend.selector.selector_strategy import SelectorStrategy
 
@@ -10,7 +9,6 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import Sel
 # Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterTrainingRequest, GetSamplesRequest, SamplesResponse, TrainingResponse  # noqa: E402, E501
-
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()

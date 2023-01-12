@@ -50,4 +50,6 @@ reports/
 htmlcov/
 assets/
 report.html
-.coverage*
+.coverage
+# Pytest creates files that have the name of the local desktop included, so we need to wildcard here
+.coverage.*

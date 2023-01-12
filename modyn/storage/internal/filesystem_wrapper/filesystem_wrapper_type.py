@@ -9,7 +9,7 @@ class FilesystemWrapperType(Enum):
     The name of the enum must be the same as the name of the class.
     """
 
-    LocalFilesystemWrapper = 'local_filesystem_wrapper'  # pylint: disable=invalid-name
+    LocalFilesystemWrapper = "local_filesystem_wrapper"  # pylint: disable=invalid-name
 
 
 class InvalidFilesystemWrapperTypeException(Exception):
