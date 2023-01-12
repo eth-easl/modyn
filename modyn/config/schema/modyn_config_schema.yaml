@@ -133,7 +133,7 @@ properties:
       - hostname
       - new_file_watcher
       - database
-  odm:
+  metadata_database:
     type: object
     properties:
       port:
