@@ -1,3 +1,4 @@
+# TODO(vGsteiger): The next metadata database PR should add a `modyn-metadata` shell script similar to storage/supervisor
 import logging
 import yaml
 import argparse
