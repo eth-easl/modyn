@@ -1,6 +1,6 @@
 # pylint: disable=unused-argument,redefined-outer-name
 import typing
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from modyn.backend.supervisor import Supervisor

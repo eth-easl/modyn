@@ -1,6 +1,7 @@
 import pytest
 from modyn.backend.supervisor.internal.triggers import DataAmountTrigger
 
+
 def test_initialization() -> None:
     trigger = DataAmountTrigger({"data_points_for_trigger": 42})
     assert trigger.data_points_for_trigger == 42

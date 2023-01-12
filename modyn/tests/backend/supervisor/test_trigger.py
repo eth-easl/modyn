@@ -1,6 +1,6 @@
 # pylint: disable=abstract-class-instantiated,unused-argument
 from typing import Callable
-from unittest.mock import  patch
+from unittest.mock import patch
 
 from modyn.backend.supervisor.internal.trigger import Trigger
 

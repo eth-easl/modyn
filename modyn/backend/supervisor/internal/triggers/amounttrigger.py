@@ -1,8 +1,8 @@
 from typing import Callable
 
+import numpy as np
 from modyn.backend.supervisor.internal.trigger import Trigger
 
-import numpy as np
 
 class DataAmountTrigger(Trigger):
     """Triggers when a certain number of data points have been seen."""

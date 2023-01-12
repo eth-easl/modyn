@@ -1,12 +1,18 @@
 # pylint: disable=unused-argument
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import grpc
 import pytest
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 
 # pylint: disable-next=no-name-in-module
-from modyn.storage.internal.grpc.generated.storage_pb2 import DatasetAvailableResponse, GetDataInIntervalRequest,  GetDataInIntervalResponse,  GetNewDataSinceRequest, GetNewDataSinceResponse
+from modyn.storage.internal.grpc.generated.storage_pb2 import (
+    DatasetAvailableResponse,
+    GetDataInIntervalRequest,
+    GetDataInIntervalResponse,
+    GetNewDataSinceRequest,
+    GetNewDataSinceResponse,
+)
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 
 
