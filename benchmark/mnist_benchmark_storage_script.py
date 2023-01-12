@@ -1,12 +1,12 @@
-import pathlib
-import os
-import json
-from PIL import Image
-import tensorflow as tf
-import logging
 import argparse
+import json
+import logging
+import os
+import pathlib
 import shutil
 
+import tensorflow as tf
+from PIL import Image
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -31,7 +31,7 @@ def main():
     args = parser.parse_args()
 
     assert args.shards > 0, f"Number of shards must be greater than 0: {args.shards}"
-    assert args.store or args.remove, f"Either store or remove data"
+    assert args.store or args.remove, "Either store or remove data"
 
     if args.store:
         logger.info(f"Storing data in {args.data} with {args.shards} shards")
@@ -42,29 +42,30 @@ def main():
 
 
 def _store_data(data_dir: pathlib.Path, shards: int):
-    # create directories
+    # create directories
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
     for i in range(shards):
         os.mkdir(data_dir / f"mnist_shard_{i}")
-    # download mnist dataset
+    # download mnist dataset
     mnist = tf.keras.datasets.mnist
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    (x_train, y_train), (_, _) = mnist.load_data()
     samples_per_shard = len(x_train) // shards
-    # store mnist dataset in png format
+    # store mnist dataset in png format
     for i in range(shards):
         for j in range(samples_per_shard):
             image = Image.fromarray(x_train[i*6000+j])
             image.save(data_dir / f"mnist_shard_{i}" / f"{i*6000+j}.png")
-    # store labels in json format for each png an individual label field
+    # store labels in json format for each png an individual label field
     for i in range(shards):
         for j in range(samples_per_shard):
-            with open(data_dir / f"mnist_shard_{i}" / f"{i*6000+j}.json", "w") as f:
-                f.write(json.dumps({"label": int(y_train[i*6000+j])}))
+            with open(data_dir / f"mnist_shard_{i}" / f"{i*6000+j}.json", "w", encoding="utf-8") as file:
+                file.write(json.dumps({"label": int(y_train[i*6000+j])}))
 
 
 def _remove_data(data_dir: pathlib.Path):
     shutil.rmtree(data_dir)
+
 
 if __name__ == "__main__":
     main()
