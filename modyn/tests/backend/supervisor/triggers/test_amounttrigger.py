@@ -28,5 +28,10 @@ def test_inform() -> None:
     assert trigger.inform([("a", 1), ("a", 1), ("a", 1), ("a", 1)]) == [1,3]
     assert trigger.inform([("a", 1), ("a", 1), ("a", 1)]) == [1]
     assert trigger.inform([("a", 1)]) == [0]
+    assert trigger.inform([("a", 1), ("a", 1), ("a", 1), ("a", 1), ("a", 1)]) == [1,3]
+    assert trigger.inform([("a", 1)]) == [0]
 
-    assert False
+    trigger = DataAmountTrigger({"data_points_for_trigger": 5})
+    assert trigger.inform([("a", 1), ("a", 1), ("a", 1), ("a", 1)]) == []
+    assert trigger.inform([("a", 1), ("a", 1), ("a", 1)]) == [0]
+    assert trigger.inform([("a", 1), ("a", 1), ("a", 1)]) == [2]
