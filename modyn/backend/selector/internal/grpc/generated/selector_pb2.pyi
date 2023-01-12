@@ -30,7 +30,12 @@ class RegisterTrainingRequest(google.protobuf.message.Message):
         training_set_size: builtins.int = ...,
         num_workers: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["num_workers", b"num_workers", "training_set_size", b"training_set_size"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing_extensions.Literal[
+            "num_workers", b"num_workers", "training_set_size", b"training_set_size"
+        ],
+    ) -> None: ...
 
 global___RegisterTrainingRequest = RegisterTrainingRequest
 
@@ -45,7 +50,9 @@ class TrainingResponse(google.protobuf.message.Message):
         *,
         training_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
+    def ClearField(
+        self, field_name: typing_extensions.Literal["training_id", b"training_id"]
+    ) -> None: ...
 
 global___TrainingResponse = TrainingResponse
 
@@ -66,7 +73,17 @@ class GetSamplesRequest(google.protobuf.message.Message):
         training_set_number: builtins.int = ...,
         worker_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id", "training_set_number", b"training_set_number", "worker_id", b"worker_id"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing_extensions.Literal[
+            "training_id",
+            b"training_id",
+            "training_set_number",
+            b"training_set_number",
+            "worker_id",
+            b"worker_id",
+        ],
+    ) -> None: ...
 
 global___GetSamplesRequest = GetSamplesRequest
 
@@ -76,12 +93,21 @@ class SamplesResponse(google.protobuf.message.Message):
 
     TRAINING_SAMPLES_SUBSET_FIELD_NUMBER: builtins.int
     @property
-    def training_samples_subset(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def training_samples_subset(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
+        builtins.str
+    ]: ...
     def __init__(
         self,
         *,
         training_samples_subset: collections.abc.Iterable[builtins.str] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["training_samples_subset", b"training_samples_subset"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing_extensions.Literal[
+            "training_samples_subset", b"training_samples_subset"
+        ],
+    ) -> None: ...
 
 global___SamplesResponse = SamplesResponse

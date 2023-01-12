@@ -15,7 +15,9 @@ class OnlineMNISTDataset(OnlineDataset):
         Returns:
             sequence of processed elements
         """
-        images = torch.tensor(list(map(lambda x: json.loads(x)["image"], data)), dtype=torch.float32)
+        images = torch.tensor(
+            list(map(lambda x: json.loads(x)["image"], data)), dtype=torch.float32
+        )
         labels = torch.tensor(list(map(lambda x: json.loads(x)["label"], data)))
         train_data = list(map(lambda i: (images[i], labels[i]), range(len(images))))
         return train_data

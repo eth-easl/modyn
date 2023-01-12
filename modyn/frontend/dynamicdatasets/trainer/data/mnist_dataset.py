@@ -33,7 +33,9 @@ class MNISTDataset(Dataset):
 
 
 def get_mnist_dataset(
-    train_aug: Optional[torch.nn.Module] = None, val_aug: Optional[torch.nn.Module] = None, version: str = "normal"
+    train_aug: Optional[torch.nn.Module] = None,
+    val_aug: Optional[torch.nn.Module] = None,
+    version: str = "normal",
 ) -> dict:
     if train_aug is None:
         train_aug = transforms.Compose(

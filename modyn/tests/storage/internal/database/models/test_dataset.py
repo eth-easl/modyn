@@ -1,7 +1,9 @@
 import pytest
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
+    FilesystemWrapperType,
+)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -32,17 +34,28 @@ def test_add_dataset(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     assert session.query(Dataset).filter(Dataset.name == "test").first() is not None
-    assert session.query(Dataset).filter(Dataset.name == "test").first().base_path == "test"
     assert (
-        session.query(Dataset).filter(Dataset.name == "test").first().filesystem_wrapper_type
+        session.query(Dataset).filter(Dataset.name == "test").first().base_path
+        == "test"
+    )
+    assert (
+        session.query(Dataset)
+        .filter(Dataset.name == "test")
+        .first()
+        .filesystem_wrapper_type
         == FilesystemWrapperType.LocalFilesystemWrapper
     )
     assert (
         session.query(Dataset).filter(Dataset.name == "test").first().file_wrapper_type
         == FileWrapperType.WebdatasetFileWrapper
     )
-    assert session.query(Dataset).filter(Dataset.name == "test").first().description == "test"
-    assert session.query(Dataset).filter(Dataset.name == "test").first().version == "test"
+    assert (
+        session.query(Dataset).filter(Dataset.name == "test").first().description
+        == "test"
+    )
+    assert (
+        session.query(Dataset).filter(Dataset.name == "test").first().version == "test"
+    )
 
 
 def test_update_dataset(session):  # pylint: disable=redefined-outer-name
@@ -67,13 +80,21 @@ def test_update_dataset(session):  # pylint: disable=redefined-outer-name
     )
     session.commit()
 
-    assert session.query(Dataset).filter(Dataset.name == "test").first().base_path == "test2"
+    assert (
+        session.query(Dataset).filter(Dataset.name == "test").first().base_path
+        == "test2"
+    )
     assert (
         session.query(Dataset).filter(Dataset.name == "test").first().file_wrapper_type
         == FileWrapperType.SingleSampleFileWrapper
     )
-    assert session.query(Dataset).filter(Dataset.name == "test").first().description == "test2"
-    assert session.query(Dataset).filter(Dataset.name == "test").first().version == "test2"
+    assert (
+        session.query(Dataset).filter(Dataset.name == "test").first().description
+        == "test2"
+    )
+    assert (
+        session.query(Dataset).filter(Dataset.name == "test").first().version == "test2"
+    )
 
 
 def test_repr(session):  # pylint: disable=redefined-outer-name

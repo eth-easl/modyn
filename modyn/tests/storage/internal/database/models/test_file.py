@@ -2,7 +2,9 @@ import pytest
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
+    FilesystemWrapperType,
+)
 from modyn.utils import current_time_millis
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -37,7 +39,13 @@ def test_add_file(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 
@@ -60,13 +68,21 @@ def test_update_file(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 
     now = NOW
 
-    session.query(File).filter(File.path == "test").update({"path": "test2", "created_at": now, "updated_at": now})
+    session.query(File).filter(File.path == "test").update(
+        {"path": "test2", "created_at": now, "updated_at": now}
+    )
     session.commit()
 
     assert session.query(File).filter(File.path == "test2").first() is not None
@@ -88,7 +104,13 @@ def test_delete_file(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 
@@ -111,7 +133,13 @@ def test_repr_file(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 

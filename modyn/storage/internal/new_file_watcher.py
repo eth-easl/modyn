@@ -9,8 +9,13 @@ from modyn.storage.internal.database.database_connection import DatabaseConnecti
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
-from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
-from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.storage.internal.database.storage_database_utils import (
+    get_file_wrapper,
+    get_filesystem_wrapper,
+)
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import (
+    AbstractFileSystemWrapper,
+)
 from modyn.utils import current_time_millis
 from sqlalchemy import exc
 from sqlalchemy.orm import sessionmaker
@@ -26,7 +31,9 @@ class NewFileWatcher:
     will be added to the database.
     """
 
-    def __init__(self, modyn_config: dict, should_stop: Any):  # See https://github.com/python/typeshed/issues/8799
+    def __init__(
+        self, modyn_config: dict, should_stop: Any
+    ):  # See https://github.com/python/typeshed/issues/8799
         """Initialize the new file watcher.
 
         Args:
@@ -42,7 +49,9 @@ class NewFileWatcher:
         Args:
             timestamp (int): Timestamp to compare the files with.
         """
-        logger.debug(f"Seeking for files with a timestamp that is equal or greater than {timestamp}")
+        logger.debug(
+            f"Seeking for files with a timestamp that is equal or greater than {timestamp}"
+        )
         with DatabaseConnection(self.modyn_config) as database:
             session = database.get_session()
 
@@ -52,12 +61,19 @@ class NewFileWatcher:
                 self._seek_dataset(session, dataset, timestamp)
 
     def _seek_dataset(self, session: Session, dataset: Dataset, timestamp: int) -> None:
-        filesystem_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
+        filesystem_wrapper = get_filesystem_wrapper(
+            dataset.filesystem_wrapper_type, dataset.base_path
+        )
 
         if filesystem_wrapper.exists(dataset.base_path):
             if filesystem_wrapper.isdir(dataset.base_path):
                 self._update_files_in_directory(
-                    filesystem_wrapper, dataset.file_wrapper_type, dataset.base_path, timestamp, session, dataset
+                    filesystem_wrapper,
+                    dataset.file_wrapper_type,
+                    dataset.base_path,
+                    timestamp,
+                    session,
+                    dataset,
                 )
             else:
                 logger.critical(f"Path {dataset.base_path} is not a directory.")
@@ -92,8 +108,12 @@ class NewFileWatcher:
             logger.critical(f"Path {path} is not a directory.")
             return
         for file_path in filesystem_wrapper.list(path, recursive=True):
-            file_wrapper = get_file_wrapper(file_wrapper_type, file_path, dataset.file_wrapper_config)
-            if filesystem_wrapper.get_modified(file_path) >= timestamp and self._file_unknown(session, file_path):
+            file_wrapper = get_file_wrapper(
+                file_wrapper_type, file_path, dataset.file_wrapper_config
+            )
+            if filesystem_wrapper.get_modified(
+                file_path
+            ) >= timestamp and self._file_unknown(session, file_path):
                 try:
                     number_of_samples = file_wrapper.get_number_of_samples()
                     file: File = File(
@@ -106,16 +126,22 @@ class NewFileWatcher:
                     session.add(file)
                     session.commit()
                 except exc.SQLAlchemyError as exception:
-                    logger.warning(f"Could not create file {file_path} in database: {exception}")
+                    logger.warning(
+                        f"Could not create file {file_path} in database: {exception}"
+                    )
                     session.rollback()
                     continue
                 try:
                     for i in range(number_of_samples):
-                        sample: Sample = Sample(file=file, external_key=str(uuid.uuid4()), index=i)
+                        sample: Sample = Sample(
+                            file=file, external_key=str(uuid.uuid4()), index=i
+                        )
                         session.add(sample)
                     session.commit()
                 except exc.SQLAlchemyError as exception:
-                    logger.warning(f"Could not create samples for file {file_path} in database: {exception}")
+                    logger.warning(
+                        f"Could not create samples for file {file_path} in database: {exception}"
+                    )
                     session.rollback()
                     session.delete(file)
                     continue
@@ -129,7 +155,9 @@ class NewFileWatcher:
             self._last_timestamp = current_time_millis()
 
 
-def run_watcher(modyn_config: dict, should_stop: Any) -> None:  # See https://github.com/python/typeshed/issues/8799
+def run_watcher(
+    modyn_config: dict, should_stop: Any
+) -> None:  # See https://github.com/python/typeshed/issues/8799
     """Run the new file watcher.
 
     Args:

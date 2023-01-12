@@ -3,7 +3,9 @@ from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
+    FilesystemWrapperType,
+)
 from modyn.utils import current_time_millis
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -37,7 +39,13 @@ def test_add_sample(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 
@@ -45,9 +53,15 @@ def test_add_sample(session):  # pylint: disable=redefined-outer-name
     session.add(sample)
     session.commit()
 
-    assert session.query(Sample).filter(Sample.external_key == "test").first() is not None
-    assert session.query(Sample).filter(Sample.external_key == "test").first().file == file
-    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 0
+    assert (
+        session.query(Sample).filter(Sample.external_key == "test").first() is not None
+    )
+    assert (
+        session.query(Sample).filter(Sample.external_key == "test").first().file == file
+    )
+    assert (
+        session.query(Sample).filter(Sample.external_key == "test").first().index == 0
+    )
 
 
 def test_update_sample(session):  # pylint: disable=redefined-outer-name
@@ -63,7 +77,13 @@ def test_update_sample(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 
@@ -73,7 +93,9 @@ def test_update_sample(session):  # pylint: disable=redefined-outer-name
 
     session.query(Sample).filter(Sample.external_key == "test").update({"index": 1})
 
-    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 1
+    assert (
+        session.query(Sample).filter(Sample.external_key == "test").first().index == 1
+    )
 
 
 def test_delete_sample(session):  # pylint: disable=redefined-outer-name
@@ -89,7 +111,13 @@ def test_delete_sample(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 
@@ -115,7 +143,13 @@ def test_repr(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
+    file = File(
+        dataset=dataset,
+        path="test",
+        created_at=now,
+        updated_at=now,
+        number_of_samples=0,
+    )
     session.add(file)
     session.commit()
 

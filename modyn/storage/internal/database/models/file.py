@@ -22,7 +22,14 @@ class File(Base):
         """Return string representation."""
         return f"<File {self.path}>"
 
-    def __init__(self, dataset: Dataset, path: str, created_at: int, updated_at: int, number_of_samples: int):
+    def __init__(
+        self,
+        dataset: Dataset,
+        path: str,
+        created_at: int,
+        updated_at: int,
+        number_of_samples: int,
+    ):
         """Init file.
 
         Args:

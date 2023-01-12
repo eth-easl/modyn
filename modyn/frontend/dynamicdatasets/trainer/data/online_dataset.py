@@ -17,7 +17,9 @@ class OnlineDataset(IterableDataset):
 
     def __selector_stub(self) -> SelectorStub:
         selector_channel = grpc.insecure_channel(
-            self._config["selector"]["hostname"] + ":" + self._config["selector"]["port"]
+            self._config["selector"]["hostname"]
+            + ":"
+            + self._config["selector"]["port"]
         )
         return SelectorStub(selector_channel)
 
@@ -29,7 +31,9 @@ class OnlineDataset(IterableDataset):
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         req = GetSamplesRequest(
-            training_id=self._training_id, training_set_number=self._trainining_set_number, worker_id=worker_id
+            training_id=self._training_id,
+            training_set_number=self._trainining_set_number,
+            worker_id=worker_id,
         )
         samples_response = self.__selector_stub().get_sample_keys(req)
         keys = samples_response.training_samples_subset

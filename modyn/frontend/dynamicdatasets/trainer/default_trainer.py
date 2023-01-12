@@ -64,9 +64,13 @@ class DefaultTrainer(Trainer):
                     self._scheduler.step()
 
                 epoch_loss = running_loss / len(self._dataloaders[phase].dataset)
-                epoch_acc = float(running_corrects) / len(self._dataloaders[phase].dataset)
+                epoch_acc = float(running_corrects) / len(
+                    self._dataloaders[phase].dataset
+                )
 
-                logging.info("{} Loss: {:.4f} Acc: {:.4f}".format(phase, epoch_loss, epoch_acc))
+                logging.info(
+                    "{} Loss: {:.4f} Acc: {:.4f}".format(phase, epoch_loss, epoch_acc)
+                )
 
                 # deep copy the model
                 if phase == "val" and epoch_acc > best_acc:
@@ -74,7 +78,11 @@ class DefaultTrainer(Trainer):
                     best_model_wts = copy.deepcopy(self._model.state_dict())
 
         time_elapsed = time.time() - since
-        logging.info("Training complete in {:.0f}m {:.0f}s".format(time_elapsed // 60, time_elapsed % 60))
+        logging.info(
+            "Training complete in {:.0f}m {:.0f}s".format(
+                time_elapsed // 60, time_elapsed % 60
+            )
+        )
         logging.info("Best val Acc: {:4f}".format(best_acc))
 
         # load best model weights

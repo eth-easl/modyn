@@ -8,8 +8,12 @@ from modyn.storage.internal.database.database_connection import DatabaseConnecti
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
-from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
-from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
+from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import (
+    WebdatasetFileWrapper,
+)
+from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import (
+    LocalFilesystemWrapper,
+)
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetDataInIntervalRequest,
@@ -31,7 +35,10 @@ NOW = current_time_millis()
 def get_minimal_modyn_config() -> dict:
     return {
         "storage": {
-            "filesystem": {"type": "LocalFilesystemWrapper", "base_path": os.path.dirname(TMP_FILE)},
+            "filesystem": {
+                "type": "LocalFilesystemWrapper",
+                "base_path": os.path.dirname(TMP_FILE),
+            },
             "database": {
                 "drivername": "sqlite",
                 "username": "",
@@ -98,15 +105,33 @@ def setup():
 
         session.commit()
 
-        file = File(path=TMP_FILE, dataset=dataset, created_at=now, updated_at=now, number_of_samples=2)
+        file = File(
+            path=TMP_FILE,
+            dataset=dataset,
+            created_at=now,
+            updated_at=now,
+            number_of_samples=2,
+        )
 
         session.add(file)
 
-        file2 = File(path=TMP_FILE2, dataset=dataset, created_at=now, updated_at=now, number_of_samples=2)
+        file2 = File(
+            path=TMP_FILE2,
+            dataset=dataset,
+            created_at=now,
+            updated_at=now,
+            number_of_samples=2,
+        )
 
         session.add(file2)
 
-        file3 = File(path=TMP_FILE3, dataset=dataset, created_at=before_now, updated_at=before_now, number_of_samples=2)
+        file3 = File(
+            path=TMP_FILE3,
+            dataset=dataset,
+            created_at=before_now,
+            updated_at=before_now,
+            number_of_samples=2,
+        )
 
         session.commit()
 
@@ -153,7 +178,9 @@ def test_get(mock_get_samples_from_indices):
 
     expetect_responses = [(b"", ["test"]), (b"", ["test3", "test4"])]
 
-    for response, expetect_response in zip(server.Get(request, None), expetect_responses):
+    for response, expetect_response in zip(
+        server.Get(request, None), expetect_responses
+    ):
         assert response is not None
         assert response.chunk == expetect_response[0]
         assert response.keys == expetect_response[1]
@@ -233,13 +260,17 @@ def test_get_new_data_since_no_new_data():
 def test_get_data_in_interval():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW + 100000)
+    request = GetDataInIntervalRequest(
+        dataset_id="test", start_timestamp=0, end_timestamp=NOW + 100000
+    )
 
     response = server.GetDataInInterval(request, None)
     assert response is not None
     assert response.keys == ["test", "test2", "test3", "test4", "test5"]
 
-    request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1)
+    request = GetDataInIntervalRequest(
+        dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1
+    )
 
     response = server.GetDataInInterval(request, None)
     assert response is not None
@@ -249,7 +280,9 @@ def test_get_data_in_interval():
 def test_get_data_in_interval_invalid_dataset():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetDataInIntervalRequest(dataset_id="test2", start_timestamp=0, end_timestamp=NOW + 100000)
+    request = GetDataInIntervalRequest(
+        dataset_id="test2", start_timestamp=0, end_timestamp=NOW + 100000
+    )
 
     response = server.GetDataInInterval(request, None)
     assert response is not None

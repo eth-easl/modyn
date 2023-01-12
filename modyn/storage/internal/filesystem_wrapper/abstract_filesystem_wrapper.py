@@ -2,7 +2,9 @@
 
 from abc import ABC, abstractmethod
 
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
+    FilesystemWrapperType,
+)
 
 
 class AbstractFileSystemWrapper(ABC):

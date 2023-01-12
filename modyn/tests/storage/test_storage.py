@@ -9,7 +9,10 @@ from modyn.storage.storage import Storage
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 modyn_config = (
-    pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "examples" / "modyn_config.yaml"
+    pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
+    / "config"
+    / "examples"
+    / "modyn_config.yaml"
 )
 
 

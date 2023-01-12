@@ -28,7 +28,12 @@ class GetDataInIntervalRequest(_message.Message):
     dataset_id: str
     end_timestamp: int
     start_timestamp: int
-    def __init__(self, dataset_id: _Optional[str] = ..., start_timestamp: _Optional[int] = ..., end_timestamp: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        dataset_id: _Optional[str] = ...,
+        start_timestamp: _Optional[int] = ...,
+        end_timestamp: _Optional[int] = ...,
+    ) -> None: ...
 
 class GetDataInIntervalResponse(_message.Message):
     __slots__ = ["keys"]
@@ -42,7 +47,9 @@ class GetNewDataSinceRequest(_message.Message):
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     dataset_id: str
     timestamp: int
-    def __init__(self, dataset_id: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self, dataset_id: _Optional[str] = ..., timestamp: _Optional[int] = ...
+    ) -> None: ...
 
 class GetNewDataSinceResponse(_message.Message):
     __slots__ = ["keys"]
@@ -56,7 +63,9 @@ class GetRequest(_message.Message):
     KEYS_FIELD_NUMBER: _ClassVar[int]
     dataset_id: str
     keys: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, dataset_id: _Optional[str] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self, dataset_id: _Optional[str] = ..., keys: _Optional[_Iterable[str]] = ...
+    ) -> None: ...
 
 class GetResponse(_message.Message):
     __slots__ = ["chunk", "keys"]
@@ -64,10 +73,20 @@ class GetResponse(_message.Message):
     KEYS_FIELD_NUMBER: _ClassVar[int]
     chunk: bytes
     keys: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ...
+    ) -> None: ...
 
 class RegisterNewDatasetRequest(_message.Message):
-    __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_config", "file_wrapper_type", "filesystem_wrapper_type", "version"]
+    __slots__ = [
+        "base_path",
+        "dataset_id",
+        "description",
+        "file_wrapper_config",
+        "file_wrapper_type",
+        "filesystem_wrapper_type",
+        "version",
+    ]
     BASE_PATH_FIELD_NUMBER: _ClassVar[int]
     DATASET_ID_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -82,7 +101,16 @@ class RegisterNewDatasetRequest(_message.Message):
     file_wrapper_type: str
     filesystem_wrapper_type: str
     version: str
-    def __init__(self, dataset_id: _Optional[str] = ..., filesystem_wrapper_type: _Optional[str] = ..., file_wrapper_type: _Optional[str] = ..., description: _Optional[str] = ..., base_path: _Optional[str] = ..., version: _Optional[str] = ..., file_wrapper_config: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self,
+        dataset_id: _Optional[str] = ...,
+        filesystem_wrapper_type: _Optional[str] = ...,
+        file_wrapper_type: _Optional[str] = ...,
+        description: _Optional[str] = ...,
+        base_path: _Optional[str] = ...,
+        version: _Optional[str] = ...,
+        file_wrapper_config: _Optional[str] = ...,
+    ) -> None: ...
 
 class RegisterNewDatasetResponse(_message.Message):
     __slots__ = ["success"]

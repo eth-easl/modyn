@@ -1,6 +1,5 @@
-
-from modyn.backend.selector.selector_strategy import SelectorStrategy
 import numpy as np
+from modyn.backend.selector.selector_strategy import SelectorStrategy
 
 
 class DataFreshnessStrategy(SelectorStrategy):
@@ -24,8 +23,8 @@ class DataFreshnessStrategy(SelectorStrategy):
 
         self.unseen_data_ratio = 1.0
         self.old_data_ratio = 0.0
-        self._set_unseen_data_ratio(self._config['selector']['unseen_data_ratio'])
-        self._is_adaptive_ratio = self._config['selector']['is_adaptive_ratio']
+        self._set_unseen_data_ratio(self._config["selector"]["unseen_data_ratio"])
+        self._is_adaptive_ratio = self._config["selector"]["is_adaptive_ratio"]
 
     def _set_unseen_data_ratio(self, unseen_data_ratio: float) -> None:
         assert 0 <= unseen_data_ratio <= 1
@@ -49,9 +48,7 @@ class DataFreshnessStrategy(SelectorStrategy):
         return unseen_data_ratio
 
     def _select_new_training_samples(
-            self,
-            training_id: int,
-            training_set_size: int
+        self, training_id: int, training_set_size: int
     ) -> list[tuple[str]]:
         """
         Selects a new training set of samples for the given training id.
@@ -88,7 +85,9 @@ class DataFreshnessStrategy(SelectorStrategy):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 0 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
-        assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
+        assert (
+            len(seen) == 0 or not np.array(seen).any()
+        ), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
 
@@ -107,7 +106,9 @@ class DataFreshnessStrategy(SelectorStrategy):
         query = f"""SELECT key, score, seen, label, data FROM metadata_database
                  WHERE seen = 1 AND training_id = {training_id}"""
         keys, _, seen, _, _ = self.grpc.get_samples_by_metadata_query(query)
-        assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
+        assert (
+            len(seen) == 0 or np.array(seen).all()
+        ), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
 

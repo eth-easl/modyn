@@ -2,7 +2,9 @@
 
 import pathlib
 
-from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
+from modyn.storage.internal.file_wrapper.abstract_file_wrapper import (
+    AbstractFileWrapper,
+)
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
 
@@ -73,10 +75,14 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         if index != 0:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
         with open(self.file_path, "rb") as file:
-            label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
+            label_path = pathlib.Path(self.file_path).with_suffix(
+                self.file_wrapper_config["label_file_extension"]
+            )
             with open(label_path, "rb") as label_file:
                 label = label_file.read()
-                return file.read() + b"\n" + label + b"\n" + len(label).to_bytes(4, "big")
+                return (
+                    file.read() + b"\n" + label + b"\n" + len(label).to_bytes(4, "big")
+                )
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get the samples from the file.

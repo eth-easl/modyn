@@ -1,30 +1,43 @@
-import logging
-import yaml
 import argparse
+import logging
 import pathlib
-import grpc
 from concurrent import futures
 
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import add_MetadataServicer_to_server  # noqa: E501, E402
-from modyn.backend.metadata_database.internal.grpc.metadata_database_grpc_servicer import MetadataDatabaseGRPCServicer
+import grpc
+import yaml
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (  # noqa: E501, E402
+    add_MetadataServicer_to_server,
+)
+from modyn.backend.metadata_database.internal.grpc.metadata_database_grpc_servicer import (
+    MetadataDatabaseGRPCServicer,
+)
 from modyn.backend.metadata_database.metadata_database import MetadataDatabase
 
-logging.basicConfig(level=logging.NOTSET,
-                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d:%H:%M:%S')
+logging.basicConfig(
+    level=logging.NOTSET,
+    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
 def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description='Modyn Metadata Database')
-    parser_.add_argument('config', type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
+    parser_ = argparse.ArgumentParser(description="Modyn Metadata Database")
+    parser_.add_argument(
+        "config",
+        type=pathlib.Path,
+        action="store",
+        help="Modyn infrastructure configuration file",
+    )
     return parser_
 
 
 def run(database: MetadataDatabase, config: dict) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     add_MetadataServicer_to_server(MetadataDatabaseGRPCServicer(database), server)
-    logger.info(f'Starting server. Listening on port {config["metadata_database"]["port"]}.')
+    logger.info(
+        f'Starting server. Listening on port {config["metadata_database"]["port"]}.'
+    )
     server.add_insecure_port(f'[::]:{config["metadata_database"]["port"]}')
     server.start()
     server.wait_for_termination()
@@ -48,5 +61,5 @@ def main() -> None:
     logger.info("Metadata database returned, exiting.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

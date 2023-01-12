@@ -13,8 +13,12 @@ from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import (
+    AbstractFileSystemWrapper,
+)
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import (
+    FilesystemWrapperType,
+)
 from modyn.storage.internal.new_file_watcher import NewFileWatcher
 
 FILE_TIMESTAMP = 1600000000
@@ -43,7 +47,10 @@ def get_minimal_modyn_config() -> dict:
 def get_invalid_modyn_config() -> dict:
     return {
         "storage": {
-            "filesystem": {"type": "InvalidFilesystemWrapper", "base_path": "/tmp/modyn"},
+            "filesystem": {
+                "type": "InvalidFilesystemWrapper",
+                "base_path": "/tmp/modyn",
+            },
             "database": {
                 "drivername": "sqlite",
                 "username": "",
@@ -94,7 +101,9 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
             return True
         return False
 
-    def list(self, path: str, recursive: bool = False) -> list[str]:  # pylint: disable=unused-argument
+    def list(
+        self, path: str, recursive: bool = False
+    ) -> list[str]:  # pylint: disable=unused-argument
         self._list_called = True
         return self._list
 
@@ -182,7 +191,9 @@ def test_seek_dataset(test__update_files_in_directory, session) -> None:  # noqa
 
 
 @patch.object(NewFileWatcher, "_update_files_in_directory", return_value=None)
-def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:  # noqa: E501
+def test_seek_path_not_exists(
+    test__update_files_in_directory, session
+) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     session.add(
@@ -202,8 +213,13 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
 
 
 @patch.object(NewFileWatcher, "_update_files_in_directory", return_value=None)
-@patch("modyn.storage.internal.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper())
-def test_seek_path_not_dir(test_get_filesystem_wrapper, test__update_files_in_directory, session):  # noqa: E501
+@patch(
+    "modyn.storage.internal.new_file_watcher.get_filesystem_wrapper",
+    return_value=MockFileSystemWrapper(),
+)
+def test_seek_path_not_dir(
+    test_get_filesystem_wrapper, test__update_files_in_directory, session
+):  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     session.add(
@@ -223,8 +239,13 @@ def test_seek_path_not_dir(test_get_filesystem_wrapper, test__update_files_in_di
 
 
 @patch.object(NewFileWatcher, "_update_files_in_directory", return_value=None)
-@patch("modyn.storage.internal.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper())
-def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_directory, session) -> None:  # noqa: E501
+@patch(
+    "modyn.storage.internal.new_file_watcher.get_filesystem_wrapper",
+    return_value=MockFileSystemWrapper(),
+)
+def test_seek_no_datasets(
+    test_get_filesystem_wrapper, test__update_files_in_directory, session
+) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     with patch.object(DatabaseConnection, "get_session") as get_session_mock:
@@ -233,9 +254,17 @@ def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_dir
         assert not test__update_files_in_directory.called
 
 
-@patch("modyn.storage.internal.new_file_watcher.get_file_wrapper", return_value=MockFileWrapper())
-@patch("modyn.storage.internal.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper())
-def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wrapper, session) -> None:  # noqa: E501
+@patch(
+    "modyn.storage.internal.new_file_watcher.get_file_wrapper",
+    return_value=MockFileWrapper(),
+)
+@patch(
+    "modyn.storage.internal.new_file_watcher.get_filesystem_wrapper",
+    return_value=MockFileSystemWrapper(),
+)
+def test_update_files_in_directory(
+    test_get_file_wrapper, test_get_filesystem_wrapper, session
+) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     dataset = Dataset(

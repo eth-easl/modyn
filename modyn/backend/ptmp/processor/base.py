@@ -47,12 +47,16 @@ class PostTrainingMetadataProcessor(ABC):
             training_id (str): The training id.
             set_request (SetRequest): The set request.
         """
-        channel = grpc.insecure_channel(self.__config["odm"]["hostname"] + ":" + self.__config["odm"]["port"])
+        channel = grpc.insecure_channel(
+            self.__config["odm"]["hostname"] + ":" + self.__config["odm"]["port"]
+        )
         stub = ODMStub(channel)
         stub.Set(set_request)
 
     @abstractmethod
-    def _process_post_training_metadata(self, training_id: int, data: str) -> SetRequest:
+    def _process_post_training_metadata(
+        self, training_id: int, data: str
+    ) -> SetRequest:
         """Processes post training metadata for the given training_id and data.
 
         Args:

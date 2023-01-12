@@ -12,7 +12,9 @@ class DataAmountTrigger(Trigger):
         ), "Trigger config is missing `data_points_for_trigger` field"
 
         self.data_points_for_trigger: int = trigger_config["data_points_for_trigger"]
-        assert self.data_points_for_trigger > 0, "data_points_for_trigger needs to be at least 1"
+        assert (
+            self.data_points_for_trigger > 0
+        ), "data_points_for_trigger needs to be at least 1"
         self.seen_data_points = 0
         super().__init__(callback, trigger_config)
 

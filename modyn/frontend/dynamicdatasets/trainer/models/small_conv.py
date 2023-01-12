@@ -7,7 +7,13 @@ class SmallConv(nn.Module):
     def __init__(self, configs: dict):
         super(SmallConv, self).__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=configs["in_channels"], out_channels=32, kernel_size=5, stride=1, padding=2)
+        self.conv1 = nn.Conv2d(
+            in_channels=configs["in_channels"],
+            out_channels=32,
+            kernel_size=5,
+            stride=1,
+            padding=2,
+        )
         # 3*32*32 -> 32*32*32
         self.dropout1 = nn.Dropout(p=configs["dropout"])
         self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
