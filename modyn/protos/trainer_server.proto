@@ -67,7 +67,9 @@ message TrainingStatusRequest {
 message TrainingStatusResponse {
     bool is_running = 1;
     bool state_available = 2;
-    optional string exception = 3;
-    optional int32 iteration = 4;
-    optional bytes state = 5;
+    bool blocked = 3;
+    optional string exception = 4;
+    optional int32 batches_seen = 5;
+    optional int32 samples_seen = 6;
+    optional bytes state = 7;
 }

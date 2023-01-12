@@ -1,6 +1,6 @@
 import io
 import traceback
-from typing import Optional
+from typing import Optional, Union
 import torch
 import logging
 import os
@@ -54,6 +54,8 @@ class PytorchTrainer:
         self._status_query_queue = status_query_queue
         self._status_response_queue = status_response_queue
 
+        self._num_samples = 0
+
     def create_logger(self, log_path: str) -> None:
 
         self._logger = logging.getLogger('trainer')
@@ -68,14 +70,16 @@ class PytorchTrainer:
         self._logger.addHandler(file_handler)
         self._logger.propagate = False
 
-    def save_checkpoint(self, checkpoint_file_name: str, iteration: int) -> None:
+    def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None):
 
         dict_to_save = {
             'model': self._model.model.state_dict(),
             'optimizer': self._optimizer.state_dict(),
-            'iteration': iteration,
         }
-        torch.save(dict_to_save, checkpoint_file_name)
+        if iteration is not None:
+            dict_to_save['iteration'] = iteration
+
+        torch.save(dict_to_save, destination)
 
     def load_checkpoint(self, path: str) -> None:
 
@@ -87,18 +91,13 @@ class PytorchTrainer:
         self._model.model.load_state_dict(checkpoint_dict['model'])
         self._optimizer.load_state_dict(checkpoint_dict['optimizer'])
 
-    def send_state_to_server(self, iteration: int) -> None:
-
-        dict_to_send = {
-            'model': self._model.model.state_dict(),
-            'optimizer': self._optimizer.state_dict(),
-        }
+    def send_state_to_server(self, batch_number: int) -> None:
 
         buffer = io.BytesIO()
-        torch.save(dict_to_send, buffer)
+        self.save_state(buffer)
         buffer.seek(0)
         bytes_state = buffer.read()
-        self._status_response_queue.put({'state': bytes_state, 'iteration': iteration})
+        self._status_response_queue.put({'state': bytes_state, 'num_batches': batch_number, 'num_samples': self._num_samples})
 
     def train(self, log_path: str, load_checkpoint_path: Optional[str] = None) -> None:
 
@@ -113,12 +112,12 @@ class PytorchTrainer:
 
         train_iter = enumerate(self._train_dataloader)
 
-        for i, batch in train_iter:
+        for batch_number, batch in train_iter:
 
             if not self._status_query_queue.empty():
                 req = self._status_query_queue.get()
                 assert req == STATUS_QUERY_MESSAGE
-                self.send_state_to_server(i)
+                self.send_state_to_server(batch_number)
 
             self._optimizer.zero_grad()
             data, target = batch[0].to(self._device), batch[1].to(self._device)
@@ -127,11 +126,13 @@ class PytorchTrainer:
             loss.backward()
             self._optimizer.step()
 
-            if self._checkpoint_interval > 0 and i % self._checkpoint_interval == 0:
-                checkpoint_file_name = self._checkpoint_path + f'/model_{i}' + '.pt'
-                self.save_checkpoint(checkpoint_file_name, i)
+            if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
+                checkpoint_file_name = self._checkpoint_path + f'/model_{batch_number}' + '.pt'
+                self.save_state(checkpoint_file_name, batch_number)
 
-            self._logger.info(f'Iteration {i}')
+            self._num_samples += batch[0].shape[0]
+
+            self._logger.info(f'Iteration {batch_number}')
 
         self._logger.info('Training complete!')
 

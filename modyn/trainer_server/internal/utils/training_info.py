@@ -1,8 +1,11 @@
 import json
+import logging
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import RegisterTrainServerRequest
 from modyn.utils.utils import dynamic_module_import
+
+logger = logging.getLogger(__name__)
 
 STATUS_QUERY_MESSAGE = "get_status"
 
@@ -25,7 +28,10 @@ class TrainingInfo:
         self.model_id = request.model_id
         model_module = dynamic_module_import("modyn.models")
         if not hasattr(model_module, self.model_id):
-            raise ValueError(f"Model {self.model_id} not available!")
+            logger.error(f"Model {self.model_id} not available!")
+            self.model_handler = None
+            return
+
         self.model_handler = getattr(model_module, self.model_id)
 
         self.torch_optimizer = request.torch_optimizer

@@ -1,6 +1,7 @@
 import glob
 import logging
 import io
+import queue
 from typing import Any, Optional
 import grpc
 import os
@@ -60,9 +61,10 @@ class TrainerServerGRPCServicer:
     ) -> RegisterTrainServerResponse:
 
         training_info = TrainingInfo(request)
+        if training_info.model_handler is None:
+            return RegisterTrainServerResponse(success=False)
 
         self._training_dict[request.training_id] = training_info
-
         return RegisterTrainServerResponse(success=True)
 
     def start_training(
@@ -118,48 +120,40 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
-            # TODO(fotstrt): what to do if blocked - add a timeout?
-            training_state_running, iteration = self.get_status(training_id)
-            return TrainingStatusResponse(
-                is_running=True,
-                state_available=True,
-                iteration=iteration,
-                state=training_state_running
-            )
+            training_state_running, num_batches, num_samples = self.get_status(training_id)
+            response_kwargs = {
+                "is_running": True,
+                "blocked": training_state_running is not None,
+                "state_available": training_state_running is not None,
+                "batches_seen": num_batches,
+                "samples_seen": num_samples,
+                "state": training_state_running
+            }
+            cleaned_kwargs = {k: v for k, v in response_kwargs.items() if v}
+            return TrainingStatusResponse(**cleaned_kwargs)
         exception = self.check_for_training_exception(training_id)
-        training_state_finished, iteration = self.get_latest_checkpoint(training_id)
-        if exception is None:
-            if training_state_finished is not None:
-                return TrainingStatusResponse(
-                    is_running=False,
-                    state_available=True,
-                    iteration=iteration,
-                    state=training_state_finished
-                )
-            return TrainingStatusResponse(
-                is_running=False,
-                state_available=False,
-            )
-        if training_state_finished is not None:
-            return TrainingStatusResponse(
-                is_running=False,
-                state_available=True,
-                exception=exception,
-                iteration=iteration,
-                state=training_state_finished
-            )
-        return TrainingStatusResponse(
-            is_running=False,
-            state_available=False,
-            exception=exception,
-        )
+        print(self.get_latest_checkpoint(training_id))
+        training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(training_id)
+        response_kwargs = {
+            "is_running": False,
+            "state_available": training_state_finished is not None,
+            "exception": exception,
+            "batches_seen": num_batches,
+            "samples_seen": num_samples,
+            "state": training_state_finished
+        }
+        cleaned_kwargs = {k: v for k, v in response_kwargs.items() if v}
+        return TrainingStatusResponse(**cleaned_kwargs)
 
-    def get_status(self, training_id: int) -> tuple[bytes, int]:
+    def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
 
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(STATUS_QUERY_MESSAGE)
-        response = self._training_process_dict[training_id].status_response_queue.get()
-        return response['state'], response['iteration']
+        try:
+            response = self._training_process_dict[training_id].status_response_queue.get(timeout=30) # blocks for 30 seconds
+            return response['state'], response['num_batches'], response['num_samples']
+        except queue.Empty:
+            return None, None, None
 
     def check_for_training_exception(self, training_id: int) -> Optional[str]:
 
@@ -168,7 +162,7 @@ class TrainerServerGRPCServicer:
             return exception_queue.get()
         return None
 
-    def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[bytes], int]:
+    def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
 
         # this might be useful in case that the training has already finished,
         # either successfully or not, and allow to access the last state
@@ -177,15 +171,18 @@ class TrainerServerGRPCServicer:
         checkpoints = list(filter(os.path.isfile, glob.glob(checkpoint_path + "/*")))
         checkpoints.sort(key=os.path.getmtime)
 
-        if len(checkpoints) == 0:
-            return None, -1
-
-        # TODO(fotstrt): add checks/actions in case checkpoint is corrupted
-        checkpoint = checkpoints[-1]
-        state = torch.load(checkpoint)
-        iteration = state.pop('iteration')
-        buffer = io.BytesIO()
-        torch.save(state, buffer)
-        buffer.seek(0)
-        state_bytes = buffer.read()
-        return state_bytes, iteration
+        # get latest valid checkpoint
+        for checkpoint in checkpoints:
+            try:
+                state = torch.load(checkpoint)
+                num_batches = state.pop('num_batches')
+                num_samples = state.pop('num_samples')
+                buffer = io.BytesIO()
+                torch.save(state, buffer)
+                buffer.seek(0)
+                state_bytes = buffer.read()
+                return state_bytes, num_batches, num_samples
+            except Exception:
+                # checkpoint corrupted
+                pass
+        return None, None, None

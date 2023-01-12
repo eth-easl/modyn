@@ -66,10 +66,10 @@ def get_dummy_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), dynam
     return trainer
 
 
-def test_save_checkpoint():
+def test_save_state():
     trainer = get_dummy_trainer(mp.Queue(), mp.Queue())
     with tempfile.NamedTemporaryFile() as temp:
-        trainer.save_checkpoint(temp.name, 10)
+        trainer.save_state(temp.name, 10)
         assert os.path.exists(temp.name)
         saved_dict = torch.load(temp.name)
 
@@ -139,7 +139,7 @@ def test_send_state_to_server():
     trainer = get_dummy_trainer(query_queue, response_queue)
     trainer.send_state_to_server(20)
     response = response_queue.get()
-    assert response['iteration'] == 20
+    assert response['num_batches'] == 20
     file_like = BytesIO(response['state'])
     assert torch.load(file_like) == {
         'model': OrderedDict([('_weight', torch.tensor([1.]))]),

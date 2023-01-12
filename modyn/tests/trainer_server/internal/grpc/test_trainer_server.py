@@ -111,8 +111,9 @@ def test_trainer_not_available(test_is_alive):
 @patch('modyn.trainer_server.internal.utils.training_info.hasattr', return_value=False)
 def test_register_invalid(test_hasattr):
     trainer_server = TrainerServerGRPCServicer()
-    with pytest.raises(ValueError, match=r"Model \w+ not available"):
-        trainer_server.register(register_request, None)
+    response = trainer_server.register(register_request, None)
+    assert not response.success
+    assert register_request.training_id not in trainer_server._training_dict
 
 
 @patch('modyn.trainer_server.internal.utils.training_info.hasattr', return_value=True)
@@ -120,7 +121,7 @@ def test_register_invalid(test_hasattr):
 def test_register(test_getattr, test_hasattr):
     trainer_server = TrainerServerGRPCServicer()
     response = trainer_server.register(register_request, None)
-    assert response.success is True
+    assert response.success
     assert register_request.training_id in trainer_server._training_dict
 
 
@@ -146,7 +147,7 @@ def test_get_training_status_not_registered():
     assert response is None
 
 @patch.object(mp.Process, 'is_alive', return_value=True)
-@patch.object(TrainerServerGRPCServicer, 'get_status', return_value=(b'state', 10))
+@patch.object(TrainerServerGRPCServicer, 'get_status', return_value=(b'state', 10, 100))
 @patch.object(TrainerServerGRPCServicer, 'check_for_training_exception')
 @patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint')
 def test_get_training_status_alive(
@@ -163,14 +164,15 @@ def test_get_training_status_alive(
     response = trainer_server.get_training_status(get_status_request, None)
     assert response.is_running
     assert response.state_available
-    assert response.iteration == 10
+    assert response.batches_seen == 10
+    assert response.samples_seen == 100
     assert response.state == b'state'
     test_get_latest_checkpoint.assert_not_called()
     test_check_for_training_exception.assert_not_called()
 
 
 @patch.object(mp.Process, 'is_alive', return_value=False)
-@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(b'state', 10))
+@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(b'state', 10, 100))
 @patch.object(TrainerServerGRPCServicer, 'check_for_training_exception', return_value="exception")
 @patch.object(TrainerServerGRPCServicer, 'get_status')
 def test_get_training_status_finished_with_exception(
@@ -187,14 +189,15 @@ def test_get_training_status_finished_with_exception(
     response = trainer_server.get_training_status(get_status_request, None)
     assert not response.is_running
     assert response.state_available
-    assert response.iteration == 10
+    assert response.batches_seen == 10
+    assert response.samples_seen == 100
     assert response.state == b'state'
     assert response.exception == "exception"
     test_get_status.assert_not_called()
 
 
 @patch.object(mp.Process, 'is_alive', return_value=False)
-@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(None, -1))
+@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint', return_value=(None, None, None))
 @patch.object(TrainerServerGRPCServicer, 'check_for_training_exception', return_value="exception")
 @patch.object(TrainerServerGRPCServicer, 'get_status')
 def test_get_training_status_finished_no_checkpoint(
@@ -219,15 +222,17 @@ def test_get_training_status():
     trainer_server = TrainerServerGRPCServicer()
     state_dict = {
         'state': {},
-        'iteration': 10
+        'num_batches': 10,
+        'num_samples': 100
     }
 
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
     training_process_info.status_response_queue.put(state_dict)
-    state, iteration = trainer_server.get_status(1)
+    state, num_batches, num_samples = trainer_server.get_status(1)
     assert state == state_dict['state']
-    assert iteration == state_dict['iteration']
+    assert num_batches == state_dict['num_batches']
+    assert num_samples == state_dict['num_samples']
     assert training_process_info.status_query_queue.qsize() == 1
     assert training_process_info.status_response_queue.empty()
     query = training_process_info.status_query_queue.get()
@@ -259,9 +264,10 @@ def test_get_latest_checkpoint_not_found():
     with tempfile.TemporaryDirectory() as temp:
         trainer_server._training_dict[1] = get_training_info(temp)
 
-    training_state, iteration = trainer_server.get_latest_checkpoint(1)
+    training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
     assert training_state is None
-    assert iteration == -1
+    assert num_batches is None
+    assert num_samples is None
 
 
 def test_get_latest_checkpoint_found():
@@ -273,14 +279,17 @@ def test_get_latest_checkpoint_found():
 
         dict_to_save = {
             'state': {'weight': 10},
-            'iteration': 10
+            'num_batches': 10,
+            'num_samples': 100
         }
 
         checkpoint_file = training_info.checkpoint_path + '/checkp'
         torch.save(dict_to_save, checkpoint_file)
 
-        training_state, iteration = trainer_server.get_latest_checkpoint(1)
-        assert iteration == 10
+        training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
+        assert num_batches == 10
+        assert num_samples == 100
 
-        dict_to_save.pop('iteration')
+        dict_to_save.pop('num_batches')
+        dict_to_save.pop('num_samples')
         assert torch.load(BytesIO(training_state))['state'] == dict_to_save['state']
