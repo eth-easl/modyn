@@ -133,8 +133,9 @@ def test_get_data_in_interval(test_grpc_connection_established):
         result = handler.get_data_in_interval("test_dataset", 21, 45)
 
         assert result == [("test1", 42), ("test2", 42)]  # timestamp is currently hardcoded
-        mock.assert_called_once_with(GetDataInIntervalRequest(
-            dataset_id="test_dataset", start_timestamp=21, end_timestamp=45))
+        mock.assert_called_once_with(
+            GetDataInIntervalRequest(dataset_id="test_dataset", start_timestamp=21, end_timestamp=45)
+        )
 
 
 def test_register_pipeline_at_selector():

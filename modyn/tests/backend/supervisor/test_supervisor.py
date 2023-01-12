@@ -233,8 +233,12 @@ def test_wait_for_new_data_filtering():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     mocked__handle_new_data_return_vals = [True, True, KeyboardInterrupt]
-    mocked_get_new_data_since = [[("a", 42), ("b", 43), ("c", 43)], [(
-        "b", 43), ("c", 43), ("d", 43), ("e", 45)], [], ValueError]
+    mocked_get_new_data_since = [
+        [("a", 42), ("b", 43), ("c", 43)],
+        [("b", 43), ("c", 43), ("d", 43), ("e", 45)],
+        [],
+        ValueError,
+    ]
 
     handle_mock: MagicMock
     with patch.object(sup, "_handle_new_data", side_effect=mocked__handle_new_data_return_vals) as handle_mock:
@@ -245,8 +249,11 @@ def test_wait_for_new_data_filtering():
             assert handle_mock.call_count == 3
             assert get_new_data_mock.call_count == 3
 
-            expected_handle_mock_arg_list = [call([("a", 42), ("b", 43), ("c", 43)]),
-                                             call([("d", 43), ("e", 45)]), call([])]
+            expected_handle_mock_arg_list = [
+                call([("a", 42), ("b", 43), ("c", 43)]),
+                call([("d", 43), ("e", 45)]),
+                call([]),
+            ]
             assert handle_mock.call_args_list == expected_handle_mock_arg_list
 
             expected_get_new_data_arg_list = [call("test", 21), call("test", 43), call("test", 45)]
@@ -266,7 +273,10 @@ def test__handle_new_data():
         assert result
 
         expected_handle_new_data_batch_arg_list = [
-            call([("a", 1), ("b", 2)]), call([("c", 3), ("d", 4)]), call([("e", 5)])]
+            call([("a", 1), ("b", 2)]),
+            call([("c", 3), ("d", 4)]),
+            call([("e", 5)]),
+        ]
         assert batch_mock.call_count == 3
         assert batch_mock.call_args_list == expected_handle_new_data_batch_arg_list
 
@@ -287,7 +297,9 @@ def test__handle_new_data_batch_no_triggers(test_inform_selector: MagicMock):
 @patch.object(Supervisor, "_run_training")
 @patch.object(GRPCHandler, "inform_selector_and_trigger")
 @patch.object(GRPCHandler, "inform_selector")
-def test__handle_triggers_within_batch(test_inform_selector: MagicMock, test_inform_selector_and_trigger: MagicMock, test__run_training: MagicMock):
+def test__handle_triggers_within_batch(
+    test_inform_selector: MagicMock, test_inform_selector_and_trigger: MagicMock, test__run_training: MagicMock
+):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.pipeline_id = 42
     batch = [("a", 1), ("b", 2), ("c", 3), ("d", 4), ("e", 5), ("f", 6), ("g", 7)]
@@ -297,8 +309,11 @@ def test__handle_triggers_within_batch(test_inform_selector: MagicMock, test_inf
 
     sup._handle_triggers_within_batch(batch, triggering_indices)
 
-    inform_selector_and_trigger_expected_args = [call(42, [("a", 1), ("b", 2)]), call(
-        42, [("c", 3), ("d", 4)]), call(42, [("e", 5), ("f", 6)])]
+    inform_selector_and_trigger_expected_args = [
+        call(42, [("a", 1), ("b", 2)]),
+        call(42, [("c", 3), ("d", 4)]),
+        call(42, [("e", 5), ("f", 6)]),
+    ]
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 

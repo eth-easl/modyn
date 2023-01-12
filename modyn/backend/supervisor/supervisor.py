@@ -167,8 +167,9 @@ class Supervisor:
                 new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
                 # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
                 new_data = [(key, timestamp) for (key, timestamp) in new_data if key not in last_keys]
-                last_timestamp = max([timestamp for (_, timestamp) in new_data]
-                                     ) if len(new_data) > 0 else last_timestamp
+                last_timestamp = (
+                    max([timestamp for (_, timestamp) in new_data]) if len(new_data) > 0 else last_timestamp
+                )
 
                 # Remember all data points with last_timestamp so we do not process them again in the next iteration
                 last_keys = set([key for (key, timestamp) in new_data if timestamp == last_timestamp])
@@ -182,16 +183,16 @@ class Supervisor:
             logger.info("Shutdown successful.")
 
     def _handle_new_data(self, new_data: list[tuple[str, int]], selector_batch_size: int = 128) -> bool:
-        """ This function handles new data during experiments or actual pipeline execution.
-            We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
-            If a data point within a batch causes a trigger, we inform the selector about all data points including that data point.
-            Otherwise, the selector is informed
+        """This function handles new data during experiments or actual pipeline execution.
+        We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
+        If a data point within a batch causes a trigger, we inform the selector about all data points including that data point.
+        Otherwise, the selector is informed
         """
         new_data.sort(key=lambda tup: tup[1])
         any_training_triggered = False
 
         for i in range(0, len(new_data), selector_batch_size):
-            batch = new_data[i: i + selector_batch_size]
+            batch = new_data[i : i + selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             any_training_triggered = any_training_triggered or triggered
 
@@ -210,7 +211,7 @@ class Supervisor:
     def _handle_triggers_within_batch(self, batch: list[tuple[str, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         for i, triggering_idx in enumerate(triggering_indices):
-            triggering_data = batch[previous_trigger_idx: triggering_idx + 1]
+            triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
             # This call informs the selector about the data until (and including) the data point that caused the trigger and then also notifies it about the triggering.
@@ -220,15 +221,14 @@ class Supervisor:
 
             # If no other trigger is coming in this batch, we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1:]
+                remaining_data = batch[triggering_idx + 1 :]
 
                 if len(remaining_data) > 0:
                     # These data points will be included in the next trigger because we inform the Selector about them, just like other batches with no trigger at all are included.
                     self.grpc.inform_selector(self.pipeline_id, remaining_data)
 
     def _run_training(self, trigger_id: int) -> None:
-        """Run training for trigger on GPU and block until done.
-        """
+        """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "Callback called without a registered pipeline."
         self.current_training_id = self.grpc.start_trainer_server(self.pipeline_id, trigger_id, self.pipeline_config)
 
