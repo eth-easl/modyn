@@ -23,7 +23,7 @@ class GRPCHandler():
         address = f"{self.config['metadata_database']['hostname']}:{self.config['metadata_database']['port']}"
         self.metadata_database_channel = grpc.insecure_channel(address)
 
-        if not utils.connection_established(self.metadata_database_channel, timeout_sec=TIMEOUT_SEC):
+        if not utils.grpc_connection_established(self.metadata_database_channel, timeout_sec=TIMEOUT_SEC):
             raise ConnectionError(f"Could not establish gRPC connection to metadata server at {address}.")
 
         self.metadata_database = MetadataStub(self.metadata_database_channel)

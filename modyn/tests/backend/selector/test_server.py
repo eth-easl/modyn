@@ -19,12 +19,12 @@ def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argumen
 
 
 @patch.object(GRPCHandler, '_init_metadata', return_value=None)
-@patch.object(modyn.utils, 'connection_established', return_value=True)
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=True)
 @patch.object(GRPCHandler, 'register_training', return_value=0)
 @patch.object(GRPCHandler, 'get_info_for_training', return_value=(8, 1))
 @patch.object(GRPCHandler, 'get_samples_by_metadata_query')
 def test_prepare_training_set(test_get_samples_by_metadata_query, test_get_info_for_training,
-                              test_register_training, test__connection_established, test__init_metadata):
+                              test_register_training, test__grpc_connection_established, test__init_metadata):
     sample_cfg = {
         'selector': {
             'port': '50056',
@@ -74,10 +74,10 @@ class DummyServer:
 
 @patch.object(grpc, 'server', return_value=DummyServer(None))
 @patch.object(GRPCHandler, '_init_metadata', return_value=None)
-@patch.object(modyn.utils, 'connection_established', return_value=True)
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=True)
 @patch.object(GRPCHandler, 'register_training', return_value=0)
 @patch.object(GRPCHandler, 'get_info_for_training', return_value=(8, 1))
-def test_main(get_info_for_training, register_training, _connection_established, _init_metadata, wait_for_terination):
+def test_main(get_info_for_training, register_training, _grpc_connection_established, _init_metadata, wait_for_terination):
     # testargs = ["selector_entrypoint.py", "modyn/config/config.yaml"]
     testargs = ["selector_entrypoint.py", "modyn/config/examples/modyn_config.yaml",
                 "modyn/config/examples/example-pipeline.yaml"]

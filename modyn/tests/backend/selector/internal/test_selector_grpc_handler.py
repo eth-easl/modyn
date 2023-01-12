@@ -20,9 +20,9 @@ def get_simple_config() -> dict:
 
 @patch.object(MetadataStub, '__init__', noop_constructor_mock)
 @patch.object(grpc, 'insecure_channel', return_value=None)
-@patch.object(modyn.utils, 'connection_established', return_value=True)
-def test_init(test_insecure_channel, test__connection_established):
-    test__connection_established.return_value = True
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=True)
+def test_init(test_insecure_channel, test__grpc_connection_established):
+    test__grpc_connection_established.return_value = True
 
     handler = GRPCHandler(get_simple_config())
 
@@ -30,12 +30,12 @@ def test_init(test_insecure_channel, test__connection_established):
     assert handler.metadata_database is not None
 
 
-def test_connection_established_times_out():
-    assert not modyn.utils.connection_established(grpc.insecure_channel("1.2.3.4:42"), 0.5)
+def test_grpc_connection_established_times_out():
+    assert not modyn.utils.grpc_connection_established(grpc.insecure_channel("1.2.3.4:42"), 0.5)
 
 
 @patch('grpc.channel_ready_future')
-def test_connection_established_works_mocked(test_channel_ready_future):
+def test_grpc_connection_established_works_mocked(test_channel_ready_future):
     # Pretty dumb test, needs E2E test with running server.
 
     class MockFuture():
@@ -43,13 +43,13 @@ def test_connection_established_works_mocked(test_channel_ready_future):
             return True
 
     test_channel_ready_future.return_value = MockFuture()
-    assert modyn.utils.connection_established(grpc.insecure_channel("1.2.3.4:42"))
+    assert modyn.utils.grpc_connection_established(grpc.insecure_channel("1.2.3.4:42"))
 
 
 @patch.object(MetadataStub, '__init__', noop_constructor_mock)
-@patch.object(modyn.utils, 'connection_established', return_value=True)
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=True)
 @patch.object(grpc, 'insecure_channel', return_value=None)
-def test_init_metadata(test_insecure_channel, test__connection_established):
+def test_init_metadata(test_insecure_channel, test__grpc_connection_established):
     handler = None
 
     with patch.object(GRPCHandler, '_init_metadata', return_value=None):
@@ -65,9 +65,9 @@ def test_init_metadata(test_insecure_channel, test__connection_established):
 
 
 @patch.object(MetadataStub, '__init__', noop_constructor_mock)
-@patch.object(modyn.utils, 'connection_established', return_value=False)
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=False)
 @patch.object(grpc, 'insecure_channel', return_value=None)
-def test_init_metadata_throws(test_insecure_channel, test__connection_established):
+def test_init_metadata_throws(test_insecure_channel, test__grpc_connection_established):
     handler = None
 
     with patch.object(GRPCHandler, '_init_metadata', return_value=None):
@@ -80,8 +80,8 @@ def test_init_metadata_throws(test_insecure_channel, test__connection_establishe
         handler._init_metadata()
 
 
-@patch.object(modyn.utils, 'connection_established', return_value=True)
-def test_register_training(test__connection_established):
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=True)
+def test_register_training(test__grpc_connection_established):
     handler = GRPCHandler(get_simple_config())
 
     assert handler.metadata_database is not None
@@ -92,8 +92,8 @@ def test_register_training(test__connection_established):
         avail_method.assert_called_once()
 
 
-@patch.object(modyn.utils, 'connection_established', return_value=True)
-def test_get_info_for_training(test__connection_established):
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=True)
+def test_get_info_for_training(test__grpc_connection_established):
     handler = GRPCHandler(get_simple_config())
 
     assert handler.metadata_database is not None
@@ -104,8 +104,8 @@ def test_get_info_for_training(test__connection_established):
         avail_method.assert_called_once()
 
 
-@patch.object(modyn.utils, 'connection_established', return_value=True)
-def test_get_samples_by_metadata_query(test__connection_established):
+@patch.object(modyn.utils, 'grpc_connection_established', return_value=True)
+def test_get_samples_by_metadata_query(test__grpc_connection_established):
     handler = GRPCHandler(get_simple_config())
 
     assert handler.metadata_database is not None
