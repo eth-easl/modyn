@@ -6,7 +6,7 @@ from modyn.backend.supervisor.internal.trigger import Trigger
 
 
 @patch.multiple(Trigger, __abstractmethods__=set())
-def get_trigger(callback: Callable) -> Trigger:
+def get_trigger() -> Trigger:
     return Trigger({})
 
 def test_initialization() -> None:

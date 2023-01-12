@@ -7,7 +7,6 @@ from time import sleep
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import (
-    current_time_millis,
     dynamic_module_import,
     model_available,
     trigger_available,
@@ -27,8 +26,8 @@ class Supervisor:
         self,
         pipeline_config: dict,
         modyn_config: dict,
-        start_replay_at: typing.Optional[int],
-        stop_replay_at: typing.Optional[int],
+        start_replay_at: typing.Optional[int] = None,
+        stop_replay_at: typing.Optional[int] = None,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
@@ -61,7 +60,7 @@ class Supervisor:
             trigger_config = self.pipeline_config["trigger"]["trigger_config"]
 
         trigger_module = dynamic_module_import("modyn.backend.supervisor.internal.triggers")
-        self.trigger: Trigger = getattr(trigger_module, trigger_id)(self._on_trigger, trigger_config)
+        self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
 
         assert self.trigger is not None, "Error during trigger initialization"
 
@@ -154,7 +153,7 @@ class Supervisor:
         return available
 
     def validate_system(self) -> bool:
-        return self.dataset_available() and self.grpc.trainer_available()
+        return self.dataset_available() and self.grpc.trainer_server_available()
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:

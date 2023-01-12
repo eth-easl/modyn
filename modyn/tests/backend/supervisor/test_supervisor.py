@@ -200,14 +200,6 @@ def test_dataset_available():
     assert not sup.dataset_available()
 
 
-@patch.object(Supervisor, "__init__", noop_constructor_mock)
-def test_trainer_available():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
-
-    # TODO(MaxiBoether): implement a real test when func is implemented.
-    assert sup.trainer_available()
-
-
 @patch.object(GRPCHandler, "dataset_available", lambda self, did: did == "existing")
 def test_validate_system():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
