@@ -18,7 +18,7 @@ NO_FILE = SCRIPT_PATH.parent / "thisshouldnot.exist"
 
 
 def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict, start_replay_at: typing.Optional[int] = None,
-        stop_replay_at: typing.Optional[int] = None) -> None:
+                          stop_replay_at: typing.Optional[int] = None) -> None:
     pass
 
 

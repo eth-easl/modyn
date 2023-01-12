@@ -87,15 +87,15 @@ class GRPCHandler:
 
     def inform_selector(self, pipeline_id: int, data: list[tuple[str, int]]) -> None:
         # TODO(#64): Implement gRPC call.
-        pass    
+        pass
 
     def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int]]) -> None:
         # TODO(#64): Implement gRPC call.
-        pass    
+        pass
 
     def trainer_server_available(self) -> bool:
         # TODO(#78): implement.
-        return True 
+        return True
 
     def shutdown_trainer_server(self, training_id: int) -> None:
         # TODO(#78): implement.
@@ -103,7 +103,7 @@ class GRPCHandler:
 
     def start_trainer_server(self, pipeline_id: int, trigger_id: int, pipeline_config: dict) -> int:
         # TODO(#78): implement.
-        return 42 
+        return 42
 
     def wait_for_training_completion(self, training_id: int) -> None:
         # TODO(#78): implement.

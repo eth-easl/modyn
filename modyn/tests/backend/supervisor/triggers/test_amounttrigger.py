@@ -7,6 +7,7 @@ def test_initialization() -> None:
     assert trigger.data_points_for_trigger == 42
     assert trigger.remaining_data_points == 0
 
+
 def test_init_fails_if_invalid() -> None:
     with pytest.raises(AssertionError, match="Trigger config is missing `data_points_for_trigger` field"):
         DataAmountTrigger({})
@@ -19,17 +20,17 @@ def test_inform() -> None:
     trigger = DataAmountTrigger({"data_points_for_trigger": 1})
     assert trigger.inform([]) == []
     assert trigger.inform([("a", 1)]) == [0]
-    assert trigger.inform([("a", 1), ("a", 1)]) == [0,1]
-    assert trigger.inform([("a", 1), ("a", 1), ("a", 1)]) == [0,1,2]
+    assert trigger.inform([("a", 1), ("a", 1)]) == [0, 1]
+    assert trigger.inform([("a", 1), ("a", 1), ("a", 1)]) == [0, 1, 2]
 
     trigger = DataAmountTrigger({"data_points_for_trigger": 2})
     assert trigger.inform([("a", 1)]) == []
     assert trigger.inform([("a", 1)]) == [0]
     assert trigger.inform([("a", 1), ("a", 1)]) == [1]
-    assert trigger.inform([("a", 1), ("a", 1), ("a", 1), ("a", 1)]) == [1,3]
+    assert trigger.inform([("a", 1), ("a", 1), ("a", 1), ("a", 1)]) == [1, 3]
     assert trigger.inform([("a", 1), ("a", 1), ("a", 1)]) == [1]
     assert trigger.inform([("a", 1)]) == [0]
-    assert trigger.inform([("a", 1), ("a", 1), ("a", 1), ("a", 1), ("a", 1)]) == [1,3]
+    assert trigger.inform([("a", 1), ("a", 1), ("a", 1), ("a", 1), ("a", 1)]) == [1, 3]
     assert trigger.inform([("a", 1)]) == [0]
 
     trigger = DataAmountTrigger({"data_points_for_trigger": 5})

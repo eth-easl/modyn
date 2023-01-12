@@ -26,7 +26,8 @@ class DataAmountTrigger(Trigger):
         # We take that mod 3: 1 2 0 1 2 0 1 2 0 1 2. We see that all indices that are 0 mod 3 are the indices we are searching for.
         # This also works with remaining data, just add 1 + remaining data.
 
-        triggering = (np.arange(1 + self.remaining_data_points, len(new_data) + self.remaining_data_points + 1) % self.data_points_for_trigger) == 0
+        triggering = (np.arange(1 + self.remaining_data_points, len(new_data) +
+                      self.remaining_data_points + 1) % self.data_points_for_trigger) == 0
         triggering_indices = np.ravel(np.argwhere(triggering))
 
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger
