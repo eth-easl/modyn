@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 
 
-class SelectorStrategy(ABC):
+class AbstractSelectionStrategy(ABC):
     """This class is the base class for selectors. In order to extend this class
     to perform custom experiments, the most important thing is to implement the
     _select_new_training_samples method, which should return a list of keys given

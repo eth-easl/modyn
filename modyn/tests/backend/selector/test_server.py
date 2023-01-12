@@ -10,7 +10,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
     GetSamplesRequest,
 )  # noqa: E402, E501, E611
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
-from modyn.backend.selector.selector import Selector
+from modyn.backend.selector.selector_server import SelectorServer
 from modyn.backend.selector.selector_entrypoint import main
 
 
@@ -43,10 +43,10 @@ def test_prepare_training_set(
     with open("modyn/config/examples/example-pipeline.yaml", "r", encoding="utf-8") as pipeline_file:
         pipeline_cfg = yaml.safe_load(pipeline_file)
 
-    selector = Selector(pipeline_cfg, sample_cfg)
-    servicer = selector.grpc_server
+    selector_server = SelectorServer(pipeline_cfg, sample_cfg)
+    servicer = selector_server.grpc_server
 
-    assert selector.strategy.register_training(training_set_size=8, num_workers=1) == 0
+    assert selector_server.selector._strategy.register_training(training_set_size=8, num_workers=1) == 0
 
     all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
     all_classes = [1, 1, 1, 1, 2, 2, 3, 3]

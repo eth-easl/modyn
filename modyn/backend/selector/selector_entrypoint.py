@@ -3,7 +3,7 @@ import logging
 import pathlib
 
 import yaml
-from modyn.backend.selector.selector import Selector
+from modyn.backend.selector.selector_server import SelectorServer
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -44,7 +44,7 @@ def main() -> None:
         pipeline_config = yaml.safe_load(pipeline_file)
 
     logger.info("Initializing selector.")
-    selector = Selector(pipeline_config, modyn_config)
+    selector = SelectorServer(pipeline_config, modyn_config)
     logger.info("Starting selector.")
     selector.run()
 

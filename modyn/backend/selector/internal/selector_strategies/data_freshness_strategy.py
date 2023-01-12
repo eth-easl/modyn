@@ -1,8 +1,8 @@
 import numpy as np
-from modyn.backend.selector.selector_strategy import SelectorStrategy
+from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 
-class DataFreshnessStrategy(SelectorStrategy):
+class DataFreshnessStrategy(AbstractSelectionStrategy):
     """
     This class implements selection solely based on freshness of the data.
     Specifically, there is a "unseen_data_ratio" that controls
