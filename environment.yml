@@ -21,7 +21,7 @@ dependencies:
   - types-protobuf
   - types-psycopg2
   - types-PyYAML
-  - torch
+  - pytorch
   - torchvision
   - pip:
       - webdataset

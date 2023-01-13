@@ -45,6 +45,7 @@ services:
       - storage
       - db
       - storage-db
+      - trainer_server
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
