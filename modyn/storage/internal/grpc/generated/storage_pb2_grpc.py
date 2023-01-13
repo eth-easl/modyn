@@ -14,30 +14,30 @@ class StorageStub(object):
             channel: A grpc.Channel.
         """
         self.Get = channel.unary_stream(
-            "/modyn.storage.Storage/Get",
-            request_serializer=storage__pb2.GetRequest.SerializeToString,
-            response_deserializer=storage__pb2.GetResponse.FromString,
-        )
+                '/modyn.storage.Storage/Get',
+                request_serializer=storage__pb2.GetRequest.SerializeToString,
+                response_deserializer=storage__pb2.GetResponse.FromString,
+                )
         self.GetNewDataSince = channel.unary_stream(
-            "/modyn.storage.Storage/GetNewDataSince",
-            request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
-            response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
-        )
+                '/modyn.storage.Storage/GetNewDataSince',
+                request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
+                response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
+                )
         self.GetDataInInterval = channel.unary_stream(
-            "/modyn.storage.Storage/GetDataInInterval",
-            request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
-            response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
-        )
+                '/modyn.storage.Storage/GetDataInInterval',
+                request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
+                response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
+                )
         self.CheckAvailability = channel.unary_unary(
-            "/modyn.storage.Storage/CheckAvailability",
-            request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
-            response_deserializer=storage__pb2.DatasetAvailableResponse.FromString,
-        )
+                '/modyn.storage.Storage/CheckAvailability',
+                request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
+                response_deserializer=storage__pb2.DatasetAvailableResponse.FromString,
+                )
         self.RegisterNewDataset = channel.unary_unary(
-            "/modyn.storage.Storage/RegisterNewDataset",
-            request_serializer=storage__pb2.RegisterNewDatasetRequest.SerializeToString,
-            response_deserializer=storage__pb2.RegisterNewDatasetResponse.FromString,
-        )
+                '/modyn.storage.Storage/RegisterNewDataset',
+                request_serializer=storage__pb2.RegisterNewDatasetRequest.SerializeToString,
+                response_deserializer=storage__pb2.RegisterNewDatasetResponse.FromString,
+                )
 
 
 class StorageServicer(object):
@@ -46,213 +46,152 @@ class StorageServicer(object):
     def Get(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def GetNewDataSince(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def GetDataInInterval(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def CheckAvailability(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def RegisterNewDataset(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
 
 def add_StorageServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        "Get": grpc.unary_stream_rpc_method_handler(
-            servicer.Get,
-            request_deserializer=storage__pb2.GetRequest.FromString,
-            response_serializer=storage__pb2.GetResponse.SerializeToString,
-        ),
-        "GetNewDataSince": grpc.unary_stream_rpc_method_handler(
-            servicer.GetNewDataSince,
-            request_deserializer=storage__pb2.GetNewDataSinceRequest.FromString,
-            response_serializer=storage__pb2.GetNewDataSinceResponse.SerializeToString,
-        ),
-        "GetDataInInterval": grpc.unary_stream_rpc_method_handler(
-            servicer.GetDataInInterval,
-            request_deserializer=storage__pb2.GetDataInIntervalRequest.FromString,
-            response_serializer=storage__pb2.GetDataInIntervalResponse.SerializeToString,
-        ),
-        "CheckAvailability": grpc.unary_unary_rpc_method_handler(
-            servicer.CheckAvailability,
-            request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
-            response_serializer=storage__pb2.DatasetAvailableResponse.SerializeToString,
-        ),
-        "RegisterNewDataset": grpc.unary_unary_rpc_method_handler(
-            servicer.RegisterNewDataset,
-            request_deserializer=storage__pb2.RegisterNewDatasetRequest.FromString,
-            response_serializer=storage__pb2.RegisterNewDatasetResponse.SerializeToString,
-        ),
+            'Get': grpc.unary_stream_rpc_method_handler(
+                    servicer.Get,
+                    request_deserializer=storage__pb2.GetRequest.FromString,
+                    response_serializer=storage__pb2.GetResponse.SerializeToString,
+            ),
+            'GetNewDataSince': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetNewDataSince,
+                    request_deserializer=storage__pb2.GetNewDataSinceRequest.FromString,
+                    response_serializer=storage__pb2.GetNewDataSinceResponse.SerializeToString,
+            ),
+            'GetDataInInterval': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetDataInInterval,
+                    request_deserializer=storage__pb2.GetDataInIntervalRequest.FromString,
+                    response_serializer=storage__pb2.GetDataInIntervalResponse.SerializeToString,
+            ),
+            'CheckAvailability': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckAvailability,
+                    request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
+                    response_serializer=storage__pb2.DatasetAvailableResponse.SerializeToString,
+            ),
+            'RegisterNewDataset': grpc.unary_unary_rpc_method_handler(
+                    servicer.RegisterNewDataset,
+                    request_deserializer=storage__pb2.RegisterNewDatasetRequest.FromString,
+                    response_serializer=storage__pb2.RegisterNewDatasetResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        "modyn.storage.Storage", rpc_method_handlers
-    )
+            'modyn.storage.Storage', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
-# This class is part of an EXPERIMENTAL API.
+ # This class is part of an EXPERIMENTAL API.
 class Storage(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def Get(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.unary_stream(
-            request,
+    def Get(request,
             target,
-            "/modyn.storage.Storage/Get",
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/Get',
             storage__pb2.GetRequest.SerializeToString,
             storage__pb2.GetResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-        )
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetNewDataSince(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.unary_stream(
-            request,
+    def GetNewDataSince(request,
             target,
-            "/modyn.storage.Storage/GetNewDataSince",
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetNewDataSince',
             storage__pb2.GetNewDataSinceRequest.SerializeToString,
             storage__pb2.GetNewDataSinceResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-        )
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetDataInInterval(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.unary_stream(
-            request,
+    def GetDataInInterval(request,
             target,
-            "/modyn.storage.Storage/GetDataInInterval",
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetDataInInterval',
             storage__pb2.GetDataInIntervalRequest.SerializeToString,
             storage__pb2.GetDataInIntervalResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-        )
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def CheckAvailability(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.unary_unary(
-            request,
+    def CheckAvailability(request,
             target,
-            "/modyn.storage.Storage/CheckAvailability",
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/CheckAvailability',
             storage__pb2.DatasetAvailableRequest.SerializeToString,
             storage__pb2.DatasetAvailableResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-        )
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def RegisterNewDataset(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
-        return grpc.experimental.unary_unary(
-            request,
+    def RegisterNewDataset(request,
             target,
-            "/modyn.storage.Storage/RegisterNewDataset",
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/RegisterNewDataset',
             storage__pb2.RegisterNewDatasetRequest.SerializeToString,
             storage__pb2.RegisterNewDatasetResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-        )
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

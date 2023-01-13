@@ -116,13 +116,7 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
 
         return pickle.dumps(wds.WebDataset(file).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
 
-    def write_samples(
-        self,
-        dst: wds.TarWriter,
-        index_start: int,
-        index_end: int,
-        dataset: wds.WebDataset,
-    ) -> None:
+    def write_samples(self, dst: wds.TarWriter, index_start: int, index_end: int, dataset: wds.WebDataset) -> None:
         """Write samples to a tar file.
 
         Args:

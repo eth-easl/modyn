@@ -22,12 +22,7 @@ def setup_argparser() -> argparse.ArgumentParser:
         argparse.ArgumentParser: Argument parser
     """
     parser_ = argparse.ArgumentParser(description="Modyn Storage")
-    parser_.add_argument(
-        "config",
-        type=pathlib.Path,
-        action="store",
-        help="Modyn infrastructure configuration file",
-    )
+    parser_.add_argument("config", type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
 
     return parser_
 

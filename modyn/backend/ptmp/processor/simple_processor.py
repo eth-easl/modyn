@@ -23,9 +23,4 @@ class SimpleProcessor(PostTrainingMetadataProcessor):
                 output_keys.append(key)
                 output_scores.append(score)
 
-        return SetRequest(
-            training_id=training_id,
-            data=output_data,
-            keys=output_keys,
-            scores=output_scores,
-        )
+        return SetRequest(training_id=training_id, data=output_data, keys=output_keys, scores=output_scores)

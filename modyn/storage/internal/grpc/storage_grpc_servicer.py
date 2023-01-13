@@ -85,9 +85,7 @@ class StorageGRPCServicer(StorageServicer):
             for sample in samples:
                 if sample.file_id != current_file.id:
                     file_wrapper = get_file_wrapper(
-                        dataset.file_wrapper_type,
-                        current_file.path,
-                        dataset.file_wrapper_config,
+                        dataset.file_wrapper_type, current_file.path, dataset.file_wrapper_config
                     )
                     yield GetResponse(
                         chunk=file_wrapper.get_samples_from_indices([index for index, _ in samples_per_file]),

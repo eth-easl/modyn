@@ -15,18 +15,8 @@ logger = logging.getLogger(__name__)
 
 def setup_argparser() -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description="Modyn Training Supervisor")
-    parser_.add_argument(
-        "pipeline",
-        type=pathlib.Path,
-        action="store",
-        help="Pipeline configuration file",
-    )
-    parser_.add_argument(
-        "config",
-        type=pathlib.Path,
-        action="store",
-        help="Modyn infrastructure configuration file",
-    )
+    parser_.add_argument("pipeline", type=pathlib.Path, action="store", help="Pipeline configuration file")
+    parser_.add_argument("config", type=pathlib.Path, action="store", help="Modyn infrastructure configuration file")
 
     parser_.add_argument(
         "--start-replay-at",
