@@ -5,7 +5,6 @@ from pathlib import Path
 
 import grpc
 
-# Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501
     GetSamplesRequest,

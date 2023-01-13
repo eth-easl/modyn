@@ -3,7 +3,6 @@ import logging
 import grpc
 from modyn import utils
 
-# Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (  # noqa: E501, E402
     GetByQueryRequest,
