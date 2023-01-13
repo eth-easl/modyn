@@ -146,7 +146,7 @@ def test_start_training():
 def test_get_training_status_not_registered():
     trainer_server = TrainerServerGRPCServicer()
     response = trainer_server.get_training_status(get_status_request, None)
-    assert response is None
+    assert not response.valid
 
 
 @patch.object(mp.Process, 'is_alive', return_value=True)
@@ -165,6 +165,7 @@ def test_get_training_status_alive(
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
+    assert response.valid
     assert response.is_running
     assert not response.blocked
     assert response.state_available
@@ -192,6 +193,7 @@ def test_get_training_status_alive_blocked(
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
+    assert response.valid
     assert response.is_running
     assert response.blocked
     assert not response.state_available
@@ -215,6 +217,7 @@ def test_get_training_status_finished_with_exception(
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
+    assert response.valid
     assert not response.is_running
     assert not response.blocked
     assert response.state_available
@@ -241,6 +244,7 @@ def test_get_training_status_finished_no_checkpoint(
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
+    assert response.valid
     assert not response.is_running
     assert not response.state_available
     assert response.exception == "exception"

@@ -65,11 +65,12 @@ message TrainingStatusRequest {
 }
 
 message TrainingStatusResponse {
-    bool is_running = 1;
-    bool state_available = 2;
-    bool blocked = 3;
-    optional string exception = 4;
-    optional int32 batches_seen = 5;
-    optional int32 samples_seen = 6;
-    optional bytes state = 7;
+    bool valid = 1;
+    bool is_running = 2;
+    bool state_available = 3;
+    bool blocked = 4;
+    optional string exception = 5;
+    optional int32 batches_seen = 6;
+    optional int32 samples_seen = 7;
+    optional bytes state = 8;
 }

@@ -116,12 +116,13 @@ class TrainerServerGRPCServicer:
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
-            return None
+            return TrainingStatusResponse(valid=False)
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
             training_state_running, num_batches, num_samples = self.get_status(training_id)
-            response_kwargs = {
+            response_kwargs_running: dict[str, Any] = {
+                "valid": True,
                 "is_running": True,
                 "blocked": training_state_running is None,
                 "state_available": training_state_running is not None,
@@ -129,11 +130,12 @@ class TrainerServerGRPCServicer:
                 "samples_seen": num_samples,
                 "state": training_state_running
             }
-            cleaned_kwargs = {k: v for k, v in response_kwargs.items() if v}
-            return TrainingStatusResponse(**cleaned_kwargs)
+            cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v}
+            return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
         exception = self.check_for_training_exception(training_id)
         training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(training_id)
-        response_kwargs = {
+        response_kwargs_finished: dict[str, Any] = {
+            "valid": True,
             "is_running": False,
             "blocked": False,
             "state_available": training_state_finished is not None,
@@ -142,8 +144,8 @@ class TrainerServerGRPCServicer:
             "samples_seen": num_samples,
             "state": training_state_finished
         }
-        cleaned_kwargs = {k: v for k, v in response_kwargs.items() if v}
-        return TrainingStatusResponse(**cleaned_kwargs)
+        cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v}
+        return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
     def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
 

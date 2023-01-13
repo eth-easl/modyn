@@ -218,6 +218,7 @@ global___TrainingStatusRequest = TrainingStatusRequest
 class TrainingStatusResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    VALID_FIELD_NUMBER: builtins.int
     IS_RUNNING_FIELD_NUMBER: builtins.int
     STATE_AVAILABLE_FIELD_NUMBER: builtins.int
     BLOCKED_FIELD_NUMBER: builtins.int
@@ -225,6 +226,7 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     BATCHES_SEEN_FIELD_NUMBER: builtins.int
     SAMPLES_SEEN_FIELD_NUMBER: builtins.int
     STATE_FIELD_NUMBER: builtins.int
+    valid: builtins.bool
     is_running: builtins.bool
     state_available: builtins.bool
     blocked: builtins.bool
@@ -235,6 +237,7 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     def __init__(
         self,
         *,
+        valid: builtins.bool = ...,
         is_running: builtins.bool = ...,
         state_available: builtins.bool = ...,
         blocked: builtins.bool = ...,
@@ -244,7 +247,7 @@ class TrainingStatusResponse(google.protobuf.message.Message):
         state: builtins.bytes | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "_state", b"_state", "batches_seen", b"batches_seen", "exception", b"exception", "samples_seen", b"samples_seen", "state", b"state"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "_state", b"_state", "batches_seen", b"batches_seen", "blocked", b"blocked", "exception", b"exception", "is_running", b"is_running", "samples_seen", b"samples_seen", "state", b"state", "state_available", b"state_available"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "_state", b"_state", "batches_seen", b"batches_seen", "blocked", b"blocked", "exception", b"exception", "is_running", b"is_running", "samples_seen", b"samples_seen", "state", b"state", "state_available", b"state_available", "valid", b"valid"]) -> None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_batches_seen", b"_batches_seen"]) -> typing_extensions.Literal["batches_seen"] | None: ...
     @typing.overload

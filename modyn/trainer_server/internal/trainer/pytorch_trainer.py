@@ -58,7 +58,7 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
-    def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None):
+    def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None) -> None:
 
         dict_to_save = {
             'model': self._model.model.state_dict(),
