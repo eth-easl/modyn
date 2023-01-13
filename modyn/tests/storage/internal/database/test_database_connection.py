@@ -55,25 +55,13 @@ def test_database_connection_with_existing_dataset():
         assert database.get_session() is not None
         assert (
             database.add_dataset(
-                "test",
-                "/tmp/modyn",
-                "LocalFilesystemWrapper",
-                "WebdatasetFileWrapper",
-                "test",
-                "0.0.1",
-                "{}",
+                "test", "/tmp/modyn", "LocalFilesystemWrapper", "WebdatasetFileWrapper", "test", "0.0.1", "{}"
             )
             is True
         )
         assert (
             database.add_dataset(
-                "test",
-                "/tmp/modyn",
-                "LocalFilesystemWrapper",
-                "WebdatasetFileWrapper",
-                "test",
-                "0.0.1",
-                "{}",
+                "test", "/tmp/modyn", "LocalFilesystemWrapper", "WebdatasetFileWrapper", "test", "0.0.1", "{}"
             )
             is True
         )
@@ -85,25 +73,13 @@ def test_database_connection_with_existing_dataset_and_different_base_path():
         assert database.get_session() is not None
         assert (
             database.add_dataset(
-                "test",
-                "/tmp/modyn",
-                "LocalFilesystemWrapper",
-                "WebdatasetFileWrapper",
-                "test",
-                "0.0.1",
-                "{}",
+                "test", "/tmp/modyn", "LocalFilesystemWrapper", "WebdatasetFileWrapper", "test", "0.0.1", "{}"
             )
             is True
         )
         assert (
             database.add_dataset(
-                "test",
-                "/tmp/modyn2",
-                "LocalFilesystemWrapper",
-                "WebdatasetFileWrapper",
-                "test",
-                "0.0.1",
-                "{}",
+                "test", "/tmp/modyn2", "LocalFilesystemWrapper", "WebdatasetFileWrapper", "test", "0.0.1", "{}"
             )
             is True
         )
@@ -117,13 +93,7 @@ def test_database_connection_failure():
             assert database.get_session() is not None
             assert (
                 database.add_dataset(
-                    "test",
-                    "/tmp/modyn",
-                    "LocalFilesystemWrapper",
-                    "WebdatasetFileWrapper",
-                    "test",
-                    "0.0.1",
-                    "{}",
+                    "test", "/tmp/modyn", "LocalFilesystemWrapper", "WebdatasetFileWrapper", "test", "0.0.1", "{}"
                 )
                 is True
             )
@@ -133,13 +103,7 @@ def test_add_dataset_failure():
     with DatabaseConnection(get_minimal_modyn_config()) as database:
         assert (
             database.add_dataset(
-                "test",
-                "/tmp/modyn",
-                "LocalFilesystemWrapper",
-                "WebdatasetFileWrapper",
-                "test",
-                "0.0.1",
-                "{}",
+                "test", "/tmp/modyn", "LocalFilesystemWrapper", "WebdatasetFileWrapper", "test", "0.0.1", "{}"
             )
             is False
         )

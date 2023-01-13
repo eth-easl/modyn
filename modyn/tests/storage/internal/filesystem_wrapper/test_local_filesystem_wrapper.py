@@ -133,10 +133,7 @@ def test_list_recursive_not_directory():
 def test_list_recursive_not_in_base_path():
     filesystem_wrapper = LocalFilesystemWrapper(TEST_DIR)
     with pytest.raises(ValueError):
-        filesystem_wrapper.list(
-            os.path.sep + os.path.join("tmp", "modyn", "not_in_base_path"),
-            recursive=True,
-        )
+        filesystem_wrapper.list(os.path.sep + os.path.join("tmp", "modyn", "not_in_base_path"), recursive=True)
 
 
 def test_isdir():

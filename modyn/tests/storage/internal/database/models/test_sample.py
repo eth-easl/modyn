@@ -37,13 +37,7 @@ def test_add_sample(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(
-        dataset=dataset,
-        path="test",
-        created_at=now,
-        updated_at=now,
-        number_of_samples=0,
-    )
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
@@ -69,13 +63,7 @@ def test_update_sample(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(
-        dataset=dataset,
-        path="test",
-        created_at=now,
-        updated_at=now,
-        number_of_samples=0,
-    )
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
@@ -101,13 +89,7 @@ def test_delete_sample(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(
-        dataset=dataset,
-        path="test",
-        created_at=now,
-        updated_at=now,
-        number_of_samples=0,
-    )
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 
@@ -133,13 +115,7 @@ def test_repr(session):  # pylint: disable=redefined-outer-name
     session.commit()
 
     now = NOW
-    file = File(
-        dataset=dataset,
-        path="test",
-        created_at=now,
-        updated_at=now,
-        number_of_samples=0,
-    )
+    file = File(dataset=dataset, path="test", created_at=now, updated_at=now, number_of_samples=0)
     session.add(file)
     session.commit()
 

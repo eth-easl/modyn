@@ -31,10 +31,7 @@ NOW = current_time_millis()
 def get_minimal_modyn_config() -> dict:
     return {
         "storage": {
-            "filesystem": {
-                "type": "LocalFilesystemWrapper",
-                "base_path": os.path.dirname(TMP_FILE),
-            },
+            "filesystem": {"type": "LocalFilesystemWrapper", "base_path": os.path.dirname(TMP_FILE)},
             "database": {
                 "drivername": "sqlite",
                 "username": "",
@@ -101,33 +98,15 @@ def setup():
 
         session.commit()
 
-        file = File(
-            path=TMP_FILE,
-            dataset=dataset,
-            created_at=now,
-            updated_at=now,
-            number_of_samples=2,
-        )
+        file = File(path=TMP_FILE, dataset=dataset, created_at=now, updated_at=now, number_of_samples=2)
 
         session.add(file)
 
-        file2 = File(
-            path=TMP_FILE2,
-            dataset=dataset,
-            created_at=now,
-            updated_at=now,
-            number_of_samples=2,
-        )
+        file2 = File(path=TMP_FILE2, dataset=dataset, created_at=now, updated_at=now, number_of_samples=2)
 
         session.add(file2)
 
-        file3 = File(
-            path=TMP_FILE3,
-            dataset=dataset,
-            created_at=before_now,
-            updated_at=before_now,
-            number_of_samples=2,
-        )
+        file3 = File(path=TMP_FILE3, dataset=dataset, created_at=before_now, updated_at=before_now, number_of_samples=2)
 
         session.commit()
 
