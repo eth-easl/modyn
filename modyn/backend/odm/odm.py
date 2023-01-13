@@ -9,11 +9,11 @@ class OptimalDatasetMetadata(object):
     def __init__(self, config: dict):
         self.__config = config
         self.__con = psycopg2.connect(
-            host=config['odm']['postgresql']['host'],
-            port=config['odm']['postgresql']['port'],
-            database=config['odm']['postgresql']['database'],
-            user=config['odm']['postgresql']['user'],
-            password=config['odm']['postgresql']['password']
+            host=config["odm"]["postgresql"]["host"],
+            port=config["odm"]["postgresql"]["port"],
+            database=config["odm"]["postgresql"]["database"],
+            user=config["odm"]["postgresql"]["user"],
+            password=config["odm"]["postgresql"]["password"],
         )
         self.__con.autocommit = False
         self.__cursor = self.__con.cursor()
@@ -24,27 +24,18 @@ class OptimalDatasetMetadata(object):
         Create tables if they do not exist.
         """
         self.__cursor.execute(
-            'CREATE TABLE IF NOT EXISTS odm_storage ('
-            'id SERIAL PRIMARY KEY,'
-            'key varchar(255) NOT NULL,'
-            'score float NOT NULL,'
-            'data text NOT NULL,'
-            'training_id int NOT NULL)'
+            "CREATE TABLE IF NOT EXISTS odm_storage ("
+            "id SERIAL PRIMARY KEY,"
+            "key varchar(255) NOT NULL,"
+            "score float NOT NULL,"
+            "data text NOT NULL,"
+            "training_id int NOT NULL)"
         )
-        self.__cursor.execute(
-            'CREATE INDEX IF NOT EXISTS storage_key_idx ON odm_storage (key)'
-        )
-        self.__cursor.execute(
-            'CREATE INDEX IF NOT EXISTS storage_training_id_idx ON odm_storage (training_id)'
-        )
+        self.__cursor.execute("CREATE INDEX IF NOT EXISTS storage_key_idx ON odm_storage (key)")
+        self.__cursor.execute("CREATE INDEX IF NOT EXISTS storage_training_id_idx ON odm_storage (training_id)")
         self.__con.commit()
 
-    def set(
-            self,
-            keys: list[str],
-            score: list[float],
-            data: list[bytes],
-            training_id: int) -> None:
+    def set(self, keys: list[str], score: list[float], data: list[bytes], training_id: int) -> None:
         """
         Set the optimal dataset metadata for a given training.
 
@@ -55,20 +46,16 @@ class OptimalDatasetMetadata(object):
             training_id (int): Training id.
         """
         self.__cursor.execute(
-            "DELETE FROM odm_storage WHERE key IN %s AND training_id = %s",
-            (tuple(keys),
-             training_id))
+            "DELETE FROM odm_storage WHERE key IN %s AND training_id = %s", (tuple(keys), training_id)
+        )
         for i in range(len(keys)):
             self.__cursor.execute(
                 "INSERT INTO odm_storage (key, score, data, training_id) VALUES (%s, %s, %s, %s)",
-                (keys[i],
-                 score[i],
-                    data[i],
-                    training_id))
+                (keys[i], score[i], data[i], training_id),
+            )
         self.__con.commit()
 
-    def get_by_keys(
-            self, keys: list[str], training_id: int) -> tuple[list[str], list[float], list[str]]:
+    def get_by_keys(self, keys: list[str], training_id: int) -> tuple[list[str], list[float], list[str]]:
         """
         Get the optimal dataset metadata for a given training and keys.
 
@@ -80,9 +67,8 @@ class OptimalDatasetMetadata(object):
             list[tuple[str, float, str]]: List of keys, scores and data.
         """
         self.__cursor.execute(
-            "SELECT key, score, data FROM odm_storage WHERE key IN %s AND training_id = %s",
-            (tuple(keys),
-             training_id))
+            "SELECT key, score, data FROM odm_storage WHERE key IN %s AND training_id = %s", (tuple(keys), training_id)
+        )
         data = self.__cursor.fetchall()
         return_keys = [d[0] for d in data]
         scores = [d[1] for d in data]
@@ -128,6 +114,5 @@ class OptimalDatasetMetadata(object):
         Args:
             training_id (int): Training id.
         """
-        self.__cursor.execute(
-            "DELETE FROM odm_storage WHERE training_id = %s", (training_id,))
+        self.__cursor.execute("DELETE FROM odm_storage WHERE training_id = %s", (training_id,))
         self.__con.commit()

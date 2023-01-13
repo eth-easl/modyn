@@ -1,8 +1,9 @@
 # pylint: disable=abstract-class-instantiated,unused-argument
-from modyn.backend.supervisor.internal.trigger import Trigger
-from unittest.mock import patch, MagicMock
 from typing import Callable
+from unittest.mock import MagicMock, patch
+
 import pytest
+from modyn.backend.supervisor.internal.trigger import Trigger
 
 
 @patch.multiple(Trigger, __abstractmethods__=set())
@@ -19,7 +20,7 @@ def test_initialization() -> None:
     assert trigger.callback == callback  # pylint: disable=comparison-with-callable
 
 
-@patch.object(Trigger, '_decide_for_trigger', return_value=0)
+@patch.object(Trigger, "_decide_for_trigger", return_value=0)
 def test_inform_does_nothing_on_no_trigger(test__decide_for_trigger) -> None:
     callback = MagicMock()
 
@@ -31,7 +32,7 @@ def test_inform_does_nothing_on_no_trigger(test__decide_for_trigger) -> None:
 
 @pytest.mark.parametrize("num_callbacks", [1, 2, 3, 4, 5])
 def test_inform_calls_callback(num_callbacks) -> None:
-    with patch.object(Trigger, '_decide_for_trigger', return_value=num_callbacks):
+    with patch.object(Trigger, "_decide_for_trigger", return_value=num_callbacks):
         callback = MagicMock()
 
         trigger = get_trigger(callback)

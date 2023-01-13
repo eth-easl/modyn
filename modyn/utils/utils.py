@@ -1,13 +1,15 @@
-from types import ModuleType
-import modyn.models
-import inspect
 import importlib
-import yaml
+import inspect
 import pathlib
+import time
+from types import ModuleType
+from typing import Optional
+
+import grpc
+import modyn.models
+import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
-from typing import Optional
-import time
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -53,3 +55,11 @@ def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool,
 def current_time_millis() -> int:
     timestamp = time.time() * 1000
     return int(round(timestamp))
+
+
+def grpc_connection_established(channel: grpc.Channel, timeout: int = 5) -> bool:
+    try:
+        grpc.channel_ready_future(channel).result(timeout=timeout)
+        return True
+    except grpc.FutureTimeoutError:
+        return False
