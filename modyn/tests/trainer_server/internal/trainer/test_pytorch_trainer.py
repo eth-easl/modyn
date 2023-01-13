@@ -23,6 +23,9 @@ class DummyModule:
     def __init__(self) -> None:
         self.model = DummyModelWrapper
 
+    def train(self) -> None:
+        pass
+
 
 class DummyModelWrapper:
     def __init__(self, model_configuration=None) -> None:
@@ -64,6 +67,18 @@ def get_dummy_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), dynam
     training_info = get_training_info()
     trainer = PytorchTrainer(training_info, 'cpu', "new", query_queue, response_queue)
     return trainer
+
+
+def test_trainer_init():
+    trainer = get_dummy_trainer(mp.Queue(), mp.Queue())
+    assert isinstance(trainer._model, DummyModelWrapper)
+    assert isinstance(trainer._optimizer, torch.optim.SGD)
+    assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
+    assert trainer._device == 'cpu'
+    assert trainer._num_samples == 0
+    assert trainer._checkpoint_interval == 10
+    assert trainer._checkpoint_path == "checkpoint_test"
+    assert os.path.isdir(trainer._checkpoint_path)
 
 
 def test_save_state():
@@ -160,3 +175,15 @@ def test_send_state_to_server():
             ]
         }
     }
+
+def test_get_query_queue():
+    pass
+
+def test_train():
+    pass
+
+def test_create_trainer():
+    pass
+
+def test_create_trainer_with_exception():
+    pass

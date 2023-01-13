@@ -116,7 +116,8 @@ class PytorchTrainer:
 
             if not self._status_query_queue.empty():
                 req = self._status_query_queue.get()
-                assert req == STATUS_QUERY_MESSAGE
+                if req != STATUS_QUERY_MESSAGE:
+                    raise ValueError(f"Unknown message {req} in the query queue")
                 self.send_state_to_server(batch_number)
 
             self._optimizer.zero_grad()

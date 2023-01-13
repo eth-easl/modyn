@@ -123,7 +123,7 @@ class TrainerServerGRPCServicer:
             training_state_running, num_batches, num_samples = self.get_status(training_id)
             response_kwargs = {
                 "is_running": True,
-                "blocked": training_state_running is not None,
+                "blocked": training_state_running is None,
                 "state_available": training_state_running is not None,
                 "batches_seen": num_batches,
                 "samples_seen": num_samples,
@@ -136,6 +136,7 @@ class TrainerServerGRPCServicer:
         training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(training_id)
         response_kwargs = {
             "is_running": False,
+            "blocked": False,
             "state_available": training_state_finished is not None,
             "exception": exception,
             "batches_seen": num_batches,

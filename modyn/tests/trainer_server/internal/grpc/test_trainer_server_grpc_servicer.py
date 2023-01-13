@@ -126,7 +126,6 @@ def test_register(test_getattr, test_hasattr):
 
 
 def test_start_training_not_registered():
-
     trainer_server = TrainerServerGRPCServicer()
     response = trainer_server.start_training(start_training_request, None)
     assert not response.training_started
@@ -163,10 +162,34 @@ def test_get_training_status_alive(
 
     response = trainer_server.get_training_status(get_status_request, None)
     assert response.is_running
+    assert not response.blocked
     assert response.state_available
     assert response.batches_seen == 10
     assert response.samples_seen == 100
     assert response.state == b'state'
+    test_get_latest_checkpoint.assert_not_called()
+    test_check_for_training_exception.assert_not_called()
+
+@patch.object(mp.Process, 'is_alive', return_value=True)
+@patch.object(TrainerServerGRPCServicer, 'get_status', return_value=(None, None, None))
+@patch.object(TrainerServerGRPCServicer, 'check_for_training_exception')
+@patch.object(TrainerServerGRPCServicer, 'get_latest_checkpoint')
+def test_get_training_status_alive_blocked(
+    test_get_latest_checkpoint,
+    test_check_for_training_exception,
+    test_get_status,
+    test_is_alive
+):
+
+    trainer_server = TrainerServerGRPCServicer()
+    training_process_info = get_training_process_info()
+    trainer_server._training_process_dict[1] = training_process_info
+    trainer_server._training_dict[1] = None
+
+    response = trainer_server.get_training_status(get_status_request, None)
+    assert response.is_running
+    assert response.blocked
+    assert not response.state_available
     test_get_latest_checkpoint.assert_not_called()
     test_check_for_training_exception.assert_not_called()
 
@@ -188,6 +211,7 @@ def test_get_training_status_finished_with_exception(
 
     response = trainer_server.get_training_status(get_status_request, None)
     assert not response.is_running
+    assert not response.blocked
     assert response.state_available
     assert response.batches_seen == 10
     assert response.samples_seen == 100
@@ -293,3 +317,20 @@ def test_get_latest_checkpoint_found():
         dict_to_save.pop('num_batches')
         dict_to_save.pop('num_samples')
         assert torch.load(BytesIO(training_state))['state'] == dict_to_save['state']
+
+
+def test_get_latest_checkpoint_invalid():
+    trainer_server = TrainerServerGRPCServicer()
+    with tempfile.TemporaryDirectory() as temp:
+
+        training_info = get_training_info(temp)
+        trainer_server._training_dict[1] = training_info
+
+        dict_to_save = {'state': {'weight': 10}}
+        checkpoint_file = training_info.checkpoint_path + '/checkp'
+        torch.save(dict_to_save, checkpoint_file)
+
+        training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
+        assert training_state is None
+        assert num_batches is None
+        assert num_samples is None
