@@ -91,8 +91,8 @@ class PytorchTrainer:
 
     def train(self, log_path: str, load_checkpoint_path: Optional[str] = None) -> None:
 
-        fh = logging.FileHandler(log_path)
-        logger.addHandler(fh)
+        file_handler = logging.FileHandler(log_path)
+        logger.addHandler(file_handler)
         logger.setLevel(logging.INFO)
 
         logger.info(f'Process {os.getpid()} starts training')
@@ -128,7 +128,7 @@ class PytorchTrainer:
             logger.info(f'Iteration {batch_number}')
 
         logger.info('Training complete!')
-        logger.removeHandler(fh)
+        logger.removeHandler(file_handler)
 
 
 def train(

@@ -116,7 +116,7 @@ class TrainerServerGRPCServicer:
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
-            return
+            return None
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
@@ -183,7 +183,7 @@ class TrainerServerGRPCServicer:
                 buffer.seek(0)
                 state_bytes = buffer.read()
                 return state_bytes, num_batches, num_samples
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 # checkpoint corrupted
                 pass
         return None, None, None

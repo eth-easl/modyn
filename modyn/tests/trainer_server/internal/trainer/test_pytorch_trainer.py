@@ -45,6 +45,7 @@ class MockModel(torch.nn.Module):
 
 
 class MockDataset(torch.utils.data.IterableDataset):
+    # pylint: disable=abstract-method, useless-parent-delegation
     def __init__(self) -> None:
         super().__init__()
 

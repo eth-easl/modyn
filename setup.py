@@ -69,7 +69,7 @@ setup(
     entry_points={'console_scripts':
                   ["_modyn_supervisor=modyn.backend.supervisor.entrypoint:main",
                    "_modyn_storage=modyn.storage.storage_entrypoint:main",
-                   "_modyn_storage=modyn.trainer_server.trainer_server_entrypoint:main"]},
+                   "_modyn_trainer_server=modyn.trainer_server.trainer_server_entrypoint:main"]},
     scripts=[
         'modyn/backend/supervisor/modyn-supervisor',
         'modyn/storage/modyn-storage',
