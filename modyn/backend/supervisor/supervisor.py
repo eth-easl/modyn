@@ -24,7 +24,7 @@ class Supervisor:
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
 
-        logging.info("Setting up connections to cluster components.")
+        logger.info("Setting up connections to cluster components.")
         self.grpc = GRPCHandler(modyn_config)
 
         if not self.validate_system():

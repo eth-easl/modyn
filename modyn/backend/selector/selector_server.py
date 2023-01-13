@@ -36,7 +36,7 @@ class SelectorServer:
     def run(self) -> None:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
         add_SelectorServicer_to_server(self.grpc_server, server)
-        logging.info(f"Starting server. Listening on port {self.modyn_config['selector']['port']}.")
+        logger.info(f"Starting server. Listening on port {self.modyn_config['selector']['port']}.")
         server.add_insecure_port("[::]:" + self.modyn_config["selector"]["port"])
         server.start()
         server.wait_for_termination()
