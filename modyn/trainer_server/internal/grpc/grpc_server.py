@@ -4,10 +4,8 @@ import logging
 from concurrent import futures
 
 import grpc
-
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
 from modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer import TrainerServerGRPCServicer
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +30,10 @@ class GRPCServer:
         """
 
         add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(), self.server)
-        logger.info(f"Starting trainer server. Listening on port {self.config['trainer']['port']}")
-        self.server.add_insecure_port('[::]:' + self.config['trainer']['port'])
+        logger.info(
+            f"Starting trainer server. Listening on port {self.config['trainer']['port']}"
+        )
+        self.server.add_insecure_port("[::]:" + self.config["trainer"]["port"])
         logger.info("start serving!")
         self.server.start()
         return self.server

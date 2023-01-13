@@ -1,15 +1,21 @@
-from torch.utils.data import IterableDataset, get_worker_info
 import typing
-from torchvision import transforms
 
-from modyn.trainer_server.internal.mocks.mock_selector_server import MockSelectorServer, GetSamplesRequest
-from modyn.trainer_server.internal.mocks.mock_storage_server import MockStorageServer, GetRequest
+from modyn.trainer_server.internal.mocks.mock_selector_server import GetSamplesRequest, MockSelectorServer
+from modyn.trainer_server.internal.mocks.mock_storage_server import GetRequest, MockStorageServer
+from torch.utils.data import IterableDataset, get_worker_info
+from torchvision import transforms
 
 
 class OnlineDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
-    def __init__(self, training_id: int, dataset_id: str, serialized_transforms: list[str], train_until_sample_id: str):
+    def __init__(
+        self,
+        training_id: int,
+        dataset_id: str,
+        serialized_transforms: list[str],
+        train_until_sample_id: str,
+    ):
         self._training_id = training_id
         self._dataset_id = dataset_id
         self._dataset_len = 0
@@ -26,11 +32,15 @@ class OnlineDataset(IterableDataset):
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         # TODO(#74): replace this with grpc calls to the selector
-        req = GetSamplesRequest(self._training_id, self._train_until_sample_id, worker_id)
+        req = GetSamplesRequest(
+            self._training_id, self._train_until_sample_id, worker_id
+        )
         samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
-    def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[typing.Any]]:
+    def _get_data_from_storage(
+        self, keys: list[str]
+    ) -> tuple[list[str], list[typing.Any]]:
         # TODO(#74): replace this with grpc calls to the selector
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)
         response = self._storagestub.Get(req)

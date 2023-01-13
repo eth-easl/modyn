@@ -1,4 +1,5 @@
 from typing import Optional
+
 import torch
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
@@ -27,8 +28,9 @@ def prepare_dataloaders(
     """
 
     train_set = OnlineDataset(training_id, dataset_id, transform, train_until_sample_id)
-    train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
-                                                   num_workers=num_dataloaders)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_set, batch_size=batch_size, num_workers=num_dataloaders
+    )
 
     # TODO(#50): what to do with the val set in the general case?
     val_dataloader = None

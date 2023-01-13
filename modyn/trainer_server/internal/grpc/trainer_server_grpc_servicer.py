@@ -1,31 +1,31 @@
 import glob
-import logging
 import io
-import queue
-from typing import Any, Optional
-import grpc
+import logging
+import multiprocessing as mp
 import os
+import queue
 import sys
 from pathlib import Path
-import multiprocessing as mp
+from typing import Any, Optional
 
+import grpc
 import torch
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     RegisterTrainServerRequest,
     RegisterTrainServerResponse,
-    TrainerAvailableRequest,
-    TrainerAvailableResponse,
     StartTrainingRequest,
     StartTrainingResponse,
+    TrainerAvailableRequest,
+    TrainerAvailableResponse,
     TrainingStatusRequest,
-    TrainingStatusResponse
+    TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.trainer.pytorch_trainer import train
+from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
-from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,8 @@ class TrainerServerGRPCServicer:
 
     def trainer_available(
         self,
-        request: TrainerAvailableRequest,   # pylint: disable=unused-argument
-        context: grpc.ServicerContext   # pylint: disable=unused-argument
+        request: TrainerAvailableRequest,  # pylint: disable=unused-argument
+        context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainerAvailableResponse:
 
         # if there is already another training job running, the node is considered unavailable
@@ -57,7 +57,7 @@ class TrainerServerGRPCServicer:
     def register(
         self,
         request: RegisterTrainServerRequest,
-        context: grpc.ServicerContext   # pylint: disable=unused-argument
+        context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> RegisterTrainServerResponse:
 
         training_info = TrainingInfo(request)
@@ -70,7 +70,7 @@ class TrainerServerGRPCServicer:
     def start_training(
         self,
         request: StartTrainingRequest,
-        context: grpc.ServicerContext   # pylint: disable=unused-argument
+        context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
 
         training_id = request.training_id
@@ -79,29 +79,32 @@ class TrainerServerGRPCServicer:
             logger.error(f"Training with id {training_id} has not been registered")
             return StartTrainingResponse(training_started=False)
 
-        exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        exception_queue: mp.Queue[  # pylint: disable=unsubscriptable-object
+            str
+        ] = mp.Queue()
+        status_query_queue: mp.Queue[  # pylint: disable=unsubscriptable-object
+            str
+        ] = mp.Queue()
+        status_response_queue: mp.Queue[  # pylint: disable=unsubscriptable-object
+            dict[str, Any]
+        ] = mp.Queue()
 
         process = mp.Process(
             target=train,
             args=(
                 self._training_dict[training_id],
                 request.device,
-                f'log-{training_id}.txt',
+                f"log-{training_id}.txt",
                 request.load_checkpoint_path,
                 request.train_until_sample_id,
                 exception_queue,
                 status_query_queue,
-                status_response_queue
-            )
+                status_response_queue,
+            ),
         )
         process.start()
         self._training_process_dict[training_id] = TrainingProcessInfo(
-            process,
-            exception_queue,
-            status_query_queue,
-            status_response_queue
+            process, exception_queue, status_query_queue, status_response_queue
         )
 
         return StartTrainingResponse(training_started=True)
@@ -109,7 +112,7 @@ class TrainerServerGRPCServicer:
     def get_training_status(
         self,
         request: TrainingStatusRequest,
-        context: grpc.ServicerContext   # pylint: disable=unused-argument
+        context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainingStatusResponse:
 
         training_id = request.training_id
@@ -120,7 +123,9 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
-            training_state_running, num_batches, num_samples = self.get_status(training_id)
+            training_state_running, num_batches, num_samples = self.get_status(
+                training_id
+            )
             response_kwargs_running: dict[str, Any] = {
                 "valid": True,
                 "is_running": True,
@@ -128,12 +133,14 @@ class TrainerServerGRPCServicer:
                 "state_available": training_state_running is not None,
                 "batches_seen": num_batches,
                 "samples_seen": num_samples,
-                "state": training_state_running
+                "state": training_state_running,
             }
             cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
         exception = self.check_for_training_exception(training_id)
-        training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(training_id)
+        training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(
+            training_id
+        )
         response_kwargs_finished: dict[str, Any] = {
             "valid": True,
             "is_running": False,
@@ -142,19 +149,23 @@ class TrainerServerGRPCServicer:
             "exception": exception,
             "batches_seen": num_batches,
             "samples_seen": num_samples,
-            "state": training_state_finished
+            "state": training_state_finished,
         }
         cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v}
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
-    def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
+    def get_status(
+        self, training_id: int
+    ) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
 
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
             # blocks for 30 seconds
-            response = self._training_process_dict[training_id].status_response_queue.get(timeout=30)
-            return response['state'], response['num_batches'], response['num_samples']
+            response = self._training_process_dict[
+                training_id
+            ].status_response_queue.get(timeout=30)
+            return response["state"], response["num_batches"], response["num_samples"]
         except queue.Empty:
             return None, None, None
 
@@ -165,7 +176,9 @@ class TrainerServerGRPCServicer:
             return exception_queue.get()
         return None
 
-    def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
+    def get_latest_checkpoint(
+        self, training_id: int
+    ) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
 
         # this might be useful in case that the training has already finished,
         # either successfully or not, and allow to access the last state
@@ -178,8 +191,8 @@ class TrainerServerGRPCServicer:
         for checkpoint in checkpoints:
             try:
                 state = torch.load(checkpoint)
-                num_batches = state.pop('num_batches')
-                num_samples = state.pop('num_samples')
+                num_batches = state.pop("num_batches")
+                num_samples = state.pop("num_samples")
                 buffer = io.BytesIO()
                 torch.save(state, buffer)
                 buffer.seek(0)

@@ -1,17 +1,17 @@
 import json
-import grpc
 import time
 
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
+import grpc
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
+    CheckpointInfo,
+    Data,
     JsonString,
     RegisterTrainServerRequest,
-    Data,
-    TrainerAvailableRequest,
-    CheckpointInfo,
     StartTrainingRequest,
-    TrainingStatusRequest
+    TrainerAvailableRequest,
+    TrainingStatusRequest,
 )
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 
@@ -27,10 +27,8 @@ class TrainerClient:
         self._trainer_stub = TrainerServerStub(
             grpc.insecure_channel(
                 "127.0.0.1:5001",
-                options=[
-                    ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
-                ],
-            ),
+                options=[("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH)],
+            )
         )
 
     def check_trainer_available(self) -> bool:
@@ -40,35 +38,29 @@ class TrainerClient:
 
     def register_training(self, training_id: int) -> bool:
 
-        transforms = ["transforms.ToTensor()",  "transforms.Normalize((0.1307,), (0.3081,))"]
+        transforms = [
+            "transforms.ToTensor()",
+            "transforms.Normalize((0.1307,), (0.3081,))",
+        ]
 
-        optimizer_parameters = {
-            'lr': 0.1,
-            'momentum': 0.001
-        }
+        optimizer_parameters = {"lr": 0.1, "momentum": 0.001}
 
-        model_configuration = {
-            'num_classes': 10,
-        }
+        model_configuration = {"num_classes": 10}
 
         req = RegisterTrainServerRequest(
             training_id=training_id,
             model_id="ResNet18",
             batch_size=32,
-            torch_optimizer='SGD',
-            torch_criterion='CrossEntropyLoss',
+            torch_optimizer="SGD",
+            torch_criterion="CrossEntropyLoss",
             criterion_parameters=JsonString(value=json.dumps({})),
             optimizer_parameters=JsonString(value=json.dumps(optimizer_parameters)),
             model_configuration=JsonString(value=json.dumps(model_configuration)),
-            data_info=Data(
-                dataset_id="MNISTDataset",
-                num_dataloaders=2
-            ),
+            data_info=Data(dataset_id="MNISTDataset", num_dataloaders=2),
             checkpoint_info=CheckpointInfo(
-                checkpoint_interval=10,
-                checkpoint_path="results"
+                checkpoint_interval=10, checkpoint_path="results"
             ),
-            transform_list=transforms
+            transform_list=transforms,
         )
 
         response = self._trainer_stub.register(req)
@@ -78,9 +70,9 @@ class TrainerClient:
 
         req = StartTrainingRequest(
             training_id=training_id,
-            device='cpu',
+            device="cpu",
             train_until_sample_id="new",
-            load_checkpoint_path="results/model_0.pt"
+            load_checkpoint_path="results/model_0.pt",
         )
         response = self._trainer_stub.start_training(req)
 

@@ -14,7 +14,10 @@ def test_init():
     assert grpc_server.config == config
 
 
-@patch("modyn.trainer_server.internal.grpc.grpc_server.add_TrainerServerServicer_to_server", return_value=None)
+@patch(
+    "modyn.trainer_server.internal.grpc.grpc_server.add_TrainerServerServicer_to_server",
+    return_value=None,
+)
 def test_enter(mock_add_trainer_server_servicer_to_server):
     with GRPCServer(get_modyn_config()) as grpc_server:
         assert grpc_server is not None

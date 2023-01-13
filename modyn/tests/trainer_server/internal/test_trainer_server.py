@@ -1,4 +1,5 @@
 from unittest.mock import patch
+
 from modyn.trainer_server.internal.grpc.grpc_server import GRPCServer
 from modyn.trainer_server.trainer_server import TrainerServer
 
