@@ -19,10 +19,7 @@ def get_simple_config() -> dict:
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
-@patch(
-    "modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established",
-    return_value=True,
-)
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init(test_insecure_channel, test_connection_established):
     handler = GRPCHandler(get_simple_config())
@@ -32,10 +29,7 @@ def test_init(test_insecure_channel, test_connection_established):
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
-@patch(
-    "modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established",
-    return_value=True,
-)
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage(test_insecure_channel, test_connection_established):
     handler = None
@@ -53,10 +47,7 @@ def test_init_storage(test_insecure_channel, test_connection_established):
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
-@patch(
-    "modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established",
-    return_value=False,
-)
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=False)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage_throws(test_insecure_channel, test_connection_established):
     handler = None
@@ -71,27 +62,20 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
         handler.init_storage()
 
 
-@patch(
-    "modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established",
-    return_value=True,
-)
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_dataset_available(test_connection_established):
     handler = GRPCHandler(get_simple_config())
 
     assert handler.storage is not None
 
     with patch.object(
-        handler.storage,
-        "CheckAvailability",
-        return_value=DatasetAvailableResponse(available=True),
+        handler.storage, "CheckAvailability", return_value=DatasetAvailableResponse(available=True)
     ) as avail_method:
         assert handler.dataset_available("id")
         avail_method.assert_called_once()
 
     with patch.object(
-        handler.storage,
-        "CheckAvailability",
-        return_value=DatasetAvailableResponse(available=False),
+        handler.storage, "CheckAvailability", return_value=DatasetAvailableResponse(available=False)
     ) as avail_method:
         assert not handler.dataset_available("id")
         avail_method.assert_called_once()

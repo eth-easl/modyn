@@ -22,10 +22,7 @@ def get_minimal_pipeline_config() -> dict:
             "initial_pass": {"activated": False},
         },
         "data": {"dataset_id": "test"},
-        "trigger": {
-            "id": "DataAmountTrigger",
-            "trigger_config": {"data_points_for_trigger": 1},
-        },
+        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
     }
 
 
