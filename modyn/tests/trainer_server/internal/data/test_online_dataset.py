@@ -55,9 +55,7 @@ def test_get_data_from_storage(test_get):
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ],
         )
     ],
@@ -72,15 +70,11 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
     )
     online_dataset._deserialize_torchvision_transforms()
     assert isinstance(online_dataset._transform.transforms, list)
-    for transform1, transform2 in zip(
-        online_dataset._transform.transforms, transforms_list
-    ):
+    for transform1, transform2 in zip(online_dataset._transform.transforms, transforms_list):
         assert transform1.__dict__ == transform2.__dict__
 
 
-@patch.object(
-    OnlineDataset, "_get_data_from_storage", return_value=(list(range(10)), [1] * 10)
-)
+@patch.object(OnlineDataset, "_get_data_from_storage", return_value=(list(range(10)), [1] * 10))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataset_iter(test_get_data, test_get_keys):
 
@@ -96,9 +90,7 @@ def test_dataset_iter(test_get_data, test_get_keys):
     assert [x[1] for x in all_data] == [1] * 10
 
 
-@patch.object(
-    OnlineDataset, "_get_data_from_storage", return_value=([0] * 16, [1] * 16)
-)
+@patch.object(OnlineDataset, "_get_data_from_storage", return_value=([0] * 16, [1] * 16))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataloader_dataset(test_get_data, test_get_keys):
 

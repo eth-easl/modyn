@@ -26,15 +26,11 @@ class PytorchTrainer:
     ) -> None:
 
         # setup model and optimizer
-        self._model = training_info.model_handler(
-            training_info.model_configuration_dict
-        )
+        self._model = training_info.model_handler(training_info.model_configuration_dict)
         self._model.model.to(device)
 
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
-        self._optimizer = optimizer_func(
-            self._model.model.parameters(), **training_info.optimizer_dict
-        )
+        self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
 
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
@@ -61,9 +57,7 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
-    def save_state(
-        self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None
-    ) -> None:
+    def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None) -> None:
 
         dict_to_save = {
             "model": self._model.model.state_dict(),
@@ -128,13 +122,8 @@ class PytorchTrainer:
             loss.backward()
             self._optimizer.step()
 
-            if (
-                self._checkpoint_interval > 0
-                and batch_number % self._checkpoint_interval == 0
-            ):
-                checkpoint_file_name = (
-                    self._checkpoint_path + f"/model_{batch_number}" + ".pt"
-                )
+            if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
+                checkpoint_file_name = self._checkpoint_path + f"/model_{batch_number}" + ".pt"
                 self.save_state(checkpoint_file_name, batch_number)
 
             self._num_samples += batch[0].shape[0]

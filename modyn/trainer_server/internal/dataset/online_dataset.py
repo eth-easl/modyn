@@ -32,15 +32,11 @@ class OnlineDataset(IterableDataset):
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         # TODO(#74): replace this with grpc calls to the selector
-        req = GetSamplesRequest(
-            self._training_id, self._train_until_sample_id, worker_id
-        )
+        req = GetSamplesRequest(self._training_id, self._train_until_sample_id, worker_id)
         samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
-    def _get_data_from_storage(
-        self, keys: list[str]
-    ) -> tuple[list[str], list[typing.Any]]:
+    def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[typing.Any]]:
         # TODO(#74): replace this with grpc calls to the selector
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)
         response = self._storagestub.Get(req)

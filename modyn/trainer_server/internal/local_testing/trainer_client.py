@@ -57,9 +57,7 @@ class TrainerClient:
             optimizer_parameters=JsonString(value=json.dumps(optimizer_parameters)),
             model_configuration=JsonString(value=json.dumps(model_configuration)),
             data_info=Data(dataset_id="MNISTDataset", num_dataloaders=2),
-            checkpoint_info=CheckpointInfo(
-                checkpoint_interval=10, checkpoint_path="results"
-            ),
+            checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="results"),
             transform_list=transforms,
         )
 

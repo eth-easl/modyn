@@ -98,9 +98,7 @@ def test_trainer_available():
 @patch.object(mp.Process, "is_alive", return_value=True)
 def test_trainer_not_available(test_is_alive):
     trainer_server = TrainerServerGRPCServicer()
-    trainer_server._training_process_dict[10] = TrainingProcessInfo(
-        mp.Process(), mp.Queue(), mp.Queue(), mp.Queue()
-    )
+    trainer_server._training_process_dict[10] = TrainingProcessInfo(mp.Process(), mp.Queue(), mp.Queue(), mp.Queue())
     response = trainer_server.trainer_available(trainer_available_request, None)
     assert not response.available
 
@@ -200,12 +198,8 @@ def test_get_training_status_alive_blocked(
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
-@patch.object(
-    TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100)
-)
-@patch.object(
-    TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception"
-)
+@patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100))
+@patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
 @patch.object(TrainerServerGRPCServicer, "get_status")
 def test_get_training_status_finished_with_exception(
     test_get_status,
@@ -231,12 +225,8 @@ def test_get_training_status_finished_with_exception(
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
-@patch.object(
-    TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None)
-)
-@patch.object(
-    TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception"
-)
+@patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None))
+@patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
 @patch.object(TrainerServerGRPCServicer, "get_status")
 def test_get_training_status_finished_no_checkpoint(
     test_get_status,
@@ -317,9 +307,7 @@ def test_get_latest_checkpoint_found():
         checkpoint_file = training_info.checkpoint_path + "/checkp"
         torch.save(dict_to_save, checkpoint_file)
 
-        training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(
-            1
-        )
+        training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
         assert num_batches == 10
         assert num_samples == 100
 
@@ -339,9 +327,7 @@ def test_get_latest_checkpoint_invalid():
         checkpoint_file = training_info.checkpoint_path + "/checkp"
         torch.save(dict_to_save, checkpoint_file)
 
-        training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(
-            1
-        )
+        training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
         assert training_state is None
         assert num_batches is None
         assert num_samples is None

@@ -52,14 +52,9 @@ class MockDataset(torch.utils.data.IterableDataset):
         return iter(range(100))
 
 
-def mock_get_dataloaders(
-    training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id
-):
+def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id):
     mock_train_dataloader = iter(
-        [
-            (torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int))
-            for _ in range(100)
-        ]
+        [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
     return mock_train_dataloader, None
 
@@ -78,18 +73,14 @@ def get_training_info(dynamic_module_patch: MagicMock):
         torch_optimizer="SGD",
         batch_size=32,
         torch_criterion="CrossEntropyLoss",
-        checkpoint_info=CheckpointInfo(
-            checkpoint_interval=10, checkpoint_path="checkpoint_test"
-        ),
+        checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="checkpoint_test"),
     )
     training_info = TrainingInfo(request)
     return training_info
 
 
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
-def get_mock_trainer(
-    query_queue: mp.Queue(), response_queue: mp.Queue(), dynamic_module_patch: MagicMock
-):
+def get_mock_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), dynamic_module_patch: MagicMock):
     dynamic_module_patch.return_value = MockModule()
     training_info = get_training_info()
     trainer = PytorchTrainer(training_info, "cpu", "new", query_queue, response_queue)
@@ -234,9 +225,7 @@ def test_train_invalid_query_message():
     trainer = get_mock_trainer(query_status_queue, status_queue)
     query_status_queue.put("INVALID MESSAGE")
     with tempfile.NamedTemporaryFile() as temp:
-        with pytest.raises(
-            ValueError, match="Unknown message in the status query queue"
-        ):
+        with pytest.raises(ValueError, match="Unknown message in the status query queue"):
             trainer.train(temp.name)
         assert query_status_queue.qsize() == 0
         assert status_queue.qsize() == 0
