@@ -47,7 +47,7 @@ def _store_data(data_dir: pathlib.Path, shards: int):
         os.mkdir(data_dir)
     for i in range(shards):
         os.mkdir(data_dir / f"mnist_shard_{i}")
-    # download mnist dataset
+    # The following line forces a download of the mnist dataset.
     mnist = tf.keras.datasets.mnist
     (x_train, y_train), (_, _) = mnist.load_data()
     samples_per_shard = len(x_train) // shards
