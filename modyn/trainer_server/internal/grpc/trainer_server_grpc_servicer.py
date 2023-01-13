@@ -25,9 +25,9 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse
 )
 from modyn.trainer_server.internal.trainer.pytorch_trainer import train
-from modyn.trainer_server.internal.utils.training_info import STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
-
+from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -132,7 +132,6 @@ class TrainerServerGRPCServicer:
             cleaned_kwargs = {k: v for k, v in response_kwargs.items() if v}
             return TrainingStatusResponse(**cleaned_kwargs)
         exception = self.check_for_training_exception(training_id)
-        print(self.get_latest_checkpoint(training_id))
         training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(training_id)
         response_kwargs = {
             "is_running": False,
@@ -149,7 +148,7 @@ class TrainerServerGRPCServicer:
     def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
 
         status_query_queue = self._training_process_dict[training_id].status_query_queue
-        status_query_queue.put(STATUS_QUERY_MESSAGE)
+        status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
             response = self._training_process_dict[training_id].status_response_queue.get(timeout=30) # blocks for 30 seconds
             return response['state'], response['num_batches'], response['num_samples']

@@ -19,7 +19,8 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainerAvailableRequest,
     TrainingStatusRequest
 )
-from modyn.trainer_server.internal.utils.training_info import STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_info import TrainingInfo
+from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 
 start_training_request = StartTrainingRequest(
@@ -260,7 +261,7 @@ def test_get_training_status():
     assert training_process_info.status_query_queue.qsize() == 1
     assert training_process_info.status_response_queue.empty()
     query = training_process_info.status_query_queue.get()
-    assert query == STATUS_QUERY_MESSAGE
+    assert query == TrainerMessages.STATUS_QUERY_MESSAGE
 
 
 def test_check_for_training_exception_not_found():

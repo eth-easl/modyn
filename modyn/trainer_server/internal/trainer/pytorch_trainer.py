@@ -8,8 +8,10 @@ import multiprocessing as mp
 
 
 from modyn.trainer_server.internal.dataset.utils import prepare_dataloaders
-from modyn.trainer_server.internal.utils.training_info import STATUS_QUERY_MESSAGE, TrainingInfo
+from modyn.trainer_server.internal.utils.training_info import TrainingInfo
+from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 
+logger = logging.getLogger(__name__)
 
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes
@@ -46,7 +48,6 @@ class PytorchTrainer:
         self._device = device
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
-        self._logger = logging.getLogger()
 
         if not os.path.isdir(self._checkpoint_path):
             os.mkdir(self._checkpoint_path)
@@ -56,19 +57,6 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
-    def create_logger(self, log_path: str) -> None:
-
-        self._logger = logging.getLogger('trainer')
-        self._logger.setLevel(logging.INFO)
-
-        file_handler = logging.FileHandler(log_path)
-        file_handler.setLevel(logging.INFO)
-
-        formatter = logging.Formatter('%(asctime)s – %(message)s')
-        file_handler.setFormatter(formatter)
-
-        self._logger.addHandler(file_handler)
-        self._logger.propagate = False
 
     def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None):
 
@@ -101,9 +89,11 @@ class PytorchTrainer:
 
     def train(self, log_path: str, load_checkpoint_path: Optional[str] = None) -> None:
 
-        self.create_logger(log_path)
+        fh = logging.FileHandler(log_path)
+        logger.addHandler(fh)
+        logger.setLevel(logging.INFO)
 
-        self._logger.info(f'Process {os.getpid()} starts training')
+        logger.info(f'Process {os.getpid()} starts training')
 
         if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
             self.load_checkpoint(load_checkpoint_path)
@@ -116,8 +106,8 @@ class PytorchTrainer:
 
             if not self._status_query_queue.empty():
                 req = self._status_query_queue.get()
-                if req != STATUS_QUERY_MESSAGE:
-                    raise ValueError(f"Unknown message {req} in the query queue")
+                if req != TrainerMessages.STATUS_QUERY_MESSAGE:
+                    raise ValueError(f"Unknown message in the status query queue")
                 self.send_state_to_server(batch_number)
 
             self._optimizer.zero_grad()
@@ -133,9 +123,10 @@ class PytorchTrainer:
 
             self._num_samples += batch[0].shape[0]
 
-            self._logger.info(f'Iteration {batch_number}')
+            logger.info(f'Iteration {batch_number}')
 
-        self._logger.info('Training complete!')
+        logger.info('Training complete!')
+        logger.removeHandler(fh)
 
 
 def train(

@@ -7,9 +7,6 @@ from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
-STATUS_QUERY_MESSAGE = "get_status"
-
-
 class TrainingInfo:
     # pylint: disable=too-many-instance-attributes
 

@@ -104,3 +104,13 @@ if __name__ == "__main__":
             print(training_started)
             time.sleep(10)
             client.get_training_status(training_id)
+
+
+    training_id = 20
+    success = client.register_training(training_id)
+    print(success)
+    if success:
+        training_started = client.start_training(training_id)
+        print(training_started)
+        time.sleep(10)
+        client.get_training_status(training_id)

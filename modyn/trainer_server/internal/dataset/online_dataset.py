@@ -30,11 +30,11 @@ class OnlineDataset(IterableDataset):
         samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
-    def _get_data_from_storage(self, keys: list[str]) -> list[str]:
+    def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[typing.Any]]:
         # TODO(#74): replace this with grpc calls to the selector
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)
-        data = self._storagestub.Get(req).value
-        return data
+        response = self._storagestub.Get(req)
+        return response.data, response.labels
 
     def _deserialize_torchvision_transforms(self) -> None:
         self._transform_list = []
@@ -54,12 +54,12 @@ class OnlineDataset(IterableDataset):
         self._trainining_set_number += 1
 
         keys = self._get_keys_from_selector(worker_id)
-        raw_data = self._get_data_from_storage(keys)
+        data, labels = self._get_data_from_storage(keys)
 
-        self._dataset_len = len(raw_data)
+        self._dataset_len = len(data)
 
-        for sample in raw_data:
-            yield self._transform(sample)
+        for sample, label in zip(data, labels):
+            yield self._transform(sample), label
 
     def __len__(self) -> int:
         return self._dataset_len

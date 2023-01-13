@@ -13,8 +13,9 @@ class GetRequest:
 
 
 class GetResponse:
-    def __init__(self, value: list[Any]) -> None:
-        self.value = value
+    def __init__(self, data: list[Any], labels: list[Any]) -> None:
+        self.data = data
+        self.labels = labels
 
 
 class MockStorageServer:
@@ -24,4 +25,4 @@ class MockStorageServer:
         pass
 
     def Get(self, request: GetRequest) -> GetResponse:
-        return GetResponse(value=[])
+        return GetResponse(data=[], labels=[])
