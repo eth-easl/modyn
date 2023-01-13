@@ -6,7 +6,7 @@ import traceback
 from typing import Optional, Union
 
 import torch
-from modyn.trainer_server.internal.dataset.utils import prepare_dataloaders
+from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 

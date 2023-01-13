@@ -1,4 +1,4 @@
-from modyn.trainer_server.internal.grpc.grpc_server import GRPCServer
+from modyn.trainer_server.internal.grpc.trainer_server_grpc_server import GRPCServer
 
 
 class TrainerServer:

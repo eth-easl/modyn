@@ -1,7 +1,7 @@
 # pylint: disable=unused-argument
 from unittest.mock import patch
 
-from modyn.trainer_server.internal.grpc.grpc_server import GRPCServer
+from modyn.trainer_server.internal.grpc.trainer_server_grpc_server import GRPCServer
 
 
 def get_modyn_config():
@@ -15,7 +15,7 @@ def test_init():
 
 
 @patch(
-    "modyn.trainer_server.internal.grpc.grpc_server.add_TrainerServerServicer_to_server",
+    "modyn.trainer_server.internal.grpc.trainer_server_grpc_server.add_TrainerServerServicer_to_server",
     return_value=None,
 )
 def test_enter(mock_add_trainer_server_servicer_to_server):

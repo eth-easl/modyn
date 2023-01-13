@@ -1,6 +1,6 @@
 # pylint: disable=unused-argument
+from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
-from modyn.trainer_server.internal.dataset.utils import prepare_dataloaders
 
 
 def test_prepare_dataloaders():
