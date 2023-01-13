@@ -15,9 +15,6 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer  # noqa: E402, E501
 from modyn.backend.selector.selector import Selector
 
-path = Path(os.path.abspath(__file__))
-SCRIPT_DIR = path.parent.parent.absolute()
-sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 
 logger = logging.getLogger(__name__)
