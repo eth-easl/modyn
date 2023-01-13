@@ -33,7 +33,7 @@ You can make sure that the code you have is compliant by running
 ```
 flake8
 isort . --check --diff
-conda run black --check modyn --verbose --config black.toml
+black --check modyn --verbose --config black.toml
 pylint modyn
 ```
 
