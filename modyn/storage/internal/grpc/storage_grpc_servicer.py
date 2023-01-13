@@ -14,6 +14,7 @@ from modyn.storage.internal.database.storage_database_utils import get_file_wrap
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     DatasetAvailableResponse,
+    GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
     GetDataInIntervalResponse,
     GetNewDataSinceRequest,
@@ -24,6 +25,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     RegisterNewDatasetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
+from modyn.utils.utils import current_time_millis
 
 logger = logging.getLogger(__name__)
 
@@ -202,3 +204,12 @@ class StorageGRPCServicer(StorageServicer):
                 request.file_wrapper_config,
             )
             return RegisterNewDatasetResponse(success=success)
+
+    # pylint: disable-next=unused-argument,invalid-name
+    def GetCurrentTimestamp(self, request: None, context: grpc.ServicerContext) -> GetCurrentTimestampResponse:
+        """Get the current timestamp.
+
+        Returns:
+            GetCurrentTimestampResponse: The current timestamp.
+        """
+        return GetCurrentTimestampResponse(timestamp=current_time_millis())
