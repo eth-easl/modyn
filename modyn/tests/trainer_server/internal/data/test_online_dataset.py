@@ -21,7 +21,7 @@ def test_get_keys_from_selector(test_get_sample_keys):
     assert online_dataset._get_keys_from_selector(0) == [1, 2, 3]
 
 
-@patch.object(MockStorageServer, 'Get', return_value=GetResponse(data=["sample0", "sample1"], labels=[0,1]))
+@patch.object(MockStorageServer, 'Get', return_value=GetResponse(data=["sample0", "sample1"], labels=[0, 1]))
 def test_get_data_from_storage(test_get):
 
     online_dataset = OnlineDataset(
@@ -30,7 +30,7 @@ def test_get_data_from_storage(test_get):
         serialized_transforms=[],
         train_until_sample_id="new"
     )
-    assert online_dataset._get_data_from_storage([]) == (["sample0", "sample1"], [0,1])
+    assert online_dataset._get_data_from_storage([]) == (["sample0", "sample1"], [0, 1])
 
 
 @pytest.mark.parametrize(
@@ -82,8 +82,6 @@ def test_dataset_iter(test_get_data, test_get_keys):
     assert [x[0] for x in all_data] == list(range(10))
     assert [x[1] for x in all_data] == [1]*10
 
-# TODO(fotstrt):
-# add test for batches
 
 @patch.object(OnlineDataset, '_get_data_from_storage', return_value=([0]*16, [1]*16))
 @patch.object(OnlineDataset, '_get_keys_from_selector', return_value=[])

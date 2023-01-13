@@ -3,7 +3,6 @@ from io import BytesIO
 import tempfile
 from unittest.mock import patch
 
-import pytest
 import json
 import torch
 import multiprocessing as mp
@@ -53,9 +52,11 @@ register_request = RegisterTrainServerRequest(
 
 get_status_request = TrainingStatusRequest(training_id=1)
 
+
 class DummyModelWrapper:
     def __init__(self, model_configuration=None) -> None:
         self.model = None
+
 
 def noop():
     return
@@ -131,6 +132,7 @@ def test_start_training_not_registered():
     response = trainer_server.start_training(start_training_request, None)
     assert not response.training_started
 
+
 def test_start_training():
     trainer_server = TrainerServerGRPCServicer()
     mock_start = mock.Mock()
@@ -145,6 +147,7 @@ def test_get_training_status_not_registered():
     trainer_server = TrainerServerGRPCServicer()
     response = trainer_server.get_training_status(get_status_request, None)
     assert response is None
+
 
 @patch.object(mp.Process, 'is_alive', return_value=True)
 @patch.object(TrainerServerGRPCServicer, 'get_status', return_value=(b'state', 10, 100))
@@ -170,6 +173,7 @@ def test_get_training_status_alive(
     assert response.state == b'state'
     test_get_latest_checkpoint.assert_not_called()
     test_check_for_training_exception.assert_not_called()
+
 
 @patch.object(mp.Process, 'is_alive', return_value=True)
 @patch.object(TrainerServerGRPCServicer, 'get_status', return_value=(None, None, None))

@@ -1,7 +1,4 @@
 import logging
-import grpc
-from concurrent import futures
-import multiprocessing as mp
 import yaml
 import argparse
 import pathlib
@@ -9,8 +6,8 @@ import pathlib
 from modyn.trainer_server.trainer_server import TrainerServer
 
 logging.basicConfig(level=logging.NOTSET,
-                        format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d:%H:%M:%S')
+                    format='[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s',
+                    datefmt='%Y-%m-%d:%H:%M:%S')
 logger = logging.getLogger(__name__)
 
 
@@ -31,11 +28,10 @@ def main() -> None:
     with open(args.config, "r", encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
-
     logger.info("Initializing TrainerServer.")
-    storage = TrainerServer(config)
+    trainer_server = TrainerServer(config)
     logger.info("Starting TrainerServer.")
-    storage.run()
+    trainer_server.run()
 
     logger.info("TrainerServer returned, exiting.")
 

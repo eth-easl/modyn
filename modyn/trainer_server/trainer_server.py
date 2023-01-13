@@ -1,8 +1,5 @@
-import os
-import pathlib
-from typing import Tuple
-
 from modyn.trainer_server.internal.grpc.grpc_server import GRPCServer
+
 
 class TrainerServer:
     def __init__(self, config: dict) -> None:

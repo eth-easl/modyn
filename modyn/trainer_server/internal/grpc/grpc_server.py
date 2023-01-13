@@ -19,7 +19,7 @@ class GRPCServer:
         """Initialize the GRPC server.
 
         Args:
-            modyn_config (dict): Configuration of the storage module.
+            modyn_config (dict): Configuration of the trainer server module.
         """
         self.config = config
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

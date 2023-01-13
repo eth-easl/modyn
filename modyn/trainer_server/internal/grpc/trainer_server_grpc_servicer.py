@@ -11,8 +11,6 @@ import multiprocessing as mp
 
 import torch
 
-logger = logging.getLogger(__name__)
-
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     RegisterTrainServerRequest,
@@ -28,6 +26,8 @@ from modyn.trainer_server.internal.trainer.pytorch_trainer import train
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
+
+logger = logging.getLogger(__name__)
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -150,7 +150,8 @@ class TrainerServerGRPCServicer:
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
-            response = self._training_process_dict[training_id].status_response_queue.get(timeout=30) # blocks for 30 seconds
+            # blocks for 30 seconds
+            response = self._training_process_dict[training_id].status_response_queue.get(timeout=30)
             return response['state'], response['num_batches'], response['num_samples']
         except queue.Empty:
             return None, None, None

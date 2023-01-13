@@ -1,5 +1,6 @@
 import multiprocessing as mp
 
+
 class TrainingProcessInfo:
     def __init__(
         self,

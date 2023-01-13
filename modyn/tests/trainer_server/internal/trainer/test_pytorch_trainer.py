@@ -53,7 +53,9 @@ class MockDataset(torch.utils.data.IterableDataset):
 
 
 def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id):
-    mock_train_dataloader = iter([(torch.ones(8,10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)])
+    mock_train_dataloader = iter(
+        [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
+    )
     return mock_train_dataloader, None
 
 
@@ -152,6 +154,7 @@ def test_save_state_to_buffer():
         },
     }
 
+
 def test_load_checkpoint():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue())
 
@@ -211,6 +214,7 @@ def test_send_state_to_server():
         }
     }
 
+
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
 def test_train_invalid_query_message():
     query_status_queue = mp.Queue()
@@ -219,7 +223,7 @@ def test_train_invalid_query_message():
     query_status_queue.put("INVALID MESSAGE")
     with tempfile.NamedTemporaryFile() as temp:
         with pytest.raises(ValueError, match="Unknown message in the status query queue"):
-            trainer.train("log_file")
+            trainer.train(temp.name)
         assert query_status_queue.qsize() == 0
         assert status_queue.qsize() == 0
 
@@ -231,7 +235,7 @@ def test_train():
     trainer = get_mock_trainer(query_status_queue, status_queue)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
     with tempfile.NamedTemporaryFile() as temp:
-        trainer.train("log_file")
+        trainer.train(temp.name)
         assert os.path.exists(temp.name)
         assert trainer._num_samples == 800
         assert query_status_queue.qsize() == 0
@@ -259,6 +263,7 @@ def test_train():
                 ]
             },
         }
+
 
 @patch('modyn.trainer_server.internal.utils.training_info.dynamic_module_import')
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)

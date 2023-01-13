@@ -13,6 +13,7 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 
 logger = logging.getLogger(__name__)
 
+
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes
 
@@ -57,7 +58,6 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
-
     def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None):
 
         dict_to_save = {
@@ -85,7 +85,9 @@ class PytorchTrainer:
         self.save_state(buffer)
         buffer.seek(0)
         bytes_state = buffer.read()
-        self._status_response_queue.put({'state': bytes_state, 'num_batches': batch_number, 'num_samples': self._num_samples})
+        self._status_response_queue.put(
+            {'state': bytes_state, 'num_batches': batch_number, 'num_samples': self._num_samples}
+        )
 
     def train(self, log_path: str, load_checkpoint_path: Optional[str] = None) -> None:
 
@@ -107,7 +109,7 @@ class PytorchTrainer:
             if not self._status_query_queue.empty():
                 req = self._status_query_queue.get()
                 if req != TrainerMessages.STATUS_QUERY_MESSAGE:
-                    raise ValueError(f"Unknown message in the status query queue")
+                    raise ValueError("Unknown message in the status query queue")
                 self.send_state_to_server(batch_number)
 
             self._optimizer.zero_grad()
@@ -141,7 +143,13 @@ def train(
 ) -> None:
 
     try:
-        trainer = PytorchTrainer(training_info, device, train_until_sample_id, status_query_queue, status_response_queue)
+        trainer = PytorchTrainer(
+            training_info,
+            device,
+            train_until_sample_id,
+            status_query_queue,
+            status_response_queue
+        )
         trainer.train(log_path, load_checkpoint_path)
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
