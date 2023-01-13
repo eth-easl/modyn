@@ -18,8 +18,6 @@ dependencies:
   - sqlalchemy<2.0
   - pyaml
   - numpy
-  - tensorflow
-  - pillow
   - types-protobuf
   - types-psycopg2
   - types-PyYAML
