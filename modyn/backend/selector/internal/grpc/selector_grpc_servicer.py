@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class SelectorGRPCServicer(SelectorServicer):
-    """Provides methods that implement functionality of the metadata server."""
+    """Provides methods that implement functionality of the selector."""
 
     def __init__(self, selector: Selector):
         self.selector = selector

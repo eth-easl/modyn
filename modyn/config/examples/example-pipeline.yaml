@@ -13,7 +13,7 @@ training:
   batch_size: 64
   strategy: finetune
   strategy_config:
-    limit: 100
+    limit: -1
   initial_model: random
   initial_pass:
     activated: True

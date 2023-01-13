@@ -100,7 +100,7 @@ class Selector:
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {training_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        # TODO(K-Shao): Cache the training set so that you don't recompute for each worker. 
+        # TODO(K-Shao): Cache the training set so that you don't recompute for each worker.
         training_samples = self._prepare_training_set(training_id, training_set_number, training_set_size)
 
         training_samples_subset = self._get_training_set_partition(training_id, training_samples, worker_id)

@@ -11,7 +11,6 @@ from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import
 )
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
 
-TIMEOUT_SEC = 5
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +26,7 @@ class GRPCHandler:
         address = f"{self.config['metadata_database']['hostname']}:{self.config['metadata_database']['port']}"
         self.metadata_database_channel = grpc.insecure_channel(address)
 
-        if not utils.grpc_connection_established(self.metadata_database_channel, timeout_sec=TIMEOUT_SEC):
+        if not utils.grpc_connection_established(self.metadata_database_channel):
             raise ConnectionError(f"Could not establish gRPC connection to metadata server at {address}.")
 
         self.metadata_database = MetadataStub(self.metadata_database_channel)
