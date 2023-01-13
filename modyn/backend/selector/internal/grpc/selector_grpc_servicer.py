@@ -1,7 +1,4 @@
 import logging
-import os
-import sys
-from pathlib import Path
 
 import grpc
 
@@ -14,8 +11,6 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
 )
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer  # noqa: E402, E501
 from modyn.backend.selector.selector import Selector
-
-
 
 logger = logging.getLogger(__name__)
 
