@@ -5,13 +5,17 @@ from concurrent import futures
 
 import grpc
 
-from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import add_MetadataProcessorServicer_to_server
-from modyn.backend.metadata_processor.internal.grpc.metadata_processor_grpc_servicer import MetadataProcessorGRPCServicer
+from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
+    add_MetadataProcessorServicer_to_server,
+)
+from modyn.backend.metadata_processor.internal.grpc.metadata_processor_grpc_servicer import (
+    MetadataProcessorGRPCServicer,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class GRPCServer():
+class GRPCServer:
     """GRPC Server Context Manager"""
 
     def __init__(self, config: dict) -> None:
@@ -29,15 +33,16 @@ class GRPCServer():
         Returns:
             grpc.Server: GRPC server
         """
-        strategy = None # TODO: get custom strategy
+        strategy = None  # TODO: get custom strategy
         add_MetadataProcessorServicer_to_server(
-            MetadataProcessorGRPCServicer(self.config, strategy), self.server)
+            MetadataProcessorGRPCServicer(self.config, strategy), self.server
+        )
 
-        port = self.config['metadata_processor']['port']
-        logger.info(f'Starting server. Listening on port {port}')
-        self.server.add_insecure_port('[::]:' + port)
+        port = self.config["metadata_processor"]["port"]
+        logger.info(f"Starting server. Listening on port {port}")
+        self.server.add_insecure_port("[::]:" + port)
         self.server.start()
-        
+
         return self.server
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:

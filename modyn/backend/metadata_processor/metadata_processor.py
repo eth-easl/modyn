@@ -11,7 +11,7 @@ from modyn.backend.metadata_processor.internal.grpc.grpc_server import GRPCServe
 logger = logging.getLogger(__name__)
 
 
-class MetadataProcessor():
+class MetadataProcessor:
     def __init__(self, config: dict) -> None:
         self.config = config
 

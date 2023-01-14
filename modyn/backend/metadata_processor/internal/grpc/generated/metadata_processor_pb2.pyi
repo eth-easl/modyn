@@ -28,14 +28,18 @@ class PostTrainingMetadataRequest(google.protobuf.message.Message):
         training_id: builtins.int = ...,
         data: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["data", b"data", "training_id", b"training_id"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing_extensions.Literal[
+            "data", b"data", "training_id", b"training_id"
+        ],
+    ) -> None: ...
 
 global___PostTrainingMetadataRequest = PostTrainingMetadataRequest
 
 @typing_extensions.final
 class PostTrainingMetadataResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
     def __init__(
         self,
     ) -> None: ...
