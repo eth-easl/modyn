@@ -12,7 +12,7 @@ runs:
       
       # increase to reset cache manually
       - name: Set cache number
-        run: echo "CACHE_NUMBER=4" >> $GITHUB_ENV 
+        run: echo "CACHE_NUMBER=6" >> $GITHUB_ENV 
         shell: bash
 
       - name: Get conda path

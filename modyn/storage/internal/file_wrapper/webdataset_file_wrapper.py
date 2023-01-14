@@ -1,15 +1,14 @@
 """Webdataset file wrapper."""
 
-import pickle
 import os
-from itertools import islice
-import uuid
-from typing import Dict
 import pathlib
+import pickle
 import shutil
+import uuid
+from itertools import islice
+from typing import Dict
 
 import webdataset as wds
-
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 
@@ -62,8 +61,9 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
         Returns:
             bytes: Pickled list of samples
         """
-        return pickle.dumps(wds.WebDataset(self.file_path)
-                            .slice(start, end).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
+        return pickle.dumps(
+            wds.WebDataset(self.file_path).slice(start, end).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
+        )
 
     def get_sample(self, index: int) -> bytes:
         """Get sample from index.
@@ -74,8 +74,9 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
         Returns:
             bytes: Pickled sample
         """
-        return pickle.dumps(wds.WebDataset(self.file_path)
-                            .slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json"))
+        return pickle.dumps(
+            wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
+        )
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get samples from indices.

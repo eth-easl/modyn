@@ -1,17 +1,15 @@
 """Dataset model."""
 
-from sqlalchemy import Column, String, Enum, Integer
-
-from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
-from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-
 from modyn.storage.internal.database.base import Base
+from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
+from sqlalchemy import Column, Enum, Integer, String
 
 
 class Dataset(Base):
     """Dataset model."""
 
-    __tablename__ = 'datasets'
+    __tablename__ = "datasets"
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(120), unique=False, nullable=True)
@@ -23,15 +21,18 @@ class Dataset(Base):
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f'<Dataset {self.name}>'
+        return f"<Dataset {self.name}>"
 
-    def __init__(self, name: str,
-                 description: str,
-                 filesystem_wrapper_type: FilesystemWrapperType,
-                 file_wrapper_type: FileWrapperType,
-                 base_path: str,
-                 version: str = '0.0.1',
-                 file_wrapper_config: str = '{}'):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        filesystem_wrapper_type: FilesystemWrapperType,
+        file_wrapper_type: FileWrapperType,
+        base_path: str,
+        version: str = "0.0.1",
+        file_wrapper_config: str = "{}",
+    ):
         """Init dataset.
 
         Args:

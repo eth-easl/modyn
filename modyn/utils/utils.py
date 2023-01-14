@@ -1,14 +1,15 @@
-from types import ModuleType
-import modyn.models
-import inspect
 import importlib
-import yaml
+import inspect
 import pathlib
+import time
+from types import ModuleType
+from typing import Optional
+
+import grpc
+import modyn.models
+import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
-from typing import Optional
-import time
-import grpc
 
 
 def dynamic_module_import(name: str) -> ModuleType:
