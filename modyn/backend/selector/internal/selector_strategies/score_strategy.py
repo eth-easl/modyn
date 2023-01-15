@@ -19,7 +19,7 @@ class ScoreStrategy(AbstractSelectionStrategy):
     def _set_is_softmax_mode(self, is_softmax_mode: bool) -> None:
         self.is_softmax_mode = is_softmax_mode
 
-    def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
         """
         For a given training_id and number of samples, request that many samples from
         the selector.

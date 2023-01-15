@@ -48,7 +48,7 @@ def test_score_selector_normal_mode(test__get_all_metadata):
     selector = ScoreStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._set_is_softmax_mode(False)
 
-    samples = selector._select_new_training_samples(0, 4)
+    samples = selector.select_new_training_samples(0, 4)
     scores = [score for _, score in samples]
     samples = [sample for sample, _ in samples]
 
@@ -70,7 +70,7 @@ def test_score_selector_softmax_mode(test__get_all_metadata):
     selector = ScoreStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._set_is_softmax_mode(True)
 
-    samples = selector._select_new_training_samples(0, 4)
+    samples = selector.select_new_training_samples(0, 4)
     scores = [score for _, score in samples]
     samples = [sample for sample, _ in samples]
 

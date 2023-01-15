@@ -26,9 +26,11 @@ class SelectorGRPCServicer(SelectorServicer):
         training_id = self.selector.register_training(request.training_set_size, request.num_workers)
         return TrainingResponse(training_id=training_id)
 
-    def get_sample_keys(self, request: GetSamplesRequest, context: grpc.ServicerContext) -> SamplesResponse:
+    def get_sample_keys_and_metadata(  # pylint: disable-next=unused-argument
+        self, request: GetSamplesRequest, context: grpc.ServicerContext
+    ) -> SamplesResponse:
         logger.info(f"Fetching samples for request - {str(request)}")
-        samples_keys = self.selector.get_sample_keys(
+        samples_keys = self.selector.get_sample_keys_and_metadata(
             request.training_id, request.training_set_number, request.worker_id
         )
         samples_keys = [sample[0] for sample in samples_keys]

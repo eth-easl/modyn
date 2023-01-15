@@ -7,7 +7,7 @@ from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy
 
 class Selector:
     """
-    This class defines the interface of interest, namely the .
+    This class defines the interface of interest, namely the get_sample_keys_and_metadata method.
     """
 
     def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
@@ -22,7 +22,7 @@ class Selector:
             list(tuple(str, ...)): the training sample keys for the newly selected training_set with a variable
                        number of auxiliary data (concrete typing in subclasses defined)
         """
-        return self._strategy._select_new_training_samples(training_id, training_set_size)
+        return self._strategy.select_new_training_samples(training_id, training_set_size)
 
     def _prepare_training_set(
         self,
@@ -87,7 +87,9 @@ class Selector:
 
         return self.grpc.register_training(training_set_size, num_workers)
 
-    def get_sample_keys(self, training_id: int, training_set_number: int, worker_id: int) -> list[tuple[str, ...]]:
+    def get_sample_keys_and_metadata(
+        self, training_id: int, training_set_number: int, worker_id: int
+    ) -> list[tuple[str, ...]]:
         """
         For a given training_id, training_set_number and worker_id, it returns a subset of sample
         keys so that the data can be queried from storage.

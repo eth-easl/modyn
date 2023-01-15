@@ -7,7 +7,7 @@ class GDumbStrategy(AbstractSelectionStrategy):
     Implements the GDumb selection policy.
     """
 
-    def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, int]]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, int]]:
         """
         For a given training_id and number of samples, request that many samples from the selector.
 

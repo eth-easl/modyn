@@ -48,7 +48,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
         return unseen_data_ratio
 
-    def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str]]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str]]:
         """
         Selects a new training set of samples for the given training id.
 
