@@ -8,8 +8,11 @@ To install the additional dependencies necessary to run the scripts in this dire
 
 `conda env update --name modyn --file benchmark_environment.yml`
 
-## Scripts
+## Benchmarks
 
-### MNIST Benchmark Storage Script
+### MNIST 
+Benchmark Storage Script - Downloads the MNIST dataset into a given directory. For more information on parameters run with `-h`.
 
-Downloads the MNIST dataset into a given directory. For more information on parameters run with `-h`.
+
+### Criteo 1TB
+Readme contains information on how data is downloaded and preprocessed. Current pre processed data has been uploaded to the dds-criteo bucket (gs://dds-criteo/) in the dynamic-datasets google cloud project
