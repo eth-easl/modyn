@@ -10,9 +10,7 @@ from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
     MetadataProcessorServicer,
 )
-from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import (
-    MetadataProcessorStrategy,
-)
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import MetadataProcessorStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +36,6 @@ class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
         Returns:
             response (PostTrainingMetadataResponse): Empty response, to confirm.
         """
-        logger.info(
-            f"Processing post-training metadata for training ID {request.training_id}"
-        )
-        self.processor_strategy.process_post_training_metadata(
-            request.training_id, request.data
-        )
+        logger.info(f"Processing post-training metadata for training ID {request.training_id}")
+        self.processor_strategy.process_post_training_metadata(request.training_id, request.data)
         return PostTrainingMetadataResponse()

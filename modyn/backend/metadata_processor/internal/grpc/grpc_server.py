@@ -9,9 +9,7 @@ from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor
 from modyn.backend.metadata_processor.internal.grpc.metadata_processor_grpc_servicer import (
     MetadataProcessorGRPCServicer,
 )
-from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import (
-    MetadataProcessorStrategy,
-)
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import MetadataProcessorStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +33,7 @@ class GRPCServer:
         Returns:
             grpc.Server: GRPC server
         """
-        add_MetadataProcessorServicer_to_server(
-            MetadataProcessorGRPCServicer(self.config, self.strategy), self.server
-        )
+        add_MetadataProcessorServicer_to_server(MetadataProcessorGRPCServicer(self.config, self.strategy), self.server)
 
         port = self.config["metadata_processor"]["port"]
         logger.info(f"Starting server. Listening on port {port}")

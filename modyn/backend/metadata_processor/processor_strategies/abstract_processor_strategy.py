@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
 
 # TODO: import SetRequest from metadata database & remove Mocks
-from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database import (
-    MockMetadataDb,
-    SetRequest,
-)
+from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database import MockMetadataDb, SetRequest
 
 # import grpc
 # from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
@@ -23,9 +20,7 @@ class MetadataProcessorStrategy(ABC):
     def __init__(self, modyn_config: dict):
         self.config = modyn_config
 
-    def process_post_training_metadata(
-        self, training_id: int, serialized_data: str
-    ) -> None:
+    def process_post_training_metadata(self, training_id: int, serialized_data: str) -> None:
         """
         Process the metadata and save it to the Metadata Database.
 
