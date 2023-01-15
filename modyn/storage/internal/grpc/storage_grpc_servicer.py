@@ -8,7 +8,7 @@ from modyn.storage.internal.database.database_connection import DatabaseConnecti
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
-from modyn.storage.internal.database.storage_database_utils import get_file_wrapper
+from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -85,7 +85,10 @@ class StorageGRPCServicer(StorageServicer):
             for sample in samples:
                 if sample.file_id != current_file.id:
                     file_wrapper = get_file_wrapper(
-                        dataset.file_wrapper_type, current_file.path, dataset.file_wrapper_config
+                        dataset.file_wrapper_type,
+                        current_file.path,
+                        dataset.file_wrapper_config,
+                        get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
                     )
                     yield GetResponse(
                         chunk=file_wrapper.get_samples_from_indices([index for index, _ in samples_per_file]),

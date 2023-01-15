@@ -3,12 +3,13 @@
 from abc import ABC, abstractmethod
 
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 
 
 class AbstractFileWrapper(ABC):
     """Base class for all file wrappers."""
 
-    def __init__(self, file_path: str, file_wrapper_config: dict):
+    def __init__(self, file_path: str, file_wrapper_config: dict, filesystem_wrapper: AbstractFileSystemWrapper):
         """Init file wrapper.
 
         Args:
@@ -18,6 +19,7 @@ class AbstractFileWrapper(ABC):
         self.file_wrapper_type: FileWrapperType = None
         self.file_path = file_path
         self.file_wrapper_config = file_wrapper_config
+        self.filesystem_wrapper = filesystem_wrapper
 
     @abstractmethod
     def get_number_of_samples(self) -> int:
