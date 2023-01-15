@@ -54,7 +54,7 @@ The preprocessed data is finally output as a set of parquet files per "split". F
 Having processed the data, the processed data has been uploaded to Google Cloud Storage under the bucket "dds-criteo" in the dynamic-datasets-eth project.
 This can be accessed either by the console, or via Google Storage API commands.
 
-![Image](https://github.com/eth-easl/dynamic_datasets_dsl/benchmark/criteo_1TB/gcs_dds-criteo.png)
+<img width="881" alt="image" src="https://user-images.githubusercontent.com/5274938/212557183-17bbf693-e2e9-4542-961a-8b9c9db95751.png">
 
 The corrsponding data can be found in "output/" where each directory there (eg day23/) contains the parquet files for the data for that particular data.
 
