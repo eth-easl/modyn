@@ -25,7 +25,7 @@ class GRPCServer:
             config (dict): configuration of the metadata processor module
         """
         self.config = config
-        self.server = grpc.server(futures.TheadPoolExecutor(max_workers=10))
+        self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
     def __enter__(self) -> grpc.Server:
         """Enter the context manager.

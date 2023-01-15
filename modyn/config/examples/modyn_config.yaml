@@ -42,7 +42,7 @@ odm:
     user: "postgres"
     password: "postgres"
 
-ptmp:
+metadata_processor:
   port: "50055"
   hostname: "backend"
   processor: "SimpleProcessor"

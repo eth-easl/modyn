@@ -2,12 +2,16 @@ import grpc
 
 from abc import ABC, abstractmethod
 
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
-    SetRequest,
+# TODO: import SetRequest from metadata database & remove Mocks
+from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database import (
+    MockMetadataDb, SetRequest
 )
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (
-    MetadataStub,
-)
+# from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
+#     SetRequest,
+# )
+# from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (
+#     MetadataStub,
+# )
 
 
 class MetadataProcessorStrategy(ABC):

@@ -1,7 +1,13 @@
 import json
 import random
 
-from backend.odm.odm_pb2 import SetRequest
+# TODO: import SetRequest from metadata database & remove Mocks
+from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database import (
+    SetRequest
+)
+# from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
+#     SetRequest,
+# )
 from modyn.backend.metadata_processor.metadata_processor_strategy import (
     MetadataProcessorStrategy,
 )
