@@ -18,7 +18,7 @@ class BasicMetadataProcessor(MetadataProcessorStrategy):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
 
-    def _process_post_training_metadata(
+    def process__metadata(
         self, training_id: int, data: str
     ) -> SetRequest:
         data_dict = json.loads(data)

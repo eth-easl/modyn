@@ -48,7 +48,6 @@ ignore=CVS
 # regex matches against paths and can be in Posix or Windows format.
 ignore-paths=^modyn/frontend/.*$,
              ^modyn/backend/odm/.*$,
-             ^modyn/backend/ptmp/.*$,
              ^modyn/backend/metadata_processor/internal/grpc/generated/.*$,
              ^modyn/backend/selector/.*$,
              ^modyn/storage/internal/grpc/generated/.*$

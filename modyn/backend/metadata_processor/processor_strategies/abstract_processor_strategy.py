@@ -20,8 +20,8 @@ class MetadataProcessorStrategy(ABC):
     this class to perform custom processing, implement _process_post_training_metadata
     """
 
-    def __init__(self, config: dict):
-        self.config = config
+    def __init__(self, modyn_config: dict):
+        self.config = modyn_config
 
     def process_post_training_metadata(
         self, training_id: int, serialized_data: str
@@ -33,7 +33,7 @@ class MetadataProcessorStrategy(ABC):
             training_id (int): The training ID.
             data (str): Serialized post training metadata.
         """
-        data = self._process_post_training_metadata(training_id, serialized_data)
+        data = self.process__metadata(training_id, serialized_data)
         self.write_to_database(training_id, data)
 
     def write_to_database(self, training_id: int, data: dict) -> None:
@@ -64,5 +64,5 @@ class MetadataProcessorStrategy(ABC):
         stub.Set(set_request)
 
     @abstractmethod
-    def _process_post_training_metadata(self, training_id: int, data: str) -> dict:
+    def process__metadata(self, training_id: int, data: str) -> dict:
         raise NotImplementedError()
