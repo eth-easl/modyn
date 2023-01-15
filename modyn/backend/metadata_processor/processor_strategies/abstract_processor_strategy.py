@@ -1,11 +1,12 @@
-import grpc
-
 from abc import ABC, abstractmethod
 
 # TODO: import SetRequest from metadata database & remove Mocks
 from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database import (
-    MockMetadataDb, SetRequest
+    MockMetadataDb,
+    SetRequest,
 )
+
+# import grpc
 # from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
 #     SetRequest,
 # )
@@ -49,7 +50,7 @@ class MetadataProcessorStrategy(ABC):
             scores=data["scores"],
             seen=data["seen"],
             label=data["label"],
-            data=data["data"]
+            data=data["data"],
         )
 
         # TODO: uncomment and remove Mock

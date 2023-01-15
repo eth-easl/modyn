@@ -5,7 +5,6 @@ import logging
 import pathlib
 
 import yaml
-
 from modyn.backend.metadata_processor.metadata_processor import MetadataProcessor
 
 logging.basicConfig(

@@ -3,7 +3,6 @@
 import logging
 
 import grpc
-
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
     PostTrainingMetadataRequest,
     PostTrainingMetadataResponse,

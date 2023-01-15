@@ -3,8 +3,9 @@ import random
 
 # TODO: import SetRequest from metadata database & remove Mocks
 from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database import (
-    SetRequest
+    SetRequest,
 )
+
 # from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
 #     SetRequest,
 # )
@@ -40,5 +41,5 @@ class BasicMetadataProcessor(MetadataProcessorStrategy):
             "scores": output_scores,
             "seen": output_seen,
             "label": None,
-            "data": output_data
+            "data": output_data,
         }
