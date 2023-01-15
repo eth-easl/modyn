@@ -51,12 +51,12 @@ class Selector:
     ) -> list[tuple[str, ...]]:
         """
         Return the required subset of training samples for the particular worker id
-        The subset is calculated by taking an offset from the start based on the given worker id. 
+        The subset is calculated by taking an offset from the start based on the given worker id.
 
-        If there is excess data (say there are 14 data points and 5 workers), there are at most 
-        num_workers extra samples. As such, we make each worker take on one extra, and the final 
-        worker takes on (probably less) the rest of the data. So we would have the first 4 take 
-        3 each and the last one takes 2. 
+        If there is excess data (say there are 14 data points and 5 workers), there are at most
+        num_workers extra samples. As such, we make each worker take on one extra, and the final
+        worker takes on (probably less) the rest of the data. So we would have the first 4 take
+        3 each and the last one takes 2.
 
         Returns:
             list(tuple(str, ...)): the training sample keys for the newly prepared training_set for
@@ -72,7 +72,7 @@ class Selector:
         if training_set_size % num_workers > 0:
             worker_subset_size += 1
         start_index = worker_id * worker_subset_size
-        training_samples_subset = training_samples[start_index : start_index + worker_subset_size]
+        training_samples_subset = training_samples[start_index: start_index + worker_subset_size]
         return training_samples_subset
 
     def register_training(self, training_set_size: int, num_workers: int) -> int:
