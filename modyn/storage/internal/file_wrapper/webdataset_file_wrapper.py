@@ -11,6 +11,7 @@ from typing import Dict
 import webdataset as wds
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 
 
 class WebdatasetFileWrapper(AbstractFileWrapper):
@@ -25,14 +26,14 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
 
     tmp_dir: pathlib.Path = pathlib.Path(os.path.abspath(__file__)).parent / "storage_tmp"
 
-    def __init__(self, file_path: str, file_wrapper_config: dict):
+    def __init__(self, file_path: str, file_wrapper_config: dict, filesystem_wrapper: AbstractFileSystemWrapper):
         """Init webdataset file wrapper.
 
         Args:
             file_path (str): Path to file
             file_wrapper_config (dict): File wrapper config
         """
-        super().__init__(file_path, file_wrapper_config)
+        super().__init__(file_path, file_wrapper_config, filesystem_wrapper)
         self.indeces_cache: Dict[str, str] = {}
         self.file_wrapper_type = FileWrapperType.WebdatasetFileWrapper
 
