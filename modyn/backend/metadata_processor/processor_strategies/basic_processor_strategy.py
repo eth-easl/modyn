@@ -8,7 +8,7 @@ from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database imp
 # from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
 #     SetRequest,
 # )
-from modyn.backend.metadata_processor.metadata_processor_strategy import (
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import (
     MetadataProcessorStrategy,
 )
 
@@ -24,6 +24,7 @@ class BasicMetadataProcessor(MetadataProcessorStrategy):
 
         output_data = []
         output_keys = []
+        output_seen = []
         output_scores = []
 
         for key, value in data_dict.items():
@@ -31,6 +32,13 @@ class BasicMetadataProcessor(MetadataProcessorStrategy):
             if score > 0.5:
                 output_data.append(value)
                 output_keys.append(key)
+                output_seen.append(True)
                 output_scores.append(score)
 
-        return {"data": output_data, "keys": output_keys, "scores": output_scores}
+        return {
+            "keys": output_keys,
+            "scores": output_scores,
+            "seen": output_seen,
+            "label": None,
+            "data": output_data
+        }

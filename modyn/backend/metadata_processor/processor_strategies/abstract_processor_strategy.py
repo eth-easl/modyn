@@ -45,17 +45,21 @@ class MetadataProcessorStrategy(ABC):
         """
         set_request = SetRequest(
             training_id=training_id,
-            data=data["data"],
             keys=data["keys"],
             scores=data["scores"],
-        )
-        channel = grpc.insecure_channel(
-            self.__config["metadata_database"]["hostname"]
-            + ":"
-            + self.__config["metadata_database"]["port"]
+            seen=data["seen"],
+            label=data["label"],
+            data=data["data"]
         )
 
-        stub = MetadataStub(channel)
+        # TODO: uncomment and remove Mock
+        # channel = grpc.insecure_channel(
+        #     self.config["metadata_database"]["hostname"]
+        #     + ":"
+        #     + self.config["metadata_database"]["port"]
+        # )
+        # stub = MetadataStub(channel)
+        stub = MockMetadataDb()
         stub.Set(set_request)
 
     @abstractmethod

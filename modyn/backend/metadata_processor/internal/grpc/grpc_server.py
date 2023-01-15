@@ -1,15 +1,17 @@
 """GRPC Server Context Manager"""
-
 import logging
-from concurrent import futures
-
 import grpc
+
+from concurrent import futures
 
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
     add_MetadataProcessorServicer_to_server,
 )
 from modyn.backend.metadata_processor.internal.grpc.metadata_processor_grpc_servicer import (
     MetadataProcessorGRPCServicer,
+)
+from modyn.backend.metadata_processor.processor_strategies.basic_processor_strategy import (
+    BasicMetadataProcessor
 )
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,9 @@ class GRPCServer:
         Returns:
             grpc.Server: GRPC server
         """
-        strategy = None  # TODO: get custom strategy
+
+        # TODO: get strategy from config
+        strategy = BasicMetadataProcessor(self.config)
         add_MetadataProcessorServicer_to_server(
             MetadataProcessorGRPCServicer(self.config, strategy), self.server
         )

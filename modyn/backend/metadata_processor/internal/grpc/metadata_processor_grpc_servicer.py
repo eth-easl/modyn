@@ -11,7 +11,7 @@ from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
     MetadataProcessorServicer,
 )
-from modyn.backend.metadata_processor.metadata_processor_strategy import (
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import (
     MetadataProcessorStrategy,
 )
 
