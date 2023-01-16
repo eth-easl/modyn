@@ -1,4 +1,7 @@
 syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
 package modyn.storage;
 
 service Storage {
@@ -7,6 +10,7 @@ service Storage {
   rpc GetDataInInterval (GetDataInIntervalRequest) returns (stream GetDataInIntervalResponse) {}
   rpc CheckAvailability (DatasetAvailableRequest) returns (DatasetAvailableResponse) {}
   rpc RegisterNewDataset (RegisterNewDatasetRequest) returns (RegisterNewDatasetResponse) {}
+  rpc GetCurrentTimestamp (google.protobuf.Empty) returns (GetCurrentTimestampResponse) {}
 }
 
 message GetRequest {
@@ -58,4 +62,8 @@ message RegisterNewDatasetRequest {
 
 message RegisterNewDatasetResponse {
   bool success = 1;
+}
+
+message GetCurrentTimestampResponse {
+  int64 timestamp = 1;
 }

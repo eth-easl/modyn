@@ -3,6 +3,7 @@ from typing import Iterable as _Iterable
 from typing import Optional as _Optional
 
 from google.protobuf import descriptor as _descriptor
+from google.protobuf import empty_pb2 as _empty_pb2
 from google.protobuf import message as _message
 from google.protobuf.internal import containers as _containers
 
@@ -19,6 +20,12 @@ class DatasetAvailableResponse(_message.Message):
     AVAILABLE_FIELD_NUMBER: _ClassVar[int]
     available: bool
     def __init__(self, available: bool = ...) -> None: ...
+
+class GetCurrentTimestampResponse(_message.Message):
+    __slots__ = ["timestamp"]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    timestamp: int
+    def __init__(self, timestamp: _Optional[int] = ...) -> None: ...
 
 class GetDataInIntervalRequest(_message.Message):
     __slots__ = ["dataset_id", "end_timestamp", "start_timestamp"]
