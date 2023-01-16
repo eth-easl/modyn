@@ -1,65 +1,42 @@
 import logging
 import os
-import sys
+import pathlib
 from concurrent import futures
-from pathlib import Path
+from typing import List, Tuple
 
 import grpc
-import yaml
-
-path = Path(os.path.abspath(__file__))
-SCRIPT_DIR = path.parent.parent.absolute()
-sys.path.append(os.path.dirname(SCRIPT_DIR))
-
-from backend.selector.new_data_selector import NewDataSelector  # noqa: E402
-from backend.selector.selector_pb2 import (  # noqa: E402; noqa: E402, E501
-    GetSamplesRequest,
-    RegisterTrainingRequest,
-    SamplesResponse,
-    TrainingResponse,
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import (  # noqa: E402, E501
+    add_SelectorServicer_to_server,
 )
-from backend.selector.selector_pb2_grpc import SelectorServicer, add_SelectorServicer_to_server  # noqa: E402
+from modyn.backend.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
+from modyn.backend.selector.selector import Selector
+from modyn.utils import validate_yaml
 
-logging.basicConfig(format="%(asctime)s %(message)s")
+logger = logging.getLogger(__name__)
 
 
-class SelectorGRPCServer(SelectorServicer):
-    """Provides methods that implement functionality of the metadata server."""
+class SelectorServer:
+    def __init__(self, pipeline_config: dict, modyn_config: dict) -> None:
+        self.pipeline_config = pipeline_config
+        self.modyn_config = modyn_config
 
-    def __init__(self, config: dict):
-        # selector_module = dynamic_module_import('dynamicdatasets.selector')
-        # self._selector = getattr(selector_module,config['metadata']['selector'])(config)
-        self._selector = NewDataSelector(config)
+        valid, errors = self._validate_pipeline()
+        if not valid:
+            raise ValueError(f"Invalid configuration: {errors}")
 
-    def register_training(self, request: RegisterTrainingRequest, context: grpc.ServicerContext) -> TrainingResponse:
-        logging.info("Registering training with request - " + str(request))
-        training_id = self._selector.register_training(request.training_set_size, request.num_workers)
-        return TrainingResponse(training_id=training_id)
+        self.selector = Selector(modyn_config, pipeline_config)
+        self.grpc_server = SelectorGRPCServicer(self.selector)
 
-    def get_sample_keys(self, request: GetSamplesRequest, context: grpc.ServicerContext) -> SamplesResponse:
-        logging.info("Fetching samples for request - " + str(request))
-        samples_keys = self._selector.get_sample_keys(
-            request.training_id, request.training_set_number, request.worker_id
+    def _validate_pipeline(self) -> Tuple[bool, List[str]]:
+        schema_path = (
+            pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "schema" / "pipeline-schema.yaml"
         )
-        return SamplesResponse(training_samples_subset=samples_keys)
+        return validate_yaml(self.pipeline_config, schema_path)
 
-
-def serve(config: dict) -> None:
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
-    add_SelectorServicer_to_server(SelectorGRPCServer(config), server)
-    logging.info("Starting server. Listening on port ." + config["selector"]["port"])
-    server.add_insecure_port("[::]:" + config["selector"]["port"])
-    server.start()
-    server.wait_for_termination()
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    if len(sys.argv) != 2:
-        print("Usage: python selector_server.py <config_file>")
-        sys.exit(1)
-
-    with open(sys.argv[1], "r") as f:
-        config = yaml.safe_load(f)
-
-    serve(config)
+    def run(self) -> None:
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
+        add_SelectorServicer_to_server(self.grpc_server, server)
+        logger.info(f"Starting server. Listening on port {self.modyn_config['selector']['port']}.")
+        server.add_insecure_port("[::]:" + self.modyn_config["selector"]["port"])
+        server.start()
+        server.wait_for_termination()

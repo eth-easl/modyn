@@ -47,11 +47,11 @@ ignore=CVS
 # Add files or directories matching the regex patterns to the ignore-list. The
 # regex matches against paths and can be in Posix or Windows format.
 ignore-paths=^modyn/frontend/.*$,
-             ^modyn/backend/odm/.*$,
              ^modyn/backend/ptmp/.*$,
-             ^modyn/backend/selector/.*$,
+             ^modyn/backend/selector/internal/grpc/generated.*$,
+             ^modyn/backend/metadata_database/internal/grpc/generated.*$,
              ^modyn/storage/internal/grpc/generated/.*$
-
+             
 # Files or directories matching the regex patterns are skipped. The regex
 # matches against base names, not paths. The default value ignores Emacs file
 # locks
