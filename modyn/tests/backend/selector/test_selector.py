@@ -20,6 +20,16 @@ class MockGRPCHandler:
         return tuple([10, 3])
 
 
+class MockStrategy:
+    def __init__(self, desired_result):
+        self.result = desired_result
+        self.times_called = 0
+
+    def select_new_training_samples(self, training_id, training_set_size):  # pylint: disable=unused-argument
+        self.times_called += 1
+        return self.result
+
+
 def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
     pass
 
@@ -113,3 +123,30 @@ def test_register_training():
         selector.register_training(0, 1)
     with pytest.raises(Exception):
         selector.register_training(-1000, 1)
+
+
+@patch.object(Selector, "__init__", noop_constructor_mock)
+def test_select_new_training_samples_caching():
+    samples_1 = [("a", 1.0), ("b", 1.0)]
+    samples_2 = [("c", 1.0), ("d", 1.0)]
+
+    selector = Selector()
+    selector._training_samples_cache = {}
+    selector._strategy = MockStrategy(desired_result=samples_1)
+
+    # I want to test the following. First call it twice with training set number 0.
+    # Assert that you get the right answer each time, and _strategy is called only once.
+    # Then, switch it to a next set, training set number 1. Repeat the process.
+    assert selector._strategy.times_called == 0
+    assert selector._select_new_training_samples(0, 0, 2) == samples_1
+    assert selector._strategy.times_called == 1
+    assert selector._select_new_training_samples(0, 0, 2) == samples_1
+    assert selector._strategy.times_called == 1
+
+    selector._strategy = MockStrategy(desired_result=samples_2)
+
+    assert selector._select_new_training_samples(0, 1, 2) == samples_2
+    assert len(selector._training_samples_cache.keys()) == 1
+    assert selector._strategy.times_called == 1
+    assert selector._select_new_training_samples(0, 1, 2) == samples_2
+    assert selector._strategy.times_called == 1
