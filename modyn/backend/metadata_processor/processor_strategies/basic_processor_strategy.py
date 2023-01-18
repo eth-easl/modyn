@@ -1,10 +1,9 @@
 import json
-import random
 
 from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
 
 
-class BasicProcessorStrategy(MetadataProcessorStrategy):
+class BasicProcessorStrategy(AbstractProcessorStrategy):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
 

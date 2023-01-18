@@ -1,12 +1,8 @@
 from abc import ABC, abstractmethod
 
 import grpc
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
-    SetRequest,
-)
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (
-    MetadataStub,
-)
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import SetRequest
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
 
 
 class AbstractProcessorStrategy(ABC):
@@ -44,9 +40,7 @@ class AbstractProcessorStrategy(ABC):
         )
 
         channel = grpc.insecure_channel(
-            self.config["metadata_database"]["hostname"]
-            + ":"
-            + self.config["metadata_database"]["port"]
+            self.config["metadata_database"]["hostname"] + ":" + self.config["metadata_database"]["port"]
         )
         stub = MetadataStub(channel)
         stub.Set(set_request)
