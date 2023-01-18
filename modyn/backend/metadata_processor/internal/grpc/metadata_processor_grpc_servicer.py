@@ -10,7 +10,7 @@ from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
     MetadataProcessorServicer,
 )
-from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import MetadataProcessorStrategy
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
     """GRPC Servicer for the MetadataProcessor module."""
 
-    def __init__(self, config: dict, strategy: MetadataProcessorStrategy) -> None:
+    def __init__(self, config: dict, strategy: AbstractProcessorStrategy) -> None:
         super().__init__()
         self.__config = config
         self.processor_strategy = strategy

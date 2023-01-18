@@ -56,7 +56,7 @@ def main() -> None:
     logger.info("Starting Metadata Processor")
     processor.run()
 
-    logger.info("Processor returner, exiting")
+    logger.info("Processor returned, exiting")
 
 
 if __name__ == "__main__":

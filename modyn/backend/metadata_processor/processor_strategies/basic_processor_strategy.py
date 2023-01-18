@@ -7,10 +7,10 @@ from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database imp
 # from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
 #     SetRequest,
 # )
-from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import MetadataProcessorStrategy
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
 
 
-class BasicMetadataProcessor(MetadataProcessorStrategy):
+class BasicProcessorStrategy(MetadataProcessorStrategy):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
 

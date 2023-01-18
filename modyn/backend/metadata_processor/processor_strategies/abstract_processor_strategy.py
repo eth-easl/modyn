@@ -12,7 +12,7 @@ from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database imp
 # )
 
 
-class MetadataProcessorStrategy(ABC):
+class AbstractProcessorStrategy(ABC):
     """This class is the base class for Metadata Processors. In order to extend
     this class to perform custom processing, implement _process_post_training_metadata
     """

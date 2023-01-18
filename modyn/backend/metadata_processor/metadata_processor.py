@@ -7,8 +7,8 @@ post-training processing of metadata collected by the GPU Node.
 import logging
 
 from modyn.backend.metadata_processor.internal.grpc.grpc_server import GRPCServer
-from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import MetadataProcessorStrategy
-from modyn.backend.metadata_processor.processor_strategies.basic_processor_strategy import BasicMetadataProcessor
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
+from modyn.backend.metadata_processor.processor_strategies.basic_processor_strategy import BasicProcessorStrategy
 
 logger = logging.getLogger(__name__)
 
