@@ -4,10 +4,10 @@ import pathlib
 import pickle
 from unittest.mock import patch
 
-from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -77,11 +77,11 @@ def setup():
     writer.write({"__key__": "6", "cls": [1, 2, 3], "json": [1, 2, 3]})
     writer.close()
 
-    with DatabaseConnection(get_minimal_modyn_config()) as database:
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
         now = NOW
         before_now = now - 1
 
-        database.create_all()
+        database.create_tables()
 
         session = database.get_session()
 
@@ -304,7 +304,7 @@ def test_register_new_dataset():
     assert response is not None
     assert response.success
 
-    with DatabaseConnection(get_minimal_modyn_config()) as database:
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
         session = database.get_session()
 
         dataset = session.query(Dataset).filter(Dataset.name == "test3").first()

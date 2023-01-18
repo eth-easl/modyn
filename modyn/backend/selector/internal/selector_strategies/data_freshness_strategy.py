@@ -1,5 +1,6 @@
 import numpy as np
-from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 
@@ -19,8 +20,8 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, grpc: GRPCHandler):
-        super().__init__(config, grpc)
+    def __init__(self, config: dict, modyn_config: dict):
+        super().__init__(config, modyn_config)
 
         self.unseen_data_ratio = 1.0
         self.old_data_ratio = 0.0
@@ -82,9 +83,18 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             List of keys for the unseen samples.
         """
-        query = f"""SELECT key, score, seen, label, data FROM metadata_database
-                 WHERE seen = 0 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.get_session()
+                .query(Metadata.key, Metadata.seen)
+                .filter(
+                    Metadata.training_id == training_id, Metadata.seen == False
+                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                .all()
+            )
+            assert len(data) > 0, "Queried unseen data, but got seen data."
+            keys, seen = zip(*data)
+
         assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
@@ -101,9 +111,18 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             List of keys for the previously seen samples
         """
-        query = f"""SELECT key, score, seen, label, data FROM metadata_database
-                 WHERE seen = 1 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.get_session()
+                .query(Metadata.key, Metadata.seen)
+                .filter(
+                    Metadata.training_id == training_id, Metadata.seen == True
+                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                .all()
+            )
+            assert len(data) > 0, "Queried unseen data, but got seen data."
+            keys, seen = zip(*data)
+
         assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
         return list(np.array(keys)[choice])
@@ -117,9 +136,18 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             int: number of unseen samples
         """
-        query = f"""SELECT key, score, seen, label, data FROM metadata_database
-                 WHERE seen = 1 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.get_session()
+                .query(Metadata.key, Metadata.seen)
+                .filter(
+                    Metadata.training_id == training_id, Metadata.seen == True
+                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                .all()
+            )
+            assert len(data) > 0, "Queried unseen data, but got seen data."
+            keys, seen = zip(*data)
+
         assert np.array(seen).all(), "Queried seen data, but got unseen data."
         return len(keys)
 
@@ -132,8 +160,17 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             int: number of previously seen samples
         """
-        query = f"""SELECT key, score, seen, label, data FROM metadata_database
-                 WHERE seen = 0 AND training_id = {training_id}"""
-        keys, _, seen, _, _ = self._grpc.get_samples_by_metadata_query(query)
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.get_session()
+                .query(Metadata.key, Metadata.seen)
+                .filter(
+                    Metadata.training_id == training_id, Metadata.seen == False
+                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                .all()
+            )
+            assert len(data) > 0, "Queried unseen data, but got seen data."
+            keys, seen = zip(*data)
+
         assert not np.array(seen).any(), "Queried unseen data, but got seen data."
         return len(keys)

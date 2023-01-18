@@ -1,27 +1,58 @@
 # pylint: disable=no-value-for-parameter
+import os
+import pathlib
 from unittest.mock import patch
 
 import pytest
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models.metadata import Metadata
+from modyn.backend.metadata_database.models.training import Training
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 
+database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
-class MockGRPCHandler:
-    def __init__(self, metadata_response):
-        self.metadata_response = metadata_response
 
-    def register_training(self, training_set_size, num_workers):  # pylint: disable=unused-argument
-        return 5
-
-    def get_samples_by_metadata_query(self, query):  # pylint: disable=unused-argument
-        return self.metadata_response
-
-    def get_info_for_training(self, training_id):  # pylint: disable=unused-argument
-        return tuple([10, 3])
+def get_minimal_modyn_config():
+    return {
+        "metadata_database": {
+            "drivername": "sqlite",
+            "username": "",
+            "password": "",
+            "host": "",
+            "port": "0",
+            "database": f"{database_path}",
+        },
+    }
 
 
 def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
-    pass
+    self._modyn_config = get_minimal_modyn_config()
+
+
+def setup():
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.create_tables()
+
+        trainig = Training(1, 1)
+        database.get_session().add(trainig)
+        database.get_session().commit()
+
+        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.id)
+
+        metadata.id = 1  # SQLite does not support autoincrement for composite primary keys
+        database.get_session().add(metadata)
+
+        metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", trainig.id)
+
+        metadata2.id = 2  # SQLite does not support autoincrement for composite primary keys
+        database.get_session().add(metadata2)
+
+        database.get_session().commit()
+
+
+def teardown():
+    os.remove(database_path)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -35,7 +66,6 @@ def test_base_selector_get_new_training_samples(test__get_seen_data, test__get_u
     selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._set_unseen_data_ratio(0.75)
     selector._is_adaptive_ratio = False
-    selector._grpc = MockGRPCHandler(None)
     with pytest.raises(Exception):
         selector._set_unseen_data_ratio(1.1)
     with pytest.raises(Exception):
@@ -86,28 +116,22 @@ def test_adaptive_selector_get_new_training_samples(
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
 def test_base_selector_get_seen_data():
-    test_metadata_response = ["a", "b"], [0, 1], [1, 1], [0, 0], ["a", "b"]
-
     selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
-    selector._grpc = MockGRPCHandler(test_metadata_response)
 
-    for key in selector._get_seen_data(0, 1):
-        assert key in ["a", "b"]
+    for key in selector._get_seen_data(1, 1):
+        assert key in ["test_key2"]
 
-    assert selector._get_seen_data_size(0) == 2
+    assert selector._get_seen_data_size(1) == 1
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
 def test_base_selector_get_unseen_data():
-    test_metadata_response = ["a", "b"], [0, 1], [0, 0], [0, 0], ["a", "b"]
-
     selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
-    selector._grpc = MockGRPCHandler(test_metadata_response)
 
-    for key in selector._get_unseen_data(0, 1):
-        assert key in ["a", "b"]
+    for key in selector._get_unseen_data(1, 1):
+        assert key in ["test_key"]
 
-    assert selector._get_unseen_data_size(0) == 2
+    assert selector._get_unseen_data_size(1) == 1

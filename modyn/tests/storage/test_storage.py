@@ -3,7 +3,7 @@ import pathlib
 from unittest.mock import patch
 
 import pytest
-from modyn.storage.internal.database.database_connection import DatabaseConnection
+from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.storage import Storage
 
@@ -42,7 +42,14 @@ def get_minimal_modyn_config() -> dict:
         },
         "project": {"name": "test", "version": "0.0.1"},
         "input": {"type": "LOCAL", "path": "/tmp/modyn"},
-        "metadata_database": {"type": "LOCAL"},
+        "metadata_database": {
+            "drivername": "sqlite",
+            "username": "",
+            "password": "",
+            "host": "",
+            "port": "0",
+            "database": f"{database_path}",
+        },
     }
 
 
@@ -79,8 +86,8 @@ def test_validate_config():
 
 @patch("modyn.storage.storage.GRPCServer", MockGRPCServer)
 def test_run():
-    with DatabaseConnection(get_minimal_modyn_config()) as database:
-        database.create_all()
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.create_tables()
     storage = Storage(get_minimal_modyn_config())
     storage.run()
 

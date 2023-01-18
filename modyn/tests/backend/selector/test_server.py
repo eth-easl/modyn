@@ -1,66 +1,78 @@
 # pylint: disable=unused-argument, no-name-in-module
+import os
+import pathlib
 import sys
 from unittest.mock import patch
 
 import grpc
-import modyn.utils
 import pytest
 import yaml
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models.metadata import Metadata
+from modyn.backend.metadata_database.models.training import Training
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest  # noqa: E402, E501, E611
-from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 from modyn.backend.selector.selector_entrypoint import main
 from modyn.backend.selector.selector_server import SelectorServer
 
-
-def noop_constructor_mock(self, config: dict):
-    pass
+database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
 
-@patch.object(GRPCHandler, "_init_metadata", return_value=None)
-@patch.object(modyn.utils, "grpc_connection_established", return_value=True)
-@patch.object(GRPCHandler, "register_training", return_value=0)
-@patch.object(GRPCHandler, "get_info_for_training", return_value=(8, 1))
-@patch.object(GRPCHandler, "get_samples_by_metadata_query")
-def test_prepare_training_set(
-    test_get_samples_by_metadata_query,
-    test_get_info_for_training,
-    test_register_training,
-    test__grpc_connection_established,
-    test__init_metadata,
-):
-    sample_cfg = {
-        "selector": {
-            "port": "50056",
-        },
+def get_minimal_modyn_config():
+    return {
         "metadata_database": {
-            "port": "50054",
-            "hostname": "backend",
+            "drivername": "sqlite",
+            "username": "",
+            "password": "",
+            "host": "",
+            "port": "0",
+            "database": f"{database_path}",
         },
     }
 
+
+def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
+    self._modyn_config = get_minimal_modyn_config()
+
+
+def setup():
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.create_tables()
+
+        trainig = Training(1, 1)
+        database.get_session().add(trainig)
+        database.get_session().commit()
+
+        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.id)
+
+        metadata.id = 1  # SQLite does not support autoincrement for composite primary keys #pylint: disable=invalid-name # noqa: E501
+        database.get_session().add(metadata)
+
+        metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", trainig.id)
+
+        metadata2.id = 2  # SQLite does not support autoincrement for composite primary keys #pylint: disable=invalid-name # noqa: E501
+        database.get_session().add(metadata2)
+
+        database.get_session().commit()
+
+
+def teardown():
+    os.remove(database_path)
+
+
+def test_prepare_training_set():
     with open("modyn/config/examples/example-pipeline.yaml", "r", encoding="utf-8") as pipeline_file:
         pipeline_cfg = yaml.safe_load(pipeline_file)
 
-    selector_server = SelectorServer(pipeline_cfg, sample_cfg)
+    selector_server = SelectorServer(pipeline_cfg, get_minimal_modyn_config())
     servicer = selector_server.grpc_server
 
-    assert selector_server.selector.register_training(training_set_size=8, num_workers=1) == 0
-
-    all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
-    all_classes = [1, 1, 1, 1, 2, 2, 3, 3]
-    all_scores = [1] * 8
-    all_seens = [False] * 8
-
-    test_get_samples_by_metadata_query.side_effect = [
-        (all_samples, all_scores, all_seens, all_classes, all_samples),
-        ([], [], [], [], []),
-    ]
+    assert selector_server.selector.register_training(training_set_size=8, num_workers=1) == 2
 
     assert set(
-        servicer.get_sample_keys_and_weight(
-            GetSamplesRequest(training_id=0, training_set_number=0, worker_id=0), None
+        servicer.get_sample_keys_and_metadata(
+            GetSamplesRequest(training_id=1, training_set_number=0, worker_id=0), None
         ).training_samples_subset
-    ) == set(["a", "b", "c", "d", "e", "f", "g", "h"])
+    ) == set(["test_key"])
 
 
 class DummyServer:
@@ -81,17 +93,7 @@ class DummyServer:
 
 
 @patch.object(grpc, "server", return_value=DummyServer(None))
-@patch.object(GRPCHandler, "_init_metadata", return_value=None)
-@patch.object(modyn.utils, "grpc_connection_established", return_value=True)
-@patch.object(GRPCHandler, "register_training", return_value=0)
-@patch.object(GRPCHandler, "get_info_for_training", return_value=(8, 1))
-def test_main(
-    get_info_for_training,
-    register_training,
-    _grpc_connection_established,
-    _init_metadata,
-    wait_for_terination,
-):
+def test_main(test_server_mock):
     # testargs = ["selector_entrypoint.py", "modyn/config/config.yaml"]
     testargs = [
         "selector_entrypoint.py",

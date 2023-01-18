@@ -1,8 +1,6 @@
 """Sample model."""
 
-from typing import Optional
-
-from modyn.storage.internal.database.base import Base
+from modyn.storage.internal.database.storage_base import Base
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import backref, relationship
 

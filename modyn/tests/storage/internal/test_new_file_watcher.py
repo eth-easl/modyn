@@ -8,10 +8,10 @@ from multiprocessing import Value
 from unittest.mock import patch
 
 import pytest
-from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
@@ -66,8 +66,8 @@ def teardown():
 
 @pytest.fixture(autouse=True)
 def session():
-    with DatabaseConnection(get_minimal_modyn_config()) as database:
-        database.create_all()
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.create_tables()
         yield database.get_session()
 
 
@@ -159,7 +159,7 @@ def test_seek(test__seek_dataset, session) -> None:  # noqa: E501
         )
     )
     session.commit()
-    with patch.object(DatabaseConnection, "get_session") as get_session_mock:
+    with patch.object(StorageDatabaseConnection, "get_session") as get_session_mock:
         get_session_mock.return_value = session
         new_file_watcher._seek(FILE_TIMESTAMP - 1)
         assert test__seek_dataset.called
@@ -198,7 +198,7 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
         )
     )
     session.commit()
-    with patch.object(DatabaseConnection, "get_session") as get_session_mock:
+    with patch.object(StorageDatabaseConnection, "get_session") as get_session_mock:
         get_session_mock.return_value = session
         new_file_watcher._seek(FILE_TIMESTAMP - 1)
         assert not test__update_files_in_directory.called
@@ -219,7 +219,7 @@ def test_seek_path_not_dir(test_get_filesystem_wrapper, test__update_files_in_di
         )
     )
     session.commit()
-    with patch.object(DatabaseConnection, "get_session") as get_session_mock:
+    with patch.object(StorageDatabaseConnection, "get_session") as get_session_mock:
         get_session_mock.return_value = session
         new_file_watcher._seek(FILE_TIMESTAMP - 1)
         assert not test__update_files_in_directory.called
@@ -230,7 +230,7 @@ def test_seek_path_not_dir(test_get_filesystem_wrapper, test__update_files_in_di
 def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_directory, session) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    with patch.object(DatabaseConnection, "get_session") as get_session_mock:
+    with patch.object(StorageDatabaseConnection, "get_session") as get_session_mock:
         get_session_mock.return_value = session
         new_file_watcher._seek(FILE_TIMESTAMP - 1)
         assert not test__update_files_in_directory.called

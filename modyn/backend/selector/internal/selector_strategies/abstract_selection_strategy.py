@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
-
 
 class AbstractSelectionStrategy(ABC):
     """This class is the base class for selectors. In order to extend this class
@@ -14,12 +12,12 @@ class AbstractSelectionStrategy(ABC):
 
     Args:
         config (dict): the configurations for the selector
-        grpc (GRPCHandler): the GRPC handler used for calls to metadata database.
+        modyn_config (dict): the configurations for the modyn backend
     """
 
-    def __init__(self, config: dict, grpc: GRPCHandler):
+    def __init__(self, config: dict, modyn_config: dict):
         self._config = config
-        self._grpc = grpc
+        self._modyn_config = modyn_config
 
     @abstractmethod
     def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:

@@ -12,7 +12,7 @@ from ctypes import c_bool
 from multiprocessing import Process, Value
 from typing import Tuple
 
-from modyn.storage.internal.database.database_connection import DatabaseConnection
+from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.storage.internal.new_file_watcher import run_watcher
 from modyn.utils import validate_yaml
@@ -54,8 +54,8 @@ class Storage:
             ValueError: Failed to add dataset.
         """
         #  Create the database tables.
-        with DatabaseConnection(self.modyn_config) as database:
-            database.create_all()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            database.create_tables()
 
             for dataset in self.modyn_config["storage"]["datasets"]:
                 if not database.add_dataset(

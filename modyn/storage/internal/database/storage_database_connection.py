@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from modyn.storage.internal.database.base import Base
 from modyn.storage.internal.database.models.dataset import Dataset
+from modyn.storage.internal.database.storage_base import Base
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import create_engine, exc
@@ -17,12 +17,8 @@ from sqlalchemy.orm.session import Session
 logger = logging.getLogger(__name__)
 
 
-class DatabaseConnection:
+class StorageDatabaseConnection:
     """Database connection context manager."""
-
-    session: Session = None
-    engine: Engine = None
-    url = None
 
     def __init__(self, modyn_config: dict) -> None:
         """Initialize the database connection.
@@ -31,8 +27,11 @@ class DatabaseConnection:
             modyn_config (dict): Configuration of the modyn module.
         """
         self.modyn_config = modyn_config
+        self.session: Session = None
+        self.engine: Engine = None
+        self.url = None
 
-    def __enter__(self) -> DatabaseConnection:
+    def __enter__(self) -> StorageDatabaseConnection:
         """Create the engine and session.
 
         Returns:
@@ -69,7 +68,7 @@ class DatabaseConnection:
         """
         return self.session
 
-    def create_all(self) -> None:
+    def create_tables(self) -> None:
         """
         Create all tables. Each table is represented by a class.
 
