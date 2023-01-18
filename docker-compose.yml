@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
-  db:
+  metadata-db:
     image: postgres:14.1-alpine
     restart: always
     environment:
@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: default_database
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - ./metadata-postgres-data:/var/lib/postgresql/data
   storage-db:
     image: postgres:14.1-alpine
     restart: always
@@ -36,7 +36,7 @@ services:
     depends_on:
       - modynbase
       - storage
-      - db
+      - metadata-db
       - storage-db
     build:
       context: .

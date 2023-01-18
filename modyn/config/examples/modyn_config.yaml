@@ -33,14 +33,12 @@ storage:
     database: "postgres"
 
 metadata_database:
-  port: "50054"
-  hostname: "backend"
-  postgresql:
-    host: 127.0.0.1
-    port: "5432"
-    database: "postgres"
-    user: "postgres"
-    password: "postgres"
+  drivername: "postgresql"
+  username: "postgres"
+  password: "postgres"
+  host: "storage-db"
+  port: "5432"
+  database: "postgres"
 
 ptmp:
   port: "50055"
@@ -52,9 +50,3 @@ selector:
   port: "50056"
   package: "score_selector"
   class: "ScoreSelector"
-  postgresql:
-    host: db
-    port: "5432"
-    database: "postgres"
-    user: "postgres"
-    password: "postgres"
