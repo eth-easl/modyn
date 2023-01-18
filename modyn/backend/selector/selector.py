@@ -47,7 +47,7 @@ class Selector:
         return training_samples
 
     def _get_training_set_partition(
-        self, training_id: int, training_samples: list[tuple[str, ...]], worker_id: int
+        self, training_id: int, training_samples: list[tuple[str, float]], worker_id: int
     ) -> list[tuple[str, float]]:
         """
         Return the required subset of training samples for the particular worker id
