@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Dict
+
 from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
@@ -13,9 +15,11 @@ class Selector:
     def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
         self.grpc = GRPCHandler(modyn_config)
         self._strategy = self._get_strategy(pipeline_config)
-        self.training_samples_cache = dict()
+        self._training_samples_cache: Dict[tuple[int, int], list[tuple[str, ...]]] = {}
 
-    def select_new_training_samples(self, training_id: int, training_set_number: int, training_set_size: int) -> list[tuple[str, ...]]:
+    def _select_new_training_samples(
+        self, training_id: int, training_set_number: int, training_set_size: int
+    ) -> list[tuple[str, ...]]:
         """
         Selects a new training set of samples for the given training id.
 
@@ -23,16 +27,16 @@ class Selector:
             list(tuple(str, ...)): the training sample keys for the newly selected training_set with a variable
                        number of auxiliary data (concrete typing in subclasses defined)
         """
-        if (training_id, training_set_number) in self.training_samples_cache.keys():
-            return self.training_samples_cache[(training_id, training_set_number)]
-        
+        if (training_id, training_set_number) in self._training_samples_cache:
+            return self._training_samples_cache[(training_id, training_set_number)]
+
         samples = self._strategy.select_new_training_samples(training_id, training_set_size)
 
-        # If there are previous caches with this training_id, remove them. 
+        # If there are previous caches with this training_id, remove them.
         for previous_training_number in range(training_set_number):
-            self.training_samples_cache.pop((training_id, previous_training_number), None)
+            self._training_samples_cache.pop((training_id, previous_training_number), None)
 
-        self.training_samples_cache[(training_id, training_set_number)] = samples
+        self._training_samples_cache[(training_id, training_set_number)] = samples
         return samples
 
     def _prepare_training_set(
@@ -44,14 +48,14 @@ class Selector:
         """
         Get a new training set of samples for the given training id. If this training_set_number
         for a given training_id has been queried before, we get it from cache, otherwise compute it anew
-        and remove from the cache any previous training sets for this training_id. We expect that 
-        training_set_number is increasing in time. 
+        and remove from the cache any previous training sets for this training_id. We expect that
+        training_set_number is increasing in time.
 
         Returns:
             list(tuple(str, ...)): the training sample keys for the newly prepared training_set with a variable
                        number of auxiliary data (concrete typing in subclasses defined)
         """
-        training_samples = self.select_new_training_samples(training_id, training_set_number, training_set_size)
+        training_samples = self._select_new_training_samples(training_id, training_set_number, training_set_size)
 
         # Throw error if no new samples are selected
         if len(training_samples) == 0:

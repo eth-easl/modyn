@@ -27,16 +27,17 @@ def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unuse
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
 @patch.object(Selector, "__init__", noop_constructor_mock)
-@patch.object(AbstractSelectionStrategy, "select_new_training_samples")
-def test_prepare_training_set(test_select_new_training_samples):
-    test_select_new_training_samples.return_value = ["a", "b"]
+@patch.object(Selector, "_select_new_training_samples")
+def test_prepare_training_set(test__select_new_training_samples):
+    test__select_new_training_samples.return_value = ["a", "b"]
 
     selector = Selector(None)
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
+    selector._training_samples_cache = {}
     assert selector._prepare_training_set(0, 0, 0) == ["a", "b"]
 
-    test_select_new_training_samples.return_value = []
+    test__select_new_training_samples.return_value = []
     with pytest.raises(ValueError):
         selector._prepare_training_set(0, 0, 3)
 
@@ -93,8 +94,6 @@ def test_get_sample_keys(test__prepare_training_set):
         selector.get_sample_keys_and_metadata(0, 0, -1)
     with pytest.raises(ValueError):
         selector.get_sample_keys_and_metadata(0, 0, 10)
-    with pytest.raises(NotImplementedError):
-        selector.select_new_training_samples(0, 0)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
