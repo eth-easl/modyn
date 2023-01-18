@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 
-import grpc
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import SetRequest
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
+from modyn.backend.metadata_processor.internal.grpc.grpc_handler import GRPCHandler
 
 
 class AbstractProcessorStrategy(ABC):
@@ -12,6 +10,7 @@ class AbstractProcessorStrategy(ABC):
 
     def __init__(self, modyn_config: dict):
         self.config = modyn_config
+        self.grpc = GRPCHandler(modyn_config)
 
     def process_post_training_metadata(self, training_id: int, serialized_data: str) -> None:
         """
@@ -32,18 +31,7 @@ class AbstractProcessorStrategy(ABC):
             training_id (str): The training id.
             set_request (dict): The metadata.
         """
-        set_request = SetRequest(
-            training_id=training_id,
-            keys=data["keys"],
-            seen=data["seen"],
-            data=data["data"],
-        )
-
-        channel = grpc.insecure_channel(
-            self.config["metadata_database"]["hostname"] + ":" + self.config["metadata_database"]["port"]
-        )
-        stub = MetadataStub(channel)
-        stub.Set(set_request)
+        self.grpc.set_metadata(training_id, data)
 
     @abstractmethod
     def process_metadata(self, training_id: int, data: str) -> dict:
