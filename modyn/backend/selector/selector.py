@@ -15,7 +15,7 @@ class Selector:
         self._strategy = self._get_strategy(pipeline_config)
         self.training_samples_cache = dict()
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, ...]]:
+    def select_new_training_samples(self, training_id: int, training_set_number: int, training_set_size: int) -> list[tuple[str, ...]]:
         """
         Selects a new training set of samples for the given training id.
 
@@ -23,7 +23,13 @@ class Selector:
             list(tuple(str, ...)): the training sample keys for the newly selected training_set with a variable
                        number of auxiliary data (concrete typing in subclasses defined)
         """
-        return self._strategy.select_new_training_samples(training_id, training_set_size)
+        if (training_id, training_set_number) in self.training_samples_cache.keys():
+            return self.training_samples_cache[(training_id, training_set_number)]
+        
+        samples = self._strategy.select_new_training_samples(training_id, training_set_size)
+        
+        
+        return 
 
     def _prepare_training_set(
         self,
@@ -40,7 +46,7 @@ class Selector:
             list(tuple(str, ...)): the training sample keys for the newly prepared training_set with a variable
                        number of auxiliary data (concrete typing in subclasses defined)
         """
-        training_samples = self.select_new_training_samples(training_id, training_set_size)
+        training_samples = self.select_new_training_samples(training_id, training_set_number, training_set_size)
 
         # Throw error if no new samples are selected
         if len(training_samples) == 0:
