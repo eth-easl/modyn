@@ -51,4 +51,11 @@ else
     exit 1
 fi
 
+if mypy modyn ; then
+    echo "No mypy errors"
+else
+    echo "mypy errors"
+    exit 1
+fi
+
 echo "Successfull compilance check"
