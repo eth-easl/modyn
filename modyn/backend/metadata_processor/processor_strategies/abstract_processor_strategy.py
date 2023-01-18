@@ -1,20 +1,17 @@
 from abc import ABC, abstractmethod
 
-# TODO: import SetRequest from metadata database & remove Mocks
-from modyn.backend.metadata_processor.internal.mocks.mocks_metadata_database import MockMetadataDb, SetRequest
-
-# import grpc
-# from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
-#     SetRequest,
-# )
-# from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (
-#     MetadataStub,
-# )
+import grpc
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import (
+    SetRequest,
+)
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import (
+    MetadataStub,
+)
 
 
 class AbstractProcessorStrategy(ABC):
     """This class is the base class for Metadata Processors. In order to extend
-    this class to perform custom processing, implement _process_post_training_metadata
+    this class to perform custom processing, implement process_metadata
     """
 
     def __init__(self, modyn_config: dict):
@@ -28,7 +25,7 @@ class AbstractProcessorStrategy(ABC):
             training_id (int): The training ID.
             data (str): Serialized post training metadata.
         """
-        data = self.process__metadata(training_id, serialized_data)
+        data = self.process_metadata(training_id, serialized_data)
         self.write_to_database(training_id, data)
 
     def write_to_database(self, training_id: int, data: dict) -> None:
@@ -42,22 +39,18 @@ class AbstractProcessorStrategy(ABC):
         set_request = SetRequest(
             training_id=training_id,
             keys=data["keys"],
-            scores=data["scores"],
             seen=data["seen"],
-            label=data["label"],
             data=data["data"],
         )
 
-        # TODO: uncomment and remove Mock
-        # channel = grpc.insecure_channel(
-        #     self.config["metadata_database"]["hostname"]
-        #     + ":"
-        #     + self.config["metadata_database"]["port"]
-        # )
-        # stub = MetadataStub(channel)
-        stub = MockMetadataDb()
+        channel = grpc.insecure_channel(
+            self.config["metadata_database"]["hostname"]
+            + ":"
+            + self.config["metadata_database"]["port"]
+        )
+        stub = MetadataStub(channel)
         stub.Set(set_request)
 
     @abstractmethod
-    def process__metadata(self, training_id: int, data: str) -> dict:
+    def process_metadata(self, training_id: int, data: str) -> dict:
         raise NotImplementedError()

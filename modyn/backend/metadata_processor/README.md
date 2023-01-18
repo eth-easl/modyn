@@ -10,9 +10,7 @@ Strating from the `abstract_processor_strategy` module, a new Strategy should ex
 ```
 {
 	"keys": [ "string" ] | None,
-	"scores": [ "float" ] | None,
 	"seen": [ "boolean" ] | None,
-	"label": [ "integer" ] | None,
 	"data": [ "string" ] | None
 }
 ```
