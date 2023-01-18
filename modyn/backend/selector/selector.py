@@ -27,9 +27,13 @@ class Selector:
             return self.training_samples_cache[(training_id, training_set_number)]
         
         samples = self._strategy.select_new_training_samples(training_id, training_set_size)
-        
-        
-        return 
+
+        # If there are previous caches with this training_id, remove them. 
+        for previous_training_number in range(training_set_number):
+            self.training_samples_cache.pop((training_id, previous_training_number), None)
+
+        self.training_samples_cache[(training_id, training_set_number)] = samples
+        return samples
 
     def _prepare_training_set(
         self,
@@ -40,7 +44,8 @@ class Selector:
         """
         Get a new training set of samples for the given training id. If this training_set_number
         for a given training_id has been queried before, we get it from cache, otherwise compute it anew
-        and remove from the cache any previous training sets for this training_id.
+        and remove from the cache any previous training sets for this training_id. We expect that 
+        training_set_number is increasing in time. 
 
         Returns:
             list(tuple(str, ...)): the training sample keys for the newly prepared training_set with a variable
