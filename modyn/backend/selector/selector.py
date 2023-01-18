@@ -13,6 +13,7 @@ class Selector:
     def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
         self.grpc = GRPCHandler(modyn_config)
         self._strategy = self._get_strategy(pipeline_config)
+        self.training_samples_cache = dict()
 
     def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, ...]]:
         """
@@ -31,8 +32,9 @@ class Selector:
         training_set_size: int,
     ) -> list[tuple[str, ...]]:
         """
-        Create a new training set of samples for the given training id. New samples are selected from
-        the select_new_samples method and are inserted into the database for the given set number.
+        Get a new training set of samples for the given training id. If this training_set_number
+        for a given training_id has been queried before, we get it from cache, otherwise compute it anew
+        and remove from the cache any previous training sets for this training_id.
 
         Returns:
             list(tuple(str, ...)): the training sample keys for the newly prepared training_set with a variable
