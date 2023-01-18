@@ -2,13 +2,14 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage__pb2
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
 class StorageStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
-        """Initialize the stub.
+        """Constructor.
 
         Args:
             channel: A grpc.Channel.
@@ -37,6 +38,11 @@ class StorageStub(object):
                 '/modyn.storage.Storage/RegisterNewDataset',
                 request_serializer=storage__pb2.RegisterNewDatasetRequest.SerializeToString,
                 response_deserializer=storage__pb2.RegisterNewDatasetResponse.FromString,
+                )
+        self.GetCurrentTimestamp = channel.unary_unary(
+                '/modyn.storage.Storage/GetCurrentTimestamp',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=storage__pb2.GetCurrentTimestampResponse.FromString,
                 )
 
 
@@ -73,6 +79,12 @@ class StorageServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetCurrentTimestamp(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StorageServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -100,6 +112,11 @@ def add_StorageServicer_to_server(servicer, server):
                     servicer.RegisterNewDataset,
                     request_deserializer=storage__pb2.RegisterNewDatasetRequest.FromString,
                     response_serializer=storage__pb2.RegisterNewDatasetResponse.SerializeToString,
+            ),
+            'GetCurrentTimestamp': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCurrentTimestamp,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=storage__pb2.GetCurrentTimestampResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -193,5 +210,22 @@ class Storage(object):
         return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/RegisterNewDataset',
             storage__pb2.RegisterNewDatasetRequest.SerializeToString,
             storage__pb2.RegisterNewDatasetResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetCurrentTimestamp(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/GetCurrentTimestamp',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            storage__pb2.GetCurrentTimestampResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

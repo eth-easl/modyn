@@ -1,27 +1,116 @@
+# pylint: disable=no-value-for-parameter
 from unittest.mock import patch
 
+import pytest
+from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.selector import Selector
 
-# We do not use the parameters in this empty mock constructor.
+
+class MockGRPCHandler:
+    def __init__(self, metadata_response):
+        self.metadata_response = metadata_response
+
+    def register_training(self, training_set_size, num_workers):  # pylint: disable=unused-argument
+        return 5
+
+    def get_samples_by_metadata_query(self, query):  # pylint: disable=unused-argument
+        return self.metadata_response
+
+    def get_info_for_training(self, training_id):  # pylint: disable=unused-argument
+        return tuple([10, 3])
 
 
-def noop_constructor_mock(self, config: dict):  # pylint: disable=unused-argument
+def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
     pass
 
 
-@patch.multiple(Selector, __abstractmethods__=set())
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
 @patch.object(Selector, "__init__", noop_constructor_mock)
-@patch.object(Selector, "_create_or_fetch_existing_set")
-@patch.object(Selector, "_get_info_for_training")
-def test_get_sample_keys(test__get_info_for_training, test__create_or_fetch_existing_set):
-    test__create_or_fetch_existing_set.return_value = ["a", "b", "c"]
-    test__get_info_for_training.return_value = tuple([3, 3])
+@patch.object(AbstractSelectionStrategy, "select_new_training_samples")
+def test_prepare_training_set(test_select_new_training_samples):
+    test_select_new_training_samples.return_value = ["a", "b"]
 
-    # We need to instantiate an abstract class for the test
-    selector = Selector(None)  # pylint: disable=abstract-class-instantiated
+    selector = Selector(None)
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
+    assert selector._prepare_training_set(0, 0, 0) == ["a", "b"]
 
-    assert selector.get_sample_keys(0, 0, 0) == ["a"]
-    assert selector.get_sample_keys(0, 0, 1) == ["b"]
-    assert selector.get_sample_keys(0, 0, 2) == ["c"]
+    test_select_new_training_samples.return_value = []
+    with pytest.raises(ValueError):
+        selector._prepare_training_set(0, 0, 3)
 
-    # TODO(MaxiBoether): Assert throws with invalid worker id
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(Selector, "__init__", noop_constructor_mock)
+@patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
+def test_get_training_set_partition():
+    selector = Selector(None)
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
+    selector.grpc = MockGRPCHandler(None)
+    strategy._grpc = MockGRPCHandler(None)
+
+    training_samples = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+    assert selector._get_training_set_partition(0, training_samples, 0) == [
+        "a",
+        "b",
+        "c",
+        "d",
+    ]
+    assert selector._get_training_set_partition(0, training_samples, 1) == [
+        "e",
+        "f",
+        "g",
+        "h",
+    ]
+    assert selector._get_training_set_partition(0, training_samples, 2) == ["i", "j"]
+
+    with pytest.raises(Exception):
+        selector._get_training_set_partition(0, training_samples, 3)
+    with pytest.raises(Exception):
+        selector._get_training_set_partition(0, training_samples, -1)
+
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
+@patch.object(Selector, "__init__", noop_constructor_mock)
+@patch.object(Selector, "_prepare_training_set")
+def test_get_sample_keys(test__prepare_training_set):
+    training_samples = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+    test__prepare_training_set.return_value = training_samples
+
+    selector = Selector()
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
+    selector.grpc = MockGRPCHandler(None)
+    strategy._grpc = MockGRPCHandler(None)
+
+    assert selector.get_sample_keys_and_metadata(0, 0, 0) == ["a", "b", "c", "d"]
+    assert selector.get_sample_keys_and_metadata(0, 0, 1) == ["e", "f", "g", "h"]
+    assert selector.get_sample_keys_and_metadata(0, 0, 2) == ["i", "j"]
+    with pytest.raises(ValueError):
+        selector.get_sample_keys_and_metadata(0, 0, -1)
+    with pytest.raises(ValueError):
+        selector.get_sample_keys_and_metadata(0, 0, 10)
+    with pytest.raises(NotImplementedError):
+        selector.select_new_training_samples(0, 0)
+
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
+@patch.object(Selector, "__init__", noop_constructor_mock)
+def test_register_training():
+    selector = Selector()
+    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector._strategy = strategy
+    selector.grpc = MockGRPCHandler(None)
+    strategy._grpc = MockGRPCHandler(None)
+
+    assert selector.register_training(1000, 1) == 5
+    with pytest.raises(Exception):
+        selector.register_training(1000, 0)
+    with pytest.raises(Exception):
+        selector.register_training(0, 1)
+    with pytest.raises(Exception):
+        selector.register_training(-1000, 1)

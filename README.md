@@ -25,7 +25,7 @@ Make sure to commit/backup before running them inplace. Then, in order to automa
 ```
 isort .
 autopep8 modyn --recursive --in-place --pep8-passes 2000 --verbose
-black modyn
+black modyn --verbose --config black.toml
 ```
 in the project root.
 
@@ -33,7 +33,7 @@ You can make sure that the code you have is compliant by running
 ```
 flake8
 isort . --check --diff
-black --check modyn
+black --check modyn --verbose --config black.toml
 pylint modyn
 ```
 

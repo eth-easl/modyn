@@ -42,7 +42,7 @@ def get_minimal_modyn_config() -> dict:
         },
         "project": {"name": "test", "version": "0.0.1"},
         "input": {"type": "LOCAL", "path": "/tmp/modyn"},
-        "odm": {"type": "LOCAL"},
+        "metadata_database": {"type": "LOCAL"},
     }
 
 
