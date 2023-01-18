@@ -1,3 +1,5 @@
+# pylint: disable=singleton-comparison
+# flake8: noqa: E712
 import numpy as np
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
@@ -88,8 +90,9 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
                 database.get_session()
                 .query(Metadata.key, Metadata.seen)
                 .filter(
-                    Metadata.training_id == training_id, Metadata.seen == False
-                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                    Metadata.training_id == training_id,
+                    Metadata.seen == False,
+                )
                 .all()
             )
             assert len(data) > 0, "Queried unseen data, but got seen data."
@@ -115,9 +118,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             data = (
                 database.get_session()
                 .query(Metadata.key, Metadata.seen)
-                .filter(
-                    Metadata.training_id == training_id, Metadata.seen == True
-                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                .filter(Metadata.training_id == training_id, Metadata.seen == True)
                 .all()
             )
             assert len(data) > 0, "Queried unseen data, but got seen data."
@@ -140,9 +141,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             data = (
                 database.get_session()
                 .query(Metadata.key, Metadata.seen)
-                .filter(
-                    Metadata.training_id == training_id, Metadata.seen == True
-                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                .filter(Metadata.training_id == training_id, Metadata.seen == True)
                 .all()
             )
             assert len(data) > 0, "Queried unseen data, but got seen data."
@@ -164,9 +163,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             data = (
                 database.get_session()
                 .query(Metadata.key, Metadata.seen)
-                .filter(
-                    Metadata.training_id == training_id, Metadata.seen == False
-                )  # noqa: E712 E501 # pylint: disable=singleton-comparison
+                .filter(Metadata.training_id == training_id, Metadata.seen == False)
                 .all()
             )
             assert len(data) > 0, "Queried unseen data, but got seen data."

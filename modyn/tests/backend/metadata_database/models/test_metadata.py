@@ -34,7 +34,7 @@ def test_add_metadata(session):
         training.id,
     )
 
-    metadata.id = 1  # This is because SQLite does not support autoincrement for composite primary keys  # noqa: E501 # pylint: disable=invalid-name
+    metadata.id = 1  # pylint: disable=invalid-name
 
     session.add(metadata)
     session.commit()
