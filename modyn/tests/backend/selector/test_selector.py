@@ -86,13 +86,13 @@ def test_get_sample_keys(test__prepare_training_set):
     selector.grpc = MockGRPCHandler(None)
     strategy._grpc = MockGRPCHandler(None)
 
-    assert selector.get_sample_keys_and_metadata(0, 0, 0) == ["a", "b", "c", "d"]
-    assert selector.get_sample_keys_and_metadata(0, 0, 1) == ["e", "f", "g", "h"]
-    assert selector.get_sample_keys_and_metadata(0, 0, 2) == ["i", "j"]
+    assert selector.get_sample_keys_and_weight(0, 0, 0) == ["a", "b", "c", "d"]
+    assert selector.get_sample_keys_and_weight(0, 0, 1) == ["e", "f", "g", "h"]
+    assert selector.get_sample_keys_and_weight(0, 0, 2) == ["i", "j"]
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_metadata(0, 0, -1)
+        selector.get_sample_keys_and_weight(0, 0, -1)
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_metadata(0, 0, 10)
+        selector.get_sample_keys_and_weight(0, 0, 10)
     with pytest.raises(NotImplementedError):
         selector.select_new_training_samples(0, 0)
 
