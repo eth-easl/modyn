@@ -20,7 +20,7 @@ class Sample(Base):
         """Return string representation."""
         return f"<Sample {self.id}>"
 
-    def __init__(self, file: str, external_key: str, index: int, label: bytes = None):
+    def __init__(self, file: str, external_key: str, index: int, label: bytes = b""):
         """Init sample.
 
         Args:
@@ -31,4 +31,5 @@ class Sample(Base):
         self.file = file
         self.external_key = external_key
         self.index = index
-        self.label = label
+        if label != b"":
+            self.label = label

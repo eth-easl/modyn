@@ -8,6 +8,7 @@ from modyn.storage.internal.file_wrapper.single_sample_file_wrapper import Singl
 
 TMP_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn")
 FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.png")
+INVALID_FILE_EXTENSION_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.txt")
 METADATA_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.json")
 FILE_WRAPPER_CONFIG = {"file_extension": ".png", "label_file_extension": ".json"}
 FILE_WRAPPER_CONFIG_MIN = {"file_extension": ".png"}
@@ -47,6 +48,13 @@ def test_get_number_of_samples():
     assert file_wrapper.get_number_of_samples() == 1
 
 
+def test_get_number_of_samples_with_invalid_file_extension():
+    file_wrapper = SingleSampleFileWrapper(
+        INVALID_FILE_EXTENSION_PATH, FILE_WRAPPER_CONFIG_MIN, MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH)
+    )
+    assert file_wrapper.get_number_of_samples() == 0
+
+
 def test_get_samples():
     file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples(0, 1)
@@ -63,6 +71,14 @@ def test_get_sample():
     file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     sample = file_wrapper.get_sample(0)
     assert sample.startswith(b"test")
+
+
+def test_get_sample_with_invalid_file_extension():
+    file_wrapper = SingleSampleFileWrapper(
+        INVALID_FILE_EXTENSION_PATH, FILE_WRAPPER_CONFIG_MIN, MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH)
+    )
+    with pytest.raises(ValueError):
+        file_wrapper.get_sample(0)
 
 
 def test_get_sample_with_invalid_index():

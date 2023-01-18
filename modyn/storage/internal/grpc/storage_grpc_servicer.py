@@ -97,7 +97,7 @@ class StorageGRPCServicer(StorageServicer):
                         keys=[external_key for _, external_key, _ in samples_per_file],
                         labels=[label for _, _, label in samples_per_file],
                     )
-                    samples_per_file = [(sample.index, sample.external_key)]
+                    samples_per_file = [(sample.index, sample.external_key, sample.label)]
                     current_file = sample.file
                 else:
                     samples_per_file.append((sample.index, sample.external_key, sample.label))
