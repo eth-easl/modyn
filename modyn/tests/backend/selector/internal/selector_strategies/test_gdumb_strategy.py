@@ -50,7 +50,7 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
     classes = [clss for _, clss in samples]
     samples = [sample for sample, _ in samples]
 
-    assert Counter(classes) == Counter([1, 1, 2, 2, 3, 3])
-    original_samples = set(zip(all_samples, all_classes))
-    for sample, clss in zip(samples, classes):
-        assert (sample, clss) in original_samples
+    assert len(classes) == len(samples) == 6
+    assert Counter(classes) == Counter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    for sample in samples:
+        assert sample in all_samples

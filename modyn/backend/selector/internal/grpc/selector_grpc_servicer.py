@@ -30,8 +30,9 @@ class SelectorGRPCServicer(SelectorServicer):
         self, request: GetSamplesRequest, context: grpc.ServicerContext
     ) -> SamplesResponse:
         logger.info(f"Fetching samples for request - {str(request)}")
-        samples_keys = self.selector.get_sample_keys_and_metadata(
+        samples = self.selector.get_sample_keys_and_metadata(
             request.training_id, request.training_set_number, request.worker_id
         )
-        samples_keys = [sample[0] for sample in samples_keys]
-        return SamplesResponse(training_samples_subset=samples_keys)
+        samples_keys = [sample[0] for sample in samples]
+        samples_weights = [sample[1] for sample in samples]
+        return SamplesResponse(training_samples_subset=samples_keys, training_samples_weight=samples_weights)

@@ -56,6 +56,8 @@ def test_prepare_training_set(
         ([], [], [], [], []),
     ]
 
+    print()
+
     assert set(
         servicer.get_sample_keys_and_metadata(
             GetSamplesRequest(training_id=0, training_set_number=0, worker_id=0), None
