@@ -4,8 +4,8 @@ import grpc
 
 # Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
-from modyn.backend.metadata_database.internal.grpc.generated.storage_pb2 import SetRequest
-from modyn.backend.metadata_database.internal.grpc.generated.storage_pb2_grpc import MetadataStub
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import SetRequest
+from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
 from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class GRPCHandler:
         self.database_channel = grpc.insecure_channel(database_address)
 
         if not grpc_connection_established(self.database_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to storage at {database_address}.")
+            raise ConnectionError(f"Could not establish gRPC connection to database at {database_address}.")
 
         self.database = MetadataStub(self.database_channel)
         logger.info("Successfully connected to metadata database.")

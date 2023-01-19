@@ -8,9 +8,9 @@ class BasicProcessorStrategy(AbstractProcessorStrategy):
     saves for each key, the metadata received along with flagging the sample
     as seen.
     """
-    
-    def __init__(self, config: dict) -> None:
-        super().__init__(config)
+
+    def __init__(self, modyn_config: dict) -> None:
+        super().__init__(modyn_config)
 
     def process_metadata(self, training_id: int, data: str) -> dict:
         data_dict = json.loads(data)
