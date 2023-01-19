@@ -39,8 +39,12 @@ pylint modyn
 
 Remember to make sure that the tests still work after running linting.
 
+For an automatic execution of automatic formatting and the linters, you can use the `compilance_check.sh` script in the project root. 
+The script assumes that `conda` is available and if not, tries to activate it on `zsh` and `bash`.
+Furthermore, you must have created a conda environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
+
 ### Configuration:
-- In `src/config/config.yaml` you will find a test configuration for the system, adapt as required
+- In `modyn/config/examples.yaml` you will find both an example pipeline configuration and system configuration
 
 ### Current architecture:
 
@@ -50,7 +54,8 @@ Remember to make sure that the tests still work after running linting.
 We manage dependency required to run Modyn using conda. All dependencies are listed in the `environment.yml` file in the project root.
 Development dependencies are managed in the `dev-requirements.txt` file in the project root.
 There are two ways to develop modyn.
-First, you can install all dependencies on your local machine via `conda env create -f ./environment.yml` and `pip install -r dev-dependencies.txt`. Modyn itself should be installed via conda, but if you run into problems try `pip install -e .` in the project root.
+First, you can install all dependencies on your local machine via `conda env create -f ./environment.yml` and `pip install -r dev-requirements.txt`.
+Modyn itself should be installed via conda, but if you run into problems try `pip install -e .` in the project root.
 
 Second, you can use a Docker container. We provide a Modyn base container where the conda setup is already done. You can find the Dockerfile in `docker/Base/Dockerfile` and build the image using `docker build -t modyn -f docker/Base/Dockerfile .`. Then, you can run a container for example using `docker run modyn /bin/bash`.
 
