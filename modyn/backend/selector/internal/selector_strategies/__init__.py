@@ -1,5 +1,6 @@
 """
-This submodule provides the base functionality for the selector server component.
+This submodule contains extensions of the Selector class that implement
+concrete selection strategies.
 """
 import os
 

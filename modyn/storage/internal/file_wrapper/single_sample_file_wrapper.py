@@ -4,6 +4,7 @@ import pathlib
 
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 
 
 class SingleSampleFileWrapper(AbstractFileWrapper):
@@ -13,14 +14,14 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
     The metadata is stored in a json file with the same name as the image file.
     """
 
-    def __init__(self, file_path: str, file_wrapper_config: dict):
+    def __init__(self, file_path: str, file_wrapper_config: dict, filesystem_wrapper: AbstractFileSystemWrapper):
         """Init file wrapper.
 
         Args:
             file_path (str): File path
             file_wrapper_config (dict): File wrapper config
         """
-        super().__init__(file_path, file_wrapper_config)
+        super().__init__(file_path, file_wrapper_config, filesystem_wrapper)
         self.file_wrapper_type = FileWrapperType.SingleSampleFileWrapper
 
     def get_number_of_samples(self) -> int:
@@ -72,11 +73,10 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             raise ValueError("File has wrong file extension.")
         if index != 0:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
-        with open(self.file_path, "rb") as file:
-            label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
-            with open(label_path, "rb") as label_file:
-                label = label_file.read()
-                return file.read() + b"\n" + label + b"\n" + len(label).to_bytes(4, "big")
+        data_file = self.filesystem_wrapper.get(self.file_path)
+        label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
+        label = self.filesystem_wrapper.get(label_path)
+        return data_file + b"\n" + label + b"\n" + len(label).to_bytes(4, "big")
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get the samples from the file.

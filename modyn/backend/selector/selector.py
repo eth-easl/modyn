@@ -1,116 +1,76 @@
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-import psycopg2
+from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
+from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 
 
-class Selector(ABC):
+class Selector:
+    """
+    This class defines the interface of interest, namely the get_sample_keys_and_metadata method.
+    """
 
-    _config: dict = dict()
-    _con = None
+    def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
+        self.grpc = GRPCHandler(modyn_config)
+        self._strategy = self._get_strategy(pipeline_config)
 
-    _create_trainings_table_sql = """CREATE TABLE IF NOT EXISTS trainings (
-            id SERIAL PRIMARY KEY,
-            training_set_size INTEGER NOT NULL,
-            num_workers INTEGER NOT NULL
-        );"""
-    _create_training_samples_table_sql = """CREATE TABLE IF NOT EXISTS training_samples (
-            training_id INTEGER,
-            training_set_number INTEGER,
-            sample_number INTEGER,
-            sample_key VARCHAR(255) NOT NULL,
-            FOREIGN KEY (training_id) REFERENCES trainings(id),
-            CONSTRAINT unique_training_sample PRIMARY KEY (training_id,training_set_number, sample_number)
-        );"""
-
-    _insert_training_sql = """INSERT INTO trainings(training_set_size, num_workers) VALUES(%s,%s) RETURNING id;"""
-    _fetch_training_samples_sql = """SELECT sample_key FROM training_samples
-                                     WHERE training_id = %s and training_set_number = %s order by sample_number;"""
-    _fetch_training_info_sql = """SELECT training_set_size, num_workers FROM trainings where id = %s"""
-
-    def __init__(self, config: dict):
-        self._config = config
-        self._con = psycopg2.connect(
-            host=config["selector"]["postgresql"]["host"],
-            port=config["selector"]["postgresql"]["port"],
-            user=config["selector"]["postgresql"]["user"],
-            password=config["selector"]["postgresql"]["password"],
-        )
-        self._setup_database()
-
-    def _setup_database(self) -> None:
-        """
-        Ensure the tables required are created in the DB
-        """
-        assert self._con is not None, "No connection established"
-        cur = self._con.cursor()
-        cur.execute(self._create_trainings_table_sql)
-        cur.execute(self._create_training_samples_table_sql)
-        self._con.commit()
-
-    @abstractmethod
-    def _select_new_training_samples(self, training_id: int, training_set_size: int) -> list[str]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, ...]]:
         """
         Selects a new training set of samples for the given training id.
 
         Returns:
-            list(str): the training sample keys for the newly selected training_set
+            list(tuple(str, ...)): the training sample keys for the newly selected training_set with a variable
+                       number of auxiliary data (concrete typing in subclasses defined)
         """
-        raise NotImplementedError
-
-    def _insert_training_samples(self, training_samples: list[str], training_id: int, training_set_number: int) -> None:
-        """
-        Insert the list of training_samples into the DB
-        """
-
-        assert self._con is not None, "No connection established"
-
-        # Form the sql query
-        insert_samples_sql = (
-            "INSERT INTO training_samples " + "(training_id, training_set_number, sample_number, sample_key) VALUES "
-        )
-
-        for idx, sample_key in enumerate(training_samples):
-            value_list = "(%s,%s,%s,'%s')," % (training_id, training_set_number, idx, sample_key)
-            insert_samples_sql = insert_samples_sql + value_list
-
-        # replace last , with ;
-        insert_samples_sql = insert_samples_sql[:-1] + ";"
-        cur = self._con.cursor()
-        cur.execute(insert_samples_sql)
-        self._con.commit()
+        return self._strategy.select_new_training_samples(training_id, training_set_size)
 
     def _prepare_training_set(
         self,
         training_id: int,
         training_set_number: int,
         training_set_size: int,
-    ) -> list[str]:
+    ) -> list[tuple[str, ...]]:
         """
         Create a new training set of samples for the given training id. New samples are selected from
         the select_new_samples method and are inserted into the database for the given set number.
 
         Returns:
-            list(str): the training sample keys for the newly prepared training_set
+            list(tuple(str, ...)): the training sample keys for the newly prepared training_set with a variable
+                       number of auxiliary data (concrete typing in subclasses defined)
         """
-        training_samples = self._select_new_training_samples(training_id, training_set_size)
+        training_samples = self.select_new_training_samples(training_id, training_set_size)
 
         # Throw error if no new samples are selected
         if len(training_samples) == 0:
-            raise ValueError("No new samples selected")
+            raise ValueError(f"No new samples selected for training set {training_set_number}")
 
-        self._insert_training_samples(training_samples, training_id, training_set_number)
         return training_samples
 
-    def _get_training_set_partition(self, training_id: int, training_samples: list[str], worker_id: int) -> list[str]:
+    def _get_training_set_partition(
+        self, training_id: int, training_samples: list[tuple[str, ...]], worker_id: int
+    ) -> list[tuple[str, ...]]:
         """
         Return the required subset of training samples for the particular worker id
-        The subset is calculated by taking an offset from the start based on the given worker id
+        The subset is calculated by taking an offset from the start based on the given worker id.
+
+        If there is excess data (say there are 14 data points and 5 workers), there are at most
+        num_workers extra samples. As such, we make each worker take on one extra, and the final
+        worker takes on (probably less) the rest of the data. So we would have the first 4 take
+        3 each and the last one takes 2.
+
+        Returns:
+            list(tuple(str, ...)): the training sample keys for the newly prepared training_set for
+                                   the particular worker id with a variable number of auxiliary data
+                                   (concrete typing in subclasses defined)
         """
+        training_set_size, num_workers = self.grpc.get_info_for_training(training_id)
 
-        training_set_size, num_workers = self._get_info_for_training(training_id)
+        if worker_id < 0 or worker_id >= num_workers:
+            raise ValueError(f"Asked for worker id {worker_id}, but only have {num_workers} workers!")
 
-        # TODO(#36): Handle training_set_size % num_workers > 0
         worker_subset_size = int(training_set_size / num_workers)
+        if training_set_size % num_workers > 0:
+            worker_subset_size += 1
         start_index = worker_id * worker_subset_size
         training_samples_subset = training_samples[start_index : start_index + worker_subset_size]
         return training_samples_subset
@@ -120,86 +80,41 @@ class Selector(ABC):
         Creates a new training object in the database with the given training_set_size and num_workers
         Returns:
             The id of the newly created training object
+        Throws:
+            ValueError if training_set_size or num_workers is not positive.
         """
-        assert self._con is not None, "No connection established"
+        if num_workers <= 0 or training_set_size <= 0:
+            raise ValueError(
+                f"Tried to register training with {num_workers} workers and {training_set_size} data points."
+            )
 
-        cur = self._con.cursor()
-        cur.execute(self._insert_training_sql, (training_set_size, num_workers))
-        training_set_id = cur.fetchone()
-        self._con.commit()
+        return self.grpc.register_training(training_set_size, num_workers)
 
-        assert training_set_id is not None and training_set_id[0] is not None, "Insertion failed"
-
-        return training_set_id[0]
-
-    def _get_info_for_training(self, training_id: int) -> tuple[int, int]:
-        """
-        Queries the database for the the training set size and number of workers for a given training.
-
-        Returns:
-            Tuple of training set size and number of workers.
-        """
-        assert self._con is not None, "No connection established"
-        cur = self._con.cursor()
-
-        # Get the training_set_size and num_workers for this training_id
-        cur.execute(self._fetch_training_info_sql, [training_id])
-        training_info = cur.fetchone()
-        if training_info is None:
-            raise Exception("Invalid training id")
-        training_set_size, num_workers = training_info
-
-        return training_set_size, num_workers
-
-    def _fetch_training_set_if_exists(self, training_id: int, training_set_number: int) -> tuple[list[str], bool]:
-        """
-        For a given training_set and training_set_number, fetch the pre-calculated training set from
-        the database, if it has been calculated.
-
-        Returns:
-            Tuple containing a list of keys describing the training set and a boolean to indicate whether the
-            training set has been pre-calculated or the result is empty.
-        """
-        assert self._con is not None, "No connection established"
-        cur = self._con.cursor()
-
-        # Fetch the samples for that training and training set
-        cur.execute(self._fetch_training_samples_sql, (training_id, training_set_number))
-        training_samples = cur.fetchall()
-
-        if len(training_samples) > 0:
-            return [x[0] for x in training_samples], True
-        else:
-            return [], False
-
-    def _create_or_fetch_existing_set(self, training_id: int, training_set_number: int) -> list[str]:
-        """
-        For a given training_set and training_set_number, fetch the pre-calculated training set from
-        the database. In case the set has not yet been calculated, calculate it.
-
-        Returns:
-            List of keys describing the training set with number `training_set_number` for the training
-            with `training_id`
-        """
-        training_set_size, _ = self._get_info_for_training(training_id)
-        training_samples, set_exists = self._fetch_training_set_if_exists(training_id, training_set_number)
-
-        if not set_exists:
-            training_samples = self._prepare_training_set(training_id, training_set_number, training_set_size)
-
-        return training_samples
-
-    def get_sample_keys(self, training_id: int, training_set_number: int, worker_id: int) -> list[str]:
+    def get_sample_keys_and_metadata(
+        self, training_id: int, training_set_number: int, worker_id: int
+    ) -> list[tuple[str, ...]]:
         """
         For a given training_id, training_set_number and worker_id, it returns a subset of sample
         keys so that the data can be queried from storage.
 
         Returns:
-            List of keys for the samples to be returned to that particular worker
+            List of tuples for the samples to be returned to that particular worker. The first
+            index of the tuple will be the key, along with auxiliary data defined in the concrete subclass.
         """
+        training_set_size, num_workers = self.grpc.get_info_for_training(training_id)
+        if worker_id < 0 or worker_id >= num_workers:
+            raise ValueError(f"Training {training_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        training_samples = self._create_or_fetch_existing_set(training_id, training_set_number)
+        # TODO(#85): Cache the training set so that you don't recompute for each worker.
+        training_samples = self._prepare_training_set(training_id, training_set_number, training_set_size)
 
         training_samples_subset = self._get_training_set_partition(training_id, training_samples, worker_id)
 
         return training_samples_subset
+
+    def _get_strategy(self, pipeline_config: dict) -> AbstractSelectionStrategy:
+        strategy_name = pipeline_config["training"]["strategy"]
+        if strategy_name == "finetune":
+            config = {"selector": {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}}
+            return DataFreshnessStrategy(config, self.grpc)
+        raise NotImplementedError(f"{strategy_name} is not implemented")

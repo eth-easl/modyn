@@ -93,7 +93,9 @@ class NewFileWatcher:
             logger.critical(f"Path {path} is not a directory.")
             return
         for file_path in filesystem_wrapper.list(path, recursive=True):
-            file_wrapper = get_file_wrapper(file_wrapper_type, file_path, dataset.file_wrapper_config)
+            file_wrapper = get_file_wrapper(
+                file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
+            )
             if filesystem_wrapper.get_modified(file_path) >= timestamp and self._file_unknown(session, file_path):
                 try:
                     number_of_samples = file_wrapper.get_number_of_samples()

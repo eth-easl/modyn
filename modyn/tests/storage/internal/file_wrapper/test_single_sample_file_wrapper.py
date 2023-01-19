@@ -26,51 +26,60 @@ def teardown():
     shutil.rmtree(TMP_DIR)
 
 
+class MockFileSystemWrapper:
+    def __init__(self, file_path):
+        self.file_path = file_path
+
+    def get(self, file_path):
+        with open(file_path, "rb") as file:
+            return file.read()
+
+
 def test_init():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     assert file_wrapper.file_path == FILE_PATH
     assert file_wrapper.file_wrapper_type == FileWrapperType.SingleSampleFileWrapper
 
 
 def test_get_number_of_samples():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     assert file_wrapper.get_number_of_samples() == 1
 
 
 def test_get_samples():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples(0, 1)
     assert samples.startswith(b"test")
     assert samples.endswith(b"\n\x00\x00\x00\x10")
 
 
 def test_get_samples_with_invalid_indices():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     with pytest.raises(IndexError):
         file_wrapper.get_samples(0, 2)
 
 
 def test_get_sample():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     sample = file_wrapper.get_sample(0)
     assert sample.startswith(b"test")
     assert sample.endswith(b"\n\x00\x00\x00\x10")
 
 
 def test_get_sample_with_invalid_index():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     with pytest.raises(IndexError):
         file_wrapper.get_sample(1)
 
 
 def test_get_samples_from_indices():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples_from_indices([0])
     assert samples.startswith(b"test")
     assert samples.endswith(b"\n\x00\x00\x00\x10")
 
 
 def test_get_samples_from_indices_with_invalid_indices():
-    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG)
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     with pytest.raises(IndexError):
         file_wrapper.get_samples_from_indices([0, 1])

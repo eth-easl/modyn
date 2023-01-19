@@ -57,9 +57,18 @@ def current_time_millis() -> int:
     return int(round(timestamp))
 
 
-def grpc_connection_established(channel: grpc.Channel, timeout: int = 5) -> bool:
+def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> bool:
+    """Establishes a connection to a given GRPC channel. Returns the connection status.
+
+    Args:
+        channel (grpc.Channel): The GRPC to connect to.
+        timeout_sec (int): The desired timeout, in seconds.
+
+    Returns:
+        bool: The connection status of the GRPC channel.
+    """
     try:
-        grpc.channel_ready_future(channel).result(timeout=timeout)
+        grpc.channel_ready_future(channel).result(timeout=timeout_sec)
         return True
     except grpc.FutureTimeoutError:
         return False

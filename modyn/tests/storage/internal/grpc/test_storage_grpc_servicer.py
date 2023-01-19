@@ -303,3 +303,12 @@ def test_register_new_dataset():
         assert dataset.base_path == os.path.dirname(TMP_FILE)
         assert dataset.description == "test"
         assert dataset.version == "0.0.1"
+
+
+@patch("modyn.storage.internal.grpc.storage_grpc_servicer.current_time_millis", return_value=NOW)
+def test_get_current_timestamp(mock_current_time_millis):
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+
+    response = server.GetCurrentTimestamp(None, None)
+    assert response is not None
+    assert response.timestamp == NOW

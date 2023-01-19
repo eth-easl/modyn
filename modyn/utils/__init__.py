@@ -1,6 +1,8 @@
 """
-TODO: Describe what is in this directory/submodule.
+This submodule contains general utility functions that can be used by multiple
+components in Modyn.
 """
+
 import os
 
 from .utils import (  # noqa: F401
