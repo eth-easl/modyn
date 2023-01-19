@@ -3,11 +3,11 @@
 import logging
 
 import grpc
-from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import ( # noqa: E402, E501
+from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
     PostTrainingMetadataRequest,
     PostTrainingMetadataResponse,
 )
-from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import ( # noqa: E402, E501
+from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (  # noqa: E402, E501
     MetadataProcessorServicer,
 )
 from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
@@ -20,7 +20,6 @@ class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
 
     def __init__(self, strategy: AbstractProcessorStrategy) -> None:
         super().__init__()
-        self.__config = config
         self.processor_strategy = strategy
 
     def ProcessPostTrainingMetadata(
