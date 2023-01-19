@@ -102,7 +102,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             return None
         label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
         label = self.filesystem_wrapper.get(label_path)
-        if isinstance(label, bytes):
+        if label is not None:
             label = label.decode("utf-8")
             return int(label)
         return None
