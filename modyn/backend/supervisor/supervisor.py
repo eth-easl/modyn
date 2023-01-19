@@ -8,6 +8,8 @@ from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
 
+from typing import Optional
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,8 +25,8 @@ class Supervisor:
         self,
         pipeline_config: dict,
         modyn_config: dict,
-        start_replay_at: typing.Optional[int] = None,
-        stop_replay_at: typing.Optional[int] = None,
+        start_replay_at: Optional[int] = None,
+        stop_replay_at: Optional[int] = None,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
