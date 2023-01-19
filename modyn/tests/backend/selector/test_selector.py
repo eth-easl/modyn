@@ -89,7 +89,8 @@ def test_get_training_set_partition():
 @patch.object(Selector, "_prepare_training_set")
 def test_get_sample_keys(test__prepare_training_set):
     training_samples = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    test__prepare_training_set.return_value = training_samples
+    training_weights = [1.0] * len(training_samples)
+    test__prepare_training_set.return_value = list(zip(training_samples, training_weights))
 
     selector = Selector()
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
@@ -97,13 +98,15 @@ def test_get_sample_keys(test__prepare_training_set):
     selector.grpc = MockGRPCHandler(None)
     strategy._grpc = MockGRPCHandler(None)
 
-    assert selector.get_sample_keys_and_metadata(0, 0, 0) == ["a", "b", "c", "d"]
-    assert selector.get_sample_keys_and_metadata(0, 0, 1) == ["e", "f", "g", "h"]
-    assert selector.get_sample_keys_and_metadata(0, 0, 2) == ["i", "j"]
+    assert selector.get_sample_keys_and_weight(0, 0, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0), ("d", 1.0)]
+    assert selector.get_sample_keys_and_weight(0, 0, 1) == [("e", 1.0), ("f", 1.0), ("g", 1.0), ("h", 1.0)]
+    assert selector.get_sample_keys_and_weight(0, 0, 2) == [("i", 1.0), ("j", 1.0)]
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_metadata(0, 0, -1)
+        selector.get_sample_keys_and_weight(0, 0, -1)
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_metadata(0, 0, 10)
+        selector.get_sample_keys_and_weight(0, 0, 10)
+    with pytest.raises(NotImplementedError):
+        selector.select_new_training_samples(0, 0)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
