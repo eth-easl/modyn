@@ -1,4 +1,4 @@
-# pylint: disable=no-value-for-parameter, invalid-name
+# pylint: disable=no-value-for-parameter
 import os
 import pathlib
 from unittest.mock import patch

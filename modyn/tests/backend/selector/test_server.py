@@ -1,4 +1,4 @@
-# pylint: disable=unused-argument, no-name-in-module, invalid-name
+# pylint: disable=unused-argument, no-name-in-module
 import os
 import pathlib
 import sys
@@ -44,12 +44,12 @@ def setup():
 
         metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.id)
 
-        metadata.id = 1  # SQLite does not support autoincrement for composite primary keys #pylint: disable=invalid-name # noqa: E501
+        metadata.id = 1  # SQLite does not support autoincrement for composite primary keys #pylint
         database.get_session().add(metadata)
 
         metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", trainig.id)
 
-        metadata2.id = 2  # SQLite does not support autoincrement for composite primary keys #pylint: disable=invalid-name # noqa: E501
+        metadata2.id = 2  # SQLite does not support autoincrement for composite primary key
         database.get_session().add(metadata2)
 
         database.get_session().commit()

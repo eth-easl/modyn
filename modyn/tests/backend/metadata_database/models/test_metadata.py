@@ -1,4 +1,4 @@
-# pylint: disable=redefined-outer-name, invalid-name
+# pylint: disable=redefined-outer-name
 import pytest
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.metadata_database.models.training import Training
@@ -34,7 +34,7 @@ def test_add_metadata(session):
         training.id,
     )
 
-    metadata.id = 1  # pylint: disable=invalid-name
+    metadata.id = 1
 
     session.add(metadata)
     session.commit()
