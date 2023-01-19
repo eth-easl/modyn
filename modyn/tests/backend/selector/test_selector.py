@@ -105,8 +105,6 @@ def test_get_sample_keys(test__prepare_training_set):
         selector.get_sample_keys_and_weight(0, 0, -1)
     with pytest.raises(ValueError):
         selector.get_sample_keys_and_weight(0, 0, 10)
-    with pytest.raises(NotImplementedError):
-        selector.select_new_training_samples(0, 0)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())

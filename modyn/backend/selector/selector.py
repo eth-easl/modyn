@@ -15,9 +15,11 @@ class Selector:
     def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
         self.grpc = GRPCHandler(modyn_config)
         self._strategy = self._get_strategy(pipeline_config)
-        self._training_samples_cache: Dict[tuple[int, int], list[tuple[str, ...]]] = {}
+        self._training_samples_cache: Dict[tuple[int, int], list[tuple[str, float]]] = {}
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
+    def _select_new_training_samples(
+        self, training_id: int, training_set_number: int, training_set_size: int
+    ) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 
