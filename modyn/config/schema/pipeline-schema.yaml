@@ -69,6 +69,10 @@ properties:
             type: number
             description: |
               When strategy is finetune, this limits how many data points we finetune on at maximum per triggered training. Set to -1 to disable limit.
+          processor_type:
+            type: string
+            description: |
+              The name of the Metadata Processor strategy that should be used.
       initial_model:
         type: string
         description: |

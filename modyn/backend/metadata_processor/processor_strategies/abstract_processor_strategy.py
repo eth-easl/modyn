@@ -1,12 +1,15 @@
 from abc import ABC, abstractmethod
 
 from modyn.backend.metadata_processor.internal.grpc.grpc_handler import GRPCHandler
+from modyn.backend.metadata_processor.processor_strategies.processor_strategy_type import ProcessorStrategyType
 
 
 class AbstractProcessorStrategy(ABC):
     """This class is the base class for Metadata Processors. In order to extend
     this class to perform custom processing, implement process_metadata
     """
+
+    processor_strategy_type: ProcessorStrategyType = None
 
     def __init__(self, modyn_config: dict):
         self.config = modyn_config

@@ -1,6 +1,7 @@
 import json
 
 from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
+from modyn.backend.metadata_processor.processor_strategies.processor_strategy_type import ProcessorStrategyType
 
 
 class BasicProcessorStrategy(AbstractProcessorStrategy):
@@ -8,6 +9,10 @@ class BasicProcessorStrategy(AbstractProcessorStrategy):
     saves for each key, the metadata received along with flagging the sample
     as seen.
     """
+
+    def __init__(self, modyn_config: dict):
+        super().__init__(modyn_config)
+        self.processor_strategy_type = ProcessorStrategyType.BasicProcessorStrategy
 
     def process_metadata(self, training_id: int, data: str) -> dict:
         data_dict = json.loads(data)

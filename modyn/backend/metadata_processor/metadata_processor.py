@@ -8,7 +8,8 @@ import logging
 
 from modyn.backend.metadata_processor.internal.grpc.grpc_server import GRPCServer
 from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
-from modyn.backend.metadata_processor.processor_strategies.basic_processor_strategy import BasicProcessorStrategy
+from modyn.backend.metadata_processor.processor_strategies.processor_strategy_type import ProcessorStrategyType
+from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,9 @@ class MetadataProcessor:
             server.wait_for_termination()
 
     def _get_strategy(self, pipeline_config: dict) -> AbstractProcessorStrategy:
-        strategy_name = pipeline_config["training"]["strategy"]
-        if strategy_name == "finetune":
-            return BasicProcessorStrategy(self.config)
-        raise NotImplementedError(f"{strategy_name} is not implemented")
+        strategy = ProcessorStrategyType(pipeline_config["training"]["strategy_config"]["processor_type"])
+        processor_strategy_module = dynamic_module_import(
+            f"modyn.backend.metadata_processor.processor_strategies.{strategy.value}"
+        )
+        processor_strategy = getattr(processor_strategy_module, f"{strategy.name}")
+        return processor_strategy(self.config)

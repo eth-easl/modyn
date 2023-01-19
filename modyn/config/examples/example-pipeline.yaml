@@ -14,6 +14,7 @@ training:
   strategy: finetune
   strategy_config:
     limit: -1
+    processor_type: basic_processor_strategy
   initial_model: random
   initial_pass:
     activated: True
