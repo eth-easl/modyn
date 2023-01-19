@@ -1,4 +1,4 @@
-# pylint disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes
 """Metadata model."""
 
 from modyn.backend.metadata_database.metadata_base import Base
