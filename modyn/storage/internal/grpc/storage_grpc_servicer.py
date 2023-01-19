@@ -81,7 +81,7 @@ class StorageGRPCServicer(StorageServicer):
                 logger.error(f"Keys: {not_found_keys}")
 
             current_file = samples[0].file
-            samples_per_file: list[Tuple[int, str]] = []
+            samples_per_file: list[Tuple[int, str, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:
@@ -93,13 +93,14 @@ class StorageGRPCServicer(StorageServicer):
                         get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
                     )
                     yield GetResponse(
-                        chunk=file_wrapper.get_samples_from_indices([index for index, _ in samples_per_file]),
-                        keys=[external_key for _, external_key in samples_per_file],
+                        chunk=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
+                        keys=[external_key for _, external_key, _ in samples_per_file],
+                        labels=[label for _, _, label in samples_per_file],
                     )
-                    samples_per_file = [(sample.index, sample.external_key)]
+                    samples_per_file = [(sample.index, sample.external_key, sample.label)]
                     current_file = sample.file
                 else:
-                    samples_per_file.append((sample.index, sample.external_key))
+                    samples_per_file.append((sample.index, sample.external_key, sample.label))
 
     # pylint: disable-next=unused-argument,invalid-name
     def GetNewDataSince(
