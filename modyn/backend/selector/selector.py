@@ -95,6 +95,9 @@ class Selector:
         """
         For a given training_id, training_set_number and worker_id, it returns a subset of sample
         keys so that the data can be queried from storage. It also returns the associated weight of each sample.
+        This weight can be used during training to support advanced strategies that want to weight the 
+        gradient descent step for different samples differently. Explicitly, instead of changing parameters
+        by learning_rate * gradient, you would change the parameters by sample_weight * learning_rate * gradient. 
 
         Returns:
             List of tuples for the samples to be returned to that particular worker. The first
