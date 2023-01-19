@@ -15,6 +15,8 @@ class Selector:
     def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
         self.grpc = GRPCHandler(modyn_config)
         self._strategy = self._get_strategy(pipeline_config)
+        # The cache will have training_id, training_set_number as the key and return the samples, 
+        # which is a list of tuples (sample_key, sample_weight)
         self._training_samples_cache: Dict[tuple[int, int], list[tuple[str, float]]] = {}
 
     def _select_new_training_samples(
@@ -27,9 +29,6 @@ class Selector:
             list(tuple(str, float)): the training sample keys for the newly selected training_set
                 along with the weight of each sample.
         """
-        if (training_id, training_set_number) in self._training_samples_cache:
-            return self._training_samples_cache[(training_id, training_set_number)]
-
         samples = self._strategy.select_new_training_samples(training_id, training_set_size)
 
         # If there are previous caches with this training_id, remove them.
@@ -39,7 +38,7 @@ class Selector:
         self._training_samples_cache[(training_id, training_set_number)] = samples
         return samples
 
-    def _prepare_training_set(
+    def _get_training_set(
         self,
         training_id: int,
         training_set_number: int,
@@ -55,7 +54,10 @@ class Selector:
             list(tuple(str, float)): the training sample keys for the newly selected training_set
                 along with the weight of each sample.
         """
-        training_samples = self._select_new_training_samples(training_id, training_set_number, training_set_size)
+        if (training_id, training_set_number) in self._training_samples_cache:
+            training_samples = self._training_samples_cache[(training_id, training_set_number)]
+        else:
+            training_samples = self._select_new_training_samples(training_id, training_set_number, training_set_size)
 
         # Throw error if no new samples are selected
         if len(training_samples) == 0:
@@ -124,7 +126,7 @@ class Selector:
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {training_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        training_samples = self._prepare_training_set(training_id, training_set_number, training_set_size)
+        training_samples = self._get_training_set(training_id, training_set_number, training_set_size)
         training_samples_subset = self._get_training_set_partition(training_id, training_samples, worker_id)
         return training_samples_subset
 
