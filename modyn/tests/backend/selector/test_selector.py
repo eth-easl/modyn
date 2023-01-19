@@ -98,13 +98,13 @@ def test_get_sample_keys(test__prepare_training_set):
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
 
-    assert selector.get_sample_keys_and_metadata(1, 0, 0) == ["a", "b", "c", "d"]
-    assert selector.get_sample_keys_and_metadata(1, 0, 1) == ["e", "f", "g", "h"]
-    assert selector.get_sample_keys_and_metadata(1, 0, 2) == ["i", "j"]
+    assert selector.get_sample_keys_and_weight(1, 0, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0), ("d", 1.0)]
+    assert selector.get_sample_keys_and_weight(1, 0, 1) == [("e", 1.0), ("f", 1.0), ("g", 1.0), ("h", 1.0)]
+    assert selector.get_sample_keys_and_weight(1, 0, 2) == [("i", 1.0), ("j", 1.0)]
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_metadata(1, 0, -1)
+        selector.get_sample_keys_and_weight(1, 0, -1)
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_metadata(1, 0, 10)
+        selector.get_sample_keys_and_weight(1, 0, 10)
     with pytest.raises(NotImplementedError):
         selector.select_new_training_samples(1, 0)
 

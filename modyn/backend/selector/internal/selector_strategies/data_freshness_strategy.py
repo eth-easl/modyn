@@ -95,8 +95,10 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
                 )
                 .all()
             )
-            assert len(data) > 0, "Queried unseen data, but got seen data."
-            keys, seen = zip(*data)
+            if len(data) > 0:
+                keys, seen = zip(*data)
+            else:
+                keys, seen = [], []
 
         assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
@@ -121,8 +123,10 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
                 .filter(Metadata.training_id == training_id, Metadata.seen == True)
                 .all()
             )
-            assert len(data) > 0, "Queried unseen data, but got seen data."
-            keys, seen = zip(*data)
+            if len(data) > 0:
+                keys, seen = zip(*data)
+            else:
+                keys, seen = [], []
 
         assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)

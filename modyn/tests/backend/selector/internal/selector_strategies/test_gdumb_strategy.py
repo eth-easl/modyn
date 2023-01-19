@@ -60,7 +60,7 @@ def teardown():
 def test_gdumb_selector_get_metadata():
     selector = GDumbStrategy(None)
 
-    assert selector._get_all_metadata(1) == ([b"test_data", b"test_data2"], [1, 2])
+    assert selector._get_all_metadata(1) == (["test_key", "test_key2"], [1, 2])
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())

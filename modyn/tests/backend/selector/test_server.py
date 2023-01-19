@@ -69,7 +69,7 @@ def test_prepare_training_set():
     assert selector_server.selector.register_training(training_set_size=8, num_workers=1) == 2
 
     assert set(
-        servicer.get_sample_keys_and_metadata(
+        servicer.get_sample_keys_and_weight(
             GetSamplesRequest(training_id=1, training_set_number=0, worker_id=0), None
         ).training_samples_subset
     ) == set(["test_key"])
