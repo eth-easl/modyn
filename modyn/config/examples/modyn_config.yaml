@@ -32,7 +32,7 @@ storage:
     port: "5432"
     database: "postgres"
 
-odm:
+metadata_database:
   port: "50054"
   hostname: "backend"
   postgresql:
@@ -50,6 +50,8 @@ ptmp:
 selector:
   hostname: "backend"
   port: "50056"
+  package: "score_selector"
+  class: "ScoreSelector"
   postgresql:
     host: db
     port: "5432"

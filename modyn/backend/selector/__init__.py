@@ -1,5 +1,5 @@
 """
-TODO: Describe what is in this directory/submodule.
+This submodule provides the base functionality for the selector server component.
 """
 import os
 
