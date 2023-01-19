@@ -8,8 +8,10 @@ from modyn.storage.internal.file_wrapper.single_sample_file_wrapper import Singl
 
 TMP_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn")
 FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.png")
+FILE_PATH_2 = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test_2.png")
 INVALID_FILE_EXTENSION_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.txt")
 METADATA_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.json")
+METADATA_PATH_2 = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test_2.json")
 FILE_WRAPPER_CONFIG = {"file_extension": ".png", "label_file_extension": ".json"}
 FILE_WRAPPER_CONFIG_MIN = {"file_extension": ".png"}
 
@@ -18,8 +20,10 @@ def setup():
     os.makedirs(TMP_DIR, exist_ok=True)
     with open(FILE_PATH, "w", encoding="utf-8") as file:
         file.write("test")
-    with open(METADATA_PATH, "w", encoding="utf-8") as file:
-        file.write("1")
+    with open(METADATA_PATH, "wb") as file:
+        file.write("42".encode("utf-8"))
+    with open(METADATA_PATH_2, "w", encoding="utf-8") as file:
+        file.write("42")
 
 
 def teardown():
@@ -90,7 +94,11 @@ def test_get_sample_with_invalid_index():
 def test_get_label():
     file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     label = file_wrapper.get_label(0)
-    assert label == 1
+    assert label == 42
+
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH_2, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH_2))
+    label = file_wrapper.get_label(0)
+    assert label == 42
 
 
 def test_get_label_with_invalid_index():
