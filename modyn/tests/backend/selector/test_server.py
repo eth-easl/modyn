@@ -57,7 +57,7 @@ def test_prepare_training_set(
     ]
 
     assert set(
-        servicer.get_sample_keys_and_metadata(
+        servicer.get_sample_keys_and_weight(
             GetSamplesRequest(training_id=0, training_set_number=0, worker_id=0), None
         ).training_samples_subset
     ) == set(["a", "b", "c", "d", "e", "f", "g", "h"])

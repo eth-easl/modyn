@@ -22,12 +22,12 @@ class AbstractSelectionStrategy(ABC):
         self._grpc = grpc
 
     @abstractmethod
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, ...]]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 
         Returns:
-            list(tuple(str, ...)): the training sample keys for the newly selected training_set with a variable
-                       number of auxiliary data (concrete typing in subclasses defined)
+            list(tuple(str, float)): each entry is a training sample, where the first element of the tuple
+                is the key, and the second element is the associated weight.
         """
         raise NotImplementedError

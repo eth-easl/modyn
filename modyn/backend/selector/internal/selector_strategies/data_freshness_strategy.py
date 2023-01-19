@@ -48,7 +48,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
         return unseen_data_ratio
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str]]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 
@@ -57,7 +57,8 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             training_set_size (int): The size of the training set queried.
 
         Returns:
-            list(str): the training sample keys for the newly selected training_set
+            list(tuple[str, float]): the training sample keys for the newly selected training_set, along with
+                a weight of 1 for each element.
         """
         unseen_data_ratio = self.unseen_data_ratio
         if self._is_adaptive_ratio:
@@ -68,7 +69,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         new_samples = self._get_unseen_data(training_id, num_new_samples)
         old_samples = self._get_seen_data(training_id, num_old_samples)
         new_samples.extend(old_samples)
-        return [(sample,) for sample in new_samples]
+        return [(sample, 1.0) for sample in new_samples]
 
     def _get_unseen_data(self, training_id: int, num_samples: int) -> list[str]:
         """

@@ -7,12 +7,12 @@ class GDumbStrategy(AbstractSelectionStrategy):
     Implements the GDumb selection policy.
     """
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, int]]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
         """
         For a given training_id and number of samples, request that many samples from the selector.
 
         Returns:
-            List of keys for the samples to be considered.
+            List of keys for the samples to be considered, along with a default weight of 1.
         """
         result_samples, result_classes = [], []
 
@@ -26,13 +26,8 @@ class GDumbStrategy(AbstractSelectionStrategy):
             class_indices = np.where(all_classes == classes[clss])[0][rand_indices]
             result_samples.append(np.array(all_samples)[class_indices])
             result_classes.append(np.array(all_classes)[class_indices])
-
-        return list(
-            zip(
-                list(np.concatenate(result_samples)),
-                list(np.concatenate(result_classes)),
-            )
-        )
+        result_samples = np.concatenate(result_samples)
+        return [(sample, 1.0) for sample in result_samples]
 
     def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[int]]:
         query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = {training_id}"
