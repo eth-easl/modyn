@@ -39,6 +39,8 @@ pylint modyn
 
 Remember to make sure that the tests still work after running linting.
 
+For an automatic execution of all of the above, you can use the `compilance_check.sh` script in the project root. This assumes that you have are using a Unix based system with the `zsh` shell where `conda` is available and that you have created a conda environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
+
 ### Configuration:
 - In `src/config/config.yaml` you will find a test configuration for the system, adapt as required
 
