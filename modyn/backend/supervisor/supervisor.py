@@ -1,14 +1,12 @@
 import logging
 import os
 import pathlib
-import typing
 from time import sleep
+from typing import Optional
 
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
-
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
