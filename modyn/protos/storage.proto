@@ -30,6 +30,7 @@ message GetNewDataSinceRequest {
 
 message GetNewDataSinceResponse {
   repeated string keys = 1;
+  repeated int64 timestamps = 2;
 }
 
 message GetDataInIntervalRequest {
@@ -40,6 +41,7 @@ message GetDataInIntervalRequest {
 
 message GetDataInIntervalResponse {
   repeated string keys = 1;
+  repeated int64 timestamps = 2;
 }
 
 message DatasetAvailableRequest {

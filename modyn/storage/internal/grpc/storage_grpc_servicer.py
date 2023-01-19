@@ -121,19 +121,21 @@ class StorageGRPCServicer(StorageServicer):
 
             timestamp = request.timestamp
 
-            external_keys = (
-                session.query(Sample.external_key)
+            values = (
+                session.query(Sample.external_key, File.updated_at)
                 .join(File)
                 .filter(File.dataset_id == dataset.id)
                 .filter(File.updated_at >= timestamp)
                 .all()
             )
 
-            if len(external_keys) == 0:
+            if len(values) == 0:
                 logger.info(f"No new data since {timestamp}")
                 return GetNewDataSinceResponse()
 
-            return GetNewDataSinceResponse(keys=[external_key[0] for external_key in external_keys])
+            return GetNewDataSinceResponse(
+                keys=[value[0] for value in values], timestamps=[value[1] for value in values]
+            )
 
     def GetDataInInterval(
         self, request: GetDataInIntervalRequest, context: grpc.ServicerContext
@@ -152,8 +154,8 @@ class StorageGRPCServicer(StorageServicer):
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
                 return GetDataInIntervalResponse()
 
-            external_keys = (
-                session.query(Sample.external_key)
+            values = (
+                session.query(Sample.external_key, File.updated_at)
                 .join(File)
                 .filter(File.dataset_id == dataset.id)
                 .filter(File.updated_at >= request.start_timestamp)
@@ -161,11 +163,13 @@ class StorageGRPCServicer(StorageServicer):
                 .all()
             )
 
-            if len(external_keys) == 0:
+            if len(values) == 0:
                 logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
                 return GetDataInIntervalResponse()
 
-            return GetDataInIntervalResponse(keys=[external_key[0] for external_key in external_keys])
+            return GetDataInIntervalResponse(
+                keys=[value[0] for value in values], timestamps=[value[1] for value in values]
+            )
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(

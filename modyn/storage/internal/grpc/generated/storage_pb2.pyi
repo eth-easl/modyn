@@ -38,10 +38,12 @@ class GetDataInIntervalRequest(_message.Message):
     def __init__(self, dataset_id: _Optional[str] = ..., start_timestamp: _Optional[int] = ..., end_timestamp: _Optional[int] = ...) -> None: ...
 
 class GetDataInIntervalResponse(_message.Message):
-    __slots__ = ["keys"]
+    __slots__ = ["keys", "timestamps"]
     KEYS_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMPS_FIELD_NUMBER: _ClassVar[int]
     keys: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keys: _Optional[_Iterable[str]] = ...) -> None: ...
+    timestamps: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, keys: _Optional[_Iterable[str]] = ..., timestamps: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class GetNewDataSinceRequest(_message.Message):
     __slots__ = ["dataset_id", "timestamp"]
@@ -52,10 +54,12 @@ class GetNewDataSinceRequest(_message.Message):
     def __init__(self, dataset_id: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...
 
 class GetNewDataSinceResponse(_message.Message):
-    __slots__ = ["keys"]
+    __slots__ = ["keys", "timestamps"]
     KEYS_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMPS_FIELD_NUMBER: _ClassVar[int]
     keys: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keys: _Optional[_Iterable[str]] = ...) -> None: ...
+    timestamps: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, keys: _Optional[_Iterable[str]] = ..., timestamps: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class GetRequest(_message.Message):
     __slots__ = ["dataset_id", "keys"]
