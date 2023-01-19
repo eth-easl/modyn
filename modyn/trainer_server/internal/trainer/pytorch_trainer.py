@@ -96,7 +96,6 @@ class PytorchTrainer:
 
         file_handler = logging.FileHandler(log_path)
         logger.addHandler(file_handler)
-        logger.setLevel(logging.INFO)
 
         logger.info(f"Process {os.getpid()} starts training")
 
