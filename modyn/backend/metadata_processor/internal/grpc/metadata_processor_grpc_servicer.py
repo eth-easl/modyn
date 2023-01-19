@@ -41,4 +41,5 @@ class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
         for request in request_iterator:
             logger.info(f"Processing post-training metadata for training ID {request.training_id}")
             self.processor_strategy.process_post_training_metadata(request.training_id, request.data)
-            return PostTrainingMetadataResponse()
+        
+        return PostTrainingMetadataResponse()
