@@ -23,7 +23,6 @@ class MetadataProcessor:
             server.wait_for_termination()
 
     def _get_strategy(self, pipeline_config: dict) -> AbstractProcessorStrategy:
-        # TODO: improve this
         strategy_name = pipeline_config["training"]["strategy"]
         if strategy_name == "finetune":
             return BasicProcessorStrategy(self.config)

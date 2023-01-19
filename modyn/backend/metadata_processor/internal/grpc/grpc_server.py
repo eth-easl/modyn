@@ -33,7 +33,7 @@ class GRPCServer:
         Returns:
             grpc.Server: GRPC server
         """
-        add_MetadataProcessorServicer_to_server(MetadataProcessorGRPCServicer(self.config, self.strategy), self.server)
+        add_MetadataProcessorServicer_to_server(MetadataProcessorGRPCServicer(self.strategy), self.server)
 
         port = self.config["metadata_processor"]["port"]
         logger.info(f"Starting server. Listening on port {port}")
