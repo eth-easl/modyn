@@ -19,7 +19,7 @@ def setup():
     with open(FILE_PATH, "w", encoding="utf-8") as file:
         file.write("test")
     with open(METADATA_PATH, "w", encoding="utf-8") as file:
-        file.write('{"test": "test"}')
+        file.write("1")
 
 
 def teardown():
@@ -90,7 +90,7 @@ def test_get_sample_with_invalid_index():
 def test_get_label():
     file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     label = file_wrapper.get_label(0)
-    assert label == b'{"test": "test"}'
+    assert label == 1
 
 
 def test_get_label_with_invalid_index():

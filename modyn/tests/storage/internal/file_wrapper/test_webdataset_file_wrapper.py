@@ -101,17 +101,11 @@ def test_get_label():
     file_wrapper = WebdatasetFileWrapper(FILE_PATH, {}, None)
     label = file_wrapper.get_label(0)
 
-    labels = pickle.loads(label)
-
-    for label in labels:
-        assert label[0]["id"] == 0
+    assert label == 0
 
     label = file_wrapper.get_label(100)
 
-    labels = pickle.loads(label)
-
-    for label in labels:
-        assert label[0]["id"] == 100
+    assert label == 100
 
 
 def test_get_samples_from_indices():

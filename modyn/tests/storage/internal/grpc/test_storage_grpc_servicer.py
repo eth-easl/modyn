@@ -110,23 +110,23 @@ def setup():
 
         session.commit()
 
-        sample = Sample(file=file, index=0, external_key="test", label=b"test")
+        sample = Sample(file=file, index=0, external_key="test", label=1)
 
         session.add(sample)
 
-        sample2 = Sample(file=file, index=1, external_key="test2", label=b"test2")
+        sample2 = Sample(file=file, index=1, external_key="test2", label=2)
 
         session.add(sample2)
 
-        sample3 = Sample(file=file2, index=0, external_key="test3", label=b"test3")
+        sample3 = Sample(file=file2, index=0, external_key="test3", label=3)
 
         session.add(sample3)
 
-        sample4 = Sample(file=file2, index=1, external_key="test4", label=b"test4")
+        sample4 = Sample(file=file2, index=1, external_key="test4", label=4)
 
         session.add(sample4)
 
-        sample5 = Sample(file=file3, index=0, external_key="test5", label=b"test5")
+        sample5 = Sample(file=file3, index=0, external_key="test5", label=5)
 
         session.add(sample5)
 
@@ -151,7 +151,7 @@ def test_get(mock_get_samples_from_indices):
 
     request = GetRequest(dataset_id="test", keys=["test", "test3", "test4"])
 
-    expetect_responses = [(b"", ["test"], [b"test"]), (b"", ["test3", "test4"], [b"test3", b"test4"])]
+    expetect_responses = [(b"", ["test"], [1]), (b"", ["test3", "test4"], [3, 4])]
 
     for response, expetect_response in zip(server.Get(request, None), expetect_responses):
         assert response is not None

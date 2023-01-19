@@ -1,11 +1,14 @@
 """A file wrapper for files that contains only one sample and metadata."""
 
+import logging
 import pathlib
 from typing import Optional
 
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+
+logger = logging.getLogger(__name__)
 
 
 class SingleSampleFileWrapper(AbstractFileWrapper):
@@ -55,10 +58,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         return self.get_sample(0)
 
     def get_sample(self, index: int) -> bytes:
-        r"""Return the sample, the label and the length of the label as bytes.
-
-        Format:
-        sample + b'\n' + label + b'\n' + len(label).to_bytes(4, 'big')
+        r"""Return the sample as bytes.
 
         Args:
             index (int): Index
@@ -77,7 +77,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         data_file = self.filesystem_wrapper.get(self.file_path)
         return data_file
 
-    def get_label(self, index: int) -> Optional[bytes]:
+    def get_label(self, index: int) -> Optional[int]:
         """Get the label of the sample at the given index.
 
         Args:
@@ -88,7 +88,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             IndexError: If the index is not 0
 
         Returns:
-            bytes: Label if exists, else None
+            int: Label if exists, else None
         """
         if self.get_number_of_samples() == 0:
             raise ValueError("File has wrong file extension.")
@@ -98,9 +98,13 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             "label_file_extension" not in self.file_wrapper_config
             or self.file_wrapper_config["label_file_extension"] is None
         ):
+            logger.warning("No label file extension defined.")
             return None
         label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
-        return self.filesystem_wrapper.get(label_path)
+        label = self.filesystem_wrapper.get(label_path)
+        if isinstance(label, bytes):
+            return int(label)
+        return None
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get the samples from the file.

@@ -76,8 +76,8 @@ class GetResponse(_message.Message):
     LABELS_FIELD_NUMBER: _ClassVar[int]
     chunk: bytes
     keys: _containers.RepeatedScalarFieldContainer[str]
-    labels: _containers.RepeatedScalarFieldContainer[bytes]
-    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ..., labels: _Optional[_Iterable[bytes]] = ...) -> None: ...
+    labels: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ..., labels: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class RegisterNewDatasetRequest(_message.Message):
     __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_config", "file_wrapper_type", "filesystem_wrapper_type", "version"]

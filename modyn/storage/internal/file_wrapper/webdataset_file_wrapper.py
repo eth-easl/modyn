@@ -79,16 +79,19 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
             wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
         )
 
-    def get_label(self, index: int) -> Optional[bytes]:
+    def get_label(self, index: int) -> Optional[int]:
         """Get label from index.
 
         Args:
             index (int): Index of label
 
         Returns:
-            bytes: Pickled label
+            int or None: Label
         """
-        return pickle.dumps(wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("json"))
+        label = None
+        for sample in wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("cls"):
+            label = sample[0]
+        return label
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get samples from indices.

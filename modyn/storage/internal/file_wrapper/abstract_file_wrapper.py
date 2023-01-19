@@ -50,7 +50,7 @@ class AbstractFileWrapper(ABC):
         """
         raise NotImplementedError  # pragma: no cover
 
-    def get_label(self, index: int) -> Optional[bytes]:
+    def get_label(self, index: int) -> Optional[int]:
         """Get the label at the given index.
 
         Args:
@@ -60,7 +60,7 @@ class AbstractFileWrapper(ABC):
             NotImplementedError: If the method is not implemented
 
         Returns:
-            bytes: Label if exists, else None
+            int: Label if exists, else None
         """
         raise NotImplementedError  # pragma: no cover
 

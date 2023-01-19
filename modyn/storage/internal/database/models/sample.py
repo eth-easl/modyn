@@ -1,7 +1,9 @@
 """Sample model."""
 
+from typing import Optional
+
 from modyn.storage.internal.database.base import Base
-from sqlalchemy import Column, ForeignKey, Integer, LargeBinary, String
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import backref, relationship
 
 
@@ -14,13 +16,13 @@ class Sample(Base):
     file = relationship("File", backref=backref("samples", lazy=True))
     external_key = Column(String(120), unique=True, nullable=False)
     index = Column(Integer, nullable=False)
-    label = Column(LargeBinary, nullable=True)
+    label = Column(Integer, nullable=True)
 
     def __repr__(self) -> str:
         """Return string representation."""
         return f"<Sample {self.id}>"
 
-    def __init__(self, file: str, external_key: str, index: int, label: bytes = b""):
+    def __init__(self, file: str, external_key: str, index: int, label: Optional[int] = None):
         """Init sample.
 
         Args:
@@ -31,5 +33,4 @@ class Sample(Base):
         self.file = file
         self.external_key = external_key
         self.index = index
-        if label != b"":
-            self.label = label
+        self.label = label

@@ -81,7 +81,7 @@ class StorageGRPCServicer(StorageServicer):
                 logger.error(f"Keys: {not_found_keys}")
 
             current_file = samples[0].file
-            samples_per_file: list[Tuple[int, str, bytes]] = []
+            samples_per_file: list[Tuple[int, str, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:

@@ -21,7 +21,7 @@ message GetRequest {
 message GetResponse {
   bytes chunk = 1;
   repeated string keys = 2;
-  repeated bytes labels = 3;
+  repeated int64 labels = 3;
 }
 
 message GetNewDataSinceRequest {
