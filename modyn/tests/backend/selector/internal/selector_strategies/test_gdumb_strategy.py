@@ -1,4 +1,4 @@
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, invalid-name
 import os
 import pathlib
 from collections import Counter
@@ -40,7 +40,7 @@ def setup():
 
         metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.id)
 
-        metadata.id = 1  # SQLite does not support autoincrement for composite primary keys # pylint: disable=invalid-name # noqa: E501
+        metadata.id = 1  # SQLite does not support autoincrement for composite primary keys
         database.get_session().add(metadata)
 
         metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", trainig.id)
