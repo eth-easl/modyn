@@ -1,4 +1,3 @@
-import numpy as np
 from modyn.backend.supervisor.internal.trigger import Trigger
 
 
@@ -17,20 +16,11 @@ class DataAmountTrigger(Trigger):
         super().__init__(trigger_config)
 
     def inform(self, new_data: list[tuple[str, int]]) -> list[int]:
-        # Imagine that we want to trigger every third data point
-        # The idea is to get the indices as follows:
-        # 0 1 2 3 4 5 6 7 8 9 10 => data point 2, 5, and 8 should trigger
-        # We add 1 onto that index array: 1 2 3 4 5 6 7 8 9 10 11
-        # We take that mod 3: 1 2 0 1 2 0 1 2 0 1 2.
-        # We see that all indices that are 0 mod 3 are the indices we are searching for.
-        # This also works with remaining data, just add 1 + remaining data.
+        assert self.remaining_data_points < self.data_points_for_trigger, "Inconsistent remaining datapoints"
 
-        triggering = (
-            np.arange(1 + self.remaining_data_points, len(new_data) + self.remaining_data_points + 1)
-            % self.data_points_for_trigger
-        ) == 0
-        triggering_indices = np.ravel(np.argwhere(triggering))
+        first_idx = self.data_points_for_trigger - self.remaining_data_points - 1
+        triggering_indices = list(range(first_idx, len(new_data), self.data_points_for_trigger))
 
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger
 
-        return list(triggering_indices)
+        return triggering_indices
