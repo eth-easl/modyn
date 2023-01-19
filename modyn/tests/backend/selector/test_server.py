@@ -1,4 +1,4 @@
-# pylint: disable=unused-argument, no-name-in-module
+# pylint: disable=unused-argument, no-name-in-module, invalid-name
 import os
 import pathlib
 import sys

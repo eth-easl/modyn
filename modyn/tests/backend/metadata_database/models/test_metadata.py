@@ -1,4 +1,4 @@
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, invalid-name
 import pytest
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.metadata_database.models.training import Training
