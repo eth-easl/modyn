@@ -1,5 +1,5 @@
 """
-TODO: Describe what is in this directory/submodule.
+Trainer
 """
 import os
 
