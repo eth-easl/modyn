@@ -6,7 +6,7 @@ import pickle
 import shutil
 import uuid
 from itertools import islice
-from typing import Dict
+from typing import Dict, Optional
 
 import webdataset as wds
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
@@ -78,6 +78,20 @@ class WebdatasetFileWrapper(AbstractFileWrapper):
         return pickle.dumps(
             wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("jpg;png;jpeg", "cls", "json")
         )
+
+    def get_label(self, index: int) -> Optional[int]:
+        """Get label from index.
+
+        Args:
+            index (int): Index of label
+
+        Returns:
+            int or None: Label
+        """
+        label = None
+        for sample in wds.WebDataset(self.file_path).slice(index, index + 1).decode("rgb").to_tuple("cls"):
+            label = sample[0]
+        return label
 
     def get_samples_from_indices(self, indices: list) -> bytes:
         """Get samples from indices.

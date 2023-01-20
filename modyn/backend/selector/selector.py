@@ -14,13 +14,13 @@ class Selector:
         self.grpc = GRPCHandler(modyn_config)
         self._strategy = self._get_strategy(pipeline_config)
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, ...]]:
+    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 
         Returns:
-            list(tuple(str, ...)): the training sample keys for the newly selected training_set with a variable
-                       number of auxiliary data (concrete typing in subclasses defined)
+            list(tuple(str, float)): the training sample keys for the newly selected training_set
+                along with the weight of each sample.
         """
         return self._strategy.select_new_training_samples(training_id, training_set_size)
 
@@ -29,14 +29,14 @@ class Selector:
         training_id: int,
         training_set_number: int,
         training_set_size: int,
-    ) -> list[tuple[str, ...]]:
+    ) -> list[tuple[str, float]]:
         """
         Create a new training set of samples for the given training id. New samples are selected from
         the select_new_samples method and are inserted into the database for the given set number.
 
         Returns:
-            list(tuple(str, ...)): the training sample keys for the newly prepared training_set with a variable
-                       number of auxiliary data (concrete typing in subclasses defined)
+            list(tuple(str, float)): the training sample keys for the newly selected training_set
+                along with the weight of each sample.
         """
         training_samples = self.select_new_training_samples(training_id, training_set_size)
 
@@ -47,8 +47,8 @@ class Selector:
         return training_samples
 
     def _get_training_set_partition(
-        self, training_id: int, training_samples: list[tuple[str, ...]], worker_id: int
-    ) -> list[tuple[str, ...]]:
+        self, training_id: int, training_samples: list[tuple[str, float]], worker_id: int
+    ) -> list[tuple[str, float]]:
         """
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id.
@@ -59,9 +59,8 @@ class Selector:
         3 each and the last one takes 2.
 
         Returns:
-            list(tuple(str, ...)): the training sample keys for the newly prepared training_set for
-                                   the particular worker id with a variable number of auxiliary data
-                                   (concrete typing in subclasses defined)
+            list(tuple(str, float)): the training sample keys for the newly selected training_set
+                along with the weight of that sample.
         """
         training_set_size, num_workers = self.grpc.get_info_for_training(training_id)
 
@@ -90,16 +89,19 @@ class Selector:
 
         return self.grpc.register_training(training_set_size, num_workers)
 
-    def get_sample_keys_and_metadata(
+    def get_sample_keys_and_weight(
         self, training_id: int, training_set_number: int, worker_id: int
-    ) -> list[tuple[str, ...]]:
+    ) -> list[tuple[str, float]]:
         """
         For a given training_id, training_set_number and worker_id, it returns a subset of sample
-        keys so that the data can be queried from storage.
+        keys so that the data can be queried from storage. It also returns the associated weight of each sample.
+        This weight can be used during training to support advanced strategies that want to weight the
+        gradient descent step for different samples differently. Explicitly, instead of changing parameters
+        by learning_rate * gradient, you would change the parameters by sample_weight * learning_rate * gradient.
 
         Returns:
             List of tuples for the samples to be returned to that particular worker. The first
-            index of the tuple will be the key, along with auxiliary data defined in the concrete subclass.
+            index of the tuple will be the key, and the second index will be that sample's weight.
         """
         training_set_size, num_workers = self.grpc.get_info_for_training(training_id)
         if worker_id < 0 or worker_id >= num_workers:

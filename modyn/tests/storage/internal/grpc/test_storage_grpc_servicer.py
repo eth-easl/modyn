@@ -110,23 +110,23 @@ def setup():
 
         session.commit()
 
-        sample = Sample(file=file, index=0, external_key="test")
+        sample = Sample(file=file, index=0, external_key="test", label=1)
 
         session.add(sample)
 
-        sample2 = Sample(file=file, index=1, external_key="test2")
+        sample2 = Sample(file=file, index=1, external_key="test2", label=2)
 
         session.add(sample2)
 
-        sample3 = Sample(file=file2, index=0, external_key="test3")
+        sample3 = Sample(file=file2, index=0, external_key="test3", label=3)
 
         session.add(sample3)
 
-        sample4 = Sample(file=file2, index=1, external_key="test4")
+        sample4 = Sample(file=file2, index=1, external_key="test4", label=4)
 
         session.add(sample4)
 
-        sample5 = Sample(file=file3, index=0, external_key="test5")
+        sample5 = Sample(file=file3, index=0, external_key="test5", label=5)
 
         session.add(sample5)
 
@@ -151,12 +151,13 @@ def test_get(mock_get_samples_from_indices):
 
     request = GetRequest(dataset_id="test", keys=["test", "test3", "test4"])
 
-    expetect_responses = [(b"", ["test"]), (b"", ["test3", "test4"])]
+    expetect_responses = [(b"", ["test"], [1]), (b"", ["test3", "test4"], [3, 4])]
 
     for response, expetect_response in zip(server.Get(request, None), expetect_responses):
         assert response is not None
         assert response.chunk == expetect_response[0]
         assert response.keys == expetect_response[1]
+        assert response.labels == expetect_response[2]
 
 
 def test_get_invalid_dataset():
@@ -167,6 +168,8 @@ def test_get_invalid_dataset():
     for response in server.Get(request, None):
         assert response is not None
         assert response.chunk == b""
+        assert response.keys == []
+        assert response.labels == []
 
 
 def test_get_invalid_key():
@@ -177,6 +180,8 @@ def test_get_invalid_key():
     for response in server.Get(request, None):
         assert response is not None
         assert response.chunk == b""
+        assert response.keys == []
+        assert response.labels == []
 
 
 def test_get_not_all_keys_found():
@@ -208,6 +213,7 @@ def test_get_new_data_since():
     response = server.GetNewDataSince(request, None)
     assert response is not None
     assert response.keys == ["test", "test2", "test3", "test4", "test5"]
+    assert response.timestamps == [NOW, NOW, NOW, NOW, NOW - 1]
 
 
 def test_get_new_data_since_invalid_dataset():
@@ -218,6 +224,7 @@ def test_get_new_data_since_invalid_dataset():
     response = server.GetNewDataSince(request, None)
     assert response is not None
     assert response.keys == []
+    assert response.timestamps == []
 
 
 def test_get_new_data_since_no_new_data():
@@ -228,6 +235,7 @@ def test_get_new_data_since_no_new_data():
     response = server.GetNewDataSince(request, None)
     assert response is not None
     assert response.keys == []
+    assert response.timestamps == []
 
 
 def test_get_data_in_interval():
@@ -238,12 +246,14 @@ def test_get_data_in_interval():
     response = server.GetDataInInterval(request, None)
     assert response is not None
     assert response.keys == ["test", "test2", "test3", "test4", "test5"]
+    assert response.timestamps == [NOW, NOW, NOW, NOW, NOW - 1]
 
     request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1)
 
     response = server.GetDataInInterval(request, None)
     assert response is not None
     assert response.keys == ["test5"]
+    assert response.timestamps == [NOW - 1]
 
 
 def test_get_data_in_interval_invalid_dataset():
@@ -254,6 +264,7 @@ def test_get_data_in_interval_invalid_dataset():
     response = server.GetDataInInterval(request, None)
     assert response is not None
     assert response.keys == []
+    assert response.timestamps == []
 
 
 def test_check_availability():

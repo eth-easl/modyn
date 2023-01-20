@@ -94,23 +94,23 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
             return True
         return False
 
-    def list(self, path: str, recursive: bool = False) -> list[str]:  # pylint: disable=unused-argument
+    def list(self, path: str, recursive: bool = False) -> list[str]:
         self._list_called = True
         return self._list
 
     def join(self, *paths: str) -> str:
         return "/".join(paths)
 
-    def get_modified(self, path: str) -> int:  # pylint: disable=unused-argument
+    def get_modified(self, path: str) -> int:
         return FILE_TIMESTAMP
 
-    def get_created(self, path: str) -> int:  # pylint: disable=unused-argument
+    def get_created(self, path: str) -> int:
         return FILE_TIMESTAMP
 
-    def get(self, path: str) -> typing.BinaryIO:  # pylint: disable=unused-argument
+    def get(self, path: str) -> typing.BinaryIO:
         return typing.BinaryIO()
 
-    def get_size(self, path: str) -> int:  # pylint: disable=unused-argument
+    def get_size(self, path: str) -> int:
         return 2
 
     def get_list_called(self) -> bool:
@@ -118,8 +118,11 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
 
 
 class MockFileWrapper:
-    def get_number_of_samples(self) -> int:  # pylint: disable=unused-argument
+    def get_number_of_samples(self) -> int:
         return 2
+
+    def get_label(self, index: int) -> bytes:
+        return b"test"
 
 
 class MockDataset:
@@ -310,7 +313,7 @@ def test_update_files_in_directory_not_exists(session) -> None:
 
 @patch.object(NewFileWatcher, "_seek", return_value=None)
 @patch("modyn.storage.internal.new_file_watcher.current_time_millis", return_value=-2)
-def test_run(mock_seek, mock_time) -> None:  # pylint: disable=unused-argument
+def test_run(mock_seek, mock_time) -> None:
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     new_file_watcher.run()
