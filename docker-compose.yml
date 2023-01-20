@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
-  metadata-db:
+  db:
     image: postgres:14.1-alpine
     restart: always
     environment:
@@ -32,19 +32,18 @@ services:
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
-  trainer_server:
-    restart: on-failure
-    depends_on:
-      - storage
-    build:
-      context: .
-      dockerfile: docker/Trainer_Server/Dockerfile
+    volumes:
+      - storage-data:/app/storage
   tests:
     depends_on:
       - modynbase
       - storage
-      - metadata-db
+      - db
       - storage-db
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
+    volumes:
+      - storage-data:/app/storage
+volumes:
+  storage-data:
