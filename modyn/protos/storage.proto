@@ -21,6 +21,7 @@ message GetRequest {
 message GetResponse {
   bytes chunk = 1;
   repeated string keys = 2;
+  repeated int64 labels = 3;
 }
 
 message GetNewDataSinceRequest {
@@ -30,6 +31,7 @@ message GetNewDataSinceRequest {
 
 message GetNewDataSinceResponse {
   repeated string keys = 1;
+  repeated int64 timestamps = 2;
 }
 
 message GetDataInIntervalRequest {
@@ -40,6 +42,7 @@ message GetDataInIntervalRequest {
 
 message GetDataInIntervalResponse {
   repeated string keys = 1;
+  repeated int64 timestamps = 2;
 }
 
 message DatasetAvailableRequest {

@@ -81,7 +81,7 @@ class StorageGRPCServicer(StorageServicer):
                 logger.error(f"Keys: {not_found_keys}")
 
             current_file = samples[0].file
-            samples_per_file: list[Tuple[int, str]] = []
+            samples_per_file: list[Tuple[int, str, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:
@@ -93,13 +93,14 @@ class StorageGRPCServicer(StorageServicer):
                         get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
                     )
                     yield GetResponse(
-                        chunk=file_wrapper.get_samples_from_indices([index for index, _ in samples_per_file]),
-                        keys=[external_key for _, external_key in samples_per_file],
+                        chunk=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
+                        keys=[external_key for _, external_key, _ in samples_per_file],
+                        labels=[label for _, _, label in samples_per_file],
                     )
-                    samples_per_file = [(sample.index, sample.external_key)]
+                    samples_per_file = [(sample.index, sample.external_key, sample.label)]
                     current_file = sample.file
                 else:
-                    samples_per_file.append((sample.index, sample.external_key))
+                    samples_per_file.append((sample.index, sample.external_key, sample.label))
 
     # pylint: disable-next=unused-argument,invalid-name
     def GetNewDataSince(
@@ -121,19 +122,21 @@ class StorageGRPCServicer(StorageServicer):
 
             timestamp = request.timestamp
 
-            external_keys = (
-                session.query(Sample.external_key)
+            values = (
+                session.query(Sample.external_key, File.updated_at)
                 .join(File)
                 .filter(File.dataset_id == dataset.id)
                 .filter(File.updated_at >= timestamp)
                 .all()
             )
 
-            if len(external_keys) == 0:
+            if len(values) == 0:
                 logger.info(f"No new data since {timestamp}")
                 return GetNewDataSinceResponse()
 
-            return GetNewDataSinceResponse(keys=[external_key[0] for external_key in external_keys])
+            return GetNewDataSinceResponse(
+                keys=[value[0] for value in values], timestamps=[value[1] for value in values]
+            )
 
     def GetDataInInterval(
         self, request: GetDataInIntervalRequest, context: grpc.ServicerContext
@@ -152,8 +155,8 @@ class StorageGRPCServicer(StorageServicer):
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
                 return GetDataInIntervalResponse()
 
-            external_keys = (
-                session.query(Sample.external_key)
+            values = (
+                session.query(Sample.external_key, File.updated_at)
                 .join(File)
                 .filter(File.dataset_id == dataset.id)
                 .filter(File.updated_at >= request.start_timestamp)
@@ -161,11 +164,13 @@ class StorageGRPCServicer(StorageServicer):
                 .all()
             )
 
-            if len(external_keys) == 0:
+            if len(values) == 0:
                 logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
                 return GetDataInIntervalResponse()
 
-            return GetDataInIntervalResponse(keys=[external_key[0] for external_key in external_keys])
+            return GetDataInIntervalResponse(
+                keys=[value[0] for value in values], timestamps=[value[1] for value in values]
+            )
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(
