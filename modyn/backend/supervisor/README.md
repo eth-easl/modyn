@@ -65,6 +65,7 @@ It is not necessarily mutally exclusive with the previous trigger.
 Last, we have the training_id: This is the ID returned by the GPU server to uniquely identify the training process on that node on a dataset, such that the supervisor can continously ask the GPU node what its current status is.
 It is not necessarily equivalent to the trigger_id because trigger_ids might overlap over different trainings, the training_id is unique per GPU node.
 We can always query the status of a training given the training ID.
+To start a training process on a GPU node, the supervisor needs to send the pipeline information, pipeline id and trigger id.
 
 ## What happens
 
