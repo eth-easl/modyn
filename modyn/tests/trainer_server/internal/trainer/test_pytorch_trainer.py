@@ -224,6 +224,8 @@ def test_train_invalid_query_message():
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue)
     query_status_queue.put("INVALID MESSAGE")
+    while query_status_queue.empty():
+        pass
     with tempfile.NamedTemporaryFile() as temp:
         with pytest.raises(ValueError, match="Unknown message in the status query queue"):
             trainer.train(temp.name)
@@ -240,6 +242,8 @@ def test_train():
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+    while query_status_queue.empty():
+        pass
     with tempfile.NamedTemporaryFile() as temp:
         trainer.train(temp.name)
         assert os.path.exists(temp.name)
@@ -283,6 +287,8 @@ def test_create_trainer_with_exception(test_dynamic_module_import):
     exception_queue = mp.Queue()
     training_info = get_training_info()
     query_status_queue.put("INVALID MESSAGE")
+    while query_status_queue.empty():
+        pass
     with tempfile.NamedTemporaryFile() as temp:
         train(
             training_info,
