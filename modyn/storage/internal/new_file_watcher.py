@@ -114,7 +114,8 @@ class NewFileWatcher:
                     continue
                 try:
                     for i in range(number_of_samples):
-                        sample: Sample = Sample(file=file, external_key=str(uuid.uuid4()), index=i)
+                        label = file_wrapper.get_label(i)
+                        sample: Sample = Sample(file=file, external_key=str(uuid.uuid4()), index=i, label=label)
                         session.add(sample)
                     session.commit()
                 except exc.SQLAlchemyError as exception:
