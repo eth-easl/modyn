@@ -43,7 +43,7 @@ services:
     depends_on:
       - modynbase
       - storage
-      - db
+      - metadata-db
       - storage-db
     build:
       context: .
