@@ -1,7 +1,7 @@
 """File model."""
 
-from modyn.storage.internal.database.base import Base
 from modyn.storage.internal.database.models.dataset import Dataset
+from modyn.storage.internal.database.storage_base import Base
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import backref, relationship
 
@@ -10,8 +10,8 @@ class File(Base):
     """File model."""
 
     __tablename__ = "files"
-    id = Column(Integer, primary_key=True)
-    dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=False)
+    file_id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey("datasets.dataset_id"), nullable=False)
     dataset = relationship("Dataset", backref=backref("files", lazy=True))
     path = Column(String(120), unique=False, nullable=False)
     created_at = Column(Integer, nullable=False)

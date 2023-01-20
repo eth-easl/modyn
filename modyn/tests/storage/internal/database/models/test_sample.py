@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 import pytest
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
@@ -24,7 +25,7 @@ def session():
     engine.dispose()
 
 
-def test_add_sample(session):  # pylint: disable=redefined-outer-name
+def test_add_sample(session):
     dataset = Dataset(
         name="test",
         base_path="test",
@@ -51,7 +52,7 @@ def test_add_sample(session):  # pylint: disable=redefined-outer-name
     assert session.query(Sample).filter(Sample.external_key == "test").first().label == b"test"
 
 
-def test_update_sample(session):  # pylint: disable=redefined-outer-name
+def test_update_sample(session):
     dataset = Dataset(
         name="test",
         base_path="test",
@@ -77,7 +78,7 @@ def test_update_sample(session):  # pylint: disable=redefined-outer-name
     assert session.query(Sample).filter(Sample.external_key == "test").first().index == 1
 
 
-def test_delete_sample(session):  # pylint: disable=redefined-outer-name
+def test_delete_sample(session):
     dataset = Dataset(
         name="test",
         base_path="test",
@@ -103,7 +104,7 @@ def test_delete_sample(session):  # pylint: disable=redefined-outer-name
     assert session.query(Sample).filter(Sample.external_key == "test").first() is None
 
 
-def test_repr(session):  # pylint: disable=redefined-outer-name
+def test_repr(session):
     dataset = Dataset(
         name="test",
         base_path="test",
