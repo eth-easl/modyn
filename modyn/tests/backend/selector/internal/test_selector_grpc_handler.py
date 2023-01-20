@@ -96,7 +96,7 @@ def test_register_training(test__grpc_connection_established):
         "RegisterTraining",
         return_value=RegisterResponse(training_id=1),
     ) as avail_method:
-        assert handler.register_training(1000, 10) == 1
+        assert handler.register_training(10) == 1
         avail_method.assert_called_once()
 
 
@@ -111,7 +111,7 @@ def test_get_info_for_training(test__grpc_connection_established):
         "GetTrainingInfo",
         return_value=TrainingResponse(training_set_size=1000, num_workers=10),
     ) as avail_method:
-        assert handler.get_info_for_training(0) == (1000, 10)
+        assert handler.get_info_for_training(0) == (10)
         avail_method.assert_called_once()
 
 

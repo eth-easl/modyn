@@ -10,14 +10,14 @@ class MockGRPCHandler:
     def __init__(self, metadata_response):
         self.metadata_response = metadata_response
 
-    def register_training(self, training_set_size, num_workers):  # pylint: disable=unused-argument
+    def register_training(self, num_workers):  # pylint: disable=unused-argument
         return 5
 
     def get_samples_by_metadata_query(self, query):  # pylint: disable=unused-argument
         return self.metadata_response
 
     def get_info_for_training(self, training_id):  # pylint: disable=unused-argument
-        return tuple([10, 3])
+        return 3  # Number of workers
 
 
 class MockStrategy:
@@ -25,7 +25,7 @@ class MockStrategy:
         self.result = desired_result
         self.times_called = 0
 
-    def select_new_training_samples(self, training_id, training_set_size):  # pylint: disable=unused-argument
+    def select_new_training_samples(self, training_id):  # pylint: disable=unused-argument
         self.times_called += 1
         return self.result
 
@@ -45,11 +45,11 @@ def test_get_training_set(test__select_new_training_samples):
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
     selector._training_samples_cache = {}
-    assert selector._get_training_set(0, 0, 0) == ["a", "b"]
+    assert selector._get_training_set(0, 0) == ["a", "b"]
 
     test__select_new_training_samples.return_value = []
     with pytest.raises(ValueError):
-        selector._get_training_set(0, 0, 3)
+        selector._get_training_set(0, 3)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -117,13 +117,11 @@ def test_register_training():
     selector.grpc = MockGRPCHandler(None)
     strategy._grpc = MockGRPCHandler(None)
 
-    assert selector.register_training(1000, 1) == 5
+    assert selector.register_training(1) == 5
     with pytest.raises(Exception):
-        selector.register_training(1000, 0)
+        selector.register_training(0)
     with pytest.raises(Exception):
-        selector.register_training(0, 1)
-    with pytest.raises(Exception):
-        selector.register_training(-1000, 1)
+        selector.register_training(-1)
 
 
 @patch.object(Selector, "__init__", noop_constructor_mock)
@@ -139,15 +137,15 @@ def test_select_new_training_samples_caching():
     # Assert that you get the right answer each time, and _strategy is called only once.
     # Then, switch it to a next set, training set number 1. Repeat the process.
     assert selector._strategy.times_called == 0
-    assert selector._get_training_set(0, 0, 2) == samples_1
+    assert selector._get_training_set(0, 0) == samples_1
     assert selector._strategy.times_called == 1
-    assert selector._get_training_set(0, 0, 2) == samples_1
+    assert selector._get_training_set(0, 0) == samples_1
     assert selector._strategy.times_called == 1
 
     selector._strategy = MockStrategy(desired_result=samples_2)
 
-    assert selector._get_training_set(0, 1, 2) == samples_2
-    assert len(selector._training_samples_cache.keys()) == 1
+    assert selector._get_training_set(0, 1) == samples_2
+    assert len(selector._training_samples_cache.keys()) == 2
     assert selector._strategy.times_called == 1
-    assert selector._get_training_set(0, 1, 2) == samples_2
+    assert selector._get_training_set(0, 1) == samples_2
     assert selector._strategy.times_called == 1

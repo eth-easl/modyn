@@ -17,7 +17,7 @@ class MockGRPCHandler:
         return self.metadata_response
 
     def get_info_for_training(self, training_id):  # pylint: disable=unused-argument
-        return tuple([10, 3])
+        return 3
 
 
 def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
@@ -45,8 +45,9 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
     test__get_all_metadata.return_value = all_samples, all_classes
 
     selector = GDumbStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector.training_set_size_limit = 6
 
-    samples = selector.select_new_training_samples(0, 6)
+    samples = selector.select_new_training_samples(0)
     classes = [clss for _, clss in samples]
     samples = [sample for sample, _ in samples]
 

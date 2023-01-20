@@ -15,13 +15,11 @@ class Selector:
     def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
         self.grpc = GRPCHandler(modyn_config)
         self._strategy = self._get_strategy(pipeline_config)
-        # The cache will have training_id, training_set_number as the key and return the samples, 
+        # The cache will have training_id, training_set_number as the key and return the samples,
         # which is a list of tuples (sample_key, sample_weight)
         self._training_samples_cache: Dict[tuple[int, int], list[tuple[str, float]]] = {}
 
-    def _select_new_training_samples(
-        self, training_id: int, training_set_number: int, training_set_size: int
-    ) -> list[tuple[str, float]]:
+    def _select_new_training_samples(self, training_id: int, training_set_number: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 
@@ -29,12 +27,7 @@ class Selector:
             list(tuple(str, float)): the training sample keys for the newly selected training_set
                 along with the weight of each sample.
         """
-        samples = self._strategy.select_new_training_samples(training_id, training_set_size)
-
-        # If there are previous caches with this training_id, remove them.
-        for previous_training_number in range(training_set_number):
-            self._training_samples_cache.pop((training_id, previous_training_number), None)
-
+        samples = self._strategy.select_new_training_samples(training_id)
         self._training_samples_cache[(training_id, training_set_number)] = samples
         return samples
 
@@ -42,7 +35,6 @@ class Selector:
         self,
         training_id: int,
         training_set_number: int,
-        training_set_size: int,
     ) -> list[tuple[str, float]]:
         """
         Get a new training set of samples for the given training id. If this training_set_number
@@ -57,7 +49,7 @@ class Selector:
         if (training_id, training_set_number) in self._training_samples_cache:
             training_samples = self._training_samples_cache[(training_id, training_set_number)]
         else:
-            training_samples = self._select_new_training_samples(training_id, training_set_number, training_set_size)
+            training_samples = self._select_new_training_samples(training_id, training_set_number)
 
         # Throw error if no new samples are selected
         if len(training_samples) == 0:
@@ -81,11 +73,12 @@ class Selector:
             list(tuple(str, float)): the training sample keys for the newly selected training_set
                 along with the weight of that sample.
         """
-        training_set_size, num_workers = self.grpc.get_info_for_training(training_id)
+        num_workers = self.grpc.get_info_for_training(training_id)
 
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Asked for worker id {worker_id}, but only have {num_workers} workers!")
 
+        training_set_size = len(training_samples)
         worker_subset_size = int(training_set_size / num_workers)
         if training_set_size % num_workers > 0:
             worker_subset_size += 1
@@ -93,20 +86,18 @@ class Selector:
         training_samples_subset = training_samples[start_index : start_index + worker_subset_size]
         return training_samples_subset
 
-    def register_training(self, training_set_size: int, num_workers: int) -> int:
+    def register_training(self, num_workers: int) -> int:
         """
-        Creates a new training object in the database with the given training_set_size and num_workers
+        Creates a new training object in the database with the given num_workers
         Returns:
             The id of the newly created training object
         Throws:
-            ValueError if training_set_size or num_workers is not positive.
+            ValueError if num_workers is not positive.
         """
-        if num_workers <= 0 or training_set_size <= 0:
-            raise ValueError(
-                f"Tried to register training with {num_workers} workers and {training_set_size} data points."
-            )
+        if num_workers <= 0:
+            raise ValueError(f"Tried to register training with {num_workers} workers.")
 
-        return self.grpc.register_training(training_set_size, num_workers)
+        return self.grpc.register_training(num_workers)
 
     def get_sample_keys_and_weight(
         self, training_id: int, training_set_number: int, worker_id: int
@@ -122,17 +113,18 @@ class Selector:
             List of tuples for the samples to be returned to that particular worker. The first
             index of the tuple will be the key, and the second index will be that sample's weight.
         """
-        training_set_size, num_workers = self.grpc.get_info_for_training(training_id)
+        num_workers = self.grpc.get_info_for_training(training_id)
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {training_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        training_samples = self._get_training_set(training_id, training_set_number, training_set_size)
+        training_samples = self._get_training_set(training_id, training_set_number)
         training_samples_subset = self._get_training_set_partition(training_id, training_samples, worker_id)
         return training_samples_subset
 
     def _get_strategy(self, pipeline_config: dict) -> AbstractSelectionStrategy:
         strategy_name = pipeline_config["training"]["strategy"]
+        strategy_config = pipeline_config["training"]["strategy_config"]
         if strategy_name == "finetune":
-            config = {"selector": {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}}
-            return DataFreshnessStrategy(config, self.grpc)
+            strategy_config["selector"] = {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}
+            return DataFreshnessStrategy(strategy_config, self.grpc)
         raise NotImplementedError(f"{strategy_name} is not implemented")

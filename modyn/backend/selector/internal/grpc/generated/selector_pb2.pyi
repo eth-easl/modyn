@@ -19,12 +19,10 @@ class GetSamplesRequest(_message.Message):
     def __init__(self, training_id: _Optional[int] = ..., training_set_number: _Optional[int] = ..., worker_id: _Optional[int] = ...) -> None: ...
 
 class RegisterTrainingRequest(_message.Message):
-    __slots__ = ["num_workers", "training_set_size"]
+    __slots__ = ["num_workers"]
     NUM_WORKERS_FIELD_NUMBER: _ClassVar[int]
-    TRAINING_SET_SIZE_FIELD_NUMBER: _ClassVar[int]
     num_workers: int
-    training_set_size: int
-    def __init__(self, training_set_size: _Optional[int] = ..., num_workers: _Optional[int] = ...) -> None: ...
+    def __init__(self, num_workers: _Optional[int] = ...) -> None: ...
 
 class SamplesResponse(_message.Message):
     __slots__ = ["training_samples_subset", "training_samples_weight"]

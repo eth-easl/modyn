@@ -33,14 +33,14 @@ class GRPCHandler:
         logger.info("Successfully connected to metadata database.")
         self.connected_to_metadata = True
 
-    def register_training(self, training_set_size: int, num_workers: int) -> int:
+    def register_training(self, num_workers: int) -> int:
         """
-        Creates a new training object in the database with the given training_set_size and num_workers
+        Creates a new training object in the database with the given num_workers
         Returns:
             The id of the newly created training object
         """
         assert self.connected_to_metadata, "Tried to register training, but metadata server not connected."
-        request = RegisterRequest(training_set_size=training_set_size, num_workers=num_workers)
+        request = RegisterRequest(num_workers=num_workers)
         training_id = self.metadata_database.RegisterTraining(request).training_id
         return training_id
 
@@ -55,9 +55,8 @@ class GRPCHandler:
 
         request = GetTrainingRequest(training_id=training_id)
         info = self.metadata_database.GetTrainingInfo(request)
-        training_set_size = info.training_set_size
         num_workers = info.num_workers
-        return training_set_size, num_workers
+        return num_workers
 
     def get_samples_by_metadata_query(
         self, query: str

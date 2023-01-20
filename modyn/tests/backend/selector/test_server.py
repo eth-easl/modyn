@@ -19,7 +19,7 @@ def noop_constructor_mock(self, config: dict):
 @patch.object(GRPCHandler, "_init_metadata", return_value=None)
 @patch.object(modyn.utils, "grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "register_training", return_value=0)
-@patch.object(GRPCHandler, "get_info_for_training", return_value=(8, 1))
+@patch.object(GRPCHandler, "get_info_for_training", return_value=1)
 @patch.object(GRPCHandler, "get_samples_by_metadata_query")
 def test_prepare_training_set(
     test_get_samples_by_metadata_query,
@@ -44,7 +44,7 @@ def test_prepare_training_set(
     selector_server = SelectorServer(pipeline_cfg, sample_cfg)
     servicer = selector_server.grpc_server
 
-    assert selector_server.selector.register_training(training_set_size=8, num_workers=1) == 0
+    assert selector_server.selector.register_training(num_workers=1) == 0
 
     all_samples = ["a", "b", "c", "d", "e", "f", "g", "h"]
     all_classes = [1, 1, 1, 1, 2, 2, 3, 3]

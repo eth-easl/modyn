@@ -8,8 +8,7 @@ service Selector {
 }
 
 message RegisterTrainingRequest {
-    int32 training_set_size = 1;
-    int32 num_workers = 2;
+    int32 num_workers = 1;
 }
 
 message TrainingResponse {
