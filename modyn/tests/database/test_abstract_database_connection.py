@@ -1,5 +1,6 @@
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 
+
 def get_minimal_modyn_config() -> dict:
     return {
         "test_database": {
@@ -11,6 +12,7 @@ def get_minimal_modyn_config() -> dict:
             "database": ":memory:",
         }
     }
+
 
 class TestAbstractDatabaseConnection(AbstractDatabaseConnection):
     def __init__(self, config):
@@ -24,6 +26,7 @@ class TestAbstractDatabaseConnection(AbstractDatabaseConnection):
 
     def create_tables(self):
         pass
+
 
 def test_database_connection():
     with TestAbstractDatabaseConnection(get_minimal_modyn_config()) as database:
