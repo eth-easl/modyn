@@ -1,6 +1,6 @@
 """Dataset model."""
 
-from modyn.storage.internal.database.base import Base
+from modyn.storage.internal.database.storage_base import Base
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import Column, Enum, Integer, String
@@ -10,7 +10,7 @@ class Dataset(Base):
     """Dataset model."""
 
     __tablename__ = "datasets"
-    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(120), unique=False, nullable=True)
     version = Column(String(80), unique=False, nullable=True)

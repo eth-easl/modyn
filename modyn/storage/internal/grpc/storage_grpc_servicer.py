@@ -4,10 +4,10 @@ import logging
 from typing import Iterable, Tuple
 
 import grpc
-from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 
 # pylint: disable-next=no-name-in-module
@@ -40,7 +40,6 @@ class StorageGRPCServicer(StorageServicer):
             config (dict): Configuration of the storage module.
         """
         self.modyn_config = config
-        self.database = DatabaseConnection(config)
         super().__init__()
 
     # pylint: disable-next=unused-argument,invalid-name
@@ -57,8 +56,8 @@ class StorageGRPCServicer(StorageServicer):
         Yields:
             Iterator[Iterable[GetResponse]]: Response containing the data for the given keys.
         """
-        with DatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
             if dataset is None:
@@ -85,7 +84,7 @@ class StorageGRPCServicer(StorageServicer):
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:
-                if sample.file_id != current_file.id:
+                if sample.file_id != current_file.file_id:
                     file_wrapper = get_file_wrapper(
                         dataset.file_wrapper_type,
                         current_file.path,
@@ -111,8 +110,8 @@ class StorageGRPCServicer(StorageServicer):
         Returns:
             GetNewDataSinceResponse: A response containing all external keys since the given timestamp.
         """
-        with DatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
@@ -125,7 +124,7 @@ class StorageGRPCServicer(StorageServicer):
             values = (
                 session.query(Sample.external_key, File.updated_at)
                 .join(File)
-                .filter(File.dataset_id == dataset.id)
+                .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
                 .all()
             )
@@ -146,8 +145,8 @@ class StorageGRPCServicer(StorageServicer):
         Returns:
             GetDataInIntervalResponse: A response containing all external keys in the given interval.
         """
-        with DatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
@@ -158,7 +157,7 @@ class StorageGRPCServicer(StorageServicer):
             values = (
                 session.query(Sample.external_key, File.updated_at)
                 .join(File)
-                .filter(File.dataset_id == dataset.id)
+                .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
                 .filter(File.updated_at <= request.end_timestamp)
                 .all()
@@ -181,8 +180,8 @@ class StorageGRPCServicer(StorageServicer):
         Returns:
             DatasetAvailableResponse: True if the dataset is available, False otherwise.
         """
-        with DatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
@@ -201,7 +200,7 @@ class StorageGRPCServicer(StorageServicer):
         Returns:
             RegisterNewDatasetResponse: True if the dataset was successfully registered, False otherwise.
         """
-        with DatabaseConnection(self.modyn_config) as database:
+        with StorageDatabaseConnection(self.modyn_config) as database:
             success = database.add_dataset(
                 request.dataset_id,
                 request.base_path,

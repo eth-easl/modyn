@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package trainer;
+
+service TrainerServer {
+    rpc register(RegisterTrainServerRequest) returns (RegisterTrainServerResponse) {}
+    rpc trainer_available(TrainerAvailableRequest) returns (TrainerAvailableResponse) {}
+    rpc start_training(StartTrainingRequest) returns (StartTrainingResponse) {}
+    rpc get_training_status(TrainingStatusRequest) returns (TrainingStatusResponse) {}
+}
+
+message RegisterTrainServerRequest {
+    int32 training_id = 1;
+    string model_id = 2;
+    string torch_optimizer = 3;
+    int32 batch_size = 4;
+    string torch_criterion = 5;
+    JsonString criterion_parameters = 6;
+    JsonString optimizer_parameters = 7;
+    JsonString model_configuration = 8;
+    Data data_info = 9;
+    CheckpointInfo checkpoint_info = 10;
+    repeated string transform_list = 11;
+}
+
+message JsonString {
+    string value = 1;
+}
+
+message RegisterTrainServerResponse {
+    bool success = 1;
+}
+
+message Data {
+    string dataset_id = 1;
+    int32 num_dataloaders = 2;
+}
+
+message TrainerAvailableRequest {
+
+}
+
+message TrainerAvailableResponse {
+    bool available = 1;
+}
+
+message CheckpointInfo {
+    int32 checkpoint_interval = 1;
+    string checkpoint_path = 2;
+}
+
+message StartTrainingRequest {
+    int32 training_id = 1;
+    string device = 2;
+    string train_until_sample_id = 3;
+    string load_checkpoint_path = 4;
+}
+
+message StartTrainingResponse {
+    bool training_started = 1;
+}
+
+message TrainingStatusRequest {
+    int32 training_id = 1;
+}
+
+message TrainingStatusResponse {
+    bool valid = 1;
+    bool is_running = 2;
+    bool state_available = 3;
+    bool blocked = 4;
+    optional string exception = 5;
+    optional int32 batches_seen = 6;
+    optional int32 samples_seen = 7;
+    optional bytes state = 8;
+}
