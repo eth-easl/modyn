@@ -71,7 +71,7 @@ class Selector:
         if training_set_size % num_workers > 0:
             worker_subset_size += 1
         start_index = worker_id * worker_subset_size
-        training_samples_subset = training_samples[start_index: start_index + worker_subset_size]
+        training_samples_subset = training_samples[start_index : start_index + worker_subset_size]
         return training_samples_subset
 
     def register_training(self, training_set_size: int, num_workers: int) -> int:

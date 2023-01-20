@@ -5,7 +5,7 @@ from modyn.trainer_server.internal.grpc.trainer_server_grpc_server import GRPCSe
 
 
 def get_modyn_config():
-    return {"trainer": {"port": "5001", "type": "grpc"}}
+    return {"trainer_server": {"port": "5001", "type": "grpc"}}
 
 
 def test_init():

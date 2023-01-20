@@ -61,22 +61,23 @@ def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, t
 
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
 def get_training_info(dynamic_module_patch: MagicMock):
-    dynamic_module_patch.return_value = MockModule()
-    request = RegisterTrainServerRequest(
-        training_id=1,
-        data_info=Data(dataset_id="MNIST", num_dataloaders=2),
-        optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
-        model_configuration=JsonString(value=json.dumps({})),
-        criterion_parameters=JsonString(value=json.dumps({})),
-        transform_list=[],
-        model_id="model",
-        torch_optimizer="SGD",
-        batch_size=32,
-        torch_criterion="CrossEntropyLoss",
-        checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="checkpoint_test"),
-    )
-    training_info = TrainingInfo(request)
-    return training_info
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        dynamic_module_patch.return_value = MockModule()
+        request = RegisterTrainServerRequest(
+            training_id=1,
+            data_info=Data(dataset_id="MNIST", num_dataloaders=2),
+            optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
+            model_configuration=JsonString(value=json.dumps({})),
+            criterion_parameters=JsonString(value=json.dumps({})),
+            transform_list=[],
+            model_id="model",
+            torch_optimizer="SGD",
+            batch_size=32,
+            torch_criterion="CrossEntropyLoss",
+            checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=tmpdirname),
+        )
+        training_info = TrainingInfo(request)
+        return training_info
 
 
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
@@ -95,7 +96,6 @@ def test_trainer_init():
     assert trainer._device == "cpu"
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
-    assert trainer._checkpoint_path == "checkpoint_test"
     assert os.path.isdir(trainer._checkpoint_path)
 
 
@@ -283,18 +283,19 @@ def test_create_trainer_with_exception(test_dynamic_module_import):
     exception_queue = mp.Queue()
     training_info = get_training_info()
     query_status_queue.put("INVALID MESSAGE")
-    train(
-        training_info,
-        "cpu",
-        "log_file",
-        None,
-        "new",
-        exception_queue,
-        query_status_queue,
-        status_queue,
-    )
-    assert query_status_queue.empty()
-    assert status_queue.empty()
-    assert exception_queue.qsize() == 1
-    exception = exception_queue.get()
-    assert "ValueError: Unknown message in the status query queue" in exception
+    with tempfile.NamedTemporaryFile() as temp:
+        train(
+            training_info,
+            "cpu",
+            temp.name,
+            None,
+            "new",
+            exception_queue,
+            query_status_queue,
+            status_queue,
+        )
+        assert query_status_queue.empty()
+        assert status_queue.empty()
+        assert exception_queue.qsize() == 1
+        exception = exception_queue.get()
+        assert "ValueError: Unknown message in the status query queue" in exception
