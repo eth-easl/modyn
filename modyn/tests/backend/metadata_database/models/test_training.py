@@ -25,10 +25,10 @@ def test_add_training(session):
     session.add(training)
     session.commit()
 
-    assert session.query(Training).filter(Training.id == 1).first() is not None
-    assert session.query(Training).filter(Training.id == 1).first().id == 1
-    assert session.query(Training).filter(Training.id == 1).first().number_of_workers == 1
-    assert session.query(Training).filter(Training.id == 1).first().training_set_size == 1
+    assert session.query(Training).filter(Training.training_id == 1).first() is not None
+    assert session.query(Training).filter(Training.training_id == 1).first().training_id == 1
+    assert session.query(Training).filter(Training.training_id == 1).first().number_of_workers == 1
+    assert session.query(Training).filter(Training.training_id == 1).first().training_set_size == 1
 
 
 def test_update_training(session):
@@ -37,16 +37,16 @@ def test_update_training(session):
     session.add(training)
     session.commit()
 
-    training = session.query(Training).filter(Training.id == 1).first()
+    training = session.query(Training).filter(Training.training_id == 1).first()
     training.number_of_workers = 2
     training.training_set_size = 2
 
     session.commit()
 
-    assert session.query(Training).filter(Training.id == 1).first() is not None
-    assert session.query(Training).filter(Training.id == 1).first().id == 1
-    assert session.query(Training).filter(Training.id == 1).first().number_of_workers == 2
-    assert session.query(Training).filter(Training.id == 1).first().training_set_size == 2
+    assert session.query(Training).filter(Training.training_id == 1).first() is not None
+    assert session.query(Training).filter(Training.training_id == 1).first().training_id == 1
+    assert session.query(Training).filter(Training.training_id == 1).first().number_of_workers == 2
+    assert session.query(Training).filter(Training.training_id == 1).first().training_set_size == 2
 
 
 def test_delete_training(session):
@@ -58,7 +58,7 @@ def test_delete_training(session):
     session.delete(training)
     session.commit()
 
-    assert session.query(Training).filter(Training.id == 1).first() is None
+    assert session.query(Training).filter(Training.training_id == 1).first() is None
 
 
 def test_repr(session):

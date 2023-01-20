@@ -10,7 +10,7 @@ class Dataset(Base):
     """Dataset model."""
 
     __tablename__ = "datasets"
-    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(120), unique=False, nullable=True)
     version = Column(String(80), unique=False, nullable=True)

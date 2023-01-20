@@ -44,7 +44,7 @@ class NewFileWatcher:
         """
         logger.debug(f"Seeking for files with a timestamp that is equal or greater than {timestamp}")
         with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+            session = database.session
 
             datasets = self._get_datasets(session)
 

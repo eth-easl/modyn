@@ -57,7 +57,7 @@ class StorageGRPCServicer(StorageServicer):
             Iterator[Iterable[GetResponse]]: Response containing the data for the given keys.
         """
         with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
             if dataset is None:
@@ -84,7 +84,7 @@ class StorageGRPCServicer(StorageServicer):
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:
-                if sample.file_id != current_file.id:
+                if sample.file_id != current_file.file_id:
                     file_wrapper = get_file_wrapper(
                         dataset.file_wrapper_type,
                         current_file.path,
@@ -111,7 +111,7 @@ class StorageGRPCServicer(StorageServicer):
             GetNewDataSinceResponse: A response containing all external keys since the given timestamp.
         """
         with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
@@ -124,7 +124,7 @@ class StorageGRPCServicer(StorageServicer):
             values = (
                 session.query(Sample.external_key, File.updated_at)
                 .join(File)
-                .filter(File.dataset_id == dataset.id)
+                .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
                 .all()
             )
@@ -146,7 +146,7 @@ class StorageGRPCServicer(StorageServicer):
             GetDataInIntervalResponse: A response containing all external keys in the given interval.
         """
         with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 
@@ -157,7 +157,7 @@ class StorageGRPCServicer(StorageServicer):
             values = (
                 session.query(Sample.external_key, File.updated_at)
                 .join(File)
-                .filter(File.dataset_id == dataset.id)
+                .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
                 .filter(File.updated_at <= request.end_timestamp)
                 .all()
@@ -181,7 +181,7 @@ class StorageGRPCServicer(StorageServicer):
             DatasetAvailableResponse: True if the dataset is available, False otherwise.
         """
         with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+            session = database.session
 
             dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
 

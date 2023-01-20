@@ -39,20 +39,20 @@ def setup():
         database.create_tables()
 
         trainig = Training(1, 1)
-        database.get_session().add(trainig)
-        database.get_session().commit()
+        database.session.add(trainig)
+        database.session.commit()
 
-        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.id)
+        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.training_id)
 
-        metadata.id = 1  # SQLite does not support autoincrement for composite primary keys #pylint
-        database.get_session().add(metadata)
+        metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys #pylint
+        database.session.add(metadata)
 
-        metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", trainig.id)
+        metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", trainig.training_id)
 
-        metadata2.id = 2  # SQLite does not support autoincrement for composite primary key
-        database.get_session().add(metadata2)
+        metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary key
+        database.session.add(metadata2)
 
-        database.get_session().commit()
+        database.session.commit()
 
 
 def teardown():

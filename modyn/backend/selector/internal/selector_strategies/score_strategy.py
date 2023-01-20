@@ -1,5 +1,4 @@
 import numpy as np
-from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
@@ -48,7 +47,6 @@ class ScoreStrategy(AbstractSelectionStrategy):
         return list(zip(list(samples), list(scores)))
 
     def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[float]]:
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            all_metadata = database.session.query(Metadata).filter(Metadata.training_id == training_id).all()
+        all_metadata = self.database.session.query(Metadata).filter(Metadata.training_id == training_id).all()
 
         return ([metadata.key for metadata in all_metadata], [metadata.score for metadata in all_metadata])

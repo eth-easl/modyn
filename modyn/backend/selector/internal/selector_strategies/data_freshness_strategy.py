@@ -1,7 +1,6 @@
 # pylint: disable=singleton-comparison
 # flake8: noqa: E712
 import numpy as np
-from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
@@ -85,20 +84,18 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             List of keys for the unseen samples.
         """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.get_session()
-                .query(Metadata.key, Metadata.seen)
-                .filter(
-                    Metadata.training_id == training_id,
-                    Metadata.seen == False,
-                )
-                .all()
+        data = (
+            self.database.session.query(Metadata.key, Metadata.seen)
+            .filter(
+                Metadata.training_id == training_id,
+                Metadata.seen == False,
             )
-            if len(data) > 0:
-                keys, seen = zip(*data)
-            else:
-                keys, seen = [], []
+            .all()
+        )
+        if len(data) > 0:
+            keys, seen = zip(*data)
+        else:
+            keys, seen = [], []
 
         assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
@@ -116,17 +113,15 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             List of keys for the previously seen samples
         """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.get_session()
-                .query(Metadata.key, Metadata.seen)
-                .filter(Metadata.training_id == training_id, Metadata.seen == True)
-                .all()
-            )
-            if len(data) > 0:
-                keys, seen = zip(*data)
-            else:
-                keys, seen = [], []
+        data = (
+            self.database.session.query(Metadata.key, Metadata.seen)
+            .filter(Metadata.training_id == training_id, Metadata.seen == True)
+            .all()
+        )
+        if len(data) > 0:
+            keys, seen = zip(*data)
+        else:
+            keys, seen = [], []
 
         assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
@@ -141,15 +136,13 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             int: number of unseen samples
         """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.get_session()
-                .query(Metadata.key, Metadata.seen)
-                .filter(Metadata.training_id == training_id, Metadata.seen == True)
-                .all()
-            )
-            assert len(data) > 0, "Queried unseen data, but got seen data."
-            keys, seen = zip(*data)
+        data = (
+            self.database.session.query(Metadata.key, Metadata.seen)
+            .filter(Metadata.training_id == training_id, Metadata.seen == True)
+            .all()
+        )
+        assert len(data) > 0, "Queried unseen data, but got seen data."
+        keys, seen = zip(*data)
 
         assert np.array(seen).all(), "Queried seen data, but got unseen data."
         return len(keys)
@@ -163,15 +156,13 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             int: number of previously seen samples
         """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.get_session()
-                .query(Metadata.key, Metadata.seen)
-                .filter(Metadata.training_id == training_id, Metadata.seen == False)
-                .all()
-            )
-            assert len(data) > 0, "Queried unseen data, but got seen data."
-            keys, seen = zip(*data)
+        data = (
+            self.database.session.query(Metadata.key, Metadata.seen)
+            .filter(Metadata.training_id == training_id, Metadata.seen == False)
+            .all()
+        )
+        assert len(data) > 0, "Queried unseen data, but got seen data."
+        keys, seen = zip(*data)
 
         assert not np.array(seen).any(), "Queried unseen data, but got seen data."
         return len(keys)

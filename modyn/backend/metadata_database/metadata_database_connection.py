@@ -3,21 +3,18 @@
 from __future__ import annotations
 
 import logging
-from typing import Tuple
+from typing import Optional, Tuple
 
 from modyn.backend.metadata_database.metadata_base import Base
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.metadata_database.models.training import Training
-from sqlalchemy import create_engine, exc
-from sqlalchemy.engine import Engine
-from sqlalchemy.engine.url import URL
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.session import Session
+from modyn.database.abstract_database_connection import AbstractDatabaseConnection
+from sqlalchemy import exc
 
 logger = logging.getLogger(__name__)
 
 
-class MetadataDatabaseConnection:
+class MetadataDatabaseConnection(AbstractDatabaseConnection):
     """Database connection context manager."""
 
     def __init__(self, modyn_config: dict) -> None:
@@ -26,47 +23,13 @@ class MetadataDatabaseConnection:
         Args:
             modyn_config (dict): Configuration of the modyn module.
         """
-        self.modyn_config = modyn_config
-        self.session: Session = None
-        self.engine: Engine = None
-        self.url = None
-
-    def __enter__(self) -> MetadataDatabaseConnection:
-        """Create the engine and session.
-
-        Returns:
-            DatabaseConnection: DatabaseConnection.
-        """
-        self.url = URL.create(
-            drivername=self.modyn_config["metadata_database"]["drivername"],
-            username=self.modyn_config["metadata_database"]["username"],
-            password=self.modyn_config["metadata_database"]["password"],
-            host=self.modyn_config["metadata_database"]["host"],
-            port=self.modyn_config["metadata_database"]["port"],
-            database=self.modyn_config["metadata_database"]["database"],
-        )
-        self.engine = create_engine(self.url, echo=True)
-        self.session = sessionmaker(bind=self.engine)()
-        return self
-
-    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
-        """Close the session and dispose the engine.
-
-        Args:
-            exc_type (type): exception type
-            exc_val (Exception): exception value
-            exc_tb (Exception): exception traceback
-        """
-        self.session.close()
-        self.engine.dispose()
-
-    def get_session(self) -> Session:
-        """Get the session.
-
-        Returns:
-            Session: Session.
-        """
-        return self.session
+        super().__init__(modyn_config)
+        self.drivername: str = self.modyn_config["metadata_database"]["drivername"]
+        self.username: str = self.modyn_config["metadata_database"]["username"]
+        self.password: str = self.modyn_config["metadata_database"]["password"]
+        self.host: str = self.modyn_config["metadata_database"]["host"]
+        self.port: int = self.modyn_config["metadata_database"]["port"]
+        self.database: str = self.modyn_config["metadata_database"]["database"]
 
     def create_tables(self) -> None:
         """
@@ -111,13 +74,13 @@ class MetadataDatabaseConnection:
         """
         try:
             self.session.query(Metadata).filter(Metadata.training_id == training_id).delete()
-            self.session.query(Training).filter(Training.id == training_id).delete()
+            self.session.query(Training).filter(Training.training_id == training_id).delete()
             self.session.commit()
         except exc.SQLAlchemyError as exception:
             logger.error(f"Could not delete training: {exception}")
             self.session.rollback()
 
-    def register_training(self, number_of_workers: int, training_set_size: int) -> int:
+    def register_training(self, number_of_workers: int, training_set_size: int) -> Optional[int]:
         """Register training.
 
         Args:
@@ -131,13 +94,13 @@ class MetadataDatabaseConnection:
             training = Training(number_of_workers=number_of_workers, training_set_size=training_set_size)
             self.session.add(training)
             self.session.commit()
-            return training.id
+            return training.training_id
         except exc.SQLAlchemyError as exception:
             logger.error(f"Could not register training: {exception}")
             self.session.rollback()
-            return -1
+            return None
 
-    def get_training_information(self, training_id: int) -> Tuple[int, int]:
+    def get_training_information(self, training_id: int) -> Tuple[Optional[int], Optional[int]]:
         """Get training.
 
         Args:
@@ -147,11 +110,11 @@ class MetadataDatabaseConnection:
             Tuple[int, int]: number of workers, training set size
         """
         try:
-            training = self.session.query(Training).filter(Training.id == training_id).first()
+            training = self.session.query(Training).filter(Training.training_id == training_id).first()
             if training is None:
-                return -1, -1
+                return None, None
             return training.number_of_workers, training.training_set_size
         except exc.SQLAlchemyError as exception:
             logger.error(f"Could not get training: {exception}")
             self.session.rollback()
-            return -1, -1
+            return None, None

@@ -4,20 +4,17 @@ from __future__ import annotations
 
 import logging
 
+from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.storage_base import Base
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
-from sqlalchemy import create_engine, exc
-from sqlalchemy.engine import URL
-from sqlalchemy.engine.base import Engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.session import Session
+from sqlalchemy import exc
 
 logger = logging.getLogger(__name__)
 
 
-class StorageDatabaseConnection:
+class StorageDatabaseConnection(AbstractDatabaseConnection):
     """Database connection context manager."""
 
     def __init__(self, modyn_config: dict) -> None:
@@ -26,47 +23,13 @@ class StorageDatabaseConnection:
         Args:
             modyn_config (dict): Configuration of the modyn module.
         """
-        self.modyn_config = modyn_config
-        self.session: Session = None
-        self.engine: Engine = None
-        self.url = None
-
-    def __enter__(self) -> StorageDatabaseConnection:
-        """Create the engine and session.
-
-        Returns:
-            DatabaseConnection: DatabaseConnection.
-        """
-        self.url = URL.create(
-            drivername=self.modyn_config["storage"]["database"]["drivername"],
-            username=self.modyn_config["storage"]["database"]["username"],
-            password=self.modyn_config["storage"]["database"]["password"],
-            host=self.modyn_config["storage"]["database"]["host"],
-            port=self.modyn_config["storage"]["database"]["port"],
-            database=self.modyn_config["storage"]["database"]["database"],
-        )
-        self.engine = create_engine(self.url, echo=True)
-        self.session = sessionmaker(bind=self.engine)()
-        return self
-
-    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
-        """Close the session and dispose the engine.
-
-        Args:
-            exc_type (type): exception type
-            exc_val (Exception): exception value
-            exc_tb (Exception): exception traceback
-        """
-        self.session.close()
-        self.engine.dispose()
-
-    def get_session(self) -> Session:
-        """Get the session.
-
-        Returns:
-            Session: Session.
-        """
-        return self.session
+        super().__init__(modyn_config)
+        self.drivername: str = self.modyn_config["storage"]["database"]["drivername"]
+        self.username: str = self.modyn_config["storage"]["database"]["username"]
+        self.password: str = self.modyn_config["storage"]["database"]["password"]
+        self.host: str = self.modyn_config["storage"]["database"]["host"]
+        self.port: int = self.modyn_config["storage"]["database"]["port"]
+        self.database: str = self.modyn_config["storage"]["database"]["database"]
 
     def create_tables(self) -> None:
         """

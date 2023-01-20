@@ -31,10 +31,10 @@ def test_add_metadata(session):
         False,
         1,
         b"test_data",
-        training.id,
+        training.training_id,
     )
 
-    metadata.id = 1
+    metadata.metadata_id = 1
 
     session.add(metadata)
     session.commit()
@@ -59,10 +59,10 @@ def test_update_metadata(session):
         False,
         1,
         b"test_data",
-        training.id,
+        training.training_id,
     )
 
-    metadata.id = 1  # This is because SQLite does not support autoincrement for composite primary keys
+    metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 
     session.add(metadata)
     session.commit()
@@ -93,10 +93,10 @@ def test_delete_metadata(session):
         False,
         1,
         b"test_data",
-        training.id,
+        training.training_id,
     )
 
-    metadata.id = 1  # This is because SQLite does not support autoincrement for composite primary keys
+    metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 
     session.add(metadata)
     session.commit()
@@ -119,10 +119,10 @@ def test_repr_metadata(session):
         False,
         1,
         b"test_data",
-        training.id,
+        training.training_id,
     )
 
-    metadata.id = 1  # This is because SQLite does not support autoincrement for composite primary keys
+    metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 
     session.add(metadata)
     session.commit()

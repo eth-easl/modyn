@@ -83,7 +83,7 @@ def setup():
 
         database.create_tables()
 
-        session = database.get_session()
+        session = database.session
 
         dataset = Dataset(
             name="test",
@@ -305,7 +305,7 @@ def test_register_new_dataset():
     assert response.success
 
     with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
-        session = database.get_session()
+        session = database.session
 
         dataset = session.query(Dataset).filter(Dataset.name == "test3").first()
 

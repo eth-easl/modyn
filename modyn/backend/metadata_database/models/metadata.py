@@ -10,13 +10,17 @@ class Metadata(Base):
     """Metadata model."""
 
     __tablename__ = "metadata"
-    id = Column(Integer, primary_key=True)
-    key = Column(String(120), nullable=False, primary_key=True)
-    score = Column(Float, nullable=False)
-    seen = Column(Boolean, nullable=False)
-    label = Column(Integer, nullable=False)
-    data = Column(LargeBinary, nullable=False)
-    training_id = Column(Integer, ForeignKey("trainings.id"), nullable=False, primary_key=True)
+    metadata_id = Column(Integer, primary_key=True)
+    key = Column(String(120), nullable=False)
+    score = Column(Float, nullable=True)
+    seen = Column(Boolean, nullable=True)
+    label = Column(Integer, nullable=True)
+    data = Column(LargeBinary, nullable=True)
+    training_id = Column(
+        Integer,
+        ForeignKey("trainings.training_id"),
+        nullable=False,
+    )
     training = relationship("Training", backref=backref("metadata", lazy=True))
 
     def __repr__(self) -> str:

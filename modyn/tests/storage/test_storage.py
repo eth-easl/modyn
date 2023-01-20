@@ -57,6 +57,12 @@ def teardown():
     os.remove(database_path)
 
 
+def setup():
+    if database_path.exists():
+        os.remove(database_path)
+    os.makedirs(database_path.parent, exist_ok=True)
+
+
 def get_invalid_modyn_config() -> dict:
     return {"invalid": "invalid"}
 

@@ -1,5 +1,4 @@
 import numpy as np
-from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
@@ -32,11 +31,7 @@ class GDumbStrategy(AbstractSelectionStrategy):
         return [(sample, 1.0) for sample in result_samples]
 
     def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[int]]:
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            all_metadata = (
-                database.get_session()
-                .query(Metadata.key, Metadata.label)
-                .filter(Metadata.training_id == training_id)
-                .all()
-            )
-            return ([metadata.key for metadata in all_metadata], [metadata.label for metadata in all_metadata])
+        all_metadata = (
+            self.database.session.query(Metadata.key, Metadata.label).filter(Metadata.training_id == training_id).all()
+        )
+        return ([metadata.key for metadata in all_metadata], [metadata.label for metadata in all_metadata])
