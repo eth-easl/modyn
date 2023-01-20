@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 from modyn.trainer_server.trainer_server import TrainerServer
 
-
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 EXAMPLE_SYSTEM_CONFIG = SCRIPT_PATH.parent.parent.parent / "config" / "examples" / "modyn_config.yaml"
