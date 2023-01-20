@@ -155,4 +155,5 @@ def train(
         trainer.train(log_path, load_checkpoint_path)
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
+        logger.error(exception_msg)
         exception_queue.put(exception_msg)

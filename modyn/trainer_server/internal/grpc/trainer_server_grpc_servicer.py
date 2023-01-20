@@ -182,7 +182,7 @@ class TrainerServerGRPCServicer:
                 buffer.seek(0)
                 state_bytes = buffer.read()
                 return state_bytes, num_batches, num_samples
-            except Exception:  # pylint: disable=broad-except
+            except Exception as exception:  # pylint: disable=broad-except
                 # checkpoint corrupted
-                pass
+                logger.error(exception)
         return None, None, None

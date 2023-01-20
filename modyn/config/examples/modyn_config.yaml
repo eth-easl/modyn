@@ -58,3 +58,7 @@ selector:
     database: "postgres"
     user: "postgres"
     password: "postgres"
+
+trainer_server:
+  hostname: "trainer_server"
+  port: "5001"
