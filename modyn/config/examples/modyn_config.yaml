@@ -50,3 +50,7 @@ selector:
   port: "50056"
   package: "score_selector"
   class: "ScoreSelector"
+
+trainer_server:
+  hostname: "trainer_server"
+  port: "5001"

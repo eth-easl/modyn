@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: default_database
     volumes:
-      - ./metadata-postgres-data:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql/data
   storage-db:
     image: postgres:14.1-alpine
     restart: always
@@ -32,11 +32,18 @@ services:
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
+  trainer_server:
+    restart: on-failure
+    depends_on:
+      - storage
+    build:
+      context: .
+      dockerfile: docker/Trainer_Server/Dockerfile
   tests:
     depends_on:
       - modynbase
       - storage
-      - metadata-db
+      - db
       - storage-db
     build:
       context: .

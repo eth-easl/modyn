@@ -1,5 +1,5 @@
-"""Models.
-
+"""
+ResNet18
 """
 import os
 
