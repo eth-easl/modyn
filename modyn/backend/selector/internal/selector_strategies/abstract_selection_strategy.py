@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 
 
 class AbstractSelectionStrategy(ABC):
@@ -14,13 +14,15 @@ class AbstractSelectionStrategy(ABC):
 
     Args:
         config (dict): the configurations for the selector
-        grpc (GRPCHandler): the GRPC handler used for calls to metadata database.
+        modyn_config (dict): the configurations for the modyn backend
     """
 
-    def __init__(self, config: dict, grpc: GRPCHandler):
+    def __init__(self, config: dict, modyn_config: dict):
         self._config = config
-        self._grpc = grpc
         self.training_set_size_limit: int = config["limit"]
+        self._modyn_config = modyn_config
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            self.database = database
 
     @abstractmethod
     def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:

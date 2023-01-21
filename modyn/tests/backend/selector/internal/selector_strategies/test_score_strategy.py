@@ -1,39 +1,69 @@
 # pylint: disable=no-value-for-parameter
+import os
+import pathlib
 from collections import Counter
 from unittest.mock import patch
 
 import numpy as np
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models.metadata import Metadata
+from modyn.backend.metadata_database.models.training import Training
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.internal.selector_strategies.score_strategy import ScoreStrategy
 
+database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
-class MockGRPCHandler:
-    def __init__(self, metadata_response):
-        self.metadata_response = metadata_response
 
-    def register_training(self, training_set_size, num_workers):  # pylint: disable=unused-argument
-        return 5
-
-    def get_samples_by_metadata_query(self, query):  # pylint: disable=unused-argument
-        return self.metadata_response
-
-    def get_info_for_training(self, training_id):  # pylint: disable=unused-argument
-        return 3
+def get_minimal_modyn_config():
+    return {
+        "metadata_database": {
+            "drivername": "sqlite",
+            "username": "",
+            "password": "",
+            "host": "",
+            "port": "0",
+            "database": f"{database_path}",
+        },
+    }
 
 
 def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
-    pass
+    self._modyn_config = get_minimal_modyn_config()
+    with MetadataDatabaseConnection(self._modyn_config) as database:
+        self.database = database
+
+
+def setup():
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.create_tables()
+
+        trainig = Training(1)
+        database.session.add(trainig)
+        database.session.commit()
+
+        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.training_id)
+
+        metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
+        database.session.add(metadata)
+
+        metadata2 = Metadata("test_key2", 0.75, True, 1, b"test_data", trainig.training_id)
+
+        metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary keys
+        database.session.add(metadata2)
+
+        database.session.commit()
+
+
+def teardown():
+    os.remove(database_path)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(ScoreStrategy, "__init__", noop_constructor_mock)
 def test_score_selector_get_metadata():
-    test_metadata_response = ["a", "b"], [-1.5, 2.4], [0, 0], [0, 4], ["a", "b"]
+    selector = ScoreStrategy(None)
 
-    selector = ScoreStrategy(None)  # pylint: disable=abstract-class-instantiated
-    selector._grpc = MockGRPCHandler(test_metadata_response)
-
-    assert selector._get_all_metadata(0) == (["a", "b"], [-1.5, 2.4])
+    assert selector._get_all_metadata(1) == (["test_key", "test_key2"], [0.5, 0.75])
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -45,7 +75,7 @@ def test_score_selector_normal_mode(test__get_all_metadata):
 
     test__get_all_metadata.return_value = all_samples, all_scores
 
-    selector = ScoreStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = ScoreStrategy(None)
     selector._set_is_softmax_mode(False)
     selector.training_set_size_limit = 4
 
@@ -68,7 +98,7 @@ def test_score_selector_softmax_mode(test__get_all_metadata):
 
     test__get_all_metadata.return_value = all_samples, all_scores
 
-    selector = ScoreStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = ScoreStrategy(None)
     selector._set_is_softmax_mode(True)
     selector.training_set_size_limit = 4
 

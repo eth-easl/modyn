@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
-  db:
+  metadata-db:
     image: postgres:14.1-alpine
     restart: always
     environment:
@@ -43,7 +43,7 @@ services:
     depends_on:
       - modynbase
       - storage
-      - db
+      - metadata-db
       - storage-db
     build:
       context: .
