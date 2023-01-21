@@ -85,7 +85,7 @@ properties:
           reference:
             type: string
             description: |
-              If we do an initial pass, we define whether we reference a certain percentage of all data (= amount) or all data newer than a timestamp (= timestamp)
+              If we do an initial pass, we define whether we reference a certain percentage of all data (= amount) or all data in an interval (= start_timestamp, end_timestamp)
         required:
           - activated
     required:
