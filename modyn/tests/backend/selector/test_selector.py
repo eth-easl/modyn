@@ -121,21 +121,6 @@ def test_get_sample_keys(test__get_training_set):
         selector.get_sample_keys_and_weight(0, 10)
 
 
-# @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-# @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
-# @patch.object(Selector, "__init__", noop_constructor_mock)
-# def test_register_training():
-#     selector = Selector()
-#     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
-#     selector._strategy = strategy
-
-#     assert selector.register_training(1) == 2
-#     with pytest.raises(Exception):
-#         selector.register_training(0)
-#     with pytest.raises(Exception):
-#         selector.register_training(-1)
-
-
 @patch.object(Selector, "__init__", noop_constructor_mock)
 def test_select_new_training_samples_caching():
     samples_1 = [("a", 1.0), ("b", 1.0)]
