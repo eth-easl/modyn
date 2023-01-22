@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0eselector.proto\x12\x08selector\"\x07\n\x05\x45mpty\"J\n\x11\x44\x61taInformRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\t\x12\x12\n\ntimestamps\x18\x03 \x03(\x03\"%\n\x0fTriggerResponse\x12\x12\n\ntrigger_id\x18\x01 \x01(\x05\".\n\x17RegisterTrainingRequest\x12\x13\n\x0bnum_workers\x18\x01 \x01(\x05\"\'\n\x10PipelineResponse\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"X\n\x11GetSamplesRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x1b\n\x13training_set_number\x18\x02 \x01(\x05\x12\x11\n\tworker_id\x18\x03 \x01(\x05\"S\n\x0fSamplesResponse\x12\x1f\n\x17training_samples_subset\x18\x01 \x03(\t\x12\x1f\n\x17training_samples_weight\x18\x02 \x03(\x02\x32\xc1\x02\n\x08Selector\x12T\n\x11register_pipeline\x12!.selector.RegisterTrainingRequest\x1a\x1a.selector.PipelineResponse\"\x00\x12K\n\x0fget_sample_keys\x12\x1b.selector.GetSamplesRequest\x1a\x19.selector.SamplesResponse\"\x00\x12=\n\x0binform_data\x12\x1b.selector.DataInformRequest\x1a\x0f.selector.Empty\"\x00\x12S\n\x17inform_data_and_trigger\x12\x1b.selector.DataInformRequest\x1a\x19.selector.TriggerResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0eselector.proto\x12\x08selector\"\x07\n\x05\x45mpty\"J\n\x11\x44\x61taInformRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\t\x12\x12\n\ntimestamps\x18\x03 \x03(\x03\"%\n\x0fTriggerResponse\x12\x12\n\ntrigger_id\x18\x01 \x01(\x05\".\n\x17RegisterTrainingRequest\x12\x13\n\x0bnum_workers\x18\x01 \x01(\x05\"\'\n\x10PipelineResponse\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"O\n\x11GetSamplesRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\x12\x11\n\tworker_id\x18\x03 \x01(\x05\"S\n\x0fSamplesResponse\x12\x1f\n\x17training_samples_subset\x18\x01 \x03(\t\x12\x1f\n\x17training_samples_weight\x18\x02 \x03(\x02\x32\xc1\x02\n\x08Selector\x12T\n\x11register_pipeline\x12!.selector.RegisterTrainingRequest\x1a\x1a.selector.PipelineResponse\"\x00\x12K\n\x0fget_sample_keys\x12\x1b.selector.GetSamplesRequest\x1a\x19.selector.SamplesResponse\"\x00\x12=\n\x0binform_data\x12\x1b.selector.DataInformRequest\x1a\x0f.selector.Empty\"\x00\x12S\n\x17inform_data_and_trigger\x12\x1b.selector.DataInformRequest\x1a\x19.selector.TriggerResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'selector_pb2', globals())
@@ -32,9 +32,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _PIPELINERESPONSE._serialized_start=200
   _PIPELINERESPONSE._serialized_end=239
   _GETSAMPLESREQUEST._serialized_start=241
-  _GETSAMPLESREQUEST._serialized_end=329
-  _SAMPLESRESPONSE._serialized_start=331
-  _SAMPLESRESPONSE._serialized_end=414
-  _SELECTOR._serialized_start=417
-  _SELECTOR._serialized_end=738
+  _GETSAMPLESREQUEST._serialized_end=320
+  _SAMPLESRESPONSE._serialized_start=322
+  _SAMPLESRESPONSE._serialized_end=405
+  _SELECTOR._serialized_start=408
+  _SELECTOR._serialized_end=729
 # @@protoc_insertion_point(module_scope)

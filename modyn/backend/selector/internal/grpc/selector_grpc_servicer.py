@@ -34,7 +34,7 @@ class SelectorGRPCServicer(SelectorServicer):
     ) -> SamplesResponse:
         logger.info(f"Fetching samples for request - {str(request)}")
         samples = self.selector_manager.get_sample_keys_and_weight(
-            request.pipeline_id, request.training_set_number, request.worker_id
+            request.pipeline_id, request.trigger_id, request.worker_id
         )
         samples_keys = [sample[0] for sample in samples]
         samples_weights = [sample[1] for sample in samples]
