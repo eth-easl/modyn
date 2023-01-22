@@ -39,3 +39,11 @@ class GDumbStrategy(AbstractSelectionStrategy):
             self.database.session.query(Metadata.key, Metadata.label).filter(Metadata.training_id == training_id).all()
         )
         return ([metadata.key for metadata in all_metadata], [metadata.label for metadata in all_metadata])
+
+    def trigger(self) -> None:
+        # No work to do for GDumb
+        pass
+
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
+        # TODO(#110): This set_metadata call needs to include the labels, which we don't have.
+        self.database.set_metadata(keys, timestamps, None, [False] * len(keys), None, None, pipeline_id)

@@ -27,6 +27,7 @@ def test_add_metadata(session):
 
     metadata = Metadata(
         "test_key",
+        100,
         0.5,
         False,
         1,
@@ -55,6 +56,7 @@ def test_update_metadata(session):
 
     metadata = Metadata(
         "test_key",
+        100,
         0.5,
         False,
         1,
@@ -89,6 +91,7 @@ def test_delete_metadata(session):
 
     metadata = Metadata(
         "test_key",
+        100,
         0.5,
         False,
         1,
@@ -115,6 +118,7 @@ def test_repr_metadata(session):
 
     metadata = Metadata(
         "test_key",
+        100,
         0.5,
         False,
         1,

@@ -9,7 +9,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import (  
     add_SelectorServicer_to_server,
 )
 from modyn.backend.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
-from modyn.backend.selector.selector import Selector
+from modyn.backend.selector.internal.selector_manager import SelectorManager
 from modyn.utils import validate_yaml
 
 logger = logging.getLogger(__name__)
@@ -24,8 +24,8 @@ class SelectorServer:
         if not valid:
             raise ValueError(f"Invalid configuration: {errors}")
 
-        self.selector = Selector(modyn_config, pipeline_config)
-        self.grpc_server = SelectorGRPCServicer(self.selector)
+        self.selector_manager = SelectorManager(modyn_config, pipeline_config)
+        self.grpc_server = SelectorGRPCServicer(self.selector_manager)
 
     def _validate_pipeline(self) -> Tuple[bool, List[str]]:
         schema_path = (

@@ -3,20 +3,36 @@ syntax = "proto3";
 package selector;
 
 service Selector {
-    rpc register_training(RegisterTrainingRequest) returns (TrainingResponse) {}
+    rpc register_pipeline(RegisterTrainingRequest) returns (PipelineResponse) {}
     rpc get_sample_keys(GetSamplesRequest) returns (SamplesResponse) {}
+    rpc inform_data(DataInformRequest) returns (Empty) {}
+    rpc inform_data_and_trigger(DataInformRequest) returns (TriggerResponse) {}
+}
+
+message Empty {
+
+}
+
+message DataInformRequest {
+    int32 pipeline_id = 1;
+    repeated string keys = 2;
+    repeated int64 timestamps = 3;
+}
+
+message TriggerResponse {
+    int32 trigger_id = 1;
 }
 
 message RegisterTrainingRequest {
     int32 num_workers = 1;
 }
 
-message TrainingResponse {
-    int32 training_id = 1;
+message PipelineResponse {
+    int32 pipeline_id = 1;
 }
 
 message GetSamplesRequest {
-    int32 training_id = 1;
+    int32 pipeline_id = 1;
     int32 training_set_number = 2;
     int32 worker_id = 3;
 }

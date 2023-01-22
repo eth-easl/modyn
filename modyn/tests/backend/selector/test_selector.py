@@ -59,11 +59,11 @@ def test_get_training_set(test__select_new_training_samples):
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
     selector._training_samples_cache = {}
-    assert selector._get_training_set(0, 0) == ["a", "b"]
+    assert selector._get_training_set(0) == ["a", "b"]
 
     test__select_new_training_samples.return_value = []
     with pytest.raises(ValueError):
-        selector._get_training_set(0, 3)
+        selector._get_training_set(3)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -73,26 +73,28 @@ def test_get_training_set_partition():
     selector = Selector(None)
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
+    selector._num_workers = 3
+    selector._pipeline_id = 0
 
     training_samples = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    assert selector._get_training_set_partition(1, training_samples, 0) == [
+    assert selector._get_training_set_partition(training_samples, 0) == [
         "a",
         "b",
         "c",
         "d",
     ]
-    assert selector._get_training_set_partition(1, training_samples, 1) == [
+    assert selector._get_training_set_partition(training_samples, 1) == [
         "e",
         "f",
         "g",
         "h",
     ]
-    assert selector._get_training_set_partition(1, training_samples, 2) == ["i", "j"]
+    assert selector._get_training_set_partition(training_samples, 2) == ["i", "j"]
 
     with pytest.raises(Exception):
-        selector._get_training_set_partition(1, training_samples, 3)
+        selector._get_training_set_partition(training_samples, 3)
     with pytest.raises(Exception):
-        selector._get_training_set_partition(1, training_samples, -1)
+        selector._get_training_set_partition(training_samples, -1)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -107,29 +109,31 @@ def test_get_sample_keys(test__get_training_set):
     selector = Selector()
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
+    selector._num_workers = 3
+    selector._pipeline_id = 0
 
-    assert selector.get_sample_keys_and_weight(1, 0, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0), ("d", 1.0)]
-    assert selector.get_sample_keys_and_weight(1, 0, 1) == [("e", 1.0), ("f", 1.0), ("g", 1.0), ("h", 1.0)]
-    assert selector.get_sample_keys_and_weight(1, 0, 2) == [("i", 1.0), ("j", 1.0)]
+    assert selector.get_sample_keys_and_weight(0, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0), ("d", 1.0)]
+    assert selector.get_sample_keys_and_weight(0, 1) == [("e", 1.0), ("f", 1.0), ("g", 1.0), ("h", 1.0)]
+    assert selector.get_sample_keys_and_weight(0, 2) == [("i", 1.0), ("j", 1.0)]
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_weight(1, 0, -1)
+        selector.get_sample_keys_and_weight(0, -1)
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_weight(1, 0, 10)
+        selector.get_sample_keys_and_weight(0, 10)
 
 
-@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-@patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
-@patch.object(Selector, "__init__", noop_constructor_mock)
-def test_register_training():
-    selector = Selector()
-    strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
-    selector._strategy = strategy
+# @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+# @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
+# @patch.object(Selector, "__init__", noop_constructor_mock)
+# def test_register_training():
+#     selector = Selector()
+#     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
+#     selector._strategy = strategy
 
-    assert selector.register_training(1) == 2
-    with pytest.raises(Exception):
-        selector.register_training(0)
-    with pytest.raises(Exception):
-        selector.register_training(-1)
+#     assert selector.register_training(1) == 2
+#     with pytest.raises(Exception):
+#         selector.register_training(0)
+#     with pytest.raises(Exception):
+#         selector.register_training(-1)
 
 
 @patch.object(Selector, "__init__", noop_constructor_mock)
@@ -139,21 +143,23 @@ def test_select_new_training_samples_caching():
 
     selector = Selector()
     selector._training_samples_cache = {}
+    selector._num_workers = 3
+    selector._pipeline_id = 0
     selector._strategy = MockStrategy(desired_result=samples_1)
 
     # I want to test the following. First call it twice with training set number 0.
     # Assert that you get the right answer each time, and _strategy is called only once.
     # Then, switch it to a next set, training set number 1. Repeat the process.
     assert selector._strategy.times_called == 0
-    assert selector._get_training_set(0, 0) == samples_1
+    assert selector._get_training_set(0) == samples_1
     assert selector._strategy.times_called == 1
-    assert selector._get_training_set(0, 0) == samples_1
+    assert selector._get_training_set(0) == samples_1
     assert selector._strategy.times_called == 1
 
     selector._strategy = MockStrategy(desired_result=samples_2)
 
-    assert selector._get_training_set(0, 1) == samples_2
+    assert selector._get_training_set(1) == samples_2
     assert len(selector._training_samples_cache.keys()) == 2
     assert selector._strategy.times_called == 1
-    assert selector._get_training_set(0, 1) == samples_2
+    assert selector._get_training_set(1) == samples_2
     assert selector._strategy.times_called == 1

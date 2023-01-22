@@ -13,22 +13,32 @@ class SelectorStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.register_training = channel.unary_unary(
-                '/selector.Selector/register_training',
+        self.register_pipeline = channel.unary_unary(
+                '/selector.Selector/register_pipeline',
                 request_serializer=selector__pb2.RegisterTrainingRequest.SerializeToString,
-                response_deserializer=selector__pb2.TrainingResponse.FromString,
+                response_deserializer=selector__pb2.PipelineResponse.FromString,
                 )
         self.get_sample_keys = channel.unary_unary(
                 '/selector.Selector/get_sample_keys',
                 request_serializer=selector__pb2.GetSamplesRequest.SerializeToString,
                 response_deserializer=selector__pb2.SamplesResponse.FromString,
                 )
+        self.inform_data = channel.unary_unary(
+                '/selector.Selector/inform_data',
+                request_serializer=selector__pb2.DataInformRequest.SerializeToString,
+                response_deserializer=selector__pb2.Empty.FromString,
+                )
+        self.inform_data_and_trigger = channel.unary_unary(
+                '/selector.Selector/inform_data_and_trigger',
+                request_serializer=selector__pb2.DataInformRequest.SerializeToString,
+                response_deserializer=selector__pb2.TriggerResponse.FromString,
+                )
 
 
 class SelectorServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def register_training(self, request, context):
+    def register_pipeline(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -40,18 +50,40 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def inform_data(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def inform_data_and_trigger(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SelectorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'register_training': grpc.unary_unary_rpc_method_handler(
-                    servicer.register_training,
+            'register_pipeline': grpc.unary_unary_rpc_method_handler(
+                    servicer.register_pipeline,
                     request_deserializer=selector__pb2.RegisterTrainingRequest.FromString,
-                    response_serializer=selector__pb2.TrainingResponse.SerializeToString,
+                    response_serializer=selector__pb2.PipelineResponse.SerializeToString,
             ),
             'get_sample_keys': grpc.unary_unary_rpc_method_handler(
                     servicer.get_sample_keys,
                     request_deserializer=selector__pb2.GetSamplesRequest.FromString,
                     response_serializer=selector__pb2.SamplesResponse.SerializeToString,
+            ),
+            'inform_data': grpc.unary_unary_rpc_method_handler(
+                    servicer.inform_data,
+                    request_deserializer=selector__pb2.DataInformRequest.FromString,
+                    response_serializer=selector__pb2.Empty.SerializeToString,
+            ),
+            'inform_data_and_trigger': grpc.unary_unary_rpc_method_handler(
+                    servicer.inform_data_and_trigger,
+                    request_deserializer=selector__pb2.DataInformRequest.FromString,
+                    response_serializer=selector__pb2.TriggerResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -64,7 +96,7 @@ class Selector(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def register_training(request,
+    def register_pipeline(request,
             target,
             options=(),
             channel_credentials=None,
@@ -74,9 +106,9 @@ class Selector(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/selector.Selector/register_training',
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/register_pipeline',
             selector__pb2.RegisterTrainingRequest.SerializeToString,
-            selector__pb2.TrainingResponse.FromString,
+            selector__pb2.PipelineResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -94,5 +126,39 @@ class Selector(object):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_sample_keys',
             selector__pb2.GetSamplesRequest.SerializeToString,
             selector__pb2.SamplesResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def inform_data(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/inform_data',
+            selector__pb2.DataInformRequest.SerializeToString,
+            selector__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def inform_data_and_trigger(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/inform_data_and_trigger',
+            selector__pb2.DataInformRequest.SerializeToString,
+            selector__pb2.TriggerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

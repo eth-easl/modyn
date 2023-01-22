@@ -12,6 +12,7 @@ class Metadata(Base):
     __tablename__ = "metadata"
     metadata_id = Column(Integer, primary_key=True)
     key = Column(String(120), nullable=False)
+    timestamp = Column(Integer, nullable=False)
     score = Column(Float, nullable=True)
     seen = Column(Boolean, nullable=True)
     label = Column(Integer, nullable=True)
@@ -27,7 +28,7 @@ class Metadata(Base):
         """Return string representation."""
         return f"<Metadata {self.key}>"
 
-    def __init__(self, key: str, score: float, seen: bool, label: int, data: bytes, training_id: int):
+    def __init__(self, key: str, timestamp: int, score: float, seen: bool, label: int, data: bytes, training_id: int):
         """Init metadata.
         Args:
             key (str): key
@@ -38,6 +39,7 @@ class Metadata(Base):
             training (Training): training reference
         """
         self.key = key
+        self.timestamp = timestamp
         self.score = score
         self.seen = seen
         self.label = label

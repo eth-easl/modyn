@@ -8,15 +8,35 @@ from google.protobuf.internal import containers as _containers
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class DataInformRequest(_message.Message):
+    __slots__ = ["keys", "pipeline_id", "timestamps"]
+    KEYS_FIELD_NUMBER: _ClassVar[int]
+    PIPELINE_ID_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMPS_FIELD_NUMBER: _ClassVar[int]
+    keys: _containers.RepeatedScalarFieldContainer[str]
+    pipeline_id: int
+    timestamps: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, pipeline_id: _Optional[int] = ..., keys: _Optional[_Iterable[str]] = ..., timestamps: _Optional[_Iterable[int]] = ...) -> None: ...
+
+class Empty(_message.Message):
+    __slots__ = []
+    def __init__(self) -> None: ...
+
 class GetSamplesRequest(_message.Message):
-    __slots__ = ["training_id", "training_set_number", "worker_id"]
-    TRAINING_ID_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ["pipeline_id", "training_set_number", "worker_id"]
+    PIPELINE_ID_FIELD_NUMBER: _ClassVar[int]
     TRAINING_SET_NUMBER_FIELD_NUMBER: _ClassVar[int]
     WORKER_ID_FIELD_NUMBER: _ClassVar[int]
-    training_id: int
+    pipeline_id: int
     training_set_number: int
     worker_id: int
-    def __init__(self, training_id: _Optional[int] = ..., training_set_number: _Optional[int] = ..., worker_id: _Optional[int] = ...) -> None: ...
+    def __init__(self, pipeline_id: _Optional[int] = ..., training_set_number: _Optional[int] = ..., worker_id: _Optional[int] = ...) -> None: ...
+
+class PipelineResponse(_message.Message):
+    __slots__ = ["pipeline_id"]
+    PIPELINE_ID_FIELD_NUMBER: _ClassVar[int]
+    pipeline_id: int
+    def __init__(self, pipeline_id: _Optional[int] = ...) -> None: ...
 
 class RegisterTrainingRequest(_message.Message):
     __slots__ = ["num_workers"]
@@ -32,8 +52,8 @@ class SamplesResponse(_message.Message):
     training_samples_weight: _containers.RepeatedScalarFieldContainer[float]
     def __init__(self, training_samples_subset: _Optional[_Iterable[str]] = ..., training_samples_weight: _Optional[_Iterable[float]] = ...) -> None: ...
 
-class TrainingResponse(_message.Message):
-    __slots__ = ["training_id"]
-    TRAINING_ID_FIELD_NUMBER: _ClassVar[int]
-    training_id: int
-    def __init__(self, training_id: _Optional[int] = ...) -> None: ...
+class TriggerResponse(_message.Message):
+    __slots__ = ["trigger_id"]
+    TRIGGER_ID_FIELD_NUMBER: _ClassVar[int]
+    trigger_id: int
+    def __init__(self, trigger_id: _Optional[int] = ...) -> None: ...
