@@ -53,5 +53,11 @@ class ScoreStrategy(AbstractSelectionStrategy):
 
     def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[float]]:
         all_metadata = self.database.session.query(Metadata).filter(Metadata.training_id == training_id).all()
-
         return ([metadata.key for metadata in all_metadata], [metadata.score for metadata in all_metadata])
+
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
+        self.database.set_metadata(keys, timestamps, [1.0] * len(keys), [False] * len(keys), None, None, pipeline_id)
+
+    def trigger(self) -> None:
+        # For score strategy, no work to do.
+        pass

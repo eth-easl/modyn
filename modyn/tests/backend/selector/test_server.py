@@ -9,7 +9,6 @@ import pytest
 import yaml
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
-from modyn.backend.metadata_database.models.training import Training
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest  # noqa: E402, E501, E611
 from modyn.backend.selector.selector_entrypoint import main
 from modyn.backend.selector.selector_server import SelectorServer
@@ -38,16 +37,15 @@ def setup():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
 
-        training = Training(1)
-        database.session.add(training)
-        database.session.commit()
 
-        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", training.training_id)
+def populate_metadata_database(pipeline_id):
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", 1)
 
         metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata)
 
-        metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", training.training_id)
+        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", 1)
 
         metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary key
         database.session.add(metadata2)
@@ -65,13 +63,13 @@ def test_prepare_training_set():
 
     selector_server = SelectorServer(pipeline_cfg, get_minimal_modyn_config())
     servicer = selector_server.grpc_server
-    selector_server.selector._strategy.training_set_size_limit = 8
-
-    assert selector_server.selector.register_training(num_workers=1) == 2
+    pipeline_id = servicer.selector_manager.register_training(num_workers=1)
+    servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
+    populate_metadata_database(pipeline_id)
 
     assert set(
         servicer.get_sample_keys_and_weight(
-            GetSamplesRequest(training_id=1, training_set_number=0, worker_id=0), None
+            GetSamplesRequest(pipeline_id=pipeline_id, training_set_number=0, worker_id=0), None
         ).training_samples_subset
     ) == set(["test_key"])
 

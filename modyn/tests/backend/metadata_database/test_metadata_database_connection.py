@@ -29,7 +29,7 @@ def test_set_metadata():
         database.session.add(training)
         database.session.commit()
 
-        database.set_metadata(["test:key:set"], [0.5], [False], [1], [b"test:data"], training.training_id)
+        database.set_metadata(["test:key:set"], [100], [0.5], [False], [1], [b"test:data"], training.training_id)
 
         metadata = database.session.query(Metadata).all()
         assert len(metadata) == 1

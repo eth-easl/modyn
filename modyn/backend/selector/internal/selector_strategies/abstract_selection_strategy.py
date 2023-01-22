@@ -34,3 +34,22 @@ class AbstractSelectionStrategy(ABC):
                 is the key, and the second element is the associated weight.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
+        """Informs the strategy of new data.
+
+        Args:
+            pipeline_id (int): The pipeline that the data is associated with
+            keys (list[str]): A list of keys of the data
+            timestamps (list[int]): A list of timestamps of the data.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def trigger(self) -> None:
+        """
+        Causes the strategy to carry out any work needed to be prepared to return training sets.
+        For most basic strategies, this will be no operation.
+        """
+        raise NotImplementedError

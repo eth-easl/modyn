@@ -46,6 +46,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
     def set_metadata(
         self,
         keys: list[str],
+        timestamps: list[int],
         scores: list[float],
         seens: list[bool],
         labels: list[int],
@@ -57,7 +58,13 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
                 if self.session.query(Metadata).filter(Metadata.key == key).first() is not None:
                     self.session.query(Metadata).filter(Metadata.key == key).delete()
                 metadata = Metadata(
-                    key=key, score=scores[i], seen=seens[i], label=labels[i], data=datas[i], training_id=training_id
+                    key=key,
+                    timestamp=timestamps[i],
+                    score=scores[i],
+                    seen=seens[i],
+                    label=labels[i],
+                    data=datas[i],
+                    training_id=training_id,
                 )
                 self.session.add(metadata)
                 self.session.commit()
