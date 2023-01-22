@@ -9,7 +9,7 @@ import pytest
 import yaml
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest  # noqa: E402, E501, E611
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest, DataInformRequest  # noqa: E402, E501, E611
 from modyn.backend.selector.selector_entrypoint import main
 from modyn.backend.selector.selector_server import SelectorServer
 
@@ -73,6 +73,31 @@ def test_prepare_training_set():
         ).training_samples_subset
     ) == set(["test_key"])
 
+
+def test_full_cycle():
+    with open("modyn/config/examples/example-pipeline.yaml", "r", encoding="utf-8") as pipeline_file:
+        pipeline_cfg = yaml.safe_load(pipeline_file)
+
+    selector_server = SelectorServer(pipeline_cfg, get_minimal_modyn_config())
+    servicer = selector_server.grpc_server
+    pipeline_id = servicer.selector_manager.register_training(num_workers=1)
+    servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
+
+    data_keys_1 = ["test_key_1", "test_key_2"]
+    data_timestamps_1 = [0, 1]
+    data_keys_2 = ["test_key_3", "test_key_4"]
+    data_timestamps_2 = [2, 3]
+    servicer.inform_data(DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_1, timestamps=data_timestamps_1), None)
+    trigger_response = servicer.inform_data_and_trigger(DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_2, timestamps=data_timestamps_2), None)
+    trigger_id = trigger_response.trigger_id
+
+    worker_0_samples = servicer.get_sample_keys_and_weight(
+            GetSamplesRequest(pipeline_id=pipeline_id, training_set_number=trigger_id, worker_id=0), None
+        ).training_samples_subset
+    
+    print(worker_0_samples)
+
+    assert set(worker_0_samples) == set(["test_key_1", "test_key_2", "test_key_3", "test_key_4"])
 
 class DummyServer:
     def __init__(self, arg):
