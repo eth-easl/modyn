@@ -101,7 +101,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             logger.warning("No label file extension defined.")
             return None
         label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
-        label = self.filesystem_wrapper.get(label_path)
+        label = self.filesystem_wrapper.get(str(label_path))
         if label is not None:
             label = label.decode("utf-8")
             return int(label)

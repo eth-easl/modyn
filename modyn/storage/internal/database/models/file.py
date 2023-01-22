@@ -2,7 +2,7 @@
 
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.storage_base import Base
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, BigInteger
 from sqlalchemy.orm import backref, relationship
 
 
@@ -10,12 +10,12 @@ class File(Base):
     """File model."""
 
     __tablename__ = "files"
-    file_id = Column(Integer, primary_key=True)
+    file_id = Column(BigInteger, primary_key=True)
     dataset_id = Column(Integer, ForeignKey("datasets.dataset_id"), nullable=False)
     dataset = relationship("Dataset", backref=backref("files", lazy=True))
     path = Column(String(120), unique=False, nullable=False)
-    created_at = Column(Integer, nullable=False)
-    updated_at = Column(Integer, nullable=False)
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
     number_of_samples = Column(Integer, nullable=False)
 
     def __repr__(self) -> str:

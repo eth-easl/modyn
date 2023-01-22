@@ -3,6 +3,8 @@
 import logging
 import time
 import uuid
+import json
+import pathlib
 from typing import Any, Optional
 
 from modyn.storage.internal.database.models.dataset import Dataset
@@ -56,7 +58,6 @@ class NewFileWatcher:
 
         if filesystem_wrapper.exists(dataset.base_path):
             if filesystem_wrapper.isdir(dataset.base_path):
-                print(f"Path {dataset.base_path} is a directory.")
                 self._update_files_in_directory(
                     filesystem_wrapper, dataset.file_wrapper_type, dataset.base_path, timestamp, session, dataset
                 )
@@ -92,7 +93,10 @@ class NewFileWatcher:
         if not filesystem_wrapper.isdir(path):
             logger.critical(f"Path {path} is not a directory.")
             return
+        data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
         for file_path in filesystem_wrapper.list(path, recursive=True):
+            if pathlib.Path(file_path).suffix != data_file_extension:
+                continue
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
@@ -127,7 +131,7 @@ class NewFileWatcher:
     def run(self) -> None:
         """Run the dataset watcher."""
         logger.info("Starting dataset watcher.")
-        while self._last_timestamp >= -1 and not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
+        while not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
             time.sleep(self.modyn_config["storage"]["new_file_watcher"]["interval"])
             self._seek(self._last_timestamp)
             self._last_timestamp = current_time_millis()

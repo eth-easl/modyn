@@ -3,7 +3,7 @@
 from typing import Optional
 
 from modyn.storage.internal.database.storage_base import Base
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, BigInteger
 from sqlalchemy.orm import backref, relationship
 
 
@@ -15,8 +15,8 @@ class Sample(Base):
     file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False)
     file = relationship("File", backref=backref("samples", lazy=True))
     external_key = Column(String(120), unique=True, nullable=False)
-    index = Column(Integer, nullable=False)
-    label = Column(Integer, nullable=True)
+    index = Column(BigInteger, nullable=False)
+    label = Column(BigInteger, nullable=True)
 
     def __repr__(self) -> str:
         """Return string representation."""

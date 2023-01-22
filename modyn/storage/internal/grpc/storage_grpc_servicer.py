@@ -143,7 +143,7 @@ class StorageGRPCServicer(StorageServicer):
         """Get all data in the given interval.
 
         Returns:
-            GetDataInIntervalResponse: A response containing all external keys in the given interval.
+            GetDataInIntervalResponse: A response containing all external keys in the given interval inclusive.
         """
         with StorageDatabaseConnection(self.modyn_config) as database:
             session = database.session
