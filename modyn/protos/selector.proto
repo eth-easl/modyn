@@ -33,7 +33,7 @@ message PipelineResponse {
 
 message GetSamplesRequest {
     int32 pipeline_id = 1;
-    int32 training_set_number = 2;
+    int32 trigger_id = 2;
     int32 worker_id = 3;
 }
 

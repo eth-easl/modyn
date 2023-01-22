@@ -51,7 +51,15 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         return unseen_data_ratio
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
-        self.database.set_metadata(keys, timestamps, [None]*len(keys), [False] * len(keys), [None]*len(keys), [None]*len(keys), pipeline_id)
+        self.database.set_metadata(
+            keys,
+            timestamps,
+            [None] * len(keys),
+            [False] * len(keys),
+            [None] * len(keys),
+            [None] * len(keys),
+            pipeline_id,
+        )
 
     def trigger(self) -> None:
         # For data freshness strategy, no prep work to do.

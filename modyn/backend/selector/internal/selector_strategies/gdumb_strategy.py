@@ -46,4 +46,12 @@ class GDumbStrategy(AbstractSelectionStrategy):
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
         # TODO(#110): This set_metadata call needs to include the labels, which we don't have.
-        self.database.set_metadata(keys, timestamps, [None]*len(keys), [False] * len(keys), [None]*len(keys), [None]*len(keys), pipeline_id)
+        self.database.set_metadata(
+            keys,
+            timestamps,
+            [None] * len(keys),
+            [False] * len(keys),
+            [None] * len(keys),
+            [None] * len(keys),
+            pipeline_id,
+        )

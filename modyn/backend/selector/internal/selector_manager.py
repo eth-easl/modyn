@@ -31,11 +31,9 @@ class SelectorManager:
         self._selectors[pipeline_id] = selector
         return pipeline_id
 
-    def get_sample_keys_and_weight(
-        self, pipeline_id: int, training_set_number: int, worker_id: int
-    ) -> list[tuple[str, float]]:
+    def get_sample_keys_and_weight(self, pipeline_id: int, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
         """
-        For a given training_id, training_set_number and worker_id, it returns a subset of sample
+        For a given training_id, trigger_id and worker_id, it returns a subset of sample
         keys so that the data can be queried from storage. It also returns the associated weight of each sample.
         This weight can be used during training to support advanced strategies that want to weight the
         gradient descent step for different samples differently. Explicitly, instead of changing parameters
@@ -54,7 +52,7 @@ class SelectorManager:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested keys from pipeline {pipeline_id} which does not exist!")
 
-        return self._selectors[pipeline_id].get_sample_keys_and_weight(training_set_number, worker_id)
+        return self._selectors[pipeline_id].get_sample_keys_and_weight(trigger_id, worker_id)
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
         if pipeline_id not in self._selectors:

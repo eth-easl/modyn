@@ -23,14 +23,14 @@ class Empty(_message.Message):
     def __init__(self) -> None: ...
 
 class GetSamplesRequest(_message.Message):
-    __slots__ = ["pipeline_id", "training_set_number", "worker_id"]
+    __slots__ = ["pipeline_id", "trigger_id", "worker_id"]
     PIPELINE_ID_FIELD_NUMBER: _ClassVar[int]
-    TRAINING_SET_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    TRIGGER_ID_FIELD_NUMBER: _ClassVar[int]
     WORKER_ID_FIELD_NUMBER: _ClassVar[int]
     pipeline_id: int
-    training_set_number: int
+    trigger_id: int
     worker_id: int
-    def __init__(self, pipeline_id: _Optional[int] = ..., training_set_number: _Optional[int] = ..., worker_id: _Optional[int] = ...) -> None: ...
+    def __init__(self, pipeline_id: _Optional[int] = ..., trigger_id: _Optional[int] = ..., worker_id: _Optional[int] = ...) -> None: ...
 
 class PipelineResponse(_message.Message):
     __slots__ = ["pipeline_id"]
