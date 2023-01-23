@@ -10,7 +10,7 @@ class File(Base):
     """File model."""
 
     __tablename__ = "files"
-    file_id = Column(BigInteger, primary_key=True)
+    file_id = Column(Integer, primary_key=True)
     dataset_id = Column(Integer, ForeignKey("datasets.dataset_id"), nullable=False)
     dataset = relationship("Dataset", backref=backref("files", lazy=True))
     path = Column(String(120), unique=False, nullable=False)
