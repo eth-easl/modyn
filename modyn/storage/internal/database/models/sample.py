@@ -3,7 +3,7 @@
 from typing import Optional
 
 from modyn.storage.internal.database.storage_base import Base
-from sqlalchemy import Column, ForeignKey, Integer, String, BigInteger
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import backref, relationship
 
 

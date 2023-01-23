@@ -1,8 +1,11 @@
-from google.protobuf import empty_pb2 as _empty_pb2
-from google.protobuf.internal import containers as _containers
+from typing import ClassVar as _ClassVar
+from typing import Iterable as _Iterable
+from typing import Optional as _Optional
+
 from google.protobuf import descriptor as _descriptor
+from google.protobuf import empty_pb2 as _empty_pb2
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
+from google.protobuf.internal import containers as _containers
 
 DESCRIPTOR: _descriptor.FileDescriptor
 

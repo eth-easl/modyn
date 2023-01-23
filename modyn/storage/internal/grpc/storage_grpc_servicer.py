@@ -100,6 +100,17 @@ class StorageGRPCServicer(StorageServicer):
                     current_file = sample.file
                 else:
                     samples_per_file.append((sample.index, sample.external_key, sample.label))
+            file_wrapper = get_file_wrapper(
+                dataset.file_wrapper_type,
+                current_file.path,
+                dataset.file_wrapper_config,
+                get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
+            )
+            yield GetResponse(
+                chunk=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
+                keys=[external_key for _, external_key, _ in samples_per_file],
+                labels=[label for _, _, label in samples_per_file],
+            )
 
     # pylint: disable-next=unused-argument,invalid-name
     def GetNewDataSince(

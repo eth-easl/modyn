@@ -1,10 +1,10 @@
 """New file watcher."""
 
+import json
 import logging
+import pathlib
 import time
 import uuid
-import json
-import pathlib
 from typing import Any, Optional
 
 from modyn.storage.internal.database.models.dataset import Dataset
@@ -77,6 +77,8 @@ class NewFileWatcher:
 
     def _file_unknown(self, session: Session, file_path: str) -> bool:
         return session.query(File).filter(File.path == file_path).first() is None
+
+    # pylint: disable=too-many-locals
 
     def _update_files_in_directory(
         self,
