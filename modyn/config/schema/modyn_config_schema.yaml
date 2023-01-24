@@ -136,52 +136,48 @@ properties:
   metadata_database:
     type: object
     properties:
+      drivername:
+        type: string
+        description: |
+          The drivername to use for the database.
+      username:
+        type: string
+        description: |
+          The username to use for the database.
+      password:
+        type: string
+        description: |
+          The password to use for the database.
+      host:
+        type: string
+        description: |
+          The host to use for the database.
       port:
         type: string
         description: |
-          The port to use for the odm server.
-      hostname:
+          The port to use for the database.
+      database:
         type: string
         description: |
-          The hostname to use for the odm server.
-      postgresql:
-        type: object
-        properties:
-          host:
-            type: string
-            description: |
-              The hostname to use for the PostgreSQL server.
-          port:
-            type: string
-            description: |
-              The port to use for the PostgreSQL server
-          database:
-            type: string
-            description: |
-              The name of the PostgreSQL database.
-          user:
-            type: string
-            description: |
-              The user to use for the PostgreSQL server.
-          password:
-            type: string
-            description: |
-              The password to use for the PostgreSQL server.
+          The database to use for the database.
+    required:
+      - drivername
+      - username
+      - password
+      - host
+      - port
+      - database
   metadata_processor:
     type: object
     properties:
       port:
         type: string
         description: |
-          The port to use for the ptmp server.
+          The port to use for the metadata processor server.
       hostname:
         type: string
         description: |
-          The hostname to use for the ptmp server.
-      processor:
-        type: string
-        description: |
-          The processor to use for the ptmp server.
+          The hostname to use for the metadata processor server.
 required:
   - project
   - storage

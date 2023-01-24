@@ -5,10 +5,10 @@ import time
 import uuid
 from typing import Any, Optional
 
-from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from modyn.utils import current_time_millis
@@ -43,8 +43,8 @@ class NewFileWatcher:
             timestamp (int): Timestamp to compare the files with.
         """
         logger.debug(f"Seeking for files with a timestamp that is equal or greater than {timestamp}")
-        with DatabaseConnection(self.modyn_config) as database:
-            session = database.get_session()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
 
             datasets = self._get_datasets(session)
 
@@ -114,7 +114,8 @@ class NewFileWatcher:
                     continue
                 try:
                     for i in range(number_of_samples):
-                        sample: Sample = Sample(file=file, external_key=str(uuid.uuid4()), index=i)
+                        label = file_wrapper.get_label(i)
+                        sample: Sample = Sample(file=file, external_key=str(uuid.uuid4()), index=i, label=label)
                         session.add(sample)
                     session.commit()
                 except exc.SQLAlchemyError as exception:

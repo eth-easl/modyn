@@ -4,10 +4,10 @@ import pathlib
 import pickle
 from unittest.mock import patch
 
-from modyn.storage.internal.database.database_connection import DatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -77,13 +77,13 @@ def setup():
     writer.write({"__key__": "6", "cls": [1, 2, 3], "json": [1, 2, 3]})
     writer.close()
 
-    with DatabaseConnection(get_minimal_modyn_config()) as database:
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
         now = NOW
         before_now = now - 1
 
-        database.create_all()
+        database.create_tables()
 
-        session = database.get_session()
+        session = database.session
 
         dataset = Dataset(
             name="test",
@@ -110,23 +110,23 @@ def setup():
 
         session.commit()
 
-        sample = Sample(file=file, index=0, external_key="test")
+        sample = Sample(file=file, index=0, external_key="test", label=1)
 
         session.add(sample)
 
-        sample2 = Sample(file=file, index=1, external_key="test2")
+        sample2 = Sample(file=file, index=1, external_key="test2", label=2)
 
         session.add(sample2)
 
-        sample3 = Sample(file=file2, index=0, external_key="test3")
+        sample3 = Sample(file=file2, index=0, external_key="test3", label=3)
 
         session.add(sample3)
 
-        sample4 = Sample(file=file2, index=1, external_key="test4")
+        sample4 = Sample(file=file2, index=1, external_key="test4", label=4)
 
         session.add(sample4)
 
-        sample5 = Sample(file=file3, index=0, external_key="test5")
+        sample5 = Sample(file=file3, index=0, external_key="test5", label=5)
 
         session.add(sample5)
 
@@ -151,12 +151,13 @@ def test_get(mock_get_samples_from_indices):
 
     request = GetRequest(dataset_id="test", keys=["test", "test3", "test4"])
 
-    expetect_responses = [(b"", ["test"]), (b"", ["test3", "test4"])]
+    expetect_responses = [(b"", ["test"], [1]), (b"", ["test3", "test4"], [3, 4])]
 
     for response, expetect_response in zip(server.Get(request, None), expetect_responses):
         assert response is not None
         assert response.chunk == expetect_response[0]
         assert response.keys == expetect_response[1]
+        assert response.labels == expetect_response[2]
 
 
 def test_get_invalid_dataset():
@@ -167,6 +168,8 @@ def test_get_invalid_dataset():
     for response in server.Get(request, None):
         assert response is not None
         assert response.chunk == b""
+        assert response.keys == []
+        assert response.labels == []
 
 
 def test_get_invalid_key():
@@ -177,6 +180,8 @@ def test_get_invalid_key():
     for response in server.Get(request, None):
         assert response is not None
         assert response.chunk == b""
+        assert response.keys == []
+        assert response.labels == []
 
 
 def test_get_not_all_keys_found():
@@ -299,8 +304,8 @@ def test_register_new_dataset():
     assert response is not None
     assert response.success
 
-    with DatabaseConnection(get_minimal_modyn_config()) as database:
-        session = database.get_session()
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
+        session = database.session
 
         dataset = session.query(Dataset).filter(Dataset.name == "test3").first()
 

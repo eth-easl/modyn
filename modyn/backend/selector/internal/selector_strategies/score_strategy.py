@@ -1,5 +1,5 @@
 import numpy as np
-from modyn.backend.selector.internal.grpc.grpc_handler import GRPCHandler
+from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 
@@ -12,8 +12,8 @@ class ScoreStrategy(AbstractSelectionStrategy):
         config (dict): configuration for the selector
     """
 
-    def __init__(self, config: dict, grpc: GRPCHandler):
-        super().__init__(config, grpc)
+    def __init__(self, config: dict, modyn_config: dict):
+        super().__init__(config, modyn_config)
         self._set_is_softmax_mode(config["selector"].get("softmax_mode", True))
 
     def _set_is_softmax_mode(self, is_softmax_mode: bool) -> None:
@@ -47,6 +47,6 @@ class ScoreStrategy(AbstractSelectionStrategy):
         return list(zip(list(samples), list(scores)))
 
     def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[float]]:
-        query = f"SELECT key, score, seen, label, data FROM metadata_database WHERE training_id = {training_id}"
-        _, scores, _, _, data = self._grpc.get_samples_by_metadata_query(query)
-        return data, scores
+        all_metadata = self.database.session.query(Metadata).filter(Metadata.training_id == training_id).all()
+
+        return ([metadata.key for metadata in all_metadata], [metadata.score for metadata in all_metadata])

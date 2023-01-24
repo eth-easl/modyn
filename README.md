@@ -35,6 +35,7 @@ flake8
 isort . --check --diff
 black --check modyn --verbose --config black.toml
 pylint modyn
+mypy modyn
 ```
 
 Remember to make sure that the tests still work after running linting.

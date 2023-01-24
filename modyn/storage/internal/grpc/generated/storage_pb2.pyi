@@ -70,12 +70,14 @@ class GetRequest(_message.Message):
     def __init__(self, dataset_id: _Optional[str] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetResponse(_message.Message):
-    __slots__ = ["chunk", "keys"]
+    __slots__ = ["chunk", "keys", "labels"]
     CHUNK_FIELD_NUMBER: _ClassVar[int]
     KEYS_FIELD_NUMBER: _ClassVar[int]
+    LABELS_FIELD_NUMBER: _ClassVar[int]
     chunk: bytes
     keys: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
+    labels: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ..., labels: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class RegisterNewDatasetRequest(_message.Message):
     __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_config", "file_wrapper_type", "filesystem_wrapper_type", "version"]

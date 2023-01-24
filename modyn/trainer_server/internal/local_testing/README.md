@@ -1,0 +1,1 @@
+The 'trainer_client.py' file is not part of the implementation, and is used only for local testing of the trainer_server object.

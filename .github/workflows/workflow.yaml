@@ -15,7 +15,7 @@ jobs:
 
       - name: Setup Conda
         uses: ./.github/actions/conda
-      
+
       - name: Flake8
         run: |
           conda run -n modyn flake8 --version
@@ -112,7 +112,7 @@ jobs:
         uses: ./.github/actions/conda
 
       - name: Pytest
-        run: conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov=modyn/storage --cov=modyn/backend/selector --cov-fail-under=90
+        run: conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov=modyn/storage --cov=modyn/backend/selector --cov=modyn/trainer_server --cov=modyn/backend/metadata_database --cov-fail-under=90
 
 
 ### Integration Tests ###
@@ -129,7 +129,7 @@ jobs:
         - isort
         - black
         - coverage-newarchitecture
-      
+
       steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -160,7 +160,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Disable buildkit. Reevaluate this in some days, I get some permissions errors without this currently.
-        run: echo "DOCKER_BUILDKIT=0" >> $GITHUB_ENV 
+        run: echo "DOCKER_BUILDKIT=0" >> $GITHUB_ENV
         shell: bash
 
       - name: Start docker compose and exit when tests run through
