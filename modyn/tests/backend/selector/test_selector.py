@@ -24,6 +24,16 @@ def get_minimal_modyn_config():
     }
 
 
+class MockStrategy:
+    def __init__(self, desired_result):
+        self.result = desired_result
+        self.times_called = 0
+
+    def select_new_training_samples(self, training_id):  # pylint: disable=unused-argument
+        self.times_called += 1
+        return self.result
+
+
 def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
     self._modyn_config = get_minimal_modyn_config()
 
@@ -31,8 +41,7 @@ def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unuse
 def setup():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-
-        database.register_training(3, 10)
+        database.register_training(3)
 
 
 def teardown():
@@ -42,18 +51,19 @@ def teardown():
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
 @patch.object(Selector, "__init__", noop_constructor_mock)
-@patch.object(AbstractSelectionStrategy, "select_new_training_samples")
-def test_prepare_training_set(test_select_new_training_samples):
-    test_select_new_training_samples.return_value = ["a", "b"]
+@patch.object(Selector, "_select_new_training_samples")
+def test_get_training_set(test__select_new_training_samples):
+    test__select_new_training_samples.return_value = ["a", "b"]
 
     selector = Selector(None)
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
-    assert selector._prepare_training_set(0, 0, 0) == ["a", "b"]
+    selector._training_samples_cache = {}
+    assert selector._get_training_set(0, 0) == ["a", "b"]
 
-    test_select_new_training_samples.return_value = []
+    test__select_new_training_samples.return_value = []
     with pytest.raises(ValueError):
-        selector._prepare_training_set(0, 0, 3)
+        selector._get_training_set(0, 3)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -88,11 +98,11 @@ def test_get_training_set_partition():
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "__init__", noop_constructor_mock)
 @patch.object(Selector, "__init__", noop_constructor_mock)
-@patch.object(Selector, "_prepare_training_set")
-def test_get_sample_keys(test__prepare_training_set):
+@patch.object(Selector, "_get_training_set")
+def test_get_sample_keys(test__get_training_set):
     training_samples = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
     training_weights = [1.0] * len(training_samples)
-    test__prepare_training_set.return_value = list(zip(training_samples, training_weights))
+    test__get_training_set.return_value = list(zip(training_samples, training_weights))
 
     selector = Selector()
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
@@ -105,8 +115,6 @@ def test_get_sample_keys(test__prepare_training_set):
         selector.get_sample_keys_and_weight(1, 0, -1)
     with pytest.raises(ValueError):
         selector.get_sample_keys_and_weight(1, 0, 10)
-    with pytest.raises(NotImplementedError):
-        selector.select_new_training_samples(1, 0)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -117,10 +125,35 @@ def test_register_training():
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
 
-    assert selector.register_training(1000, 1) == 2
+    assert selector.register_training(1) == 2
     with pytest.raises(Exception):
-        selector.register_training(1000, 0)
+        selector.register_training(0)
     with pytest.raises(Exception):
-        selector.register_training(0, 1)
-    with pytest.raises(Exception):
-        selector.register_training(-1000, 1)
+        selector.register_training(-1)
+
+
+@patch.object(Selector, "__init__", noop_constructor_mock)
+def test_select_new_training_samples_caching():
+    samples_1 = [("a", 1.0), ("b", 1.0)]
+    samples_2 = [("c", 1.0), ("d", 1.0)]
+
+    selector = Selector()
+    selector._training_samples_cache = {}
+    selector._strategy = MockStrategy(desired_result=samples_1)
+
+    # I want to test the following. First call it twice with training set number 0.
+    # Assert that you get the right answer each time, and _strategy is called only once.
+    # Then, switch it to a next set, training set number 1. Repeat the process.
+    assert selector._strategy.times_called == 0
+    assert selector._get_training_set(0, 0) == samples_1
+    assert selector._strategy.times_called == 1
+    assert selector._get_training_set(0, 0) == samples_1
+    assert selector._strategy.times_called == 1
+
+    selector._strategy = MockStrategy(desired_result=samples_2)
+
+    assert selector._get_training_set(0, 1) == samples_2
+    assert len(selector._training_samples_cache.keys()) == 2
+    assert selector._strategy.times_called == 1
+    assert selector._get_training_set(0, 1) == samples_2
+    assert selector._strategy.times_called == 1

@@ -19,7 +19,7 @@ class ScoreStrategy(AbstractSelectionStrategy):
     def _set_is_softmax_mode(self, is_softmax_mode: bool) -> None:
         self.is_softmax_mode = is_softmax_mode
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
         """
         For a given training_id and number of samples, request that many samples from
         the selector.
@@ -30,6 +30,11 @@ class ScoreStrategy(AbstractSelectionStrategy):
         all_samples, all_scores = self._get_all_metadata(training_id)
         all_samples_np = np.array(all_samples)
         all_scores_np = np.array(all_scores)
+
+        if self.training_set_size_limit > 0:
+            training_set_size = min(self.training_set_size_limit, len(all_samples))
+        else:
+            training_set_size = len(all_samples)
 
         if self.is_softmax_mode:
             all_scores_np = np.exp(all_scores_np) / np.sum(np.exp(all_scores_np))

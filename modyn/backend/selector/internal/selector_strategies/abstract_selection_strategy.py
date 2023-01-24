@@ -19,12 +19,13 @@ class AbstractSelectionStrategy(ABC):
 
     def __init__(self, config: dict, modyn_config: dict):
         self._config = config
+        self.training_set_size_limit: int = config["limit"]
         self._modyn_config = modyn_config
         with MetadataDatabaseConnection(self._modyn_config) as database:
             self.database = database
 
     @abstractmethod
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 

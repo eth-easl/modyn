@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional
 
 from modyn.backend.metadata_database.metadata_base import Base
 from modyn.backend.metadata_database.models.metadata import Metadata
@@ -80,18 +80,17 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             logger.error(f"Could not delete training: {exception}")
             self.session.rollback()
 
-    def register_training(self, number_of_workers: int, training_set_size: int) -> Optional[int]:
+    def register_training(self, number_of_workers: int) -> Optional[int]:
         """Register training.
 
         Args:
             number_of_workers (int): number of workers
-            training_set_size (int): training set size
 
         Returns:
             int: training id
         """
         try:
-            training = Training(number_of_workers=number_of_workers, training_set_size=training_set_size)
+            training = Training(number_of_workers=number_of_workers)
             self.session.add(training)
             self.session.commit()
             return training.training_id
@@ -100,21 +99,21 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             self.session.rollback()
             return None
 
-    def get_training_information(self, training_id: int) -> Tuple[Optional[int], Optional[int]]:
+    def get_training_information(self, training_id: int) -> Optional[int]:
         """Get training.
 
         Args:
             training_id (int): training id
 
         Returns:
-            Tuple[int, int]: number of workers, training set size
+            int: number of workers,
         """
         try:
             training = self.session.query(Training).filter(Training.training_id == training_id).first()
             if training is None:
-                return None, None
-            return training.number_of_workers, training.training_set_size
+                return None
+            return training.number_of_workers
         except exc.SQLAlchemyError as exception:
             logger.error(f"Could not get training: {exception}")
             self.session.rollback()
-            return None, None
+            return None

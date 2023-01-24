@@ -20,7 +20,7 @@ def session():
 
 
 def test_add_training(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
@@ -28,11 +28,10 @@ def test_add_training(session):
     assert session.query(Training).filter(Training.training_id == 1).first() is not None
     assert session.query(Training).filter(Training.training_id == 1).first().training_id == 1
     assert session.query(Training).filter(Training.training_id == 1).first().number_of_workers == 1
-    assert session.query(Training).filter(Training.training_id == 1).first().training_set_size == 1
 
 
 def test_update_training(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
@@ -50,7 +49,7 @@ def test_update_training(session):
 
 
 def test_delete_training(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
@@ -62,7 +61,7 @@ def test_delete_training(session):
 
 
 def test_repr(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
