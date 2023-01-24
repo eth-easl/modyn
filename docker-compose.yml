@@ -32,6 +32,11 @@ services:
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
+  metadata_processor:
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: docker/MetadataProcessor/Dockerfile
   tests:
     depends_on:
       - modynbase
