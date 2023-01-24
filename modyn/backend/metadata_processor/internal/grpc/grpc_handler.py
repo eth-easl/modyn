@@ -2,7 +2,6 @@ import logging
 
 import grpc
 
-# Pylint cannot handle the auto-generated gRPC files, apparently.
 # pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import SetRequest
 from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub

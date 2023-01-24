@@ -2,7 +2,11 @@
 
 This is the Metadata Processor submodule.
 
-This component receives metadata from the Metadata Collector, processes it according to a custom chosen strategy, and saves it in the Metadata Database. The metadata processor component is started using `modyn-metadata-processor config.yaml`. The script should be in PATH after installing the `modyn` module.
+This component receives metadata from the Metadata Collector running at the trainer server, processes it according to a chosen strategy, and saves it in the Metadata Database.
+
+The metadata processor component is started using `modyn-metadata-processor config.yaml pipeline.yaml`.
+
+The script should be in PATH after installing the `modyn` module.
 
 ## How to add a new strategy
 
