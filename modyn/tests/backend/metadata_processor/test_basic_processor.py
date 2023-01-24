@@ -34,9 +34,9 @@ def grpchandler_constructor_mock(self, modyn_config: dict) -> None:
 
 
 @patch.object(AbstractProcessorStrategy, "__init__", grpchandler_constructor_mock)
-def test_process_post_training_metadata():
+def test_process_training_metadata():
     strategy = BasicProcessorStrategy(None)
-    strategy.process_post_training_metadata(TEST_TRAINING_ID, TEST_DATA)
+    strategy.process_training_metadata(TEST_TRAINING_ID, TEST_DATA)
 
     assert len(strategy.grpc.training_id) == 1
     assert len(strategy.grpc.data) == 1
@@ -52,4 +52,4 @@ def test_process_post_training_metadata():
 def test_strategy_throws_on_nonjson_data():
     strategy = BasicProcessorStrategy(None)
     with pytest.raises(ValueError):
-        strategy.process_post_training_metadata(TEST_TRAINING_ID, TEST_NONJSON_DATA)
+        strategy.process_training_metadata(TEST_TRAINING_ID, TEST_NONJSON_DATA)

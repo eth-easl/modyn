@@ -14,17 +14,17 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18metadata_processor.proto\x12\x12metadata_processor\"@\n\x1bPostTrainingMetadataRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\t\"\x1e\n\x1cPostTrainingMetadataResponse2\x9a\x01\n\x11MetadataProcessor\x12\x84\x01\n\x1bProcessPostTrainingMetadata\x12/.metadata_processor.PostTrainingMetadataRequest\x1a\x30.metadata_processor.PostTrainingMetadataResponse\"\x00(\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18metadata_processor.proto\x12\x12metadata_processor\"<\n\x17TrainingMetadataRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\t\"\x1a\n\x18TrainingMetadataResponse2\x8d\x01\n\x11MetadataProcessor\x12x\n\x17ProcessTrainingMetadata\x12+.metadata_processor.TrainingMetadataRequest\x1a,.metadata_processor.TrainingMetadataResponse\"\x00(\x01\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'metadata_processor_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _POSTTRAININGMETADATAREQUEST._serialized_start=48
-  _POSTTRAININGMETADATAREQUEST._serialized_end=112
-  _POSTTRAININGMETADATARESPONSE._serialized_start=114
-  _POSTTRAININGMETADATARESPONSE._serialized_end=144
-  _METADATAPROCESSOR._serialized_start=147
-  _METADATAPROCESSOR._serialized_end=301
+  _TRAININGMETADATAREQUEST._serialized_start=48
+  _TRAININGMETADATAREQUEST._serialized_end=108
+  _TRAININGMETADATARESPONSE._serialized_start=110
+  _TRAININGMETADATARESPONSE._serialized_end=136
+  _METADATAPROCESSOR._serialized_start=139
+  _METADATAPROCESSOR._serialized_end=280
 # @@protoc_insertion_point(module_scope)

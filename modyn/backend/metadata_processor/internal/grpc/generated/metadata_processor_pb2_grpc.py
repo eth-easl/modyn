@@ -13,17 +13,17 @@ class MetadataProcessorStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.ProcessPostTrainingMetadata = channel.stream_unary(
-                '/metadata_processor.MetadataProcessor/ProcessPostTrainingMetadata',
-                request_serializer=metadata__processor__pb2.PostTrainingMetadataRequest.SerializeToString,
-                response_deserializer=metadata__processor__pb2.PostTrainingMetadataResponse.FromString,
+        self.ProcessTrainingMetadata = channel.stream_unary(
+                '/metadata_processor.MetadataProcessor/ProcessTrainingMetadata',
+                request_serializer=metadata__processor__pb2.TrainingMetadataRequest.SerializeToString,
+                response_deserializer=metadata__processor__pb2.TrainingMetadataResponse.FromString,
                 )
 
 
 class MetadataProcessorServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def ProcessPostTrainingMetadata(self, request_iterator, context):
+    def ProcessTrainingMetadata(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -32,10 +32,10 @@ class MetadataProcessorServicer(object):
 
 def add_MetadataProcessorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'ProcessPostTrainingMetadata': grpc.stream_unary_rpc_method_handler(
-                    servicer.ProcessPostTrainingMetadata,
-                    request_deserializer=metadata__processor__pb2.PostTrainingMetadataRequest.FromString,
-                    response_serializer=metadata__processor__pb2.PostTrainingMetadataResponse.SerializeToString,
+            'ProcessTrainingMetadata': grpc.stream_unary_rpc_method_handler(
+                    servicer.ProcessTrainingMetadata,
+                    request_deserializer=metadata__processor__pb2.TrainingMetadataRequest.FromString,
+                    response_serializer=metadata__processor__pb2.TrainingMetadataResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -48,7 +48,7 @@ class MetadataProcessor(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def ProcessPostTrainingMetadata(request_iterator,
+    def ProcessTrainingMetadata(request_iterator,
             target,
             options=(),
             channel_credentials=None,
@@ -58,8 +58,8 @@ class MetadataProcessor(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.stream_unary(request_iterator, target, '/metadata_processor.MetadataProcessor/ProcessPostTrainingMetadata',
-            metadata__processor__pb2.PostTrainingMetadataRequest.SerializeToString,
-            metadata__processor__pb2.PostTrainingMetadataResponse.FromString,
+        return grpc.experimental.stream_unary(request_iterator, target, '/metadata_processor.MetadataProcessor/ProcessTrainingMetadata',
+            metadata__processor__pb2.TrainingMetadataRequest.SerializeToString,
+            metadata__processor__pb2.TrainingMetadataResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -15,7 +15,7 @@ else:
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
 @typing_extensions.final
-class PostTrainingMetadataRequest(google.protobuf.message.Message):
+class TrainingMetadataRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     TRAINING_ID_FIELD_NUMBER: builtins.int
@@ -30,14 +30,14 @@ class PostTrainingMetadataRequest(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["data", b"data", "training_id", b"training_id"]) -> None: ...
 
-global___PostTrainingMetadataRequest = PostTrainingMetadataRequest
+global___TrainingMetadataRequest = TrainingMetadataRequest
 
 @typing_extensions.final
-class PostTrainingMetadataResponse(google.protobuf.message.Message):
+class TrainingMetadataResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     def __init__(
         self,
     ) -> None: ...
 
-global___PostTrainingMetadataResponse = PostTrainingMetadataResponse
+global___TrainingMetadataResponse = TrainingMetadataResponse

@@ -15,13 +15,13 @@ class AbstractProcessorStrategy(ABC):
         self.config = modyn_config
         self.grpc = GRPCHandler(modyn_config)
 
-    def process_post_training_metadata(self, training_id: int, serialized_data: str) -> None:
+    def process_training_metadata(self, training_id: int, serialized_data: str) -> None:
         """
         Process the metadata and send it to the Metadata Database.
 
         Args:
             training_id (int): The training ID.
-            data (str): Serialized post training metadata.
+            data (str): Serialized training metadata.
         """
         data = self.process_metadata(training_id, serialized_data)
         self.grpc.set_metadata(training_id, data)
