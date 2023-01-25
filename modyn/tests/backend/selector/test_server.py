@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import grpc
 import pytest
-import yaml
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611

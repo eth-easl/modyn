@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 from modyn.backend.selector.selector import Selector

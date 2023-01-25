@@ -48,8 +48,6 @@ ptmp:
 selector:
   hostname: "backend"
   port: "50056"
-  package: "score_selector"
-  class: "ScoreSelector"
 
 trainer_server:
   hostname: "trainer_server"

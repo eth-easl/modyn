@@ -1,8 +1,5 @@
 import logging
-import os
-import pathlib
 from concurrent import futures
-from typing import List, Tuple
 
 import grpc
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import (  # noqa: E402, E501
@@ -10,7 +7,6 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import (  
 )
 from modyn.backend.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
 from modyn.backend.selector.internal.selector_manager import SelectorManager
-from modyn.utils import validate_yaml
 
 logger = logging.getLogger(__name__)
 

@@ -36,7 +36,7 @@ class AbstractSelectionStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         """Informs the strategy of new data.
 
         Args:

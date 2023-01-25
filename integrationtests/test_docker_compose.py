@@ -81,7 +81,15 @@ def metadata_db_running() -> bool:
 
 
 def selector_running() -> bool:
-    # TODO(MaxiBoether): implement this when selector is merged and docker entrypoint works
+    config = get_modyn_config()
+
+    selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
+    selector_channel = grpc.insecure_channel(selector_address)
+
+    if not grpc_connection_established(selector_channel):
+        print(f"Could not establish gRPC connection to selector at {selector_address}. Retrying.")
+        return False
+
     return True
 
 
