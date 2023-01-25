@@ -38,13 +38,13 @@ def test_set_metadata():
         assert metadata[0].seen is False
 
 
-def test_register_training():
+def test_register_pipeline():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
 
         database.session.query(Training).delete()
 
-        training = database.register_training(1)
+        training = database.register_pipeline(1)
         assert training == 1
 
         trainings = database.session.query(Training).all()
@@ -53,7 +53,7 @@ def test_register_training():
         assert trainings[0].training_id == 1
         assert trainings[0].number_of_workers == 1
 
-        training = database.register_training(2)
+        training = database.register_pipeline(2)
 
         assert training == 2
 
@@ -71,7 +71,7 @@ def test_delete_training():
 
         database.session.query(Training).delete()
 
-        training = database.register_training(1)
+        training = database.register_pipeline(1)
         assert training == 1
 
         trainings = database.session.query(Training).all()
@@ -86,7 +86,7 @@ def test_delete_training():
 
         assert len(trainings) == 0
 
-        training = database.register_training(2)
+        training = database.register_pipeline(2)
 
         assert training == 1
 

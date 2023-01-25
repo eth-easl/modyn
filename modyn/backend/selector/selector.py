@@ -99,11 +99,11 @@ class Selector:
         training_samples_subset = self._get_training_set_partition(training_samples, worker_id)
         return training_samples_subset
 
-    def inform_data(self, keys: list[str], timestamps: list[int]) -> None:
-        self._strategy.inform_data(self._pipeline_id, keys, timestamps)
+    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+        self._strategy.inform_data(self._pipeline_id, keys, timestamps, labels)
 
-    def inform_data_and_trigger(self, keys: list[str], timestamps: list[int]) -> int:
-        self._strategy.inform_data(self._pipeline_id, keys, timestamps)
+    def inform_data_and_trigger(self, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
+        self._strategy.inform_data(self._pipeline_id, keys, timestamps, labels)
         self._strategy.trigger()
         next_trigger_id = self._current_trigger_id
         self._current_trigger_id += 1

@@ -87,7 +87,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             logger.error(f"Could not delete training: {exception}")
             self.session.rollback()
 
-    def register_training(self, number_of_workers: int) -> Optional[int]:
+    def register_pipeline(self, number_of_workers: int) -> Optional[int]:
         """Register training.
 
         Args:

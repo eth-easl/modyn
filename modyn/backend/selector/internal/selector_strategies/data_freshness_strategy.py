@@ -50,7 +50,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
         return unseen_data_ratio
 
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         self.database.set_metadata(
             keys,
             timestamps,

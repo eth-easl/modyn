@@ -41,7 +41,7 @@ def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unuse
 def setup():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        database.register_training(3)
+        database.register_pipeline(3)
 
 
 def teardown():

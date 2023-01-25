@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module
+import json
 import os
 import pathlib
 import sys
@@ -43,12 +44,12 @@ def setup():
 
 def populate_metadata_database(pipeline_id):
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", 1)
+        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", pipeline_id)
 
         metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata)
 
-        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", 1)
+        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", pipeline_id)
 
         metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary key
         database.session.add(metadata2)
@@ -56,17 +57,19 @@ def populate_metadata_database(pipeline_id):
         database.session.commit()
 
 
+
 def teardown():
     os.remove(database_path)
 
 
 def test_prepare_training_set():
-    with open("modyn/config/examples/example-pipeline.yaml", "r", encoding="utf-8") as pipeline_file:
-        pipeline_cfg = yaml.safe_load(pipeline_file)
-
-    selector_server = SelectorServer(pipeline_cfg, get_minimal_modyn_config())
+    selector_strategy_configs = {
+        "name": "finetune", 
+        "configs": {"limit": 8}
+    }
+    selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_server
-    pipeline_id = servicer.selector_manager.register_training(num_workers=1)
+    pipeline_id = servicer.selector_manager.register_pipeline(num_workers=1, strategy_configs=json.dumps(selector_strategy_configs))
     servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
     populate_metadata_database(pipeline_id)
 
@@ -75,26 +78,34 @@ def test_prepare_training_set():
             GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=0, worker_id=0), None
         ).training_samples_subset
     ) == set(["test_key"])
+    
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.delete_training(pipeline_id)
+
 
 
 def test_full_cycle():
-    with open("modyn/config/examples/example-pipeline.yaml", "r", encoding="utf-8") as pipeline_file:
-        pipeline_cfg = yaml.safe_load(pipeline_file)
+    selector_strategy_configs = {
+        "name": "finetune", 
+        "configs": {"limit": 8}
+    }
 
-    selector_server = SelectorServer(pipeline_cfg, get_minimal_modyn_config())
+    selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_server
-    pipeline_id = servicer.selector_manager.register_training(num_workers=1)
+    pipeline_id = servicer.selector_manager.register_pipeline(num_workers=1, strategy_configs=json.dumps(selector_strategy_configs))
     servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
 
     data_keys_1 = ["test_key_1", "test_key_2"]
     data_timestamps_1 = [0, 1]
+    data_labels_1 = [0, 0]
     data_keys_2 = ["test_key_3", "test_key_4"]
     data_timestamps_2 = [2, 3]
+    data_labels_2 = [1, 1]
     servicer.inform_data(
-        DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_1, timestamps=data_timestamps_1), None
+        DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1), None
     )
     trigger_response = servicer.inform_data_and_trigger(
-        DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_2, timestamps=data_timestamps_2), None
+        DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_2, timestamps=data_timestamps_2, labels=data_labels_2), None
     )
     trigger_id = trigger_response.trigger_id
 
@@ -129,7 +140,6 @@ def test_main(test_server_mock):
     testargs = [
         "selector_entrypoint.py",
         "modyn/config/examples/modyn_config.yaml",
-        "modyn/config/examples/example-pipeline.yaml",
     ]
     with patch.object(sys, "argv", testargs):
         main()

@@ -44,7 +44,7 @@ class GDumbStrategy(AbstractSelectionStrategy):
         # No work to do for GDumb
         pass
 
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int]) -> None:
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         # TODO(#110): This set_metadata call needs to include the labels, which we don't have.
         self.database.set_metadata(
             keys,

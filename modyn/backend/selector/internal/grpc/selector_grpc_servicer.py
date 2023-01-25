@@ -8,7 +8,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
     Empty,
     GetSamplesRequest,
     PipelineResponse,
-    RegisterTrainingRequest,
+    RegisterPipelineRequest,
     SamplesResponse,
     TriggerResponse,
 )
@@ -24,9 +24,9 @@ class SelectorGRPCServicer(SelectorServicer):
     def __init__(self, selector_manager: SelectorManager):
         self.selector_manager = selector_manager
 
-    def register_pipeline(self, request: RegisterTrainingRequest, context: grpc.ServicerContext) -> PipelineResponse:
+    def register_pipeline(self, request: RegisterPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         logger.info(f"Registering training with request - {str(request)}")
-        pipeline_id = self.selector_manager.register_training(request.num_workers)
+        pipeline_id = self.selector_manager.register_pipeline(request.num_workers, request.selector_strategy_config)
         return PipelineResponse(pipeline_id=pipeline_id)
 
     def get_sample_keys_and_weight(  # pylint: disable-next=unused-argument
@@ -41,13 +41,13 @@ class SelectorGRPCServicer(SelectorServicer):
         return SamplesResponse(training_samples_subset=samples_keys, training_samples_weight=samples_weights)
 
     def inform_data(self, request: DataInformRequest, context: grpc.ServicerContext) -> Empty:
-        pipeline_id, keys, timestamps = request.pipeline_id, request.keys, request.timestamps
+        pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
         logger.info(f"Selctor is informed of {len(keys)} new data points")
-        self.selector_manager.inform_data(pipeline_id, keys, timestamps)
+        self.selector_manager.inform_data(pipeline_id, keys, timestamps, labels)
         return Empty()
 
     def inform_data_and_trigger(self, request: DataInformRequest, context: grpc.ServicerContext) -> TriggerResponse:
-        pipeline_id, keys, timestamps = request.pipeline_id, request.keys, request.timestamps
+        pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
         logger.info(f"Selctor is informed of {len(keys)} new data points, and triggered")
-        trigger_id = self.selector_manager.inform_data_and_trigger(pipeline_id, keys, timestamps)
+        trigger_id = self.selector_manager.inform_data_and_trigger(pipeline_id, keys, timestamps, labels)
         return TriggerResponse(trigger_id=trigger_id)

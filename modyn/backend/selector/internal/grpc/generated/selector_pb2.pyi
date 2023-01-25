@@ -1,22 +1,21 @@
-from typing import ClassVar as _ClassVar
-from typing import Iterable as _Iterable
-from typing import Optional as _Optional
-
+from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from google.protobuf.internal import containers as _containers
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DataInformRequest(_message.Message):
-    __slots__ = ["keys", "pipeline_id", "timestamps"]
+    __slots__ = ["keys", "labels", "pipeline_id", "timestamps"]
     KEYS_FIELD_NUMBER: _ClassVar[int]
+    LABELS_FIELD_NUMBER: _ClassVar[int]
     PIPELINE_ID_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMPS_FIELD_NUMBER: _ClassVar[int]
     keys: _containers.RepeatedScalarFieldContainer[str]
+    labels: _containers.RepeatedScalarFieldContainer[int]
     pipeline_id: int
     timestamps: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, pipeline_id: _Optional[int] = ..., keys: _Optional[_Iterable[str]] = ..., timestamps: _Optional[_Iterable[int]] = ...) -> None: ...
+    def __init__(self, pipeline_id: _Optional[int] = ..., keys: _Optional[_Iterable[str]] = ..., timestamps: _Optional[_Iterable[int]] = ..., labels: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class Empty(_message.Message):
     __slots__ = []
@@ -38,11 +37,13 @@ class PipelineResponse(_message.Message):
     pipeline_id: int
     def __init__(self, pipeline_id: _Optional[int] = ...) -> None: ...
 
-class RegisterTrainingRequest(_message.Message):
-    __slots__ = ["num_workers"]
+class RegisterPipelineRequest(_message.Message):
+    __slots__ = ["num_workers", "selector_strategy_config"]
     NUM_WORKERS_FIELD_NUMBER: _ClassVar[int]
+    SELECTOR_STRATEGY_CONFIG_FIELD_NUMBER: _ClassVar[int]
     num_workers: int
-    def __init__(self, num_workers: _Optional[int] = ...) -> None: ...
+    selector_strategy_config: str
+    def __init__(self, num_workers: _Optional[int] = ..., selector_strategy_config: _Optional[str] = ...) -> None: ...
 
 class SamplesResponse(_message.Message):
     __slots__ = ["training_samples_subset", "training_samples_weight"]
