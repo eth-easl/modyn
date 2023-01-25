@@ -61,7 +61,9 @@ class SelectorManager:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
         self._selectors[pipeline_id].inform_data(keys, timestamps, labels)
 
-    def inform_data_and_trigger(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
+    def inform_data_and_trigger(
+        self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]
+    ) -> int:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")
         return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)

@@ -57,19 +57,17 @@ def populate_metadata_database(pipeline_id):
         database.session.commit()
 
 
-
 def teardown():
     os.remove(database_path)
 
 
 def test_prepare_training_set():
-    selector_strategy_configs = {
-        "name": "finetune", 
-        "configs": {"limit": 8}
-    }
+    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8}}
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_server
-    pipeline_id = servicer.selector_manager.register_pipeline(num_workers=1, strategy_configs=json.dumps(selector_strategy_configs))
+    pipeline_id = servicer.selector_manager.register_pipeline(
+        num_workers=1, strategy_configs=json.dumps(selector_strategy_configs)
+    )
     servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
     populate_metadata_database(pipeline_id)
 
@@ -78,21 +76,19 @@ def test_prepare_training_set():
             GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=0, worker_id=0), None
         ).training_samples_subset
     ) == set(["test_key"])
-    
+
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.delete_training(pipeline_id)
 
 
-
 def test_full_cycle():
-    selector_strategy_configs = {
-        "name": "finetune", 
-        "configs": {"limit": 8}
-    }
+    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8}}
 
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_server
-    pipeline_id = servicer.selector_manager.register_pipeline(num_workers=1, strategy_configs=json.dumps(selector_strategy_configs))
+    pipeline_id = servicer.selector_manager.register_pipeline(
+        num_workers=1, strategy_configs=json.dumps(selector_strategy_configs)
+    )
     servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
 
     data_keys_1 = ["test_key_1", "test_key_2"]
@@ -102,10 +98,16 @@ def test_full_cycle():
     data_timestamps_2 = [2, 3]
     data_labels_2 = [1, 1]
     servicer.inform_data(
-        DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1), None
+        DataInformRequest(
+            pipeline_id=pipeline_id, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1
+        ),
+        None,
     )
     trigger_response = servicer.inform_data_and_trigger(
-        DataInformRequest(pipeline_id=pipeline_id, keys=data_keys_2, timestamps=data_timestamps_2, labels=data_labels_2), None
+        DataInformRequest(
+            pipeline_id=pipeline_id, keys=data_keys_2, timestamps=data_timestamps_2, labels=data_labels_2
+        ),
+        None,
     )
     trigger_id = trigger_response.trigger_id
 
