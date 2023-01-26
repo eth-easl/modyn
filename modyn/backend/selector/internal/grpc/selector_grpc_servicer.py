@@ -23,7 +23,7 @@ class SelectorGRPCServicer(SelectorServicer):
 
     def register_training(self, request: RegisterTrainingRequest, context: grpc.ServicerContext) -> TrainingResponse:
         logger.info(f"Registering training with request - {str(request)}")
-        training_id = self.selector.register_training(request.training_set_size, request.num_workers)
+        training_id = self.selector.register_training(request.num_workers)
         return TrainingResponse(training_id=training_id)
 
     def get_sample_keys_and_weight(  # pylint: disable-next=unused-argument

@@ -50,7 +50,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
         return unseen_data_ratio
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 
@@ -66,12 +66,71 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         if self._is_adaptive_ratio:
             unseen_data_ratio = self._get_adaptive_unseen_ratio(training_id)
 
-        num_new_samples = int(training_set_size * unseen_data_ratio)
-        num_old_samples = training_set_size - num_new_samples
-        new_samples = self._get_unseen_data(training_id, num_new_samples)
-        old_samples = self._get_seen_data(training_id, num_old_samples)
+        if self.training_set_size_limit > 0:
+            new_samples, old_samples = self._select_new_training_samples_with_limit(training_id, unseen_data_ratio)
+        else:
+            new_samples, old_samples = self._select_new_training_samples_without_limit(training_id, unseen_data_ratio)
+
         new_samples.extend(old_samples)
         return [(sample, 1.0) for sample in new_samples]
+
+    def _select_new_training_samples_with_limit(
+        self, training_id: int, unseen_data_ratio: float
+    ) -> tuple[list[str], list[str]]:
+        """If there is a limit, then we should return the proper proportion.
+
+
+        Args:
+            training_id (int): The training ID of the current training
+
+        Returns:
+            tuple[list[str], list[str]]: A tuple of new_samples, old_samples
+        """
+        num_new_samples = int(self.training_set_size_limit * unseen_data_ratio)
+        num_old_samples = self.training_set_size_limit - num_new_samples
+        new_samples = self._get_unseen_data(training_id, num_new_samples)
+        old_samples = self._get_seen_data(training_id, num_old_samples)
+        return new_samples, old_samples
+
+    def _select_new_training_samples_without_limit(
+        self, training_id: int, unseen_data_ratio: float
+    ) -> tuple[list[str], list[str]]:
+        """If there is no limit, and we have a strict ratio to maintain (not adaptive), then
+        we have to use the relatively smaller amount. For example, let's say we have 25/75
+        new/old ratio. If we have 40 new points and 60 old points, we can only return 80
+        points (20 new / 60 old).
+        If there is no strict ratio, then we can return all the data.
+
+        Args:
+            training_id (int): The training ID of the current training
+            unseen_data_ratio (float): The desired ratio of unseen data to seen data, if applicable
+
+        Returns:
+            tuple[list[str], list[str]]: A tuple of new_samples, old_samples
+        """
+        if self._is_adaptive_ratio:
+            new_samples = self._get_unseen_data(training_id, -1)
+            old_samples = self._get_seen_data(training_id, -1)
+        else:
+            if unseen_data_ratio == 0.0:
+                new_samples = []
+                old_samples = self._get_seen_data(training_id, -1)
+            elif unseen_data_ratio == 1.0:
+                new_samples = self._get_unseen_data(training_id, -1)
+                old_samples = []
+            else:
+                num_new_samples = self._get_unseen_data_size(training_id)
+                num_old_samples = self._get_seen_data_size(training_id)
+                new_samples_multiple = int(num_new_samples / unseen_data_ratio)
+                old_samples_multiple = int(num_old_samples / (1 - unseen_data_ratio))
+                total_samples = min(new_samples_multiple, old_samples_multiple)
+                if new_samples_multiple < old_samples_multiple:
+                    new_samples = self._get_unseen_data(training_id, -1)
+                    old_samples = self._get_seen_data(training_id, total_samples - num_new_samples)
+                else:
+                    new_samples = self._get_unseen_data(training_id, total_samples - num_old_samples)
+                    old_samples = self._get_seen_data(training_id, -1)
+        return new_samples, old_samples
 
     def _get_unseen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
@@ -79,7 +138,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
 
         Args:
             training_id (int): The training ID of the current training.
-            num_samples (int): Number of samples queried
+            num_samples (int): Number of samples queried. If negative, returns all.
 
         Returns:
             List of keys for the unseen samples.
@@ -98,8 +157,13 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             keys, seen = [], []
 
         assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
+        if num_samples < 0 or num_samples > len(keys):
+            num_samples = len(keys)
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
-        return list(np.array(keys)[choice])
+        result = list(np.array(keys)[choice])
+        if num_samples < 0:
+            assert len(result) == num_samples
+        return result
 
     def _get_seen_data(self, training_id: int, num_samples: int) -> list[str]:
         """
@@ -108,7 +172,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
 
         Args:
             training_id (int): The training ID of the current training.
-            num_samples (int): Number of samples queried
+            num_samples (int): Number of samples queried. If negative, returns all.
 
         Returns:
             List of keys for the previously seen samples
@@ -124,8 +188,13 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             keys, seen = [], []
 
         assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
+        if num_samples < 0 or num_samples > len(keys):
+            num_samples = len(keys)
         choice = np.random.choice(len(keys), size=num_samples, replace=False)
-        return list(np.array(keys)[choice])
+        result = list(np.array(keys)[choice])
+        if num_samples < 0:
+            assert len(result) == num_samples
+        return result
 
     def _get_seen_data_size(self, training_id: int) -> int:
         """For a given training_id, return how many unseen samples there are

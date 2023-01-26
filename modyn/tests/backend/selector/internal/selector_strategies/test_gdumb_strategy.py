@@ -36,16 +36,16 @@ def setup():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
 
-        trainig = Training(1, 1)
-        database.session.add(trainig)
+        training = Training(1)
+        database.session.add(training)
         database.session.commit()
 
-        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.training_id)
+        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", training.training_id)
 
         metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata)
 
-        metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", trainig.training_id)
+        metadata2 = Metadata("test_key2", 0.75, True, 2, b"test_data2", training.training_id)
 
         metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata2)
@@ -74,9 +74,10 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
 
     test__get_all_metadata.return_value = all_samples, all_classes
 
-    selector = GDumbStrategy(None)
+    selector = GDumbStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector.training_set_size_limit = 6
 
-    samples = selector.select_new_training_samples(0, 6)
+    samples = selector.select_new_training_samples(0)
     classes = [clss for _, clss in samples]
     samples = [sample for sample, _ in samples]
 

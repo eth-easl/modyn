@@ -37,16 +37,16 @@ def setup():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
 
-        trainig = Training(1, 1)
-        database.session.add(trainig)
+        training = Training(1)
+        database.session.add(training)
         database.session.commit()
 
-        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", trainig.training_id)
+        metadata = Metadata("test_key", 0.5, False, 1, b"test_data", training.training_id)
 
         metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata)
 
-        metadata2 = Metadata("test_key2", 0.75, True, 1, b"test_data", trainig.training_id)
+        metadata2 = Metadata("test_key2", 0.75, True, 1, b"test_data", training.training_id)
 
         metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata2)
@@ -77,8 +77,9 @@ def test_score_selector_normal_mode(test__get_all_metadata):
 
     selector = ScoreStrategy(None)
     selector._set_is_softmax_mode(False)
+    selector.training_set_size_limit = 4
 
-    samples = selector.select_new_training_samples(0, 4)
+    samples = selector.select_new_training_samples(0)
     scores = [score for _, score in samples]
     samples = [sample for sample, _ in samples]
 
@@ -99,8 +100,9 @@ def test_score_selector_softmax_mode(test__get_all_metadata):
 
     selector = ScoreStrategy(None)
     selector._set_is_softmax_mode(True)
+    selector.training_set_size_limit = 4
 
-    samples = selector.select_new_training_samples(0, 4)
+    samples = selector.select_new_training_samples(0)
     scores = [score for _, score in samples]
     samples = [sample for sample, _ in samples]
 

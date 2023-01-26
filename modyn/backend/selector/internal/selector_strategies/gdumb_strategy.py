@@ -8,7 +8,7 @@ class GDumbStrategy(AbstractSelectionStrategy):
     Implements the GDumb selection policy.
     """
 
-    def select_new_training_samples(self, training_id: int, training_set_size: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
         """
         For a given training_id and number of samples, request that many samples from the selector.
 
@@ -21,6 +21,10 @@ class GDumbStrategy(AbstractSelectionStrategy):
         classes, counts = np.unique(all_classes, return_counts=True)
 
         num_classes = classes.shape[0]
+        if self.training_set_size_limit > 0:
+            training_set_size = min(self.training_set_size_limit, len(all_samples))
+        else:
+            training_set_size = len(all_samples)
         for clss in range(num_classes):
             num_class_samples = counts[clss]
             rand_indices = np.random.choice(num_class_samples, size=training_set_size // num_classes, replace=False)

@@ -25,7 +25,7 @@ def test_database_connection():
 def test_set_metadata():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        training = Training(1, 1)
+        training = Training(1)
         database.session.add(training)
         database.session.commit()
 
@@ -44,7 +44,7 @@ def test_register_training():
 
         database.session.query(Training).delete()
 
-        training = database.register_training(1, 1)
+        training = database.register_training(1)
         assert training == 1
 
         trainings = database.session.query(Training).all()
@@ -52,9 +52,8 @@ def test_register_training():
         assert len(trainings) == 1
         assert trainings[0].training_id == 1
         assert trainings[0].number_of_workers == 1
-        assert trainings[0].training_set_size == 1
 
-        training = database.register_training(2, 2)
+        training = database.register_training(2)
 
         assert training == 2
 
@@ -62,10 +61,8 @@ def test_register_training():
         assert len(trainings) == 2
         assert trainings[0].training_id == 1
         assert trainings[0].number_of_workers == 1
-        assert trainings[0].training_set_size == 1
         assert trainings[1].training_id == 2
         assert trainings[1].number_of_workers == 2
-        assert trainings[1].training_set_size == 2
 
 
 def test_delete_training():
@@ -74,7 +71,7 @@ def test_delete_training():
 
         database.session.query(Training).delete()
 
-        training = database.register_training(1, 1)
+        training = database.register_training(1)
         assert training == 1
 
         trainings = database.session.query(Training).all()
@@ -82,7 +79,6 @@ def test_delete_training():
         assert len(trainings) == 1
         assert trainings[0].training_id == 1
         assert trainings[0].number_of_workers == 1
-        assert trainings[0].training_set_size == 1
 
         database.delete_training(1)
 
@@ -90,7 +86,7 @@ def test_delete_training():
 
         assert len(trainings) == 0
 
-        training = database.register_training(2, 2)
+        training = database.register_training(2)
 
         assert training == 1
 
@@ -98,7 +94,6 @@ def test_delete_training():
         assert len(trainings) == 1
         assert trainings[0].training_id == 1
         assert trainings[0].number_of_workers == 2
-        assert trainings[0].training_set_size == 2
 
         database.delete_training(1)
 
@@ -112,20 +107,18 @@ def test_get_training_information():
 
         database.session.query(Training).delete()
 
-        training = Training(1, 1)
+        training = Training(1)
 
         database.session.add(training)
         database.session.commit()
 
-        num_workers, training_set_size = database.get_training_information(training.training_id)
+        num_workers = database.get_training_information(training.training_id)
         assert num_workers == 1
-        assert training_set_size == 1
 
-        training2 = Training(2, 2)
+        training2 = Training(2)
 
         database.session.add(training2)
         database.session.commit()
 
-        num_workers, training_set_size = database.get_training_information(training2.training_id)
+        num_workers = database.get_training_information(training2.training_id)
         assert num_workers == 2
-        assert training_set_size == 2

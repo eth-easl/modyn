@@ -20,7 +20,7 @@ def session():
 
 
 def test_add_metadata(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
@@ -48,7 +48,7 @@ def test_add_metadata(session):
 
 
 def test_update_metadata(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
@@ -82,7 +82,7 @@ def test_update_metadata(session):
 
 
 def test_delete_metadata(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
@@ -108,7 +108,7 @@ def test_delete_metadata(session):
 
 
 def test_repr_metadata(session):
-    training = Training(1, 1)
+    training = Training(1)
 
     session.add(training)
     session.commit()
