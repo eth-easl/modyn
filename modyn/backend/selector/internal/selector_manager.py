@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
 from modyn.backend.selector.selector import Selector
+
+logger = logging.getLogger(__name__)
 
 
 class SelectorManager:
@@ -14,9 +17,9 @@ class SelectorManager:
         self._num_workers: dict[int, int] = {}
         self._next_pipeline_id = 0
 
-    def register_pipeline(self, num_workers: int, strategy_configs: str) -> int:
+    def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """
-        Creates a new training object in the database with the given num_workers
+        Registers a new pipeline at the Selector.
         Returns:
             The id of the newly created training object
         Throws:
@@ -28,7 +31,7 @@ class SelectorManager:
         pipeline_id = self._next_pipeline_id
         self._next_pipeline_id += 1
 
-        selection_strategy = self._instantiate_strategy(json.loads(strategy_configs))
+        selection_strategy = self._instantiate_strategy(json.loads(selection_strategy))
         selector = Selector(selection_strategy, pipeline_id, num_workers)
         self._selectors[pipeline_id] = selector
         self._num_workers[pipeline_id] = num_workers
@@ -67,10 +70,21 @@ class SelectorManager:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")
         return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
-    def _instantiate_strategy(self, strategy_configs: dict) -> AbstractSelectionStrategy:
-        strategy_name = strategy_configs["name"]
-        strategy_config = strategy_configs["configs"]
+    def _instantiate_strategy(self, selection_strategy: dict) -> AbstractSelectionStrategy:
+        strategy_name = selection_strategy["name"]
+        config = selection_strategy["config"] if "config" in selection_strategy.keys() else {}
+
+        if "limit" not in config.keys():
+            config["limit"] = -1
+            logger.warning("No explicit limit given, disabling.")
+
+        if "reset_after_trigger" not in config.keys():
+            config["reset_after_trigger"] = False
+            logger.warning("No reset setting given, disabling reset.")
+
         if strategy_name == "finetune":
-            strategy_config["selector"] = {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}
-            return DataFreshnessStrategy(strategy_config, self._modyn_config)
+            # TODO(MaxiBoether): get rid of this selector thing
+            config["selector"] = {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}
+            return DataFreshnessStrategy(config, self._modyn_config)
+
         raise NotImplementedError(f"{strategy_name} is not implemented")

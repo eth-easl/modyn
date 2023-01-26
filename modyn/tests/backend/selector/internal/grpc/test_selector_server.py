@@ -1,5 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module
-# TODO(MaxiBoether): this tests multiple things, such as entrypoint, servicer and more. split this into entrypoint, server, servicer
+# TODO(MaxiBoether): this tests multiple things, such as entrypoint, servicer and more.
+# split this into entrypoint, server, servicer
 
 import json
 import os

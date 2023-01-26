@@ -30,7 +30,7 @@ message TriggerResponse {
 
 message RegisterPipelineRequest {
     int32 num_workers = 1;
-    JsonString selector_strategy_config = 2;
+    JsonString selection_strategy = 2;
 }
 
 message PipelineResponse {

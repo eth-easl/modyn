@@ -26,7 +26,7 @@ class SelectorGRPCServicer(SelectorServicer):
 
     def register_pipeline(self, request: RegisterPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         logger.info(f"Registering pipeline with request - {str(request)}")
-        pipeline_id = self.selector_manager.register_pipeline(request.num_workers, request.selector_strategy_config)
+        pipeline_id = self.selector_manager.register_pipeline(request.num_workers, request.selection_strategy)
         return PipelineResponse(pipeline_id=pipeline_id)
 
     def get_sample_keys_and_weight(  # pylint: disable-next=unused-argument

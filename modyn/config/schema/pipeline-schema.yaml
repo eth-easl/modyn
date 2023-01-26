@@ -56,19 +56,31 @@ properties:
         type: number
         description: |
           The batch size to be used during training.
-      strategy:
-        type: string
-        description: |
-          The Selector strategy that the pipeline should use.
-      strategy_config:
+      selection_strategy:
         type: object
         description: |
-          Configuration dictionary that will be passed to the Selector
+          Configuration for the Selector
         properties:
-          limit:
-            type: number
+          name:
+            type: string
             description: |
-              When strategy is finetune, this limits how many data points we finetune on at maximum per triggered training. Set to -1 to disable limit.
+              The Selector strategy that the pipeline should use.
+          config:
+            type: object
+            description: |
+              Configuration dictionary that will be passed to the strategy
+            properties:
+              limit:
+                type: number
+                description: |
+                  This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.
+              reset_after_trigger:
+                type: boolean
+                description: |
+                  If set to true, the selection strategy resets its internal state after a trigger.
+
+        required:
+          - name
       initial_model:
         type: string
         description: |

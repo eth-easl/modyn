@@ -19,11 +19,14 @@ class AbstractSelectionStrategy(ABC):
 
     def __init__(self, config: dict, modyn_config: dict):
         self._config = config
+        assert (
+            "limit" in config.keys() and "reset_after_trigger" in config.keys()
+        ), "Strategy instantiated with invalid config"
+
         self.training_set_size_limit: int = config["limit"]
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            self.database: MetadataDatabaseConnection = database
+        self.database = MetadataDatabaseConnection(self._modyn_config)
 
     @abstractmethod
     def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
