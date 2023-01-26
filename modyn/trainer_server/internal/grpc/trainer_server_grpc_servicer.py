@@ -159,8 +159,11 @@ class TrainerServerGRPCServicer:
 
         exception_queue = self._training_process_dict[training_id].exception_queue
 
+        # As qsize() is unreliable and not implemented on macOS,
+        # we try to fetch an element within 100ms. If there is no
+        # element within that timeframe returned, we return None.
         try:
-            exception = exception_queue.get(True, 0.2)
+            exception = exception_queue.get(True, 0.1)
             return exception
         except queue.Empty:
             return None
