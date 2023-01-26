@@ -16,6 +16,7 @@ from modyn.backend.selector.entrypoint import main
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611
     DataInformRequest,
     GetSamplesRequest,
+    JsonString,
     PipelineResponse,
     RegisterPipelineRequest,
 )
@@ -66,22 +67,24 @@ def teardown():
 
 
 def test_illegal_register_raises():
-    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
+    selection_strategy = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_servicer
     with pytest.raises(ValueError):
         servicer.register_pipeline(
-            RegisterPipelineRequest(num_workers=-1, selector_strategy_config=json.dumps(selector_strategy_configs)),
+            RegisterPipelineRequest(
+                num_workers=-1, selection_strategy=JsonString(value=json.dumps(selection_strategy))
+            ),
             None,
         )
 
 
 def test_prepare_training_set():
-    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
+    selection_strategy = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_servicer
     pipeline_id = servicer.selector_manager.register_pipeline(
-        num_workers=1, strategy_configs=json.dumps(selector_strategy_configs)
+        num_workers=1, selection_strategy=json.dumps(selection_strategy)
     )
     servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
     populate_metadata_database(pipeline_id)
@@ -97,12 +100,13 @@ def test_prepare_training_set():
 
 
 def test_full_cycle():
-    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": True}}
+    selection_strategy = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": True}}
 
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_servicer
     pipeline_response: PipelineResponse = servicer.register_pipeline(
-        RegisterPipelineRequest(num_workers=1, selector_strategy_config=json.dumps(selector_strategy_configs)), None
+        RegisterPipelineRequest(num_workers=1, selection_strategy=JsonString(value=json.dumps(selection_strategy))),
+        None,
     )
     pipeline_id = pipeline_response.pipeline_id
     servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8

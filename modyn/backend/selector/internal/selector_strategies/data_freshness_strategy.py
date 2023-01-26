@@ -1,6 +1,7 @@
 # pylint: disable=singleton-comparison
 # flake8: noqa: E712
 import numpy as np
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
@@ -56,15 +57,16 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         return unseen_data_ratio
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
-        self.database.set_metadata(
-            keys,
-            timestamps,
-            [None] * len(keys),
-            [False] * len(keys),
-            [None] * len(keys),
-            [None] * len(keys),
-            pipeline_id,
-        )
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.set_metadata(
+                keys,
+                timestamps,
+                [None] * len(keys),
+                [False] * len(keys),
+                [None] * len(keys),
+                [None] * len(keys),
+                pipeline_id,
+            )
 
     def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
@@ -159,14 +161,16 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             List of keys for the unseen samples.
         """
-        data = (
-            self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(
-                Metadata.training_id == pipeline_id,
-                Metadata.seen == False,
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.session.query(Metadata.key, Metadata.seen)
+                .filter(
+                    Metadata.training_id == pipeline_id,
+                    Metadata.seen == False,
+                )
+                .all()
             )
-            .all()
-        )
+
         if len(data) > 0:
             keys, seen = zip(*data)
         else:
@@ -193,11 +197,12 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             List of keys for the previously seen samples
         """
-        data = (
-            self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
-            .all()
-        )
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.session.query(Metadata.key, Metadata.seen)
+                .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
+                .all()
+            )
         if len(data) > 0:
             keys, seen = zip(*data)
         else:
@@ -221,11 +226,12 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             int: number of unseen samples
         """
-        data = (
-            self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
-            .all()
-        )
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.session.query(Metadata.key, Metadata.seen)
+                .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
+                .all()
+            )
         assert len(data) > 0, "Queried unseen data, but got seen data."
         keys, seen = zip(*data)
 
@@ -241,11 +247,13 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         Returns:
             int: number of previously seen samples
         """
-        data = (
-            self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.training_id == pipeline_id, Metadata.seen == False)
-            .all()
-        )
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.session.query(Metadata.key, Metadata.seen)
+                .filter(Metadata.training_id == pipeline_id, Metadata.seen == False)
+                .all()
+            )
+
         assert len(data) > 0, "Queried unseen data, but got seen data."
         keys, seen = zip(*data)
 

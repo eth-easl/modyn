@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-
 
 class AbstractSelectionStrategy(ABC):
     """This class is the base class for selectors. In order to extend this class
@@ -26,7 +24,6 @@ class AbstractSelectionStrategy(ABC):
         self.training_set_size_limit: int = config["limit"]
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
-        self.database = MetadataDatabaseConnection(self._modyn_config)
 
     @abstractmethod
     def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:

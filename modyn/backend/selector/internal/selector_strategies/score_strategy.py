@@ -1,4 +1,5 @@
 import numpy as np
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
@@ -52,16 +53,18 @@ class ScoreStrategy(AbstractSelectionStrategy):
         return list(zip(list(samples), list(scores)))
 
     def _get_all_metadata(self, pipeline_id: int) -> tuple[list[str], list[float]]:
-        all_metadata = self.database.session.query(Metadata).filter(Metadata.training_id == pipeline_id).all()
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            all_metadata = database.session.query(Metadata).filter(Metadata.training_id == pipeline_id).all()
         return ([metadata.key for metadata in all_metadata], [metadata.score for metadata in all_metadata])
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
-        self.database.set_metadata(
-            keys,
-            timestamps,
-            [1.0] * len(keys),
-            [False] * len(keys),
-            [None] * len(keys),
-            [None] * len(keys),
-            pipeline_id,
-        )
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.set_metadata(
+                keys,
+                timestamps,
+                [1.0] * len(keys),
+                [False] * len(keys),
+                [None] * len(keys),
+                [None] * len(keys),
+                pipeline_id,
+            )

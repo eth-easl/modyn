@@ -28,8 +28,6 @@ def get_minimal_modyn_config():
 
 def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
     self._modyn_config = get_minimal_modyn_config()
-    with MetadataDatabaseConnection(self._modyn_config) as database:
-        self.database = database
 
 
 def setup():

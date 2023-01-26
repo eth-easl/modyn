@@ -1,4 +1,5 @@
 import numpy as np
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
@@ -35,18 +36,20 @@ class GDumbStrategy(AbstractSelectionStrategy):
         return [(sample, 1.0) for sample in result_samples]
 
     def _get_all_metadata(self, pipeline_id: int) -> tuple[list[str], list[int]]:
-        all_metadata = (
-            self.database.session.query(Metadata.key, Metadata.label).filter(Metadata.training_id == pipeline_id).all()
-        )
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            all_metadata = (
+                database.session.query(Metadata.key, Metadata.label).filter(Metadata.training_id == pipeline_id).all()
+            )
         return ([metadata.key for metadata in all_metadata], [metadata.label for metadata in all_metadata])
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
-        self.database.set_metadata(
-            keys,
-            timestamps,
-            [None] * len(keys),
-            [False] * len(keys),
-            labels,
-            [None] * len(keys),
-            pipeline_id,
-        )
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.set_metadata(
+                keys,
+                timestamps,
+                [None] * len(keys),
+                [False] * len(keys),
+                labels,
+                [None] * len(keys),
+                pipeline_id,
+            )
