@@ -9,7 +9,7 @@ class GDumbStrategy(AbstractSelectionStrategy):
     Implements the GDumb selection policy.
     """
 
-    def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
+    def _on_trigger(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
         For a given pipeline_id and number of samples, request that many samples from the selector.
 

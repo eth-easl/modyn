@@ -240,7 +240,6 @@ def test_storage() -> None:
     check_get_current_timestamp()  # Check if the storage service is still available.
 
 
-
 def main() -> None:
     try:
         test_storage()

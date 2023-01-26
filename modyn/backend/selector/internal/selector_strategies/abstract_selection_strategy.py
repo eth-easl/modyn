@@ -15,7 +15,7 @@ class AbstractSelectionStrategy(ABC):
         modyn_config (dict): the configurations for the modyn backend
     """
 
-    def __init__(self, config: dict, modyn_config: dict):
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
         self._config = config
         assert (
             "limit" in config.keys() and "reset_after_trigger" in config.keys()
@@ -24,30 +24,36 @@ class AbstractSelectionStrategy(ABC):
         self.training_set_size_limit: int = config["limit"]
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
+        self._pipeline_id = pipeline_id
 
     @abstractmethod
-    def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
+    def _on_trigger(self) -> list[tuple[str, float]]:
         """
-        Selects a new training set of samples for the given pipeline id.
+        Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
+        train on.
 
         Returns:
-            list(tuple(str, float)): each entry is a training sample, where the first element of the tuple
+            list(tuple(str, float)): Each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def _reset_state(self) -> None:
+        """Resets the internal state of the strategy, e.g., by clearing buffers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         """Informs the strategy of new data.
 
         Args:
-            pipeline_id (int): The pipeline that the data is associated with
             keys (list[str]): A list of keys of the data
             timestamps (list[int]): A list of timestamps of the data.
         """
         raise NotImplementedError
 
-    def trigger(self, pipeline_id: int) -> list[tuple[str, float]]:
+    def trigger(self) -> list[tuple[str, float]]:
         """
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
 
@@ -55,10 +61,9 @@ class AbstractSelectionStrategy(ABC):
             list(tuple(str, float)): each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
-        training_samples = self.select_new_training_samples(pipeline_id)
+        training_samples = self._on_trigger()
+
         if self.reset_after_trigger:
             self._reset_state()
-        return training_samples
 
-    def _reset_state(self) -> None:
-        pass
+        return training_samples

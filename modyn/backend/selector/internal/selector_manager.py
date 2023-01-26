@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from threading import Lock
 
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
@@ -14,8 +15,9 @@ class SelectorManager:
     def __init__(self, modyn_config: dict) -> None:
         self._modyn_config = modyn_config
         self._selectors: dict[int, Selector] = {}
-        self._num_workers: dict[int, int] = {}
+        self._selector_locks: dict[int, Lock] = {}
         self._next_pipeline_id = 0
+        self._next_pipeline_lock = Lock()
 
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """
@@ -28,19 +30,20 @@ class SelectorManager:
         if num_workers <= 0:
             raise ValueError(f"Tried to register training with {num_workers} workers.")
 
-        pipeline_id = self._next_pipeline_id
-        self._next_pipeline_id += 1
+        with self._next_pipeline_lock:
+            pipeline_id = self._next_pipeline_id
+            self._next_pipeline_id += 1
 
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy))
         selector = Selector(selection_strategy, pipeline_id, num_workers)
         self._selectors[pipeline_id] = selector
-        self._num_workers[pipeline_id] = num_workers
+        self._selector_locks[pipeline_id] = Lock()
         return pipeline_id
 
-    def get_sample_keys_and_weight(self, pipeline_id: int, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
+    def get_sample_keys_and_weights(self, pipeline_id: int, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
         """
-        For a given pipeline_id, trigger_id and worker_id, it returns a subset of sample
-        keys so that the data can be queried from storage. It also returns the associated weight of each sample.
+        For a given pipeline, trigger and worker, this function returns the subset of sample
+        keys to be queried from storage. It also returns the associated weight of each sample.
         This weight can be used during training to support advanced strategies that want to weight the
         gradient descent step for different samples differently. Explicitly, instead of changing parameters
         by learning_rate * gradient, you would change the parameters by sample_weight * learning_rate * gradient.
@@ -52,7 +55,7 @@ class SelectorManager:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested keys from pipeline {pipeline_id} which does not exist!")
 
-        num_workers = self._num_workers[pipeline_id]
+        num_workers = self._selectors[pipeline_id]._num_workers
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {pipeline_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
@@ -61,14 +64,18 @@ class SelectorManager:
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
-        self._selectors[pipeline_id].inform_data(keys, timestamps, labels)
+
+        with self._selector_locks[pipeline_id]:
+            self._selectors[pipeline_id].inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(
         self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]
     ) -> int:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")
-        return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
+
+        with self._selector_locks[pipeline_id]:
+            return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
     def _instantiate_strategy(self, selection_strategy: dict) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]

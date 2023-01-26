@@ -74,7 +74,7 @@ def test_gdumb_selector_get_new_training_samples(test__get_all_metadata):
     selector = GDumbStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector.training_set_size_limit = 6
 
-    samples = selector.select_new_training_samples(0)
+    samples = selector._on_trigger(0)
     classes = [clss for _, clss in samples]
     samples = [sample for sample, _ in samples]
 

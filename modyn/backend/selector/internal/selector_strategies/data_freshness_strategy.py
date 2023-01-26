@@ -68,7 +68,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
                 pipeline_id,
             )
 
-    def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
+    def _on_trigger(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 

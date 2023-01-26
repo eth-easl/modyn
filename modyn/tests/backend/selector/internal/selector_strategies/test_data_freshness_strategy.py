@@ -72,7 +72,7 @@ def test_base_selector_with_limit_get_new_training_samples(test__get_seen_data, 
     with pytest.raises(Exception):
         selector._set_unseen_data_ratio(-0.1)
 
-    assert selector.select_new_training_samples(0) == [
+    assert selector._on_trigger(0) == [
         ("a", 1.0),
         ("b", 1.0),
         ("c", 1.0),
@@ -104,7 +104,7 @@ def test_adaptive_selector_with_limit_get_new_training_samples(
     selector._is_adaptive_ratio = True
     selector.unseen_data_ratio = 0.0
 
-    assert selector.select_new_training_samples(0) == [
+    assert selector._on_trigger(0) == [
         ("a", 1.0),
         ("b", 1.0),
         ("c", 1.0),
@@ -138,7 +138,7 @@ def test_base_selector_without_limit_get_new_training_samples(
     with pytest.raises(Exception):
         selector._set_unseen_data_ratio(-0.1)
 
-    assert selector.select_new_training_samples(0) == [
+    assert selector._on_trigger(0) == [
         ("a", 1.0),
         ("b", 1.0),
         ("c", 1.0),
@@ -170,7 +170,7 @@ def test_adaptive_selector_without_limit_get_new_training_samples(
     selector._is_adaptive_ratio = True
     selector.unseen_data_ratio = 0.0
 
-    assert selector.select_new_training_samples(0) == [
+    assert selector._on_trigger(0) == [
         ("a", 1.0),
         ("b", 1.0),
         ("c", 1.0),

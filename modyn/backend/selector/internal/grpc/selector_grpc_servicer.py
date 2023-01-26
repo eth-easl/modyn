@@ -32,22 +32,28 @@ class SelectorGRPCServicer(SelectorServicer):
     def get_sample_keys_and_weight(  # pylint: disable-next=unused-argument
         self, request: GetSamplesRequest, context: grpc.ServicerContext
     ) -> SamplesResponse:
-        logger.info(f"Fetching samples for request - {str(request)}")
-        samples = self.selector_manager.get_sample_keys_and_weight(
-            request.pipeline_id, request.trigger_id, request.worker_id
-        )
+        pipeline_id, trigger_id, worker_id = request.pipeline_id, request.trigger_id, request.worker_id
+        logger.info(f"[Pipeline {pipeline_id}]: Fetching samples for trigger id {trigger_id} and worker id {worker_id}")
+
+        samples = self.selector_manager.get_sample_keys_and_weights(pipeline_id, trigger_id, worker_id)
+
         samples_keys = [sample[0] for sample in samples]
         samples_weights = [sample[1] for sample in samples]
         return SamplesResponse(training_samples_subset=samples_keys, training_samples_weight=samples_weights)
 
     def inform_data(self, request: DataInformRequest, context: grpc.ServicerContext) -> Empty:
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
-        logger.info(f"Selctor is informed of {len(keys)} new data points")
+        logger.info(f"[Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points")
+
         self.selector_manager.inform_data(pipeline_id, keys, timestamps, labels)
         return Empty()
 
     def inform_data_and_trigger(self, request: DataInformRequest, context: grpc.ServicerContext) -> TriggerResponse:
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
-        logger.info(f"Selctor is informed of {len(keys)} new data points, and triggered")
+        logger.info(
+            f"[Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points"
+            + f"+ trigger at timestamp {timestamps[-1]}"
+        )
+
         trigger_id = self.selector_manager.inform_data_and_trigger(pipeline_id, keys, timestamps, labels)
         return TriggerResponse(trigger_id=trigger_id)
