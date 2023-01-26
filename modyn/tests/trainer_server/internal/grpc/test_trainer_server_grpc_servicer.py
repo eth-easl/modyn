@@ -1,6 +1,7 @@
 # pylint: disable=unused-argument, no-name-in-module
 import json
 import multiprocessing as mp
+import platform
 import tempfile
 from io import BytesIO
 from unittest import mock
@@ -258,7 +259,12 @@ def test_get_training_status():
     assert state == state_dict["state"]
     assert num_batches == state_dict["num_batches"]
     assert num_samples == state_dict["num_samples"]
-    assert training_process_info.status_query_queue.qsize() == 1
+
+    if not platform.system() == "Darwin":
+        assert training_process_info.status_query_queue.qsize() == 1
+    else:
+        assert not training_process_info.status_query_queue.empty()
+
     assert training_process_info.status_response_queue.empty()
     query = training_process_info.status_query_queue.get()
     assert query == TrainerMessages.STATUS_QUERY_MESSAGE
