@@ -32,6 +32,8 @@ services:
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
+    volumes:
+      - storage-data:/app/storage
   trainer_server:
     restart: on-failure
     depends_on:
@@ -56,3 +58,8 @@ services:
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
+    user: root
+    volumes:
+      - storage-data:/app/storage
+volumes:
+  storage-data:

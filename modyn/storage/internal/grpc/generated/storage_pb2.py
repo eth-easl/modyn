@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\rmodyn.storage\x1a\x1bgoogle/protobuf/empty.proto\".\n\nGetRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x0c\n\x04keys\x18\x02 \x03(\t\":\n\x0bGetResponse\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x0c\n\x04keys\x18\x02 \x03(\t\x12\x0e\n\x06labels\x18\x03 \x03(\x03\"?\n\x16GetNewDataSinceRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\";\n\x17GetNewDataSinceResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x12\n\ntimestamps\x18\x02 \x03(\x03\"^\n\x18GetDataInIntervalRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fstart_timestamp\x18\x02 \x01(\x03\x12\x15\n\rend_timestamp\x18\x03 \x01(\x03\"=\n\x19GetDataInIntervalResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x12\n\ntimestamps\x18\x02 \x03(\x03\"-\n\x17\x44\x61tasetAvailableRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\"-\n\x18\x44\x61tasetAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\"\xc1\x01\n\x19RegisterNewDatasetRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x1f\n\x17\x66ilesystem_wrapper_type\x18\x02 \x01(\t\x12\x19\n\x11\x66ile_wrapper_type\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x11\n\tbase_path\x18\x05 \x01(\t\x12\x0f\n\x07version\x18\x06 \x01(\t\x12\x1b\n\x13\x66ile_wrapper_config\x18\x07 \x01(\t\"-\n\x1aRegisterNewDatasetResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"0\n\x1bGetCurrentTimestampResponse\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x32\xcf\x04\n\x07Storage\x12@\n\x03Get\x12\x19.modyn.storage.GetRequest\x1a\x1a.modyn.storage.GetResponse\"\x00\x30\x01\x12\x64\n\x0fGetNewDataSince\x12%.modyn.storage.GetNewDataSinceRequest\x1a&.modyn.storage.GetNewDataSinceResponse\"\x00\x30\x01\x12j\n\x11GetDataInInterval\x12\'.modyn.storage.GetDataInIntervalRequest\x1a(.modyn.storage.GetDataInIntervalResponse\"\x00\x30\x01\x12\x66\n\x11\x43heckAvailability\x12&.modyn.storage.DatasetAvailableRequest\x1a\'.modyn.storage.DatasetAvailableResponse\"\x00\x12k\n\x12RegisterNewDataset\x12(.modyn.storage.RegisterNewDatasetRequest\x1a).modyn.storage.RegisterNewDatasetResponse\"\x00\x12[\n\x13GetCurrentTimestamp\x12\x16.google.protobuf.Empty\x1a*.modyn.storage.GetCurrentTimestampResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rstorage.proto\x12\rmodyn.storage\x1a\x1bgoogle/protobuf/empty.proto\".\n\nGetRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x0c\n\x04keys\x18\x02 \x03(\t\"<\n\x0bGetResponse\x12\x0f\n\x07samples\x18\x01 \x03(\x0c\x12\x0c\n\x04keys\x18\x02 \x03(\t\x12\x0e\n\x06labels\x18\x03 \x03(\x03\"?\n\x16GetNewDataSinceRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\x03\";\n\x17GetNewDataSinceResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x12\n\ntimestamps\x18\x02 \x03(\x03\"^\n\x18GetDataInIntervalRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fstart_timestamp\x18\x02 \x01(\x03\x12\x15\n\rend_timestamp\x18\x03 \x01(\x03\"=\n\x19GetDataInIntervalResponse\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x12\n\ntimestamps\x18\x02 \x03(\x03\"-\n\x17\x44\x61tasetAvailableRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\"-\n\x18\x44\x61tasetAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\"\xc1\x01\n\x19RegisterNewDatasetRequest\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x1f\n\x17\x66ilesystem_wrapper_type\x18\x02 \x01(\t\x12\x19\n\x11\x66ile_wrapper_type\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x11\n\tbase_path\x18\x05 \x01(\t\x12\x0f\n\x07version\x18\x06 \x01(\t\x12\x1b\n\x13\x66ile_wrapper_config\x18\x07 \x01(\t\"-\n\x1aRegisterNewDatasetResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"0\n\x1bGetCurrentTimestampResponse\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\"(\n\x15\x44\x65leteDatasetResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xac\x05\n\x07Storage\x12@\n\x03Get\x12\x19.modyn.storage.GetRequest\x1a\x1a.modyn.storage.GetResponse\"\x00\x30\x01\x12\x62\n\x0fGetNewDataSince\x12%.modyn.storage.GetNewDataSinceRequest\x1a&.modyn.storage.GetNewDataSinceResponse\"\x00\x12h\n\x11GetDataInInterval\x12\'.modyn.storage.GetDataInIntervalRequest\x1a(.modyn.storage.GetDataInIntervalResponse\"\x00\x12\x66\n\x11\x43heckAvailability\x12&.modyn.storage.DatasetAvailableRequest\x1a\'.modyn.storage.DatasetAvailableResponse\"\x00\x12k\n\x12RegisterNewDataset\x12(.modyn.storage.RegisterNewDatasetRequest\x1a).modyn.storage.RegisterNewDatasetResponse\"\x00\x12[\n\x13GetCurrentTimestamp\x12\x16.google.protobuf.Empty\x1a*.modyn.storage.GetCurrentTimestampResponse\"\x00\x12_\n\rDeleteDataset\x12&.modyn.storage.DatasetAvailableRequest\x1a$.modyn.storage.DeleteDatasetResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'storage_pb2', globals())
@@ -24,25 +24,27 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _GETREQUEST._serialized_start=61
   _GETREQUEST._serialized_end=107
   _GETRESPONSE._serialized_start=109
-  _GETRESPONSE._serialized_end=167
-  _GETNEWDATASINCEREQUEST._serialized_start=169
-  _GETNEWDATASINCEREQUEST._serialized_end=232
-  _GETNEWDATASINCERESPONSE._serialized_start=234
-  _GETNEWDATASINCERESPONSE._serialized_end=293
-  _GETDATAININTERVALREQUEST._serialized_start=295
-  _GETDATAININTERVALREQUEST._serialized_end=389
-  _GETDATAININTERVALRESPONSE._serialized_start=391
-  _GETDATAININTERVALRESPONSE._serialized_end=452
-  _DATASETAVAILABLEREQUEST._serialized_start=454
-  _DATASETAVAILABLEREQUEST._serialized_end=499
-  _DATASETAVAILABLERESPONSE._serialized_start=501
-  _DATASETAVAILABLERESPONSE._serialized_end=546
-  _REGISTERNEWDATASETREQUEST._serialized_start=549
-  _REGISTERNEWDATASETREQUEST._serialized_end=742
-  _REGISTERNEWDATASETRESPONSE._serialized_start=744
-  _REGISTERNEWDATASETRESPONSE._serialized_end=789
-  _GETCURRENTTIMESTAMPRESPONSE._serialized_start=791
-  _GETCURRENTTIMESTAMPRESPONSE._serialized_end=839
-  _STORAGE._serialized_start=842
-  _STORAGE._serialized_end=1433
+  _GETRESPONSE._serialized_end=169
+  _GETNEWDATASINCEREQUEST._serialized_start=171
+  _GETNEWDATASINCEREQUEST._serialized_end=234
+  _GETNEWDATASINCERESPONSE._serialized_start=236
+  _GETNEWDATASINCERESPONSE._serialized_end=295
+  _GETDATAININTERVALREQUEST._serialized_start=297
+  _GETDATAININTERVALREQUEST._serialized_end=391
+  _GETDATAININTERVALRESPONSE._serialized_start=393
+  _GETDATAININTERVALRESPONSE._serialized_end=454
+  _DATASETAVAILABLEREQUEST._serialized_start=456
+  _DATASETAVAILABLEREQUEST._serialized_end=501
+  _DATASETAVAILABLERESPONSE._serialized_start=503
+  _DATASETAVAILABLERESPONSE._serialized_end=548
+  _REGISTERNEWDATASETREQUEST._serialized_start=551
+  _REGISTERNEWDATASETREQUEST._serialized_end=744
+  _REGISTERNEWDATASETRESPONSE._serialized_start=746
+  _REGISTERNEWDATASETRESPONSE._serialized_end=791
+  _GETCURRENTTIMESTAMPRESPONSE._serialized_start=793
+  _GETCURRENTTIMESTAMPRESPONSE._serialized_end=841
+  _DELETEDATASETRESPONSE._serialized_start=843
+  _DELETEDATASETRESPONSE._serialized_end=883
+  _STORAGE._serialized_start=886
+  _STORAGE._serialized_end=1570
 # @@protoc_insertion_point(module_scope)

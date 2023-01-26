@@ -35,7 +35,7 @@ class AbstractFileWrapper(ABC):
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
-    def get_samples(self, start: int, end: int) -> bytes:
+    def get_samples(self, start: int, end: int) -> list[bytes]:
         """Get the samples from the file.
 
         Args:
@@ -80,7 +80,7 @@ class AbstractFileWrapper(ABC):
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
-    def get_samples_from_indices(self, indices: list) -> bytes:
+    def get_samples_from_indices(self, indices: list) -> list[bytes]:
         """Get the samples at the given indices.
 
         Args:

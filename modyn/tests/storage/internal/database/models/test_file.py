@@ -30,7 +30,7 @@ def test_add_file(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -53,7 +53,7 @@ def test_update_file(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -81,7 +81,7 @@ def test_delete_file(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -104,7 +104,7 @@ def test_repr_file(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )

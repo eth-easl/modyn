@@ -7,7 +7,7 @@ storage:
   port: "50051"
   hostname: "storage"
   new_file_watcher:
-    interval: 10
+    interval: 5
   datasets:
     [
       {

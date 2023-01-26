@@ -24,7 +24,7 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
     def __is_valid_path(self, path: str) -> bool:
         return path.startswith(self.base_path)
 
-    def get(self, path: str) -> bytes:
+    def _get(self, path: str) -> bytes:
         """Get file content.
 
         Args:
