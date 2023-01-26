@@ -1,7 +1,7 @@
+import grpc
 from integrationtests.utils import get_modyn_config
 from modyn.utils import grpc_connection_established
 
-import grpc
 
 def connect_to_selector_servicer() -> grpc.Channel:
     config = get_modyn_config()
