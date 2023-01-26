@@ -3,6 +3,7 @@ import io
 import json
 import multiprocessing as mp
 import os
+import platform
 import tempfile
 from collections import OrderedDict
 from io import BytesIO
@@ -229,8 +230,8 @@ def test_train_invalid_query_message():
     with tempfile.NamedTemporaryFile() as temp:
         with pytest.raises(ValueError, match="Unknown message in the status query queue"):
             trainer.train(temp.name)
-        assert query_status_queue.qsize() == 0
-        assert status_queue.qsize() == 0
+        assert query_status_queue.empty()
+        assert status_queue.empty()
 
 
 @patch(
@@ -248,8 +249,13 @@ def test_train():
         trainer.train(temp.name)
         assert os.path.exists(temp.name)
         assert trainer._num_samples == 800
-        assert query_status_queue.qsize() == 0
-        assert status_queue.qsize() == 1
+        assert query_status_queue.empty()
+
+        if not platform.system() == "Darwin":
+            assert status_queue.qsize() == 1
+        else:
+            assert not status_queue.empty()
+
         status = status_queue.get()
         assert status["num_batches"] == 0
         assert status["num_samples"] == 0
@@ -302,6 +308,11 @@ def test_create_trainer_with_exception(test_dynamic_module_import):
         )
         assert query_status_queue.empty()
         assert status_queue.empty()
-        assert exception_queue.qsize() == 1
+
+        if not platform.system() == "Darwin":
+            assert exception_queue.qsize() == 1
+        else:
+            assert not exception_queue.empty()
+
         exception = exception_queue.get()
         assert "ValueError: Unknown message in the status query queue" in exception

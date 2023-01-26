@@ -158,9 +158,15 @@ class TrainerServerGRPCServicer:
     def check_for_training_exception(self, training_id: int) -> Optional[str]:
 
         exception_queue = self._training_process_dict[training_id].exception_queue
-        if exception_queue.qsize() > 0:
-            return exception_queue.get()
-        return None
+
+        # As qsize() is unreliable and not implemented on macOS,
+        # we try to fetch an element within 100ms. If there is no
+        # element within that timeframe returned, we return None.
+        try:
+            exception = exception_queue.get(True, 0.1)
+            return exception
+        except queue.Empty:
+            return None
 
     def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
 
