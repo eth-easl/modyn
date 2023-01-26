@@ -2,14 +2,13 @@
 
 import grpc
 from integrationtests.utils import get_modyn_config
-from modyn.utils import grpc_connection_established
-from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
-    RegisterPipelineRequest,
     DataInformRequest,
     GetSamplesRequest,
+    RegisterPipelineRequest,
 )
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.utils import grpc_connection_established
 
 
 def connect_to_selector_servicer() -> grpc.Channel:
