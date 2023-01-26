@@ -3,7 +3,7 @@ import logging
 import pathlib
 
 import yaml
-from modyn.backend.selector.selector_server import SelectorServer
+from modyn.backend.selector.internal.grpc.selector_server import SelectorServer
 
 logging.basicConfig(
     level=logging.NOTSET,

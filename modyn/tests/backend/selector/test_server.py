@@ -1,4 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module
+# TODO(MaxiBoether): this tests multiple things, such as entrypoint and more. split this.
+
 import json
 import os
 import pathlib
@@ -9,14 +11,14 @@ import grpc
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
+from modyn.backend.selector.entrypoint import main
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611
     DataInformRequest,
     GetSamplesRequest,
     PipelineResponse,
     RegisterPipelineRequest,
 )
-from modyn.backend.selector.selector_entrypoint import main
-from modyn.backend.selector.selector_server import SelectorServer
+from modyn.backend.selector.internal.grpc.selector_server import SelectorServer
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 

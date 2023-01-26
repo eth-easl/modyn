@@ -17,7 +17,7 @@ class Selector:
         self._num_workers = num_workers
         # The cache will have trigger_id as the key and return the samples,
         # which is a list of tuples (sample_key, sample_weight)
-        self._training_samples_cache: Dict[int, list[tuple[str, float]]] = {}
+        self._trigger_cache: Dict[int, list[tuple[str, float]]] = {}
         self._current_trigger_id = 0
 
     def _select_new_training_samples(self, trigger_id: int) -> list[tuple[str, float]]:
@@ -29,7 +29,7 @@ class Selector:
                 along with the weight of each sample.
         """
         samples = self._strategy.select_new_training_samples(self._pipeline_id)
-        self._training_samples_cache[trigger_id] = samples
+        self._trigger_cache[trigger_id] = samples
         return samples
 
     def _get_training_set(
@@ -45,8 +45,8 @@ class Selector:
             list(tuple(str, float)): the training sample keys for the newly selected training_set
                 along with the weight of each sample.
         """
-        if trigger_id in self._training_samples_cache:
-            training_samples = self._training_samples_cache[trigger_id]
+        if trigger_id in self._trigger_cache:
+            training_samples = self._trigger_cache[trigger_id]
         else:
             training_samples = self._select_new_training_samples(trigger_id)
 
@@ -106,5 +106,5 @@ class Selector:
         self._strategy.inform_data(self._pipeline_id, keys, timestamps, labels)
         next_trigger_id = self._current_trigger_id
         self._current_trigger_id += 1
-        self._training_samples_cache[next_trigger_id] = self._strategy.trigger(self._pipeline_id)
+        self._trigger_cache[next_trigger_id] = self._strategy.trigger(self._pipeline_id)
         return next_trigger_id

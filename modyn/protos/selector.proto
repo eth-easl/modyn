@@ -13,6 +13,10 @@ message Empty {
 
 }
 
+message JsonString {
+    string value = 1;
+}
+
 message DataInformRequest {
     int32 pipeline_id = 1;
     repeated string keys = 2;
@@ -26,7 +30,7 @@ message TriggerResponse {
 
 message RegisterPipelineRequest {
     int32 num_workers = 1;
-    string selector_strategy_config = 2;
+    JsonString selector_strategy_config = 2;
 }
 
 message PipelineResponse {
@@ -39,7 +43,7 @@ message GetSamplesRequest {
     int32 worker_id = 3;
 }
 
-message SamplesResponse{
+message SamplesResponse {
     repeated string training_samples_subset = 1;
     repeated float training_samples_weight = 2;
 }

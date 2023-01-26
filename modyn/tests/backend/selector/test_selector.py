@@ -58,7 +58,7 @@ def test_get_training_set(test__select_new_training_samples):
     selector = Selector(None)
     strategy = AbstractSelectionStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._strategy = strategy
-    selector._training_samples_cache = {}
+    selector._trigger_cache = {}
     assert selector._get_training_set(0) == ["a", "b"]
 
     test__select_new_training_samples.return_value = []
@@ -127,7 +127,7 @@ def test_select_new_training_samples_caching():
     samples_2 = [("c", 1.0), ("d", 1.0)]
 
     selector = Selector()
-    selector._training_samples_cache = {}
+    selector._trigger_cache = {}
     selector._num_workers = 3
     selector._pipeline_id = 0
     selector._strategy = MockStrategy(desired_result=samples_1)
@@ -144,7 +144,7 @@ def test_select_new_training_samples_caching():
     selector._strategy = MockStrategy(desired_result=samples_2)
 
     assert selector._get_training_set(1) == samples_2
-    assert len(selector._training_samples_cache.keys()) == 2
+    assert len(selector._trigger_cache.keys()) == 2
     assert selector._strategy.times_called == 1
     assert selector._get_training_set(1) == samples_2
     assert selector._strategy.times_called == 1

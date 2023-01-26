@@ -25,7 +25,7 @@ class SelectorGRPCServicer(SelectorServicer):
         self.selector_manager = selector_manager
 
     def register_pipeline(self, request: RegisterPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
-        logger.info(f"Registering training with request - {str(request)}")
+        logger.info(f"Registering pipeline with request - {str(request)}")
         pipeline_id = self.selector_manager.register_pipeline(request.num_workers, request.selector_strategy_config)
         return PipelineResponse(pipeline_id=pipeline_id)
 
