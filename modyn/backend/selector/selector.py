@@ -104,7 +104,7 @@ class Selector:
 
     def inform_data_and_trigger(self, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
         self._strategy.inform_data(self._pipeline_id, keys, timestamps, labels)
-        self._strategy.trigger()
         next_trigger_id = self._current_trigger_id
         self._current_trigger_id += 1
+        self._training_samples_cache[next_trigger_id] = self._strategy.trigger(self._pipeline_id)
         return next_trigger_id

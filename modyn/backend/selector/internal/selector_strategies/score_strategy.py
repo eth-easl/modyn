@@ -65,7 +65,3 @@ class ScoreStrategy(AbstractSelectionStrategy):
             [None] * len(keys),
             pipeline_id,
         )
-
-    def trigger(self) -> None:
-        # For score strategy, no work to do.
-        pass

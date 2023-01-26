@@ -61,7 +61,7 @@ def teardown():
 
 
 def test_prepare_training_set():
-    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8}}
+    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_server
     pipeline_id = servicer.selector_manager.register_pipeline(
@@ -81,7 +81,7 @@ def test_prepare_training_set():
 
 
 def test_full_cycle():
-    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8}}
+    selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
 
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_server
@@ -113,8 +113,6 @@ def test_full_cycle():
     worker_0_samples = servicer.get_sample_keys_and_weight(
         GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0), None
     ).training_samples_subset
-
-    print(worker_0_samples)
 
     assert set(worker_0_samples) == set(["test_key_1", "test_key_2", "test_key_3", "test_key_4"])
 

@@ -67,7 +67,7 @@ class SelectorManager:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")
         return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
-    def _instantiate_strategy(self, strategy_configs) -> AbstractSelectionStrategy:
+    def _instantiate_strategy(self, strategy_configs: dict) -> AbstractSelectionStrategy:
         strategy_name = strategy_configs["name"]
         strategy_config = strategy_configs["configs"]
         if strategy_name == "finetune":

@@ -20,9 +20,10 @@ class AbstractSelectionStrategy(ABC):
     def __init__(self, config: dict, modyn_config: dict):
         self._config = config
         self.training_set_size_limit: int = config["limit"]
+        self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            self.database = database
+            self.database: MetadataDatabaseConnection = database
 
     @abstractmethod
     def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
@@ -46,10 +47,18 @@ class AbstractSelectionStrategy(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def trigger(self) -> None:
+    def trigger(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
-        Causes the strategy to carry out any work needed to be prepared to return training sets.
-        For most basic strategies, this will be no operation.
+        Causes the strategy to compute the training set, and (if so configured) reset its internal state.
+
+        Returns:
+            list(tuple(str, float)): each entry is a training sample, where the first element of the tuple
+                is the key, and the second element is the associated weight.
         """
-        raise NotImplementedError
+        training_samples = self.select_new_training_samples(pipeline_id)
+        if self.reset_after_trigger:
+            self._reset_state()
+        return training_samples
+
+    def _reset_state(self) -> None:
+        pass

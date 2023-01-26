@@ -29,6 +29,11 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         self._set_unseen_data_ratio(self._config["selector"]["unseen_data_ratio"])
         self._is_adaptive_ratio = self._config["selector"]["is_adaptive_ratio"]
 
+        if self.unseen_data_ratio < 1:
+            assert (
+                not self.reset_after_trigger
+            ), "Tried to instantiate a DataFreshness strategy that uses previously seen data, but set reset_after_trigger, which is incompatible. "
+
     def _set_unseen_data_ratio(self, unseen_data_ratio: float) -> None:
         assert 0 <= unseen_data_ratio <= 1
         self.unseen_data_ratio = unseen_data_ratio
@@ -60,10 +65,6 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             [None] * len(keys),
             pipeline_id,
         )
-
-    def trigger(self) -> None:
-        # For data freshness strategy, no prep work to do.
-        pass
 
     def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
         """
