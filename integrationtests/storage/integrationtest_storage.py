@@ -196,9 +196,9 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
         if len(response.samples) == 0:
             assert False, f"Could not get image with key {keys[i]}."
         for sample in response.samples:
-            if sample.image is None:
+            if sample is None:
                 assert False, f"Could not get image with key {keys[i]}."
-            image = Image.open(io.BytesIO(sample.image))
+            image = Image.open(io.BytesIO(sample))
             if image.tobytes() not in expected_images:
                 raise ValueError(f"Image with key {keys[i]} is not present in the expected images.")
     assert i == len(keys) - 1, f"Could not get all images. Images missing: keys: {keys} i: {i}"
