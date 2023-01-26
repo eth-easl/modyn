@@ -7,8 +7,8 @@ from unittest.mock import patch
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
 from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.file_wrapper.single_sample_file_wrapper import SingleSampleFileWrapper
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
-from modyn.storage.internal.file_wrapper.webdataset_file_wrapper import WebdatasetFileWrapper
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
@@ -45,7 +45,7 @@ def get_minimal_modyn_config() -> dict:
                     "name": "test",
                     "base_path": os.path.dirname(TMP_FILE),
                     "filesystem_wrapper_type": LocalFilesystemWrapper,
-                    "file_wrapper_type": WebdatasetFileWrapper,
+                    "file_wrapper_type": SingleSampleFileWrapper,
                     "description": "test",
                     "version": "0.0.1",
                     "file_wrapper_config": {},
@@ -129,7 +129,7 @@ def test_init() -> None:
     assert server is not None
 
 
-@patch.object(WebdatasetFileWrapper, "get_samples_from_indices", return_value=b"")
+@patch.object(SingleSampleFileWrapper, "get_samples_from_indices", return_value=b"")
 def test_get(mock_get_samples_from_indices):
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
@@ -278,7 +278,7 @@ def test_register_new_dataset():
         dataset_id="test3",
         base_path=os.path.dirname(TMP_FILE),
         filesystem_wrapper_type="LocalFilesystemWrapper",
-        file_wrapper_type="WebdatasetFileWrapper",
+        file_wrapper_type="SingleSampleFileWrapper",
         description="test",
         version="0.0.1",
         file_wrapper_config="{}",

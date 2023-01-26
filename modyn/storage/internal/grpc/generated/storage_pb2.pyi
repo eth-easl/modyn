@@ -1,11 +1,8 @@
-from typing import ClassVar as _ClassVar
-from typing import Iterable as _Iterable
-from typing import Optional as _Optional
-
-from google.protobuf import descriptor as _descriptor
 from google.protobuf import empty_pb2 as _empty_pb2
-from google.protobuf import message as _message
 from google.protobuf.internal import containers as _containers
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -20,6 +17,12 @@ class DatasetAvailableResponse(_message.Message):
     AVAILABLE_FIELD_NUMBER: _ClassVar[int]
     available: bool
     def __init__(self, available: bool = ...) -> None: ...
+
+class DeleteDatasetResponse(_message.Message):
+    __slots__ = ["success"]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: bool = ...) -> None: ...
 
 class GetCurrentTimestampResponse(_message.Message):
     __slots__ = ["timestamp"]
@@ -70,14 +73,14 @@ class GetRequest(_message.Message):
     def __init__(self, dataset_id: _Optional[str] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetResponse(_message.Message):
-    __slots__ = ["chunk", "keys", "labels"]
-    CHUNK_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ["keys", "labels", "samples"]
     KEYS_FIELD_NUMBER: _ClassVar[int]
     LABELS_FIELD_NUMBER: _ClassVar[int]
-    chunk: bytes
+    SAMPLES_FIELD_NUMBER: _ClassVar[int]
     keys: _containers.RepeatedScalarFieldContainer[str]
     labels: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ..., labels: _Optional[_Iterable[int]] = ...) -> None: ...
+    samples: _containers.RepeatedScalarFieldContainer[bytes]
+    def __init__(self, samples: _Optional[_Iterable[bytes]] = ..., keys: _Optional[_Iterable[str]] = ..., labels: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class RegisterNewDatasetRequest(_message.Message):
     __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_config", "file_wrapper_type", "filesystem_wrapper_type", "version"]

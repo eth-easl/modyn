@@ -156,7 +156,7 @@ def test_seek(test__seek_dataset, session) -> None:  # noqa: E501
             name="test1",
             description="test description",
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+            file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path=TEST_DIR,
         )
     )
@@ -176,7 +176,7 @@ def test_seek_dataset(test__update_files_in_directory, session) -> None:  # noqa
             name="test2",
             description="test description",
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+            file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path=TEST_DIR,
         )
     )
@@ -196,7 +196,7 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
             name="test",
             description="test description",
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+            file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path="/notexists",
         )
     )
@@ -217,7 +217,7 @@ def test_seek_path_not_dir(test_get_filesystem_wrapper, test__update_files_in_di
             name="test4",
             description="test description",
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+            file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path=TEST_FILE1,
         )
     )

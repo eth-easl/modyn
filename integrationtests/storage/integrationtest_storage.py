@@ -4,7 +4,7 @@ import os
 import pathlib
 import random
 import time
-
+import shutil
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import yaml
@@ -25,12 +25,14 @@ SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
 CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
+# The following path leads to a directory that is mounted into the docker container and shared with the storage container.
 DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
 
-
-IMAGES = []
+# Because we have no mapping of file to key (happens in the storage service), we have to keep track of the images we added
+# to the dataset ourselves and compare them to the images we get from the storage service.
+FIRST_ADDED_IMAGES = []
+SECOND_ADDED_IMAGES = []
 IMAGE_UPDATED_TIME_STAMPS = []
-TIME_STAMP = current_time_millis() + 10000
 
 
 def get_modyn_config() -> dict:
@@ -46,16 +48,14 @@ def connect_to_storage() -> grpc.Channel:
     storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
     storage_channel = grpc.insecure_channel(storage_address)
 
-    if not grpc_connection_established(storage_channel):
-        assert False, f"Could not establish gRPC connection to storage at {storage_address}."
+    if not grpc_connection_established(storage_channel) or storage_channel is None:
+        raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
 
     return storage_channel
 
 
 def register_new_dataset() -> None:
     storage_channel = connect_to_storage()
-    if storage_channel is None:
-        return
 
     storage = StorageStub(storage_channel)
 
@@ -76,8 +76,6 @@ def register_new_dataset() -> None:
 
 def check_dataset_availability() -> None:
     storage_channel = connect_to_storage()
-    if storage_channel is None:
-        return False
 
     storage = StorageStub(storage_channel)
 
@@ -89,8 +87,6 @@ def check_dataset_availability() -> None:
 
 def check_get_current_timestamp() -> None:
     storage_channel = connect_to_storage()
-    if storage_channel is None:
-        return False
 
     storage = StorageStub(storage_channel)
 
@@ -101,8 +97,24 @@ def check_get_current_timestamp() -> None:
     assert response.timestamp > 0, "Timestamp is not valid."
 
 
-def create_dataset() -> None:
+def create_dataset_dir() -> None:
     pathlib.Path(DATASET_PATH).mkdir(parents=True, exist_ok=True)
+
+
+def cleanup_dataset_dir() -> None:
+    shutil.rmtree(DATASET_PATH)
+
+
+def cleanup_storage_database() -> None:
+    storage_channel = connect_to_storage()
+
+    storage = StorageStub(storage_channel)
+
+    request = DatasetAvailableRequest(dataset_id="test_dataset")
+
+    response = storage.DeleteDataset(request)
+
+    assert response.success, "Could not cleanup storage database."
 
 
 def add_image_to_dataset(image: Image, name: str) -> None:
@@ -124,22 +136,19 @@ def create_random_image() -> Image:
     return image
 
 
-def add_images_to_dataset(start_number: int, end_number: int) -> None:
-    create_dataset()
+def add_images_to_dataset(start_number: int, end_number: int, images_added: list[bytes]) -> None:
+    create_dataset_dir()
 
     for i in range(start_number, end_number):
         image = create_random_image()
         add_image_to_dataset(image, f"image_{i}.png")
-        IMAGES.append(image)
+        images_added.append(image.tobytes())
         with open(DATASET_PATH / f"image_{i}.txt", "w") as label_file:
             label_file.write(f"{i}")
 
 
 def get_new_data_since(timestamp: int) -> GetNewDataSinceResponse:
     storage_channel = connect_to_storage()
-
-    if storage_channel is None:
-        raise Exception("Could not connect to storage.")
 
     storage = StorageStub(storage_channel)
 
@@ -156,9 +165,6 @@ def get_new_data_since(timestamp: int) -> GetNewDataSinceResponse:
 def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> GetDataInIntervalResponse:
     storage_channel = connect_to_storage()
 
-    if storage_channel is None:
-        raise Exception("Could not connect to storage.")
-
     storage = StorageStub(storage_channel)
 
     request = GetDataInIntervalRequest(
@@ -172,12 +178,9 @@ def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> GetDataInI
     return response
 
 
-def check_data(keys: list[str], indices: list[int]) -> None:
+def check_data(keys: list[str], expected_images: list[bytes]) -> None:
 
     storage_channel = connect_to_storage()
-
-    if storage_channel is None:
-        raise Exception("Could not connect to storage.")
 
     storage = StorageStub(storage_channel)
 
@@ -186,64 +189,62 @@ def check_data(keys: list[str], indices: list[int]) -> None:
         keys=keys,
     )
 
-    expected_images = [IMAGES[index].tobytes() for index in indices]
-
     for i, response in enumerate(storage.Get(request)):
-        if response.chunk is None:
+        if len(response.samples) == 0:
             assert False, f"Could not get image with key {keys[i]}."
-        image = Image.open(io.BytesIO(response.chunk))
-        if image.tobytes() not in expected_images:
-            assert False, f"Image with key {keys[i]} is not present in the expected images."
-    assert i == len(keys) - 1, f"Could not get all images. Images missing: indices: {indices} keys: {keys} i: {i}"
+        for sample in response.samples:
+            if sample.image is None:
+                assert False, f"Could not get image with key {keys[i]}."
+            image = Image.open(io.BytesIO(sample.image))
+            if image.tobytes() not in expected_images:
+                raise ValueError(f"Image with key {keys[i]} is not present in the expected images.")
+    assert i == len(keys) - 1, f"Could not get all images. Images missing: keys: {keys} i: {i}"
 
 
 def test_storage() -> None:
     check_get_current_timestamp()  # Check if the storage service is available.
-    create_dataset()
-    add_images_to_dataset(0, 10)  # Add images to the dataset.
+    create_dataset_dir()
+    add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
 
-    time.sleep(20)  # Let the storage service process the new dataset.
-
-    check_dataset_availability()  # Check again to make sure the dataset is available.
-
-    response = get_new_data_since(0)  # Get all images currently in the dataset.
-
+    for i in range(20):
+        response = get_new_data_since(0)
+        if len(response.keys) == 10:
+            break
+        time.sleep(1)
+    
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
-    check_data(response.keys, list(range(0, 10)))
 
-    add_images_to_dataset(10, 20)  # Add more images to the dataset.
+    check_data(response.keys, FIRST_ADDED_IMAGES)
 
-    time.sleep(20)  # Let the storage service process the new images.
+    add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
 
     sorted_image_updated_time_stamps = sorted(IMAGE_UPDATED_TIME_STAMPS)
 
-    # Due to the time it takes to process the images,
-    response = get_new_data_since(sorted_image_updated_time_stamps[10] - 2)
-    # the timestamp of the last image might be a bit off.
+    for i in range(20):
+        response = get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1)
+        if len(response.keys) == 10:
+            break
+        time.sleep(1)
 
-    assert (
-        len(response.keys) == 10
-    ), f"Not all images were returned. Images returned: {response.keys}, \
-        image updated time stamps: {IMAGE_UPDATED_TIME_STAMPS}, \
-        image updated time stamps[10]: {IMAGE_UPDATED_TIME_STAMPS[10]}"
-    check_data(response.keys, list(range(10, 20)))
+    assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
-    image_indices = list(range(0, 20))
-    sorted_image_indices = [
-        x for _, x in sorted(zip(IMAGE_UPDATED_TIME_STAMPS, image_indices), key=lambda pair: pair[0])
-    ]
+    check_data(response.keys, SECOND_ADDED_IMAGES)
 
-    response = get_data_in_interval(0, sorted_image_updated_time_stamps[9])
+    response = get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9])
 
-    check_data(response.keys, sorted_image_indices[0:10])
+    check_data(response.keys, FIRST_ADDED_IMAGES)
 
     check_get_current_timestamp()  # Check if the storage service is still available.
 
 
 def main() -> None:
-    test_storage()
+    try:
+        test_storage()
+    finally:
+        cleanup_dataset_dir()
+        cleanup_storage_database()
 
 
 if __name__ == "__main__":

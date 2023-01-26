@@ -23,6 +23,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetResponse,
     RegisterNewDatasetRequest,
     RegisterNewDatasetResponse,
+    DeleteDatasetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 from modyn.utils.utils import current_time_millis
@@ -231,3 +232,14 @@ class StorageGRPCServicer(StorageServicer):
             GetCurrentTimestampResponse: The current timestamp.
         """
         return GetCurrentTimestampResponse(timestamp=current_time_millis())
+
+    # pylint: disable-next=unused-argument,invalid-name
+    def DeleteDataset(self, request: DatasetAvailableRequest, context: grpc.ServeContext):
+        """Delete a dataset from the database.
+
+        Returns:
+            DeleteDatasetResponse: True if the dataset was successfully deleted, False otherwise.
+        """
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            success = database.delete_dataset(request.dataset_id)
+            return DeleteDatasetResponse(success=success)

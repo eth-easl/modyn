@@ -24,5 +24,4 @@ dependencies:
   - pytorch
   - torchvision
   - pip:
-      - webdataset
       - "-e ."
