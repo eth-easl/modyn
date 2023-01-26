@@ -6,6 +6,8 @@ import logging
 
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 from modyn.storage.internal.database.models.dataset import Dataset
+from modyn.storage.internal.database.models.file import File
+from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.storage_base import Base
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
@@ -85,6 +87,23 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
             self.session.commit()
         except exc.SQLAlchemyError as exception:
             logger.error(f"Error adding dataset: {exception}")
+            self.session.rollback()
+            return False
+        return True
+
+    def delete_dataset(self, name: str) -> bool:
+        """Delete dataset from database."""
+        try:
+            samples = self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).all()
+            for sample in samples:
+                self.session.delete(sample)
+            files = self.session.query(File).join(Dataset).filter(Dataset.name == name).all()
+            for file in files:
+                self.session.delete(file)
+            self.session.query(Dataset).filter(Dataset.name == name).delete()
+            self.session.commit()
+        except exc.SQLAlchemyError as exception:
+            logger.error(f"Error deleting dataset: {exception}")
             self.session.rollback()
             return False
         return True

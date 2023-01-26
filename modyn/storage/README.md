@@ -32,7 +32,6 @@ To add a new filesystem wrapper, you need to implement the `AbstractFilesystemWr
 The following file wrappers are currently implemented:
 
 - `single_sample`: Each file contains a single sample
-- `webdataset`: Each file contains multiple samples in the [WebDataset](https://webdataset.github.io/webdataset/) format
 
 Future file wrappers may include:
 

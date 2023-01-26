@@ -40,7 +40,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             return 0
         return 1
 
-    def get_samples(self, start: int, end: int) -> bytes:
+    def get_samples(self, start: int, end: int) -> list[bytes]:
         """Get the samples from the file.
 
         Args:
@@ -55,7 +55,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         """
         if start != 0 or end != 1:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
-        return self.get_sample(0)
+        return [self.get_sample(0)]
 
     def get_sample(self, index: int) -> bytes:
         r"""Return the sample as bytes.
@@ -107,7 +107,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             return int(label)
         return None
 
-    def get_samples_from_indices(self, indices: list) -> bytes:
+    def get_samples_from_indices(self, indices: list) -> list[bytes]:
         """Get the samples from the file.
 
         Args:
@@ -121,4 +121,4 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         """
         if len(indices) != 1 or indices[0] != 0:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
-        return self.get_sample(0)
+        return [self.get_sample(0)]
