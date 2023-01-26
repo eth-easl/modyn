@@ -13,7 +13,7 @@ logging.basicConfig(format="%(asctime)s %(message)s")
 
 
 class TrainingMetadataRequest:
-    def __init__(self, pipeline_id, trigger_id, per_sample_metadata: list, per_tigger_metadata: list):
+    def __init__(self, pipeline_id, trigger_id, per_sample_metadata: list = [], per_tigger_metadata: list = []):
         self.pipeline_id = pipeline_id
         self.trigger_id = trigger_id
         self.per_sample_metadata = per_sample_metadata
@@ -23,10 +23,10 @@ class TrainingMetadataResponse:
     def __init__(self):
         pass
 
-class PerSampleMetadata:
-    def __init__(self, sample_id, metadata):
+class PerSampleLoss:
+    def __init__(self, sample_id, loss):
         self.sample_id = sample_id
-        self.metadata = metadata
+        self.loss = loss
 
 
 class MockMetadataProcessorServer:

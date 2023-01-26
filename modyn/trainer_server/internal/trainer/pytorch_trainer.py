@@ -7,6 +7,8 @@ from typing import Optional, Union
 
 import torch
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
+from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
+from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
@@ -57,6 +59,13 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
+        # just pass pipeline_id 0 for now
+        self._metadata_collector = MetadataCollector(0, training_info.training_id)
+
+        # create callbacks - For now, assume LossCallback by default
+        # TODO: should be defined by the pipeline and passed with training request
+        self._callbacks = [LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)]
+
     def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None) -> None:
 
         dict_to_save = {
@@ -106,7 +115,13 @@ class PytorchTrainer:
 
         train_iter = enumerate(self._train_dataloader)
 
+        for callback in self._callbacks:
+            callback.on_train_begin()
+
         for batch_number, batch in train_iter:
+
+            for callback in self._callbacks:
+                callback.on_batch_begin()
 
             if not self._status_query_queue.empty():
                 req = self._status_query_queue.get()
@@ -114,11 +129,17 @@ class PytorchTrainer:
                     raise ValueError("Unknown message in the status query queue")
                 self.send_state_to_server(batch_number)
 
+            sample_ids = batch[0]
+            data, target = batch[1].to(self._device), batch[2].to(self._device)
+
             self._optimizer.zero_grad()
-            data, target = batch[0].to(self._device), batch[1].to(self._device)
             output = self._model.model(data)
             loss = self._criterion(output, target)
             loss.backward()
+
+            for callback in self._callbacks:
+                callback.on_batch_before_update(sample_ids, data, target, output, loss)
+
             self._optimizer.step()
 
             if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
@@ -128,6 +149,15 @@ class PytorchTrainer:
             self._num_samples += batch[0].shape[0]
 
             logger.info(f"Iteration {batch_number}")
+
+            for callback in self._callbacks:
+                callback.on_batch_end()
+
+
+        for callback in self._callbacks:
+            callback.on_train_end()
+
+        self._metadata_collector.send_metadata()
 
         logger.info("Training complete!")
         logger.removeHandler(file_handler)

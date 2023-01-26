@@ -14,11 +14,8 @@ class BaseCallback(ABC):
     def on_batch_begin(self):
         pass
 
+    def on_batch_before_update(self):
+        pass
+
     def on_batch_end(self):
-        pass
-
-    def on_epoch_begin(self):
-        pass
-
-    def on_epoch_end(self):
         pass
