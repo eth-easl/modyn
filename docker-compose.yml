@@ -52,6 +52,7 @@ services:
       - storage
       - metadata-db
       - storage-db
+      - selector_server
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
