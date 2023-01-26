@@ -13,7 +13,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
     DataInformRequest,
     GetSamplesRequest,
     PipelineResponse,
-    RegisterPipelineRequest
+    RegisterPipelineRequest,
 )
 from modyn.backend.selector.selector_entrypoint import main
 from modyn.backend.selector.selector_server import SelectorServer
@@ -61,14 +61,17 @@ def populate_metadata_database(pipeline_id):
 def teardown():
     os.remove(database_path)
 
+
 def test_illegal_register_raises():
     selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_server
     with pytest.raises(ValueError):
         servicer.register_pipeline(
-            RegisterPipelineRequest(num_workers=-1, selector_strategy_config=json.dumps(selector_strategy_configs)), None
+            RegisterPipelineRequest(num_workers=-1, selector_strategy_config=json.dumps(selector_strategy_configs)),
+            None,
         )
+
 
 def test_prepare_training_set():
     selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
@@ -127,7 +130,7 @@ def test_full_cycle():
 
     assert set(worker_0_samples) == set(["test_key_1", "test_key_2", "test_key_3", "test_key_4"])
 
-    # Now check that we correctly raise errors in the case of silly requests. 
+    # Now check that we correctly raise errors in the case of silly requests.
 
     with pytest.raises(ValueError):
         # Pipeline ID not registered
@@ -135,27 +138,27 @@ def test_full_cycle():
 
     with pytest.raises(ValueError):
         # Num workers out of bounds
-        servicer.get_sample_keys_and_weight(GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1), None)
+        servicer.get_sample_keys_and_weight(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1), None
+        )
 
     with pytest.raises(ValueError):
         # Num workers out of bounds
-        servicer.get_sample_keys_and_weight(GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=-1), None)
+        servicer.get_sample_keys_and_weight(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=-1), None
+        )
 
     with pytest.raises(ValueError):
         # Pipeline ID not registered
         servicer.inform_data(
-            DataInformRequest(
-                pipeline_id=3, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1
-            ),
+            DataInformRequest(pipeline_id=3, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1),
             None,
         )
 
     with pytest.raises(ValueError):
         # Pipeline ID not registered
         servicer.inform_data_and_trigger(
-            DataInformRequest(
-                pipeline_id=3, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1
-            ),
+            DataInformRequest(pipeline_id=3, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1),
             None,
         )
 
