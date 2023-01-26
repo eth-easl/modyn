@@ -52,7 +52,7 @@ class ScoreStrategy(AbstractSelectionStrategy):
         return list(zip(list(samples), list(scores)))
 
     def _get_all_metadata(self, pipeline_id: int) -> tuple[list[str], list[float]]:
-        all_metadata = self.database.session.query(Metadata).filter(Metadata.pipeline_id == pipeline_id).all()
+        all_metadata = self.database.session.query(Metadata).filter(Metadata.training_id == pipeline_id).all()
         return ([metadata.key for metadata in all_metadata], [metadata.score for metadata in all_metadata])
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:

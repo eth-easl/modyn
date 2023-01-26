@@ -36,7 +36,7 @@ class GDumbStrategy(AbstractSelectionStrategy):
 
     def _get_all_metadata(self, pipeline_id: int) -> tuple[list[str], list[int]]:
         all_metadata = (
-            self.database.session.query(Metadata.key, Metadata.label).filter(Metadata.pipeline_id == pipeline_id).all()
+            self.database.session.query(Metadata.key, Metadata.label).filter(Metadata.training_id == pipeline_id).all()
         )
         return ([metadata.key for metadata in all_metadata], [metadata.label for metadata in all_metadata])
 

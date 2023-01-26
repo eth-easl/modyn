@@ -162,7 +162,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
             .filter(
-                Metadata.pipeline_id == pipeline_id,
+                Metadata.training_id == pipeline_id,
                 Metadata.seen == False,
             )
             .all()
@@ -195,7 +195,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.pipeline_id == pipeline_id, Metadata.seen == True)
+            .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
             .all()
         )
         if len(data) > 0:
@@ -223,7 +223,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.pipeline_id == pipeline_id, Metadata.seen == True)
+            .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
             .all()
         )
         assert len(data) > 0, "Queried unseen data, but got seen data."
@@ -243,7 +243,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.pipeline_id == pipeline_id, Metadata.seen == False)
+            .filter(Metadata.training_id == pipeline_id, Metadata.seen == False)
             .all()
         )
         assert len(data) > 0, "Queried unseen data, but got seen data."
