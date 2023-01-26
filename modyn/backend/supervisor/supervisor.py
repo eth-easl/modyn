@@ -197,7 +197,7 @@ class Supervisor:
         any_training_triggered = False
 
         for i in range(0, len(new_data), selector_batch_size):
-            batch = new_data[i : i + selector_batch_size]
+            batch = new_data[i: i + selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             any_training_triggered = any_training_triggered or triggered
 
@@ -216,7 +216,7 @@ class Supervisor:
     def _handle_triggers_within_batch(self, batch: list[tuple[str, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         for i, triggering_idx in enumerate(triggering_indices):
-            triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
+            triggering_data = batch[previous_trigger_idx: triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
             # This call informs the selector about the data until (and including)
@@ -229,7 +229,7 @@ class Supervisor:
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1 :]
+                remaining_data = batch[triggering_idx + 1:]
 
                 if len(remaining_data) > 0:
                     # These data points will be included in the next trigger
