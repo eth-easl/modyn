@@ -46,12 +46,12 @@ class SelectorManager:
             List of tuples for the samples to be returned to that particular worker. The first
             index of the tuple will be the key, and the second index will be that sample's weight.
         """
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested keys from pipeline {pipeline_id} which does not exist!")
+
         num_workers = self._num_workers[pipeline_id]
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {pipeline_id} has {num_workers} workers, but queried for worker {worker_id}!")
-
-        if pipeline_id not in self._selectors:
-            raise ValueError(f"Requested keys from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_sample_keys_and_weight(trigger_id, worker_id)
 
