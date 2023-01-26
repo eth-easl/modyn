@@ -90,12 +90,16 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
             self.session.rollback()
             return False
         return True
-    
+
     def delete_dataset(self, name: str) -> bool:
         """Delete dataset from database."""
         try:
-            self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).delete()
-            self.session.query(File).join(Dataset).filter(Dataset.name == name).delete()
+            samples = self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).all()
+            for sample in samples:
+                self.session.delete(sample)
+            files = self.session.query(File).join(Dataset).filter(Dataset.name == name).all()
+            for file in files:
+                self.session.delete(file)
             self.session.query(Dataset).filter(Dataset.name == name).delete()
             self.session.commit()
         except exc.SQLAlchemyError as exception:

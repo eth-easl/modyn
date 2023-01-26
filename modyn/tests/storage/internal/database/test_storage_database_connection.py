@@ -1,5 +1,7 @@
 import pytest
 from modyn.storage.internal.database.models.dataset import Dataset
+from modyn.storage.internal.database.models.file import File
+from modyn.storage.internal.database.models.sample import Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 
 
@@ -100,3 +102,30 @@ def test_add_dataset_failure():
             )
             is False
         )
+
+
+def test_delete_dataset():
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.create_tables()
+        assert database.session is not None
+        assert (
+            database.add_dataset(
+                "test", "/tmp/modyn", "LocalFilesystemWrapper", "SingleSampleFileWrapper", "test", "0.0.1", "{}"
+            )
+            is True
+        )
+        dataset = database.session.query(Dataset).filter(Dataset.name == "test").first()
+        file = File(dataset, "/tmp/modyn/test", 0, 0, 1)
+        database.session.add(file)
+        database.session.commit()
+        file = database.session.query(File).filter(File.path == "/tmp/modyn/test").first()
+        sample = Sample(file, 0, 0, 1)
+        database.session.add(sample)
+        database.session.commit()
+        assert database.delete_dataset("test") is True
+        assert database.session.query(Dataset).filter(Dataset.name == "test").first() is None
+
+
+def test_delete_dataset_failure():
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
+        assert database.delete_dataset("test") is False

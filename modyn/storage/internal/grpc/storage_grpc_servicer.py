@@ -14,6 +14,7 @@ from modyn.storage.internal.database.storage_database_utils import get_file_wrap
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     DatasetAvailableResponse,
+    DeleteDatasetResponse,
     GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
     GetDataInIntervalResponse,
@@ -23,7 +24,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetResponse,
     RegisterNewDatasetRequest,
     RegisterNewDatasetResponse,
-    DeleteDatasetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 from modyn.utils.utils import current_time_millis
@@ -93,7 +93,7 @@ class StorageGRPCServicer(StorageServicer):
                         get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
                     )
                     yield GetResponse(
-                        chunk=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
+                        samples=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
                         keys=[external_key for _, external_key, _ in samples_per_file],
                         labels=[label for _, _, label in samples_per_file],
                     )
@@ -108,7 +108,7 @@ class StorageGRPCServicer(StorageServicer):
                 get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
             )
             yield GetResponse(
-                chunk=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
+                samples=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
                 keys=[external_key for _, external_key, _ in samples_per_file],
                 labels=[label for _, _, label in samples_per_file],
             )
@@ -234,7 +234,7 @@ class StorageGRPCServicer(StorageServicer):
         return GetCurrentTimestampResponse(timestamp=current_time_millis())
 
     # pylint: disable-next=unused-argument,invalid-name
-    def DeleteDataset(self, request: DatasetAvailableRequest, context: grpc.ServeContext):
+    def DeleteDataset(self, request: DatasetAvailableRequest, context: grpc.ServicerContext) -> DeleteDatasetResponse:
         """Delete a dataset from the database.
 
         Returns:

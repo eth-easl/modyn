@@ -1,8 +1,9 @@
 """Abstract filesystem wrapper class."""
 
 from abc import ABC, abstractmethod
-from typing import Union
 from pathlib import Path
+from typing import Union
+
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 
 
@@ -19,7 +20,7 @@ class AbstractFileSystemWrapper(ABC):
         """
         self.base_path = base_path
 
-    def get(self, path: Union[str, Path]):
+    def get(self, path: Union[str, Path]) -> bytes:
         """Get file content.
 
         Args:
@@ -29,7 +30,6 @@ class AbstractFileSystemWrapper(ABC):
             bytes: File content
         """
         return self._get(str(path))
-
 
     @abstractmethod
     def _get(self, path: str) -> bytes:

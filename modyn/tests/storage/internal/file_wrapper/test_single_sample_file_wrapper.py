@@ -62,7 +62,8 @@ def test_get_number_of_samples_with_invalid_file_extension():
 def test_get_samples():
     file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples(0, 1)
-    assert samples.startswith(b"test")
+    assert len(samples) == 1
+    assert samples[0].startswith(b"test")
 
 
 def test_get_samples_with_invalid_indices():
@@ -116,7 +117,8 @@ def test_get_label_no_label():
 def test_get_samples_from_indices():
     file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples_from_indices([0])
-    assert samples.startswith(b"test")
+    assert len(samples) == 1
+    assert samples[0].startswith(b"test")
 
 
 def test_get_samples_from_indices_with_invalid_indices():

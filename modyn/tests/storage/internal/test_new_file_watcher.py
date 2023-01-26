@@ -21,6 +21,7 @@ FILE_TIMESTAMP = 1600000000
 TEST_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp")
 TEST_FILE1 = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test1.txt")
 TEST_FILE2 = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test2.txt")
+TEST_FILE_WRONG_SUFFIX = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test1.csv")
 TEST_DATABASE = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test.db")
 
 
@@ -75,7 +76,7 @@ def session():
 class MockFileSystemWrapper(AbstractFileSystemWrapper):
     def __init__(self):
         super().__init__(TEST_DIR)
-        self._list = [TEST_FILE1, TEST_FILE2]
+        self._list = [TEST_FILE1, TEST_FILE2, TEST_FILE_WRONG_SUFFIX]
         self._list_called = False
 
     def exists(self, path: str) -> bool:
@@ -84,14 +85,14 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
         return True
 
     def isdir(self, path: str) -> bool:
-        if path in (TEST_FILE1, TEST_FILE2):
+        if path in (TEST_FILE1, TEST_FILE2, TEST_FILE_WRONG_SUFFIX):
             return False
         if path == TEST_DIR:
             return True
         return False
 
     def isfile(self, path: str) -> bool:
-        if path in (TEST_FILE1, TEST_FILE2):
+        if path in (TEST_FILE1, TEST_FILE2, TEST_FILE_WRONG_SUFFIX):
             return True
         return False
 
@@ -108,7 +109,7 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
     def get_created(self, path: str) -> int:
         return FILE_TIMESTAMP
 
-    def get(self, path: str) -> typing.BinaryIO:
+    def _get(self, path: str) -> typing.BinaryIO:
         return typing.BinaryIO()
 
     def get_size(self, path: str) -> int:
@@ -296,6 +297,8 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
     assert result is not None
     assert len(result) == 4
     assert result[0].file_id == 1
+    session.query(Dataset).delete()
+    session.commit()
 
 
 def test_update_files_in_directory_not_exists(session) -> None:
@@ -320,3 +323,10 @@ def test_run(mock_seek, mock_time) -> None:
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     new_file_watcher.run()
     assert new_file_watcher._seek.called
+
+
+def test_get_datasets(session):
+    should_stop = Value(c_bool, False)
+    new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
+    datasets = new_file_watcher._get_datasets(session)
+    assert len(datasets) == 0

@@ -3,8 +3,9 @@ import json
 import os
 import pathlib
 import random
-import time
 import shutil
+import time
+
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import yaml
@@ -18,18 +19,20 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     RegisterNewDatasetRequest,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils import current_time_millis, grpc_connection_established
+from modyn.utils import grpc_connection_established
 from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
 CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
-# The following path leads to a directory that is mounted into the docker container and shared with the storage container.
+# The following path leads to a directory that is mounted into the docker container and shared with the
+# storage container.
 DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
 
-# Because we have no mapping of file to key (happens in the storage service), we have to keep track of the images we added
-# to the dataset ourselves and compare them to the images we get from the storage service.
+# Because we have no mapping of file to key (happens in the storage service), we have to keep
+# track of the images we added to the dataset ourselves and compare them to the images we get
+# from the storage service.
 FIRST_ADDED_IMAGES = []
 SECOND_ADDED_IMAGES = []
 IMAGE_UPDATED_TIME_STAMPS = []
@@ -213,14 +216,12 @@ def test_storage() -> None:
         if len(response.keys) == 10:
             break
         time.sleep(1)
-    
+
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
 
     add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
-
-    sorted_image_updated_time_stamps = sorted(IMAGE_UPDATED_TIME_STAMPS)
 
     for i in range(20):
         response = get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1)
