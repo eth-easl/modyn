@@ -67,7 +67,7 @@ def teardown():
 def test_illegal_register_raises():
     selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
     selector_server = SelectorServer(get_minimal_modyn_config())
-    servicer = selector_server.grpc_server
+    servicer = selector_server.grpc_servicer
     with pytest.raises(ValueError):
         servicer.register_pipeline(
             RegisterPipelineRequest(num_workers=-1, selector_strategy_config=json.dumps(selector_strategy_configs)),
@@ -78,7 +78,7 @@ def test_illegal_register_raises():
 def test_prepare_training_set():
     selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
     selector_server = SelectorServer(get_minimal_modyn_config())
-    servicer = selector_server.grpc_server
+    servicer = selector_server.grpc_servicer
     pipeline_id = servicer.selector_manager.register_pipeline(
         num_workers=1, strategy_configs=json.dumps(selector_strategy_configs)
     )
@@ -99,7 +99,7 @@ def test_full_cycle():
     selector_strategy_configs = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": True}}
 
     selector_server = SelectorServer(get_minimal_modyn_config())
-    servicer = selector_server.grpc_server
+    servicer = selector_server.grpc_servicer
     pipeline_response: PipelineResponse = servicer.register_pipeline(
         RegisterPipelineRequest(num_workers=1, selector_strategy_config=json.dumps(selector_strategy_configs)), None
     )
