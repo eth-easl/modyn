@@ -5,7 +5,7 @@ import logging
 from threading import Lock
 
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
+from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import FreshnessSamplingStrategy
 from modyn.backend.selector.selector import Selector
 
 logger = logging.getLogger(__name__)
@@ -90,8 +90,8 @@ class SelectorManager:
             logger.warning("No reset setting given, disabling reset.")
 
         if strategy_name == "finetune":
-            # TODO(MaxiBoether): get rid of this selector thing
-            config["selector"] = {"unseen_data_ratio": 1.0, "is_adaptive_ratio": False}
-            return DataFreshnessStrategy(config, self._modyn_config)
+            config["unseen_data_ratio"] = 1.0
+            config["is_adaptive_ratio"] = False
+            return FreshnessSamplingStrategy(config, self._modyn_config)
 
-        raise NotImplementedError(f"{strategy_name} is not implemented")
+        raise NotImplementedError(f"{strategy_name} is not supported")

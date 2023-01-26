@@ -6,39 +6,37 @@ from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 
-class DataFreshnessStrategy(AbstractSelectionStrategy):
+class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     """
-    This class implements selection solely based on freshness of the data.
-    Specifically, there is a "unseen_data_ratio" that controls
-    how much of each batch is from unseen data, and how much is from previously
-    seen data. If is_adaptive_ratio is set to True, then this ratio is automatically
-    set to the proportion of the size of the unseen vs. previously seen data.
+    This class selects data from a mixture of old and new data.
+    We can set a ratio that defines how much data in the training set per trigger should be from previously unused data in any trigger.
 
-    For example, if is_adaptive_ratio is set to True, and there are 600 previously
-    seen data points and 200 previously unseen data points, we will set unseen_data_ratio
-    to 0.25, since there are 200 unseen points and 800 total points, so 200/800=0.25
+    The first trigger will always use only fresh data (up to the limit, if there is one).
+    The subsequent triggers will sample a dataset that reflects the ratio of used/unused data (if data came but was not used in a previous trigger, we still handle it as unseen).
+    We have to respect both the ratio and the limit (if there is one) and build up the dataset on trigger accordingly.
+
+    It cannot be used with reset, because we need to keep state over multiple triggers.
 
     Args:
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, modyn_config: dict):
-        super().__init__(config, modyn_config)
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
+        super().__init__(config, modyn_config, pipeline_id)
 
-        self.unseen_data_ratio = 1.0
-        self.old_data_ratio = 0.0
-        self._set_unseen_data_ratio(self._config["selector"]["unseen_data_ratio"])
-        self._is_adaptive_ratio = self._config["selector"]["is_adaptive_ratio"]
+        for required_config in ["unseen_data_ratio", "is_adaptive_ratio"]:
+            if required_config not in self._config.keys():
+              raise ValueError(f"{required_config} not given in DataFreshnessStrategy config")
 
-        if self.unseen_data_ratio < 1:
-            assert (
-                not self.reset_after_trigger
-            ), "Tried to instantiate a DataFreshness strategy that uses previously seen data, but set reset_after_trigger, which is incompatible. "
+        self.unseen_data_ratio = self._config["unseen_data_ratio"]
 
-    def _set_unseen_data_ratio(self, unseen_data_ratio: float) -> None:
-        assert 0 <= unseen_data_ratio <= 1
-        self.unseen_data_ratio = unseen_data_ratio
-        self.old_data_ratio = 1 - self.unseen_data_ratio
+        if self.unseen_data_ratio < 0 or self.unseen_data_ratio > 100:
+            raise ValueError(f"Invalid unseen data ratio: {self.unseen_data_ratio}. Must be between 0 and 100.")
+
+        if self.unseen_data_ratio < 100 and self.reset_after_trigger:
+            raise ValueError("DataFreshnessStrategy cannot use old data and reset state after trigger, because then no old data is available.")
+
+        self._is_adaptive_ratio = self._config["is_adaptive_ratio"]
 
     def _get_adaptive_unseen_ratio(self, pipeline_id: int) -> float:
         """Returns the proper adaptive unseen data ratio. For example, if there are 200

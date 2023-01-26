@@ -8,7 +8,7 @@ from modyn.backend.metadata_database.metadata_database_connection import Metadat
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.metadata_database.models.training import Training
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import DataFreshnessStrategy
+from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import FreshnessSamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -56,14 +56,14 @@ def teardown():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-@patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
-@patch.object(DataFreshnessStrategy, "_get_unseen_data")
-@patch.object(DataFreshnessStrategy, "_get_seen_data")
+@patch.object(FreshnessSamplingStrategy, "__init__", noop_constructor_mock)
+@patch.object(FreshnessSamplingStrategy, "_get_unseen_data")
+@patch.object(FreshnessSamplingStrategy, "_get_seen_data")
 def test_base_selector_with_limit_get_new_training_samples(test__get_seen_data, test__get_unseen_data):
     test__get_unseen_data.return_value = ["a", "b", "c"]
     test__get_seen_data.return_value = ["d"]
 
-    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = FreshnessSamplingStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._set_unseen_data_ratio(0.75)
     selector.training_set_size_limit = 4
     selector._is_adaptive_ratio = False
@@ -83,11 +83,11 @@ def test_base_selector_with_limit_get_new_training_samples(test__get_seen_data, 
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-@patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
-@patch.object(DataFreshnessStrategy, "_get_unseen_data")
-@patch.object(DataFreshnessStrategy, "_get_seen_data")
-@patch.object(DataFreshnessStrategy, "_get_unseen_data_size")
-@patch.object(DataFreshnessStrategy, "_get_seen_data_size")
+@patch.object(FreshnessSamplingStrategy, "__init__", noop_constructor_mock)
+@patch.object(FreshnessSamplingStrategy, "_get_unseen_data")
+@patch.object(FreshnessSamplingStrategy, "_get_seen_data")
+@patch.object(FreshnessSamplingStrategy, "_get_unseen_data_size")
+@patch.object(FreshnessSamplingStrategy, "_get_seen_data_size")
 def test_adaptive_selector_with_limit_get_new_training_samples(
     test__get_seen_data_size,
     test__get_unseen_data_size,
@@ -99,7 +99,7 @@ def test_adaptive_selector_with_limit_get_new_training_samples(
     test__get_seen_data_size.return_value = 4
     test__get_unseen_data_size.return_value = 1
 
-    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = FreshnessSamplingStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector.training_set_size_limit = 5
     selector._is_adaptive_ratio = True
     selector.unseen_data_ratio = 0.0
@@ -116,11 +116,11 @@ def test_adaptive_selector_with_limit_get_new_training_samples(
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-@patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
-@patch.object(DataFreshnessStrategy, "_get_unseen_data")
-@patch.object(DataFreshnessStrategy, "_get_seen_data")
-@patch.object(DataFreshnessStrategy, "_get_unseen_data_size")
-@patch.object(DataFreshnessStrategy, "_get_seen_data_size")
+@patch.object(FreshnessSamplingStrategy, "__init__", noop_constructor_mock)
+@patch.object(FreshnessSamplingStrategy, "_get_unseen_data")
+@patch.object(FreshnessSamplingStrategy, "_get_seen_data")
+@patch.object(FreshnessSamplingStrategy, "_get_unseen_data_size")
+@patch.object(FreshnessSamplingStrategy, "_get_seen_data_size")
 def test_base_selector_without_limit_get_new_training_samples(
     test__get_seen_data_size, test__get_unseen_data_size, test__get_seen_data, test__get_unseen_data
 ):
@@ -129,7 +129,7 @@ def test_base_selector_without_limit_get_new_training_samples(
     test__get_seen_data_size.return_value = 1
     test__get_unseen_data_size.return_value = 4
 
-    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = FreshnessSamplingStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._set_unseen_data_ratio(0.75)
     selector.training_set_size_limit = -1
     selector._is_adaptive_ratio = False
@@ -149,11 +149,11 @@ def test_base_selector_without_limit_get_new_training_samples(
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-@patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
-@patch.object(DataFreshnessStrategy, "_get_unseen_data")
-@patch.object(DataFreshnessStrategy, "_get_seen_data")
-@patch.object(DataFreshnessStrategy, "_get_unseen_data_size")
-@patch.object(DataFreshnessStrategy, "_get_seen_data_size")
+@patch.object(FreshnessSamplingStrategy, "__init__", noop_constructor_mock)
+@patch.object(FreshnessSamplingStrategy, "_get_unseen_data")
+@patch.object(FreshnessSamplingStrategy, "_get_seen_data")
+@patch.object(FreshnessSamplingStrategy, "_get_unseen_data_size")
+@patch.object(FreshnessSamplingStrategy, "_get_seen_data_size")
 def test_adaptive_selector_without_limit_get_new_training_samples(
     test__get_seen_data_size,
     test__get_unseen_data_size,
@@ -165,7 +165,7 @@ def test_adaptive_selector_without_limit_get_new_training_samples(
     test__get_seen_data_size.return_value = 4
     test__get_unseen_data_size.return_value = 1
 
-    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = FreshnessSamplingStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector.training_set_size_limit = -1
     selector._is_adaptive_ratio = True
     selector.unseen_data_ratio = 0.0
@@ -182,9 +182,9 @@ def test_adaptive_selector_without_limit_get_new_training_samples(
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-@patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
+@patch.object(FreshnessSamplingStrategy, "__init__", noop_constructor_mock)
 def test_base_selector_get_seen_data():
-    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = FreshnessSamplingStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
 
     for key in selector._get_seen_data(1, 1):
@@ -194,9 +194,9 @@ def test_base_selector_get_seen_data():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-@patch.object(DataFreshnessStrategy, "__init__", noop_constructor_mock)
+@patch.object(FreshnessSamplingStrategy, "__init__", noop_constructor_mock)
 def test_base_selector_get_unseen_data():
-    selector = DataFreshnessStrategy(None)  # pylint: disable=abstract-class-instantiated
+    selector = FreshnessSamplingStrategy(None)  # pylint: disable=abstract-class-instantiated
     selector._is_adaptive_ratio = True
 
     for key in selector._get_unseen_data(1, 1):
