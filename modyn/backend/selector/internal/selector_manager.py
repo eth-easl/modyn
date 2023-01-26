@@ -5,7 +5,7 @@ import logging
 from threading import Lock
 
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import FreshnessSamplingStrategy
+from modyn.backend.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
 from modyn.backend.selector.selector import Selector
 
 logger = logging.getLogger(__name__)

@@ -17,18 +17,30 @@ class Metadata(Base):
     seen = Column(Boolean, nullable=True)
     label = Column(Integer, nullable=True)
     data = Column(LargeBinary, nullable=True)
-    training_id = Column(
+    pipeline_id = Column(
         Integer,
+        # TODO(MaxiBoether): update that there are no trainings anymore only pipelines/triggers
         ForeignKey("trainings.training_id"),
         nullable=False,
     )
     training = relationship("Training", backref=backref("metadata", lazy=True))
+    trigger_id = Column(Integer, nullable=False)
 
     def __repr__(self) -> str:
         """Return string representation."""
         return f"<Metadata {self.key}>"
 
-    def __init__(self, key: str, timestamp: int, score: float, seen: bool, label: int, data: bytes, training_id: int):
+    def __init__(
+        self,
+        key: str,
+        timestamp: int,
+        score: float,
+        seen: bool,
+        label: int,
+        data: bytes,
+        pipeline_id: int,
+        trigger_id: int,
+    ):
         """Init metadata.
         Args:
             key (str): key
@@ -44,4 +56,5 @@ class Metadata(Base):
         self.seen = seen
         self.label = label
         self.data = data
-        self.training_id = training_id
+        self.pipeline_id = pipeline_id
+        self.trigger_id = trigger_id

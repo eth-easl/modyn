@@ -8,11 +8,11 @@ from modyn.backend.selector.internal.selector_strategies.abstract_selection_stra
 
 class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     """
-    This class selects data from a mixture of old and new data.
-    We can set a ratio that defines how much data in the training set per trigger should be from previously unused data in any trigger.
+    This class selects data from a mixture of used and unsed data.
+    We can set a ratio that defines how much data in the training set per trigger should be from previously unused data (in all previous triggers).
 
     The first trigger will always use only fresh data (up to the limit, if there is one).
-    The subsequent triggers will sample a dataset that reflects the ratio of used/unused data (if data came but was not used in a previous trigger, we still handle it as unseen).
+    The subsequent triggers will sample a dataset that reflects the ratio of used/unused data (if data came during but was not used in a previous trigger, we still handle it as unseen).
     We have to respect both the ratio and the limit (if there is one) and build up the dataset on trigger accordingly.
 
     It cannot be used with reset, because we need to keep state over multiple triggers.
@@ -22,39 +22,22 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     """
 
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
-        super().__init__(config, modyn_config, pipeline_id)
+        super().__init__(config, modyn_config, pipeline_id, required_configs=["unused_data_ratio"])
+        self.unused_data_ratio = self._config["unused_data_ratio"]
 
-        for required_config in ["unseen_data_ratio", "is_adaptive_ratio"]:
-            if required_config not in self._config.keys():
-              raise ValueError(f"{required_config} not given in DataFreshnessStrategy config")
+        if self.unused_data_ratio < 1 or self.unused_data_ratio > 99:
+            raise ValueError(
+                f"Invalid unused data ratio: {self.unused_data_ratio}. We need at least 1% fresh data (otherwise we would always train on the data from first trigger) and at maximum 99% fresh data (otherwise please use NewDataStrategy)."
+            )
 
-        self.unseen_data_ratio = self._config["unseen_data_ratio"]
+        if self.reset_after_trigger:
+            raise ValueError(
+                "FreshnessSamplingStrategy cannot reset state after trigger, because then no old data would be available to sample from."
+            )
 
-        if self.unseen_data_ratio < 0 or self.unseen_data_ratio > 100:
-            raise ValueError(f"Invalid unseen data ratio: {self.unseen_data_ratio}. Must be between 0 and 100.")
+    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+        # TODO(#116): Right now we persist all datapoint into DB. We might want to keep this partly in memory for performance.
 
-        if self.unseen_data_ratio < 100 and self.reset_after_trigger:
-            raise ValueError("DataFreshnessStrategy cannot use old data and reset state after trigger, because then no old data is available.")
-
-        self._is_adaptive_ratio = self._config["is_adaptive_ratio"]
-
-    def _get_adaptive_unseen_ratio(self, pipeline_id: int) -> float:
-        """Returns the proper adaptive unseen data ratio. For example, if there are 200
-        unseen data points and 600 previously unseen data points, it will return
-        a ratio of 200 (unseen) / 800 (total) = 0.25
-
-        Args:
-            pipeline_id (int): The training ID of the current training.
-
-        Returns:
-            float: The unseen ratio.
-        """
-        seen_data_size = self._get_seen_data_size(pipeline_id)
-        unseen_data_size = self._get_unseen_data_size(pipeline_id)
-        unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
-        return unseen_data_ratio
-
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.set_metadata(
                 keys,
@@ -63,7 +46,8 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 [False] * len(keys),
                 [None] * len(keys),
                 [None] * len(keys),
-                pipeline_id,
+                self._pipeline_id,
+                self._next_trigger_id,
             )
 
     def _on_trigger(self, pipeline_id: int) -> list[tuple[str, float]]:

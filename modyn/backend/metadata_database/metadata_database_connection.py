@@ -43,6 +43,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         """
         Base.metadata.create_all(self.engine)
 
+    # TODO(#113): this really requires some restructuring
     def set_metadata(
         self,
         keys: list[str],
@@ -51,7 +52,8 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         seens: list[bool],
         labels: list[int],
         datas: list[bytes],
-        training_id: int,
+        pipeline_id: int,
+        trigger_id: int,
     ) -> None:
         for i, key in enumerate(keys):
             try:
@@ -64,7 +66,8 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
                     seen=seens[i],
                     label=labels[i],
                     data=datas[i],
-                    training_id=training_id,
+                    pipeline_id=pipeline_id,
+                    trigger_id=trigger_id,
                 )
                 self.session.add(metadata)
                 self.session.commit()

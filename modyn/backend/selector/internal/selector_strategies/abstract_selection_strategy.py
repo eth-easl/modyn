@@ -15,16 +15,19 @@ class AbstractSelectionStrategy(ABC):
         modyn_config (dict): the configurations for the modyn backend
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, required_configs: list[str] = []):
         self._config = config
-        assert (
-            "limit" in config.keys() and "reset_after_trigger" in config.keys()
-        ), "Strategy instantiated with invalid config"
+        required_configs.extend(["limit", "reset_after_trigger"])
+        for required_config in required_configs:
+            if required_config not in self._config.keys():
+                raise ValueError(f"{required_config} not given but required.")
 
         self.training_set_size_limit: int = config["limit"]
+        self.has_limit = self.training_set_size_limit > 0
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
+        self._next_trigger_id = 0
 
     @abstractmethod
     def _on_trigger(self) -> list[tuple[str, float]]:
@@ -53,17 +56,20 @@ class AbstractSelectionStrategy(ABC):
         """
         raise NotImplementedError
 
-    def trigger(self) -> list[tuple[str, float]]:
+    def trigger(self) -> tuple[int, list[tuple[str, float]]]:
         """
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
 
         Returns:
-            list(tuple(str, float)): each entry is a training sample, where the first element of the tuple
-                is the key, and the second element is the associated weight.
+            tuple[int, list[tuple[str, float]]]: Trigger ID and a list of the training data. In this list, each entry is a training sample,
+              where the first element of the tuple is the key, and the second element is the associated weight.
         """
+        trigger_id = self._next_trigger_id
+        self._next_trigger_id += 1
+
         training_samples = self._on_trigger()
 
         if self.reset_after_trigger:
             self._reset_state()
 
-        return training_samples
+        return trigger_id, training_samples

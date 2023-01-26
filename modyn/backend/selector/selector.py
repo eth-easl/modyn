@@ -18,7 +18,6 @@ class Selector:
         # To avoid recalculation, for each trigger_id, we cache the key and return the samples,
         # which is a list of tuples (sample_key, sample_weight)
         self._trigger_cache: Dict[int, list[tuple[str, float]]] = {}
-        self._next_trigger_id = 0
 
     def _get_training_set_partition(
         self, training_samples: list[tuple[str, float]], worker_id: int
@@ -73,11 +72,11 @@ class Selector:
 
     def inform_data_and_trigger(self, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
         self._strategy.inform_data(self._pipeline_id, keys, timestamps, labels)
-        trigger_id = self._next_trigger_id
-        self._next_trigger_id += 1
-        assert trigger_id not in self._trigger_cache.keys(), "Trigger ID already exists, something went wrong."
 
         # Calculates the actual training set for that trigger.
-        self._trigger_cache[trigger_id] = self._strategy.trigger(self._pipeline_id)
+        trigger_id, data = self._strategy.trigger(self._pipeline_id)
+        assert trigger_id not in self._trigger_cache.keys(), "Trigger ID already exists, something went wrong."
+
+        self._trigger_cache[trigger_id] = data
 
         return trigger_id
