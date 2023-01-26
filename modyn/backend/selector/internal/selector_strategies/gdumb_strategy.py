@@ -8,16 +8,16 @@ class GDumbStrategy(AbstractSelectionStrategy):
     Implements the GDumb selection policy.
     """
 
-    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
-        For a given training_id and number of samples, request that many samples from the selector.
+        For a given pipeline_id and number of samples, request that many samples from the selector.
 
         Returns:
             List of keys for the samples to be considered, along with a default weight of 1.
         """
         result_samples, result_classes = [], []
 
-        all_samples, all_classes = self._get_all_metadata(training_id)
+        all_samples, all_classes = self._get_all_metadata(pipeline_id)
         classes, counts = np.unique(all_classes, return_counts=True)
 
         num_classes = classes.shape[0]
@@ -34,9 +34,9 @@ class GDumbStrategy(AbstractSelectionStrategy):
         result_samples = np.concatenate(result_samples)
         return [(sample, 1.0) for sample in result_samples]
 
-    def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[int]]:
+    def _get_all_metadata(self, pipeline_id: int) -> tuple[list[str], list[int]]:
         all_metadata = (
-            self.database.session.query(Metadata.key, Metadata.label).filter(Metadata.training_id == training_id).all()
+            self.database.session.query(Metadata.key, Metadata.label).filter(Metadata.pipeline_id == pipeline_id).all()
         )
         return ([metadata.key for metadata in all_metadata], [metadata.label for metadata in all_metadata])
 

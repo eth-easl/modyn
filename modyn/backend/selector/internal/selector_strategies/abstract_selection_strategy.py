@@ -26,9 +26,9 @@ class AbstractSelectionStrategy(ABC):
             self.database: MetadataDatabaseConnection = database
 
     @abstractmethod
-    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
-        Selects a new training set of samples for the given training id.
+        Selects a new training set of samples for the given pipeline id.
 
         Returns:
             list(tuple(str, float)): each entry is a training sample, where the first element of the tuple

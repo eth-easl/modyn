@@ -40,12 +40,12 @@ def setup():
         database.session.add(training)
         database.session.commit()
 
-        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id)
+        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.pipeline_id)
 
         metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata)
 
-        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", training.training_id)
+        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", training.pipeline_id)
 
         metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata2)

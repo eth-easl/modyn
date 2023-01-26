@@ -19,15 +19,15 @@ class ScoreStrategy(AbstractSelectionStrategy):
     def _set_is_softmax_mode(self, is_softmax_mode: bool) -> None:
         self.is_softmax_mode = is_softmax_mode
 
-    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
-        For a given training_id and number of samples, request that many samples from
+        For a given pipeline_id and number of samples, request that many samples from
         the selector.
 
         Returns:
             List of keys for the samples that we want to select.
         """
-        all_samples, all_scores = self._get_all_metadata(training_id)
+        all_samples, all_scores = self._get_all_metadata(pipeline_id)
         all_samples_np = np.array(all_samples)
         all_scores_np = np.array(all_scores)
 
@@ -51,8 +51,8 @@ class ScoreStrategy(AbstractSelectionStrategy):
         scores = all_scores_np[rand_indices]
         return list(zip(list(samples), list(scores)))
 
-    def _get_all_metadata(self, training_id: int) -> tuple[list[str], list[float]]:
-        all_metadata = self.database.session.query(Metadata).filter(Metadata.training_id == training_id).all()
+    def _get_all_metadata(self, pipeline_id: int) -> tuple[list[str], list[float]]:
+        all_metadata = self.database.session.query(Metadata).filter(Metadata.pipeline_id == pipeline_id).all()
         return ([metadata.key for metadata in all_metadata], [metadata.score for metadata in all_metadata])
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:

@@ -39,19 +39,19 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         self.unseen_data_ratio = unseen_data_ratio
         self.old_data_ratio = 1 - self.unseen_data_ratio
 
-    def _get_adaptive_unseen_ratio(self, training_id: int) -> float:
+    def _get_adaptive_unseen_ratio(self, pipeline_id: int) -> float:
         """Returns the proper adaptive unseen data ratio. For example, if there are 200
         unseen data points and 600 previously unseen data points, it will return
         a ratio of 200 (unseen) / 800 (total) = 0.25
 
         Args:
-            training_id (int): The training ID of the current training.
+            pipeline_id (int): The training ID of the current training.
 
         Returns:
             float: The unseen ratio.
         """
-        seen_data_size = self._get_seen_data_size(training_id)
-        unseen_data_size = self._get_unseen_data_size(training_id)
+        seen_data_size = self._get_seen_data_size(pipeline_id)
+        unseen_data_size = self._get_unseen_data_size(pipeline_id)
         unseen_data_ratio = unseen_data_size / (unseen_data_size + seen_data_size)
         return unseen_data_ratio
 
@@ -66,12 +66,12 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             pipeline_id,
         )
 
-    def select_new_training_samples(self, training_id: int) -> list[tuple[str, float]]:
+    def select_new_training_samples(self, pipeline_id: int) -> list[tuple[str, float]]:
         """
         Selects a new training set of samples for the given training id.
 
         Args:
-            training_id (int): The training ID of the current training.
+            pipeline_id (int): The training ID of the current training.
             training_set_size (int): The size of the training set queried.
 
         Returns:
@@ -80,36 +80,36 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         unseen_data_ratio = self.unseen_data_ratio
         if self._is_adaptive_ratio:
-            unseen_data_ratio = self._get_adaptive_unseen_ratio(training_id)
+            unseen_data_ratio = self._get_adaptive_unseen_ratio(pipeline_id)
 
         if self.training_set_size_limit > 0:
-            new_samples, old_samples = self._select_new_training_samples_with_limit(training_id, unseen_data_ratio)
+            new_samples, old_samples = self._select_new_training_samples_with_limit(pipeline_id, unseen_data_ratio)
         else:
-            new_samples, old_samples = self._select_new_training_samples_without_limit(training_id, unseen_data_ratio)
+            new_samples, old_samples = self._select_new_training_samples_without_limit(pipeline_id, unseen_data_ratio)
 
         new_samples.extend(old_samples)
         return [(sample, 1.0) for sample in new_samples]
 
     def _select_new_training_samples_with_limit(
-        self, training_id: int, unseen_data_ratio: float
+        self, pipeline_id: int, unseen_data_ratio: float
     ) -> tuple[list[str], list[str]]:
         """If there is a limit, then we should return the proper proportion.
 
 
         Args:
-            training_id (int): The training ID of the current training
+            pipeline_id (int): The training ID of the current training
 
         Returns:
             tuple[list[str], list[str]]: A tuple of new_samples, old_samples
         """
         num_new_samples = int(self.training_set_size_limit * unseen_data_ratio)
         num_old_samples = self.training_set_size_limit - num_new_samples
-        new_samples = self._get_unseen_data(training_id, num_new_samples)
-        old_samples = self._get_seen_data(training_id, num_old_samples)
+        new_samples = self._get_unseen_data(pipeline_id, num_new_samples)
+        old_samples = self._get_seen_data(pipeline_id, num_old_samples)
         return new_samples, old_samples
 
     def _select_new_training_samples_without_limit(
-        self, training_id: int, unseen_data_ratio: float
+        self, pipeline_id: int, unseen_data_ratio: float
     ) -> tuple[list[str], list[str]]:
         """If there is no limit, and we have a strict ratio to maintain (not adaptive), then
         we have to use the relatively smaller amount. For example, let's say we have 25/75
@@ -118,42 +118,42 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         If there is no strict ratio, then we can return all the data.
 
         Args:
-            training_id (int): The training ID of the current training
+            pipeline_id (int): The training ID of the current training
             unseen_data_ratio (float): The desired ratio of unseen data to seen data, if applicable
 
         Returns:
             tuple[list[str], list[str]]: A tuple of new_samples, old_samples
         """
         if self._is_adaptive_ratio:
-            new_samples = self._get_unseen_data(training_id, -1)
-            old_samples = self._get_seen_data(training_id, -1)
+            new_samples = self._get_unseen_data(pipeline_id, -1)
+            old_samples = self._get_seen_data(pipeline_id, -1)
         else:
             if unseen_data_ratio == 0.0:
                 new_samples = []
-                old_samples = self._get_seen_data(training_id, -1)
+                old_samples = self._get_seen_data(pipeline_id, -1)
             elif unseen_data_ratio == 1.0:
-                new_samples = self._get_unseen_data(training_id, -1)
+                new_samples = self._get_unseen_data(pipeline_id, -1)
                 old_samples = []
             else:
-                num_new_samples = self._get_unseen_data_size(training_id)
-                num_old_samples = self._get_seen_data_size(training_id)
+                num_new_samples = self._get_unseen_data_size(pipeline_id)
+                num_old_samples = self._get_seen_data_size(pipeline_id)
                 new_samples_multiple = int(num_new_samples / unseen_data_ratio)
                 old_samples_multiple = int(num_old_samples / (1 - unseen_data_ratio))
                 total_samples = min(new_samples_multiple, old_samples_multiple)
                 if new_samples_multiple < old_samples_multiple:
-                    new_samples = self._get_unseen_data(training_id, -1)
-                    old_samples = self._get_seen_data(training_id, total_samples - num_new_samples)
+                    new_samples = self._get_unseen_data(pipeline_id, -1)
+                    old_samples = self._get_seen_data(pipeline_id, total_samples - num_new_samples)
                 else:
-                    new_samples = self._get_unseen_data(training_id, total_samples - num_old_samples)
-                    old_samples = self._get_seen_data(training_id, -1)
+                    new_samples = self._get_unseen_data(pipeline_id, total_samples - num_old_samples)
+                    old_samples = self._get_seen_data(pipeline_id, -1)
         return new_samples, old_samples
 
-    def _get_unseen_data(self, training_id: int, num_samples: int) -> list[str]:
+    def _get_unseen_data(self, pipeline_id: int, num_samples: int) -> list[str]:
         """
-        For a given training_id and number of samples, request that many previously unseen samples.
+        For a given pipeline_id and number of samples, request that many previously unseen samples.
 
         Args:
-            training_id (int): The training ID of the current training.
+            pipeline_id (int): The training ID of the current training.
             num_samples (int): Number of samples queried. If negative, returns all.
 
         Returns:
@@ -162,7 +162,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
             .filter(
-                Metadata.training_id == training_id,
+                Metadata.pipeline_id == pipeline_id,
                 Metadata.seen == False,
             )
             .all()
@@ -181,13 +181,13 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             assert len(result) == num_samples
         return result
 
-    def _get_seen_data(self, training_id: int, num_samples: int) -> list[str]:
+    def _get_seen_data(self, pipeline_id: int, num_samples: int) -> list[str]:
         """
-        For a given training_id and number of samples, request that many samples from
+        For a given pipeline_id and number of samples, request that many samples from
         the previously seen data
 
         Args:
-            training_id (int): The training ID of the current training.
+            pipeline_id (int): The training ID of the current training.
             num_samples (int): Number of samples queried. If negative, returns all.
 
         Returns:
@@ -195,7 +195,7 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         """
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.training_id == training_id, Metadata.seen == True)
+            .filter(Metadata.pipeline_id == pipeline_id, Metadata.seen == True)
             .all()
         )
         if len(data) > 0:
@@ -212,18 +212,18 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
             assert len(result) == num_samples
         return result
 
-    def _get_seen_data_size(self, training_id: int) -> int:
-        """For a given training_id, return how many unseen samples there are
+    def _get_seen_data_size(self, pipeline_id: int) -> int:
+        """For a given pipeline_id, return how many unseen samples there are
 
         Args:
-            training_id (int): the queried training_id
+            pipeline_id (int): the queried pipeline_id
 
         Returns:
             int: number of unseen samples
         """
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.training_id == training_id, Metadata.seen == True)
+            .filter(Metadata.pipeline_id == pipeline_id, Metadata.seen == True)
             .all()
         )
         assert len(data) > 0, "Queried unseen data, but got seen data."
@@ -232,18 +232,18 @@ class DataFreshnessStrategy(AbstractSelectionStrategy):
         assert np.array(seen).all(), "Queried seen data, but got unseen data."
         return len(keys)
 
-    def _get_unseen_data_size(self, training_id: int) -> int:
-        """For a given training_id, return how many previously seen samples there are
+    def _get_unseen_data_size(self, pipeline_id: int) -> int:
+        """For a given pipeline_id, return how many previously seen samples there are
 
         Args:
-            training_id (int): the queried training_id
+            pipeline_id (int): the queried pipeline_id
 
         Returns:
             int: number of previously seen samples
         """
         data = (
             self.database.session.query(Metadata.key, Metadata.seen)
-            .filter(Metadata.training_id == training_id, Metadata.seen == False)
+            .filter(Metadata.pipeline_id == pipeline_id, Metadata.seen == False)
             .all()
         )
         assert len(data) > 0, "Queried unseen data, but got seen data."

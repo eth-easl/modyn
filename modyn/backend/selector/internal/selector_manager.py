@@ -36,7 +36,7 @@ class SelectorManager:
 
     def get_sample_keys_and_weight(self, pipeline_id: int, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
         """
-        For a given training_id, trigger_id and worker_id, it returns a subset of sample
+        For a given pipeline_id, trigger_id and worker_id, it returns a subset of sample
         keys so that the data can be queried from storage. It also returns the associated weight of each sample.
         This weight can be used during training to support advanced strategies that want to weight the
         gradient descent step for different samples differently. Explicitly, instead of changing parameters

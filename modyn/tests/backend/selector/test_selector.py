@@ -29,7 +29,7 @@ class MockStrategy:
         self.result = desired_result
         self.times_called = 0
 
-    def select_new_training_samples(self, training_id):  # pylint: disable=unused-argument
+    def select_new_training_samples(self, pipeline_id):  # pylint: disable=unused-argument
         self.times_called += 1
         return self.result
 
