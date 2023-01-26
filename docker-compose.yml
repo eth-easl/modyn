@@ -39,6 +39,13 @@ services:
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
+  selector_server:
+    restart: on-failure
+    depends_on: 
+      - metadata-db
+    build:
+      context: .
+      dockerfile: docker/Selecter_Server/Dockerfile
   tests:
     depends_on:
       - modynbase

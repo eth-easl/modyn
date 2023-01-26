@@ -15,7 +15,6 @@ def connect_to_selector_servicer() -> grpc.Channel:
     return selector_channel
 
 
-
 def test_selector() -> None:
     pass
 
