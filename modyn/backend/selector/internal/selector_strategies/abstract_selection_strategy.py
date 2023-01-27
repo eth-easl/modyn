@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class AbstractSelectionStrategy(ABC):
@@ -15,7 +16,9 @@ class AbstractSelectionStrategy(ABC):
         modyn_config (dict): the configurations for the modyn backend
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, required_configs: list[str] = None):
+    def __init__(
+        self, config: dict, modyn_config: dict, pipeline_id: int, required_configs: Optional[list[str]] = None
+    ):
         self._config = config
 
         if required_configs is None:

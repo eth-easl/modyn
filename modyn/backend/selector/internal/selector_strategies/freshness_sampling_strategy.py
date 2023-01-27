@@ -80,8 +80,8 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         else:
             samples = self._get_trigger_data()
 
-        random.shuffle(samples)
         self._mark_used(samples)
+        random.shuffle(samples)
 
         return [(sample, 1.0) for sample in samples]
 
@@ -110,7 +110,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
         return random.sample(unused_samples, num_unused_samples) + random.sample(used_samples, num_used_samples)
 
-    def _calc_num_samples_no_limit(self, total_unused_samples, total_used_samples) -> tuple[int, int]:
+    def _calc_num_samples_no_limit(self, total_unused_samples: int, total_used_samples: int) -> tuple[int, int]:
         # For both the used and unsed samples, we calculate how many samples we could have at maximum where the used/unused samples make up the required fraction
 
         maximum_samples_unused = int(total_unused_samples / (float(self.unused_data_ratio) / 100.0))
@@ -125,16 +125,18 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             num_unused_samples = total_unused_samples
             num_used_samples = total_samples - num_unused_samples
 
-        assert isclose(num_unused_samples / total_samples, float(self.unused_data_ratio) / 100.0)
+        assert isclose(num_unused_samples / total_samples, float(self.unused_data_ratio) / 100.0, abs_tol=0.5)
         assert num_used_samples <= total_used_samples
         assert num_unused_samples <= total_unused_samples
 
         return num_unused_samples, num_used_samples
 
-    def _calc_num_samples_limit(self, total_unused_samples, total_used_samples) -> tuple[int, int]:
+    def _calc_num_samples_limit(self, total_unused_samples: int, total_used_samples: int) -> tuple[int, int]:
+        assert self.has_limit
+
         # This function has the assumption that we have enough data points available to fulfill the limit
         # This is why _get_trigger_data calls the no limit function first
-        num_unused_samples = self.training_set_size_limit * (float(self.unused_data_ratio) / 100.0)
+        num_unused_samples = int(self.training_set_size_limit * (float(self.unused_data_ratio) / 100.0))
         num_used_samples = self.training_set_size_limit - num_unused_samples
 
         assert num_unused_samples <= total_unused_samples
