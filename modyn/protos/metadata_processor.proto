@@ -7,8 +7,20 @@ service MetadataProcessor {
 }
 
 message TrainingMetadataRequest {
-    int32 training_id = 1;
-    string data = 2;
+    int32 pipeline_id = 1;
+    int32 trigger_id = 2;
+
+    PerTriggerMetadata trigger_metadata = 3;
+    repeated PerSampleMetadata sample_metadata = 4;
+}
+
+message PerTriggerMetadata {
+	bytes loss = 1;
+}
+
+message PerSampleMetadata {
+	string sample_id = 1;
+	bytes loss = 2;
 }
 
 message TrainingMetadataResponse {
