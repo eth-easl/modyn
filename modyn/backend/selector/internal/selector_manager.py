@@ -93,6 +93,7 @@ class SelectorManager:
         if strategy_name == "finetune":
             config["unseen_data_ratio"] = 1.0
             config["is_adaptive_ratio"] = False
+            # TODO(MaxiBoether): switch to newdatastrategy and remove adaptive stuff
             return FreshnessSamplingStrategy(config, self._modyn_config, pipeline_id)
 
         raise NotImplementedError(f"{strategy_name} is not supported")
