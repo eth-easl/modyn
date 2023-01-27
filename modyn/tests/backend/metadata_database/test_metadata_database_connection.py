@@ -29,13 +29,16 @@ def test_set_metadata():
         database.session.add(training)
         database.session.commit()
 
-        database.set_metadata(["test:key:set"], [100], [0.5], [False], [1], [b"test:data"], training.training_id)
+        # TODO(#113): there is no training ID anymore
+        database.set_metadata(["test:key:set"], [100], [0.5], [False], [1], [b"test:data"], training.training_id, 42)
 
         metadata = database.session.query(Metadata).all()
         assert len(metadata) == 1
         assert metadata[0].key == "test:key:set"
         assert metadata[0].score == 0.5
         assert metadata[0].seen is False
+        assert metadata[0].trigger_id == 42
+        assert metadata[0].pipeline_id == training.training_id
 
 
 def test_register_pipeline():

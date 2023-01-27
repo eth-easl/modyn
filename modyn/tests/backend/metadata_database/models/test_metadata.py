@@ -5,6 +5,8 @@ from modyn.backend.metadata_database.models.training import Training
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# TODO(#113): there is no training ID anymore
+
 
 @pytest.fixture(autouse=True)
 def session():
@@ -25,15 +27,7 @@ def test_add_metadata(session):
     session.add(training)
     session.commit()
 
-    metadata = Metadata(
-        "test_key",
-        100,
-        0.5,
-        False,
-        1,
-        b"test_data",
-        training.training_id,
-    )
+    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
 
     metadata.metadata_id = 1
 
@@ -44,8 +38,9 @@ def test_add_metadata(session):
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().key == "test_key"
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().score == 0.5
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().seen is False
-    assert session.query(Metadata).filter(Metadata.key == "test_key").first().training_id == 1
+    assert session.query(Metadata).filter(Metadata.key == "test_key").first().pipeline_id == 1
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().data == b"test_data"
+    assert session.query(Metadata).filter(Metadata.key == "test_key").first().trigger_id == 42
 
 
 def test_update_metadata(session):
@@ -54,15 +49,7 @@ def test_update_metadata(session):
     session.add(training)
     session.commit()
 
-    metadata = Metadata(
-        "test_key",
-        100,
-        0.5,
-        False,
-        1,
-        b"test_data",
-        training.training_id,
-    )
+    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
 
     metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 
@@ -79,8 +66,9 @@ def test_update_metadata(session):
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().key == "test_key"
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().value == 0.6
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().is_json is True
-    assert session.query(Metadata).filter(Metadata.key == "test_key").first().training_id == 1
+    assert session.query(Metadata).filter(Metadata.key == "test_key").first().pipeline_id == 1
     assert session.query(Metadata).filter(Metadata.key == "test_key").first().data == b"test_data_2"
+    assert session.query(Metadata).filter(Metadata.key == "test_key").first().trigger_id == 42
 
 
 def test_delete_metadata(session):
@@ -89,15 +77,7 @@ def test_delete_metadata(session):
     session.add(training)
     session.commit()
 
-    metadata = Metadata(
-        "test_key",
-        100,
-        0.5,
-        False,
-        1,
-        b"test_data",
-        training.training_id,
-    )
+    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
 
     metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 
@@ -116,15 +96,7 @@ def test_repr_metadata(session):
     session.add(training)
     session.commit()
 
-    metadata = Metadata(
-        "test_key",
-        100,
-        0.5,
-        False,
-        1,
-        b"test_data",
-        training.training_id,
-    )
+    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
 
     metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 

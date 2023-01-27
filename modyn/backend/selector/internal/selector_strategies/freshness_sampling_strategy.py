@@ -80,12 +80,12 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         else:
             samples = self._get_trigger_data()
 
-        samples = random.shuffle(samples)
+        random.shuffle(samples)
         self._mark_used(samples)
 
         return [(sample, 1.0) for sample in samples]
 
-    def _get_first_trigger_data(self) -> list[tuple[str, float]]:
+    def _get_first_trigger_data(self) -> list[str]:
         assert self._is_first_trigger
 
         samples = self._get_all_unused_data()
@@ -97,7 +97,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
         return samples
 
-    def _get_trigger_data(self) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    def _get_trigger_data(self) -> list[str]:
         assert not self._is_first_trigger
         unused_samples = self._get_all_unused_data()
         used_samples = self._get_all_used_data()
@@ -161,7 +161,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         else:
             keys, seen = [], []
 
-        return keys
+        return list(keys)
 
     def _get_all_unused_data(self) -> list[str]:
         """Returns all unused samples
@@ -182,7 +182,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         else:
             keys, seen = [], []
 
-        return keys
+        return list(keys)
 
     def _mark_used(self, keys: list[str]) -> None:
         """Sets samples to used"""
@@ -197,3 +197,6 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             except exc.SQLAlchemyError as exception:
                 logger.error(f"Could not set metadata: {exception}")
                 database.session.rollback()
+
+    def _reset_state(self) -> None:
+        raise Exception("This strategy does not support resets.")

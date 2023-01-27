@@ -49,12 +49,12 @@ def setup():
 
 def populate_metadata_database(pipeline_id):
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", pipeline_id)
+        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", pipeline_id, 42)
 
         metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
         database.session.add(metadata)
 
-        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", pipeline_id)
+        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", pipeline_id, 42)
 
         metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary key
         database.session.add(metadata2)
@@ -67,7 +67,10 @@ def teardown():
 
 
 def test_illegal_register_raises():
-    selection_strategy = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
+    selection_strategy = {
+        "name": "finetune",
+        "config": {"limit": 8, "reset_after_trigger": False, "unused_data_ratio": 50},
+    }
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_servicer
     with pytest.raises(ValueError):
@@ -79,28 +82,11 @@ def test_illegal_register_raises():
         )
 
 
-def test_prepare_training_set():
-    selection_strategy = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": False}}
-    selector_server = SelectorServer(get_minimal_modyn_config())
-    servicer = selector_server.grpc_servicer
-    pipeline_id = servicer.selector_manager.register_pipeline(
-        num_workers=1, selection_strategy=json.dumps(selection_strategy)
-    )
-    servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
-    populate_metadata_database(pipeline_id)
-
-    assert set(
-        servicer.get_sample_keys_and_weight(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=0, worker_id=0), None
-        ).training_samples_subset
-    ) == set(["test_key"])
-
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        database.delete_training(pipeline_id)
-
-
 def test_full_cycle():
-    selection_strategy = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": True}}
+    selection_strategy = {
+        "name": "finetune",
+        "config": {"limit": 8, "reset_after_trigger": False, "unused_data_ratio": 50},
+    }
 
     selector_server = SelectorServer(get_minimal_modyn_config())
     servicer = selector_server.grpc_servicer

@@ -13,6 +13,8 @@ from sqlalchemy import exc
 
 logger = logging.getLogger(__name__)
 
+# TODO(#113): there is no training id anymore
+
 
 class MetadataDatabaseConnection(AbstractDatabaseConnection):
     """Database connection context manager."""
@@ -83,7 +85,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             training_id (int): training id
         """
         try:
-            self.session.query(Metadata).filter(Metadata.training_id == training_id).delete()
+            self.session.query(Metadata).filter(Metadata.pipeline_id == training_id).delete()
             self.session.query(Training).filter(Training.training_id == training_id).delete()
             self.session.commit()
         except exc.SQLAlchemyError as exception:

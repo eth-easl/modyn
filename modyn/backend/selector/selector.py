@@ -61,21 +61,21 @@ class Selector:
             List of tuples for the samples to be returned to that particular worker. The first
             index of the tuple will be the key, and the second index will be that sample's weight.
         """
-        if trigger_id not in self._trigger_cache.keys():
+        if trigger_id not in self._trigger_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
         training_samples = self._trigger_cache[trigger_id]
         return self._get_training_set_partition(training_samples, worker_id)
 
     def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
-        self._strategy.inform_data(self._pipeline_id, keys, timestamps, labels)
+        self._strategy.inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(self, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
-        self._strategy.inform_data(self._pipeline_id, keys, timestamps, labels)
+        self._strategy.inform_data(keys, timestamps, labels)
 
         # Calculates the actual training set for that trigger.
-        trigger_id, data = self._strategy.trigger(self._pipeline_id)
-        assert trigger_id not in self._trigger_cache.keys(), "Trigger ID already exists, something went wrong."
+        trigger_id, data = self._strategy.trigger()
+        assert trigger_id not in self._trigger_cache, "Trigger ID already exists, something went wrong."
 
         self._trigger_cache[trigger_id] = data
 

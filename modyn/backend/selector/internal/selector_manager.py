@@ -34,7 +34,7 @@ class SelectorManager:
             pipeline_id = self._next_pipeline_id
             self._next_pipeline_id += 1
 
-        selection_strategy = self._instantiate_strategy(json.loads(selection_strategy))
+        selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
         selector = Selector(selection_strategy, pipeline_id, num_workers)
         self._selectors[pipeline_id] = selector
         self._selector_locks[pipeline_id] = Lock()
@@ -77,21 +77,22 @@ class SelectorManager:
         with self._selector_locks[pipeline_id]:
             return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
-    def _instantiate_strategy(self, selection_strategy: dict) -> AbstractSelectionStrategy:
+    def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
-        config = selection_strategy["config"] if "config" in selection_strategy.keys() else {}
+        config = selection_strategy["config"] if "config" in selection_strategy else {}
+        assert "configs" not in selection_strategy, "Found legacy usage of 'configs'"
 
-        if "limit" not in config.keys():
+        if "limit" not in config:
             config["limit"] = -1
             logger.warning("No explicit limit given, disabling.")
 
-        if "reset_after_trigger" not in config.keys():
+        if "reset_after_trigger" not in config:
             config["reset_after_trigger"] = False
             logger.warning("No reset setting given, disabling reset.")
 
         if strategy_name == "finetune":
             config["unseen_data_ratio"] = 1.0
             config["is_adaptive_ratio"] = False
-            return FreshnessSamplingStrategy(config, self._modyn_config)
+            return FreshnessSamplingStrategy(config, self._modyn_config, pipeline_id)
 
         raise NotImplementedError(f"{strategy_name} is not supported")

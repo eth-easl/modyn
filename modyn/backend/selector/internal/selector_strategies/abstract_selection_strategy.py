@@ -15,8 +15,12 @@ class AbstractSelectionStrategy(ABC):
         modyn_config (dict): the configurations for the modyn backend
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, required_configs: list[str] = []):
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, required_configs: list[str] = None):
         self._config = config
+
+        if required_configs is None:
+            required_configs = []  # Using [] as default is considered unsafe by pylint
+
         required_configs.extend(["limit", "reset_after_trigger"])
         for required_config in required_configs:
             if required_config not in self._config.keys():
