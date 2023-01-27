@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
 
 path = Path(os.path.abspath(__file__))
 SCRIPT_DIR = path.parent.parent.absolute()
@@ -13,18 +12,22 @@ logging.basicConfig(format="%(asctime)s %(message)s")
 
 
 class TrainingMetadataRequest:
-    def __init__(self, pipeline_id, trigger_id, per_sample_metadata: list = [], per_tigger_metadata: list = []):
+    def __init__(
+        self, pipeline_id: int, trigger_id: int, per_sample_metadata: list = [], per_tigger_metadata: list = []
+    ) -> None:
         self.pipeline_id = pipeline_id
         self.trigger_id = trigger_id
         self.per_sample_metadata = per_sample_metadata
         self.per_tigger_metadata = per_tigger_metadata
 
+
 class TrainingMetadataResponse:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
+
 class PerSampleLoss:
-    def __init__(self, sample_id, loss):
+    def __init__(self, sample_id: str, loss: float) -> None:
         self.sample_id = sample_id
         self.loss = loss
 

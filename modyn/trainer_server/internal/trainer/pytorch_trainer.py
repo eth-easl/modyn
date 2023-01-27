@@ -63,7 +63,7 @@ class PytorchTrainer:
         self._metadata_collector = MetadataCollector(0, training_info.training_id)
 
         # create callbacks - For now, assume LossCallback by default
-        # TODO: should be defined by the pipeline and passed with training request
+        # TODO(): should be defined by the pipeline and passed with training request
         self._callbacks = [LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)]
 
     def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None) -> None:
@@ -152,7 +152,6 @@ class PytorchTrainer:
 
             for callback in self._callbacks:
                 callback.on_batch_end()
-
 
         for callback in self._callbacks:
             callback.on_train_end(total_num_samples=self._num_samples)
