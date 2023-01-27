@@ -14,20 +14,13 @@ class BasicProcessorStrategy(AbstractProcessorStrategy):
         super().__init__(modyn_config)
         self.processor_strategy_type = ProcessorStrategyType.BasicProcessorStrategy
 
-    def process_metadata(self, training_id: int, data: str) -> dict:
-        data_dict = json.loads(data)
-
-        output_keys = []
-        output_data = []
-        output_seen = []
-
-        for key, value in data_dict.items():
-            output_keys.append(key)
-            output_data.append(value)
-            output_seen.append(True)
+    def process_metadata(self,
+        trigger_metadata: PerTriggerMetadata,
+        sample_metadata: Iterable[PerSampleMetadata]
+        ) -> dict:
+        # TODO(): redo this based on how Metadata Database interface looks like
 
         return {
-            "keys": output_keys,
-            "seen": output_seen,
-            "data": output_data,
+            "keys": [],
+            "data": [],
         }

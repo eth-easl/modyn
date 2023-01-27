@@ -29,6 +29,7 @@ class GRPCHandler:
         logger.info("Successfully connected to metadata database.")
         self.connected_to_database = True
 
-    def set_metadata(self, training_id: int, data: dict) -> None:
+    def set_metadata(self, pipeline_id: int, trigger_id: int, data: str) -> None:
         assert self.connected_to_database, "Tried to write metadata, but no database connection."
-        self.database.Set(SetRequest(training_id=training_id, keys=data["keys"], seen=data["seen"], data=data["data"]))
+        # TODO(): change this based on Metadata Database new interface
+        # self.database.Set(SetRequest(training_id=training_id, keys=data["keys"], seen=data["seen"], data=data["data"]))

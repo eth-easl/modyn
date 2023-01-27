@@ -3,7 +3,9 @@
 isort:skip_file
 """
 import builtins
+import collections.abc
 import google.protobuf.descriptor
+import google.protobuf.internal.containers
 import google.protobuf.message
 import sys
 
@@ -18,19 +20,61 @@ DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 class TrainingMetadataRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    TRAINING_ID_FIELD_NUMBER: builtins.int
-    DATA_FIELD_NUMBER: builtins.int
-    training_id: builtins.int
-    data: builtins.str
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    TRIGGER_ID_FIELD_NUMBER: builtins.int
+    TRIGGER_METADATA_FIELD_NUMBER: builtins.int
+    SAMPLE_METADATA_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    trigger_id: builtins.int
+    @property
+    def trigger_metadata(self) -> global___PerTriggerMetadata: ...
+    @property
+    def sample_metadata(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PerSampleMetadata]: ...
     def __init__(
         self,
         *,
-        training_id: builtins.int = ...,
-        data: builtins.str = ...,
+        pipeline_id: builtins.int = ...,
+        trigger_id: builtins.int = ...,
+        trigger_metadata: global___PerTriggerMetadata | None = ...,
+        sample_metadata: collections.abc.Iterable[global___PerSampleMetadata] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["data", b"data", "training_id", b"training_id"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["trigger_metadata", b"trigger_metadata"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id", "sample_metadata", b"sample_metadata", "trigger_id", b"trigger_id", "trigger_metadata", b"trigger_metadata"]) -> None: ...
 
 global___TrainingMetadataRequest = TrainingMetadataRequest
+
+@typing_extensions.final
+class PerTriggerMetadata(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    LOSS_FIELD_NUMBER: builtins.int
+    loss: builtins.bytes
+    def __init__(
+        self,
+        *,
+        loss: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["loss", b"loss"]) -> None: ...
+
+global___PerTriggerMetadata = PerTriggerMetadata
+
+@typing_extensions.final
+class PerSampleMetadata(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SAMPLE_ID_FIELD_NUMBER: builtins.int
+    LOSS_FIELD_NUMBER: builtins.int
+    sample_id: builtins.str
+    loss: builtins.bytes
+    def __init__(
+        self,
+        *,
+        sample_id: builtins.str = ...,
+        loss: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["loss", b"loss", "sample_id", b"sample_id"]) -> None: ...
+
+global___PerSampleMetadata = PerSampleMetadata
 
 @typing_extensions.final
 class TrainingMetadataResponse(google.protobuf.message.Message):
