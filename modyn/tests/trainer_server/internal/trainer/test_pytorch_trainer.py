@@ -17,6 +17,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     JsonString,
     RegisterTrainServerRequest,
 )
+from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.base_callback import BaseCallback
 from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer, train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
@@ -55,7 +56,7 @@ class MockDataset(torch.utils.data.IterableDataset):
 
 def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id):
     mock_train_dataloader = iter(
-        [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
+        [(('1',)*8, torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
     return mock_train_dataloader, None
 
@@ -238,7 +239,12 @@ def test_train_invalid_query_message():
     "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
     mock_get_dataloaders,
 )
-def test_train():
+@patch.object(BaseCallback, "on_train_begin", return_value=None)
+@patch.object(BaseCallback, "on_train_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_begin", return_value=None)
+@patch.object(BaseCallback, "on_batch_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_before_update", return_value=None)
+def test_train(test_on_batch_before_update, test_on_batch_end, test_on_batch_begin, test_on_train_end, test_on_train_begin):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue)
@@ -250,6 +256,12 @@ def test_train():
         assert os.path.exists(temp.name)
         assert trainer._num_samples == 800
         assert query_status_queue.empty()
+
+        test_on_train_begin.call_count == len(trainer._callbacks)
+        test_on_train_end.call_count == len(trainer._callbacks)
+        test_on_batch_begin.call_count == len(trainer._callbacks) * 100
+        test_on_batch_end.call_count == len(trainer._callbacks) * 100
+        test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
 
         if not platform.system() == "Darwin":
             assert status_queue.qsize() == 1

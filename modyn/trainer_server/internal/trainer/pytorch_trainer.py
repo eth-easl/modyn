@@ -146,7 +146,7 @@ class PytorchTrainer:
                 checkpoint_file_name = self._checkpoint_path + f"/model_{batch_number}" + ".pt"
                 self.save_state(checkpoint_file_name, batch_number)
 
-            self._num_samples += batch[0].shape[0]
+            self._num_samples += batch[1].shape[0]
 
             logger.info(f"Iteration {batch_number}")
 
@@ -155,7 +155,7 @@ class PytorchTrainer:
 
 
         for callback in self._callbacks:
-            callback.on_train_end()
+            callback.on_train_end(total_num_samples=self._num_samples)
 
         self._metadata_collector.send_metadata()
 
