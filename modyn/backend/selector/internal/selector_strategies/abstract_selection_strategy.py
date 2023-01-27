@@ -61,7 +61,8 @@ class AbstractSelectionStrategy(ABC):
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
 
         Returns:
-            tuple[int, list[tuple[str, float]]]: Trigger ID and a list of the training data. In this list, each entry is a training sample,
+            tuple[int, list[tuple[str, float]]]: Trigger ID and a list of the training data.
+              In this list, each entry is a training sample,
               where the first element of the tuple is the key, and the second element is the associated weight.
         """
         trigger_id = self._next_trigger_id

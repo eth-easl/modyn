@@ -1,9 +1,17 @@
 # pylint: disable=singleton-comparison
 # flake8: noqa: E712
-import numpy as np
+import logging
+import random
+from math import isclose
+
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from sqlalchemy import exc, update
+
+logger = logging.getLogger(__name__)
+
+# TODO(MaxiBoether): change seen field to used field in database
 
 
 class FreshnessSamplingStrategy(AbstractSelectionStrategy):
@@ -24,10 +32,11 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
         super().__init__(config, modyn_config, pipeline_id, required_configs=["unused_data_ratio"])
         self.unused_data_ratio = self._config["unused_data_ratio"]
+        self._is_first_trigger = True
 
         if self.unused_data_ratio < 1 or self.unused_data_ratio > 99:
             raise ValueError(
-                f"Invalid unused data ratio: {self.unused_data_ratio}. We need at least 1% fresh data (otherwise we would always train on the data from first trigger) and at maximum 99% fresh data (otherwise please use NewDataStrategy)."
+                f"Invalid unused data ratio: {self.unused_data_ratio}. We need at least 1% fresh data (otherwise we would always train on the data from first trigger) and at maximum 99% fresh data (otherwise please use NewDataStrategy+reset)."
             )
 
         if self.reset_after_trigger:
@@ -36,208 +45,155 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             )
 
     def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
-        # TODO(#116): Right now we persist all datapoint into DB. We might want to keep this partly in memory for performance.
+        assert len(keys) == len(timestamps)
+        assert len(timestamps) == len(labels)
 
+        # TODO(#116): Right now we persist all datapoint into DB. We might want to keep this partly in memory for performance.
+        # Even if each sample is 64 byte and we see 2 million samples, it's just 128 MB of data in memory.
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.set_metadata(
                 keys,
                 timestamps,
                 [None] * len(keys),
                 [False] * len(keys),
-                [None] * len(keys),
+                labels,
                 [None] * len(keys),
                 self._pipeline_id,
                 self._next_trigger_id,
             )
 
-    def _on_trigger(self, pipeline_id: int) -> list[tuple[str, float]]:
+    def _on_trigger(self) -> list[tuple[str, float]]:
         """
-        Selects a new training set of samples for the given training id.
-
-        Args:
-            pipeline_id (int): The training ID of the current training.
-            training_set_size (int): The size of the training set queried.
+        Internal function. Calculates the next set of data to
+        train on.
 
         Returns:
-            list(tuple[str, float]): the training sample keys for the newly selected training_set, along with
-                a weight of 1 for each element.
+            list(tuple(str, float)): Each entry is a training sample, where the first element of the tuple
+                is the key, and the second element is the associated weight.
         """
-        unseen_data_ratio = self.unseen_data_ratio
-        if self._is_adaptive_ratio:
-            unseen_data_ratio = self._get_adaptive_unseen_ratio(pipeline_id)
 
-        if self.training_set_size_limit > 0:
-            new_samples, old_samples = self._select_new_training_samples_with_limit(pipeline_id, unseen_data_ratio)
+        # TODO(MaxiBoether): right now this is an offline implementation. we might switch to an online
+        # implementation where we don't calculate everything on trigger.
+
+        if self._is_first_trigger:
+            samples = self._get_first_trigger_data()
         else:
-            new_samples, old_samples = self._select_new_training_samples_without_limit(pipeline_id, unseen_data_ratio)
+            samples = self._get_trigger_data()
 
-        new_samples.extend(old_samples)
-        return [(sample, 1.0) for sample in new_samples]
+        samples = random.shuffle(samples)
+        self._mark_used(samples)
 
-    def _select_new_training_samples_with_limit(
-        self, pipeline_id: int, unseen_data_ratio: float
-    ) -> tuple[list[str], list[str]]:
-        """If there is a limit, then we should return the proper proportion.
+        return [(sample, 1.0) for sample in samples]
 
+    def _get_first_trigger_data(self) -> list[tuple[str, float]]:
+        assert self._is_first_trigger
 
-        Args:
-            pipeline_id (int): The training ID of the current training
+        samples = self._get_all_unused_data()
 
-        Returns:
-            tuple[list[str], list[str]]: A tuple of new_samples, old_samples
-        """
-        num_new_samples = int(self.training_set_size_limit * unseen_data_ratio)
-        num_old_samples = self.training_set_size_limit - num_new_samples
-        new_samples = self._get_unseen_data(pipeline_id, num_new_samples)
-        old_samples = self._get_seen_data(pipeline_id, num_old_samples)
-        return new_samples, old_samples
+        if self.has_limit and self.training_set_size_limit < len(samples):
+            samples = random.sample(samples, self.training_set_size_limit)
 
-    def _select_new_training_samples_without_limit(
-        self, pipeline_id: int, unseen_data_ratio: float
-    ) -> tuple[list[str], list[str]]:
-        """If there is no limit, and we have a strict ratio to maintain (not adaptive), then
-        we have to use the relatively smaller amount. For example, let's say we have 25/75
-        new/old ratio. If we have 40 new points and 60 old points, we can only return 80
-        points (20 new / 60 old).
-        If there is no strict ratio, then we can return all the data.
+        self._is_first_trigger = False
 
-        Args:
-            pipeline_id (int): The training ID of the current training
-            unseen_data_ratio (float): The desired ratio of unseen data to seen data, if applicable
+        return samples
 
-        Returns:
-            tuple[list[str], list[str]]: A tuple of new_samples, old_samples
-        """
-        if self._is_adaptive_ratio:
-            new_samples = self._get_unseen_data(pipeline_id, -1)
-            old_samples = self._get_seen_data(pipeline_id, -1)
+    def _get_trigger_data(self) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+        assert not self._is_first_trigger
+        unused_samples = self._get_all_unused_data()
+        used_samples = self._get_all_used_data()
+        # TODO(#116): At this point, we hold everything in memory anyways, so the database does not really even make sense except for very high usage scnearios
+
+        num_unused_samples, num_used_samples = self._calc_num_samples_no_limit(len(unused_samples), len(used_samples))
+
+        if self.has_limit and (num_unused_samples + num_used_samples) > self.training_set_size_limit:
+            num_unused_samples, num_used_samples = self._calc_num_samples_limit(len(unused_samples), len(used_samples))
+
+        return random.sample(unused_samples, num_unused_samples) + random.sample(used_samples, num_used_samples)
+
+    def _calc_num_samples_no_limit(self, total_unused_samples, total_used_samples) -> tuple[int, int]:
+        # For both the used and unsed samples, we calculate how many samples we could have at maximum where the used/unused samples make up the required fraction
+
+        maximum_samples_unused = int(total_unused_samples / (float(self.unused_data_ratio) / 100.0))
+        maximum_samples_used = int(total_used_samples / (float(100 - self.unused_data_ratio) / 100.0))
+
+        if maximum_samples_unused > maximum_samples_used:
+            total_samples = maximum_samples_used
+            num_used_samples = total_used_samples
+            num_unused_samples = total_samples - num_used_samples
         else:
-            if unseen_data_ratio == 0.0:
-                new_samples = []
-                old_samples = self._get_seen_data(pipeline_id, -1)
-            elif unseen_data_ratio == 1.0:
-                new_samples = self._get_unseen_data(pipeline_id, -1)
-                old_samples = []
-            else:
-                num_new_samples = self._get_unseen_data_size(pipeline_id)
-                num_old_samples = self._get_seen_data_size(pipeline_id)
-                new_samples_multiple = int(num_new_samples / unseen_data_ratio)
-                old_samples_multiple = int(num_old_samples / (1 - unseen_data_ratio))
-                total_samples = min(new_samples_multiple, old_samples_multiple)
-                if new_samples_multiple < old_samples_multiple:
-                    new_samples = self._get_unseen_data(pipeline_id, -1)
-                    old_samples = self._get_seen_data(pipeline_id, total_samples - num_new_samples)
-                else:
-                    new_samples = self._get_unseen_data(pipeline_id, total_samples - num_old_samples)
-                    old_samples = self._get_seen_data(pipeline_id, -1)
-        return new_samples, old_samples
+            total_samples = maximum_samples_unused
+            num_unused_samples = total_unused_samples
+            num_used_samples = total_samples - num_unused_samples
 
-    def _get_unseen_data(self, pipeline_id: int, num_samples: int) -> list[str]:
-        """
-        For a given pipeline_id and number of samples, request that many previously unseen samples.
+        assert isclose(num_unused_samples / total_samples, float(self.unused_data_ratio) / 100.0)
+        assert num_used_samples <= total_used_samples
+        assert num_unused_samples <= total_unused_samples
 
-        Args:
-            pipeline_id (int): The training ID of the current training.
-            num_samples (int): Number of samples queried. If negative, returns all.
+        return num_unused_samples, num_used_samples
+
+    def _calc_num_samples_limit(self, total_unused_samples, total_used_samples) -> tuple[int, int]:
+        # This function has the assumption that we have enough data points available to fulfill the limit
+        # This is why _get_trigger_data calls the no limit function first
+        num_unused_samples = self.training_set_size_limit * (float(self.unused_data_ratio) / 100.0)
+        num_used_samples = self.training_set_size_limit - num_unused_samples
+
+        assert num_unused_samples <= total_unused_samples
+        assert num_used_samples <= total_used_samples
+
+        return num_unused_samples, num_used_samples
+
+    def _get_all_used_data(self) -> list[str]:
+        """Returns all used samples
 
         Returns:
-            List of keys for the unseen samples.
+            list[str]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
                 database.session.query(Metadata.key, Metadata.seen)
-                .filter(
-                    Metadata.training_id == pipeline_id,
-                    Metadata.seen == False,
-                )
+                .filter(Metadata.pipeline_id == self._pipeline_id, Metadata.seen == True)
                 .all()
             )
 
         if len(data) > 0:
             keys, seen = zip(*data)
+            assert all(seen), "Queried seen data, but got unseen data."
         else:
             keys, seen = [], []
 
-        assert len(seen) == 0 or not np.array(seen).any(), "Queried unseen data, but got seen data."
-        if num_samples < 0 or num_samples > len(keys):
-            num_samples = len(keys)
-        choice = np.random.choice(len(keys), size=num_samples, replace=False)
-        result = list(np.array(keys)[choice])
-        if num_samples < 0:
-            assert len(result) == num_samples
-        return result
+        return keys
 
-    def _get_seen_data(self, pipeline_id: int, num_samples: int) -> list[str]:
-        """
-        For a given pipeline_id and number of samples, request that many samples from
-        the previously seen data
-
-        Args:
-            pipeline_id (int): The training ID of the current training.
-            num_samples (int): Number of samples queried. If negative, returns all.
+    def _get_all_unused_data(self) -> list[str]:
+        """Returns all unused samples
 
         Returns:
-            List of keys for the previously seen samples
+            list[str]: Keys of unused samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
                 database.session.query(Metadata.key, Metadata.seen)
-                .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
+                .filter(Metadata.pipeline_id == self._pipeline_id, Metadata.seen == False)
                 .all()
             )
+
         if len(data) > 0:
             keys, seen = zip(*data)
+            assert not any(seen), "Queried unseen data, but got seen data."
         else:
             keys, seen = [], []
 
-        assert len(seen) == 0 or np.array(seen).all(), "Queried seen data, but got unseen data."
-        if num_samples < 0 or num_samples > len(keys):
-            num_samples = len(keys)
-        choice = np.random.choice(len(keys), size=num_samples, replace=False)
-        result = list(np.array(keys)[choice])
-        if num_samples < 0:
-            assert len(result) == num_samples
-        return result
+        return keys
 
-    def _get_seen_data_size(self, pipeline_id: int) -> int:
-        """For a given pipeline_id, return how many unseen samples there are
+    def _mark_used(self, keys: list[str]) -> None:
+        """Sets samples to used"""
+        if len(keys) == 0:
+            return
 
-        Args:
-            pipeline_id (int): the queried pipeline_id
-
-        Returns:
-            int: number of unseen samples
-        """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.session.query(Metadata.key, Metadata.seen)
-                .filter(Metadata.training_id == pipeline_id, Metadata.seen == True)
-                .all()
-            )
-        assert len(data) > 0, "Queried unseen data, but got seen data."
-        keys, seen = zip(*data)
-
-        assert np.array(seen).all(), "Queried seen data, but got unseen data."
-        return len(keys)
-
-    def _get_unseen_data_size(self, pipeline_id: int) -> int:
-        """For a given pipeline_id, return how many previously seen samples there are
-
-        Args:
-            pipeline_id (int): the queried pipeline_id
-
-        Returns:
-            int: number of previously seen samples
-        """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.session.query(Metadata.key, Metadata.seen)
-                .filter(Metadata.training_id == pipeline_id, Metadata.seen == False)
-                .all()
-            )
-
-        assert len(data) > 0, "Queried unseen data, but got seen data."
-        keys, seen = zip(*data)
-
-        assert not np.array(seen).any(), "Queried unseen data, but got seen data."
-        return len(keys)
+            try:
+                stmt = update(Metadata).where(Metadata.key.in_(keys)).values(seen=True)
+                database.session.execute(stmt)
+                database.session.commit()
+            except exc.SQLAlchemyError as exception:
+                logger.error(f"Could not set metadata: {exception}")
+                database.session.rollback()

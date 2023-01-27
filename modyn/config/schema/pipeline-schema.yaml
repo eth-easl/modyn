@@ -78,6 +78,10 @@ properties:
                 type: boolean
                 description: |
                   If set to true, the selection strategy resets its internal state after a trigger.
+              unused_data_ratio:
+                type: number
+                description: |
+                 [FreshnessSamplingStrategy] Ratio that defines how much data in the training set per trigger should be from previously unused data (in all previous triggers).
 
         required:
           - name

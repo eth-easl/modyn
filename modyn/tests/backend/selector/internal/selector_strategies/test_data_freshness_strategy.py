@@ -8,7 +8,7 @@ from modyn.backend.metadata_database.metadata_database_connection import Metadat
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.metadata_database.models.training import Training
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.backend.selector.internal.selector_strategies.data_freshness_strategy import FreshnessSamplingStrategy
+from modyn.backend.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
