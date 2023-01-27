@@ -3,14 +3,14 @@ from typing import Any, Dict
 import grpc
 import torch
 
-from modyn.trainer_server.internal.mocks.mock_metadata_processor import MockMetadataProcessorServer, PerSampleLoss, PerSampleMetadata, TrainingMetadataRequest
+from modyn.trainer_server.internal.mocks.mock_metadata_processor import MockMetadataProcessorServer, PerSampleLoss, TrainingMetadataRequest
 
 class MetadataCollector:
 
     def __init__(self, pipeline_id: str, trigger_id: int):
 
-        self._per_sample_metadata_dict = Dict['str', Dict[Any]]
-        self._per_trigger_metadata = Dict['str', Any]
+        self._per_sample_metadata_dict: dict[str, Any] = {}
+        self._per_trigger_metadata: dict[str, Any] = {}
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
 
@@ -21,7 +21,7 @@ class MetadataCollector:
 
         # We expect a list of the sample ids for a batch, along with a list of their metadata.
         # Also, we expect metadata are already in a proper format for grpc messages (no need for extra serialization, or type transform)
-        assert len(sample_id_list) == len(metadata_list)
+        assert len(sample_id_list) == len(metadata_list), "Sample id and per-sample metadata lists do not match"
 
         if metric not in self._per_sample_metadata_dict:
             self._per_sample_metadata_dict[metric] = {}

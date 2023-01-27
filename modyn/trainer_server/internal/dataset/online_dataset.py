@@ -64,8 +64,8 @@ class OnlineDataset(IterableDataset):
 
         self._dataset_len = len(data)
 
-        for sample, label in zip(data, labels):
-            yield self._transform(sample), label
+        for key, sample, label in zip(keys, data, labels):
+            yield key, self._transform(sample), label
 
     def __len__(self) -> int:
         return self._dataset_len

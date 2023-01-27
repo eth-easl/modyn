@@ -36,4 +36,4 @@ class MockMetadataProcessorServer:
         pass
 
     def send_metadata(self, request: TrainingMetadataRequest) -> TrainingMetadataResponse:
-        return TrainingMetadataRequest()
+        return TrainingMetadataResponse()

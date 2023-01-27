@@ -75,7 +75,7 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
 
 
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=(list(range(10)), [1] * 10))
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[0]*10)
 def test_dataset_iter(test_get_data, test_get_keys):
 
     online_dataset = OnlineDataset(
@@ -86,12 +86,14 @@ def test_dataset_iter(test_get_data, test_get_keys):
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
-    assert [x[0] for x in all_data] == list(range(10))
-    assert [x[1] for x in all_data] == [1] * 10
+
+    assert [x[0] for x in all_data] == [0] * 10
+    assert [x[1] for x in all_data] == list(range(10))
+    assert [x[2] for x in all_data] == [1] * 10
 
 
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=([0] * 16, [1] * 16))
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[0]*16)
 def test_dataloader_dataset(test_get_data, test_get_keys):
 
     online_dataset = OnlineDataset(
@@ -102,6 +104,7 @@ def test_dataloader_dataset(test_get_data, test_get_keys):
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for batch in dataloader:
-        assert len(batch) == 2
+        assert len(batch) == 3
         assert torch.equal(batch[0], torch.zeros(4, dtype=int))
-        assert torch.equal(batch[1], torch.ones(4, dtype=int))
+        assert torch.equal(batch[1], torch.zeros(4, dtype=int))
+        assert torch.equal(batch[2], torch.ones(4, dtype=int))
