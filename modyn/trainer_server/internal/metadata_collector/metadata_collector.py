@@ -2,7 +2,8 @@ from typing import Any
 
 from modyn.trainer_server.internal.mocks.mock_metadata_processor import (
     MockMetadataProcessorServer,
-    PerSampleLoss,
+    PerSampleMetadata,
+    PerTriggerMetadata,
     TrainingMetadataRequest,
 )
 
@@ -38,13 +39,14 @@ class MetadataCollector:
 
     def send_metadata(self) -> None:
 
-        for metric in self._per_sample_metadata_dict:
+        for metric, metric_dict in self._per_sample_metadata_dict.items():
 
             per_sample_metadata_list = []
 
             if metric == "loss":
-                for sample_id, loss in self._per_sample_metadata_dict.items():
-                    per_sample_metadata_list.append(PerSampleLoss(sample_id=sample_id, loss=loss))
+
+                for sample_id, loss in metric_dict.items():
+                    per_sample_metadata_list.append(PerSampleMetadata(sample_id=sample_id, loss=loss))
 
             # TODO(): replace this with grpc calls to the MetadataProcessor
             metadata_request = TrainingMetadataRequest(
@@ -56,11 +58,15 @@ class MetadataCollector:
 
         for metric, metadata in self._per_trigger_metadata.items():
 
-            metadata_request = TrainingMetadataRequest(
-                pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, per_tigger_metadata=metadata
-            )
+            if metric == "loss":
 
-            self._metadata_processor_stub.send_metadata(metadata_request)
+                metadata_request = TrainingMetadataRequest(
+                    pipeline_id=self._pipeline_id,
+                    trigger_id=self._trigger_id,
+                    per_trigger_metadata=PerTriggerMetadata(loss=metadata),
+                )
+
+                self._metadata_processor_stub.send_metadata(metadata_request)
 
         self._per_sample_metadata_dict.clear()
         self._per_trigger_metadata.clear()
