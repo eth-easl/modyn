@@ -61,7 +61,7 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_sample_keys_and_weight(trigger_id, worker_id)
 
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[str]) -> None:
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
 

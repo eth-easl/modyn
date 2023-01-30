@@ -1,195 +1,43 @@
-# pylint: disable=unused-argument, no-name-in-module
-# TODO(MaxiBoether): this tests multiple things, such as entrypoint, servicer and more.
-# split this into entrypoint, server, servicer
+# pylint: disable=unused-argument,redefined-outer-name
+from unittest import mock
+from unittest.mock import MagicMock, patch
 
-import json
-import os
-import pathlib
-import sys
-from unittest.mock import patch
-
-import grpc
-import pytest
-from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.metadata import Metadata
-from modyn.backend.selector.entrypoint import main
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611
-    DataInformRequest,
-    GetSamplesRequest,
-    JsonString,
-    PipelineResponse,
-    RegisterPipelineRequest,
-)
 from modyn.backend.selector.internal.grpc.selector_server import SelectorServer
 
-database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
+
+def get_modyn_config():
+    return {"selector": {"port": "1337"}}
 
 
-def get_minimal_modyn_config():
-    return {
-        "metadata_database": {
-            "drivername": "sqlite",
-            "username": "",
-            "password": "",
-            "host": "",
-            "port": "0",
-            "database": f"{database_path}",
-        },
-    }
+def test_init():
+    config = get_modyn_config()
+    grpc_server = SelectorServer(config)
+    assert grpc_server.modyn_config == config
 
 
-def noop_constructor_mock(self, config=None, opt=None):  # pylint: disable=unused-argument
-    self._modyn_config = get_minimal_modyn_config()
+def test_prepare_server():
+    grpc_server = SelectorServer(get_modyn_config())
+    mock_add = mock.Mock()
+    grpc_server._add_servicer_to_server_func = mock_add
+
+    assert grpc_server.prepare_server() is not None
+
+    mock_add.assert_called_once()
 
 
-def setup():
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        database.create_tables()
+@patch.object(SelectorServer, "prepare_server")
+def test_run(test_prepare_server: MagicMock):
+    grpc_server = SelectorServer(get_modyn_config())
+    mock_start = mock.Mock()
+    mock_wait = mock.Mock()
 
+    server = grpc_server.prepare_server()
+    server.start = mock_start
+    server.wait_for_termination = mock_wait
 
-def populate_metadata_database(pipeline_id):
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", pipeline_id, 42)
+    test_prepare_server.return_value = server
 
-        metadata.metadata_id = 1  # SQLite does not support autoincrement for composite primary keys
-        database.session.add(metadata)
+    grpc_server.run()
 
-        metadata2 = Metadata("test_key2", 101, 0.75, True, 2, b"test_data2", pipeline_id, 42)
-
-        metadata2.metadata_id = 2  # SQLite does not support autoincrement for composite primary key
-        database.session.add(metadata2)
-
-        database.session.commit()
-
-
-def teardown():
-    os.remove(database_path)
-
-
-def test_illegal_register_raises():
-    selection_strategy = {
-        "name": "finetune",
-        "config": {"limit": 8, "reset_after_trigger": False, "unused_data_ratio": 50},
-    }
-    selector_server = SelectorServer(get_minimal_modyn_config())
-    servicer = selector_server.grpc_servicer
-    with pytest.raises(ValueError):
-        servicer.register_pipeline(
-            RegisterPipelineRequest(
-                num_workers=-1, selection_strategy=JsonString(value=json.dumps(selection_strategy))
-            ),
-            None,
-        )
-
-
-def test_full_cycle():
-    selection_strategy = {
-        "name": "finetune",
-        "config": {"limit": 8, "reset_after_trigger": False, "unused_data_ratio": 50},
-    }
-
-    selector_server = SelectorServer(get_minimal_modyn_config())
-    servicer = selector_server.grpc_servicer
-    pipeline_response: PipelineResponse = servicer.register_pipeline(
-        RegisterPipelineRequest(num_workers=1, selection_strategy=JsonString(value=json.dumps(selection_strategy))),
-        None,
-    )
-    pipeline_id = pipeline_response.pipeline_id
-    servicer.selector_manager._selectors[pipeline_id]._strategy.training_set_size_limit = 8
-
-    data_keys_1 = ["test_key_1", "test_key_2"]
-    data_timestamps_1 = [0, 1]
-    data_labels_1 = [0, 0]
-    data_keys_2 = ["test_key_3", "test_key_4"]
-    data_timestamps_2 = [2, 3]
-    data_labels_2 = [1, 1]
-    servicer.inform_data(
-        DataInformRequest(
-            pipeline_id=pipeline_id, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1
-        ),
-        None,
-    )
-    trigger_response = servicer.inform_data_and_trigger(
-        DataInformRequest(
-            pipeline_id=pipeline_id, keys=data_keys_2, timestamps=data_timestamps_2, labels=data_labels_2
-        ),
-        None,
-    )
-    trigger_id = trigger_response.trigger_id
-
-    worker_0_samples = servicer.get_sample_keys_and_weight(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0), None
-    ).training_samples_subset
-
-    assert set(worker_0_samples) == set(["test_key_1", "test_key_2", "test_key_3", "test_key_4"])
-
-    # Now check that we correctly raise errors in the case of silly requests.
-
-    with pytest.raises(ValueError):
-        # Pipeline ID not registered
-        servicer.get_sample_keys_and_weight(GetSamplesRequest(pipeline_id=3, trigger_id=trigger_id, worker_id=0), None)
-
-    with pytest.raises(ValueError):
-        # Num workers out of bounds
-        servicer.get_sample_keys_and_weight(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1), None
-        )
-
-    with pytest.raises(ValueError):
-        # Num workers out of bounds
-        servicer.get_sample_keys_and_weight(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=-1), None
-        )
-
-    with pytest.raises(ValueError):
-        # Pipeline ID not registered
-        servicer.inform_data(
-            DataInformRequest(pipeline_id=3, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1),
-            None,
-        )
-
-    with pytest.raises(ValueError):
-        # Pipeline ID not registered
-        servicer.inform_data_and_trigger(
-            DataInformRequest(pipeline_id=3, keys=data_keys_1, timestamps=data_timestamps_1, labels=data_labels_1),
-            None,
-        )
-
-
-class DummyServer:
-    def __init__(self, arg):
-        pass
-
-    def add_insecure_port(self, arg=None):
-        pass
-
-    def start(self):
-        pass
-
-    def wait_for_termination(self):
-        pass
-
-    def add_generic_rpc_handlers(self, arg=None):
-        pass
-
-
-@patch.object(grpc, "server", return_value=DummyServer(None))
-def test_main(test_server_mock):
-    testargs = [
-        "selector_entrypoint.py",
-        "modyn/config/examples/modyn_config.yaml",
-    ]
-    with patch.object(sys, "argv", testargs):
-        main()
-
-
-def test_main_raise():
-    testargs = [
-        "selector_entrypoint.py",
-        "modyn/config/examples/example-pipeline.yaml",
-        "modyn/config/config.yaml",
-        "extra",
-    ]
-    with patch.object(sys, "argv", testargs):
-        with pytest.raises(SystemExit):
-            main()
+    mock_start.assert_called_once()
+    mock_wait.assert_called_once()
