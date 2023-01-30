@@ -64,6 +64,9 @@ class Selector:
         if trigger_id not in self._trigger_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
+        if worker_id < 0 or worker_id >= self._num_workers:
+            raise ValueError(f"Asked for worker id {worker_id}, but only have {self._num_workers} workers!")
+
         training_samples = self._trigger_cache[trigger_id]
         return self._get_training_set_partition(training_samples, worker_id)
 
