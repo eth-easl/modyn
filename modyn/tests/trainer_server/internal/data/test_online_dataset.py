@@ -19,6 +19,7 @@ def test_get_keys_from_selector(test_get_sample_keys):
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_converter_func="lambda x: x",
         serialized_transforms=[],
         train_until_sample_id="new",
     )
@@ -28,13 +29,14 @@ def test_get_keys_from_selector(test_get_sample_keys):
 @patch.object(
     MockStorageServer,
     "Get",
-    return_value=GetResponse(data=["sample0", "sample1"], labels=[0, 1]),
+    return_value=GetResponse(samples=["sample0", "sample1"], labels=[0, 1]),
 )
 def test_get_data_from_storage(test_get):
 
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_converter_func="lambda x: x",
         serialized_transforms=[],
         train_until_sample_id="new",
     )
@@ -65,6 +67,7 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_converter_func="lambda x: x",
         serialized_transforms=serialized_transforms,
         train_until_sample_id="new",
     )
@@ -81,6 +84,7 @@ def test_dataset_iter(test_get_data, test_get_keys):
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_converter_func="lambda x: x",
         serialized_transforms=[],
         train_until_sample_id="new",
     )
@@ -97,6 +101,7 @@ def test_dataloader_dataset(test_get_data, test_get_keys):
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_converter_func="lambda x: x",
         serialized_transforms=[],
         train_until_sample_id="new",
     )

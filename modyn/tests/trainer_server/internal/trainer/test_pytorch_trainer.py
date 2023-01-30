@@ -53,7 +53,7 @@ class MockDataset(torch.utils.data.IterableDataset):
         return iter(range(100))
 
 
-def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id):
+def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, bytes_converter_func, transform_list, sample_id):
     mock_train_dataloader = iter(
         [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
