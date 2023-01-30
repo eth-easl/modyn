@@ -27,7 +27,7 @@ class SelectorManager:
         Throws:
             ValueError if num_workers is not positive.
         """
-        if num_workers <= 0:
+        if num_workers < 0:
             raise ValueError(f"Tried to register training with {num_workers} workers.")
 
         with self._next_pipeline_lock:
@@ -61,7 +61,7 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_sample_keys_and_weight(trigger_id, worker_id)
 
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[str]) -> None:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
 
