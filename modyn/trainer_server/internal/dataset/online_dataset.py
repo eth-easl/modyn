@@ -13,7 +13,6 @@ class OnlineDataset(IterableDataset):
         self,
         training_id: int,
         dataset_id: str,
-        bytes_converter_func: str,
         serialized_transforms: list[str],
         train_until_sample_id: str,
     ):
@@ -21,7 +20,6 @@ class OnlineDataset(IterableDataset):
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
-        self._bytes_converter_func = eval(bytes_converter_func) # pylint: disable=eval-used
         self._serialized_transforms = serialized_transforms
         self._transform = lambda x: x  # identity as default
         self._deserialize_torchvision_transforms()
@@ -67,8 +65,7 @@ class OnlineDataset(IterableDataset):
         self._dataset_len = len(data)
 
         for sample, label in zip(data, labels):
-            converted_sample = self._bytes_converter_func(sample)
-            yield self._transform(converted_sample), label
+            yield self._transform(sample), label
 
     def __len__(self) -> int:
         return self._dataset_len

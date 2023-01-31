@@ -5,7 +5,7 @@ from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
 def test_prepare_dataloaders():
 
-    train_dataloader, _ = prepare_dataloaders(1, "MNIST", 4, 128, "lambda x: x", [], "new")
+    train_dataloader, _ = prepare_dataloaders(1, "MNIST", 4, 128, [], "new")
 
     assert train_dataloader.num_workers == 4
     assert train_dataloader.batch_size == 128
