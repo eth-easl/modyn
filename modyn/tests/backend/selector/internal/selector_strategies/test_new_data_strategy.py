@@ -74,7 +74,7 @@ def test_e2e_noreset_nolimit():
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
 
-    ### NO RESET // NO LIMIT ###
+    # NO RESET // NO LIMIT #
     conf = get_config()
     conf["limit"] = -1
     conf["reset_after_trigger"] = False
@@ -82,11 +82,11 @@ def test_e2e_noreset_nolimit():
     strat.inform_data(data1, timestamps1, labels1)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 10
-    assert set([int(key) for (key, _) in training_samples]) == set(range(10))
+    assert {int(key) for (key, _) in training_samples} == set(range(10))
     strat.inform_data(data2, timestamps2, labels2)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 20
-    assert set([int(key) for (key, _) in training_samples]) == set(range(20))
+    assert {int(key) for (key, _) in training_samples} == set(range(20))
 
 
 def test_e2e_reset_nolimit():
@@ -98,7 +98,7 @@ def test_e2e_reset_nolimit():
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
 
-    ### RESET // NO LIMIT ###
+    # RESET // NO LIMIT #
     conf = get_config()
     conf["limit"] = -1
     conf["reset_after_trigger"] = True
@@ -106,11 +106,11 @@ def test_e2e_reset_nolimit():
     strat.inform_data(data1, timestamps1, labels1)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 10
-    assert set([int(key) for (key, _) in training_samples]) == set(range(10))
+    assert {int(key) for (key, _) in training_samples} == set(range(10))
     strat.inform_data(data2, timestamps2, labels2)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 10
-    assert set([int(key) for (key, _) in training_samples]) == set(range(10, 20))
+    assert {int(key) for (key, _) in training_samples} == set(range(10, 20))
 
 
 def test_e2e_reset_limit():
@@ -122,7 +122,7 @@ def test_e2e_reset_limit():
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
 
-    ### RESET // LIMIT ###
+    # RESET // LIMIT #
     conf = get_config()
     conf["limit"] = 5
     conf["reset_after_trigger"] = True
@@ -130,11 +130,11 @@ def test_e2e_reset_limit():
     strat.inform_data(data1, timestamps1, labels1)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 5
-    assert set([int(key) for (key, _) in training_samples]) < set(range(10))
+    assert {int(key) for (key, _) in training_samples} < set(range(10))
     strat.inform_data(data2, timestamps2, labels2)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 5
-    assert set([int(key) for (key, _) in training_samples]) < set(range(10, 20))
+    assert {int(key) for (key, _) in training_samples} < set(range(10, 20))
 
 
 def test_e2e_reset_limit_uar():
@@ -145,7 +145,7 @@ def test_e2e_reset_limit_uar():
     data2 = list(range(10, 20))
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
-    ### NO RESET // LIMIT (UAR) ###
+    # NO RESET // LIMIT (UAR) #
     conf = get_config()
     conf["limit"] = 5
     conf["reset_after_trigger"] = False
@@ -154,11 +154,11 @@ def test_e2e_reset_limit_uar():
     strat.inform_data(data1, timestamps1, labels1)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 5
-    assert set([int(key) for (key, _) in training_samples]) < set(range(10))
+    assert {int(key) for (key, _) in training_samples} < set(range(10))
     strat.inform_data(data2, timestamps2, labels2)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 5
-    assert set([int(key) for (key, _) in training_samples]) < set(range(20))
+    assert {int(key) for (key, _) in training_samples} < set(range(20))
 
 
 def test_e2e_reset_limit_lastx():
@@ -170,7 +170,7 @@ def test_e2e_reset_limit_lastx():
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
 
-    ### NO RESET // LIMIT (lastX) ###
+    # NO RESET // LIMIT (lastX) #
     conf = get_config()
     conf["limit"] = 5
     conf["reset_after_trigger"] = False
@@ -179,11 +179,11 @@ def test_e2e_reset_limit_lastx():
     strat.inform_data(data1, timestamps1, labels1)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 5
-    assert set([int(key) for (key, _) in training_samples]) == set(range(5, 10))
+    assert {int(key) for (key, _) in training_samples} == set(range(5, 10))
     strat.inform_data(data2, timestamps2, labels2)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 5
-    assert set([int(key) for (key, _) in training_samples]) == set(range(15, 20))
+    assert {int(key) for (key, _) in training_samples} == set(range(15, 20))
 
 
 def test_e2e_reset_limit_lastx_large():
@@ -195,7 +195,7 @@ def test_e2e_reset_limit_lastx_large():
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
 
-    ### NO RESET // LIMIT (lastX w/ large limit) ###
+    # NO RESET // LIMIT (lastX w/ large limit) #
     conf = get_config()
     conf["limit"] = 15
     conf["reset_after_trigger"] = False
@@ -204,11 +204,11 @@ def test_e2e_reset_limit_lastx_large():
     strat.inform_data(data1, timestamps1, labels1)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 10
-    assert set([int(key) for (key, _) in training_samples]) == set(range(10))
+    assert {int(key) for (key, _) in training_samples} == set(range(10))
     strat.inform_data(data2, timestamps2, labels2)
     _, training_samples = strat.trigger()
     assert len(training_samples) == 15
-    assert set([int(key) for (key, _) in training_samples]) == set(range(5, 20))
+    assert {int(key) for (key, _) in training_samples} == set(range(5, 20))
 
 
 def test_inform_data():
@@ -294,33 +294,182 @@ def test__on_trigger_no_reset(test__get_data_no_reset: MagicMock, test__get_data
         assert isclose(weight, 1.0)
 
 
-def test__get_data_reset():
-    pass
+@patch.object(NewDataStrategy, "_get_current_trigger_data")
+@patch.object(NewDataStrategy, "_get_all_data")
+def test__get_data_reset_nolimit(test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock):
+    conf = get_config()
+    conf["reset_after_trigger"] = True
+
+    test__get_current_trigger_data.return_value = ["a", "b", "c"]
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+
+    assert strat._get_data_reset() == ["a", "b", "c"]
+    test__get_all_data.assert_not_called()
+    test__get_current_trigger_data.assert_called_once()
 
 
-def test__get_data_no_reset():
-    pass
+@patch.object(NewDataStrategy, "_get_current_trigger_data")
+@patch.object(NewDataStrategy, "_get_all_data")
+def test__get_data_reset_smalllimit(test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock):
+    conf = get_config()
+    conf["reset_after_trigger"] = True
+    conf["limit"] = 2
+    test__get_current_trigger_data.return_value = ["a", "b", "c"]
+
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+    keys = strat._get_data_reset()
+    assert len(keys) == 2
+    assert set(keys) < set(["a", "b", "c"])
+    test__get_all_data.assert_not_called()
+    test__get_current_trigger_data.assert_called_once()
 
 
-def test__handle_limit_no_reset():
-    pass
+@patch.object(NewDataStrategy, "_get_current_trigger_data")
+@patch.object(NewDataStrategy, "_get_all_data")
+def test__get_data_reset_largelimit(test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock):
+    conf = get_config()
+    conf["reset_after_trigger"] = True
+    conf["limit"] = 42
+    test__get_current_trigger_data.return_value = ["a", "b", "c"]
+
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+    keys = strat._get_data_reset()
+    assert len(keys) == 3
+    assert set(keys) == set(["a", "b", "c"])
+    test__get_all_data.assert_not_called()
+    test__get_current_trigger_data.assert_called_once()
+
+
+@patch.object(NewDataStrategy, "_get_current_trigger_data")
+@patch.object(NewDataStrategy, "_get_all_data")
+@patch.object(NewDataStrategy, "_handle_limit_no_reset")
+def test__get_data_no_reset_nolimit(
+    test__handle_limit_no_reset: MagicMock, test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock
+):
+    conf = get_config()
+    conf["reset_after_trigger"] = False
+
+    test__get_all_data.return_value = ["a", "b", "c"]
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+
+    assert strat._get_data_no_reset() == ["a", "b", "c"]
+    test__get_all_data.assert_called_once()
+    test__get_current_trigger_data.assert_not_called()
+    test__handle_limit_no_reset.assert_not_called()
+
+
+@patch.object(NewDataStrategy, "_get_current_trigger_data")
+@patch.object(NewDataStrategy, "_get_all_data")
+@patch.object(NewDataStrategy, "_handle_limit_no_reset")
+def test__get_data_no_reset_limit(
+    test__handle_limit_no_reset: MagicMock, test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock
+):
+    conf = get_config()
+    conf["reset_after_trigger"] = False
+    conf["limit"] = 2
+    conf["limit_reset"] = "sampleUAR"
+
+    test__handle_limit_no_reset.return_value = ["a", "b"]
+    test__get_all_data.return_value = ["a", "b", "c"]
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+
+    assert strat._get_data_no_reset() == ["a", "b"]
+    test__get_all_data.assert_called_once()
+    test__get_current_trigger_data.assert_not_called()
+    test__handle_limit_no_reset.assert_called_once()
+
+
+@patch.object(NewDataStrategy, "_last_x_limit")
+@patch.object(NewDataStrategy, "_sample_uar")
+def test__handle_limit_no_reset_lastx(test__sample_uar: MagicMock, test__last_x_limit: MagicMock):
+    conf = get_config()
+    conf["reset_after_trigger"] = False
+    conf["limit"] = 42
+    conf["limit_reset"] = "lastX"
+    test__last_x_limit.return_value = ["a", "b"]
+    test__sample_uar.return_value = ["c", "d"]
+
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+
+    assert strat._handle_limit_no_reset(["x"]) == ["a", "b"]
+    test__last_x_limit.assert_called_once_with(["x"])
+    test__sample_uar.assert_not_called()
+
+
+@patch.object(NewDataStrategy, "_last_x_limit")
+@patch.object(NewDataStrategy, "_sample_uar")
+def test__handle_limit_no_reset_sampleuar(test__sample_uar: MagicMock, test__last_x_limit: MagicMock):
+    conf = get_config()
+    conf["reset_after_trigger"] = False
+    conf["limit"] = 42
+    conf["limit_reset"] = "sampleUAR"
+    test__last_x_limit.return_value = ["a", "b"]
+    test__sample_uar.return_value = ["c", "d"]
+
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+
+    assert strat._handle_limit_no_reset(["x"]) == ["c", "d"]
+    test__last_x_limit.assert_not_called()
+    test__sample_uar.assert_called_once_with(["x"])
 
 
 def test__last_x_limit():
-    pass
+    conf = get_config()
+    conf["limit"] = 5
+    conf["limit_reset"] = "lastX"
+
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+    assert strat._last_x_limit(list(range(1, 10))) == list(range(5, 10))
 
 
 def test__sample_uar():
-    pass
+    conf = get_config()
+    conf["limit"] = 5
+    conf["limit_reset"] = "sampleUAR"
+
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
+    samples = strat._sample_uar(list(range(1, 10)))
+
+    assert len(samples) == 5
+    assert set(samples) < set(range(1, 10))
 
 
 def test__get_current_trigger_data():
-    pass
+    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0)
+    data1 = [str(x) for x in list(range(10))]
+    timestamps1 = list(range(10))
+    labels = [0] * 10
+
+    strat.inform_data(data1, timestamps1, labels)
+
+    assert set(strat._get_current_trigger_data()) == set(data1)
+    strat.trigger()
+
+    data2 = [str(x) for x in list(range(10, 20))]
+    timestamps2 = list(range(10, 20))
+
+    strat.inform_data(data2, timestamps2, labels)
+    assert set(strat._get_current_trigger_data()) == set(data2)
 
 
 def test__get_all_data():
-    pass
+    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0)
+    data1 = [str(x) for x in list(range(10))]
+    timestamps1 = list(range(10))
+    labels = [0] * 10
+
+    strat.inform_data(data1, timestamps1, labels)
+
+    assert set(strat._get_all_data()) == set(data1)
+    strat.trigger()
+
+    data2 = [str(x) for x in list(range(10, 20))]
+    timestamps2 = list(range(10, 20))
+
+    strat.inform_data(data2, timestamps2, labels)
+    assert set(strat._get_all_data()) == set(data1 + data2)
 
 
 def test__reset_state():
-    pass
+    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0)
+    strat._reset_state()

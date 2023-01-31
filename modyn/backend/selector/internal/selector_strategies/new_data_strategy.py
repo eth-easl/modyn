@@ -12,12 +12,11 @@
 # flake8: noqa: E712
 import logging
 import random
-from math import isclose
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import asc, exc, update
+from sqlalchemy import asc
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +118,8 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
         if self.limit_reset_strategy == "lastX":
             return self._last_x_limit(samples)
-        elif self.limit_reset_strategy == "sampleUAR":
+
+        if self.limit_reset_strategy == "sampleUAR":
             return self._sample_uar(samples)
 
         raise NotImplementedError(f"Unsupport limit reset strategy: {self.limit_reset_strategy}")
