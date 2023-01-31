@@ -57,13 +57,13 @@ def test_get_sample_keys_and_weight(test_get_training_set_partition: MagicMock):
 
     test_get_training_set_partition.return_value = [("a", 1.0), ("b", 1.0)]
 
-    result = selector.get_sample_keys_and_weight(42, 2)
+    result = selector.get_sample_keys_and_weights(42, 2)
 
     assert result == [("a", 1.0), ("b", 1.0)]
     test_get_training_set_partition.assert_called_once_with([("a", 1.0), ("b", 1.0)], 2)
 
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_weight(42, 1337)
+        selector.get_sample_keys_and_weights(42, 1337)
 
 
 @patch.object(MockStrategy, "inform_data")

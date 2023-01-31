@@ -144,17 +144,17 @@ class SamplesResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     TRAINING_SAMPLES_SUBSET_FIELD_NUMBER: builtins.int
-    TRAINING_SAMPLES_WEIGHT_FIELD_NUMBER: builtins.int
+    TRAINING_SAMPLES_WEIGHTS_FIELD_NUMBER: builtins.int
     @property
     def training_samples_subset(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     @property
-    def training_samples_weight(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]: ...
+    def training_samples_weights(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]: ...
     def __init__(
         self,
         *,
         training_samples_subset: collections.abc.Iterable[builtins.str] | None = ...,
-        training_samples_weight: collections.abc.Iterable[builtins.float] | None = ...,
+        training_samples_weights: collections.abc.Iterable[builtins.float] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["training_samples_subset", b"training_samples_subset", "training_samples_weight", b"training_samples_weight"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["training_samples_subset", b"training_samples_subset", "training_samples_weights", b"training_samples_weights"]) -> None: ...
 
 global___SamplesResponse = SamplesResponse

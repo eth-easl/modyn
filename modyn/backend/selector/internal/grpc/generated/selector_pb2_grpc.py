@@ -18,8 +18,8 @@ class SelectorStub(object):
                 request_serializer=selector__pb2.RegisterPipelineRequest.SerializeToString,
                 response_deserializer=selector__pb2.PipelineResponse.FromString,
                 )
-        self.get_sample_keys = channel.unary_unary(
-                '/selector.Selector/get_sample_keys',
+        self.get_sample_keys_and_weights = channel.unary_unary(
+                '/selector.Selector/get_sample_keys_and_weights',
                 request_serializer=selector__pb2.GetSamplesRequest.SerializeToString,
                 response_deserializer=selector__pb2.SamplesResponse.FromString,
                 )
@@ -44,7 +44,7 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def get_sample_keys(self, request, context):
+    def get_sample_keys_and_weights(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -70,8 +70,8 @@ def add_SelectorServicer_to_server(servicer, server):
                     request_deserializer=selector__pb2.RegisterPipelineRequest.FromString,
                     response_serializer=selector__pb2.PipelineResponse.SerializeToString,
             ),
-            'get_sample_keys': grpc.unary_unary_rpc_method_handler(
-                    servicer.get_sample_keys,
+            'get_sample_keys_and_weights': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_sample_keys_and_weights,
                     request_deserializer=selector__pb2.GetSamplesRequest.FromString,
                     response_serializer=selector__pb2.SamplesResponse.SerializeToString,
             ),
@@ -113,7 +113,7 @@ class Selector(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def get_sample_keys(request,
+    def get_sample_keys_and_weights(request,
             target,
             options=(),
             channel_credentials=None,
@@ -123,7 +123,7 @@ class Selector(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_sample_keys',
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_sample_keys_and_weights',
             selector__pb2.GetSamplesRequest.SerializeToString,
             selector__pb2.SamplesResponse.FromString,
             options, channel_credentials,

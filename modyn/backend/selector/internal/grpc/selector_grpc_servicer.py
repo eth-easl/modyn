@@ -29,7 +29,7 @@ class SelectorGRPCServicer(SelectorServicer):
         pipeline_id = self.selector_manager.register_pipeline(request.num_workers, request.selection_strategy.value)
         return PipelineResponse(pipeline_id=pipeline_id)
 
-    def get_sample_keys_and_weight(  # pylint: disable-next=unused-argument
+    def get_sample_keys_and_weights(  # pylint: disable-next=unused-argument
         self, request: GetSamplesRequest, context: grpc.ServicerContext
     ) -> SamplesResponse:
         pipeline_id, trigger_id, worker_id = request.pipeline_id, request.trigger_id, request.worker_id
@@ -39,7 +39,7 @@ class SelectorGRPCServicer(SelectorServicer):
 
         samples_keys = [sample[0] for sample in samples]
         samples_weights = [sample[1] for sample in samples]
-        return SamplesResponse(training_samples_subset=samples_keys, training_samples_weight=samples_weights)
+        return SamplesResponse(training_samples_subset=samples_keys, training_samples_weights=samples_weights)
 
     def inform_data(self, request: DataInformRequest, context: grpc.ServicerContext) -> Empty:
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels

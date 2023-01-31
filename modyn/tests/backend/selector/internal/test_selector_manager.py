@@ -45,7 +45,7 @@ def test_register_pipeline(test__instantiate_strategy: MagicMock):
 
 
 @patch.object(SelectorManager, "_instantiate_strategy")
-@patch.object(Selector, "get_sample_keys_and_weight")
+@patch.object(Selector, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights(
     selector_get_sample_keys_and_weight: MagicMock, test__instantiate_strategy: MagicMock
 ):

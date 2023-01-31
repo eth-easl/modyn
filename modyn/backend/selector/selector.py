@@ -49,7 +49,7 @@ class Selector:
 
         return training_samples_subset
 
-    def get_sample_keys_and_weight(self, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
+    def get_sample_keys_and_weights(self, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
         """
         For a give trigger and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.

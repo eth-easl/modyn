@@ -4,7 +4,7 @@ package selector;
 
 service Selector {
     rpc register_pipeline(RegisterPipelineRequest) returns (PipelineResponse) {}
-    rpc get_sample_keys(GetSamplesRequest) returns (SamplesResponse) {}
+    rpc get_sample_keys_and_weights(GetSamplesRequest) returns (SamplesResponse) {}
     rpc inform_data(DataInformRequest) returns (Empty) {}
     rpc inform_data_and_trigger(DataInformRequest) returns (TriggerResponse) {}
 }
@@ -45,5 +45,5 @@ message GetSamplesRequest {
 
 message SamplesResponse {
     repeated string training_samples_subset = 1;
-    repeated float training_samples_weight = 2;
+    repeated float training_samples_weights = 2;
 }

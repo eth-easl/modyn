@@ -59,7 +59,7 @@ class SelectorManager:
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {pipeline_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        return self._selectors[pipeline_id].get_sample_keys_and_weight(trigger_id, worker_id)
+        return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id)
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         if pipeline_id not in self._selectors:
