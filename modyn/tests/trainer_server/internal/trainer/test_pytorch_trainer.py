@@ -53,7 +53,11 @@ class MockDataset(torch.utils.data.IterableDataset):
         return iter(range(100))
 
 
-def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id):
+def get_mock_bytes_parser():
+    return "def bytes_parser_function(x):\n\treturn x"
+
+
+def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, bytes_parser, transform_list, sample_id):
     mock_train_dataloader = iter(
         [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
@@ -71,6 +75,7 @@ def get_training_info(dynamic_module_patch: MagicMock):
             model_configuration=JsonString(value=json.dumps({})),
             criterion_parameters=JsonString(value=json.dumps({})),
             transform_list=[],
+            bytes_parser=get_mock_bytes_parser(),
             model_id="model",
             torch_optimizer="SGD",
             batch_size=32,

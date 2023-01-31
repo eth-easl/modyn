@@ -22,6 +22,7 @@ class TrainingInfo:
         self.criterion_dict = json.loads(request.criterion_parameters.value)
 
         self.transform_list = list(request.transform_list)
+        self.bytes_parser = request.bytes_parser
 
         self.model_id = request.model_id
         model_module = dynamic_module_import("modyn.models")

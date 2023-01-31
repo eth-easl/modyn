@@ -31,6 +31,7 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     DATA_INFO_FIELD_NUMBER: builtins.int
     CHECKPOINT_INFO_FIELD_NUMBER: builtins.int
+    BYTES_PARSER_FIELD_NUMBER: builtins.int
     TRANSFORM_LIST_FIELD_NUMBER: builtins.int
     training_id: builtins.int
     model_id: builtins.str
@@ -47,6 +48,7 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
     def data_info(self) -> global___Data: ...
     @property
     def checkpoint_info(self) -> global___CheckpointInfo: ...
+    bytes_parser: builtins.str
     @property
     def transform_list(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     def __init__(
@@ -62,10 +64,11 @@ class RegisterTrainServerRequest(google.protobuf.message.Message):
         model_configuration: global___JsonString | None = ...,
         data_info: global___Data | None = ...,
         checkpoint_info: global___CheckpointInfo | None = ...,
+        bytes_parser: builtins.str = ...,
         transform_list: collections.abc.Iterable[builtins.str] | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "optimizer_parameters", b"optimizer_parameters"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_criterion", b"torch_criterion", "torch_optimizer", b"torch_optimizer", "training_id", b"training_id", "transform_list", b"transform_list"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "torch_criterion", b"torch_criterion", "torch_optimizer", b"torch_optimizer", "training_id", b"training_id", "transform_list", b"transform_list"]) -> None: ...
 
 global___RegisterTrainServerRequest = RegisterTrainServerRequest
 
