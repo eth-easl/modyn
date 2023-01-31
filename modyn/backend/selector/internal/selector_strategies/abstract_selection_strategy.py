@@ -73,11 +73,10 @@ class AbstractSelectionStrategy(ABC):
               where the first element of the tuple is the key, and the second element is the associated weight.
         """
         trigger_id = self._next_trigger_id
-        self._next_trigger_id += 1
-
         training_samples = self._on_trigger()
 
         if self.reset_after_trigger:
             self._reset_state()
 
+        self._next_trigger_id += 1
         return trigger_id, training_samples

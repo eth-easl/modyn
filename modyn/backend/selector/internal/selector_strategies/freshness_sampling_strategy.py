@@ -7,7 +7,7 @@ from math import isclose
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models.metadata import Metadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import exc, update
+from sqlalchemy import asc, exc, update
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +175,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             data = (
                 database.session.query(Metadata.key, Metadata.seen)
                 .filter(Metadata.pipeline_id == self._pipeline_id, Metadata.seen == False)
+                .order_by(asc(Metadata.timestamp))
                 .all()
             )
 

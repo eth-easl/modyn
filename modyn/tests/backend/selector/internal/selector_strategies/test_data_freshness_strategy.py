@@ -30,15 +30,14 @@ def get_freshness_config():
     return {"reset_after_trigger": False, "unused_data_ratio": 50, "limit": -1}
 
 
-def setup():
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
         training = Training(1)
         database.session.add(training)
         database.session.commit()
-
-
-def teardown():
+    yield
     os.remove(database_path)
 
 
