@@ -15,6 +15,8 @@ def get_minimal_modyn_config() -> dict:
 
 
 class TestAbstractDatabaseConnection(AbstractDatabaseConnection):
+    __test__ = False
+    
     def __init__(self, config):
         super().__init__(config)
         self.drivername = config["test_database"]["drivername"]
