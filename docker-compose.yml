@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
+    container_name: modynbase
   metadata-db:
     image: postgres:14.1-alpine
     restart: always
@@ -40,6 +41,7 @@ services:
     restart: on-failure
     depends_on:
       - storage
+      - selector
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile

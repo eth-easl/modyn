@@ -1,4 +1,4 @@
-FROM modynbase
+FROM modynbase:latest
 
 RUN chmod a+x /src/integrationtests/run.sh
 
