@@ -34,7 +34,7 @@ def get_config():
 def setup_and_teardown():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        training = Training(1)
+        training = Training(number_of_workers=1)
         database.session.add(training)
         database.session.commit()
 

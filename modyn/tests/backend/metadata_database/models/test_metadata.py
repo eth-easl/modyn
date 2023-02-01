@@ -22,12 +22,21 @@ def session():
 
 
 def test_add_metadata(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()
 
-    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
+    metadata = Metadata(
+        key="test_key",
+        timestamp=100,
+        score=0.5,
+        seen=False,
+        label=1,
+        data=b"test_data",
+        pipeline_id=training.training_id,
+        trigger_id=42,
+    )
 
     metadata.metadata_id = 1
 
@@ -44,12 +53,21 @@ def test_add_metadata(session):
 
 
 def test_update_metadata(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()
 
-    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
+    metadata = Metadata(
+        key="test_key",
+        timestamp=100,
+        score=0.5,
+        seen=False,
+        label=1,
+        data=b"test_data",
+        pipeline_id=training.training_id,
+        trigger_id=42,
+    )
 
     metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 
@@ -72,12 +90,21 @@ def test_update_metadata(session):
 
 
 def test_delete_metadata(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()
 
-    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
+    metadata = Metadata(
+        key="test_key",
+        timestamp=100,
+        score=0.5,
+        seen=False,
+        label=1,
+        data=b"test_data",
+        pipeline_id=training.training_id,
+        trigger_id=42,
+    )
 
     metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 
@@ -91,12 +118,21 @@ def test_delete_metadata(session):
 
 
 def test_repr_metadata(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()
 
-    metadata = Metadata("test_key", 100, 0.5, False, 1, b"test_data", training.training_id, 42)
+    metadata = Metadata(
+        key="test_key",
+        timestamp=100,
+        score=0.5,
+        seen=False,
+        label=1,
+        data=b"test_data",
+        pipeline_id=training.training_id,
+        trigger_id=42,
+    )
 
     metadata.metadata_id = 1  # This is because SQLite does not support autoincrement for composite primary keys
 

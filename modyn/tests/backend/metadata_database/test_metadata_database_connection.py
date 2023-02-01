@@ -25,7 +25,7 @@ def test_database_connection():
 def test_set_metadata():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        training = Training(1)
+        training = Training(number_of_workers=1)
         database.session.add(training)
         database.session.commit()
 
@@ -110,7 +110,7 @@ def test_get_training_information():
 
         database.session.query(Training).delete()
 
-        training = Training(1)
+        training = Training(number_of_workers=1)
 
         database.session.add(training)
         database.session.commit()
@@ -118,7 +118,7 @@ def test_get_training_information():
         num_workers = database.get_training_information(training.training_id)
         assert num_workers == 1
 
-        training2 = Training(2)
+        training2 = Training(number_of_workers=2)
 
         database.session.add(training2)
         database.session.commit()

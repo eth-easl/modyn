@@ -29,32 +29,3 @@ class Metadata(Base):
     def __repr__(self) -> str:
         """Return string representation."""
         return f"<Metadata {self.key}>"
-
-    def __init__(
-        self,
-        key: str,
-        timestamp: int,
-        score: float,
-        seen: bool,
-        label: int,
-        data: bytes,
-        pipeline_id: int,
-        trigger_id: int,
-    ):
-        """Init metadata.
-        Args:
-            key (str): key
-            score (float): score
-            seen (bool): seen
-            label (int): label
-            data (bytes): data
-            training (Training): training reference
-        """
-        self.key = key
-        self.timestamp = timestamp
-        self.score = score
-        self.seen = seen
-        self.label = label
-        self.data = data
-        self.pipeline_id = pipeline_id
-        self.trigger_id = trigger_id
