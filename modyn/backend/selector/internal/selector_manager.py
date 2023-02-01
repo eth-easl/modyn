@@ -18,7 +18,6 @@ class SelectorManager:
         self._modyn_config = modyn_config
         self._selectors: dict[int, Selector] = {}
         self._selector_locks: dict[int, Lock] = {}
-        self._next_pipeline_id = 0 # TODO(create issue): don't start at zero in case pipeline already exists in DB
         self._next_pipeline_lock = Lock()
 
         self.init_metadata_db()
@@ -39,8 +38,8 @@ class SelectorManager:
             raise ValueError(f"Tried to register training with {num_workers} workers.")
 
         with self._next_pipeline_lock:
-            pipeline_id = self._next_pipeline_id
-            self._next_pipeline_id += 1
+            with MetadataDatabaseConnection(self._modyn_config) as database:
+                pipeline_id = database.register_pipeline(num_workers)
 
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
         selector = Selector(selection_strategy, pipeline_id, num_workers)
@@ -100,7 +99,8 @@ class SelectorManager:
 
         if strategy_name == "newdata":
             return NewDataStrategy(config, self._modyn_config, pipeline_id)
-        elif strategy_name == "freshness_sampling":
+
+        if strategy_name == "freshness_sampling":
             return FreshnessSamplingStrategy(config, self._modyn_config, pipeline_id)
 
         raise NotImplementedError(f"{strategy_name} is not supported")

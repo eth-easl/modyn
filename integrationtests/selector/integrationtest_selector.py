@@ -56,8 +56,6 @@ def test_newdata() -> None:
         )
     ).trigger_id
 
-    assert False, f"trigger id is {trigger_id}"
-
     worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
         GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0)
     )
@@ -69,7 +67,9 @@ def test_newdata() -> None:
     worker_1_samples = [key for key in worker1_response.training_samples_subset]
     worker_2_samples = [key for key in worker2_response.training_samples_subset]
 
-    assert set(worker_1_samples + worker_2_samples) == set(["key_" + str(i) for i in range(6)]), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+    assert set(worker_1_samples + worker_2_samples) == set(
+        ["key_" + str(i) for i in range(6)]
+    ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(worker_1_samples) == 3
     assert len(worker_2_samples) == 3
 
@@ -101,11 +101,12 @@ def test_newdata() -> None:
         GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1)
     )
 
-
     worker_1_samples = [key for key in worker1_response.training_samples_subset]
     worker_2_samples = [key for key in worker2_response.training_samples_subset]
 
-    assert set(worker_1_samples + worker_2_samples) == set(["key_" + str(i) for i in range(6, 12)]), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+    assert set(worker_1_samples + worker_2_samples) == set(
+        ["key_" + str(i) for i in range(6, 12)]
+    ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(worker_1_samples) == 3
     assert len(worker_2_samples) == 3
 
