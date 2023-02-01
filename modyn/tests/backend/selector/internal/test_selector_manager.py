@@ -146,4 +146,4 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test__instantiate_strategy():
-    pass  # TODO(MaxiBoether): write this (test that limit was set + after newdatastrat is there)
+    pass  # TODO(MaxiBoether): Implement this at a later point

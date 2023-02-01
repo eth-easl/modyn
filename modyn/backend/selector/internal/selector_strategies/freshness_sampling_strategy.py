@@ -11,9 +11,6 @@ from sqlalchemy import asc, exc, update
 
 logger = logging.getLogger(__name__)
 
-# TODO(MaxiBoether): change seen field to used field in database
-
-
 class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     """
     This class selects data from a mixture of used and unsed data.
