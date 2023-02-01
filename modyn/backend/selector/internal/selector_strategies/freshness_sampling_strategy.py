@@ -72,8 +72,9 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 is the key, and the second element is the associated weight.
         """
 
-        # TODO(MaxiBoether): right now this is an offline implementation. we might switch to an online
-        # implementation where we don't calculate everything on trigger.
+        # TODO(#116): right now this is an offline implementation. we might switch to an online
+        # implementation where we don't calculate everything on trigger. This depends on what
+        # we hold in memory.
 
         if self._is_first_trigger:
             samples = self._get_first_trigger_data()

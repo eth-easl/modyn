@@ -17,7 +17,7 @@ from modyn.backend.selector.internal.selector_manager import SelectorManager
 
 logger = logging.getLogger(__name__)
 
-# TODO(create issue): function to unregister a pipeline
+# TODO(#124): Add a function to unregister a pipeline
 
 
 class SelectorGRPCServicer(SelectorServicer):

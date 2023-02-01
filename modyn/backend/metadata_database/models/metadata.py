@@ -19,7 +19,7 @@ class Metadata(Base):
     data = Column(LargeBinary, nullable=True)
     pipeline_id = Column(
         Integer,
-        # TODO(MaxiBoether): update that there are no trainings anymore only pipelines/triggers
+        # TODO(#113): We do not have "trainings" anymore, only pipelines/triggers
         ForeignKey("trainings.training_id"),
         nullable=False,
     )
