@@ -1,4 +1,3 @@
-# pylint: disable=super-init-not-called
 """Dataset model."""
 
 from modyn.storage.internal.database.storage_base import Base
