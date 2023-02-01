@@ -21,11 +21,17 @@ class MockStrategy(AbstractSelectionStrategy):
         pass
 
 
+def noop_init_metadata_db(self):
+    pass
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     selec = SelectorManager({})
     assert selec._next_pipeline_id == 0
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 def test_register_pipeline(test__instantiate_strategy: MagicMock):
     selec = SelectorManager({})
@@ -44,6 +50,7 @@ def test_register_pipeline(test__instantiate_strategy: MagicMock):
         selec.register_pipeline(0, "strat")
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights(
@@ -66,6 +73,7 @@ def test_get_sample_keys_and_weights(
     selector_get_sample_keys_and_weight.assert_called_once_with(0, 0)
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "inform_data")
 def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy: MagicMock):
@@ -83,6 +91,7 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
     selector_inform_data.assert_called_once_with(["a"], [0], [0])
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "inform_data_and_trigger")
 def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, test__instantiate_strategy: MagicMock):
@@ -100,5 +109,6 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
     selector_inform_data_and_trigger.assert_called_once_with(["a"], [0], [0])
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test__instantiate_strategy():
     pass  # TODO(MaxiBoether): write this (test that limit was set + after newdatastrat is there)

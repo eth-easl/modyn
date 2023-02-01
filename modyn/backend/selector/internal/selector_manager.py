@@ -4,6 +4,7 @@ import json
 import logging
 from threading import Lock
 
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.backend.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
 from modyn.backend.selector.internal.selector_strategies.new_data_strategy import NewDataStrategy
@@ -17,8 +18,14 @@ class SelectorManager:
         self._modyn_config = modyn_config
         self._selectors: dict[int, Selector] = {}
         self._selector_locks: dict[int, Lock] = {}
-        self._next_pipeline_id = 0
+        self._next_pipeline_id = 0 # TODO(create issue): don't start at zero in case pipeline already exists in DB
         self._next_pipeline_lock = Lock()
+
+        self.init_metadata_db()
+
+    def init_metadata_db(self) -> None:
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.create_tables()
 
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """

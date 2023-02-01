@@ -10,7 +10,7 @@ class Metadata(Base):
     """Metadata model."""
 
     __tablename__ = "metadata"
-    metadata_id = Column(Integer, primary_key=True)
+    metadata_id = Column("metadata_id", Integer, primary_key=True)
     key = Column(String(120), nullable=False)
     timestamp = Column(Integer, nullable=False)
     score = Column(Float, nullable=True)

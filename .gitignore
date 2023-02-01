@@ -38,6 +38,7 @@ var/
 # postgresql
 postgres-data/
 storage-postgres-data/
+metadata-postgres-data/
 
 # Trainer output data
 src/data/*

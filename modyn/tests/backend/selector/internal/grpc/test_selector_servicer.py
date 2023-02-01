@@ -15,12 +15,18 @@ from modyn.backend.selector.internal.grpc.selector_grpc_servicer import Selector
 from modyn.backend.selector.internal.selector_manager import SelectorManager
 
 
+def noop_init_metadata_db(self):
+    pass
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     mgr = SelectorManager({})
     servicer = SelectorGRPCServicer(mgr)
     assert servicer.selector_manager == mgr
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "register_pipeline")
 def test_register_pipeline(test_register_pipeline: MagicMock):
     mgr = SelectorManager({})
@@ -34,6 +40,7 @@ def test_register_pipeline(test_register_pipeline: MagicMock):
     test_register_pipeline.assert_called_once_with(2, "strat")
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights(test_get_sample_keys_and_weights: MagicMock):
     mgr = SelectorManager({})
@@ -49,6 +56,7 @@ def test_get_sample_keys_and_weights(test_get_sample_keys_and_weights: MagicMock
     test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2)
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "inform_data")
 def test_inform_data(test_inform_data: MagicMock):
     mgr = SelectorManager({})
@@ -60,6 +68,7 @@ def test_inform_data(test_inform_data: MagicMock):
     test_inform_data.assert_called_once_with(0, ["a", "b"], [1, 2], [0, 1])
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "inform_data_and_trigger")
 def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
     mgr = SelectorManager({})

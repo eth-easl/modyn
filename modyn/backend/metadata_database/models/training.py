@@ -8,7 +8,7 @@ class Training(Base):
     """Training model."""
 
     __tablename__ = "trainings"
-    training_id = Column(Integer, primary_key=True)
+    training_id = Column("training_id", Integer, primary_key=True)
     number_of_workers = Column(Integer, nullable=False)
 
     def __repr__(self) -> str:

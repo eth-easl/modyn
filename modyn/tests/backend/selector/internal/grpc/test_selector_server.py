@@ -3,18 +3,25 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from modyn.backend.selector.internal.grpc.selector_server import SelectorServer
+from modyn.backend.selector.internal.selector_manager import SelectorManager
+
+
+def noop_init_metadata_db(self):
+    pass
 
 
 def get_modyn_config():
     return {"selector": {"port": "1337"}}
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     config = get_modyn_config()
     grpc_server = SelectorServer(config)
     assert grpc_server.modyn_config == config
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_prepare_server():
     grpc_server = SelectorServer(get_modyn_config())
     mock_add = mock.Mock()
@@ -25,6 +32,7 @@ def test_prepare_server():
     mock_add.assert_called_once()
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorServer, "prepare_server")
 def test_run(test_prepare_server: MagicMock):
     grpc_server = SelectorServer(get_modyn_config())
