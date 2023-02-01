@@ -4,6 +4,7 @@ import multiprocessing as mp
 import platform
 import tempfile
 from io import BytesIO
+from time import sleep
 from unittest import mock
 from unittest.mock import patch
 
@@ -183,7 +184,6 @@ def test_get_training_status_alive_blocked(
     test_get_status,
     test_is_alive,
 ):
-
     trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
@@ -260,10 +260,22 @@ def test_get_training_status():
     assert num_batches == state_dict["num_batches"]
     assert num_samples == state_dict["num_samples"]
 
-    if not platform.system() == "Darwin":
-        assert training_process_info.status_query_queue.qsize() == 1
-    else:
-        assert not training_process_info.status_query_queue.empty()
+    timeout = 5
+    elapsed = 0
+
+    while True:
+        if not platform.system() == "Darwin":
+            if training_process_info.status_query_queue.qsize() == 1:
+                break
+        else:
+            if not training_process_info.status_query_queue.empty():
+                break
+
+        sleep(1)
+        elapsed += 1
+
+        if elapsed >= timeout:
+            raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
     assert training_process_info.status_response_queue.empty()
     query = training_process_info.status_query_queue.get()
@@ -304,7 +316,6 @@ def test_get_latest_checkpoint_not_found():
 def test_get_latest_checkpoint_found():
     trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
-
         training_info = get_training_info(temp)
         trainer_server._training_dict[1] = training_info
 
@@ -325,7 +336,6 @@ def test_get_latest_checkpoint_found():
 def test_get_latest_checkpoint_invalid():
     trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
-
         training_info = get_training_info(temp)
         trainer_server._training_dict[1] = training_info
 

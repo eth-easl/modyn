@@ -15,7 +15,6 @@ from torchvision import transforms
     return_value=GetSamplesResponse(training_samples_subset=[1, 2, 3]),
 )
 def test_get_keys_from_selector(test_get_sample_keys):
-
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
@@ -31,7 +30,6 @@ def test_get_keys_from_selector(test_get_sample_keys):
     return_value=GetResponse(data=["sample0", "sample1"], labels=[0, 1]),
 )
 def test_get_data_from_storage(test_get):
-
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
@@ -61,7 +59,6 @@ def test_get_data_from_storage(test_get):
     ],
 )
 def test_deserialize_torchvision_transforms(serialized_transforms, transforms_list):
-
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
@@ -77,7 +74,6 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=(list(range(10)), [1] * 10))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataset_iter(test_get_data, test_get_keys):
-
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
@@ -93,7 +89,6 @@ def test_dataset_iter(test_get_data, test_get_keys):
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=([0] * 16, [1] * 16))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataloader_dataset(test_get_data, test_get_keys):
-
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
