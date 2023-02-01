@@ -11,6 +11,7 @@ from sqlalchemy import asc, exc, update
 
 logger = logging.getLogger(__name__)
 
+
 class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     """
     This class selects data from a mixture of used and unsed data.
