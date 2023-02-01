@@ -1,3 +1,4 @@
+# pylint: disable=super-init-not-called
 """Sample model."""
 
 from typing import Optional
