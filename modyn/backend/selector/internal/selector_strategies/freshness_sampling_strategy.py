@@ -202,4 +202,4 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 database.session.rollback()
 
     def _reset_state(self) -> None:
-        raise Exception("This strategy does not support resets.")
+        raise NotImplementedError("This strategy does not support resets.")
