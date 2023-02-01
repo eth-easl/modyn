@@ -64,7 +64,7 @@ properties:
           name:
             type: string
             description: |
-              The Selector strategy that the pipeline should use.
+              The Selector strategy that the pipeline should use. Currently supported: newdata, freshness_sampling
           config:
             type: object
             description: |
@@ -82,7 +82,10 @@ properties:
                 type: number
                 description: |
                  [FreshnessSamplingStrategy] Ratio that defines how much data in the training set per trigger should be from previously unused data (in all previous triggers).
-
+              limit_reset:
+                type: string
+                description: |
+                 [NewDataStrategy] Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true. Either "lastX" or "sampleUAR" are supported. See class description for further info.
         required:
           - name
       initial_model:

@@ -8,6 +8,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
 
+# TODO(54): Write more integration tests for different strategies.
 
 def connect_to_selector_servicer() -> grpc.Channel:
     config = get_modyn_config()
@@ -16,17 +17,17 @@ def connect_to_selector_servicer() -> grpc.Channel:
     selector_channel = grpc.insecure_channel(selector_address)
 
     if not grpc_connection_established(selector_channel):
-        assert False, f"Could not establish gRPC connection to selector at {selector_address}."
+        raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
 
     return selector_channel
 
 
-def test_selector() -> None:
-    # Register a finetuning pipeline (which I'm assuming the initial training will be)
+def test_newdata() -> None:
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
+    # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit
 
-    strategy_config = {"name": "finetune", "configs": {"limit": 8, "reset_after_trigger": True}}
+    strategy_config = {"name": "newdata", "config": {"limit": -1, "reset_after_trigger": True}}
 
     pipeline_id = selector.register_pipeline(
         RegisterPipelineRequest(num_workers=2, selector_strategy_config=strategy_config)
@@ -55,11 +56,45 @@ def test_selector() -> None:
     ).training_samples_subset
 
     worker_2_samples = selector.get_sample_keys(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0)
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1)
     ).training_samples_subset
 
     assert set(worker_1_samples + worker_2_samples) == set(["key_" + str(i) for i in range(6)])
+    assert len(worker_1_samples) == 3
+    assert len(worker_2_samples) == 3
+
+    selector.inform_data(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=["key_6", "key_7", "key_8"],
+            timestamps=[7, 8, 9],
+            labels=[1, 0, 1],
+        )
+    )
+
+    next_trigger_id = selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=["key_9", "key_10", "key_11"],
+            timestamps=[10, 11, 12],
+            labels=[0, 0, 1],
+        )
+    ).trigger_id
+
+    assert next_trigger_id > trigger_id
+
+    worker_1_samples = selector.get_sample_keys(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0)
+    ).training_samples_subset
+
+    worker_2_samples = selector.get_sample_keys(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1)
+    ).training_samples_subset
+
+    assert set(worker_1_samples + worker_2_samples) == set(["key_" + str(i) for i in range(6,12)])
+    assert len(worker_1_samples) == 3
+    assert len(worker_2_samples) == 3
 
 
 if __name__ == "__main__":
-    test_selector()
+    test_newdata()

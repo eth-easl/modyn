@@ -74,6 +74,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
                     }
                 )
             else:
+                logger.info(f"Dataset with name {name} does not exist.")
                 dataset = Dataset(
                     name=name,
                     base_path=base_path,
