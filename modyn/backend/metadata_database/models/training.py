@@ -1,3 +1,4 @@
+# pylint: disable=super-init-not-called
 """Training model."""
 
 from modyn.backend.metadata_database.metadata_base import Base

@@ -1,3 +1,4 @@
+# pylint: disable=super-init-not-called
 """File model."""
 
 from modyn.storage.internal.database.storage_base import Base
