@@ -32,7 +32,7 @@ def test_newdata() -> None:
     selector = SelectorStub(selector_channel)
     # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit
 
-    strategy_config = {"name": "newdata", "config": {"limit": -1, "reset_after_trigger": True}}
+    strategy_config = {"name": "NewDataStrategy", "config": {"limit": -1, "reset_after_trigger": True}}
 
     pipeline_id = selector.register_pipeline(
         RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
@@ -64,8 +64,8 @@ def test_newdata() -> None:
         GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1)
     )
 
-    worker_1_samples = [key for key in worker1_response.training_samples_subset]
-    worker_2_samples = [key for key in worker2_response.training_samples_subset]
+    worker_1_samples = list(worker1_response.training_samples_subset)
+    worker_2_samples = list(worker2_response.training_samples_subset)
 
     assert set(worker_1_samples + worker_2_samples) == set(
         ["key_" + str(i) for i in range(6)]
@@ -101,8 +101,8 @@ def test_newdata() -> None:
         GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1)
     )
 
-    worker_1_samples = [key for key in worker1_response.training_samples_subset]
-    worker_2_samples = [key for key in worker2_response.training_samples_subset]
+    worker_1_samples = list(worker1_response.training_samples_subset)
+    worker_2_samples = list(worker2_response.training_samples_subset)
 
     assert set(worker_1_samples + worker_2_samples) == set(
         ["key_" + str(i) for i in range(6, 12)]

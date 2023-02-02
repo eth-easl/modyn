@@ -86,14 +86,12 @@ class SelectorManager:
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
         config = selection_strategy["config"] if "config" in selection_strategy else {}
+        default_configs = {"limit": -1, "reset_after_trigger": False}
 
-        if "limit" not in config:
-            config["limit"] = -1
-            logger.warning("No explicit limit given, disabling.")
-
-        if "reset_after_trigger" not in config:
-            config["reset_after_trigger"] = False
-            logger.warning("No reset setting given, disabling reset.")
+        for setting, default_value in default_configs.items():
+            if setting not in config:
+                config[setting] = default_value
+                logger.warning(f"Setting {setting} to default {default_value} since it was not given.")
 
         strategy_module = dynamic_module_import("modyn.backend.selector.internal.selector_strategies")
         if not hasattr(strategy_module, strategy_name):

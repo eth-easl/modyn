@@ -101,6 +101,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         unused_samples = self._get_all_unused_data()
         used_samples = self._get_all_used_data()
         # TODO(#116): At this point, we hold everything in memory anyways, so the database does not really even make sense except for very high usage scnearios
+        # For this use case, it is enough to query only the length from the DB, but then again to call `random.sample` we need the entire list.
 
         num_unused_samples, num_used_samples = self._calc_num_samples_no_limit(len(unused_samples), len(used_samples))
 
@@ -110,7 +111,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         return random.sample(unused_samples, num_unused_samples) + random.sample(used_samples, num_used_samples)
 
     def _calc_num_samples_no_limit(self, total_unused_samples: int, total_used_samples: int) -> tuple[int, int]:
-        # For both the used and unsed samples, we calculate how many samples we could have at maximum where the used/unused samples make up the required fraction
+        # For both the used and unused samples, we calculate how many samples we could have at maximum where the used/unused samples make up the required fraction
 
         maximum_samples_unused = int(total_unused_samples / (float(self.unused_data_ratio) / 100.0))
         maximum_samples_used = int(total_used_samples / (float(100 - self.unused_data_ratio) / 100.0))
