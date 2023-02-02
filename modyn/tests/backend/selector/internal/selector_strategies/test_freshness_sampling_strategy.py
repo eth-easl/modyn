@@ -77,15 +77,9 @@ def test_inform_data():
         for pip_id in pipeline_ids:
             assert pip_id == 0
 
-        assert keys[0] == "a"
-        assert timestamps[0] == 0
-        assert labels[0] == "dog"
-        assert keys[1] == "b"
-        assert timestamps[1] == 1
-        assert labels[1] == "dog"
-        assert keys[2] == "c"
-        assert timestamps[2] == 2
-        assert labels[2] == "cat"
+        assert keys[0] == "a" and keys[1] == "b" and keys[2] == "c"
+        assert timestamps[0] == 0 and timestamps[1] == 1 and timestamps[2] == 2
+        assert labels[0] == "dog" and labels[1] == "dog" and labels[2] == "cat"
 
 
 @patch.object(FreshnessSamplingStrategy, "_get_first_trigger_data")
