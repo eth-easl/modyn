@@ -182,7 +182,20 @@ properties:
         type: string
         description: |
           The processor to use for the ptmp server.
+    selector:
+      type: object
+      properties:
+      port:
+        type: string
+        description: |
+          The port to use for the selector grpc service.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the selector grpc service.
+
 required:
   - project
   - storage
   - metadata_database
+  - selector

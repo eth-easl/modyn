@@ -182,7 +182,6 @@ def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> GetDataInI
 
 
 def check_data(keys: list[str], expected_images: list[bytes]) -> None:
-
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)

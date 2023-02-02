@@ -50,6 +50,7 @@ def get_minimal_modyn_config() -> dict:
             "port": "0",
             "database": f"{database_path}",
         },
+        "selector": {"hostname": "host", "port": "1337"},
     }
 
 

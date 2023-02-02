@@ -25,26 +25,29 @@ def test_database_connection():
 def test_set_metadata():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        training = Training(1)
+        training = Training(number_of_workers=1)
         database.session.add(training)
         database.session.commit()
 
-        database.set_metadata(["test:key:set"], [0.5], [False], [1], [b"test:data"], training.training_id)
+        # TODO(#113): there is no training ID anymore
+        database.set_metadata(["test:key:set"], [100], [0.5], [False], [1], [b"test:data"], training.training_id, 42)
 
         metadata = database.session.query(Metadata).all()
         assert len(metadata) == 1
         assert metadata[0].key == "test:key:set"
         assert metadata[0].score == 0.5
         assert metadata[0].seen is False
+        assert metadata[0].trigger_id == 42
+        assert metadata[0].pipeline_id == training.training_id
 
 
-def test_register_training():
+def test_register_pipeline():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
 
         database.session.query(Training).delete()
 
-        training = database.register_training(1)
+        training = database.register_pipeline(1)
         assert training == 1
 
         trainings = database.session.query(Training).all()
@@ -53,7 +56,7 @@ def test_register_training():
         assert trainings[0].training_id == 1
         assert trainings[0].number_of_workers == 1
 
-        training = database.register_training(2)
+        training = database.register_pipeline(2)
 
         assert training == 2
 
@@ -71,7 +74,7 @@ def test_delete_training():
 
         database.session.query(Training).delete()
 
-        training = database.register_training(1)
+        training = database.register_pipeline(1)
         assert training == 1
 
         trainings = database.session.query(Training).all()
@@ -86,7 +89,7 @@ def test_delete_training():
 
         assert len(trainings) == 0
 
-        training = database.register_training(2)
+        training = database.register_pipeline(2)
 
         assert training == 1
 
@@ -107,7 +110,7 @@ def test_get_training_information():
 
         database.session.query(Training).delete()
 
-        training = Training(1)
+        training = Training(number_of_workers=1)
 
         database.session.add(training)
         database.session.commit()
@@ -115,7 +118,7 @@ def test_get_training_information():
         num_workers = database.get_training_information(training.training_id)
         assert num_workers == 1
 
-        training2 = Training(2)
+        training2 = Training(number_of_workers=2)
 
         database.session.add(training2)
         database.session.commit()

@@ -40,7 +40,7 @@ class MockSelectorServer:
     def __init__(self) -> None:
         pass
 
-    def register_training(self, request: RegisterTrainingRequest) -> TrainingResponse:
+    def register_pipeline(self, request: RegisterTrainingRequest) -> TrainingResponse:
         return TrainingResponse(training_id=10)
 
     def get_sample_keys(self, request: GetSamplesRequest) -> GetSamplesResponse:

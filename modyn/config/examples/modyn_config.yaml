@@ -36,7 +36,7 @@ metadata_database:
   drivername: "postgresql"
   username: "postgres"
   password: "postgres"
-  host: "storage-db"
+  host: "metadata-db"
   port: "5432"
   database: "postgres"
 
@@ -46,10 +46,8 @@ ptmp:
   processor: "SimpleProcessor"
 
 selector:
-  hostname: "backend"
+  hostname: "selector"
   port: "50056"
-  package: "score_selector"
-  class: "ScoreSelector"
 
 trainer_server:
   hostname: "trainer_server"

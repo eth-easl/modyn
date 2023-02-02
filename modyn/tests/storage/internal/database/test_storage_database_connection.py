@@ -115,11 +115,11 @@ def test_delete_dataset():
             is True
         )
         dataset = database.session.query(Dataset).filter(Dataset.name == "test").first()
-        file = File(dataset, "/tmp/modyn/test", 0, 0, 1)
+        file = File(dataset=dataset, path="/tmp/modyn/test", created_at=0, updated_at=0, number_of_samples=1)
         database.session.add(file)
         database.session.commit()
         file = database.session.query(File).filter(File.path == "/tmp/modyn/test").first()
-        sample = Sample(file, 0, 0, 1)
+        sample = Sample(file=file, external_key=0, index=0, label=1)
         database.session.add(sample)
         database.session.commit()
         assert database.delete_dataset("test") is True
