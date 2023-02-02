@@ -118,7 +118,6 @@ def test_dataset_iter(test_get_data, test_get_keys):
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=(list(range(10)), [1] * 10))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataset_iter_with_parsing(test_get_data, test_get_keys):
-
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
