@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     """
-    This class selects data from a mixture of used and unsed data.
+    This class selects data from a mixture of used and unused data.
     We can set a ratio that defines how much data in the training set per trigger should be from previously unused data (in all previous triggers).
 
     The first trigger will always use only fresh data (up to the limit, if there is one).
