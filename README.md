@@ -65,4 +65,5 @@ We use docker-compose to manage the system setup.
 The `docker-compose.yml` file describes our setup. 
 Use `docker compose up --build` to start all containers and `docker compose up --build --abort-on-container-exit --exit-code-from tests` to run the integration tests.
 The `tests` service runs integration tests, if started (e.g., in the Github Workflow).
-Last, on macOS, you might be required to set the `DOCKER_BUILDKIT` environment variable to 0, if you run into problems during the build process.
+On macOS, you might be required to set the `DOCKER_BUILDKIT` environment variable to 0, if you run into problems during the build process.
+In case you encounter issues when running integration tests, you can try deleting the local postgres data folders.
