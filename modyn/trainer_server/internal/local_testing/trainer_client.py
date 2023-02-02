@@ -6,6 +6,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     JsonString,
+    PythonString,
     RegisterTrainServerRequest,
     StartTrainingRequest,
     TrainerAvailableRequest,
@@ -61,7 +62,7 @@ class TrainerClient:
             data_info=Data(dataset_id="MNISTDataset", num_dataloaders=2),
             checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="results"),
             transform_list=transforms,
-            bytes_parser=bytes_parser,
+            bytes_parser=PythonString(value=bytes_parser),
         )
 
         response = self._trainer_stub.register(req)

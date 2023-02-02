@@ -19,6 +19,7 @@ def get_minimal_pipeline_config() -> dict:
             "strategy": "finetune",
             "initial_model": "random",
             "initial_pass": {"activated": False},
+            "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x",
         },
         "data": {"dataset_id": "test"},
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},

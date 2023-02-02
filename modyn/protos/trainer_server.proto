@@ -20,11 +20,15 @@ message RegisterTrainServerRequest {
     JsonString model_configuration = 8;
     Data data_info = 9;
     CheckpointInfo checkpoint_info = 10;
-    string bytes_parser = 11;
+    PythonString bytes_parser = 11;
     repeated string transform_list = 12;
 }
 
 message JsonString {
+    string value = 1;
+}
+
+message PythonString {
     string value = 1;
 }
 
