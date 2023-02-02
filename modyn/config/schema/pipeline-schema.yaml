@@ -105,8 +105,19 @@ properties:
         type: string
         description: |
           ID of dataset to be used for training.
+      bytes_parser_function:
+        type: string
+        description: |
+          Function used to convert bytes received from the Storage, to a format useful for further transformations (e.g. Tensors).
+          This function is called before any other transformations are performed on the data.
+      transformations:
+        type: array
+        description: |
+          Further (optional) transformations to be applied on the data after bytes_parser_function has been applied.
+          For example, this can be torchvision transformations.
     required:
       - dataset_id
+      - bytes_parser_function
   trigger:
     type: object
     description: |

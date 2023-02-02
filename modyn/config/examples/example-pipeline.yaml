@@ -12,9 +12,10 @@ training:
   dataloader_workers: 2
   learning_rate: 0.001
   batch_size: 64
-  strategy: finetune
+  strategy: NewDataStrategy
   strategy_config:
     limit: -1
+    reset_after_trigger: True
   initial_model: random
   initial_pass:
     activated: True
@@ -22,6 +23,14 @@ training:
     amount: 0.5
 data:
   dataset_id: mnist
+  transformations: ["transforms.ToTensor()",
+                    "transforms.Normalize((0.1307,), (0.3081,))"]
+  bytes_parser_function: |
+    from PIL import Image
+    import io
+    def bytes_parser_function(data: bytes) -> Image:
+      return Image.open(io.BytesIO(data))
+                  
 trigger:
   id: DataAmountTrigger
   trigger_config:
