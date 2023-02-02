@@ -38,7 +38,6 @@ class TrainerClient:
         return response.available
 
     def register_training(self, training_id: int) -> bool:
-
         bytes_parser = """import time\ndef bytes_parser_function(x):\n\treturn x"""
 
         transforms = [
@@ -69,7 +68,6 @@ class TrainerClient:
         return response.success
 
     def start_training(self, training_id: int) -> bool:
-
         req = StartTrainingRequest(
             training_id=training_id,
             device="cpu",
@@ -81,7 +79,6 @@ class TrainerClient:
         return response.training_started
 
     def get_training_status(self, training_id: int) -> None:
-
         req = TrainingStatusRequest(training_id=training_id)
         self._trainer_stub.get_training_status(req)
 

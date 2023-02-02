@@ -8,7 +8,6 @@ def get_mock_bytes_parser():
 
 
 def test_prepare_dataloaders():
-
     train_dataloader, _ = prepare_dataloaders(1, "MNIST", 4, 128, get_mock_bytes_parser(), [], "new")
 
     assert train_dataloader.num_workers == 4

@@ -24,7 +24,6 @@ class PytorchTrainer:
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
     ) -> None:
-
         # setup model and optimizer
         self._model = training_info.model_handler(training_info.model_configuration_dict)
         self._model.model.to(device)
@@ -59,7 +58,6 @@ class PytorchTrainer:
         self._num_samples = 0
 
     def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None) -> None:
-
         dict_to_save = {
             "model": self._model.model.state_dict(),
             "optimizer": self._optimizer.state_dict(),
@@ -70,7 +68,6 @@ class PytorchTrainer:
         torch.save(dict_to_save, destination)
 
     def load_checkpoint(self, path: str) -> None:
-
         checkpoint_dict = torch.load(path)
 
         assert "model" in checkpoint_dict
@@ -80,7 +77,6 @@ class PytorchTrainer:
         self._optimizer.load_state_dict(checkpoint_dict["optimizer"])
 
     def send_state_to_server(self, batch_number: int) -> None:
-
         buffer = io.BytesIO()
         self.save_state(buffer)
         buffer.seek(0)
@@ -94,7 +90,6 @@ class PytorchTrainer:
         )
 
     def train(self, log_path: str, load_checkpoint_path: Optional[str] = None) -> None:
-
         file_handler = logging.FileHandler(log_path)
         logger.addHandler(file_handler)
 
@@ -108,7 +103,6 @@ class PytorchTrainer:
         train_iter = enumerate(self._train_dataloader)
 
         for batch_number, batch in train_iter:
-
             if not self._status_query_queue.empty():
                 req = self._status_query_queue.get()
                 if req != TrainerMessages.STATUS_QUERY_MESSAGE:
@@ -144,7 +138,6 @@ def train(
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue,
 ) -> None:
-
     try:
         trainer = PytorchTrainer(
             training_info,

@@ -59,7 +59,6 @@ def get_minimal_modyn_config() -> dict:
 
 
 def setup():
-
     os.makedirs(os.path.dirname(TMP_FILE), exist_ok=True)
     with open(TMP_FILE, "wb") as file:
         file.write(b"test")

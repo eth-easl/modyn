@@ -3,7 +3,7 @@ import logging
 import pathlib
 
 import yaml
-from modyn.backend.selector.selector_server import SelectorServer
+from modyn.backend.selector.internal.grpc.selector_server import SelectorServer
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -21,12 +21,6 @@ def setup_argparser() -> argparse.ArgumentParser:
         action="store",
         help="Modyn infrastructure configuration file",
     )
-    parser_.add_argument(
-        "pipeline",
-        type=pathlib.Path,
-        action="store",
-        help="Modyn pipeline configuration file",
-    )
 
     return parser_
 
@@ -40,15 +34,12 @@ def main() -> None:
     with open(args.config, "r", encoding="utf-8") as config_file:
         modyn_config = yaml.safe_load(config_file)
 
-    with open(args.pipeline, "r", encoding="utf-8") as pipeline_file:
-        pipeline_config = yaml.safe_load(pipeline_file)
-
-    logger.info("Initializing selector.")
-    selector = SelectorServer(pipeline_config, modyn_config)
-    logger.info("Starting selector.")
+    logger.info("Initializing selector server.")
+    selector = SelectorServer(modyn_config)
+    logger.info("Starting selector server.")
     selector.run()
 
-    logger.info("Selector returned, exiting.")
+    logger.info("Selector server returned, exiting.")
 
 
 if __name__ == "__main__":
