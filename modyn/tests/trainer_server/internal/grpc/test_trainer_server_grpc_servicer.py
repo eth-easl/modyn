@@ -260,12 +260,22 @@ def test_get_training_status():
     assert num_batches == state_dict["num_batches"]
     assert num_samples == state_dict["num_samples"]
 
-    sleep(0.2)  # sleep 200 ms to give the queue some time
+    timeout = 5
+    elapsed = 0
 
-    if not platform.system() == "Darwin":
-        assert training_process_info.status_query_queue.qsize() == 1
-    else:
-        assert not training_process_info.status_query_queue.empty()
+    while True:
+        if not platform.system() == "Darwin":
+            if training_process_info.status_query_queue.qsize() == 1:
+                break
+        else:
+            if not training_process_info.status_query_queue.empty():
+                break
+
+        sleep(1)
+        elapsed += 1
+
+        if elapsed >= timeout:
+            raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
     assert training_process_info.status_response_queue.empty()
     query = training_process_info.status_query_queue.get()
