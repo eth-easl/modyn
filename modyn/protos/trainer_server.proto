@@ -3,25 +3,11 @@ syntax = "proto3";
 package trainer;
 
 service TrainerServer {
-    rpc register(RegisterTrainServerRequest) returns (RegisterTrainServerResponse) {}
     rpc trainer_available(TrainerAvailableRequest) returns (TrainerAvailableResponse) {}
     rpc start_training(StartTrainingRequest) returns (StartTrainingResponse) {}
     rpc get_training_status(TrainingStatusRequest) returns (TrainingStatusResponse) {}
-}
-
-message RegisterTrainServerRequest {
-    int32 training_id = 1;
-    string model_id = 2;
-    string torch_optimizer = 3;
-    int32 batch_size = 4;
-    string torch_criterion = 5;
-    JsonString criterion_parameters = 6;
-    JsonString optimizer_parameters = 7;
-    JsonString model_configuration = 8;
-    Data data_info = 9;
-    CheckpointInfo checkpoint_info = 10;
-    PythonString bytes_parser = 11;
-    repeated string transform_list = 12;
+    rpc get_final_model_state(GetFinalModelRequest) returns (GetFinalModelResponse) {}
+    rpc get_latest_model_state(GetLatestModelRequest) returns (GetLatestModelResponse) {}
 }
 
 message JsonString {
@@ -30,10 +16,6 @@ message JsonString {
 
 message PythonString {
     string value = 1;
-}
-
-message RegisterTrainServerResponse {
-    bool success = 1;
 }
 
 message Data {
@@ -55,14 +37,26 @@ message CheckpointInfo {
 }
 
 message StartTrainingRequest {
-    int32 training_id = 1;
-    string device = 2;
-    string train_until_sample_id = 3;
-    string load_checkpoint_path = 4;
+    int32 pipeline_id = 1;
+    int32 trigger_id = 2;
+    string device = 3;
+    string model_id = 4;
+    JsonString model_configuration = 5;
+    bool use_pretrained_model = 6;
+    bytes pretrained_model = 7;
+    int32 batch_size = 8;
+    string torch_optimizer = 9;
+    JsonString optimizer_parameters = 10;
+    string torch_criterion = 11;
+    JsonString criterion_parameters = 12;
+    Data data_info = 13;
+    required CheckpointInfo checkpoint_info = 14;
+    PythonString bytes_parser = 15;
+    repeated string transform_list = 16;
 }
 
 message StartTrainingResponse {
-    bool training_started = 1;
+    int32 training_id = 1;
 }
 
 message TrainingStatusRequest {
@@ -77,5 +71,22 @@ message TrainingStatusResponse {
     optional string exception = 5;
     optional int32 batches_seen = 6;
     optional int32 samples_seen = 7;
-    optional bytes state = 8;
+}
+
+message GetFinalModelRequest {
+    int32 training_id = 1;
+}
+
+message GetFinalModelResponse {
+    bool valid_state = 1;
+    bytes state = 2;
+}
+
+message GetLatestModelRequest {
+    int32 training_id = 1;
+}
+
+message GetLatestModelResponse {
+    bool valid_state = 1;
+    bytes state = 2;
 }

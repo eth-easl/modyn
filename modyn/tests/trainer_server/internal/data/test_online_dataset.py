@@ -16,20 +16,20 @@ def get_mock_bytes_parser():
 def test_invalid_bytes_parser():
     with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
         OnlineDataset(
-            training_id=1,
+            pipeline_id=1,
+            trigger_id=1,
             dataset_id="MNIST",
             bytes_parser="",
             serialized_transforms=[],
-            train_until_sample_id="new",
         )
 
     with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
         OnlineDataset(
-            training_id=1,
+            pipeline_id=1,
+            trigger_id=1,
             dataset_id="MNIST",
             bytes_parser="bytes_parser_function=1",
             serialized_transforms=[],
-            train_until_sample_id="new",
         )
 
 
@@ -40,11 +40,11 @@ def test_invalid_bytes_parser():
 )
 def test_get_keys_from_selector(test_get_sample_keys):
     online_dataset = OnlineDataset(
-        training_id=1,
+        pipeline_id=1,
+        trigger_id=1,
         dataset_id="MNIST",
         bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
-        train_until_sample_id="new",
     )
     assert online_dataset._get_keys_from_selector(0) == [1, 2, 3]
 
@@ -56,11 +56,11 @@ def test_get_keys_from_selector(test_get_sample_keys):
 )
 def test_get_data_from_storage(test_get):
     online_dataset = OnlineDataset(
-        training_id=1,
+        pipeline_id=1,
+        trigger_id=1,
         dataset_id="MNIST",
         bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
-        train_until_sample_id="new",
     )
     assert online_dataset._get_data_from_storage([]) == (["sample0", "sample1"], [0, 1])
 
@@ -86,11 +86,11 @@ def test_get_data_from_storage(test_get):
 )
 def test_deserialize_torchvision_transforms(serialized_transforms, transforms_list):
     online_dataset = OnlineDataset(
-        training_id=1,
+        pipeline_id=1,
+        trigger_id=1,
         dataset_id="MNIST",
         bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=serialized_transforms,
-        train_until_sample_id="new",
     )
     online_dataset._deserialize_torchvision_transforms()
     assert isinstance(online_dataset._transform.transforms, list)
@@ -103,11 +103,11 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataset_iter(test_get_data, test_get_keys):
     online_dataset = OnlineDataset(
-        training_id=1,
+        pipeline_id=1,
+        trigger_id=1,
         dataset_id="MNIST",
         bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
-        train_until_sample_id="new",
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -119,11 +119,11 @@ def test_dataset_iter(test_get_data, test_get_keys):
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataset_iter_with_parsing(test_get_data, test_get_keys):
     online_dataset = OnlineDataset(
-        training_id=1,
+        pipeline_id=1,
+        trigger_id=1,
         dataset_id="MNIST",
         bytes_parser="def bytes_parser_function(x):\n\treturn 2*x",
         serialized_transforms=[],
-        train_until_sample_id="new",
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -135,11 +135,11 @@ def test_dataset_iter_with_parsing(test_get_data, test_get_keys):
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataloader_dataset(test_get_data, test_get_keys):
     online_dataset = OnlineDataset(
-        training_id=1,
+        pipeline_id=1,
+        trigger_id=1,
         dataset_id="MNIST",
         bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
-        train_until_sample_id="new",
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for batch in dataloader:

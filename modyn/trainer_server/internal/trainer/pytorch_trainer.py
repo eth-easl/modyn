@@ -21,7 +21,6 @@ class PytorchTrainer:
         self,
         training_info: TrainingInfo,
         device: str,
-        train_until_sample_id: str,
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
     ) -> None:
@@ -32,18 +31,21 @@ class PytorchTrainer:
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
         self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
 
+        if training_info.used_pretrained_model:
+            self.load_state_if_given(training_info.pretrained_model)
+
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
 
         # setup dataloaders
         self._train_dataloader, self._val_dataloader = prepare_dataloaders(
-            training_info.training_id,
+            training_info.pipeline_id,
+            training_info.trigger_id,
             training_info.dataset_id,
             training_info.num_dataloaders,
             training_info.batch_size,
             training_info.bytes_parser,
             training_info.transform_list,
-            train_until_sample_id,
         )
 
         self._device = device
@@ -68,14 +70,14 @@ class PytorchTrainer:
 
         torch.save(dict_to_save, destination)
 
-    def load_checkpoint(self, path: str) -> None:
-        checkpoint_dict = torch.load(path)
+    def load_state_if_given(self, initial_state):
 
-        assert "model" in checkpoint_dict
-        assert "optimizer" in checkpoint_dict
-
-        self._model.model.load_state_dict(checkpoint_dict["model"])
-        self._optimizer.load_state_dict(checkpoint_dict["optimizer"])
+        checkpoint_buffer = io.BytesIO(initial_state)
+        checkpoint = torch.load(checkpoint_buffer)
+        assert 'model' in checkpoint
+        self._model.model.load_state_dict(checkpoint['model'])
+        if 'optimizer' in checkpoint:
+            self._optimizer.load_state_dict(checkpoint['optimizer'])
 
     def send_state_to_server(self, batch_number: int) -> None:
         buffer = io.BytesIO()
@@ -90,14 +92,11 @@ class PytorchTrainer:
             }
         )
 
-    def train(self, log_path: str, load_checkpoint_path: Optional[str] = None) -> None:
+    def train(self, log_path) -> None:
         file_handler = logging.FileHandler(log_path)
         logger.addHandler(file_handler)
 
         logger.info(f"Process {os.getpid()} starts training")
-
-        if load_checkpoint_path is not None and os.path.exists(load_checkpoint_path):
-            self.load_checkpoint(load_checkpoint_path)
 
         self._model.model.train()
 
@@ -130,6 +129,10 @@ class PytorchTrainer:
 
             logger.info(f"Iteration {batch_number}")
 
+        # save final model
+        final_checkpoint_file_name = self._checkpoint_path + "/model_final.pt"
+        self.save_state(final_checkpoint_file_name, batch_number)
+
         logger.info("Training complete!")
         logger.removeHandler(file_handler)
 
@@ -138,8 +141,6 @@ def train(
     training_info: TrainingInfo,
     device: str,
     log_path: str,
-    load_checkpoint_path: Optional[str],
-    train_until_sample_id: str,
     exception_queue: mp.Queue,
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue,
@@ -148,11 +149,10 @@ def train(
         trainer = PytorchTrainer(
             training_info,
             device,
-            train_until_sample_id,
             status_query_queue,
             status_response_queue,
         )
-        trainer.train(log_path, load_checkpoint_path)
+        trainer.train(log_path)
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)

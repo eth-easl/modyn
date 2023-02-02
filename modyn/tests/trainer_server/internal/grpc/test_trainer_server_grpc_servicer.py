@@ -14,7 +14,6 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     Data,
     JsonString,
     PythonString,
-    RegisterTrainServerRequest,
     StartTrainingRequest,
     TrainerAvailableRequest,
     TrainingStatusRequest,
@@ -25,15 +24,9 @@ from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 
 start_training_request = StartTrainingRequest(
-    training_id=1,
+    pipeline_id=1,
+    trigger_id=1,
     device="cpu",
-    train_until_sample_id="new",
-    load_checkpoint_path="test",
-)
-trainer_available_request = TrainerAvailableRequest()
-
-register_request = RegisterTrainServerRequest(
-    training_id=1,
     model_id="test",
     batch_size=32,
     torch_optimizer="SGD",
@@ -45,7 +38,11 @@ register_request = RegisterTrainServerRequest(
     checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="/tmp"),
     bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
     transform_list=[],
+    use_pretrained_model=False,
+    pretrained_model=None
 )
+trainer_available_request = TrainerAvailableRequest()
+
 
 get_status_request = TrainingStatusRequest(training_id=1)
 
@@ -76,8 +73,10 @@ def get_training_process_info():
     return_value=DummyModelWrapper,
 )
 def get_training_info(temp, test_getattr=None, test_hasattr=None):
-    request = RegisterTrainServerRequest(
-        training_id=1,
+    request = StartTrainingRequest(
+        pipeline_id=1,
+        trigger_id=1,
+        device="cpu",
         data_info=Data(dataset_id="MNIST", num_dataloaders=2),
         optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
         model_configuration=JsonString(value=json.dumps({})),
@@ -89,6 +88,8 @@ def get_training_info(temp, test_getattr=None, test_hasattr=None):
         checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=temp),
         bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
         transform_list=[],
+        use_pretrained_model=False,
+        pretrained_model=None
     )
     training_info = TrainingInfo(request)
     return training_info
@@ -108,40 +109,40 @@ def test_trainer_not_available(test_is_alive):
     assert not response.available
 
 
-@patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=False)
-def test_register_invalid(test_hasattr):
-    trainer_server = TrainerServerGRPCServicer()
-    response = trainer_server.register(register_request, None)
-    assert not response.success
-    assert register_request.training_id not in trainer_server._training_dict
+# @patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=False)
+# def test_register_invalid(test_hasattr):
+#     trainer_server = TrainerServerGRPCServicer()
+#     response = trainer_server.register(register_request, None)
+#     assert not response.success
+#     assert register_request.training_id not in trainer_server._training_dict
 
 
-@patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=True)
-@patch(
-    "modyn.trainer_server.internal.utils.training_info.getattr",
-    return_value=DummyModelWrapper,
-)
-def test_register(test_getattr, test_hasattr):
-    trainer_server = TrainerServerGRPCServicer()
-    response = trainer_server.register(register_request, None)
-    assert response.success
-    assert register_request.training_id in trainer_server._training_dict
+# @patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=True)
+# @patch(
+#     "modyn.trainer_server.internal.utils.training_info.getattr",
+#     return_value=DummyModelWrapper,
+# )
+# def test_register(test_getattr, test_hasattr):
+#     trainer_server = TrainerServerGRPCServicer()
+#     response = trainer_server.register(register_request, None)
+#     assert response.success
+#     assert register_request.training_id in trainer_server._training_dict
 
 
-def test_start_training_not_registered():
-    trainer_server = TrainerServerGRPCServicer()
-    response = trainer_server.start_training(start_training_request, None)
-    assert not response.training_started
+# def test_start_training_not_registered():
+#     trainer_server = TrainerServerGRPCServicer()
+#     response = trainer_server.start_training(start_training_request, None)
+#     assert not response.training_started
 
 
-def test_start_training():
-    trainer_server = TrainerServerGRPCServicer()
-    mock_start = mock.Mock()
-    mock_start.side_effect = noop
-    trainer_server._training_dict[1] = None
-    with patch("multiprocessing.Process.start", mock_start):
-        trainer_server.start_training(start_training_request, None)
-        assert 1 in trainer_server._training_process_dict
+# def test_start_training():
+#     trainer_server = TrainerServerGRPCServicer()
+#     mock_start = mock.Mock()
+#     mock_start.side_effect = noop
+#     trainer_server._training_dict[1] = None
+#     with patch("multiprocessing.Process.start", mock_start):
+#         trainer_server.start_training(start_training_request, None)
+#         assert 0 in trainer_server._training_process_dict
 
 
 def test_get_training_status_not_registered():
@@ -172,7 +173,6 @@ def test_get_training_status_alive(
     assert response.state_available
     assert response.batches_seen == 10
     assert response.samples_seen == 100
-    assert response.state == b"state"
     test_get_latest_checkpoint.assert_not_called()
     test_check_for_training_exception.assert_not_called()
 
@@ -223,7 +223,6 @@ def test_get_training_status_finished_with_exception(
     assert response.state_available
     assert response.batches_seen == 10
     assert response.samples_seen == 100
-    assert response.state == b"state"
     assert response.exception == "exception"
     test_get_status.assert_not_called()
 

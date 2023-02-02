@@ -2,7 +2,7 @@ import json
 import logging
 
 # pylint: disable=no-name-in-module
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import RegisterTrainServerRequest
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import StartTrainingRequest
 from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 class TrainingInfo:
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, request: RegisterTrainServerRequest) -> None:
-        self.training_id = request.training_id
+    def __init__(self, request: StartTrainingRequest) -> None:
+        self.pipeline_id = request.pipeline_id
+        self.trigger_id = request.trigger_id
+
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders
 
@@ -29,6 +31,9 @@ class TrainingInfo:
             logger.error(f"Model {self.model_id} not available!")
             self.model_handler = None
             return
+
+        self.used_pretrained_model = request.use_pretrained_model
+        self.pretrained_model = request.pretrained_model
 
         self.model_handler = getattr(model_module, self.model_id)
 

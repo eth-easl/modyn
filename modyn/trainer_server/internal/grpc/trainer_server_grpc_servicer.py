@@ -7,14 +7,17 @@ import queue
 import sys
 from pathlib import Path
 from typing import Any, Optional
+from threading import Lock
 
 import grpc
 import torch
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    RegisterTrainServerRequest,
-    RegisterTrainServerResponse,
+    GetFinalModelRequest,
+    GetFinalModelResponse,
+    GetLatestModelRequest,
+    GetLatestModelResponse,
     StartTrainingRequest,
     StartTrainingResponse,
     TrainerAvailableRequest,
@@ -38,6 +41,8 @@ class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self) -> None:
+        self._latest_training_id = 0
+        self._lock = Lock()
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
 
@@ -53,28 +58,22 @@ class TrainerServerGRPCServicer:
 
         return TrainerAvailableResponse(available=True)
 
-    def register(
-        self,
-        request: RegisterTrainServerRequest,
-        context: grpc.ServicerContext,  # pylint: disable=unused-argument
-    ) -> RegisterTrainServerResponse:
-        training_info = TrainingInfo(request)
-        if training_info.model_handler is None:
-            return RegisterTrainServerResponse(success=False)
-
-        self._training_dict[request.training_id] = training_info
-        return RegisterTrainServerResponse(success=True)
-
     def start_training(
         self,
         request: StartTrainingRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
-        training_id = request.training_id
 
-        if training_id not in self._training_dict:
-            logger.error(f"Training with id {training_id} has not been registered")
-            return StartTrainingResponse(training_started=False)
+        training_info = TrainingInfo(request)
+        if training_info.model_handler is None:
+            return StartTrainingResponse(training_id=-1)
+
+        training_id = self._latest_training_id
+
+        with self._lock:
+            self._latest_training_id += 1
+
+        self._training_dict[training_id] = training_info
 
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
         status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
@@ -86,8 +85,6 @@ class TrainerServerGRPCServicer:
                 self._training_dict[training_id],
                 request.device,
                 f"log-{training_id}.txt",
-                request.load_checkpoint_path,
-                request.train_until_sample_id,
                 exception_queue,
                 status_query_queue,
                 status_response_queue,
@@ -98,7 +95,7 @@ class TrainerServerGRPCServicer:
             process, exception_queue, status_query_queue, status_response_queue
         )
 
-        return StartTrainingResponse(training_started=True)
+        return StartTrainingResponse(training_id=training_id)
 
     def get_training_status(
         self,
@@ -113,32 +110,79 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
-            training_state_running, num_batches, num_samples = self.get_status(training_id)
+            _, num_batches, num_samples = self.get_status(training_id)
             response_kwargs_running: dict[str, Any] = {
                 "valid": True,
                 "is_running": True,
-                "blocked": training_state_running is None,
-                "state_available": training_state_running is not None,
+                "blocked": num_batches is None,
+                "state_available": num_batches is not None,
                 "batches_seen": num_batches,
                 "samples_seen": num_samples,
-                "state": training_state_running,
             }
             cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
         exception = self.check_for_training_exception(training_id)
-        training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(training_id)
+        _, num_batches, num_samples = self.get_latest_checkpoint(training_id)
         response_kwargs_finished: dict[str, Any] = {
             "valid": True,
             "is_running": False,
             "blocked": False,
-            "state_available": training_state_finished is not None,
+            "state_available": num_batches is not None,
             "exception": exception,
             "batches_seen": num_batches,
             "samples_seen": num_samples,
-            "state": training_state_finished,
         }
         cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v}
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
+
+    def get_final_model(
+        self,
+        request: GetFinalModelRequest,
+        context: grpc.ServicerContext,  # pylint: disable=unused-argument
+    ) -> GetFinalModelResponse:
+        training_id = request.training_id
+
+        if training_id not in self._training_dict:
+            logger.error(f"Training with id {training_id} has not been registered")
+            return GetFinalModelResponse(valid_state=False)
+
+        if self._training_process_dict[training_id].process_handler.is_alive():
+            logger.error(f"Training with id {training_id} is still running")
+            return GetFinalModelResponse(valid_state=False)
+
+        final_checkpoint_path = self._training_dict[training_id].checkpoint_path + "/model_final.pt"
+        if os.path.exists(final_checkpoint_path):
+            final_state = torch.load(final_checkpoint_path)
+            buffer = io.BytesIO()
+            torch.save(final_state, buffer)
+            buffer.seek(0)
+            state_bytes = buffer.read()
+            return GetFinalModelResponse(valid_state=True, state=state_bytes)
+        else:
+            return GetFinalModelResponse(valid_state=False)
+
+    def get_latest_model(
+        self,
+        request: GetLatestModelRequest,
+        context: grpc.ServicerContext,  # pylint: disable=unused-argument
+    ) -> GetLatestModelResponse:
+        training_id = request.training_id
+
+        if training_id not in self._training_dict:
+            logger.error(f"Training with id {training_id} has not been registered")
+            return GetLatestModelResponse(valid_state=False)
+
+        process_handler = self._training_process_dict[training_id].process_handler
+        if process_handler.is_alive():
+            training_state,_,_ = self.get_status(training_id)
+        else:
+            training_state,_,_ = self.get_latest_checkpoint(training_id)
+
+        if (training_state is not None):
+            return GetLatestModelResponse(valid_state=True, state=training_state)
+        else:
+            return GetLatestModelResponse(valid_state=False)
+
 
     def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
         status_query_queue = self._training_process_dict[training_id].status_query_queue

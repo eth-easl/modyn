@@ -12,13 +12,14 @@ class OnlineDataset(IterableDataset):
 
     def __init__(
         self,
-        training_id: int,
+        pipeline_id: int,
+        trigger_id: int,
         dataset_id: str,
         bytes_parser: str,
         serialized_transforms: list[str],
-        train_until_sample_id: str,
     ):
-        self._training_id = training_id
+        self._pipeline_id = pipeline_id
+        self._trigger_id = trigger_id
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
@@ -30,7 +31,6 @@ class OnlineDataset(IterableDataset):
         self._serialized_transforms = serialized_transforms
         self._transform = self._bytes_parser_function
         self._deserialize_torchvision_transforms()
-        self._train_until_sample_id = train_until_sample_id
 
         # These mock the behavior of storage and selector servers.
         # TODO(#74): remove them when the storage and selector grpc servers are fixed
@@ -39,7 +39,7 @@ class OnlineDataset(IterableDataset):
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         # TODO(#74): replace this with grpc calls to the selector
-        req = GetSamplesRequest(self._training_id, self._train_until_sample_id, worker_id)
+        req = GetSamplesRequest(self._pipeline_id, self._trigger_id, worker_id)
         samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
