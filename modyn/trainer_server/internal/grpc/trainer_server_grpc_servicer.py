@@ -41,7 +41,7 @@ class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self) -> None:
-        self._latest_training_id = 0
+        self._next_training_id = 0
         self._lock = Lock()
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
@@ -63,15 +63,15 @@ class TrainerServerGRPCServicer:
         request: StartTrainingRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
-
         training_info = TrainingInfo(request)
-        if training_info.model_handler is None:
-            return StartTrainingResponse(training_id=-1)
 
-        training_id = self._latest_training_id
+        if training_info.model_handler is None:
+            return StartTrainingResponse(training_started=False)
+
+        training_id = self._next_training_id
 
         with self._lock:
-            self._latest_training_id += 1
+            self._next_training_id += 1
 
         self._training_dict[training_id] = training_info
 
@@ -95,7 +95,7 @@ class TrainerServerGRPCServicer:
             process, exception_queue, status_query_queue, status_response_queue
         )
 
-        return StartTrainingResponse(training_id=training_id)
+        return StartTrainingResponse(training_started=True, training_id=training_id)
 
     def get_training_status(
         self,
@@ -174,8 +174,10 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
+            print("c1")
             training_state,_,_ = self.get_status(training_id)
         else:
+            print("c2")
             training_state,_,_ = self.get_latest_checkpoint(training_id)
 
         if (training_state is not None):

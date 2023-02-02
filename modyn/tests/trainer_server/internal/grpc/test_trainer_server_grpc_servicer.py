@@ -12,6 +12,8 @@ import torch
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
+    GetFinalModelRequest,
+    GetLatestModelRequest,
     JsonString,
     PythonString,
     StartTrainingRequest,
@@ -42,10 +44,9 @@ start_training_request = StartTrainingRequest(
     pretrained_model=None
 )
 trainer_available_request = TrainerAvailableRequest()
-
-
 get_status_request = TrainingStatusRequest(training_id=1)
-
+get_final_model_request = GetFinalModelRequest(training_id=1)
+get_latest_model_request = GetLatestModelRequest(training_id=1)
 
 class DummyModelWrapper:
     def __init__(self, model_configuration=None) -> None:
@@ -67,30 +68,33 @@ def get_training_process_info():
     return training_process_info
 
 
+def get_start_training_request(checkpoint_path="", valid_model=True):
+    return StartTrainingRequest(
+        pipeline_id=1,
+        trigger_id=1,
+        device="cpu",
+        model_id="model" if valid_model else "unknown",
+        batch_size=32,
+        torch_optimizer="SGD",
+        torch_criterion="CrossEntropyLoss",
+        optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
+        model_configuration=JsonString(value=json.dumps({})),
+        criterion_parameters=JsonString(value=json.dumps({})),
+        data_info=Data(dataset_id="Dataset", num_dataloaders=1),
+        checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=checkpoint_path),
+        bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
+        transform_list=[],
+        use_pretrained_model=False,
+        pretrained_model=None
+    )
+
 @patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=True)
 @patch(
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,
 )
 def get_training_info(temp, test_getattr=None, test_hasattr=None):
-    request = StartTrainingRequest(
-        pipeline_id=1,
-        trigger_id=1,
-        device="cpu",
-        data_info=Data(dataset_id="MNIST", num_dataloaders=2),
-        optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
-        model_configuration=JsonString(value=json.dumps({})),
-        criterion_parameters=JsonString(value=json.dumps({})),
-        model_id="model",
-        torch_optimizer="SGD",
-        batch_size=32,
-        torch_criterion="CrossEntropyLoss",
-        checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=temp),
-        bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
-        transform_list=[],
-        use_pretrained_model=False,
-        pretrained_model=None
-    )
+    request = get_start_training_request(temp)
     training_info = TrainingInfo(request)
     return training_info
 
@@ -109,40 +113,34 @@ def test_trainer_not_available(test_is_alive):
     assert not response.available
 
 
-# @patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=False)
-# def test_register_invalid(test_hasattr):
-#     trainer_server = TrainerServerGRPCServicer()
-#     response = trainer_server.register(register_request, None)
-#     assert not response.success
-#     assert register_request.training_id not in trainer_server._training_dict
+@patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=False)
+def test_start_training_invalid(test_hasattr):
+    trainer_server = TrainerServerGRPCServicer()
+    response = trainer_server.start_training(get_start_training_request(valid_model=False), None)
+    assert not response.training_started
+    assert not trainer_server._training_dict
+    assert trainer_server._next_training_id == 0
 
 
-# @patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=True)
-# @patch(
-#     "modyn.trainer_server.internal.utils.training_info.getattr",
-#     return_value=DummyModelWrapper,
-# )
-# def test_register(test_getattr, test_hasattr):
-#     trainer_server = TrainerServerGRPCServicer()
-#     response = trainer_server.register(register_request, None)
-#     assert response.success
-#     assert register_request.training_id in trainer_server._training_dict
+@patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=True)
+@patch(
+    "modyn.trainer_server.internal.utils.training_info.getattr",
+    return_value=DummyModelWrapper,
+)
+def test_start_training(test_getattr, test_hasattr):
+    trainer_server = TrainerServerGRPCServicer()
+    mock_start = mock.Mock()
+    mock_start.side_effect = noop
+    trainer_server._training_dict[1] = None
+    with patch("multiprocessing.Process.start", mock_start):
+        trainer_server.start_training(get_start_training_request(valid_model=True), None)
+        assert 0 in trainer_server._training_process_dict
+        assert trainer_server._next_training_id == 1
 
-
-# def test_start_training_not_registered():
-#     trainer_server = TrainerServerGRPCServicer()
-#     response = trainer_server.start_training(start_training_request, None)
-#     assert not response.training_started
-
-
-# def test_start_training():
-#     trainer_server = TrainerServerGRPCServicer()
-#     mock_start = mock.Mock()
-#     mock_start.side_effect = noop
-#     trainer_server._training_dict[1] = None
-#     with patch("multiprocessing.Process.start", mock_start):
-#         trainer_server.start_training(start_training_request, None)
-#         assert 0 in trainer_server._training_process_dict
+        # start new training
+        trainer_server.start_training(get_start_training_request(valid_model=True), None)
+        assert 1 in trainer_server._training_process_dict
+        assert trainer_server._next_training_id == 2
 
 
 def test_get_training_status_not_registered():
@@ -162,8 +160,7 @@ def test_get_training_status_alive(
     test_is_alive,
 ):
     trainer_server = TrainerServerGRPCServicer()
-    training_process_info = get_training_process_info()
-    trainer_server._training_process_dict[1] = training_process_info
+    trainer_server._training_process_dict[1] = get_training_process_info()
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
@@ -188,8 +185,7 @@ def test_get_training_status_alive_blocked(
     test_is_alive,
 ):
     trainer_server = TrainerServerGRPCServicer()
-    training_process_info = get_training_process_info()
-    trainer_server._training_process_dict[1] = training_process_info
+    trainer_server._training_process_dict[1] = get_training_process_info()
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
@@ -212,8 +208,7 @@ def test_get_training_status_finished_with_exception(
     test_is_alive,
 ):
     trainer_server = TrainerServerGRPCServicer()
-    training_process_info = get_training_process_info()
-    trainer_server._training_process_dict[1] = training_process_info
+    trainer_server._training_process_dict[1] = get_training_process_info()
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
@@ -238,8 +233,7 @@ def test_get_training_status_finished_no_checkpoint(
     test_is_alive,
 ):
     trainer_server = TrainerServerGRPCServicer()
-    training_process_info = get_training_process_info()
-    trainer_server._training_process_dict[1] = training_process_info
+    trainer_server._training_process_dict[1] = get_training_process_info()
     trainer_server._training_dict[1] = None
 
     response = trainer_server.get_training_status(get_status_request, None)
@@ -286,8 +280,7 @@ def test_get_training_status():
 
 def test_check_for_training_exception_not_found():
     trainer_server = TrainerServerGRPCServicer()
-    training_process_info = get_training_process_info()
-    trainer_server._training_process_dict[1] = training_process_info
+    trainer_server._training_process_dict[1] = get_training_process_info()
     child_exception = trainer_server.check_for_training_exception(1)
     assert child_exception is None
 
@@ -349,3 +342,90 @@ def test_get_latest_checkpoint_invalid():
         assert training_state is None
         assert num_batches is None
         assert num_samples is None
+
+
+def test_get_final_model_not_registered():
+    trainer_server = TrainerServerGRPCServicer()
+    response = trainer_server.get_final_model(get_final_model_request, None)
+    assert not response.valid_state
+
+
+@patch.object(mp.Process, "is_alive", return_value=True)
+def test_get_final_model_still_running(test_is_alive):
+    trainer_server = TrainerServerGRPCServicer()
+    trainer_server._training_process_dict[1] = get_training_process_info()
+    response = trainer_server.get_final_model(get_final_model_request, None)
+    assert not response.valid_state
+
+@patch.object(mp.Process, "is_alive", return_value=False)
+def test_get_final_model_not_found(test_is_alive):
+    trainer_server = TrainerServerGRPCServicer()
+    with tempfile.TemporaryDirectory() as temp:
+        trainer_server._training_dict[1] = get_training_info(temp)
+        trainer_server._training_process_dict[1] = get_training_process_info()
+        response = trainer_server.get_final_model(get_final_model_request, None)
+        assert not response.valid_state
+
+@patch.object(mp.Process, "is_alive", return_value=False)
+def test_get_final_model_found(test_is_alive):
+    trainer_server = TrainerServerGRPCServicer()
+    with tempfile.TemporaryDirectory() as temp:
+        training_info = get_training_info(temp)
+        dict_to_save = {"state": {"weight": 10}}
+
+        checkpoint_file = training_info.checkpoint_path + "/model_final.pt"
+        torch.save(dict_to_save, checkpoint_file)
+
+        trainer_server._training_dict[1] = training_info
+        trainer_server._training_process_dict[1] = get_training_process_info()
+        response = trainer_server.get_final_model(get_final_model_request, None)
+        assert response.valid_state
+        assert torch.load(BytesIO(response.state)) == {"state": {"weight": 10}}
+
+
+def test_get_latest_model_not_registered():
+    trainer_server = TrainerServerGRPCServicer()
+    response = trainer_server.get_latest_model(get_latest_model_request, None)
+    assert not response.valid_state
+
+
+@patch.object(mp.Process, "is_alive", return_value=True)
+@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None, None))
+def test_get_latest_model_alive_not_found(test_get_status, test_is_alive):
+    trainer_server = TrainerServerGRPCServicer()
+    trainer_server._training_dict[1] = None
+    trainer_server._training_process_dict[1] = get_training_process_info()
+    response = trainer_server.get_latest_model(get_latest_model_request, None)
+    assert not response.valid_state
+
+
+@patch.object(mp.Process, "is_alive", return_value=True)
+@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(b"state", 10, 100))
+def test_get_latest_model_alive_found(test_get_status, test_is_alive):
+    trainer_server = TrainerServerGRPCServicer()
+    trainer_server._training_process_dict[1] = get_training_process_info()
+    trainer_server._training_dict[1] = None
+    response = trainer_server.get_latest_model(get_latest_model_request, None)
+    assert response.valid_state
+    assert response.state == b"state"
+
+
+@patch.object(mp.Process, "is_alive", return_value=False)
+@patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None))
+def test_get_latest_model_finished_not_found(test_get_latest_checkpoint, test_is_alive):
+    trainer_server = TrainerServerGRPCServicer()
+    trainer_server._training_dict[1] = None
+    trainer_server._training_process_dict[1] = get_training_process_info()
+    response = trainer_server.get_latest_model(get_latest_model_request, None)
+    assert not response.valid_state
+
+
+@patch.object(mp.Process, "is_alive", return_value=False)
+@patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100))
+def test_get_latest_model_finished_found(test_get_latest_checkpoint, test_is_alive):
+    trainer_server = TrainerServerGRPCServicer()
+    trainer_server._training_dict[1] = None
+    trainer_server._training_process_dict[1] = get_training_process_info()
+    response = trainer_server.get_latest_model(get_latest_model_request, None)
+    assert response.valid_state
+    assert response.state == b"state"

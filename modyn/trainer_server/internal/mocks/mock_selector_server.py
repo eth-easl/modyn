@@ -23,9 +23,9 @@ class TrainingResponse:
 
 
 class GetSamplesRequest:
-    def __init__(self, training_id: int, train_until_sample_id: str, worker_id: int) -> None:
-        self.training_id = training_id
-        self.train_until_sample_id = train_until_sample_id
+    def __init__(self, pipeline_id: int, trigger_id: str, worker_id: int) -> None:
+        self.pipeline_id = pipeline_id
+        self.trigger_id = trigger_id
         self.worker_id = worker_id
 
 

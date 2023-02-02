@@ -8,6 +8,7 @@ import tempfile
 from collections import OrderedDict
 from io import BytesIO
 from time import sleep
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -67,7 +68,7 @@ def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, b
 
 
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
-def get_training_info(dynamic_module_patch: MagicMock):
+def get_training_info(use_pretrained: bool, pretrained_model: Any, dynamic_module_patch: MagicMock):
     with tempfile.TemporaryDirectory() as tmpdirname:
         dynamic_module_patch.return_value = MockModule()
         request = StartTrainingRequest(
@@ -85,23 +86,23 @@ def get_training_info(dynamic_module_patch: MagicMock):
             checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=tmpdirname),
             bytes_parser=PythonString(value=get_mock_bytes_parser()),
             transform_list=[],
-            use_pretrained_model=False,
-            pretrained_model=None
+            use_pretrained_model=use_pretrained,
+            pretrained_model=pretrained_model
         )
         training_info = TrainingInfo(request)
         return training_info
 
 
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
-def get_mock_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), dynamic_module_patch: MagicMock):
+def get_mock_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), use_pretrained: bool, pretrained_model: Any, dynamic_module_patch: MagicMock):
     dynamic_module_patch.return_value = MockModule()
-    training_info = get_training_info()
+    training_info = get_training_info(use_pretrained, pretrained_model)
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue)
     return trainer
 
 
 def test_trainer_init():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue())
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, None)
     assert isinstance(trainer._model, MockModelWrapper)
     assert isinstance(trainer._optimizer, torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
@@ -111,8 +112,21 @@ def test_trainer_init():
     assert os.path.isdir(trainer._checkpoint_path)
 
 
+@patch.object(PytorchTrainer, "load_state_if_given")
+def test_trainer_init_from_pretrained_model(test_load_state_if_given):
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, b"state")
+    assert isinstance(trainer._model, MockModelWrapper)
+    assert isinstance(trainer._optimizer, torch.optim.SGD)
+    assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
+    assert trainer._device == "cpu"
+    assert trainer._num_samples == 0
+    assert trainer._checkpoint_interval == 10
+    assert os.path.isdir(trainer._checkpoint_path)
+    test_load_state_if_given.assert_called_once_with(b"state")
+
+
 def test_save_state_to_file():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue())
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, None)
     with tempfile.NamedTemporaryFile() as temp:
         trainer.save_state(temp.name, 10)
         assert os.path.exists(temp.name)
@@ -141,7 +155,7 @@ def test_save_state_to_file():
 
 
 def test_save_state_to_buffer():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue())
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, None)
     buffer = io.BytesIO()
     trainer.save_state(buffer)
     buffer.seek(0)
@@ -165,6 +179,35 @@ def test_save_state_to_buffer():
             ],
         },
     }
+
+
+def test_load_state_if_given():
+    dict_to_save = {
+        "model": OrderedDict([("_weight", torch.tensor([100.0]))]),
+        "optimizer": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.1,
+                    "momentum": 0,
+                    "dampening": 0,
+                    "weight_decay": 0,
+                    "nesterov": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "differentiable": False,
+                    "params": [0],
+                }
+            ],
+        },
+    }
+    initial_state_buffer = io.BytesIO()
+    torch.save(dict_to_save, initial_state_buffer)
+    initial_state_buffer.seek(0)
+    initial_state = initial_state_buffer.read()
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, initial_state)
+    assert trainer._model.model.state_dict() == dict_to_save["model"]
+    assert trainer._optimizer.state_dict() == dict_to_save["optimizer"]
 
 
 # def test_load_checkpoint():
@@ -201,7 +244,7 @@ def test_save_state_to_buffer():
 def test_send_state_to_server():
     response_queue = mp.Queue()
     query_queue = mp.Queue()
-    trainer = get_mock_trainer(query_queue, response_queue)
+    trainer = get_mock_trainer(query_queue, response_queue, False, None)
     trainer.send_state_to_server(20)
     response = response_queue.get()
     assert response["num_batches"] == 20
@@ -234,7 +277,7 @@ def test_send_state_to_server():
 def test_train_invalid_query_message():
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue)
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, None)
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
@@ -265,7 +308,7 @@ def test_train_invalid_query_message():
 def test_train():
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue)
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, None)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
     timeout = 5
     elapsed = 0
@@ -325,6 +368,7 @@ def test_train():
                 ],
             },
         }
+        assert os.path.exists(trainer._checkpoint_path + "/model_final.pt")
 
 
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
@@ -337,7 +381,7 @@ def test_create_trainer_with_exception(test_dynamic_module_import):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info()
+    training_info = get_training_info(False, None)
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0

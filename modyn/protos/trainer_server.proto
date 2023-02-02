@@ -50,13 +50,14 @@ message StartTrainingRequest {
     string torch_criterion = 11;
     JsonString criterion_parameters = 12;
     Data data_info = 13;
-    required CheckpointInfo checkpoint_info = 14;
+    CheckpointInfo checkpoint_info = 14;
     PythonString bytes_parser = 15;
     repeated string transform_list = 16;
 }
 
 message StartTrainingResponse {
-    int32 training_id = 1;
+    bool training_started = 1;
+    int32 training_id = 2;
 }
 
 message TrainingStatusRequest {

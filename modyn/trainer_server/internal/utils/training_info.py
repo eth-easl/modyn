@@ -32,10 +32,10 @@ class TrainingInfo:
             self.model_handler = None
             return
 
+        self.model_handler = getattr(model_module, self.model_id)
+
         self.used_pretrained_model = request.use_pretrained_model
         self.pretrained_model = request.pretrained_model
-
-        self.model_handler = getattr(model_module, self.model_id)
 
         self.torch_optimizer = request.torch_optimizer
         self.batch_size = request.batch_size
