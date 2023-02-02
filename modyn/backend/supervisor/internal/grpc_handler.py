@@ -16,6 +16,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+# pylint: disable-next=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
@@ -185,7 +186,7 @@ class GRPCHandler:
         if not response.success:
             raise RuntimeError("Registration at trainer did go wrong: {response}")
 
-        # TODO(create issue): training registration at trainer should return training ID, given pipeline and trigger ID
+        # TODO(#74): training registration at trainer should return training ID, given pipeline and trigger ID
         return 42
 
     def start_training(self, pipeline_id: int, trigger_id: int, pipeline_config: dict) -> int:
@@ -249,6 +250,7 @@ class GRPCHandler:
 
         logger.info("Training completed 🚀")
 
+    # pylint: disable-next=unused-argument
     def get_trained_model(self, training_id: int) -> bytes:
         # TODO(create issue): Implement at trainer.
         return b""
