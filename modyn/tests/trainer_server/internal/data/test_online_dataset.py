@@ -9,6 +9,30 @@ from modyn.trainer_server.internal.mocks.mock_storage_server import GetResponse,
 from torchvision import transforms
 
 
+def get_mock_bytes_parser():
+    return "def bytes_parser_function(x):\n\treturn x"
+
+
+def test_invalid_bytes_parser():
+    with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
+        OnlineDataset(
+            training_id=1,
+            dataset_id="MNIST",
+            bytes_parser="",
+            serialized_transforms=[],
+            train_until_sample_id="new",
+        )
+
+    with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
+        OnlineDataset(
+            training_id=1,
+            dataset_id="MNIST",
+            bytes_parser="bytes_parser_function=1",
+            serialized_transforms=[],
+            train_until_sample_id="new",
+        )
+
+
 @patch.object(
     MockSelectorServer,
     "get_sample_keys",
@@ -18,6 +42,7 @@ def test_get_keys_from_selector(test_get_sample_keys):
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
         train_until_sample_id="new",
     )
@@ -27,12 +52,13 @@ def test_get_keys_from_selector(test_get_sample_keys):
 @patch.object(
     MockStorageServer,
     "Get",
-    return_value=GetResponse(data=["sample0", "sample1"], labels=[0, 1]),
+    return_value=GetResponse(samples=["sample0", "sample1"], labels=[0, 1]),
 )
 def test_get_data_from_storage(test_get):
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
         train_until_sample_id="new",
     )
@@ -62,12 +88,14 @@ def test_deserialize_torchvision_transforms(serialized_transforms, transforms_li
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=serialized_transforms,
         train_until_sample_id="new",
     )
     online_dataset._deserialize_torchvision_transforms()
     assert isinstance(online_dataset._transform.transforms, list)
-    for transform1, transform2 in zip(online_dataset._transform.transforms, transforms_list):
+    assert online_dataset._transform.transforms[0].__name__ == "bytes_parser_function"
+    for transform1, transform2 in zip(online_dataset._transform.transforms[1:], transforms_list):
         assert transform1.__dict__ == transform2.__dict__
 
 
@@ -77,6 +105,7 @@ def test_dataset_iter(test_get_data, test_get_keys):
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
         train_until_sample_id="new",
     )
@@ -86,12 +115,29 @@ def test_dataset_iter(test_get_data, test_get_keys):
     assert [x[1] for x in all_data] == [1] * 10
 
 
+@patch.object(OnlineDataset, "_get_data_from_storage", return_value=(list(range(10)), [1] * 10))
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
+def test_dataset_iter_with_parsing(test_get_data, test_get_keys):
+    online_dataset = OnlineDataset(
+        training_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn 2*x",
+        serialized_transforms=[],
+        train_until_sample_id="new",
+    )
+    dataset_iter = iter(online_dataset)
+    all_data = list(dataset_iter)
+    assert [x[0] for x in all_data] == list(range(0, 20, 2))
+    assert [x[1] for x in all_data] == [1] * 10
+
+
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=([0] * 16, [1] * 16))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[])
 def test_dataloader_dataset(test_get_data, test_get_keys):
     online_dataset = OnlineDataset(
         training_id=1,
         dataset_id="MNIST",
+        bytes_parser=get_mock_bytes_parser(),
         serialized_transforms=[],
         train_until_sample_id="new",
     )

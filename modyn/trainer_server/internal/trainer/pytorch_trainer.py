@@ -2,6 +2,7 @@ import io
 import logging
 import multiprocessing as mp
 import os
+import queue
 import traceback
 from typing import Optional, Union
 
@@ -40,6 +41,7 @@ class PytorchTrainer:
             training_info.dataset_id,
             training_info.num_dataloaders,
             training_info.batch_size,
+            training_info.bytes_parser,
             training_info.transform_list,
             train_until_sample_id,
         )
@@ -102,11 +104,16 @@ class PytorchTrainer:
         train_iter = enumerate(self._train_dataloader)
 
         for batch_number, batch in train_iter:
-            if not self._status_query_queue.empty():
-                req = self._status_query_queue.get()
+            # As empty() is unreliable
+            # we try to fetch an element within 100ms. If there is no
+            # element within that timeframe returned, we continue.
+            try:
+                req = self._status_query_queue.get(timeout=0.1)
                 if req != TrainerMessages.STATUS_QUERY_MESSAGE:
                     raise ValueError("Unknown message in the status query queue")
                 self.send_state_to_server(batch_number)
+            except queue.Empty:
+                pass
 
             self._optimizer.zero_grad()
             data, target = batch[0].to(self._device), batch[1].to(self._device)

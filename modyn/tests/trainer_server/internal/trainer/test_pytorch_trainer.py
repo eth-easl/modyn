@@ -7,6 +7,7 @@ import platform
 import tempfile
 from collections import OrderedDict
 from io import BytesIO
+from time import sleep
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,6 +16,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     JsonString,
+    PythonString,
     RegisterTrainServerRequest,
 )
 from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer, train
@@ -53,7 +55,11 @@ class MockDataset(torch.utils.data.IterableDataset):
         return iter(range(100))
 
 
-def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id):
+def get_mock_bytes_parser():
+    return "def bytes_parser_function(x):\n\treturn x"
+
+
+def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, bytes_parser, transform_list, sample_id):
     mock_train_dataloader = iter(
         [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
@@ -70,12 +76,13 @@ def get_training_info(dynamic_module_patch: MagicMock):
             optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
             model_configuration=JsonString(value=json.dumps({})),
             criterion_parameters=JsonString(value=json.dumps({})),
-            transform_list=[],
             model_id="model",
             torch_optimizer="SGD",
             batch_size=32,
             torch_criterion="CrossEntropyLoss",
             checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=tmpdirname),
+            bytes_parser=PythonString(value=get_mock_bytes_parser()),
+            transform_list=[],
         )
         training_info = TrainingInfo(request)
         return training_info
@@ -225,13 +232,26 @@ def test_train_invalid_query_message():
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue)
     query_status_queue.put("INVALID MESSAGE")
+    timeout = 5
+    elapsed = 0
     while query_status_queue.empty():
-        pass
+        sleep(1)
+        elapsed += 1
+
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
+
     with tempfile.NamedTemporaryFile() as temp:
         with pytest.raises(ValueError, match="Unknown message in the status query queue"):
             trainer.train(temp.name)
-        assert query_status_queue.empty()
-        assert status_queue.empty()
+
+        elapsed = 0
+        while not (query_status_queue.empty() and status_queue.empty()):
+            sleep(1)
+            elapsed += 1
+
+            if elapsed >= timeout:
+                raise TimeoutError("Did not reach desired queue state within timelimit.")
 
 
 @patch(
@@ -243,18 +263,40 @@ def test_train():
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+    timeout = 5
+    elapsed = 0
     while query_status_queue.empty():
-        pass
+        sleep(1)
+        elapsed += 1
+
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
+
     with tempfile.NamedTemporaryFile() as temp:
         trainer.train(temp.name)
         assert os.path.exists(temp.name)
         assert trainer._num_samples == 800
-        assert query_status_queue.empty()
+        while not query_status_queue.empty():
+            sleep(1)
+            elapsed += 1
 
-        if not platform.system() == "Darwin":
-            assert status_queue.qsize() == 1
-        else:
-            assert not status_queue.empty()
+            if elapsed >= timeout:
+                raise TimeoutError("Did not reach desired queue state within timelimit.")
+
+        elapsed = 0
+        while True:
+            if not platform.system() == "Darwin":
+                if status_queue.qsize() == 1:
+                    break
+            else:
+                if not status_queue.empty():
+                    break
+
+            sleep(1)
+            elapsed += 1
+
+            if elapsed >= timeout:
+                raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
         status = status_queue.get()
         assert status["num_batches"] == 0
@@ -293,8 +335,15 @@ def test_create_trainer_with_exception(test_dynamic_module_import):
     exception_queue = mp.Queue()
     training_info = get_training_info()
     query_status_queue.put("INVALID MESSAGE")
+    timeout = 5
+    elapsed = 0
     while query_status_queue.empty():
-        pass
+        sleep(1)
+        elapsed += 1
+
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
+
     with tempfile.NamedTemporaryFile() as temp:
         train(
             training_info,
@@ -306,13 +355,29 @@ def test_create_trainer_with_exception(test_dynamic_module_import):
             query_status_queue,
             status_queue,
         )
-        assert query_status_queue.empty()
-        assert status_queue.empty()
+        elapsed = 0
+        while not (query_status_queue.empty() and status_queue.empty()):
+            sleep(1)
+            elapsed += 1
 
-        if not platform.system() == "Darwin":
-            assert exception_queue.qsize() == 1
-        else:
-            assert not exception_queue.empty()
+            if elapsed >= timeout:
+                raise TimeoutError("Did not reach desired queue state within timelimit.")
+
+        elapsed = 0
+
+        while True:
+            if not platform.system() == "Darwin":
+                if exception_queue.qsize() == 1:
+                    break
+            else:
+                if not exception_queue.empty():
+                    break
+
+            sleep(1)
+            elapsed += 1
+
+            if elapsed >= timeout:
+                raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
         exception = exception_queue.get()
         assert "ValueError: Unknown message in the status query queue" in exception
