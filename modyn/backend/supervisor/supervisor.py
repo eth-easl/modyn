@@ -268,6 +268,7 @@ class Supervisor:
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
+        self.grpc.register_pipeline_at_trainer_server(self.pipeline_id, self.pipeline_config)
 
         self.initial_pass()
         logger.info("Initial pass completed.")

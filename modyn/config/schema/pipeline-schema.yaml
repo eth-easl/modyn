@@ -44,6 +44,10 @@ properties:
         type: number
         description: |
           The number of GPUs that should be used for training.
+      device:
+        type: string
+        description: |
+          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu" and let the trainer server figure out the exact device, but for now, this really is the identifier of the device.
       dataloader_workers:
         type: number
         description: |
@@ -107,14 +111,35 @@ properties:
               If we do an initial pass, we define whether we reference a certain percentage of all data (= amount) or all data in an interval (= start_timestamp, end_timestamp)
         required:
           - activated
+      checkpointing:
+        type: object
+        description: |
+          Configuration of checkpointing during training
+        properties:
+          activated:
+            type: boolean
+            description: |
+              Whether we checkpoint or not
+          interval:
+            type: number
+            description: |
+              In what interval we checkpoint
+          path:
+            type: string
+            description: |
+              The path on the training node where the checkpoints are stored
+        required:
+          - activated
     required:
       - gpus
+      - device
       - dataloader_workers
       - learning_rate
       - batch_size
       - strategy
       - initial_model
       - initial_pass
+      - checkpointing
   data:
     type: object
     description: |

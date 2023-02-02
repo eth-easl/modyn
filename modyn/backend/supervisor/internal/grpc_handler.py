@@ -21,6 +21,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     JsonString,
+    PythonString,
     RegisterTrainServerRequest,
     RegisterTrainServerResponse,
     StartTrainingRequest,
@@ -145,8 +146,7 @@ class GRPCHandler:
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
         pass
 
-    # pylint: disable-next=unused-argument (TODO #74: remove this disable)
-    def _register_training(self, pipeline_id: int, trigger_id: int, pipeline_config: dict) -> int:
+    def register_pipeline_at_trainer_server(self, pipeline_id: int, pipeline_config: dict) -> None:
         if "model_config" in pipeline_config["model"]:
             model_config = json.dumps(pipeline_config["model"]["model_config"])
         else:
@@ -155,14 +155,22 @@ class GRPCHandler:
         # TODO(MaxiBoether): Support Optimizer/Criterion in pipeline config
         optimizer_parameters = json.dumps({"lr": 0.1, "momentum": 0.001})
 
-        # TODO(MaxiBoether): Support transformations and bytes to tensor in pipeline
-        transforms = [
-            "transforms.ToTensor()",
-            "transforms.Normalize((0.1307,), (0.3081,))",
-        ]
+        if "transformations" in pipeline_config["data"]:
+            transform_list=pipeline_config["data"]["transformations"]
+        else:
+            transform_list=[]
 
+        if pipeline_config["checkpointing"]["activated"]:
+            if "interval" not in pipeline_config["checkpointing"] or "path" not in pipeline_config["checkpointing"]:
+                raise ValueError("Checkpointing is enabled, but interval or path not given.")
+
+            checkpoint_info = CheckpointInfo(checkpoint_interval=pipeline_config["checkpointing"]["interval"], checkpoint_path=pipeline_config["checkpointing"]["path"])
+        else:
+            checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
+
+        # TODO(#127): Optionally transfer random seed
         req = RegisterTrainServerRequest(
-            training_id=pipeline_id,  # TODO(#74): the trainer needs to switch to the pipeline/trigger model
+            training_id=pipeline_id,  # TODO(#74): The trainer needs to switch to the pipeline/trigger model
             model_id=pipeline_config["model"]["id"],
             batch_size=pipeline_config["training"]["batch_size"],
             torch_optimizer="SGD",  # TODO(MaxiBoether): Support Optimizer/Criterion in pipeline config
@@ -176,9 +184,9 @@ class GRPCHandler:
                 dataset_id=pipeline_config["data"]["dataset_id"],
                 num_dataloaders=pipeline_config["training"]["dataloader_workers"],
             ),
-            # TODO(MaxiBoether): Checkpointing in pipeline config
-            checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="results"),
-            transform_list=transforms,
+            checkpoint_info=checkpoint_info,
+            transform_list=transform_list,
+            bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"])
         )
 
         response: RegisterTrainServerResponse = self.trainer_server.register(req)
@@ -186,7 +194,7 @@ class GRPCHandler:
         if not response.success:
             raise RuntimeError("Registration at trainer did go wrong: {response}")
 
-        # TODO(#74): training registration at trainer should return training ID, given pipeline and trigger ID
+        # TODO(#74): Return training ID from trainer server here
         return 42
 
     def start_training(self, pipeline_id: int, trigger_id: int, pipeline_config: dict) -> int:
@@ -198,10 +206,9 @@ class GRPCHandler:
 
         req = StartTrainingRequest(
             training_id=training_id,
-            device="cpu",  # TODO(create issue): Add this to pipeline config
-            train_until_sample_id="new",  # TODO(create issue): this does not really make sense anymore
-            # TODO(#127): This needs to be optional. Either we use a random initial model or a pretrained model we load from a checkpoint. Furthermore, we should load the checkpoint at the supervisor into a bytes array and transfer the bytes
-            load_checkpoint_path="results/model_0.pt",
+            device=pipeline_config["training"]["device"],
+            train_until_sample_id="new",  # TODO(#74): Remove this
+            load_checkpoint_path="", # TODO(#127): Make pretrained model optional in protos + transfer bytes of initial model instead. 
         )
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)
@@ -213,7 +220,6 @@ class GRPCHandler:
 
         return training_id
 
-    # pylint: disable-next=unused-argument
     def wait_for_training_completion(self, training_id: int) -> None:
         if not self.connected_to_trainer_server:
             raise ConnectionError(
