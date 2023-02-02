@@ -1,8 +1,8 @@
 import json
 import logging
-import sys
+import pathlib
 from time import sleep
-from typing import Any
+from typing import Optional
 
 import grpc
 
@@ -16,14 +16,13 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+
 # pylint: disable-next=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     JsonString,
     PythonString,
-    RegisterTrainServerRequest,
-    RegisterTrainServerResponse,
     StartTrainingRequest,
     StartTrainingResponse,
     TrainerAvailableRequest,
@@ -144,71 +143,73 @@ class GRPCHandler:
     def stop_training_at_trainer_server(self, training_id: int) -> None:
         # TODO(#130): Implement this at trainer server.
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
-        pass
 
-    def register_pipeline_at_trainer_server(self, pipeline_id: int, pipeline_config: dict) -> None:
-        if "model_config" in pipeline_config["model"]:
-            model_config = json.dumps(pipeline_config["model"]["model_config"])
+    # pylint: disable=too-many-branches,too-many-locals
+    def start_training(
+        self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model: Optional[pathlib.Path]
+    ) -> int:
+        if not self.connected_to_trainer_server:
+            raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
+
+        if "config" in pipeline_config["model"]:
+            model_config = json.dumps(pipeline_config["model"]["config"])
         else:
             model_config = "{}"
 
-        # TODO(MaxiBoether): Support Optimizer/Criterion in pipeline config
-        optimizer_parameters = json.dumps({"lr": 0.1, "momentum": 0.001})
+        if previous_model is not None:
+            use_pretrained_model = True
+            with open(previous_model, "rb") as file:
+                pretrained_model = file.read()
+        else:
+            use_pretrained_model = False
+            pretrained_model = None
+
+        if "config" in pipeline_config["optimizer"]:
+            optimizer_config = json.dumps(pipeline_config["optimizer"]["config"])
+        else:
+            optimizer_config = "{}"
+
+        if "config" in pipeline_config["optimization_criterion"]:
+            criterion_config = json.dumps(pipeline_config["optimization_criterion"]["config"])
+        else:
+            criterion_config = "{}"
 
         if "transformations" in pipeline_config["data"]:
-            transform_list=pipeline_config["data"]["transformations"]
+            transform_list = pipeline_config["data"]["transformations"]
         else:
-            transform_list=[]
+            transform_list = []
 
         if pipeline_config["checkpointing"]["activated"]:
             if "interval" not in pipeline_config["checkpointing"] or "path" not in pipeline_config["checkpointing"]:
                 raise ValueError("Checkpointing is enabled, but interval or path not given.")
 
-            checkpoint_info = CheckpointInfo(checkpoint_interval=pipeline_config["checkpointing"]["interval"], checkpoint_path=pipeline_config["checkpointing"]["path"])
+            checkpoint_info = CheckpointInfo(
+                checkpoint_interval=pipeline_config["checkpointing"]["interval"],
+                checkpoint_path=pipeline_config["checkpointing"]["path"],
+            )
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
-        # TODO(#127): Optionally transfer random seed
-        req = RegisterTrainServerRequest(
-            training_id=pipeline_id,  # TODO(#74): The trainer needs to switch to the pipeline/trigger model
+        req = StartTrainingRequest(
+            pipeline_id=pipeline_id,
+            training_id=trigger_id,
+            device=pipeline_config["training"]["device"],
             model_id=pipeline_config["model"]["id"],
-            batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizer="SGD",  # TODO(MaxiBoether): Support Optimizer/Criterion in pipeline config
-            torch_criterion="CrossEntropyLoss",  # TODO(MaxiBoether): Support Optimizer/Criterion in pipeline config
-            # TODO(MaxiBoether): Support Optimizer/Criterion in pipeline config
-            criterion_parameters=JsonString(value="{}"),
-            # TODO(MaxiBoether): Support Optimizer/Criterion in pipeline config
-            optimizer_parameters=JsonString(value=optimizer_parameters),
             model_configuration=JsonString(value=model_config),
+            use_pretrained_model=use_pretrained_model,
+            pretrained_model=pretrained_model,
+            batch_size=pipeline_config["training"]["batch_size"],
+            torch_optimizer=pipeline_config["optimizer"]["name"],
+            optimizer_parameters=JsonString(value=optimizer_config),
+            torch_criterion=pipeline_config["optimization_criterion"]["name"],
+            criterion_parameters=JsonString(value=criterion_config),
             data_info=Data(
                 dataset_id=pipeline_config["data"]["dataset_id"],
                 num_dataloaders=pipeline_config["training"]["dataloader_workers"],
             ),
             checkpoint_info=checkpoint_info,
             transform_list=transform_list,
-            bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"])
-        )
-
-        response: RegisterTrainServerResponse = self.trainer_server.register(req)
-
-        if not response.success:
-            raise RuntimeError("Registration at trainer did go wrong: {response}")
-
-        # TODO(#74): Return training ID from trainer server here
-        return 42
-
-    def start_training(self, pipeline_id: int, trigger_id: int, pipeline_config: dict) -> int:
-        if not self.connected_to_trainer_server:
-            raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection..")
-
-        training_id = self._register_training(pipeline_id, trigger_id, pipeline_config)
-        logger.info(f"Registered training at trainer server with id {training_id}")
-
-        req = StartTrainingRequest(
-            training_id=training_id,
-            device=pipeline_config["training"]["device"],
-            train_until_sample_id="new",  # TODO(#74): Remove this
-            load_checkpoint_path="", # TODO(#127): Make pretrained model optional in protos + transfer bytes of initial model instead. 
+            bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
         )
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)
@@ -216,6 +217,7 @@ class GRPCHandler:
         if not response.training_started:
             raise RuntimeError("Starting training at trainer did go wrong: {response}")
 
+        training_id = response.training_id
         logger.info(f"Started training {training_id} at trainer server.")
 
         return training_id
@@ -233,10 +235,7 @@ class GRPCHandler:
             if not res.valid:
                 raise RuntimeError(f"Training {training_id} is invalid at server: {res}\n")
 
-            if res.is_running:
-                emoji = "⏳"
-            else:
-                emoji = "✅"
+            emoji = "⏳" if res.is_running else "✅"
 
             if res.blocked:
                 logger.warning("Trainer Server returned a blocked response: {res}\n")
@@ -246,7 +245,8 @@ class GRPCHandler:
                     logger.info(f"\r{emoji} Batch {res.batches_seen}/?, Sample {res.samples_seen}/?")
                 else:
                     logger.warning(
-                        "Trainer server is not blocked, but no state is available. This might be because we queried status for a finished training.\n"
+                        "Trainer server is not blocked, but no state is available. "
+                        "This might be because we queried status for a finished training.\n"
                     )
 
             if res.is_running:
@@ -257,6 +257,27 @@ class GRPCHandler:
         logger.info("Training completed 🚀")
 
     # pylint: disable-next=unused-argument
-    def get_trained_model(self, training_id: int) -> bytes:
-        # TODO(create issue): Implement at trainer.
-        return b""
+    def fetch_trained_model(self, training_id: int, storage_dir: pathlib.Path) -> pathlib.Path:
+        logger.info(f"Fetching trained model for training {training_id}")
+        req = TrainingStatusRequest(training_id=training_id)
+        res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
+
+        if not res.valid:
+            raise RuntimeError(f"Cannot fetch trained model for training {training_id} since training is invalid")
+
+        if res.is_running:
+            raise RuntimeError(
+                f"Cannot fetch trained model for training {training_id} since training has not finished yet"
+            )
+
+        model = b""  # TODO(#74): fetch final model from trainer
+
+        model_path = storage_dir / f"{training_id}.modyn"
+        logger.info(f"Fetched model, storing at {model_path}")
+
+        with open(model_path, "wb") as file:
+            file.write(model)
+
+        logger.info("Wrote model to disk.")
+
+        return model_path

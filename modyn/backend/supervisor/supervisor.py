@@ -7,6 +7,7 @@ from typing import Optional
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
+from modyn.utils.utils import current_time_millis
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
@@ -16,9 +17,8 @@ class Supervisor:
     # pylint: disable=too-many-instance-attributes
     # This is a core class and we require the attributes.
 
-    # TODO(#63): Get these from the Trainer and Selector
+    # TODO(#63): Get these from Selector
     supported_strategies: list[str] = ["NewDataStrategy", "FreshnessSamplingStrategy"]
-    supported_initial_models: list[str] = ["random"]
 
     def __init__(
         self,
@@ -29,8 +29,9 @@ class Supervisor:
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
-        self.current_training_id = None
-        self.pipeline_id = None
+        self.current_training_id: Optional[int] = None
+        self.pipeline_id: Optional[int] = None
+        self.previous_model: Optional[pathlib.Path] = None
 
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
@@ -51,6 +52,13 @@ class Supervisor:
             self.stop_replay_at = stop_replay_at
 
         self._setup_trigger()
+        self._setup_model_directory()
+
+    def _setup_model_directory(self) -> None:
+        self.model_storage_directory = (
+            pathlib.Path(os.getcwd()) / f"models_{self.pipeline_config['pipeline']['name']}" / current_time_millis()
+        )
+        os.makedirs(self.model_storage_directory)
 
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
@@ -96,12 +104,19 @@ class Supervisor:
             logger.error(f"Unsupported strategy: {strategy}. Supported strategies = {Supervisor.supported_strategies}")
             is_valid = False
 
-        if initial_model not in Supervisor.supported_initial_models:
-            logger.error(
-                f"Unsupported initial model: {initial_model}."
-                f"Supported initial models = {Supervisor.supported_initial_models}"
-            )
+        if initial_model not in ["random", "pretrained"]:
+            logger.error("Only random and pretrained initial models are supported.")
             is_valid = False
+
+        if initial_model == "pretrained":
+            if "initial_model_path" not in self.pipeline_config["training"]:
+                logger.error("Initial model set to pretrained, but no initial_model_path given")
+                is_valid = False
+            else:
+                self.previous_model = self.pipeline_config["training"]["initial_model_path"]
+                if not self.previous_model.exists():
+                    logger.error(f"Path {self.previous_model} does not exist.")
+                    is_valid = False
 
         if self.pipeline_config["training"]["initial_pass"]["activated"]:
             reference = self.pipeline_config["training"]["initial_pass"]["reference"]
@@ -241,15 +256,18 @@ class Supervisor:
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
         logger.info(f"Running training for trigger {trigger_id}")
 
-        self.current_training_id = self.grpc.start_training(self.pipeline_id, trigger_id, self.pipeline_config)
+        self.current_training_id = self.grpc.start_training(
+            self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model
+        )
         self.grpc.wait_for_training_completion(self.current_training_id)
 
-        # TODO(MaxiBoether): call self.grpc.get_trained_model if in pipeline config and store model on disk.
+        self.previous_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.
         # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
         # for reference = amount, we need support from the storage module to return the required keys
+        # In case self.previous_model is set, respect and update!
         pass
 
     def replay_data(self) -> None:
@@ -268,7 +286,6 @@ class Supervisor:
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
-        self.grpc.register_pipeline_at_trainer_server(self.pipeline_id, self.pipeline_config)
 
         self.initial_pass()
         logger.info("Initial pass completed.")

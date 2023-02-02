@@ -31,7 +31,7 @@ properties:
         type: string
         description: |
           The ID of the model that should be trained.
-      model_config:
+      config:
         type: object
         description: |
           Configuration dictionary that will be passed to the model on initialization.
@@ -96,6 +96,10 @@ properties:
         type: string
         description: |
           What type of initial model should be used (random or pretrained).
+      initial_model_path:
+        type: string
+        description: |
+          In case of pretrained initial model, provide path (local on supervisor) to initial model
       initial_pass:
         type: object
         description: |
@@ -130,6 +134,36 @@ properties:
               The path on the training node where the checkpoints are stored
         required:
           - activated
+      optimizer:
+        type: object
+        description: |
+          Configuration for the optimizer (e.g., Adam)
+        properties:
+          name:
+            type: string
+            description: |
+              The name of the optimizer the pipeline uses (e.g., SGD)
+          config:
+            type: object
+            description: |
+              Optional configuration of the optimizer, e.g. learning rate/momentum. Passed to the optimizer class as a dict.
+        required:
+          - name
+      optimization_criterion:
+        type: object
+        description: |
+          Configuration for the optimization criterion that we optimize
+        properties:
+          name:
+            type: string
+            description: |
+              The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss)
+          config:
+            type: object
+            description: |
+              Optional configuration of the criterion. Passed to the optimizer class as a dict.
+        required:
+          - name
     required:
       - gpus
       - device
@@ -140,6 +174,8 @@ properties:
       - initial_model
       - initial_pass
       - checkpointing
+      - optimization_criterion
+      - optimizer
   data:
     type: object
     description: |

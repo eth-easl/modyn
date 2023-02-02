@@ -4,29 +4,35 @@ pipeline:
   version: 1.0.0
 model:
   id: ResNet18
-  model_config:
+  config:
     dropout: 0.3
     num_classes: 10
 training:
   gpus: 1
   device: "cpu"
   dataloader_workers: 2
-  learning_rate: 0.001
-  batch_size: 64
-  selection_strategy: 
-    name: NewDataStrategy
-    config:
-      limit: -1
-      reset_after_trigger: True
   initial_model: random
   initial_pass:
     activated: True
     reference: amount
     amount: 0.5
+  batch_size: 64
+  optimizer:
+    name: "SGD"
+    config:
+      lr: 0.1
+      momentum: 0.001
+  optimization_criterion:
+    name: "CrossEntropyLoss"
   checkpointing:
     activated: True
     interval: 10
     path: "results"
+  selection_strategy: 
+    name: NewDataStrategy
+    config:
+      limit: -1
+      reset_after_trigger: True
 data:
   dataset_id: mnist
   transformations: ["transforms.ToTensor()",
