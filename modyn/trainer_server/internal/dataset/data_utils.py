@@ -9,6 +9,7 @@ def prepare_dataloaders(
     dataset_id: str,
     num_dataloaders: int,
     batch_size: int,
+    bytes_parser: str,
     transform: list[str],
     train_until_sample_id: str,
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
@@ -27,7 +28,7 @@ def prepare_dataloaders(
 
     """
 
-    train_set = OnlineDataset(training_id, dataset_id, transform, train_until_sample_id)
+    train_set = OnlineDataset(training_id, dataset_id, bytes_parser, transform, train_until_sample_id)
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)
 
     # TODO(#50): what to do with the val set in the general case?

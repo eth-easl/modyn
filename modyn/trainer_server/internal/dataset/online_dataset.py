@@ -1,4 +1,5 @@
-import typing
+from inspect import isfunction
+from typing import Any, Generator
 
 from modyn.trainer_server.internal.mocks.mock_selector_server import GetSamplesRequest, MockSelectorServer
 from modyn.trainer_server.internal.mocks.mock_storage_server import GetRequest, MockStorageServer
@@ -13,6 +14,7 @@ class OnlineDataset(IterableDataset):
         self,
         training_id: int,
         dataset_id: str,
+        bytes_parser: str,
         serialized_transforms: list[str],
         train_until_sample_id: str,
     ):
@@ -20,8 +22,13 @@ class OnlineDataset(IterableDataset):
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
+        mod_dict: dict[str, Any] = {}
+        exec(bytes_parser, mod_dict)  # pylint: disable=exec-used
+        if "bytes_parser_function" not in mod_dict or not isfunction(mod_dict["bytes_parser_function"]):
+            raise ValueError("Missing function bytes_parser_function from training invocation")
+        self._bytes_parser_function = mod_dict["bytes_parser_function"]
         self._serialized_transforms = serialized_transforms
-        self._transform = lambda x: x  # identity as default
+        self._transform = self._bytes_parser_function
         self._deserialize_torchvision_transforms()
         self._train_until_sample_id = train_until_sample_id
 
@@ -36,21 +43,21 @@ class OnlineDataset(IterableDataset):
         samples_response = self._selectorstub.get_sample_keys(req)
         return samples_response.training_samples_subset
 
-    def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[typing.Any]]:
+    def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[Any]]:
         # TODO(#74): replace this with grpc calls to the selector
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)
         response = self._storagestub.Get(req)
-        return response.data, response.labels
+        return response.samples, response.labels
 
     def _deserialize_torchvision_transforms(self) -> None:
-        self._transform_list = []
+        self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
 
-    def __iter__(self) -> typing.Generator:
+    def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
             # Non-multithreaded data loading. We use worker_id 0.

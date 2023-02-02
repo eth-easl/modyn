@@ -16,6 +16,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     JsonString,
+    PythonString,
     RegisterTrainServerRequest,
 )
 from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer, train
@@ -54,7 +55,11 @@ class MockDataset(torch.utils.data.IterableDataset):
         return iter(range(100))
 
 
-def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, transform_list, sample_id):
+def get_mock_bytes_parser():
+    return "def bytes_parser_function(x):\n\treturn x"
+
+
+def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, bytes_parser, transform_list, sample_id):
     mock_train_dataloader = iter(
         [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
@@ -71,12 +76,13 @@ def get_training_info(dynamic_module_patch: MagicMock):
             optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
             model_configuration=JsonString(value=json.dumps({})),
             criterion_parameters=JsonString(value=json.dumps({})),
-            transform_list=[],
             model_id="model",
             torch_optimizer="SGD",
             batch_size=32,
             torch_criterion="CrossEntropyLoss",
             checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=tmpdirname),
+            bytes_parser=PythonString(value=get_mock_bytes_parser()),
+            transform_list=[],
         )
         training_info = TrainingInfo(request)
         return training_info

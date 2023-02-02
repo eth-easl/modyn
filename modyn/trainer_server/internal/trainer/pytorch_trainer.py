@@ -41,6 +41,7 @@ class PytorchTrainer:
             training_info.dataset_id,
             training_info.num_dataloaders,
             training_info.batch_size,
+            training_info.bytes_parser,
             training_info.transform_list,
             train_until_sample_id,
         )

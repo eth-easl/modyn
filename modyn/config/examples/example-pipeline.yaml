@@ -21,6 +21,7 @@ training:
     activated: True
     reference: amount
     amount: 0.5
+  bytes_parser_function: "def bytes_parser_function(x):\n\treturn x"
 data:
   dataset_id: mnist
 trigger:
