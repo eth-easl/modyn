@@ -51,7 +51,7 @@ class Selector:
 
     def get_sample_keys_and_weights(self, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
         """
-        For a give trigger and worker, this function returns the subset of sample
+        For a given trigger and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.
         This weight can be used during training to support advanced strategies that want to weight the
         gradient descent step for different samples differently. Explicitly, instead of changing parameters
