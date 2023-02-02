@@ -6,9 +6,8 @@ from threading import Lock
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.backend.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
-from modyn.backend.selector.internal.selector_strategies.new_data_strategy import NewDataStrategy
 from modyn.backend.selector.selector import Selector
+from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +86,6 @@ class SelectorManager:
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
         config = selection_strategy["config"] if "config" in selection_strategy else {}
-        assert "configs" not in selection_strategy, "Found legacy usage of 'configs'"
 
         if "limit" not in config:
             config["limit"] = -1
@@ -97,10 +95,10 @@ class SelectorManager:
             config["reset_after_trigger"] = False
             logger.warning("No reset setting given, disabling reset.")
 
-        if strategy_name == "newdata":
-            return NewDataStrategy(config, self._modyn_config, pipeline_id)
+        strategy_module = dynamic_module_import("modyn.backend.selector.internal.selector_strategies")
+        if not hasattr(strategy_module, strategy_name):
+            raise NotImplementedError(f"Strategy {strategy_name} not available!")
 
-        if strategy_name == "freshness_sampling":
-            return FreshnessSamplingStrategy(config, self._modyn_config, pipeline_id)
+        strategy_handler = getattr(strategy_module, strategy_name)
 
-        raise NotImplementedError(f"{strategy_name} is not supported")
+        return strategy_handler(config, self._modyn_config, pipeline_id)

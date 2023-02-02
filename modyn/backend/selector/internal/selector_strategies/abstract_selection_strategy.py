@@ -3,13 +3,9 @@ from typing import Optional
 
 
 class AbstractSelectionStrategy(ABC):
-    """This class is the base class for selectors. In order to extend this class
-    to perform custom experiments, you should override the _select_new_training_samples
-    method, which returns a list of tuples given a training ID and the number of samples
-    requested. The tuples can be of arbitrary length, but the first index should be
-    the key of the sample.
-
-    Then, the selector object should hold an instance of the strategy in selector._strategy.
+    """This class is the base class for selection strategies.
+    New selection strategies need to implement the
+    `_on_trigger`, `_reset_state`, and `inform_data` methods.
 
     Args:
         config (dict): the configurations for the selector

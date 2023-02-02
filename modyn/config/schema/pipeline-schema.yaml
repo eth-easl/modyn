@@ -64,7 +64,7 @@ properties:
           name:
             type: string
             description: |
-              The Selector strategy that the pipeline should use. Currently supported: newdata, freshness_sampling
+              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy
           config:
             type: object
             description: |

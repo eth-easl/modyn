@@ -12,10 +12,10 @@ training:
   learning_rate: 0.001
   batch_size: 64
   selection_strategy: 
-    name: finetune
+    name: NewDataStrategy
     config:
       limit: -1
-      reset_after_trigger: False
+      reset_after_trigger: True
   initial_model: random
   initial_pass:
     activated: True

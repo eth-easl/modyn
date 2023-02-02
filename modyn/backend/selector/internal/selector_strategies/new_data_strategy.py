@@ -132,17 +132,16 @@ class NewDataStrategy(AbstractSelectionStrategy):
         Returns:
             list[str]: Keys of used samples
         """
-        logger.error(f"{self._next_trigger_id} - lol")
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(Metadata.key, Metadata.seen)
+                database.session.query(Metadata.key)
                 .filter(Metadata.pipeline_id == self._pipeline_id, Metadata.trigger_id == self._next_trigger_id)
                 .order_by(asc(Metadata.timestamp))
                 .all()
             )
 
         if len(data) > 0:
-            keys, _ = zip(*data)
+            keys = [res[0] for res in data]
         else:
             keys = []
 
@@ -156,14 +155,14 @@ class NewDataStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(Metadata.key, Metadata.seen)
+                database.session.query(Metadata.key)
                 .filter(Metadata.pipeline_id == self._pipeline_id)
                 .order_by(asc(Metadata.timestamp))
                 .all()
             )
 
         if len(data) > 0:
-            keys, _ = zip(*data)
+            keys = [res[0] for res in data]
         else:
             keys = []
 
