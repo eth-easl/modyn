@@ -16,7 +16,7 @@ class Supervisor:
     # pylint: disable=too-many-instance-attributes
     # This is a core class and we require the attributes.
 
-    # TODO(#63): Get these from the Trainer and Selector, as soon as that functionality is merged.
+    # TODO(#63): Get these from the Trainer and Selector
     supported_strategies: list[str] = ["NewDataStrategy", "FreshnessSamplingStrategy"]
     supported_initial_models: list[str] = ["random"]
 
@@ -277,4 +277,5 @@ class Supervisor:
         else:
             self.wait_for_new_data(start_timestamp)
 
+        logger.info("Pipeline done, unregistering.")
         self.grpc.unregister_pipeline_at_selector(self.pipeline_id)
