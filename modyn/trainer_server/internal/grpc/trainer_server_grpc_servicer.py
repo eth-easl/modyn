@@ -46,7 +46,6 @@ class TrainerServerGRPCServicer:
         request: TrainerAvailableRequest,  # pylint: disable=unused-argument
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainerAvailableResponse:
-
         # if there is already another training job running, the node is considered unavailable
         for _, training in self._training_process_dict.items():
             if training.process_handler.is_alive():
@@ -59,7 +58,6 @@ class TrainerServerGRPCServicer:
         request: RegisterTrainServerRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> RegisterTrainServerResponse:
-
         training_info = TrainingInfo(request)
         if training_info.model_handler is None:
             return RegisterTrainServerResponse(success=False)
@@ -72,7 +70,6 @@ class TrainerServerGRPCServicer:
         request: StartTrainingRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
-
         training_id = request.training_id
 
         if training_id not in self._training_dict:
@@ -108,7 +105,6 @@ class TrainerServerGRPCServicer:
         request: TrainingStatusRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainingStatusResponse:
-
         training_id = request.training_id
 
         if training_id not in self._training_dict:
@@ -129,6 +125,7 @@ class TrainerServerGRPCServicer:
             }
             cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
+
         exception = self.check_for_training_exception(training_id)
         training_state_finished, num_batches, num_samples = self.get_latest_checkpoint(training_id)
         response_kwargs_finished: dict[str, Any] = {
@@ -145,7 +142,6 @@ class TrainerServerGRPCServicer:
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
     def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
-
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
@@ -156,7 +152,6 @@ class TrainerServerGRPCServicer:
             return None, None, None
 
     def check_for_training_exception(self, training_id: int) -> Optional[str]:
-
         exception_queue = self._training_process_dict[training_id].exception_queue
 
         # As qsize() is unreliable and not implemented on macOS,
@@ -169,7 +164,6 @@ class TrainerServerGRPCServicer:
             return None
 
     def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
-
         # this might be useful in case that the training has already finished,
         # either successfully or not, and allow to access the last state
 

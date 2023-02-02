@@ -183,7 +183,6 @@ def test_get_training_status_alive_blocked(
     test_get_status,
     test_is_alive,
 ):
-
     trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
@@ -304,7 +303,6 @@ def test_get_latest_checkpoint_not_found():
 def test_get_latest_checkpoint_found():
     trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
-
         training_info = get_training_info(temp)
         trainer_server._training_dict[1] = training_info
 
@@ -325,7 +323,6 @@ def test_get_latest_checkpoint_found():
 def test_get_latest_checkpoint_invalid():
     trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
-
         training_info = get_training_info(temp)
         trainer_server._training_dict[1] = training_info
 

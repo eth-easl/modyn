@@ -26,7 +26,6 @@ def setup_argparser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-
     parser = setup_argparser()
     args = parser.parse_args()
 

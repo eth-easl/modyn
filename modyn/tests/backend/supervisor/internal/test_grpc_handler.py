@@ -184,7 +184,7 @@ def test_shutdown_trainer_server():
     training_id = 42
 
     # TODO(#78): implement a real test when func is implemented.
-    handler.shutdown_trainer_server(training_id)
+    handler.stop_training_at_trainer_server(training_id)
 
 
 def test_start_trainer_server():
@@ -194,7 +194,7 @@ def test_start_trainer_server():
     pipeline_config = {}
 
     # TODO(#78): implement a real test when func is implemented.
-    assert handler.start_trainer_server(pipeline_id, trigger_id, pipeline_config) == 42
+    assert handler.start_training(pipeline_id, trigger_id, pipeline_config) == 42
 
 
 def test_wait_for_training_completion():

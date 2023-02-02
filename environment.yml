@@ -23,5 +23,6 @@ dependencies:
   - types-PyYAML
   - pytorch
   - torchvision
+  - tqdm
   - pip:
       - "-e ."

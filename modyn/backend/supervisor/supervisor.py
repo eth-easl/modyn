@@ -7,6 +7,7 @@ from typing import Optional
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class Supervisor:
     # This is a core class and we require the attributes.
 
     # TODO(#63): Get these from the Trainer and Selector, as soon as that functionality is merged.
-    supported_strategies: list[str] = ["finetune"]
+    supported_strategies: list[str] = ["NewDataStrategy", "FreshnessSamplingStrategy"]
     supported_initial_models: list[str] = ["random"]
 
     def __init__(
@@ -95,13 +96,6 @@ class Supervisor:
             logger.error(f"Unsupported strategy: {strategy}. Supported strategies = {Supervisor.supported_strategies}")
             is_valid = False
 
-        if strategy == "finetune":
-            if (
-                "strategy_config" not in self.pipeline_config["training"].keys()
-                or "limit" not in self.pipeline_config["training"]["strategy_config"].keys()
-            ):
-                logger.warning("Did not give any explicit limit on finetuning strategy. Assuming no limit.")
-
         if initial_model not in Supervisor.supported_initial_models:
             logger.error(
                 f"Unsupported initial model: {initial_model}."
@@ -155,7 +149,7 @@ class Supervisor:
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:
-            self.grpc.shutdown_trainer_server(self.current_training_id)
+            self.grpc.stop_training_at_trainer_server(self.current_training_id)
 
     def wait_for_new_data(self, start_timestamp: int) -> None:
         last_timestamp = start_timestamp
@@ -193,10 +187,11 @@ class Supervisor:
         we inform the selector about all data points including that data point.
         Otherwise, the selector is informed
         """
+        logger.info(f"Received {len(new_data)} new data points. Handling batches.")
         new_data.sort(key=lambda tup: tup[1])
         any_training_triggered = False
 
-        for i in range(0, len(new_data), selector_batch_size):
+        for i in tqdm(range(0, len(new_data), selector_batch_size)):
             batch = new_data[i : i + selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             any_training_triggered = any_training_triggered or triggered
@@ -207,6 +202,7 @@ class Supervisor:
         triggering_indices = self.trigger.inform(batch)
 
         if len(triggering_indices) > 0:
+            logger.info(f"There are {len(triggering_indices)} triggers in this batch.")
             self._handle_triggers_within_batch(batch, triggering_indices)
             return True
 
@@ -215,7 +211,9 @@ class Supervisor:
 
     def _handle_triggers_within_batch(self, batch: list[tuple[str, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
-        for i, triggering_idx in enumerate(triggering_indices):
+        logger.info("Handling triggers within batch.")
+
+        for i, triggering_idx in enumerate(tqdm(triggering_indices)):
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
@@ -230,6 +228,7 @@ class Supervisor:
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
                 remaining_data = batch[triggering_idx + 1 :]
+                logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0:
                     # These data points will be included in the next trigger
@@ -239,13 +238,16 @@ class Supervisor:
 
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
-        assert self.pipeline_id is not None, "Callback called without a registered pipeline."
-        self.current_training_id = self.grpc.start_trainer_server(self.pipeline_id, trigger_id, self.pipeline_config)
+        assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
+        logger.info(f"Running training for trigger {trigger_id}")
 
+        self.current_training_id = self.grpc.start_training(self.pipeline_id, trigger_id, self.pipeline_config)
         self.grpc.wait_for_training_completion(self.current_training_id)
 
+        # TODO(MaxiBoether): call self.grpc.get_trained_model if in pipeline config and store model on disk.
+
     def initial_pass(self) -> None:
-        # TODO(##10): Implement initial pass.
+        # TODO(#128): Implement initial pass.
         # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
         # for reference = amount, we need support from the storage module to return the required keys
         pass
@@ -254,6 +256,8 @@ class Supervisor:
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
+        logger.info("Starting data replay.")
+
         if self.stop_replay_at is None:
             replay_data = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
         else:
@@ -261,15 +265,12 @@ class Supervisor:
 
         self._handle_new_data(replay_data)
 
-    def end_pipeline(self) -> None:
-        # deregister etc
-        pass
-
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
 
         self.initial_pass()
+        logger.info("Initial pass completed.")
 
         if self.experiment_mode:
             self.replay_data()
