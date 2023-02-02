@@ -4,6 +4,7 @@ import multiprocessing as mp
 import platform
 import tempfile
 from io import BytesIO
+from time import sleep
 from unittest import mock
 from unittest.mock import patch
 
@@ -183,7 +184,6 @@ def test_get_training_status_alive_blocked(
     test_get_status,
     test_is_alive,
 ):
-
     trainer_server = TrainerServerGRPCServicer()
     training_process_info = get_training_process_info()
     trainer_server._training_process_dict[1] = training_process_info
@@ -260,6 +260,8 @@ def test_get_training_status():
     assert num_batches == state_dict["num_batches"]
     assert num_samples == state_dict["num_samples"]
 
+    sleep(0.2)  # sleep 200 ms to give the queue some time
+
     if not platform.system() == "Darwin":
         assert training_process_info.status_query_queue.qsize() == 1
     else:
@@ -304,7 +306,6 @@ def test_get_latest_checkpoint_not_found():
 def test_get_latest_checkpoint_found():
     trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
-
         training_info = get_training_info(temp)
         trainer_server._training_dict[1] = training_info
 
@@ -325,7 +326,6 @@ def test_get_latest_checkpoint_found():
 def test_get_latest_checkpoint_invalid():
     trainer_server = TrainerServerGRPCServicer()
     with tempfile.TemporaryDirectory() as temp:
-
         training_info = get_training_info(temp)
         trainer_server._training_dict[1] = training_info
 

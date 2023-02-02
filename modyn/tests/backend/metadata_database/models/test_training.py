@@ -20,7 +20,7 @@ def session():
 
 
 def test_add_training(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()
@@ -31,7 +31,7 @@ def test_add_training(session):
 
 
 def test_update_training(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()
@@ -49,7 +49,7 @@ def test_update_training(session):
 
 
 def test_delete_training(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()
@@ -61,7 +61,7 @@ def test_delete_training(session):
 
 
 def test_repr(session):
-    training = Training(1)
+    training = Training(number_of_workers=1)
 
     session.add(training)
     session.commit()

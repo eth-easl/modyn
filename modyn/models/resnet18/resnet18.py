@@ -8,5 +8,4 @@ class ResNet18:
         self,
         model_configuration: dict[str, Any],
     ) -> None:
-
         self.model = models.__dict__["resnet18"](**model_configuration)

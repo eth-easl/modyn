@@ -12,7 +12,6 @@ class TrainingInfo:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, request: RegisterTrainServerRequest) -> None:
-
         self.training_id = request.training_id
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders

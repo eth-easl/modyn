@@ -13,6 +13,8 @@ from sqlalchemy import exc
 
 logger = logging.getLogger(__name__)
 
+# TODO(#113): there is no training id anymore
+
 
 class MetadataDatabaseConnection(AbstractDatabaseConnection):
     """Database connection context manager."""
@@ -43,21 +45,31 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         """
         Base.metadata.create_all(self.engine)
 
+    # TODO(#113): this really requires some restructuring
     def set_metadata(
         self,
         keys: list[str],
+        timestamps: list[int],
         scores: list[float],
         seens: list[bool],
         labels: list[int],
         datas: list[bytes],
-        training_id: int,
+        pipeline_id: int,
+        trigger_id: int,
     ) -> None:
         for i, key in enumerate(keys):
             try:
                 if self.session.query(Metadata).filter(Metadata.key == key).first() is not None:
                     self.session.query(Metadata).filter(Metadata.key == key).delete()
                 metadata = Metadata(
-                    key=key, score=scores[i], seen=seens[i], label=labels[i], data=datas[i], training_id=training_id
+                    key=key,
+                    timestamp=timestamps[i],
+                    score=scores[i],
+                    seen=seens[i],
+                    label=labels[i],
+                    data=datas[i],
+                    pipeline_id=pipeline_id,
+                    trigger_id=trigger_id,
                 )
                 self.session.add(metadata)
                 self.session.commit()
@@ -73,14 +85,14 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             training_id (int): training id
         """
         try:
-            self.session.query(Metadata).filter(Metadata.training_id == training_id).delete()
+            self.session.query(Metadata).filter(Metadata.pipeline_id == training_id).delete()
             self.session.query(Training).filter(Training.training_id == training_id).delete()
             self.session.commit()
         except exc.SQLAlchemyError as exception:
             logger.error(f"Could not delete training: {exception}")
             self.session.rollback()
 
-    def register_training(self, number_of_workers: int) -> Optional[int]:
+    def register_pipeline(self, number_of_workers: int) -> Optional[int]:
         """Register training.
 
         Args:

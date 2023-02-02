@@ -1,0 +1,3 @@
+#!/bin/bash
+MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
+python $MODYNPATH/backend/selector/selector_entrypoint.py "$@"

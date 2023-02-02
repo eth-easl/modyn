@@ -9,7 +9,6 @@ class TrainingProcessInfo:
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
     ):
-
         self.process_handler = process_handler
         self.exception_queue = exception_queue
         self.status_query_queue = status_query_queue
