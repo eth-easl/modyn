@@ -157,7 +157,7 @@ class TrainerServerGRPCServicer:
         # we try to fetch an element within 100ms. If there is no
         # element within that timeframe returned, we return None.
         try:
-            exception = exception_queue.get(True, 0.1)
+            exception = exception_queue.get(timeout=0.1)
             return exception
         except queue.Empty:
             return None
