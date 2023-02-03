@@ -51,6 +51,7 @@ def get_minimal_modyn_config() -> dict:
             "database": f"{database_path}",
         },
         "selector": {"hostname": "host", "port": "1337"},
+        "trainer_server": {"hostname": "host", "port": "1337"},
     }
 
 

@@ -181,14 +181,14 @@ class Supervisor:
             while True:
                 new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
                 # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
-                new_data = [(key, timestamp) for (key, timestamp) in new_data if key not in last_keys]
+                new_data = [(key, timestamp, label) for (key, timestamp, label) in new_data if key not in last_keys]
                 last_timestamp = (
-                    max((timestamp for (_, timestamp) in new_data)) if len(new_data) > 0 else last_timestamp
+                    max((timestamp for (_, timestamp, _) in new_data)) if len(new_data) > 0 else last_timestamp
                 )
 
                 # Remember all data points with last_timestamp so we do not process them again in the next iteration
                 # We use a set to have a O(1) check in the line above.
-                last_keys = {key for (key, timestamp) in new_data if timestamp == last_timestamp}
+                last_keys = {key for (key, timestamp, label) in new_data if timestamp == last_timestamp}
 
                 if not self._handle_new_data(new_data):
                     sleep(2)
@@ -198,7 +198,7 @@ class Supervisor:
             self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
-    def _handle_new_data(self, new_data: list[tuple[str, int]], selector_batch_size: int = 128) -> bool:
+    def _handle_new_data(self, new_data: list[tuple[str, int, int]], selector_batch_size: int = 128) -> bool:
         """This function handles new data during experiments or actual pipeline execution.
         We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
         If a data point within a batch causes a trigger,
@@ -216,7 +216,7 @@ class Supervisor:
 
         return any_training_triggered
 
-    def _handle_new_data_batch(self, batch: list[tuple[str, int]]) -> bool:
+    def _handle_new_data_batch(self, batch: list[tuple[str, int, int]]) -> bool:
         triggering_indices = self.trigger.inform(batch)
 
         if len(triggering_indices) > 0:
@@ -227,7 +227,7 @@ class Supervisor:
         self.grpc.inform_selector(self.pipeline_id, batch)
         return False
 
-    def _handle_triggers_within_batch(self, batch: list[tuple[str, int]], triggering_indices: list[int]) -> None:
+    def _handle_triggers_within_batch(self, batch: list[tuple[str, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
 

@@ -42,6 +42,7 @@ def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
 
+@patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
@@ -53,6 +54,7 @@ def get_non_connecting_supervisor(
     test_connection_established,
     test_init_trainer_server,
     test_init_storage,
+    test_init_selector,
 ) -> Supervisor:
     supervisor = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
 
@@ -63,6 +65,7 @@ def test_initialization() -> None:
     get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
 
+@patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
@@ -74,11 +77,13 @@ def test_constructor_throws_on_invalid_system_config(
     test_connection_established,
     test_init_storage,
     test_init_trainer_server,
+    test_init_selector,
 ) -> None:
     with pytest.raises(ValueError, match="Invalid system configuration"):
         Supervisor(get_minimal_pipeline_config(), {}, None)
 
 
+@patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
@@ -90,6 +95,7 @@ def test_constructor_throws_on_invalid_pipeline_config(
     test_connection_established,
     test_init_storage,
     test_init_trainer_server,
+    test_init_selector,
 ) -> None:
     with pytest.raises(ValueError, match="Invalid pipeline configuration"):
         Supervisor({}, get_minimal_system_config(), None)
@@ -242,7 +248,7 @@ def test_shutdown_trainer():
     pass
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[("a", 42), ("b", 43)])
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[("a", 42, 0), ("b", 43, 1)])
 @patch.object(Supervisor, "_handle_new_data", return_value=False, side_effect=KeyboardInterrupt)
 def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     # This is a simple test and does not the inclusivity filtering!
@@ -250,7 +256,7 @@ def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_s
 
     sup.wait_for_new_data(21)
     test_get_new_data_since.assert_called_once_with("test", 21)
-    test__handle_new_data.assert_called_once_with([("a", 42), ("b", 43)])
+    test__handle_new_data.assert_called_once_with([("a", 42, 0), ("b", 43, 1)])
 
 
 def test_wait_for_new_data_filtering():
@@ -258,8 +264,8 @@ def test_wait_for_new_data_filtering():
 
     mocked__handle_new_data_return_vals = [True, True, KeyboardInterrupt]
     mocked_get_new_data_since = [
-        [("a", 42), ("b", 43), ("c", 43)],
-        [("b", 43), ("c", 43), ("d", 43), ("e", 45)],
+        [("a", 42, 0), ("b", 43, 0), ("c", 43, 1)],
+        [("b", 43, 0), ("c", 43, 1), ("d", 43, 2), ("e", 45, 3)],
         [],
         ValueError,
     ]
@@ -274,8 +280,8 @@ def test_wait_for_new_data_filtering():
             assert get_new_data_mock.call_count == 3
 
             expected_handle_mock_arg_list = [
-                call([("a", 42), ("b", 43), ("c", 43)]),
-                call([("d", 43), ("e", 45)]),
+                call([("a", 42, 0), ("b", 43, 0), ("c", 43, 1)]),
+                call([("d", 43, 2), ("e", 45, 3)]),
                 call([]),
             ]
             assert handle_mock.call_args_list == expected_handle_mock_arg_list
