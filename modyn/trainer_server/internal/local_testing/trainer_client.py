@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 
 import grpc
@@ -7,7 +8,6 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     Data,
     JsonString,
     PythonString,
-    RegisterTrainServerRequest,
     StartTrainingRequest,
     TrainerAvailableRequest,
     TrainingStatusRequest,
@@ -37,7 +37,7 @@ class TrainerClient:
         response = self._trainer_stub.trainer_available(req)
         return response.available
 
-    def register_training(self, training_id: int) -> bool:
+    def start_training(self, pipeline_id: int, trigger_id: int) -> bool:
         bytes_parser = """import time\ndef bytes_parser_function(x):\n\treturn x"""
 
         transforms = [
@@ -49,8 +49,10 @@ class TrainerClient:
 
         model_configuration = {"num_classes": 10}
 
-        req = RegisterTrainServerRequest(
-            training_id=training_id,
+        req = StartTrainingRequest(
+            pipeline_id=pipeline_id,
+            trigger_id=trigger_id,
+            device="cpu",
             model_id="ResNet18",
             batch_size=32,
             torch_optimizer="SGD",
@@ -62,21 +64,11 @@ class TrainerClient:
             checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="results"),
             transform_list=transforms,
             bytes_parser=PythonString(value=bytes_parser),
+            use_pretrained_model=False
         )
 
-        response = self._trainer_stub.register(req)
-        return response.success
-
-    def start_training(self, training_id: int) -> bool:
-        req = StartTrainingRequest(
-            training_id=training_id,
-            device="cpu",
-            train_until_sample_id="new",
-            load_checkpoint_path="results/model_0.pt",
-        )
         response = self._trainer_stub.start_training(req)
-
-        return response.training_started
+        return response.training_started, response.training_id
 
     def get_training_status(self, training_id: int) -> None:
         req = TrainingStatusRequest(training_id=training_id)
@@ -86,21 +78,9 @@ class TrainerClient:
 if __name__ == "__main__":
     client = TrainerClient()
     is_available = client.check_trainer_available()
-    training_id = 10
     if is_available:
-        success = client.register_training(training_id)
-        print(success)
+        success, training_id = client.start_training(1,1)
+        print(success, training_id)
         if success:
-            training_started = client.start_training(training_id)
-            print(training_started)
             time.sleep(10)
             client.get_training_status(training_id)
-
-    training_id = 20
-    success = client.register_training(training_id)
-    print(success)
-    if success:
-        training_started = client.start_training(training_id)
-        print(training_started)
-        time.sleep(10)
-        client.get_training_status(training_id)

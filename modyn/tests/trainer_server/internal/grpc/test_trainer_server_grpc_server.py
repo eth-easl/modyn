@@ -5,7 +5,11 @@ from modyn.trainer_server.internal.grpc.trainer_server_grpc_server import GRPCSe
 
 
 def get_modyn_config():
-    return {"trainer_server": {"port": "5001", "type": "grpc"}}
+    return {
+        "trainer_server": {"hostname": "trainer_server", "port": "5001"},
+        "storage": {"hostname": "storage", "port": "5002"},
+        "selector": {"hostname": "selector", "port": "5003"}
+    }
 
 
 def test_init():

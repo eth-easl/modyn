@@ -1,10 +1,16 @@
 from inspect import isfunction
 from typing import Any, Generator
 
-from modyn.trainer_server.internal.mocks.mock_selector_server import GetSamplesRequest, MockSelectorServer
-from modyn.trainer_server.internal.mocks.mock_storage_server import GetRequest, MockStorageServer
+import grpc
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
+
+from modyn.utils.utils import grpc_connection_established
 
 
 class OnlineDataset(IterableDataset):
@@ -17,6 +23,8 @@ class OnlineDataset(IterableDataset):
         dataset_id: str,
         bytes_parser: str,
         serialized_transforms: list[str],
+        storage_address: str,
+        selector_address: str
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -32,22 +40,29 @@ class OnlineDataset(IterableDataset):
         self._transform = self._bytes_parser_function
         self._deserialize_torchvision_transforms()
 
-        # These mock the behavior of storage and selector servers.
-        # TODO(#74): remove them when the storage and selector grpc servers are fixed
-        self._selectorstub = MockSelectorServer()
-        self._storagestub = MockStorageServer()
+        selector_channel = grpc.insecure_channel(selector_address)
+        if not grpc_connection_established(selector_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to selector at address {selector_address}.")
+        self._selectorstub = SelectorStub(selector_channel)
+
+        storage_channel = grpc.insecure_channel(storage_address)
+        if not grpc_connection_established(storage_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
+        self._storagestub = StorageStub(storage_channel)
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
-        # TODO(#74): replace this with grpc calls to the selector
-        req = GetSamplesRequest(self._pipeline_id, self._trigger_id, worker_id)
-        samples_response = self._selectorstub.get_sample_keys(req)
-        return samples_response.training_samples_subset
+        req = GetSamplesRequest(
+            pipeline_id=self._pipeline_id,
+            trigger_id=self._trigger_id,
+            worker_id=worker_id
+        )
+        samples_response = self._selectorstub.get_sample_keys_and_weights(req)
+        return samples_response.training_samples_subset # ignore 'training_samples_weights' entry for now
 
     def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[Any]]:
-        # TODO(#74): replace this with grpc calls to the selector
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)
         response = self._storagestub.Get(req)
-        return response.samples, response.labels
+        return response.samples, response.labels # ignore 'keys' entry for now
 
     def _deserialize_torchvision_transforms(self) -> None:
         self._transform_list = [self._bytes_parser_function]

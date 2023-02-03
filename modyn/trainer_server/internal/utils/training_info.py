@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class TrainingInfo:
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, request: StartTrainingRequest) -> None:
+    def __init__(self, request: StartTrainingRequest, storage_address: str, selector_address: str) -> None:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id
 
@@ -43,3 +43,6 @@ class TrainingInfo:
 
         self.checkpoint_path = request.checkpoint_info.checkpoint_path
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
+
+        self.storage_address = storage_address
+        self.selector_address = selector_address

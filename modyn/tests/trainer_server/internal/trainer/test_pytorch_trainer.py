@@ -10,9 +10,12 @@ from io import BytesIO
 from time import sleep
 from typing import Any
 from unittest.mock import MagicMock, patch
+import grpc
 
 import pytest
 import torch
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
@@ -60,15 +63,19 @@ def get_mock_bytes_parser():
     return "def bytes_parser_function(x):\n\treturn x"
 
 
-def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, bytes_parser, transform_list, sample_id):
+def mock_get_dataloaders(training_id, dataset_id, num_dataloaders, batch_size, bytes_parser, transform_list, sample_id, storage_address, selector_address):
     mock_train_dataloader = iter(
         [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
     return mock_train_dataloader, None
 
 
+def noop_constructor_mock(self, channel):
+    pass
+
+
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
-def get_training_info(use_pretrained: bool, pretrained_model: Any, dynamic_module_patch: MagicMock):
+def get_training_info(use_pretrained: bool, pretrained_model: Any, storage_address: str, selector_address: str, dynamic_module_patch: MagicMock):
     with tempfile.TemporaryDirectory() as tmpdirname:
         dynamic_module_patch.return_value = MockModule()
         request = StartTrainingRequest(
@@ -89,14 +96,18 @@ def get_training_info(use_pretrained: bool, pretrained_model: Any, dynamic_modul
             use_pretrained_model=use_pretrained,
             pretrained_model=pretrained_model
         )
-        training_info = TrainingInfo(request)
+        training_info = TrainingInfo(request, storage_address, selector_address)
         return training_info
 
 
+@patch.object(StorageStub, "__init__", noop_constructor_mock)
+@patch.object(SelectorStub, "__init__", noop_constructor_mock)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
-def get_mock_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), use_pretrained: bool, pretrained_model: Any, dynamic_module_patch: MagicMock):
+def get_mock_trainer(query_queue: mp.Queue(), response_queue: mp.Queue(), use_pretrained: bool, pretrained_model: Any, dynamic_module_patch: MagicMock, test_insecure_channel, test_grpc_connection_established):
     dynamic_module_patch.return_value = MockModule()
-    training_info = get_training_info(use_pretrained, pretrained_model)
+    training_info = get_training_info(use_pretrained, pretrained_model, "", "")
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue)
     return trainer
 
@@ -210,36 +221,6 @@ def test_load_state_if_given():
     assert trainer._optimizer.state_dict() == dict_to_save["optimizer"]
 
 
-# def test_load_checkpoint():
-#     trainer = get_mock_trainer(mp.Queue(), mp.Queue())
-
-#     dict_to_save = {
-#         "model": OrderedDict([("_weight", torch.tensor([100.0]))]),
-#         "optimizer": {
-#             "state": {},
-#             "param_groups": [
-#                 {
-#                     "lr": 0.1,
-#                     "momentum": 0,
-#                     "dampening": 0,
-#                     "weight_decay": 0,
-#                     "nesterov": False,
-#                     "maximize": False,
-#                     "foreach": None,
-#                     "differentiable": False,
-#                     "params": [0],
-#                 }
-#             ],
-#         },
-#         "iteration": 100,
-#     }
-
-#     with tempfile.NamedTemporaryFile() as temp:
-#         torch.save(dict_to_save, temp.name)
-#         trainer.load_checkpoint(temp.name)
-#         assert trainer._model.model.state_dict() == dict_to_save["model"]
-#         assert trainer._optimizer.state_dict() == dict_to_save["optimizer"]
-
 
 def test_send_state_to_server():
     response_queue = mp.Queue()
@@ -349,7 +330,7 @@ def test_train():
         assert status["num_batches"] == 0
         assert status["num_samples"] == 0
         status_state = torch.load(io.BytesIO(status["state"]))
-        assert status_state == {
+        checkpointed_state = {
             "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
             "optimizer": {
                 "state": {},
@@ -368,20 +349,26 @@ def test_train():
                 ],
             },
         }
+        assert status_state == checkpointed_state
         assert os.path.exists(trainer._checkpoint_path + "/model_final.pt")
+        final_state = torch.load(trainer._checkpoint_path + "/model_final.pt")
+        assert final_state == checkpointed_state
 
-
+@patch.object(StorageStub, "__init__", noop_constructor_mock)
+@patch.object(SelectorStub, "__init__", noop_constructor_mock)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
 @patch(
     "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
     mock_get_dataloaders,
 )
-def test_create_trainer_with_exception(test_dynamic_module_import):
+def test_create_trainer_with_exception(test_dynamic_module_import, test_insecure_channel, test_grpc_connection_established):
     test_dynamic_module_import.return_value = MockModule()
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(False, None)
+    training_info = get_training_info(False, None, "", "")
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0

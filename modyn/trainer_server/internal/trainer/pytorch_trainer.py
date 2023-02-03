@@ -46,6 +46,8 @@ class PytorchTrainer:
             training_info.batch_size,
             training_info.bytes_parser,
             training_info.transform_list,
+            training_info.storage_address,
+            training_info.selector_address,
         )
 
         self._device = device
@@ -131,7 +133,7 @@ class PytorchTrainer:
 
         # save final model
         final_checkpoint_file_name = self._checkpoint_path + "/model_final.pt"
-        self.save_state(final_checkpoint_file_name, batch_number)
+        self.save_state(final_checkpoint_file_name)
 
         logger.info("Training complete!")
         logger.removeHandler(file_handler)

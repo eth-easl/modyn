@@ -6,6 +6,7 @@ import os
 import queue
 import sys
 from pathlib import Path
+import threading
 from typing import Any, Optional
 from threading import Lock
 
@@ -40,11 +41,14 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
         self._next_training_id = 0
-        self._lock = Lock()
+        self._lock = Lock() # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
+
+        self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
+        self._selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
 
     def trainer_available(
         self,
@@ -63,14 +67,13 @@ class TrainerServerGRPCServicer:
         request: StartTrainingRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
-        training_info = TrainingInfo(request)
+        training_info = TrainingInfo(request, self._storage_address, self._selector_address)
 
         if training_info.model_handler is None:
             return StartTrainingResponse(training_started=False)
 
-        training_id = self._next_training_id
-
         with self._lock:
+            training_id = self._next_training_id
             self._next_training_id += 1
 
         self._training_dict[training_id] = training_info

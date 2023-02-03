@@ -22,6 +22,7 @@ class GRPCServer:
         self.config = config
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
+
     def __enter__(self) -> grpc.Server:
         """Enter the context manager.
 
@@ -29,7 +30,7 @@ class GRPCServer:
             grpc.Server: GRPC server
         """
 
-        add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(), self.server)
+        add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(self.config), self.server)
         logger.info(f"Starting trainer server. Listening on port {self.config['trainer_server']['port']}")
         self.server.add_insecure_port("[::]:" + self.config["trainer_server"]["port"])
         logger.info("start serving!")
