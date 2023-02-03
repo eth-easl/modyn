@@ -1,3 +1,4 @@
+# pylint: disable=no-name-in-module
 import json
 import logging
 import pathlib
@@ -5,8 +6,10 @@ from time import sleep
 from typing import Optional
 
 import grpc
-
-# pylint: disable-next=no-name-in-module
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterPipelineRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
@@ -16,12 +19,9 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-
-# pylint: disable-next=no-name-in-module
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    CheckpointInfo,
-    Data,
-    JsonString,
     PythonString,
     StartTrainingRequest,
     StartTrainingResponse,
@@ -31,22 +31,14 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
-    DataInformRequest,
-    GetSamplesRequest,
-    JsonString,
-    RegisterPipelineRequest,
-    SamplesResponse,
-)
-from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-
 from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
 
 class GRPCHandler:
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self, modyn_config: dict):
         self.config = modyn_config
         self.connected_to_storage = False
@@ -110,7 +102,9 @@ class GRPCHandler:
 
         return list(zip(response.keys, response.timestamps, response.labels))
 
-    def get_data_in_interval(self, dataset_id: str, start_timestamp: int, end_timestamp: int) -> list[tuple[str, int, int]]:
+    def get_data_in_interval(
+        self, dataset_id: str, start_timestamp: int, end_timestamp: int
+    ) -> list[tuple[str, int, int]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -135,11 +129,16 @@ class GRPCHandler:
     def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
         if not self.connected_to_selector:
             raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
-        
+
         pipeline_id = self.selector.register_pipeline(
-            RegisterPipelineRequest(num_workers=pipeline_config["training"]["dataloader_workers"], selection_strategy=JsonString(value=json.dumps(pipeline_config["training"]["selection_strategy"])))
+            RegisterPipelineRequest(
+                num_workers=pipeline_config["training"]["dataloader_workers"],
+                selection_strategy=SelectorJsonString(
+                    value=json.dumps(pipeline_config["training"]["selection_strategy"])
+                ),
+            )
         ).pipeline_id
-    
+
         logger.info(f"Registered pipeline {pipeline_config['pipeline']['name']} at selector with ID {pipeline_id}")
         return pipeline_id
 
@@ -150,21 +149,19 @@ class GRPCHandler:
 
     def inform_selector(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> None:
         keys, timestamps, labels = zip(*data)
-        request = DataInformRequest(pipeline_id=pipeline_id,keys=keys, timestamps=timestamps,labels=labels)
+        request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         self.selector.inform_data(request)
 
         logging.info(f"Informed selector about {len(keys)} new data points.")
-        
 
     def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
         keys, timestamps, labels = zip(*data)
-        request = DataInformRequest(pipeline_id=pipeline_id,keys=keys, timestamps=timestamps,labels=labels)
+        request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         trigger_id = self.selector.inform_data_and_trigger(request)
 
         logging.info(f"Informed and triggerd selector about {len(keys)} new data points. Got trigger id {trigger_id}.")
 
         return trigger_id
-
 
     def trainer_server_available(self) -> bool:
         if not self.connected_to_trainer_server:
@@ -235,14 +232,14 @@ class GRPCHandler:
             training_id=trigger_id,
             device=pipeline_config["training"]["device"],
             model_id=pipeline_config["model"]["id"],
-            model_configuration=JsonString(value=model_config),
+            model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
             pretrained_model=pretrained_model,
             batch_size=pipeline_config["training"]["batch_size"],
             torch_optimizer=pipeline_config["optimizer"]["name"],
-            optimizer_parameters=JsonString(value=optimizer_config),
+            optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
             torch_criterion=pipeline_config["optimization_criterion"]["name"],
-            criterion_parameters=JsonString(value=criterion_config),
+            criterion_parameters=TrainerServerJsonString(value=criterion_config),
             data_info=Data(
                 dataset_id=pipeline_config["data"]["dataset_id"],
                 num_dataloaders=pipeline_config["training"]["dataloader_workers"],
