@@ -101,20 +101,18 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(self, dataset_id: str, timestamp: int) -> list[tuple[str, int]]:
+    def get_new_data_since(self, dataset_id: str, timestamp: int) -> list[tuple[str, int, int]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
-        # TODO(MaxiBoether): GET LABELS
 
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
         response: GetNewDataSinceResponse = self.storage.GetNewDataSince(request)
 
-        return list(zip(response.keys, response.timestamps))
+        return list(zip(response.keys, response.timestamps, response.labels))
 
-    def get_data_in_interval(self, dataset_id: str, start_timestamp: int, end_timestamp: int) -> list[tuple[str, int]]:
+    def get_data_in_interval(self, dataset_id: str, start_timestamp: int, end_timestamp: int) -> list[tuple[str, int, int]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
-        # TODO(MaxiBoether): GET LABELS
 
         request = GetDataInIntervalRequest(
             dataset_id=dataset_id,
@@ -123,7 +121,7 @@ class GRPCHandler:
         )
         response: GetDataInIntervalResponse = self.storage.GetDataInInterval(request)
 
-        return list(zip(response.keys, response.timestamps))
+        return list(zip(response.keys, response.timestamps, response.labels))
 
     def get_time_at_storage(self) -> int:
         if not self.connected_to_storage:
