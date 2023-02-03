@@ -26,6 +26,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     StartTrainingRequest,
     StartTrainingResponse,
     TrainerAvailableRequest,
+    TrainerAvailableResponse,
     TrainingStatusRequest,
     TrainingStatusResponse,
 )
@@ -113,7 +114,7 @@ class GRPCHandler:
 
     # pylint: disable-next=unused-argument
     def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
-        #  # TODO(#64,#130): Implement.
+        #  # TODO(#64,#124): Implement.
         pass
 
     # pylint: disable-next=unused-argument
@@ -133,7 +134,7 @@ class GRPCHandler:
         logger.info("Checking whether trainer server is available.")
 
         request = TrainerAvailableRequest()
-        response = self.trainer_server.trainer_available(request)
+        response: TrainerAvailableResponse = self.trainer_server.trainer_available(request)
 
         logger.info(f"Trainer Server Availability = {response.available}")
 
@@ -222,7 +223,7 @@ class GRPCHandler:
 
         return training_id
 
-    def wait_for_training_completion(self, training_id: int) -> None:
+    def wait_for_training_completion(self, training_id: int) -> None:  # pragma: no cover
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."

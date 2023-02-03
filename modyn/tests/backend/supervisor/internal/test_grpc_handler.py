@@ -15,15 +15,46 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 
+# pylint: disable-next=no-name-in-module
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
+    StartTrainingResponse,
+    TrainerAvailableResponse,
+    TrainingStatusResponse,
+)
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
+
 
 def noop_constructor_mock(self, channel: grpc.Channel) -> None:
     pass
 
 
 def get_simple_config() -> dict:
-    return {"storage": {"hostname": "test", "port": 42}}
+    return {"storage": {"hostname": "test", "port": 42}, "trainer_server": {"hostname": "test", "port": 42}}
 
 
+def get_minimal_pipeline_config() -> dict:
+    return {
+        "pipeline": {"name": "Test"},
+        "model": {"id": "ResNet18"},
+        "training": {
+            "gpus": 1,
+            "device": "cpu",
+            "dataloader_workers": 1,
+            "initial_model": "random",
+            "initial_pass": {"activated": False},
+            "learning_rate": 0.1,
+            "batch_size": 42,
+            "optimizer": {"name": "SGD"},
+            "optimization_criterion": {"name": "CrossEntropyLoss"},
+            "checkpointing": {"activated": False},
+            "selection_strategy": {"name": "NewDataStrategy"},
+        },
+        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
+        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
+    }
+
+
+@patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -31,6 +62,7 @@ def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
     return GRPCHandler(get_simple_config())
 
 
+@patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -38,9 +70,11 @@ def test_init(test_insecure_channel, test_connection_established):
     handler = GRPCHandler(get_simple_config())
 
     assert handler.connected_to_storage
+    assert handler.connected_to_trainer_server
     assert handler.storage is not None
 
 
+@patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -59,6 +93,7 @@ def test_init_storage(test_insecure_channel, test_connection_established):
     assert handler.storage is not None
 
 
+@patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=False)
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -66,7 +101,8 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
     handler = None
 
     with patch.object(GRPCHandler, "init_storage", return_value=None):
-        handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
+        with patch.object(GRPCHandler, "init_trainer_server", return_value=None):
+            handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -106,12 +142,11 @@ def test_get_new_data_since(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config())
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
-        # TODO(#76): The storage should return the timestamp as well
-        mock.return_value = GetNewDataSinceResponse(keys=["test1", "test2"])
+        mock.return_value = GetNewDataSinceResponse(keys=["test1", "test2"], timestamps=[41, 42])
 
         result = handler.get_new_data_since("test_dataset", 21)
 
-        assert result == [("test1", 42), ("test2", 42)]  # timestamp is currently hardcoded
+        assert result == [("test1", 41), ("test2", 42)]
         mock.assert_called_once_with(GetNewDataSinceRequest(dataset_id="test_dataset", timestamp=21))
 
 
@@ -127,12 +162,11 @@ def test_get_data_in_interval(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config())
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
-        # TODO(#76): The storage should return the timestamp as well
-        mock.return_value = GetDataInIntervalResponse(keys=["test1", "test2"])
+        mock.return_value = GetDataInIntervalResponse(keys=["test1", "test2"], timestamps=[41, 42])
 
         result = handler.get_data_in_interval("test_dataset", 21, 45)
 
-        assert result == [("test1", 42), ("test2", 42)]  # timestamp is currently hardcoded
+        assert result == [("test1", 41), ("test2", 42)]  # timestamp is currently hardcoded
         mock.assert_called_once_with(
             GetDataInIntervalRequest(dataset_id="test_dataset", start_timestamp=21, end_timestamp=45)
         )
@@ -150,7 +184,7 @@ def test_unregister_pipeline_at_selector():
     handler = get_non_connecting_handler()
     pipeline_id = 42
 
-    # TODO(#64): implement a real test when func is implemented.
+    # TODO(#64,#124): implement a real test when func is implemented.
     handler.unregister_pipeline_at_selector(pipeline_id)
 
 
@@ -172,34 +206,54 @@ def test_inform_selector_and_trigger():
     handler.inform_selector_and_trigger(pipeline_id, data)
 
 
-def test_trainer_server_available():
-    handler = get_non_connecting_handler()
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_trainer_server_available(test_connection_established):
+    handler = GRPCHandler(get_simple_config())
+    assert handler.trainer_server is not None
 
-    # TODO(#78): implement a real test when func is implemented.
-    assert handler.trainer_server_available()
+    with patch.object(
+        handler.trainer_server, "trainer_available", return_value=TrainerAvailableResponse(available=True)
+    ) as avail_method:
+        assert handler.trainer_server_available()
+        avail_method.assert_called_once()
 
 
-def test_shutdown_trainer_server():
+def test_stop_training_at_trainer_server():
     handler = get_non_connecting_handler()
     training_id = 42
 
-    # TODO(#78): implement a real test when func is implemented.
+    # TODO(#78,#130): implement a real test when func is implemented.
     handler.stop_training_at_trainer_server(training_id)
 
 
-def test_start_trainer_server():
-    handler = get_non_connecting_handler()
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_start_training(test_connection_established):
+    handler = GRPCHandler(get_simple_config())
+    assert handler.trainer_server is not None
+
     pipeline_id = 42
     trigger_id = 21
-    pipeline_config = {}
+    pipeline_config = get_minimal_pipeline_config()
 
-    # TODO(#78): implement a real test when func is implemented.
-    assert handler.start_training(pipeline_id, trigger_id, pipeline_config) == 42
+    with patch.object(
+        handler.trainer_server, "start_training", return_value=StartTrainingResponse(training_id=42)
+    ) as avail_method:
+        assert handler.start_training(pipeline_id, trigger_id, pipeline_config, None) == 42
+        avail_method.assert_called_once()
 
 
-def test_wait_for_training_completion():
-    handler = get_non_connecting_handler()
-    training_id = 42
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_wait_for_training_completion(test_connection_established):
+    # This test primarily checks whether we terminate.
+    handler = GRPCHandler(get_simple_config())
+    assert handler.trainer_server is not None
 
-    # TODO(#78): implement a real test when func is implemented.
-    handler.wait_for_training_completion(training_id)
+    with patch.object(
+        handler.trainer_server,
+        "get_training_status",
+        return_value=TrainingStatusResponse(
+            valid=True, blocked=False, exception=None, state_available=False, is_running=False
+        ),
+    ) as avail_method:
+        handler.start_training(42)
+        avail_method.assert_called_once()
