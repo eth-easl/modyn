@@ -104,6 +104,7 @@ class GRPCHandler:
     def get_new_data_since(self, dataset_id: str, timestamp: int) -> list[tuple[str, int]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
+        # TODO(MaxiBoether): GET LABELS
 
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
         response: GetNewDataSinceResponse = self.storage.GetNewDataSince(request)
@@ -113,6 +114,7 @@ class GRPCHandler:
     def get_data_in_interval(self, dataset_id: str, start_timestamp: int, end_timestamp: int) -> list[tuple[str, int]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
+        # TODO(MaxiBoether): GET LABELS
 
         request = GetDataInIntervalRequest(
             dataset_id=dataset_id,
@@ -133,23 +135,38 @@ class GRPCHandler:
 
     # pylint: disable-next=unused-argument
     def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
-        # TODO(#64): Implement gRPC call.
-        return 42
+        if not self.connected_to_selector:
+            raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
+        
+        pipeline_id = self.selector.register_pipeline(
+            RegisterPipelineRequest(num_workers=pipeline_config["training"]["dataloader_workers"], selection_strategy=JsonString(value=json.dumps(pipeline_config["training"]["selection_strategy"])))
+        ).pipeline_id
+    
+        logger.info(f"Registered pipeline {pipeline_config['pipeline']['name']} at selector with ID {pipeline_id}")
+        return pipeline_id
 
     # pylint: disable-next=unused-argument
     def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
         #  # TODO(#64,#124): Implement.
         pass
 
-    # pylint: disable-next=unused-argument
-    def inform_selector(self, pipeline_id: int, data: list[tuple[str, int]]) -> None:
-        # TODO(#64): Implement gRPC call.
-        pass
+    def inform_selector(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> None:
+        keys, timestamps, labels = zip(*data)
+        request = DataInformRequest(pipeline_id=pipeline_id,keys=keys, timestamps=timestamps,labels=labels)
+        self.selector.inform_data(request)
 
-    # pylint: disable-next=unused-argument
-    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int]]) -> int:
-        # TODO(#64): Implement gRPC call.
-        return 42
+        logging.info(f"Informed selector about {len(keys)} new data points.")
+        
+
+    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
+        keys, timestamps, labels = zip(*data)
+        request = DataInformRequest(pipeline_id=pipeline_id,keys=keys, timestamps=timestamps,labels=labels)
+        trigger_id = self.selector.inform_data_and_trigger(request)
+
+        logging.info(f"Informed and triggerd selector about {len(keys)} new data points. Got trigger id {trigger_id}.")
+
+        return trigger_id
+
 
     def trainer_server_available(self) -> bool:
         if not self.connected_to_trainer_server:
