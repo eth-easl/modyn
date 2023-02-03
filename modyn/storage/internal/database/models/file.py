@@ -1,11 +1,11 @@
 """File model."""
 
-from modyn.storage.internal.database.storage_base import Base
+from modyn.storage.internal.database.storage_base import StorageBase
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import backref, relationship
 
 
-class File(Base):
+class File(StorageBase):
     """File model."""
 
     __tablename__ = "files"

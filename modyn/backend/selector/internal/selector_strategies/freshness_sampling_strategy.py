@@ -5,7 +5,7 @@ import random
 from math import isclose
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.metadata import Metadata
+from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from sqlalchemy import asc, exc, update
 
@@ -46,19 +46,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
-        # TODO(#116): Right now we persist all datapoint into DB. We might want to keep this partly in memory for performance.
-        # Even if each sample is 64 byte and we see 2 million samples, it's just 128 MB of data in memory.
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            database.set_metadata(
-                keys,
-                timestamps,
-                [None] * len(keys),
-                [False] * len(keys),
-                labels,
-                [None] * len(keys),
-                self._pipeline_id,
-                self._next_trigger_id,
-            )
+        self._persist_data(keys, timestamps, labels)
 
     def _on_trigger(self) -> list[tuple[str, float]]:
         """
@@ -152,8 +140,8 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(Metadata.key, Metadata.seen)
-                .filter(Metadata.pipeline_id == self._pipeline_id, Metadata.seen == True)
+                database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.seen == True)
                 .all()
             )
 
@@ -173,9 +161,9 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(Metadata.key, Metadata.seen)
-                .filter(Metadata.pipeline_id == self._pipeline_id, Metadata.seen == False)
-                .order_by(asc(Metadata.timestamp))
+                database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.seen == False)
+                .order_by(asc(SelectorStateMetadata.timestamp))
                 .all()
             )
 
@@ -194,7 +182,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
             try:
-                stmt = update(Metadata).where(Metadata.key.in_(keys)).values(seen=True)
+                stmt = update(SelectorStateMetadata).where(SelectorStateMetadata.sample_id.in_(keys)).values(seen=True)
                 database.session.execute(stmt)
                 database.session.commit()
             except exc.SQLAlchemyError as exception:

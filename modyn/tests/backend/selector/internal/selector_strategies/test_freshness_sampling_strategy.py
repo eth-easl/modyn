@@ -6,8 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.metadata import Metadata
-from modyn.backend.metadata_database.models.training import Training
+from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -34,9 +33,6 @@ def get_freshness_config():
 def setup_and_teardown():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        training = Training(number_of_workers=1)
-        database.session.add(training)
-        database.session.commit()
     yield
     os.remove(database_path)
 
@@ -66,7 +62,11 @@ def test_inform_data():
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(
-            Metadata.key, Metadata.timestamp, Metadata.label, Metadata.pipeline_id, Metadata.seen
+            SelectorStateMetadata.sample_id,
+            SelectorStateMetadata.timestamp,
+            SelectorStateMetadata.label,
+            SelectorStateMetadata.pipeline_id,
+            SelectorStateMetadata.seen,
         ).all()
 
         assert len(data) == 3
@@ -293,7 +293,7 @@ def test__mark_used():
     strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        data = database.session.query(Metadata.seen).all()
+        data = database.session.query(SelectorStateMetadata.seen).all()
 
         assert len(data) == 3
         useds = [used[0] for used in data]
@@ -301,7 +301,11 @@ def test__mark_used():
 
     strat._mark_used(["a", "c"])
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        data = database.session.query(Metadata.key, Metadata.seen).filter(Metadata.seen == True).all()  # noqa: E712
+        data = (
+            database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
+            .filter(SelectorStateMetadata.seen == True)  # noqa: E712
+            .all()
+        )
 
         assert len(data) == 2
         keys, useds = zip(*data)
@@ -309,7 +313,11 @@ def test__mark_used():
         assert all(useds)
         assert set(["a", "c"]) == set(keys)
 
-        data = database.session.query(Metadata.key, Metadata.seen).filter(Metadata.seen == False).all()  # noqa: E712
+        data = (
+            database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
+            .filter(SelectorStateMetadata.seen == False)  # noqa: E712
+            .all()
+        )
 
         assert len(data) == 1
         keys, useds = zip(*data)

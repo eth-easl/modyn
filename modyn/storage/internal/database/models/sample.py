@@ -1,11 +1,11 @@
 """Sample model."""
 
-from modyn.storage.internal.database.storage_base import Base
+from modyn.storage.internal.database.storage_base import StorageBase
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import backref, relationship
 
 
-class Sample(Base):
+class Sample(StorageBase):
     """Sample model."""
 
     __tablename__ = "samples"

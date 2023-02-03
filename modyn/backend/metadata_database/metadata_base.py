@@ -3,5 +3,5 @@
 from sqlalchemy.orm import DeclarativeBase
 
 
-class Base(DeclarativeBase):
+class MetadataBase(DeclarativeBase):
     pass

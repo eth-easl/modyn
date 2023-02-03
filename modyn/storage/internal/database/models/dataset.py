@@ -1,12 +1,12 @@
 """Dataset model."""
 
-from modyn.storage.internal.database.storage_base import Base
+from modyn.storage.internal.database.storage_base import StorageBase
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import Column, Enum, Integer, String
 
 
-class Dataset(Base):
+class Dataset(StorageBase):
     """Dataset model."""
 
     __tablename__ = "datasets"

@@ -25,15 +25,15 @@ def dynamic_module_import(name: str) -> ModuleType:
     return importlib.import_module(name)
 
 
-def model_available(model_id: str) -> bool:
+def model_available(model_type: str) -> bool:
     available_models = list(x[0] for x in inspect.getmembers(modyn.models, inspect.isclass))
-    return model_id in available_models
+    return model_type in available_models
 
 
-def trigger_available(trigger_id: str) -> bool:
+def trigger_available(trigger_type: str) -> bool:
     trigger_module = dynamic_module_import("modyn.backend.supervisor.internal.triggers")
     available_triggers = list(x[0] for x in inspect.getmembers(trigger_module, inspect.isclass))
-    return trigger_id in available_triggers
+    return trigger_type in available_triggers
 
 
 def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool, Optional[ValidationError]]:

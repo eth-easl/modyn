@@ -1,4 +1,4 @@
-"""This package contains the database classes for the backend module.
+"""This package contains all the ORM models for the database.
 
 The models are used to abstract the database operations.
 This allows the storage module to be used with different databases.
