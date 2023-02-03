@@ -125,7 +125,6 @@ class GRPCHandler:
 
         return response.timestamp
 
-    # pylint: disable-next=unused-argument
     def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
         if not self.connected_to_selector:
             raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
