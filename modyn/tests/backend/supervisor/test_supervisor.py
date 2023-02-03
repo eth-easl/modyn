@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import pathlib
 import typing
 from unittest.mock import MagicMock, call, patch
 
@@ -13,15 +14,18 @@ def get_minimal_pipeline_config() -> dict:
         "model": {"id": "ResNet18"},
         "training": {
             "gpus": 1,
+            "device": "cpu",
             "dataloader_workers": 1,
-            "learning_rate": 0.1,
-            "batch_size": 42,
-            "strategy": "finetune",
             "initial_model": "random",
             "initial_pass": {"activated": False},
-            "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x",
+            "learning_rate": 0.1,
+            "batch_size": 42,
+            "optimizer": {"name": "SGD"},
+            "optimization_criterion": {"name": "CrossEntropyLoss"},
+            "checkpointing": {"activated": False},
+            "selection_strategy": {"name": "NewDataStrategy"},
         },
-        "data": {"dataset_id": "test"},
+        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
     }
 
@@ -39,9 +43,17 @@ def sleep_mock(duration: int):
 
 
 @patch.object(GRPCHandler, "init_storage", return_value=None)
+@patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
-def get_non_connecting_supervisor(test_dataset_available, test_connection_established, test_init_storage) -> Supervisor:
+@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+def get_non_connecting_supervisor(
+    test_trainer_server_available,
+    test_dataset_available,
+    test_connection_established,
+    test_init_trainer_server,
+    test_init_storage,
+) -> Supervisor:
     supervisor = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
 
     return supervisor
@@ -51,21 +63,33 @@ def test_initialization() -> None:
     get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
 
+@patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=False)
+@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
 def test_constructor_throws_on_invalid_system_config(
-    test_dataset_available, test_connection_established, test_init_storage
+    test_trainer_server_available,
+    test_dataset_available,
+    test_connection_established,
+    test_init_storage,
+    test_init_trainer_server,
 ) -> None:
     with pytest.raises(ValueError, match="Invalid system configuration"):
         Supervisor(get_minimal_pipeline_config(), {}, None)
 
 
+@patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
+@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
 def test_constructor_throws_on_invalid_pipeline_config(
-    test_dataset_available, test_connection_established, test_init_storage
+    test_trainer_server_available,
+    test_dataset_available,
+    test_connection_established,
+    test_init_storage,
+    test_init_trainer_server,
 ) -> None:
     with pytest.raises(ValueError, match="Invalid pipeline configuration"):
         Supervisor({}, get_minimal_system_config(), None)
@@ -110,7 +134,7 @@ def test__validate_training_options():
 
     # Check that training with an invalid strategy gets rejected
     sup.pipeline_config = get_minimal_pipeline_config()
-    sup.pipeline_config["training"]["strategy"] = "UnknownStrategy"
+    sup.pipeline_config["training"]["selection_strategy"]["name"] = "UnknownStrategy"
     assert not sup._validate_training_options()
 
     # Check that training with an invalid initial model gets rejected
@@ -325,9 +349,12 @@ def test__handle_triggers_within_batch(
     test_inform_selector.assert_called_once_with(42, [("g", 7)])
 
 
-@patch.object(GRPCHandler, "start_trainer_server", return_value=1337)
+@patch.object(GRPCHandler, "fetch_trained_model", return_value=pathlib.Path("/"))
+@patch.object(GRPCHandler, "start_training", return_value=1337)
 @patch.object(GRPCHandler, "wait_for_training_completion")
-def test__run_training(test_wait_for_training_completion: MagicMock, test_start_trainer_server: MagicMock):
+def test__run_training(
+    test_wait_for_training_completion: MagicMock, test_start_training: MagicMock, test_fetch_trained_model: MagicMock
+):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.pipeline_id = 42
 
@@ -336,7 +363,8 @@ def test__run_training(test_wait_for_training_completion: MagicMock, test_start_
     assert sup.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337)
-    test_start_trainer_server.assert_called_once_with(42, 21, get_minimal_pipeline_config())
+    test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None)
+    test_fetch_trained_model.assert_called_once()
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
@@ -369,14 +397,6 @@ def test_replay_data_open_inteval(test__handle_new_data: MagicMock, test_get_new
 
     test_get_new_data_since.assert_called_once_with("test", 0)
     test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)])
-
-
-@patch.object(Supervisor, "__init__", noop_constructor_mock)
-def test_end_pipeline():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
-
-    # TODO(MaxiBoether): implement a real test when func is implemented.
-    sup.end_pipeline()
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)

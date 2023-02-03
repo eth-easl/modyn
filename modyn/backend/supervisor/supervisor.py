@@ -56,7 +56,9 @@ class Supervisor:
 
     def _setup_model_directory(self) -> None:
         self.model_storage_directory = (
-            pathlib.Path(os.getcwd()) / f"models_{self.pipeline_config['pipeline']['name']}" / current_time_millis()
+            pathlib.Path(os.getcwd())
+            / f"models_{self.pipeline_config['pipeline']['name']}"
+            / str(current_time_millis())
         )
         os.makedirs(self.model_storage_directory)
 
@@ -89,7 +91,7 @@ class Supervisor:
     def _validate_training_options(self) -> bool:
         is_valid = True
         batch_size = self.pipeline_config["training"]["batch_size"]
-        strategy = self.pipeline_config["training"]["strategy"]
+        strategy = self.pipeline_config["training"]["selection_strategy"]["name"]
         initial_model = self.pipeline_config["training"]["initial_model"]
 
         if self.pipeline_config["training"]["gpus"] != 1:
@@ -114,6 +116,7 @@ class Supervisor:
                 is_valid = False
             else:
                 self.previous_model = self.pipeline_config["training"]["initial_model_path"]
+                assert self.previous_model is not None  # makes mypy happy
                 if not self.previous_model.exists():
                     logger.error(f"Path {self.previous_model} does not exist.")
                     is_valid = False

@@ -83,7 +83,7 @@ class GRPCHandler:
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
         response: GetNewDataSinceResponse = self.storage.GetNewDataSince(request)
 
-        return zip(response.keys, response.timestamps)
+        return list(zip(response.keys, response.timestamps))
 
     def get_data_in_interval(self, dataset_id: str, start_timestamp: int, end_timestamp: int) -> list[tuple[str, int]]:
         if not self.connected_to_storage:
@@ -96,7 +96,7 @@ class GRPCHandler:
         )
         response: GetDataInIntervalResponse = self.storage.GetDataInInterval(request)
 
-        return zip(response.keys, response.timestamps)
+        return list(zip(response.keys, response.timestamps))
 
     def get_time_at_storage(self) -> int:
         if not self.connected_to_storage:
@@ -215,7 +215,7 @@ class GRPCHandler:
         response: StartTrainingResponse = self.trainer_server.start_training(req)
 
         if not response.training_started:
-            raise RuntimeError("Starting training at trainer did go wrong: {response}")
+            raise RuntimeError(f"Starting training at trainer did go wrong: {response}")
 
         training_id = response.training_id
         logger.info(f"Started training {training_id} at trainer server.")
@@ -235,14 +235,17 @@ class GRPCHandler:
             if not res.valid:
                 raise RuntimeError(f"Training {training_id} is invalid at server: {res}\n")
 
-            emoji = "⏳" if res.is_running else "✅"
-
             if res.blocked:
                 logger.warning("Trainer Server returned a blocked response: {res}\n")
             else:
+                if res.exception is not None:
+                    logger.error(f"Exception occured during training: {res.exception}\n\n{res}\n")
+
                 if res.state_available:
-                    # TODO(create issue): return total number of batches/samples
-                    logger.info(f"\r{emoji} Batch {res.batches_seen}/?, Sample {res.samples_seen}/?")
+                    logger.info(
+                        f"\r{'⏳' if res.is_running else '✅'} Batch {res.batches_seen}/{res.batches_total}"
+                        + f"Sample {res.samples_seen}/{res.samples_total}"
+                    )
                 else:
                     logger.warning(
                         "Trainer server is not blocked, but no state is available. "
@@ -256,7 +259,6 @@ class GRPCHandler:
 
         logger.info("Training completed 🚀")
 
-    # pylint: disable-next=unused-argument
     def fetch_trained_model(self, training_id: int, storage_dir: pathlib.Path) -> pathlib.Path:
         logger.info(f"Fetching trained model for training {training_id}")
         req = TrainingStatusRequest(training_id=training_id)
