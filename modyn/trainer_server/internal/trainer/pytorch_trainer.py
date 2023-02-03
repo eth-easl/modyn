@@ -32,7 +32,7 @@ class PytorchTrainer:
         self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
 
         if training_info.used_pretrained_model:
-            self.load_state_if_given(training_info.pretrained_model)
+            self.load_state_if_given(training_info.pretrained_model, training_info.load_optimizer_state)
 
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
@@ -76,12 +76,12 @@ class PytorchTrainer:
 
         torch.save(dict_to_save, destination)
 
-    def load_state_if_given(self, initial_state: bytes) -> None:
+    def load_state_if_given(self, initial_state: bytes, load_optimizer_state: bool = False) -> None:
         checkpoint_buffer = io.BytesIO(initial_state)
         checkpoint = torch.load(checkpoint_buffer)
         assert "model" in checkpoint
         self._model.model.load_state_dict(checkpoint["model"])
-        if "optimizer" in checkpoint:
+        if load_optimizer_state and "optimizer" in checkpoint:
             self._optimizer.load_state_dict(checkpoint["optimizer"])
 
     def send_state_to_server(self, batch_number: int) -> None:

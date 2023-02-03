@@ -35,6 +35,7 @@ class TrainingInfo:
         self.model_handler = getattr(model_module, self.model_id)
 
         self.used_pretrained_model = request.use_pretrained_model
+        self.load_optimizer_state = request.load_optimizer_state
         self.pretrained_model = request.pretrained_model
 
         self.torch_optimizer = request.torch_optimizer

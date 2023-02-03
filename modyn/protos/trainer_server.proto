@@ -43,16 +43,17 @@ message StartTrainingRequest {
     string model_id = 4;
     JsonString model_configuration = 5;
     bool use_pretrained_model = 6;
-    bytes pretrained_model = 7;
-    int32 batch_size = 8;
-    string torch_optimizer = 9;
-    JsonString optimizer_parameters = 10;
-    string torch_criterion = 11;
-    JsonString criterion_parameters = 12;
-    Data data_info = 13;
-    CheckpointInfo checkpoint_info = 14;
-    PythonString bytes_parser = 15;
-    repeated string transform_list = 16;
+    bool load_optimizer_state = 7;
+    bytes pretrained_model = 8;
+    int32 batch_size = 9;
+    string torch_optimizer = 10;
+    JsonString optimizer_parameters = 11;
+    string torch_criterion = 12;
+    JsonString criterion_parameters = 13;
+    Data data_info = 14;
+    CheckpointInfo checkpoint_info = 15;
+    PythonString bytes_parser = 16;
+    repeated string transform_list = 17;
 }
 
 message StartTrainingResponse {

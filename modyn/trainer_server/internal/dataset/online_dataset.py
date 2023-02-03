@@ -53,7 +53,7 @@ class OnlineDataset(IterableDataset):
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
         samples_response = self._selectorstub.get_sample_keys_and_weights(req)
-        return samples_response.training_samples_subset  # ignore 'training_samples_weights' entry for now
+        return samples_response.training_samples_subset  # TODO(#138): take into account sample weights when needed
 
     def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[Any]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)

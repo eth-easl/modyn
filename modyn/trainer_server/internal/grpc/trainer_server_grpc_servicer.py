@@ -163,6 +163,7 @@ class TrainerServerGRPCServicer:
             buffer.seek(0)
             state_bytes = buffer.read()
             return GetFinalModelResponse(valid_state=True, state=state_bytes)
+        logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
         return GetFinalModelResponse(valid_state=False)
 
     def get_latest_model(
