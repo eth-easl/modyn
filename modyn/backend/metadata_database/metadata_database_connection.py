@@ -5,6 +5,10 @@ from __future__ import annotations
 import logging
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
+from modyn.backend.metadata_database.models.sample_training_metadata import SampleTrainingMetadata
+from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
+from modyn.backend.metadata_database.models.trigger_sample_training_metadata import TriggerSampleTrainingMetadata
+from modyn.backend.metadata_database.models.trigger_training_metadata import TriggerTrainingMetadata
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 
 logger = logging.getLogger(__name__)

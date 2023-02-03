@@ -13,6 +13,8 @@ class SelectorStateMetadata(MetadataBase):
     """
 
     __tablename__ = "selector_state_metadata"
+    # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing
+    __table_args__ = {'extend_existing': True}
     selector_state_metadata_id = Column("selector_state_metadata_id", Integer, primary_key=True)
     pipeline_id = Column("pipeline_id", Integer, nullable=False)
     sample_id = Column("sample_id", String(120), nullable=False)
