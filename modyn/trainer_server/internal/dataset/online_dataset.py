@@ -2,15 +2,15 @@ from inspect import isfunction
 from typing import Any, Generator
 
 import grpc
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest
-from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest
-from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 
+# pylint: disable-next=no-name-in-module
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.utils.utils import grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
-
-from modyn.utils.utils import grpc_connection_established
 
 
 class OnlineDataset(IterableDataset):
@@ -24,7 +24,7 @@ class OnlineDataset(IterableDataset):
         bytes_parser: str,
         serialized_transforms: list[str],
         storage_address: str,
-        selector_address: str
+        selector_address: str,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -51,18 +51,14 @@ class OnlineDataset(IterableDataset):
         self._storagestub = StorageStub(storage_channel)
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
-        req = GetSamplesRequest(
-            pipeline_id=self._pipeline_id,
-            trigger_id=self._trigger_id,
-            worker_id=worker_id
-        )
+        req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
         samples_response = self._selectorstub.get_sample_keys_and_weights(req)
-        return samples_response.training_samples_subset # ignore 'training_samples_weights' entry for now
+        return samples_response.training_samples_subset  # ignore 'training_samples_weights' entry for now
 
     def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[Any]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=keys)
         response = self._storagestub.Get(req)
-        return response.samples, response.labels # ignore 'keys' entry for now
+        return response.samples, response.labels  # ignore 'keys' entry for now
 
     def _deserialize_torchvision_transforms(self) -> None:
         self._transform_list = [self._bytes_parser_function]

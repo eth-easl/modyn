@@ -1,5 +1,4 @@
 import json
-import threading
 import time
 
 import grpc
@@ -37,7 +36,7 @@ class TrainerClient:
         response = self._trainer_stub.trainer_available(req)
         return response.available
 
-    def start_training(self, pipeline_id: int, trigger_id: int) -> bool:
+    def start_training(self, pipeline_id: int, trigger_id: int) -> tuple[bool, int]:
         bytes_parser = """import time\ndef bytes_parser_function(x):\n\treturn x"""
 
         transforms = [
@@ -64,7 +63,7 @@ class TrainerClient:
             checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="results"),
             transform_list=transforms,
             bytes_parser=PythonString(value=bytes_parser),
-            use_pretrained_model=False
+            use_pretrained_model=False,
         )
 
         response = self._trainer_stub.start_training(req)
@@ -79,7 +78,7 @@ if __name__ == "__main__":
     client = TrainerClient()
     is_available = client.check_trainer_available()
     if is_available:
-        success, training_id = client.start_training(1,1)
+        success, training_id = client.start_training(1, 1)
         print(success, training_id)
         if success:
             time.sleep(10)

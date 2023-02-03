@@ -1,4 +1,4 @@
-# pylint: disable=unused-argument, no-name-in-module
+# pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import json
 import multiprocessing as mp
 import platform
@@ -41,7 +41,7 @@ start_training_request = StartTrainingRequest(
     bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
     transform_list=[],
     use_pretrained_model=False,
-    pretrained_model=None
+    pretrained_model=None,
 )
 trainer_available_request = TrainerAvailableRequest()
 get_status_request = TrainingStatusRequest(training_id=1)
@@ -51,8 +51,9 @@ get_latest_model_request = GetLatestModelRequest(training_id=1)
 modyn_config = {
     "trainer_server": {"hostname": "trainer_server", "port": "5001"},
     "storage": {"hostname": "storage", "port": "5002"},
-    "selector": {"hostname": "selector", "port": "5003"}
+    "selector": {"hostname": "selector", "port": "5003"},
 }
+
 
 class DummyModelWrapper:
     def __init__(self, model_configuration=None) -> None:
@@ -91,23 +92,27 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
         transform_list=[],
         use_pretrained_model=False,
-        pretrained_model=None
+        pretrained_model=None,
     )
+
 
 @patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=True)
 @patch(
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,
 )
-def get_training_info(temp, storage_address, selector_address, test_getattr=None, test_hasattr=None):
+def get_training_info(temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None):
     request = get_start_training_request(temp)
     training_info = TrainingInfo(request, storage_address, selector_address)
+    training_info.set_final_checkpoint_path(final_temp)
     return training_info
+
 
 def test_init():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     assert trainer_server._storage_address == "storage:5002"
     assert trainer_server._selector_address == "selector:5003"
+
 
 def test_trainer_available():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
@@ -310,7 +315,10 @@ def test_check_for_training_exception_found():
 def test_get_latest_checkpoint_not_found():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     with tempfile.TemporaryDirectory() as temp:
-        trainer_server._training_dict[1] = get_training_info(temp, trainer_server._storage_address, trainer_server._selector_address)
+        with tempfile.TemporaryDirectory() as final_temp:
+            trainer_server._training_dict[1] = get_training_info(
+                temp, final_temp, trainer_server._storage_address, trainer_server._selector_address
+            )
 
     training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
     assert training_state is None
@@ -367,30 +375,36 @@ def test_get_final_model_still_running(test_is_alive):
     response = trainer_server.get_final_model(get_final_model_request, None)
     assert not response.valid_state
 
+
 @patch.object(mp.Process, "is_alive", return_value=False)
 def test_get_final_model_not_found(test_is_alive):
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     with tempfile.TemporaryDirectory() as temp:
-        trainer_server._training_dict[1] = get_training_info(temp)
-        trainer_server._training_process_dict[1] = get_training_process_info()
-        response = trainer_server.get_final_model(get_final_model_request, None)
-        assert not response.valid_state
+        with tempfile.TemporaryDirectory() as final_temp:
+            trainer_server._training_dict[1] = get_training_info(temp, final_temp)
+            trainer_server._training_process_dict[1] = get_training_process_info()
+            response = trainer_server.get_final_model(get_final_model_request, None)
+            assert not response.valid_state
+
 
 @patch.object(mp.Process, "is_alive", return_value=False)
 def test_get_final_model_found(test_is_alive):
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     with tempfile.TemporaryDirectory() as temp:
-        training_info = get_training_info(temp, trainer_server._storage_address, trainer_server._selector_address)
-        dict_to_save = {"state": {"weight": 10}}
+        with tempfile.TemporaryDirectory() as final_temp:
+            training_info = get_training_info(
+                temp, final_temp, trainer_server._storage_address, trainer_server._selector_address
+            )
+            dict_to_save = {"state": {"weight": 10}}
 
-        checkpoint_file = training_info.checkpoint_path + "/model_final.pt"
-        torch.save(dict_to_save, checkpoint_file)
+            checkpoint_file = final_temp + "/model_final.pt"
+            torch.save(dict_to_save, checkpoint_file)
 
-        trainer_server._training_dict[1] = training_info
-        trainer_server._training_process_dict[1] = get_training_process_info()
-        response = trainer_server.get_final_model(get_final_model_request, None)
-        assert response.valid_state
-        assert torch.load(BytesIO(response.state)) == {"state": {"weight": 10}}
+            trainer_server._training_dict[1] = training_info
+            trainer_server._training_process_dict[1] = get_training_process_info()
+            response = trainer_server.get_final_model(get_final_model_request, None)
+            assert response.valid_state
+            assert torch.load(BytesIO(response.state)) == {"state": {"weight": 10}}
 
 
 def test_get_latest_model_not_registered():

@@ -53,9 +53,13 @@ class PytorchTrainer:
         self._device = device
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
+        self._final_checkpoint_path = training_info.final_checkpoint_path
 
         if not os.path.isdir(self._checkpoint_path):
             os.mkdir(self._checkpoint_path)
+
+        if not os.path.isdir(self._final_checkpoint_path):
+            os.mkdir(self._final_checkpoint_path)
 
         self._status_query_queue = status_query_queue
         self._status_response_queue = status_response_queue
@@ -72,14 +76,13 @@ class PytorchTrainer:
 
         torch.save(dict_to_save, destination)
 
-    def load_state_if_given(self, initial_state):
-
+    def load_state_if_given(self, initial_state: bytes) -> None:
         checkpoint_buffer = io.BytesIO(initial_state)
         checkpoint = torch.load(checkpoint_buffer)
-        assert 'model' in checkpoint
-        self._model.model.load_state_dict(checkpoint['model'])
-        if 'optimizer' in checkpoint:
-            self._optimizer.load_state_dict(checkpoint['optimizer'])
+        assert "model" in checkpoint
+        self._model.model.load_state_dict(checkpoint["model"])
+        if "optimizer" in checkpoint:
+            self._optimizer.load_state_dict(checkpoint["optimizer"])
 
     def send_state_to_server(self, batch_number: int) -> None:
         buffer = io.BytesIO()
@@ -94,7 +97,7 @@ class PytorchTrainer:
             }
         )
 
-    def train(self, log_path) -> None:
+    def train(self, log_path: str) -> None:
         file_handler = logging.FileHandler(log_path)
         logger.addHandler(file_handler)
 
@@ -132,7 +135,7 @@ class PytorchTrainer:
             logger.info(f"Iteration {batch_number}")
 
         # save final model
-        final_checkpoint_file_name = self._checkpoint_path + "/model_final.pt"
+        final_checkpoint_file_name = self._final_checkpoint_path + "/model_final.pt"
         self.save_state(final_checkpoint_file_name)
 
         logger.info("Training complete!")

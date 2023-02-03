@@ -7,11 +7,14 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
+
 def get_mock_bytes_parser():
     return "def bytes_parser_function(x):\n\treturn x"
 
+
 def noop_constructor_mock(self, channel: grpc.Channel) -> None:
     pass
+
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)

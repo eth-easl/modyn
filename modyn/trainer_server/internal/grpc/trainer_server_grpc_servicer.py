@@ -5,10 +5,10 @@ import multiprocessing as mp
 import os
 import queue
 import sys
+import tempfile
 from pathlib import Path
-import threading
-from typing import Any, Optional
 from threading import Lock
+from typing import Any, Optional
 
 import grpc
 import torch
@@ -41,9 +41,9 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
-    def __init__(self, config) -> None:
+    def __init__(self, config: dict) -> None:
         self._next_training_id = 0
-        self._lock = Lock() # TODO(#118): Fix race conditions in the trainer server
+        self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
 
@@ -68,13 +68,15 @@ class TrainerServerGRPCServicer:
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
         training_info = TrainingInfo(request, self._storage_address, self._selector_address)
-
         if training_info.model_handler is None:
             return StartTrainingResponse(training_started=False)
 
         with self._lock:
             training_id = self._next_training_id
             self._next_training_id += 1
+
+        final_checkpoint_path = f"{tempfile.gettempdir()}/training_{training_id}"
+        training_info.set_final_checkpoint_path(final_checkpoint_path)
 
         self._training_dict[training_id] = training_info
 
@@ -153,7 +155,7 @@ class TrainerServerGRPCServicer:
             logger.error(f"Training with id {training_id} is still running")
             return GetFinalModelResponse(valid_state=False)
 
-        final_checkpoint_path = self._training_dict[training_id].checkpoint_path + "/model_final.pt"
+        final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path + "/model_final.pt"
         if os.path.exists(final_checkpoint_path):
             final_state = torch.load(final_checkpoint_path)
             buffer = io.BytesIO()
@@ -161,8 +163,7 @@ class TrainerServerGRPCServicer:
             buffer.seek(0)
             state_bytes = buffer.read()
             return GetFinalModelResponse(valid_state=True, state=state_bytes)
-        else:
-            return GetFinalModelResponse(valid_state=False)
+        return GetFinalModelResponse(valid_state=False)
 
     def get_latest_model(
         self,
@@ -177,17 +178,13 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
-            print("c1")
-            training_state,_,_ = self.get_status(training_id)
+            training_state, _, _ = self.get_status(training_id)
         else:
-            print("c2")
-            training_state,_,_ = self.get_latest_checkpoint(training_id)
+            training_state, _, _ = self.get_latest_checkpoint(training_id)
 
-        if (training_state is not None):
+        if training_state is not None:
             return GetLatestModelResponse(valid_state=True, state=training_state)
-        else:
-            return GetLatestModelResponse(valid_state=False)
-
+        return GetLatestModelResponse(valid_state=False)
 
     def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
         status_query_queue = self._training_process_dict[training_id].status_query_queue

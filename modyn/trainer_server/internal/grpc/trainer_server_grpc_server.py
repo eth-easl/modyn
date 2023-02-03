@@ -17,11 +17,10 @@ class GRPCServer:
         """Initialize the GRPC server.
 
         Args:
-            modyn_config (dict): Configuration of the trainer server module.
+            config (dict): Modyn configuration.
         """
         self.config = config
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-
 
     def __enter__(self) -> grpc.Server:
         """Enter the context manager.

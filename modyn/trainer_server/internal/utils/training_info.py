@@ -46,3 +46,8 @@ class TrainingInfo:
 
         self.storage_address = storage_address
         self.selector_address = selector_address
+
+        self.final_checkpoint_path: str = ""
+
+    def set_final_checkpoint_path(self, final_checkpoint_path: str) -> None:
+        self.final_checkpoint_path = final_checkpoint_path
