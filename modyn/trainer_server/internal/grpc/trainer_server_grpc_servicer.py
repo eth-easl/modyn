@@ -1,8 +1,8 @@
-import glob
 import io
 import logging
 import multiprocessing as mp
 import os
+import pathlib
 import queue
 import sys
 import tempfile
@@ -47,6 +47,8 @@ class TrainerServerGRPCServicer:
         self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
+        self._modyn_base_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
+        self._modyn_base_dir.mkdir()
 
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
@@ -76,7 +78,7 @@ class TrainerServerGRPCServicer:
             training_id = self._next_training_id
             self._next_training_id += 1
 
-        final_checkpoint_path = f"{tempfile.gettempdir()}/training_{training_id}"
+        final_checkpoint_path = self._modyn_base_dir / f"training_{training_id}"
         training_info = TrainingInfo(request, self._storage_address, self._selector_address, final_checkpoint_path)
         self._training_dict[training_id] = training_info
 
@@ -89,7 +91,7 @@ class TrainerServerGRPCServicer:
             args=(
                 self._training_dict[training_id],
                 request.device,
-                f"log-{training_id}.txt",
+                self._modyn_base_dir / f"log-{training_id}.txt",
                 exception_queue,
                 status_query_queue,
                 status_response_queue,
@@ -155,8 +157,9 @@ class TrainerServerGRPCServicer:
             logger.error(f"Training with id {training_id} is still running")
             return GetFinalModelResponse(valid_state=False)
 
-        final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path + "/model_final.pt"
-        if os.path.exists(final_checkpoint_path):
+        final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
+        print(final_checkpoint_path)
+        if final_checkpoint_path.exists():
             final_state = torch.load(final_checkpoint_path)
             buffer = io.BytesIO()
             torch.save(final_state, buffer)
@@ -214,7 +217,10 @@ class TrainerServerGRPCServicer:
         # either successfully or not, and allow to access the last state
 
         checkpoint_path = self._training_dict[training_id].checkpoint_path
-        checkpoints = list(filter(os.path.isfile, glob.glob(checkpoint_path + "/*")))
+        if not checkpoint_path.exists():
+            return None, None, None
+
+        checkpoints = list(checkpoint_path.iterdir())
         checkpoints.sort(key=os.path.getmtime)
 
         # get latest valid checkpoint

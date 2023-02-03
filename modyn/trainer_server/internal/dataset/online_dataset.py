@@ -63,15 +63,8 @@ class OnlineDataset(IterableDataset):
             for key, sample, label in zip(response.keys, response.samples, response.labels):
                 data_from_storage[key] = (sample, label)
 
-        sample_list = []
-        label_list = []
-
-        for key in selector_keys:
-            if key not in data_from_storage:
-                raise ValueError(f"Key {key} provided by the Selector, but not returned from Storage")
-
-            sample_list.append(data_from_storage[key][0])
-            label_list.append(data_from_storage[key][1])
+        sample_list = [data_from_storage[key][0] for key in selector_keys]
+        label_list = [data_from_storage[key][1] for key in selector_keys]
 
         return sample_list, label_list
 

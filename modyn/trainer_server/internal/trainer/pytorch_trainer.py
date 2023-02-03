@@ -2,6 +2,7 @@ import io
 import logging
 import multiprocessing as mp
 import os
+import pathlib
 import queue
 import traceback
 from typing import Optional, Union
@@ -55,18 +56,17 @@ class PytorchTrainer:
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
 
-        if not os.path.isdir(self._checkpoint_path):
-            os.mkdir(self._checkpoint_path)
+        if not self._checkpoint_path.is_dir():
+            self._checkpoint_path.mkdir()
 
-        if not os.path.isdir(self._final_checkpoint_path):
-            os.mkdir(self._final_checkpoint_path)
+        self._final_checkpoint_path.mkdir()  # exist_ok == False, this directory should not exist before
 
         self._status_query_queue = status_query_queue
         self._status_response_queue = status_response_queue
 
         self._num_samples = 0
 
-    def save_state(self, destination: Union[str, io.BytesIO], iteration: Optional[int] = None) -> None:
+    def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {
             "model": self._model.model.state_dict(),
             "optimizer": self._optimizer.state_dict(),
@@ -97,7 +97,7 @@ class PytorchTrainer:
             }
         )
 
-    def train(self, log_path: str) -> None:
+    def train(self, log_path: pathlib.Path) -> None:
         file_handler = logging.FileHandler(log_path)
         logger.addHandler(file_handler)
 
@@ -127,7 +127,7 @@ class PytorchTrainer:
             self._optimizer.step()
 
             if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
-                checkpoint_file_name = self._checkpoint_path + f"/model_{batch_number}" + ".pt"
+                checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
                 self.save_state(checkpoint_file_name, batch_number)
 
             self._num_samples += batch[0].shape[0]
@@ -135,7 +135,7 @@ class PytorchTrainer:
             logger.info(f"Iteration {batch_number}")
 
         # save final model
-        final_checkpoint_file_name = self._final_checkpoint_path + "/model_final.pt"
+        final_checkpoint_file_name = self._final_checkpoint_path / "model_final.modyn"
         self.save_state(final_checkpoint_file_name)
 
         logger.info("Training complete!")
@@ -145,7 +145,7 @@ class PytorchTrainer:
 def train(
     training_info: TrainingInfo,
     device: str,
-    log_path: str,
+    log_path: pathlib.Path,
     exception_queue: mp.Queue,
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue,

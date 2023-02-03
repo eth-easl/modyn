@@ -1,5 +1,6 @@
 import json
 import logging
+import pathlib
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import StartTrainingRequest
@@ -12,7 +13,11 @@ class TrainingInfo:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(
-        self, request: StartTrainingRequest, storage_address: str, selector_address: str, final_checkpoint_path: str
+        self,
+        request: StartTrainingRequest,
+        storage_address: str,
+        selector_address: str,
+        final_checkpoint_path: pathlib.Path,
     ) -> None:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id
@@ -39,7 +44,7 @@ class TrainingInfo:
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
 
-        self.checkpoint_path = request.checkpoint_info.checkpoint_path
+        self.checkpoint_path = pathlib.Path(request.checkpoint_info.checkpoint_path)
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
 
         self.storage_address = storage_address

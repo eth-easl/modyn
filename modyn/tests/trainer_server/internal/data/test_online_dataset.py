@@ -126,10 +126,6 @@ def test_get_data_from_storage(test_insecure_channel, test_grpc_connection_estab
         [0, 9, 6, 5, 4, 3],
     )
 
-    key_missing_list = ["0", "9", "6", "15", "4", "3"]
-    with pytest.raises(ValueError):
-        online_dataset._get_data_from_storage(key_missing_list)
-
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)

@@ -3,6 +3,7 @@ import io
 import json
 import multiprocessing as mp
 import os
+import pathlib
 import platform
 import tempfile
 from collections import OrderedDict
@@ -115,7 +116,7 @@ def get_training_info(
                 load_optimizer_state=load_optimizer_state,
                 pretrained_model=pretrained_model,
             )
-            training_info = TrainingInfo(request, storage_address, selector_address, final_tmpdirname)
+            training_info = TrainingInfo(request, storage_address, selector_address, pathlib.Path(final_tmpdirname))
             return training_info
 
 
@@ -331,7 +332,7 @@ def test_train():
             raise TimeoutError("Did not reach desired queue state within timelimit.")
 
     with tempfile.NamedTemporaryFile() as temp:
-        trainer.train(temp.name)
+        trainer.train(pathlib.Path(temp.name))
         assert os.path.exists(temp.name)
         assert trainer._num_samples == 800
         while not query_status_queue.empty():
@@ -380,8 +381,8 @@ def test_train():
             },
         }
         assert status_state == checkpointed_state
-        assert os.path.exists(trainer._final_checkpoint_path + "/model_final.pt")
-        final_state = torch.load(trainer._final_checkpoint_path + "/model_final.pt")
+        assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
+        final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
         assert final_state == checkpointed_state
 
 

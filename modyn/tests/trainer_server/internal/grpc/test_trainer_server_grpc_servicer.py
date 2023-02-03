@@ -1,7 +1,9 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import json
 import multiprocessing as mp
+import pathlib
 import platform
+import shutil
 import tempfile
 from io import BytesIO
 from time import sleep
@@ -103,20 +105,26 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
 )
 def get_training_info(temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None):
     request = get_start_training_request(temp)
-    training_info = TrainingInfo(request, storage_address, selector_address, final_temp)
+    training_info = TrainingInfo(request, storage_address, selector_address, pathlib.Path(final_temp))
     return training_info
+
+
+def cleanup():
+    shutil.rmtree(pathlib.Path(tempfile.gettempdir()) / "modyn")
 
 
 def test_init():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     assert trainer_server._storage_address == "storage:5002"
     assert trainer_server._selector_address == "selector:5003"
+    cleanup()
 
 
 def test_trainer_available():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     response = trainer_server.trainer_available(trainer_available_request, None)
     assert response.available
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
@@ -125,6 +133,7 @@ def test_trainer_not_available(test_is_alive):
     trainer_server._training_process_dict[10] = TrainingProcessInfo(mp.Process(), mp.Queue(), mp.Queue(), mp.Queue())
     response = trainer_server.trainer_available(trainer_available_request, None)
     assert not response.available
+    cleanup()
 
 
 @patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=False)
@@ -134,6 +143,7 @@ def test_start_training_invalid(test_hasattr):
     assert not response.training_started
     assert not trainer_server._training_dict
     assert trainer_server._next_training_id == 0
+    cleanup()
 
 
 @patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
@@ -155,12 +165,14 @@ def test_start_training(test_getattr, test_hasattr):
         trainer_server.start_training(get_start_training_request(valid_model=True), None)
         assert 1 in trainer_server._training_process_dict
         assert trainer_server._next_training_id == 2
+    cleanup()
 
 
 def test_get_training_status_not_registered():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     response = trainer_server.get_training_status(get_status_request, None)
     assert not response.valid
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
@@ -186,6 +198,7 @@ def test_get_training_status_alive(
     assert response.samples_seen == 100
     test_get_latest_checkpoint.assert_not_called()
     test_check_for_training_exception.assert_not_called()
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
@@ -209,6 +222,7 @@ def test_get_training_status_alive_blocked(
     assert not response.state_available
     test_get_latest_checkpoint.assert_not_called()
     test_check_for_training_exception.assert_not_called()
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -234,6 +248,7 @@ def test_get_training_status_finished_with_exception(
     assert response.samples_seen == 100
     assert response.exception == "exception"
     test_get_status.assert_not_called()
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -256,6 +271,7 @@ def test_get_training_status_finished_no_checkpoint(
     assert not response.state_available
     assert response.exception == "exception"
     test_get_status.assert_not_called()
+    cleanup()
 
 
 def test_get_training_status():
@@ -290,6 +306,7 @@ def test_get_training_status():
     assert training_process_info.status_response_queue.empty()
     query = training_process_info.status_query_queue.get()
     assert query == TrainerMessages.STATUS_QUERY_MESSAGE
+    cleanup()
 
 
 def test_check_for_training_exception_not_found():
@@ -297,6 +314,7 @@ def test_check_for_training_exception_not_found():
     trainer_server._training_process_dict[1] = get_training_process_info()
     child_exception = trainer_server.check_for_training_exception(1)
     assert child_exception is None
+    cleanup()
 
 
 def test_check_for_training_exception_found():
@@ -309,6 +327,7 @@ def test_check_for_training_exception_found():
 
     child_exception = trainer_server.check_for_training_exception(1)
     assert child_exception == exception_msg
+    cleanup()
 
 
 def test_get_latest_checkpoint_not_found():
@@ -323,6 +342,7 @@ def test_get_latest_checkpoint_not_found():
     assert training_state is None
     assert num_batches is None
     assert num_samples is None
+    cleanup()
 
 
 def test_get_latest_checkpoint_found():
@@ -333,7 +353,7 @@ def test_get_latest_checkpoint_found():
 
         dict_to_save = {"state": {"weight": 10}, "num_batches": 10, "num_samples": 100}
 
-        checkpoint_file = training_info.checkpoint_path + "/checkp"
+        checkpoint_file = training_info.checkpoint_path / "checkp"
         torch.save(dict_to_save, checkpoint_file)
 
         training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
@@ -343,6 +363,7 @@ def test_get_latest_checkpoint_found():
         dict_to_save.pop("num_batches")
         dict_to_save.pop("num_samples")
         assert torch.load(BytesIO(training_state))["state"] == dict_to_save["state"]
+    cleanup()
 
 
 def test_get_latest_checkpoint_invalid():
@@ -352,19 +373,21 @@ def test_get_latest_checkpoint_invalid():
         trainer_server._training_dict[1] = training_info
 
         dict_to_save = {"state": {"weight": 10}}
-        checkpoint_file = training_info.checkpoint_path + "/checkp"
+        checkpoint_file = training_info.checkpoint_path / "checkp"
         torch.save(dict_to_save, checkpoint_file)
 
         training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
         assert training_state is None
         assert num_batches is None
         assert num_samples is None
+    cleanup()
 
 
 def test_get_final_model_not_registered():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     response = trainer_server.get_final_model(get_final_model_request, None)
     assert not response.valid_state
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
@@ -373,6 +396,7 @@ def test_get_final_model_still_running(test_is_alive):
     trainer_server._training_process_dict[1] = get_training_process_info()
     response = trainer_server.get_final_model(get_final_model_request, None)
     assert not response.valid_state
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -384,6 +408,7 @@ def test_get_final_model_not_found(test_is_alive):
             trainer_server._training_process_dict[1] = get_training_process_info()
             response = trainer_server.get_final_model(get_final_model_request, None)
             assert not response.valid_state
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -396,7 +421,8 @@ def test_get_final_model_found(test_is_alive):
             )
             dict_to_save = {"state": {"weight": 10}}
 
-            checkpoint_file = final_temp + "/model_final.pt"
+            checkpoint_file = final_temp + "/model_final.modyn"
+            print(checkpoint_file)
             torch.save(dict_to_save, checkpoint_file)
 
             trainer_server._training_dict[1] = training_info
@@ -404,12 +430,14 @@ def test_get_final_model_found(test_is_alive):
             response = trainer_server.get_final_model(get_final_model_request, None)
             assert response.valid_state
             assert torch.load(BytesIO(response.state)) == {"state": {"weight": 10}}
+    cleanup()
 
 
 def test_get_latest_model_not_registered():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     response = trainer_server.get_latest_model(get_latest_model_request, None)
     assert not response.valid_state
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
@@ -420,6 +448,7 @@ def test_get_latest_model_alive_not_found(test_get_status, test_is_alive):
     trainer_server._training_process_dict[1] = get_training_process_info()
     response = trainer_server.get_latest_model(get_latest_model_request, None)
     assert not response.valid_state
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
@@ -431,6 +460,7 @@ def test_get_latest_model_alive_found(test_get_status, test_is_alive):
     response = trainer_server.get_latest_model(get_latest_model_request, None)
     assert response.valid_state
     assert response.state == b"state"
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -441,6 +471,7 @@ def test_get_latest_model_finished_not_found(test_get_latest_checkpoint, test_is
     trainer_server._training_process_dict[1] = get_training_process_info()
     response = trainer_server.get_latest_model(get_latest_model_request, None)
     assert not response.valid_state
+    cleanup()
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -452,3 +483,4 @@ def test_get_latest_model_finished_found(test_get_latest_checkpoint, test_is_ali
     response = trainer_server.get_latest_model(get_latest_model_request, None)
     assert response.valid_state
     assert response.state == b"state"
+    cleanup()

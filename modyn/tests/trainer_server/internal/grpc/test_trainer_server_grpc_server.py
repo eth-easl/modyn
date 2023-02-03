@@ -1,5 +1,5 @@
 # pylint: disable=unused-argument
-import os
+import pathlib
 import tempfile
 from unittest.mock import patch
 
@@ -34,8 +34,8 @@ def test_enter(mock_add_trainer_server_servicer_to_server):
     return_value=None,
 )
 def test_cleanup_at_exit(mock_add_trainer_server_servicer_to_server):
+    modyn_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
     with GRPCServer(get_modyn_config()) as _:
-        with open(f"{tempfile.gettempdir()}/training_0", "w", encoding="utf-8") as _:
-            assert os.path.isfile(f"{tempfile.gettempdir()}/training_0")
+        assert modyn_dir.exists()
 
-    assert not os.path.isfile(f"{tempfile.gettempdir()}/training_0")
+    assert not modyn_dir.exists()
