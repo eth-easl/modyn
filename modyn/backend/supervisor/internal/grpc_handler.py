@@ -31,6 +31,16 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
+
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
+    DataInformRequest,
+    GetSamplesRequest,
+    JsonString,
+    RegisterPipelineRequest,
+    SamplesResponse,
+)
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+
 from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
@@ -41,8 +51,10 @@ class GRPCHandler:
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
+        self.connected_to_selector = False
 
         self.init_storage()
+        self.init_selector()
         self.init_trainer_server()
 
     def init_storage(self) -> None:
@@ -56,6 +68,18 @@ class GRPCHandler:
         self.storage = StorageStub(self.storage_channel)
         logger.info("Successfully connected to storage.")
         self.connected_to_storage = True
+
+    def init_selector(self) -> None:
+        assert self.config is not None
+        selector_address = f"{self.config['selector']['hostname']}:{self.config['selector']['port']}"
+        self.selector_channel = grpc.insecure_channel(selector_address)
+
+        if not grpc_connection_established(self.selector_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
+
+        self.selector = SelectorStub(self.selector_channel)
+        logger.info("Successfully connected to selector.")
+        self.connected_to_selector = True
 
     def init_trainer_server(self) -> None:
         assert self.config is not None
