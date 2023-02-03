@@ -13,8 +13,8 @@ class TriggerSampleTrainingMetadata(MetadataBase):
     """
 
     __tablename__ = "trigger_sample_training_metadata"
-    # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing
-    __table_args__ = {'extend_existing': True}
+    # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
+    __table_args__ = {"extend_existing": True}
     trigger_sample_training_metadata_id = Column("trigger_sample_training_metadata_id", Integer, primary_key=True)
     trigger_training_metadata_id = Column(
         Integer, ForeignKey("trigger_training_metadata.trigger_training_metadata_id"), nullable=False

@@ -10,8 +10,8 @@ class Dataset(StorageBase):
     """Dataset model."""
 
     __tablename__ = "datasets"
-    # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing
-    __table_args__ = {'extend_existing': True}
+    # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
+    __table_args__ = {"extend_existing": True}
     dataset_id = Column("dataset_id", Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(120), unique=False, nullable=True)
