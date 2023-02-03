@@ -1,7 +1,6 @@
 """TriggerSampleTrainingMetadata model."""
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
-from sqlalchemy.orm import backref, relationship
 
 
 class TriggerSampleTrainingMetadata(MetadataBase):
@@ -19,9 +18,10 @@ class TriggerSampleTrainingMetadata(MetadataBase):
     trigger_training_metadata_id = Column(
         Integer, ForeignKey("trigger_training_metadata.trigger_training_metadata_id"), nullable=False
     )
-    trigger_training_metadata = relationship(
-        "TriggerTrainingMetadata", backref=backref("trigger_training_metadata", lazy=True)
-    )
     sample_id = Column("sample_id", String(120), nullable=False)
     seen_by_trigger = Column("seen_by_trigger", Boolean, default=False)
     part_of_training_set = Column("part_of_training_set", Boolean, default=False)
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return f"<TriggerSampleTrainingMetadata {self.trigger_training_metadata_id}:{self.sample_id}>"

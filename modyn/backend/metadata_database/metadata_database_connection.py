@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
+from modyn.backend.metadata_database.models.pipeline import Pipeline
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 
 logger = logging.getLogger(__name__)
@@ -38,3 +39,18 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         schema constructs (such as Column objects, ForeignKey objects, and so on).
         """
         MetadataBase.metadata.create_all(self.engine)
+
+    def register_pipeline(self, num_workers: int) -> int:
+        """Register a new pipeline in the database.
+
+        Args:
+            num_workers (int): Number of workers in the pipeline.
+
+        Returns:
+            int: Id of the newly created pipeline.
+        """
+        pipeline = Pipeline(num_workers=num_workers)
+        self.session.add(pipeline)
+        self.session.commit()
+        pipeline_id = pipeline.pipeline_id
+        return pipeline_id
