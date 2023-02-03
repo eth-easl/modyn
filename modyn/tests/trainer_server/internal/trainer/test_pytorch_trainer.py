@@ -115,8 +115,7 @@ def get_training_info(
                 load_optimizer_state=load_optimizer_state,
                 pretrained_model=pretrained_model,
             )
-            training_info = TrainingInfo(request, storage_address, selector_address)
-            training_info.set_final_checkpoint_path(final_tmpdirname)
+            training_info = TrainingInfo(request, storage_address, selector_address, final_tmpdirname)
             return training_info
 
 

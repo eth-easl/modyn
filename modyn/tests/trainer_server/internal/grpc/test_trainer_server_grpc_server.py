@@ -1,4 +1,6 @@
 # pylint: disable=unused-argument
+import os
+import tempfile
 from unittest.mock import patch
 
 from modyn.trainer_server.internal.grpc.trainer_server_grpc_server import GRPCServer
@@ -25,3 +27,15 @@ def test_init():
 def test_enter(mock_add_trainer_server_servicer_to_server):
     with GRPCServer(get_modyn_config()) as grpc_server:
         assert grpc_server is not None
+
+
+@patch(
+    "modyn.trainer_server.internal.grpc.trainer_server_grpc_server.add_TrainerServerServicer_to_server",
+    return_value=None,
+)
+def test_cleanup_at_exit(mock_add_trainer_server_servicer_to_server):
+    with GRPCServer(get_modyn_config()) as _:
+        with open(f"{tempfile.gettempdir()}/training_0", "w", encoding="utf-8") as _:
+            assert os.path.isfile(f"{tempfile.gettempdir()}/training_0")
+
+    assert not os.path.isfile(f"{tempfile.gettempdir()}/training_0")

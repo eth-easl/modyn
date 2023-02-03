@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 class TrainingInfo:
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, request: StartTrainingRequest, storage_address: str, selector_address: str) -> None:
+    def __init__(
+        self, request: StartTrainingRequest, storage_address: str, selector_address: str, final_checkpoint_path: str
+    ) -> None:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id
 
@@ -27,11 +29,6 @@ class TrainingInfo:
 
         self.model_id = request.model_id
         model_module = dynamic_module_import("modyn.models")
-        if not hasattr(model_module, self.model_id):
-            logger.error(f"Model {self.model_id} not available!")
-            self.model_handler = None
-            return
-
         self.model_handler = getattr(model_module, self.model_id)
 
         self.used_pretrained_model = request.use_pretrained_model
@@ -48,7 +45,4 @@ class TrainingInfo:
         self.storage_address = storage_address
         self.selector_address = selector_address
 
-        self.final_checkpoint_path: str = ""
-
-    def set_final_checkpoint_path(self, final_checkpoint_path: str) -> None:
         self.final_checkpoint_path = final_checkpoint_path

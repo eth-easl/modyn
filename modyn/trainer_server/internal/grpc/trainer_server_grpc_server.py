@@ -1,6 +1,9 @@
 """GRPC server context manager."""
 
+import glob
 import logging
+import os
+import tempfile
 from concurrent import futures
 
 import grpc
@@ -44,4 +47,8 @@ class GRPCServer:
             exc_val (Exception): exception value
             exc_tb (Exception): exception traceback
         """
+        # remove any final checkpoints created throughout training
+        for file in filter(os.path.isfile, glob.glob(tempfile.gettempdir() + "/training_*")):
+            os.remove(file)
+
         self.server.stop(0)

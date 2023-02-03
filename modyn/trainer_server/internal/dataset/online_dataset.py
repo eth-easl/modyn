@@ -55,10 +55,25 @@ class OnlineDataset(IterableDataset):
         samples_response = self._selectorstub.get_sample_keys_and_weights(req)
         return samples_response.training_samples_subset  # TODO(#138): take into account sample weights when needed
 
-    def _get_data_from_storage(self, keys: list[str]) -> tuple[list[str], list[Any]]:
-        req = GetRequest(dataset_id=self._dataset_id, keys=keys)
-        response = self._storagestub.Get(req)
-        return response.samples, response.labels  # ignore 'keys' entry for now
+    def _get_data_from_storage(self, selector_keys: list[str]) -> tuple[list[bytes], list[int]]:
+        req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
+
+        data_from_storage: dict[str, tuple[bytes, int]] = {}
+        for _, response in enumerate(self._storagestub.Get(req)):
+            for key, sample, label in zip(response.keys, response.samples, response.labels):
+                data_from_storage[key] = (sample, label)
+
+        sample_list = []
+        label_list = []
+
+        for key in selector_keys:
+            if key not in data_from_storage:
+                raise ValueError(f"Key {key} provided by the Selector, but not returned from Storage")
+
+            sample_list.append(data_from_storage[key][0])
+            label_list.append(data_from_storage[key][1])
+
+        return sample_list, label_list
 
     def _deserialize_torchvision_transforms(self) -> None:
         self._transform_list = [self._bytes_parser_function]

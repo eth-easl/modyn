@@ -103,8 +103,7 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
 )
 def get_training_info(temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None):
     request = get_start_training_request(temp)
-    training_info = TrainingInfo(request, storage_address, selector_address)
-    training_info.set_final_checkpoint_path(final_temp)
+    training_info = TrainingInfo(request, storage_address, selector_address, final_temp)
     return training_info
 
 
@@ -128,7 +127,7 @@ def test_trainer_not_available(test_is_alive):
     assert not response.available
 
 
-@patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=False)
+@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=False)
 def test_start_training_invalid(test_hasattr):
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     response = trainer_server.start_training(get_start_training_request(valid_model=False), None)
@@ -137,7 +136,7 @@ def test_start_training_invalid(test_hasattr):
     assert trainer_server._next_training_id == 0
 
 
-@patch("modyn.trainer_server.internal.utils.training_info.hasattr", return_value=True)
+@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
 @patch(
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,

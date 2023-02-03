@@ -30,6 +30,7 @@ from modyn.trainer_server.internal.trainer.pytorch_trainer import train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
+from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +68,8 @@ class TrainerServerGRPCServicer:
         request: StartTrainingRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
-        training_info = TrainingInfo(request, self._storage_address, self._selector_address)
-        if training_info.model_handler is None:
+        if not hasattr(dynamic_module_import("modyn.models"), request.model_id):
+            logger.error(f"Model {request.model_id} not available!")
             return StartTrainingResponse(training_started=False)
 
         with self._lock:
@@ -76,8 +77,7 @@ class TrainerServerGRPCServicer:
             self._next_training_id += 1
 
         final_checkpoint_path = f"{tempfile.gettempdir()}/training_{training_id}"
-        training_info.set_final_checkpoint_path(final_checkpoint_path)
-
+        training_info = TrainingInfo(request, self._storage_address, self._selector_address, final_checkpoint_path)
         self._training_dict[training_id] = training_info
 
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
