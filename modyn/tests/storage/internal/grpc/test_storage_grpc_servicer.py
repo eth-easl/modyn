@@ -195,7 +195,8 @@ def test_get_new_data_since():
     assert response is not None
     assert response.keys == ["test", "test3", "test5"]
     assert response.timestamps == [NOW, NOW, NOW - 1]
-    assert response.labels == [1,3,5]
+    assert response.labels == [1, 3, 5]
+
 
 def test_get_new_data_since_invalid_dataset():
     server = StorageGRPCServicer(get_minimal_modyn_config())
@@ -208,6 +209,7 @@ def test_get_new_data_since_invalid_dataset():
     assert response.timestamps == []
     assert response.labels == []
 
+
 def test_get_new_data_since_no_new_data():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
@@ -219,6 +221,7 @@ def test_get_new_data_since_no_new_data():
     assert response.timestamps == []
     assert response.labels == []
 
+
 def test_get_data_in_interval():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
@@ -228,7 +231,7 @@ def test_get_data_in_interval():
     assert response is not None
     assert response.keys == ["test", "test3", "test5"]
     assert response.timestamps == [NOW, NOW, NOW - 1]
-    assert response.labels == [1,3,5]
+    assert response.labels == [1, 3, 5]
 
     request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1)
 
@@ -257,6 +260,7 @@ def test_get_data_in_interval_invalid_dataset():
     assert response.keys == []
     assert response.timestamps == []
     assert response.labels == []
+
 
 def test_check_availability():
     server = StorageGRPCServicer(get_minimal_modyn_config())
