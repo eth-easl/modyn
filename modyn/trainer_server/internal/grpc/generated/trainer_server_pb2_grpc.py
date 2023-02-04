@@ -13,11 +13,6 @@ class TrainerServerStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.register = channel.unary_unary(
-                '/trainer.TrainerServer/register',
-                request_serializer=trainer__server__pb2.RegisterTrainServerRequest.SerializeToString,
-                response_deserializer=trainer__server__pb2.RegisterTrainServerResponse.FromString,
-                )
         self.trainer_available = channel.unary_unary(
                 '/trainer.TrainerServer/trainer_available',
                 request_serializer=trainer__server__pb2.TrainerAvailableRequest.SerializeToString,
@@ -33,16 +28,20 @@ class TrainerServerStub(object):
                 request_serializer=trainer__server__pb2.TrainingStatusRequest.SerializeToString,
                 response_deserializer=trainer__server__pb2.TrainingStatusResponse.FromString,
                 )
+        self.get_final_model = channel.unary_unary(
+                '/trainer.TrainerServer/get_final_model',
+                request_serializer=trainer__server__pb2.GetFinalModelRequest.SerializeToString,
+                response_deserializer=trainer__server__pb2.GetFinalModelResponse.FromString,
+                )
+        self.get_latest_model = channel.unary_unary(
+                '/trainer.TrainerServer/get_latest_model',
+                request_serializer=trainer__server__pb2.GetLatestModelRequest.SerializeToString,
+                response_deserializer=trainer__server__pb2.GetLatestModelResponse.FromString,
+                )
 
 
 class TrainerServerServicer(object):
     """Missing associated documentation comment in .proto file."""
-
-    def register(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
 
     def trainer_available(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -62,14 +61,21 @@ class TrainerServerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_final_model(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def get_latest_model(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_TrainerServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'register': grpc.unary_unary_rpc_method_handler(
-                    servicer.register,
-                    request_deserializer=trainer__server__pb2.RegisterTrainServerRequest.FromString,
-                    response_serializer=trainer__server__pb2.RegisterTrainServerResponse.SerializeToString,
-            ),
             'trainer_available': grpc.unary_unary_rpc_method_handler(
                     servicer.trainer_available,
                     request_deserializer=trainer__server__pb2.TrainerAvailableRequest.FromString,
@@ -85,6 +91,16 @@ def add_TrainerServerServicer_to_server(servicer, server):
                     request_deserializer=trainer__server__pb2.TrainingStatusRequest.FromString,
                     response_serializer=trainer__server__pb2.TrainingStatusResponse.SerializeToString,
             ),
+            'get_final_model': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_final_model,
+                    request_deserializer=trainer__server__pb2.GetFinalModelRequest.FromString,
+                    response_serializer=trainer__server__pb2.GetFinalModelResponse.SerializeToString,
+            ),
+            'get_latest_model': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_latest_model,
+                    request_deserializer=trainer__server__pb2.GetLatestModelRequest.FromString,
+                    response_serializer=trainer__server__pb2.GetLatestModelResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'trainer.TrainerServer', rpc_method_handlers)
@@ -94,23 +110,6 @@ def add_TrainerServerServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class TrainerServer(object):
     """Missing associated documentation comment in .proto file."""
-
-    @staticmethod
-    def register(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/register',
-            trainer__server__pb2.RegisterTrainServerRequest.SerializeToString,
-            trainer__server__pb2.RegisterTrainServerResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def trainer_available(request,
@@ -160,5 +159,39 @@ class TrainerServer(object):
         return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/get_training_status',
             trainer__server__pb2.TrainingStatusRequest.SerializeToString,
             trainer__server__pb2.TrainingStatusResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_final_model(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/get_final_model',
+            trainer__server__pb2.GetFinalModelRequest.SerializeToString,
+            trainer__server__pb2.GetFinalModelResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_latest_model(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/trainer.TrainerServer/get_latest_model',
+            trainer__server__pb2.GetLatestModelRequest.SerializeToString,
+            trainer__server__pb2.GetLatestModelResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
