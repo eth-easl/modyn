@@ -1,6 +1,9 @@
 """GRPC server context manager."""
 
 import logging
+import pathlib
+import shutil
+import tempfile
 from concurrent import futures
 
 import grpc
@@ -17,7 +20,7 @@ class GRPCServer:
         """Initialize the GRPC server.
 
         Args:
-            modyn_config (dict): Configuration of the trainer server module.
+            config (dict): Modyn configuration.
         """
         self.config = config
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -29,7 +32,7 @@ class GRPCServer:
             grpc.Server: GRPC server
         """
 
-        add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(), self.server)
+        add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(self.config), self.server)
         logger.info(f"Starting trainer server. Listening on port {self.config['trainer_server']['port']}")
         self.server.add_insecure_port("[::]:" + self.config["trainer_server"]["port"])
         logger.info("start serving!")
@@ -44,4 +47,6 @@ class GRPCServer:
             exc_val (Exception): exception value
             exc_tb (Exception): exception traceback
         """
+
+        shutil.rmtree(pathlib.Path(tempfile.gettempdir()) / "modyn")
         self.server.stop(0)

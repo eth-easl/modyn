@@ -107,6 +107,11 @@ properties:
               If we do an initial pass, we define whether we reference a certain percentage of all data (= amount) or all data in an interval (= start_timestamp, end_timestamp)
         required:
           - activated
+      bytes_parser_function:
+        type: string
+        description: |
+          Function used to convert bytes received from the Storage, to a format useful for further transformations (e.g. Tensors).
+          This function is called before any other transformations are performed on the data.
     required:
       - gpus
       - dataloader_workers
@@ -115,6 +120,7 @@ properties:
       - strategy
       - initial_model
       - initial_pass
+      - bytes_parser_function
   data:
     type: object
     description: |
