@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -62,11 +62,11 @@ def test_inform_data():
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(
-            SelectorStateMetadata.sample_id,
+            SelectorStateMetadata.sample_key,
             SelectorStateMetadata.timestamp,
             SelectorStateMetadata.label,
             SelectorStateMetadata.pipeline_id,
-            SelectorStateMetadata.seen,
+            SelectorStateMetadata.used,
         ).all()
 
         assert len(data) == 3
@@ -293,7 +293,7 @@ def test__mark_used():
     strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        data = database.session.query(SelectorStateMetadata.seen).all()
+        data = database.session.query(SelectorStateMetadata.used).all()
 
         assert len(data) == 3
         useds = [used[0] for used in data]
@@ -302,8 +302,8 @@ def test__mark_used():
     strat._mark_used(["a", "c"])
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = (
-            database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
-            .filter(SelectorStateMetadata.seen == True)  # noqa: E712
+            database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
+            .filter(SelectorStateMetadata.used == True)  # noqa: E712
             .all()
         )
 
@@ -314,8 +314,8 @@ def test__mark_used():
         assert set(["a", "c"]) == set(keys)
 
         data = (
-            database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
-            .filter(SelectorStateMetadata.seen == False)  # noqa: E712
+            database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
+            .filter(SelectorStateMetadata.used == False)  # noqa: E712
             .all()
         )
 

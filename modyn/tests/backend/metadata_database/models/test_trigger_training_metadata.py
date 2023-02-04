@@ -1,6 +1,6 @@
 # pylint: disable=redefined-outer-name
 import pytest
-from modyn.backend.metadata_database.models.trigger_training_metadata import TriggerTrainingMetadata
+from modyn.backend.metadata_database.models import TriggerTrainingMetadata
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

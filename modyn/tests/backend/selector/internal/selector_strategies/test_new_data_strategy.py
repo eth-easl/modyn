@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.new_data_strategy import NewDataStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -209,11 +209,11 @@ def test_e2e_reset_limit_lastx_large():
 def test_inform_data():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(
-            SelectorStateMetadata.sample_id,
+            SelectorStateMetadata.sample_key,
             SelectorStateMetadata.timestamp,
             SelectorStateMetadata.label,
             SelectorStateMetadata.pipeline_id,
-            SelectorStateMetadata.seen,
+            SelectorStateMetadata.used,
         ).all()
 
         assert len(data) == 0
@@ -223,11 +223,11 @@ def test_inform_data():
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(
-            SelectorStateMetadata.sample_id,
+            SelectorStateMetadata.sample_key,
             SelectorStateMetadata.timestamp,
             SelectorStateMetadata.label,
             SelectorStateMetadata.pipeline_id,
-            SelectorStateMetadata.seen,
+            SelectorStateMetadata.used,
         ).all()
 
         assert len(data) == 3

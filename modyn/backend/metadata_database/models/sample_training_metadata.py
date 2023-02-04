@@ -20,10 +20,10 @@ class SampleTrainingMetadata(MetadataBase):
     sample_training_metadata_id = Column("sample_training_metadata_id", Integer, primary_key=True)
     pipeline_id = Column(Integer, ForeignKey("pipelines.pipeline_id"), nullable=False)
     trigger_id = Column("trigger_id", Integer, nullable=False)
-    sample_id = Column("sample_id", String(120), nullable=False)
+    sample_key = Column("sample_key", String(120), nullable=False)
     loss = Column("loss", Double)
     gradient = Column("gradient", Double)
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f"<SampleTrainingMetadata {self.pipeline_id}:{self.trigger_id}:{self.sample_id}>"
+        return f"<SampleTrainingMetadata {self.pipeline_id}:{self.trigger_id}:{self.sample_key}>"

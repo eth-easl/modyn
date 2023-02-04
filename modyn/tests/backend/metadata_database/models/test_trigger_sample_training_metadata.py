@@ -1,6 +1,6 @@
 # pylint: disable=redefined-outer-name
 import pytest
-from modyn.backend.metadata_database.models.trigger_sample_training_metadata import TriggerSampleTrainingMetadata
+from modyn.backend.metadata_database.models import TriggerSampleTrainingMetadata
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -21,7 +21,7 @@ def session():
 def test_add_trigger_sample_training_metadata(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_by_trigger=True,
         part_of_training_set=True,
     )
@@ -45,8 +45,8 @@ def test_add_trigger_sample_training_metadata(session):
         session.query(TriggerSampleTrainingMetadata)
         .filter(TriggerSampleTrainingMetadata.trigger_sample_training_metadata_id == 1)
         .first()
-        .sample_id
-        == "sample_id"
+        .sample_key
+        == "sample_key"
     )
     assert (
         session.query(TriggerSampleTrainingMetadata)
@@ -67,7 +67,7 @@ def test_add_trigger_sample_training_metadata(session):
 def test_update_trigger_sample_training_metadata(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_by_trigger=True,
         part_of_training_set=True,
     )
@@ -95,8 +95,8 @@ def test_update_trigger_sample_training_metadata(session):
         session.query(TriggerSampleTrainingMetadata)
         .filter(TriggerSampleTrainingMetadata.trigger_sample_training_metadata_id == 1)
         .first()
-        .sample_id
-        == "sample_id"
+        .sample_key
+        == "sample_key"
     )
     assert (
         session.query(TriggerSampleTrainingMetadata)
@@ -117,7 +117,7 @@ def test_update_trigger_sample_training_metadata(session):
 def test_delete_trigger_sample_training_metadata(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_by_trigger=True,
         part_of_training_set=True,
     )
@@ -138,11 +138,11 @@ def test_delete_trigger_sample_training_metadata(session):
 def test_repr(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_by_trigger=True,
         part_of_training_set=True,
     )
     session.add(trigger_sample_training_metadata)
     session.commit()
 
-    assert repr(trigger_sample_training_metadata) == "<TriggerSampleTrainingMetadata 1:sample_id>"
+    assert repr(trigger_sample_training_metadata) == "<TriggerSampleTrainingMetadata 1:sample_key>"

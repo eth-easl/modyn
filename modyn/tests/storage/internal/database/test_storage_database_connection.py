@@ -1,7 +1,5 @@
 import pytest
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.database.models.file import File
-from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 
 

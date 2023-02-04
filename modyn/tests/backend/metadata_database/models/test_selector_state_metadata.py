@@ -1,6 +1,6 @@
 # pylint: disable=redefined-outer-name
 import pytest
-from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -21,10 +21,9 @@ def session():
 def test_add_selector_state_metadata(session):
     selector_state_metadata = SelectorStateMetadata(
         pipeline_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_in_trigger_id=1,
-        seen=False,
-        score=1.0,
+        used=False,
         timestamp=10000,
         label=10,
     )
@@ -46,8 +45,8 @@ def test_add_selector_state_metadata(session):
         session.query(SelectorStateMetadata)
         .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
         .first()
-        .sample_id
-        == "sample_id"
+        .sample_key
+        == "sample_key"
     )
     assert (
         session.query(SelectorStateMetadata)
@@ -57,12 +56,8 @@ def test_add_selector_state_metadata(session):
         == 1
     )
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().seen
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().used
         is False
-    )
-    assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().score
-        == 1.0
     )
     assert (
         session.query(SelectorStateMetadata)
@@ -80,10 +75,9 @@ def test_add_selector_state_metadata(session):
 def test_update_selector_state_metadata(session):
     selector_state_metadata = SelectorStateMetadata(
         pipeline_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_in_trigger_id=1,
-        seen=False,
-        score=1.0,
+        used=False,
         timestamp=10000,
         label=10,
     )
@@ -110,8 +104,8 @@ def test_update_selector_state_metadata(session):
         session.query(SelectorStateMetadata)
         .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
         .first()
-        .sample_id
-        == "sample_id"
+        .sample_key
+        == "sample_key"
     )
     assert (
         session.query(SelectorStateMetadata)
@@ -121,7 +115,7 @@ def test_update_selector_state_metadata(session):
         == 1
     )
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().seen
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().used
         is False
     )
     assert (
@@ -144,10 +138,9 @@ def test_update_selector_state_metadata(session):
 def test_delete_selector_state_metadata(session):
     selector_state_metadata = SelectorStateMetadata(
         pipeline_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_in_trigger_id=1,
-        seen=False,
-        score=1.0,
+        used=False,
         timestamp=10000,
         label=10,
     )
@@ -166,14 +159,13 @@ def test_delete_selector_state_metadata(session):
 def test_repr(session):
     selector_state_metadata = SelectorStateMetadata(
         pipeline_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         seen_in_trigger_id=1,
-        seen=False,
-        score=1.0,
+        used=False,
         timestamp=10000,
         label=10,
     )
     session.add(selector_state_metadata)
     session.commit()
 
-    assert repr(selector_state_metadata) == "<SelectorStateMetadata 1:sample_id>"
+    assert repr(selector_state_metadata) == "<SelectorStateMetadata 1:sample_key>"

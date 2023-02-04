@@ -5,7 +5,7 @@ import random
 from math import isclose
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from sqlalchemy import asc, exc, update
 
@@ -18,7 +18,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
     We can set a ratio that defines how much data in the training set per trigger should be from previously unused data (in all previous triggers).
 
     The first trigger will always use only fresh data (up to the limit, if there is one).
-    The subsequent triggers will sample a dataset that reflects the ratio of used/unused data (if data came during but was not used in a previous trigger, we still handle it as unseen).
+    The subsequent triggers will sample a dataset that reflects the ratio of used/unused data (if data came during but was not used in a previous trigger, we still handle it as unused).
     We have to respect both the ratio and the limit (if there is one) and build up the dataset on trigger accordingly.
 
     It cannot be used with reset, because we need to keep state over multiple triggers.
@@ -140,16 +140,16 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.seen == True)
+                database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == True)
                 .all()
             )
 
         if len(data) > 0:
-            keys, seen = zip(*data)
-            assert all(seen), "Queried seen data, but got unseen data."
+            keys, used = zip(*data)
+            assert all(used), "Queried used data, but got unused data."
         else:
-            keys, seen = [], []
+            keys, used = [], []
 
         return list(keys)
 
@@ -161,17 +161,17 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(SelectorStateMetadata.sample_id, SelectorStateMetadata.seen)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.seen == False)
+                database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == False)
                 .order_by(asc(SelectorStateMetadata.timestamp))
                 .all()
             )
 
         if len(data) > 0:
-            keys, seen = zip(*data)
-            assert not any(seen), "Queried unseen data, but got seen data."
+            keys, used = zip(*data)
+            assert not any(used), "Queried unused data, but got used data."
         else:
-            keys, seen = [], []
+            keys, used = [], []
 
         return list(keys)
 
@@ -182,7 +182,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
             try:
-                stmt = update(SelectorStateMetadata).where(SelectorStateMetadata.sample_id.in_(keys)).values(seen=True)
+                stmt = update(SelectorStateMetadata).where(SelectorStateMetadata.sample_key.in_(keys)).values(used=True)
                 database.session.execute(stmt)
                 database.session.commit()
             except exc.SQLAlchemyError as exception:

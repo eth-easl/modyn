@@ -1,6 +1,6 @@
 # pylint: disable=redefined-outer-name
 import pytest
-from modyn.backend.metadata_database.models.sample_training_metadata import SampleTrainingMetadata
+from modyn.backend.metadata_database.models import SampleTrainingMetadata
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -22,7 +22,7 @@ def test_add_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
         pipeline_id=1,
         trigger_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         loss=1.0,
         gradient=1.0,
     )
@@ -51,8 +51,8 @@ def test_add_sample_training_metadata(session):
         session.query(SampleTrainingMetadata)
         .filter(SampleTrainingMetadata.sample_training_metadata_id == 1)
         .first()
-        .sample_id
-        == "sample_id"
+        .sample_key
+        == "sample_key"
     )
     assert (
         session.query(SampleTrainingMetadata)
@@ -74,7 +74,7 @@ def test_update_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
         pipeline_id=1,
         trigger_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         loss=1.0,
         gradient=1.0,
     )
@@ -107,8 +107,8 @@ def test_update_sample_training_metadata(session):
         session.query(SampleTrainingMetadata)
         .filter(SampleTrainingMetadata.sample_training_metadata_id == 1)
         .first()
-        .sample_id
-        == "sample_id"
+        .sample_key
+        == "sample_key"
     )
     assert (
         session.query(SampleTrainingMetadata)
@@ -130,7 +130,7 @@ def test_delete_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
         pipeline_id=1,
         trigger_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         loss=1.0,
         gradient=1.0,
     )
@@ -150,11 +150,11 @@ def test_repr(session):
     sample_training_metadata = SampleTrainingMetadata(
         pipeline_id=1,
         trigger_id=1,
-        sample_id="sample_id",
+        sample_key="sample_key",
         loss=1.0,
         gradient=1.0,
     )
     session.add(sample_training_metadata)
     session.commit()
 
-    assert repr(sample_training_metadata) == "<SampleTrainingMetadata 1:1:sample_id>"
+    assert repr(sample_training_metadata) == "<SampleTrainingMetadata 1:1:sample_key>"

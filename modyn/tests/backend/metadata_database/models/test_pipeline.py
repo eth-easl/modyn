@@ -1,6 +1,6 @@
 # pylint: disable=redefined-outer-name
 import pytest
-from modyn.backend.metadata_database.models.pipeline import Pipeline
+from modyn.backend.metadata_database.models import Pipeline
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

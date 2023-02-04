@@ -50,7 +50,7 @@ We differentiate between pipelines, triggers, and trainings.
 A pipeline is defined as the continously running model training process, i.e., what model we train on which dataset and how training is done (data selection and triggering).
 The supervisor registers the pipeline at the selector and gets a pipeline ID in return.
 
-When the supervisor informs the selector about a trigger, the Selector returns a trigger_id which defines the data that the GPU node should train on for the last interval of data that we have seen. 
+When the supervisor informs the selector about a trigger, the Selector returns a trigger_id which defines the data that the GPU node should train on for the last interval of data that we have used. 
 Imagine that we saw data points {a,b,c} in the interval [0,10] and data points {d,e,f} in inteval [11,20] and had a trigger after data point c and f.
 Then, a selector strategy could decide on trigger that the training after the first trigger is training on {a,c}. 
 This dataset {a,c} is uniquely identified by its trigger_id, e.g., 0.

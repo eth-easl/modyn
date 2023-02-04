@@ -4,7 +4,7 @@ import logging
 import random
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from sqlalchemy import asc
 
@@ -121,7 +121,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(SelectorStateMetadata.sample_id)
+                database.session.query(SelectorStateMetadata.sample_key)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id,
@@ -145,7 +145,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
-                database.session.query(SelectorStateMetadata.sample_id)
+                database.session.query(SelectorStateMetadata.sample_key)
                 .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
                 .order_by(asc(SelectorStateMetadata.timestamp))
                 .all()

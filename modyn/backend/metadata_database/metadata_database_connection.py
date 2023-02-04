@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
-from modyn.backend.metadata_database.models.pipeline import Pipeline
+from modyn.backend.metadata_database.models import Pipeline
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 
 logger = logging.getLogger(__name__)

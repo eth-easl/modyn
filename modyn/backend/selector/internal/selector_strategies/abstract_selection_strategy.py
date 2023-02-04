@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata
 
 
 class AbstractSelectionStrategy(ABC):
@@ -94,16 +94,15 @@ class AbstractSelectionStrategy(ABC):
         # Even if each sample is 64 byte and we see 2 million samples, it's just 128 MB of data in memory.
         # This also means that we have to clear this list on reset accordingly etc.
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            new_selector_state_metadata = []
-            for key, timestamp, label in zip(keys, timestamps, labels):
-                new_selector_state_metadata.append(
-                    SelectorStateMetadata(
-                        pipeline_id=self._pipeline_id,
-                        sample_id=key,
-                        timestamp=timestamp,
-                        label=label,
-                        seen_in_trigger_id=self._next_trigger_id,
-                    )
+            new_selector_state_metadata = [
+                SelectorStateMetadata(
+                    pipeline_id=self._pipeline_id,
+                    sample_key=key,
+                    timestamp=timestamp,
+                    label=label,
+                    seen_in_trigger_id=self._next_trigger_id,
                 )
+                for key, timestamp, label in zip(keys, timestamps, labels)
+            ]
             database.session.add_all(new_selector_state_metadata)
             database.session.commit()

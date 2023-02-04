@@ -2,7 +2,7 @@ from modyn.backend.supervisor.internal.trigger import Trigger
 
 
 class DataAmountTrigger(Trigger):
-    """Triggers when a certain number of data points have been seen."""
+    """Triggers when a certain number of data points have been used."""
 
     def __init__(self, trigger_config: dict):
         assert (

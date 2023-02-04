@@ -18,10 +18,10 @@ class TriggerSampleTrainingMetadata(MetadataBase):
     trigger_training_metadata_id = Column(
         Integer, ForeignKey("trigger_training_metadata.trigger_training_metadata_id"), nullable=False
     )
-    sample_id = Column("sample_id", String(120), nullable=False)
+    sample_key = Column("sample_key", String(120), nullable=False)
     seen_by_trigger = Column("seen_by_trigger", Boolean, default=False)
     part_of_training_set = Column("part_of_training_set", Boolean, default=False)
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f"<TriggerSampleTrainingMetadata {self.trigger_training_metadata_id}:{self.sample_id}>"
+        return f"<TriggerSampleTrainingMetadata {self.trigger_training_metadata_id}:{self.sample_key}>"
