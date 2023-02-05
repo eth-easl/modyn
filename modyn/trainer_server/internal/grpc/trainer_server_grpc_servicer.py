@@ -79,7 +79,9 @@ class TrainerServerGRPCServicer:
             self._next_training_id += 1
 
         final_checkpoint_path = self._modyn_base_dir / f"training_{training_id}"
-        training_info = TrainingInfo(request, training_id, self._storage_address, self._selector_address, final_checkpoint_path)
+        training_info = TrainingInfo(
+            request, training_id, self._storage_address, self._selector_address, final_checkpoint_path
+        )
         self._training_dict[training_id] = training_info
 
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
@@ -158,7 +160,6 @@ class TrainerServerGRPCServicer:
             return GetFinalModelResponse(valid_state=False)
 
         final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
-        print(final_checkpoint_path)
         if final_checkpoint_path.exists():
             final_state = torch.load(final_checkpoint_path)
             buffer = io.BytesIO()

@@ -3,6 +3,7 @@ from typing import Any
 import torch
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.base_callback import BaseCallback
+from modyn.trainer_server.internal.utils.metric_type import MetricType
 
 
 class LossCallback(BaseCallback):
@@ -14,21 +15,27 @@ class LossCallback(BaseCallback):
         self._average_train_loss = 0.0
         self._loss_criterion = loss_criterion_func(**loss_criterion_args, reduction="none")
 
-    # pylint:disable=arguments-differ
     def on_batch_before_update(
         self,
+        model: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        batch_number: int,
         sample_ids: list[str],
         data: torch.Tensor,
         target: torch.Tensor,
         output: torch.Tensor,
         reduced_loss: torch.Tensor,
     ) -> None:
-        super().on_batch_before_update()
+        super().on_batch_before_update(model, optimizer, batch_number, sample_ids, data, target, output, reduced_loss)
         loss_per_sample = self._loss_criterion(output, target)
         self._average_train_loss += reduced_loss.item() * data.shape[0]
-        self._metadata_collector.add_per_sample_metadata_for_batch("loss", list(sample_ids), loss_per_sample.tolist())
+        self._metadata_collector.add_per_sample_metadata_for_batch(
+            MetricType.LOSS, list(sample_ids), loss_per_sample.tolist()
+        )
 
-    def on_train_end(self, total_num_samples: int) -> None:  # pylint:disable=arguments-differ
-        super().on_train_end()
-        self._average_train_loss /= total_num_samples
-        self._metadata_collector.add_per_trigger_metadata("loss", self._average_train_loss)
+    def on_train_end(
+        self, model: torch.nn.Module, optimizer: torch.optim.Optimizer, total_samples: int, total_batches: int
+    ) -> None:
+        super().on_train_end(model, optimizer, total_samples, total_batches)
+        self._average_train_loss /= total_samples
+        self._metadata_collector.add_per_trigger_metadata(MetricType.LOSS, self._average_train_loss)

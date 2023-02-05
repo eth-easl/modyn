@@ -103,7 +103,9 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,
 )
-def get_training_info(training_id, temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None):
+def get_training_info(
+    training_id, temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None
+):
     request = get_start_training_request(temp)
     training_info = TrainingInfo(request, training_id, storage_address, selector_address, pathlib.Path(final_temp))
     return training_info
@@ -349,7 +351,9 @@ def test_get_latest_checkpoint_found():
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     with tempfile.TemporaryDirectory() as temp:
         with tempfile.TemporaryDirectory() as final_temp:
-            training_info = get_training_info(1, temp, final_temp, trainer_server._storage_address, trainer_server._selector_address)
+            training_info = get_training_info(
+                1, temp, final_temp, trainer_server._storage_address, trainer_server._selector_address
+            )
             trainer_server._training_dict[1] = training_info
 
             dict_to_save = {"state": {"weight": 10}, "num_batches": 10, "num_samples": 100}
@@ -405,7 +409,9 @@ def test_get_final_model_not_found(test_is_alive):
     trainer_server = TrainerServerGRPCServicer(modyn_config)
     with tempfile.TemporaryDirectory() as temp:
         with tempfile.TemporaryDirectory() as final_temp:
-            trainer_server._training_dict[1] = get_training_info(1, temp, final_temp, trainer_server._storage_address, trainer_server._selector_address)
+            trainer_server._training_dict[1] = get_training_info(
+                1, temp, final_temp, trainer_server._storage_address, trainer_server._selector_address
+            )
             trainer_server._training_process_dict[1] = get_training_process_info()
             response = trainer_server.get_final_model(get_final_model_request, None)
             assert not response.valid_state
@@ -423,7 +429,6 @@ def test_get_final_model_found(test_is_alive):
             dict_to_save = {"state": {"weight": 10}}
 
             checkpoint_file = final_temp + "/model_final.modyn"
-            print(checkpoint_file)
             torch.save(dict_to_save, checkpoint_file)
 
             trainer_server._training_dict[1] = training_info

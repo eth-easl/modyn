@@ -24,6 +24,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     PythonString,
     StartTrainingRequest,
 )
+from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.base_callback import BaseCallback
 from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer, train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
@@ -118,7 +119,9 @@ def get_training_info(
                 load_optimizer_state=load_optimizer_state,
                 pretrained_model=pretrained_model,
             )
-            training_info = TrainingInfo(request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname))
+            training_info = TrainingInfo(
+                request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname)
+            )
             return training_info
 
 
@@ -315,6 +318,9 @@ def test_train_invalid_query_message():
                 raise TimeoutError("Did not reach desired queue state within timelimit.")
 
 
+# pylint: disable=too-many-locals
+
+
 @patch(
     "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
     mock_get_dataloaders,
@@ -324,8 +330,16 @@ def test_train_invalid_query_message():
 @patch.object(BaseCallback, "on_batch_begin", return_value=None)
 @patch.object(BaseCallback, "on_batch_end", return_value=None)
 @patch.object(BaseCallback, "on_batch_before_update", return_value=None)
+@patch.object(MetadataCollector, "send_metadata", return_value=None)
+@patch.object(MetadataCollector, "cleanup", return_value=None)
 def test_train(
-    test_on_batch_before_update, test_on_batch_end, test_on_batch_begin, test_on_train_end, test_on_train_begin
+    test_cleanup,
+    test_send_metadata,
+    test_on_batch_before_update,
+    test_on_batch_end,
+    test_on_batch_begin,
+    test_on_train_end,
+    test_on_train_begin,
 ):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
@@ -356,6 +370,8 @@ def test_train(
         assert test_on_batch_begin.call_count == len(trainer._callbacks) * 100
         assert test_on_batch_end.call_count == len(trainer._callbacks) * 100
         assert test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
+        assert test_send_metadata.call_count == len(trainer._callbacks)
+        test_cleanup.assert_called_once()
 
         if not platform.system() == "Darwin":
             assert status_queue.qsize() == 1

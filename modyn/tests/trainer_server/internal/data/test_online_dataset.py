@@ -242,6 +242,6 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
         assert len(batch) == 3
-        assert batch[0] == (str(4*i), str(4*i+1), str(4*i+2), str(4*i+3))
+        assert batch[0] == (str(4 * i), str(4 * i + 1), str(4 * i + 2), str(4 * i + 3))
         assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
