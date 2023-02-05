@@ -11,7 +11,7 @@ class FileWrapperType(Enum):
     """
 
     SingleSampleFileWrapper = "single_sample_file_wrapper"  # pylint: disable=invalid-name
-    BinaryFileWrapper = "binary_file_wrapper" # pylint: disable=invalid-name
+    BinaryFileWrapper = "binary_file_wrapper"  # pylint: disable=invalid-name
 
 
 class InvalidFileWrapperTypeException(Exception):
