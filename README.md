@@ -63,7 +63,14 @@ Second, you can use a Docker container. We provide a Modyn base container where 
 ### Docker-Compose Setup
 We use docker-compose to manage the system setup.
 The `docker-compose.yml` file describes our setup. 
-Use `docker compose up --build` to start all containers and `docker compose up --build --abort-on-container-exit --exit-code-from tests` to run the integration tests.
+Use `docker compose up --build` to start all containers and `docker compose up --build --abort-on-container-exit --exit-code-from tests` to run the integration tests once and exit.
 The `tests` service runs integration tests, if started (e.g., in the Github Workflow).
 On macOS, you might be required to set the `DOCKER_BUILDKIT` environment variable to 0, if you run into problems during the build process.
 In case you encounter issues when running integration tests, you can try deleting the local postgres data folders.
+If you make changes to modyn, run `docker-compose down && docker-compise up --build` to rebuild the containers.
+
+### tmuxp Setup
+For local deployment, you can use tmuxp, which enables to load a tmux session from a file.
+After running `docker-compose up`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
+You will have access to a supervisor container in which you can submit pipelines, to panes for administrating the databases, and to all gRPC components.
+To end the session, run CTRL+B (or your tmux modifier), and enter `:kill-session`.
