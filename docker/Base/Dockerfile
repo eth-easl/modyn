@@ -14,6 +14,9 @@ RUN apt-get update -q \
     wget \
     nano \
     vim \
+    htop \
+    procps \
+    libjpeg-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
@@ -26,11 +29,7 @@ ENV CONDA_DIR /opt/conda
 RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=x86_64; fi \
     && wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${ARCHITECTURE}.sh" -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda
-
-# Put conda in path so we can use conda activate
 ENV PATH=$CONDA_DIR/bin:$PATH
-
-# Update conda installation
 RUN conda update -n base -c defaults conda && conda update --all && conda init bash
 
 # Mount modyn directory to container, make it working directory

@@ -10,14 +10,17 @@ windows:
     layout: tiled
     panes:
       - docker logs $(docker-compose ps -q storage) && docker attach $(docker-compose ps -q storage)
+      - docker exec -it $(docker-compose ps -q storage) /bin/bash
   - window_name: selector
     layout: tiled
     panes:
       - docker logs $(docker-compose ps -q selector) && docker attach $(docker-compose ps -q selector)
+      - docker exec -it $(docker-compose ps -q selector) /bin/bash
   - window_name: trainer_server
     layout: tiled
     panes:
       - docker logs $(docker-compose ps -q trainer_server) && docker attach $(docker-compose ps -q trainer_server)
+      - docker exec -it $(docker-compose ps -q trainer_server) /bin/bash
   - window_name: storage-db
     layout: tiled
     panes:
