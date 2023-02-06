@@ -16,6 +16,10 @@ RUN apt-get update -q \
     vim \
   && rm -rf /var/lib/apt/lists/*
 
+# Creates a non-root user with an explicit UID and adds permission to access the /app folder
+# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
+RUN adduser -u 5678 --disabled-password --gecos "" appuser
+ENV PATH="${PATH}:/home/appuser/.local/bin"
 
 # Install miniconda
 ENV CONDA_DIR /opt/conda
@@ -26,21 +30,20 @@ RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; 
 # Put conda in path so we can use conda activate
 ENV PATH=$CONDA_DIR/bin:$PATH
 
+# Update conda installation
+RUN conda update -n base -c defaults conda && conda update --all && conda init bash
+
 # Mount modyn directory to container, make it working directory
 ADD . /src
 WORKDIR /src
+RUN chown -R appuser /src
 
-# Create modyn environment
-RUN conda update -n base -c defaults conda && conda update --all && conda env create -f ./environment.yml && conda init bash
+# Create modyn environment (delete old if exists)
+RUN conda env remove -n modyn && conda env create -f ./environment.yml
 ENV CONDA_DEFAULT_ENV modyn
 
-# Creates a non-root user with an explicit UID and adds permission to access the /app folder
-# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /src
-USER appuser
-ENV PATH="${PATH}:/home/appuser/.local/bin"
-
 # Initialize again for user shell
+USER appuser
 RUN /bin/bash -c "conda init"
 RUN echo "conda activate modyn" >> /home/appuser/.bashrc
 
