@@ -198,15 +198,15 @@ class GRPCHandler:
                 pretrained_model = file.read()
         else:
             use_pretrained_model = False
-            pretrained_model = None
+            pretrained_model = b""
 
-        if "config" in pipeline_config["optimizer"]:
-            optimizer_config = json.dumps(pipeline_config["optimizer"]["config"])
+        if "config" in pipeline_config["training"]["optimizer"]:
+            optimizer_config = json.dumps(pipeline_config["training"]["optimizer"]["config"])
         else:
             optimizer_config = "{}"
 
-        if "config" in pipeline_config["optimization_criterion"]:
-            criterion_config = json.dumps(pipeline_config["optimization_criterion"]["config"])
+        if "config" in pipeline_config["training"]["optimization_criterion"]:
+            criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"]["config"])
         else:
             criterion_config = "{}"
 
@@ -215,29 +215,32 @@ class GRPCHandler:
         else:
             transform_list = []
 
-        if pipeline_config["checkpointing"]["activated"]:
-            if "interval" not in pipeline_config["checkpointing"] or "path" not in pipeline_config["checkpointing"]:
+        if pipeline_config["training"]["checkpointing"]["activated"]:
+            if (
+                "interval" not in pipeline_config["training"]["checkpointing"]
+                or "path" not in pipeline_config["training"]["checkpointing"]
+            ):
                 raise ValueError("Checkpointing is enabled, but interval or path not given.")
 
             checkpoint_info = CheckpointInfo(
-                checkpoint_interval=pipeline_config["checkpointing"]["interval"],
-                checkpoint_path=pipeline_config["checkpointing"]["path"],
+                checkpoint_interval=pipeline_config["training"]["checkpointing"]["interval"],
+                checkpoint_path=pipeline_config["training"]["checkpointing"]["path"],
             )
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
         req = StartTrainingRequest(
             pipeline_id=pipeline_id,
-            training_id=trigger_id,
+            trigger_id=trigger_id,
             device=pipeline_config["training"]["device"],
             model_id=pipeline_config["model"]["id"],
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
             pretrained_model=pretrained_model,
             batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizer=pipeline_config["optimizer"]["name"],
+            torch_optimizer=pipeline_config["training"]["optimizer"]["name"],
             optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
-            torch_criterion=pipeline_config["optimization_criterion"]["name"],
+            torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
             criterion_parameters=TrainerServerJsonString(value=criterion_config),
             data_info=Data(
                 dataset_id=pipeline_config["data"]["dataset_id"],

@@ -285,7 +285,9 @@ def test_start_training(test_connection_established):
     pipeline_config = get_minimal_pipeline_config()
 
     with patch.object(
-        handler.trainer_server, "start_training", return_value=StartTrainingResponse(training_id=42)
+        handler.trainer_server,
+        "start_training",
+        return_value=StartTrainingResponse(training_started=True, training_id=42),
     ) as avail_method:
         assert handler.start_training(pipeline_id, trigger_id, pipeline_config, None) == 42
         avail_method.assert_called_once()
@@ -304,5 +306,5 @@ def test_wait_for_training_completion(test_connection_established):
             valid=True, blocked=False, exception=None, state_available=False, is_running=False
         ),
     ) as avail_method:
-        handler.start_training(42)
+        handler.wait_for_training_completion(42)
         avail_method.assert_called_once()
