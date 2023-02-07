@@ -9,9 +9,9 @@ import pandas as pd
 from psaw import PushshiftAPI
 
 logging.basicConfig(
-    level=logging.NOTSET,
-    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d:%H:%M:%S",
+	level=logging.NOTSET,
+	format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
+	datefmt="%Y-%m-%d:%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def setup_argparser() -> argparse.ArgumentParser:
 
 def main():
 	parser = setup_argparser()
-    args = parser.parse_args()
+	args = parser.parse_args()
 
 	start = time.time()
 	make_reddit_dataset_files(args.subreddits, args.offset, args.size, args.output)
