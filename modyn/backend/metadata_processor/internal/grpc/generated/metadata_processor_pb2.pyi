@@ -48,11 +48,11 @@ class PerTriggerMetadata(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     LOSS_FIELD_NUMBER: builtins.int
-    loss: builtins.bytes
+    loss: builtins.float
     def __init__(
         self,
         *,
-        loss: builtins.bytes = ...,
+        loss: builtins.float = ...,
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["loss", b"loss"]) -> None: ...
 
@@ -65,12 +65,12 @@ class PerSampleMetadata(google.protobuf.message.Message):
     SAMPLE_ID_FIELD_NUMBER: builtins.int
     LOSS_FIELD_NUMBER: builtins.int
     sample_id: builtins.str
-    loss: builtins.bytes
+    loss: builtins.float
     def __init__(
         self,
         *,
         sample_id: builtins.str = ...,
-        loss: builtins.bytes = ...,
+        loss: builtins.float = ...,
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["loss", b"loss", "sample_id", b"sample_id"]) -> None: ...
 

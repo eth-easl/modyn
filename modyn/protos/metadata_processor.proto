@@ -15,12 +15,12 @@ message TrainingMetadataRequest {
 }
 
 message PerTriggerMetadata {
-	bytes loss = 1;
+	float loss = 1;
 }
 
 message PerSampleMetadata {
 	string sample_id = 1;
-	bytes loss = 2;
+	float loss = 2;
 }
 
 message TrainingMetadataResponse {
