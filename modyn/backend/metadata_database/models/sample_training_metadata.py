@@ -2,6 +2,7 @@
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from sqlalchemy import Column, Double, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 
 class SampleTrainingMetadata(MetadataBase):
@@ -18,12 +19,12 @@ class SampleTrainingMetadata(MetadataBase):
     # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
     __table_args__ = {"extend_existing": True}
     sample_training_metadata_id = Column("sample_training_metadata_id", Integer, primary_key=True)
-    pipeline_id = Column(Integer, ForeignKey("pipelines.pipeline_id"), nullable=False)
-    trigger_id = Column("trigger_id", Integer, nullable=False)
+    trigger_id = Column(Integer, ForeignKey("triggers.trigger_id"), nullable=False)
+    trigger = relationship("Trigger")
     sample_key = Column("sample_key", String(120), nullable=False)
     loss = Column("loss", Double)
     gradient = Column("gradient", Double)
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f"<SampleTrainingMetadata {self.pipeline_id}:{self.trigger_id}:{self.sample_key}>"
+        return f"<SampleTrainingMetadata {self.trigger_id}:{self.sample_key}>"

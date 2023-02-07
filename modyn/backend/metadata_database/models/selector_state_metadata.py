@@ -2,6 +2,7 @@
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 
 class SelectorStateMetadata(MetadataBase):
@@ -17,6 +18,7 @@ class SelectorStateMetadata(MetadataBase):
     __table_args__ = {"extend_existing": True}
     selector_state_metadata_id = Column("selector_state_metadata_id", Integer, primary_key=True)
     pipeline_id = Column(Integer, ForeignKey("pipelines.pipeline_id"), nullable=False)
+    pipeline = relationship("Pipeline")
     sample_key = Column("sample_key", String(120), nullable=False)
     seen_in_trigger_id = Column("seen_in_trigger_id", Integer)
     used = Column("used", Boolean, default=False)

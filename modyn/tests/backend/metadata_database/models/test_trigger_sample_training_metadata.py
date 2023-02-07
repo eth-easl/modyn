@@ -22,8 +22,6 @@ def test_add_trigger_sample_training_metadata(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
         sample_key="sample_key",
-        seen_by_trigger=True,
-        part_of_training_set=True,
     )
     session.add(trigger_sample_training_metadata)
     session.commit()
@@ -48,28 +46,12 @@ def test_add_trigger_sample_training_metadata(session):
         .sample_key
         == "sample_key"
     )
-    assert (
-        session.query(TriggerSampleTrainingMetadata)
-        .filter(TriggerSampleTrainingMetadata.trigger_sample_training_metadata_id == 1)
-        .first()
-        .seen_by_trigger
-        is True
-    )
-    assert (
-        session.query(TriggerSampleTrainingMetadata)
-        .filter(TriggerSampleTrainingMetadata.trigger_sample_training_metadata_id == 1)
-        .first()
-        .part_of_training_set
-        is True
-    )
 
 
 def test_update_trigger_sample_training_metadata(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
         sample_key="sample_key",
-        seen_by_trigger=True,
-        part_of_training_set=True,
     )
     session.add(trigger_sample_training_metadata)
     session.commit()
@@ -98,28 +80,12 @@ def test_update_trigger_sample_training_metadata(session):
         .sample_key
         == "sample_key"
     )
-    assert (
-        session.query(TriggerSampleTrainingMetadata)
-        .filter(TriggerSampleTrainingMetadata.trigger_sample_training_metadata_id == 1)
-        .first()
-        .seen_by_trigger
-        is False
-    )
-    assert (
-        session.query(TriggerSampleTrainingMetadata)
-        .filter(TriggerSampleTrainingMetadata.trigger_sample_training_metadata_id == 1)
-        .first()
-        .part_of_training_set
-        is False
-    )
 
 
 def test_delete_trigger_sample_training_metadata(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
         sample_key="sample_key",
-        seen_by_trigger=True,
-        part_of_training_set=True,
     )
     session.add(trigger_sample_training_metadata)
     session.commit()
@@ -139,8 +105,6 @@ def test_repr(session):
     trigger_sample_training_metadata = TriggerSampleTrainingMetadata(
         trigger_training_metadata_id=1,
         sample_key="sample_key",
-        seen_by_trigger=True,
-        part_of_training_set=True,
     )
     session.add(trigger_sample_training_metadata)
     session.commit()

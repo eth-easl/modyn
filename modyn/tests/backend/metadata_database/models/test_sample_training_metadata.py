@@ -20,7 +20,6 @@ def session():
 
 def test_add_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         sample_key="sample_key",
         loss=1.0,
@@ -32,13 +31,6 @@ def test_add_sample_training_metadata(session):
     assert (
         session.query(SampleTrainingMetadata).filter(SampleTrainingMetadata.sample_training_metadata_id == 1).first()
         is not None
-    )
-    assert (
-        session.query(SampleTrainingMetadata)
-        .filter(SampleTrainingMetadata.sample_training_metadata_id == 1)
-        .first()
-        .pipeline_id
-        == 1
     )
     assert (
         session.query(SampleTrainingMetadata)
@@ -72,7 +64,6 @@ def test_add_sample_training_metadata(session):
 
 def test_update_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         sample_key="sample_key",
         loss=1.0,
@@ -88,13 +79,6 @@ def test_update_sample_training_metadata(session):
     assert (
         session.query(SampleTrainingMetadata).filter(SampleTrainingMetadata.sample_training_metadata_id == 1).first()
         is not None
-    )
-    assert (
-        session.query(SampleTrainingMetadata)
-        .filter(SampleTrainingMetadata.sample_training_metadata_id == 1)
-        .first()
-        .pipeline_id
-        == 1
     )
     assert (
         session.query(SampleTrainingMetadata)
@@ -128,7 +112,6 @@ def test_update_sample_training_metadata(session):
 
 def test_delete_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         sample_key="sample_key",
         loss=1.0,
@@ -148,7 +131,6 @@ def test_delete_sample_training_metadata(session):
 
 def test_repr(session):
     sample_training_metadata = SampleTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         sample_key="sample_key",
         loss=1.0,
@@ -157,4 +139,4 @@ def test_repr(session):
     session.add(sample_training_metadata)
     session.commit()
 
-    assert repr(sample_training_metadata) == "<SampleTrainingMetadata 1:1:sample_key>"
+    assert repr(sample_training_metadata) == "<SampleTrainingMetadata 1:sample_key>"

@@ -46,7 +46,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
-        self._persist_data(keys, timestamps, labels)
+        self._persist_samples(keys, timestamps, labels)
 
     def _on_trigger(self) -> list[tuple[str, float]]:
         """

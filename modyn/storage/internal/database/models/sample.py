@@ -2,7 +2,7 @@
 
 from modyn.storage.internal.database.storage_base import StorageBase
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import relationship
 
 
 class Sample(StorageBase):
@@ -13,7 +13,7 @@ class Sample(StorageBase):
     __table_args__ = {"extend_existing": True}
     sample_id = Column("sample_id", Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False)
-    file = relationship("File", backref=backref("samples", lazy=True))
+    file = relationship("File")
     external_key = Column(String(120), unique=True, nullable=False)
     index = Column(BigInteger, nullable=False)
     label = Column(BigInteger, nullable=True)

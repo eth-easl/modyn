@@ -114,7 +114,7 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test__persist_data():
     strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42)
-    strat._persist_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
+    strat._persist_samples(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(

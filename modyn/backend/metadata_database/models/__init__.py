@@ -5,11 +5,12 @@ This allows the storage module to be used with different databases.
 """
 import os
 
-from .pipeline import Pipeline  # noqa: F401
+from .pipelines import Pipeline  # noqa: F401
 from .sample_training_metadata import SampleTrainingMetadata  # noqa: F401
 from .selector_state_metadata import SelectorStateMetadata  # noqa: F401
 from .trigger_sample_training_metadata import TriggerSampleTrainingMetadata  # noqa: F401
 from .trigger_training_metadata import TriggerTrainingMetadata  # noqa: F401
+from .triggers import Trigger  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

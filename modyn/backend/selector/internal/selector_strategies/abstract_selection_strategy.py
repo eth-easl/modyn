@@ -80,7 +80,7 @@ class AbstractSelectionStrategy(ABC):
         self._next_trigger_id += 1
         return trigger_id, training_samples
 
-    def _persist_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def _persist_samples(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         """Persists the data in the database.
 
         Args:

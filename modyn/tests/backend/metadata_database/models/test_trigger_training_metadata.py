@@ -20,7 +20,6 @@ def session():
 
 def test_add_trigger_training_metadata(session):
     trigger_training_metadata = TriggerTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         time_to_train=1.0,
         overall_loss=1.0,
@@ -32,13 +31,6 @@ def test_add_trigger_training_metadata(session):
     assert (
         session.query(TriggerTrainingMetadata).filter(TriggerTrainingMetadata.trigger_training_metadata_id == 1).first()
         is not None
-    )
-    assert (
-        session.query(TriggerTrainingMetadata)
-        .filter(TriggerTrainingMetadata.trigger_training_metadata_id == 1)
-        .first()
-        .pipeline_id
-        == 1
     )
     assert (
         session.query(TriggerTrainingMetadata)
@@ -65,7 +57,6 @@ def test_add_trigger_training_metadata(session):
 
 def test_update_trigger_training_metadata(session):
     trigger_training_metadata = TriggerTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         time_to_train=1.0,
         overall_loss=1.0,
@@ -81,13 +72,6 @@ def test_update_trigger_training_metadata(session):
     assert (
         session.query(TriggerTrainingMetadata).filter(TriggerTrainingMetadata.trigger_training_metadata_id == 1).first()
         is not None
-    )
-    assert (
-        session.query(TriggerTrainingMetadata)
-        .filter(TriggerTrainingMetadata.trigger_training_metadata_id == 1)
-        .first()
-        .pipeline_id
-        == 1
     )
     assert (
         session.query(TriggerTrainingMetadata)
@@ -114,7 +98,6 @@ def test_update_trigger_training_metadata(session):
 
 def test_delete_trigger_training_metadata(session):
     trigger_training_metadata = TriggerTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         time_to_train=1.0,
         overall_loss=1.0,
@@ -134,7 +117,6 @@ def test_delete_trigger_training_metadata(session):
 
 def test_repr(session):
     trigger_training_metadata = TriggerTrainingMetadata(
-        pipeline_id=1,
         trigger_id=1,
         time_to_train=1.0,
         overall_loss=1.0,
@@ -143,4 +125,4 @@ def test_repr(session):
     session.add(trigger_training_metadata)
     session.commit()
 
-    assert repr(trigger_training_metadata) == "<TriggerTrainingMetadata 1:1>"
+    assert repr(trigger_training_metadata) == "<TriggerTrainingMetadata 1>"
