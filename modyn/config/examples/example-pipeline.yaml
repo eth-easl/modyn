@@ -11,14 +11,17 @@ training:
   dataloader_workers: 2
   learning_rate: 0.001
   batch_size: 64
-  strategy: finetune
-  strategy_config:
-    limit: -1
+  selection_strategy: 
+    name: NewDataStrategy
+    config:
+      limit: -1
+      reset_after_trigger: True
   initial_model: random
   initial_pass:
     activated: True
     reference: amount
     amount: 0.5
+  bytes_parser_function: "def bytes_parser_function(x):\n\treturn x"
 data:
   dataset_id: mnist
 trigger:

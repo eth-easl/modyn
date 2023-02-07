@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 import pytest
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.database.models.file import File
@@ -24,12 +25,12 @@ def session():
     engine.dispose()
 
 
-def test_add_file(session):  # pylint: disable=redefined-outer-name
+def test_add_file(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -47,12 +48,12 @@ def test_add_file(session):  # pylint: disable=redefined-outer-name
     assert session.query(File).filter(File.path == "test").first().updated_at == now
 
 
-def test_update_file(session):  # pylint: disable=redefined-outer-name
+def test_update_file(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -75,12 +76,12 @@ def test_update_file(session):  # pylint: disable=redefined-outer-name
     assert session.query(File).filter(File.path == "test2").first().updated_at == now
 
 
-def test_delete_file(session):  # pylint: disable=redefined-outer-name
+def test_delete_file(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -98,12 +99,12 @@ def test_delete_file(session):  # pylint: disable=redefined-outer-name
     assert session.query(File).filter(File.path == "test").first() is None
 
 
-def test_repr_file(session):  # pylint: disable=redefined-outer-name
+def test_repr_file(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )

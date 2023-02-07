@@ -32,7 +32,6 @@ To add a new filesystem wrapper, you need to implement the `AbstractFilesystemWr
 The following file wrappers are currently implemented:
 
 - `single_sample`: Each file contains a single sample
-- `webdataset`: Each file contains multiple samples in the [WebDataset](https://webdataset.github.io/webdataset/) format
 
 Future file wrappers may include:
 
@@ -70,21 +69,21 @@ Files and samples are expected to be added by a separate component or an altoget
 The storage abstraction uses a database to store information about the datasets. The database contains the following tables:
 
 - `datasets`: Contains information about the datasets
-    - `id`: The id of the dataset (primary key)
+    - `dataset_id`: The id of the dataset (primary key)
     - `name`: The name of the dataset
     - `description`: A description of the dataset
     - `filesystem_wrapper_type`: The name of the filesystem wrapper
     - `file_wrapper_type`: The name of the file wrapper
     - `base_path`: The base path of the dataset
 - `files`: Contains information about the files in the datasets
-    - `id`: The id of the file (primary key)
-    - `dataset_id`: The id of the dataset (foreign key to `datasets.id`)
+    - `file_id`: The id of the file (primary key)
+    - `dataset_id`: The id of the dataset (foreign key to `datasets.dataset_id`)
     - `path`: The path of the file
     - `created_at`: The timestamp when the file was created
     - `updated_at`: The timestamp when the file was updated
     - `number_of_samples`: The number of samples in the file
 - `samples`: Contains information about the samples in the files
-    - `id`: The id of the sample (primary key)
-    - `file_id`: The id of the file (foreign key to `files.id`)
+    - `sample_id`: The id of the sample (primary key)
+    - `file_id`: The id of the file (foreign key to `files.file_id`)
     - `index`: The index of the sample in the file
     - `external_key`: The external key of the sample (this is used to identify the sample in the storage system and is expected to be asked by the GPU nodes)

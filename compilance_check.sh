@@ -24,8 +24,8 @@ fi
 echo "Running auto-formatters"
 
 conda run -n modyn isort . > /dev/null
-conda run -n modyn autopep8 modyn --recursive --in-place --pep8-passes 2000 > /dev/null
-conda run -n modyn black modyn --verbose --config black.toml > /dev/null
+conda run -n modyn autopep8 modyn integrationtests --recursive --in-place --pep8-passes 2000 > /dev/null
+conda run -n modyn black modyn integrationtests --verbose --config black.toml > /dev/null
 
 echo "Running linters"
 

@@ -1,10 +1,14 @@
 """A file wrapper for files that contains only one sample and metadata."""
 
+import logging
 import pathlib
+from typing import Optional
 
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+
+logger = logging.getLogger(__name__)
 
 
 class SingleSampleFileWrapper(AbstractFileWrapper):
@@ -36,7 +40,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             return 0
         return 1
 
-    def get_samples(self, start: int, end: int) -> bytes:
+    def get_samples(self, start: int, end: int) -> list[bytes]:
         """Get the samples from the file.
 
         Args:
@@ -51,13 +55,10 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         """
         if start != 0 or end != 1:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
-        return self.get_sample(0)
+        return [self.get_sample(0)]
 
     def get_sample(self, index: int) -> bytes:
-        r"""Return the sample, the label and the length of the label as bytes.
-
-        Format:
-        sample + b'\n' + label + b'\n' + len(label).to_bytes(4, 'big')
+        r"""Return the sample as bytes.
 
         Args:
             index (int): Index
@@ -74,11 +75,39 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         if index != 0:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
         data_file = self.filesystem_wrapper.get(self.file_path)
+        return data_file
+
+    def get_label(self, index: int) -> Optional[int]:
+        """Get the label of the sample at the given index.
+
+        Args:
+            index (int): Index
+
+        Raises:
+            ValueError: If the file has the wrong file extension
+            IndexError: If the index is not 0
+
+        Returns:
+            int: Label if exists, else None
+        """
+        if self.get_number_of_samples() == 0:
+            raise ValueError("File has wrong file extension.")
+        if index != 0:
+            raise IndexError("SingleSampleFileWrapper contains only one sample.")
+        if (
+            "label_file_extension" not in self.file_wrapper_config
+            or self.file_wrapper_config["label_file_extension"] is None
+        ):
+            logger.warning("No label file extension defined.")
+            return None
         label_path = pathlib.Path(self.file_path).with_suffix(self.file_wrapper_config["label_file_extension"])
         label = self.filesystem_wrapper.get(label_path)
-        return data_file + b"\n" + label + b"\n" + len(label).to_bytes(4, "big")
+        if label is not None:
+            label = label.decode("utf-8")
+            return int(label)
+        return None
 
-    def get_samples_from_indices(self, indices: list) -> bytes:
+    def get_samples_from_indices(self, indices: list) -> list[bytes]:
         """Get the samples from the file.
 
         Args:
@@ -92,4 +121,4 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         """
         if len(indices) != 1 or indices[0] != 0:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
-        return self.get_sample(0)
+        return [self.get_sample(0)]

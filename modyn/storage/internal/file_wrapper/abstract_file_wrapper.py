@@ -1,6 +1,7 @@
 """Base class for all file wrappers."""
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
@@ -34,7 +35,7 @@ class AbstractFileWrapper(ABC):
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
-    def get_samples(self, start: int, end: int) -> bytes:
+    def get_samples(self, start: int, end: int) -> list[bytes]:
         """Get the samples from the file.
 
         Args:
@@ -46,6 +47,20 @@ class AbstractFileWrapper(ABC):
 
         Returns:
             bytes: Samples
+        """
+        raise NotImplementedError  # pragma: no cover
+
+    def get_label(self, index: int) -> Optional[int]:
+        """Get the label at the given index.
+
+        Args:
+            index (int): Index
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            int: Label if exists, else None
         """
         raise NotImplementedError  # pragma: no cover
 
@@ -65,7 +80,7 @@ class AbstractFileWrapper(ABC):
         raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
-    def get_samples_from_indices(self, indices: list) -> bytes:
+    def get_samples_from_indices(self, indices: list) -> list[bytes]:
         """Get the samples at the given indices.
 
         Args:

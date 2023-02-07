@@ -48,13 +48,31 @@ def storage_db_running() -> bool:
     config = get_modyn_config()
     try:
         psycopg2.connect(
-                        host=config['storage']['database']['host'],
-                        port=config['storage']['database']['port'],
-                        database=config['storage']['database']['database'],
-                        user=config['storage']['database']['username'],
-                        password=config['storage']['database']['password'],
-                        connect_timeout=5
-                    )
+            host=config["storage"]["database"]["host"],
+            port=config["storage"]["database"]["port"],
+            database=config["storage"]["database"]["database"],
+            user=config["storage"]["database"]["username"],
+            password=config["storage"]["database"]["password"],
+            connect_timeout=5,
+        )
+
+        return True
+    except (Exception, psycopg2.DatabaseError) as error:
+        print("Error while connecting to the database: " + str(error))
+        return False
+
+
+def metadata_db_running() -> bool:
+    config = get_modyn_config()
+    try:
+        psycopg2.connect(
+            host=config["metadata_database"]["host"],
+            port=config["metadata_database"]["port"],
+            database=config["metadata_database"]["database"],
+            user=config["metadata_database"]["username"],
+            password=config["metadata_database"]["password"],
+            connect_timeout=5,
+        )
 
         return True
     except (Exception, psycopg2.DatabaseError) as error:
@@ -63,12 +81,20 @@ def storage_db_running() -> bool:
 
 
 def selector_running() -> bool:
-    # TODO(MaxiBoether): implement this when selector is merged and docker entrypoint works
+    config = get_modyn_config()
+
+    selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
+    selector_channel = grpc.insecure_channel(selector_address)
+
+    if not grpc_connection_established(selector_channel):
+        print(f"Could not establish gRPC connection to selector at {selector_address}. Retrying.")
+        return False
+
     return True
 
 
 def system_running() -> bool:
-    return storage_db_running() and storage_running() and selector_running()
+    return storage_db_running() and storage_running() and selector_running() and metadata_db_running()
 
 
 def main() -> None:
@@ -82,5 +108,5 @@ def main() -> None:
         time.sleep(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

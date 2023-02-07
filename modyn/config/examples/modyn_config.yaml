@@ -7,7 +7,7 @@ storage:
   port: "50051"
   hostname: "storage"
   new_file_watcher:
-    interval: 10
+    interval: 5
   datasets:
     [
       {
@@ -33,14 +33,12 @@ storage:
     database: "postgres"
 
 metadata_database:
-  port: "50054"
-  hostname: "backend"
-  postgresql:
-    host: 127.0.0.1
-    port: "5432"
-    database: "postgres"
-    user: "postgres"
-    password: "postgres"
+  drivername: "postgresql"
+  username: "postgres"
+  password: "postgres"
+  host: "metadata-db"
+  port: "5432"
+  database: "postgres"
 
 ptmp:
   port: "50055"
@@ -48,13 +46,9 @@ ptmp:
   processor: "SimpleProcessor"
 
 selector:
-  hostname: "backend"
+  hostname: "selector"
   port: "50056"
-  package: "score_selector"
-  class: "ScoreSelector"
-  postgresql:
-    host: db
-    port: "5432"
-    database: "postgres"
-    user: "postgres"
-    password: "postgres"
+
+trainer_server:
+  hostname: "trainer_server"
+  port: "5001"

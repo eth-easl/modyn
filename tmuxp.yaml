@@ -1,0 +1,47 @@
+session_name: modyn
+windows:
+  - window_name: supervisor
+    layout: tiled
+    panes:
+      - shell_command:
+        - docker exec -it $(docker-compose ps -q modynbase) /bin/bash
+        - clear && echo "Welcome to the supervisor pane. You have access to the 'modyn-supervisor' command here to submit pipelines."
+  - window_name: storage
+    layout: tiled
+    panes:
+      - docker logs $(docker-compose ps -q storage) && docker attach $(docker-compose ps -q storage)
+      - docker exec -it $(docker-compose ps -q storage) /bin/bash
+  - window_name: selector
+    layout: tiled
+    panes:
+      - docker logs $(docker-compose ps -q selector) && docker attach $(docker-compose ps -q selector)
+      - docker exec -it $(docker-compose ps -q selector) /bin/bash
+  - window_name: trainer_server
+    layout: tiled
+    panes:
+      - docker logs $(docker-compose ps -q trainer_server) && docker attach $(docker-compose ps -q trainer_server)
+      - docker exec -it $(docker-compose ps -q trainer_server) /bin/bash
+  - window_name: storage-db
+    layout: tiled
+    panes:
+      - docker logs $(docker-compose ps -q storage-db) && docker attach $(docker-compose ps -q storage-db)
+      - shell_command:
+        - docker exec -it $(docker-compose ps -q storage-db) /bin/bash
+        - psql -U postgres
+        - \c postgres
+        - \dt
+  - window_name: metadata-db
+    layout: tiled
+    panes:
+      - docker logs $(docker-compose ps -q metadata-db) && docker attach $(docker-compose ps -q metadata-db)
+      - shell_command:
+        - docker exec -it $(docker-compose ps -q metadata-db) /bin/bash
+        - psql -U postgres
+        - \c postgres
+        - \dt
+  - window_name: tests
+    layout: tiled
+    panes:
+      - shell_command:
+        - docker logs $(docker-compose ps -q tests)
+        - docker attach $(docker-compose ps -q tests) 2> /dev/null

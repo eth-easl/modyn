@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 import pytest
 from modyn.storage.internal.database.models.dataset import Dataset
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
@@ -19,12 +20,12 @@ def session():
     engine.dispose()
 
 
-def test_add_dataset(session):  # pylint: disable=redefined-outer-name
+def test_add_dataset(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -39,18 +40,18 @@ def test_add_dataset(session):  # pylint: disable=redefined-outer-name
     )
     assert (
         session.query(Dataset).filter(Dataset.name == "test").first().file_wrapper_type
-        == FileWrapperType.WebdatasetFileWrapper
+        == FileWrapperType.SingleSampleFileWrapper
     )
     assert session.query(Dataset).filter(Dataset.name == "test").first().description == "test"
     assert session.query(Dataset).filter(Dataset.name == "test").first().version == "test"
 
 
-def test_update_dataset(session):  # pylint: disable=redefined-outer-name
+def test_update_dataset(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -76,12 +77,12 @@ def test_update_dataset(session):  # pylint: disable=redefined-outer-name
     assert session.query(Dataset).filter(Dataset.name == "test").first().version == "test2"
 
 
-def test_repr(session):  # pylint: disable=redefined-outer-name
+def test_repr(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -91,12 +92,12 @@ def test_repr(session):  # pylint: disable=redefined-outer-name
     assert repr(dataset) == "<Dataset test>"
 
 
-def test_delete_dataset(session):  # pylint: disable=redefined-outer-name
+def test_delete_dataset(session):
     dataset = Dataset(
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )

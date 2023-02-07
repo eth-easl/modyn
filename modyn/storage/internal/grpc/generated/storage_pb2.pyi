@@ -21,6 +21,12 @@ class DatasetAvailableResponse(_message.Message):
     available: bool
     def __init__(self, available: bool = ...) -> None: ...
 
+class DeleteDatasetResponse(_message.Message):
+    __slots__ = ["success"]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: bool = ...) -> None: ...
+
 class GetCurrentTimestampResponse(_message.Message):
     __slots__ = ["timestamp"]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
@@ -70,12 +76,14 @@ class GetRequest(_message.Message):
     def __init__(self, dataset_id: _Optional[str] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetResponse(_message.Message):
-    __slots__ = ["chunk", "keys"]
-    CHUNK_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ["keys", "labels", "samples"]
     KEYS_FIELD_NUMBER: _ClassVar[int]
-    chunk: bytes
+    LABELS_FIELD_NUMBER: _ClassVar[int]
+    SAMPLES_FIELD_NUMBER: _ClassVar[int]
     keys: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, chunk: _Optional[bytes] = ..., keys: _Optional[_Iterable[str]] = ...) -> None: ...
+    labels: _containers.RepeatedScalarFieldContainer[int]
+    samples: _containers.RepeatedScalarFieldContainer[bytes]
+    def __init__(self, samples: _Optional[_Iterable[bytes]] = ..., keys: _Optional[_Iterable[str]] = ..., labels: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class RegisterNewDatasetRequest(_message.Message):
     __slots__ = ["base_path", "dataset_id", "description", "file_wrapper_config", "file_wrapper_type", "filesystem_wrapper_type", "version"]
