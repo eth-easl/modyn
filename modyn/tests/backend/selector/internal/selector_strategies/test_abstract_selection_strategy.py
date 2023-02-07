@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -50,6 +50,10 @@ def test_init():
         AbstractSelectionStrategy(
             {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, ["doesntexist"]
         )
+
+    #  Test reinit works
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42)
+    strat._next_trigger_id = 1
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -109,6 +113,28 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
     test_reset_state.assert_called_once()
     test__on_trigger.assert_called_once()
     assert samples == [("a", 1.0), ("b", 1.0), ("c", 1.0)]
+
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_on_trigger")
+@patch.object(AbstractSelectionStrategy, "_reset_state")
+def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42)
+    assert strat.reset_after_trigger
+    assert strat._next_trigger_id == 0
+
+    test__on_trigger.return_value = [("a", 1.0), ("b", 1.0), ("c", 1.0)]
+
+    trigger_id, _ = strat.trigger()
+    assert trigger_id == 0
+    assert strat._next_trigger_id == 1
+
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        data = database.session.query(Trigger).all()
+
+        assert len(data) == 1
+        assert data[0].trigger_id == 0
+        assert data[0].pipeline_id == 42
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())

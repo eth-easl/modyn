@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models import SelectorStateMetadata
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
+from sqlalchemy import func
 
 
 class AbstractSelectionStrategy(ABC):
@@ -33,7 +34,16 @@ class AbstractSelectionStrategy(ABC):
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
-        self._next_trigger_id = 0
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            last_trigger_id = (
+                database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
+                .filter(pipeline_id == self._pipeline_id)
+                .scalar()
+            )
+            if last_trigger_id is None:
+                self._next_trigger_id = 0
+            else:
+                self._next_trigger_id = last_trigger_id + 1
 
     @abstractmethod
     def _on_trigger(self) -> list[tuple[str, float]]:
@@ -72,6 +82,9 @@ class AbstractSelectionStrategy(ABC):
               where the first element of the tuple is the key, and the second element is the associated weight.
         """
         trigger_id = self._next_trigger_id
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.session.add(Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id))
+            database.session.commit()
         training_samples = self._on_trigger()
 
         if self.reset_after_trigger:
