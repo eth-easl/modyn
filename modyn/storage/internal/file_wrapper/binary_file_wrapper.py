@@ -1,8 +1,12 @@
 """Binary file wrapper."""
 
-from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
+from modyn.storage.internal.file_wrapper.abstract_file_wrapper import (
+    AbstractFileWrapper,
+)
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
-from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import (
+    AbstractFileSystemWrapper,
+)
 
 
 class BinaryFileWrapper(AbstractFileWrapper):
@@ -13,7 +17,12 @@ class BinaryFileWrapper(AbstractFileWrapper):
     to read samples by offsetting the required number of bytes.
     """
 
-    def __init__(self, file_path: str, file_wrapper_config: dict, filesystem_wrapper: AbstractFileSystemWrapper):
+    def __init__(
+        self,
+        file_path: str,
+        file_wrapper_config: dict,
+        filesystem_wrapper: AbstractFileSystemWrapper,
+    ):
         """Init binary file wrapper.
 
         Args:
@@ -26,6 +35,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         self.record_size = file_wrapper_config["record_size"]
         self.label_offset = file_wrapper_config["label_offset"]
         self.label_size = file_wrapper_config["label_size"]
+        self.byteorder = file_wrapper_config["byteorder"]
 
     def _validate_file_extension(self) -> None:
         """Validates the file extension as bin
@@ -47,7 +57,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         file_size = self.filesystem_wrapper.get_size(self.file_path)
         return file_size / self.record_size
 
-    def get_sample(self, index: int) -> bytearray:
+    def get_sample(self, index: int) -> bytes:
         """Get the sample at the given index.
         The indices are zero based.
 
@@ -61,7 +71,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         Returns:
             bytes: Sample
         """
-        return self.get_samples(index, index+1)
+        return self.get_samples(index, index + 1)[0]
 
     def get_label(self, index: int) -> int:
         """Get the label of the sample at the given index.
@@ -77,10 +87,10 @@ class BinaryFileWrapper(AbstractFileWrapper):
             int: Label for the sample
         """
         sample = self.get_sample(index)
-        lable_bytes = sample[self.label_offset: self.label_offset + self.label_size]
-        return int.from_bytes(lable_bytes, byteorder="big")
+        lable_bytes = sample[self.label_offset : self.label_offset + self.label_size]
+        return int.from_bytes(lable_bytes, byteorder=self.byteorder)
 
-    def get_samples(self, start: int, end: int) -> bytearray:
+    def get_samples(self, start: int, end: int) -> list[bytes]:
         """Get the samples at the given range from start (inclusive) to end (exclusive).
         The indices are zero based.
 
@@ -96,19 +106,25 @@ class BinaryFileWrapper(AbstractFileWrapper):
             bytes: Sample
         """
         self._validate_file_extension()
-        data = bytearray(self.filesystem_wrapper.get(self.file_path))
+        data = self.filesystem_wrapper.get(self.file_path)
 
         total_samples = len(data) / self.record_size
-        invalid_start = (start > (total_samples - 1) or start < 0)
-        invalid_end = (end < 1 or end > total_samples)
-        if (invalid_start or invalid_end):
-            raise IndexError("Indices are out of range.")
+        invalid_start = start > (total_samples - 1) or start < 0
+        invalid_end = end < 1 or end > total_samples
+        if invalid_start or invalid_end:
+            raise IndexError(
+                "Indices are out of range. Start and end should be between 0 and "
+                + str(total_samples)
+            )
 
-        start_offset = start * self.record_size
-        end_offset = end * self.record_size
-        return data[start_offset: end_offset]
+        samples = []
+        for idx in range(start, end):
+            sample = data[idx * self.record_size : (idx + 1) * self.record_size]
+            samples.append(sample)
 
-    def get_samples_from_indices(self, indices: list) -> bytearray:
+        return samples
+
+    def get_samples_from_indices(self, indices: list) -> list[bytes]:
         """Get the samples at the given index list.
         The indices are zero based.
 
@@ -123,15 +139,18 @@ class BinaryFileWrapper(AbstractFileWrapper):
             bytes: Sample
         """
         self._validate_file_extension()
-        data = bytearray(self.filesystem_wrapper.get(self.file_path))
+        data = self.filesystem_wrapper.get(self.file_path)
 
         total_samples = len(data) / self.record_size
         invalid_indices = any((idx < 0 or idx > (total_samples - 1)) for idx in indices)
         if invalid_indices:
-            raise IndexError("Indices are out of range.")
+            raise IndexError(
+                "Indices are out of range. Indices should be between 0 and "
+                + str(total_samples)
+            )
 
-        samples = bytearray()
+        samples = []
         for idx in indices:
-            sample = data[idx*self.record_size: (idx+1)*self.record_size]
-            samples += sample
+            sample = data[idx * self.record_size : (idx + 1) * self.record_size]
+            samples.append(sample)
         return samples
