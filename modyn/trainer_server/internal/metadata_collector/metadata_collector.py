@@ -44,10 +44,10 @@ class MetadataCollector:
         self._metric_handlers[metric]()
 
     def send_loss(self) -> None:
-        # In the future, when we add more metadata that follows the same pattern, 
-        # we might want to extract out the basic functionality 
+        # In the future, when we add more metadata that follows the same pattern,
+        # we might want to extract out the basic functionality
         # of sending a `TrainingMetadataRequest` with a respective kwarg.
-        
+
         metric_dict = self._per_sample_metadata_dict[MetricType.LOSS]
         per_trigger_metric = self._per_trigger_metadata[MetricType.LOSS]
 
