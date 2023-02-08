@@ -86,15 +86,15 @@ properties:
                   description: |
                     The label file extension of the dataset. Starts with a dot.
                 record_size:
-                  type: int
+                  type: number
                   description: |
                     The size of each record in bytes for a binary file wrapper.
                 label_size:
-                  type: int
+                  type: number
                   description: |
                     The size of the label field in bytes for a binary file wrapper.
                 label_offset:
-                  type: int
+                  type: number
                   description: |
                     The offset of the label field from the start of a record, for a binary file wrapper.
                 byteorder:
