@@ -18,7 +18,7 @@ class MetadataCollector:
         self._trigger_id = trigger_id
 
         self.register_metric_handlers()
-        # TODO(): remove this when the MetadataProcessor is fixed
+        # TODO(#139): remove this when the MetadataProcessor is fixed
         self._metadata_processor_stub = MockMetadataProcessorServer()
 
     def register_metric_handlers(self) -> None:
