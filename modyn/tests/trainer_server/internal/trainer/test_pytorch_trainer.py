@@ -24,6 +24,8 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     PythonString,
     StartTrainingRequest,
 )
+from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
+from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.base_callback import BaseCallback
 from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer, train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
@@ -76,7 +78,7 @@ def mock_get_dataloaders(
     selector_address,
 ):
     mock_train_dataloader = iter(
-        [(torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
+        [(("1",) * 8, torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
     )
     return mock_train_dataloader, None
 
@@ -87,6 +89,7 @@ def noop_constructor_mock(self, channel):
 
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
 def get_training_info(
+    training_id: int,
     use_pretrained: bool,
     load_optimizer_state: bool,
     pretrained_model: Any,
@@ -116,7 +119,9 @@ def get_training_info(
                 load_optimizer_state=load_optimizer_state,
                 pretrained_model=pretrained_model,
             )
-            training_info = TrainingInfo(request, storage_address, selector_address, pathlib.Path(final_tmpdirname))
+            training_info = TrainingInfo(
+                request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname)
+            )
             return training_info
 
 
@@ -136,7 +141,7 @@ def get_mock_trainer(
     test_grpc_connection_established: MagicMock,
 ):
     dynamic_module_patch.return_value = MockModule()
-    training_info = get_training_info(use_pretrained, load_optimizer_state, pretrained_model, "", "")
+    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "")
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue)
     return trainer
 
@@ -313,11 +318,29 @@ def test_train_invalid_query_message():
                 raise TimeoutError("Did not reach desired queue state within timelimit.")
 
 
+# pylint: disable=too-many-locals
+
+
 @patch(
     "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
     mock_get_dataloaders,
 )
-def test_train():
+@patch.object(BaseCallback, "on_train_begin", return_value=None)
+@patch.object(BaseCallback, "on_train_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_begin", return_value=None)
+@patch.object(BaseCallback, "on_batch_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_before_update", return_value=None)
+@patch.object(MetadataCollector, "send_metadata", return_value=None)
+@patch.object(MetadataCollector, "cleanup", return_value=None)
+def test_train(
+    test_cleanup,
+    test_send_metadata,
+    test_on_batch_before_update,
+    test_on_batch_end,
+    test_on_batch_begin,
+    test_on_train_end,
+    test_on_train_begin,
+):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None)
@@ -342,6 +365,18 @@ def test_train():
             if elapsed >= timeout:
                 raise TimeoutError("Did not reach desired queue state within timelimit.")
 
+        assert test_on_train_begin.call_count == len(trainer._callbacks)
+        assert test_on_train_end.call_count == len(trainer._callbacks)
+        assert test_on_batch_begin.call_count == len(trainer._callbacks) * 100
+        assert test_on_batch_end.call_count == len(trainer._callbacks) * 100
+        assert test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
+        assert test_send_metadata.call_count == len(trainer._callbacks)
+        test_cleanup.assert_called_once()
+
+        if not platform.system() == "Darwin":
+            assert status_queue.qsize() == 1
+        else:
+            assert not status_queue.empty()
         elapsed = 0
         while True:
             if not platform.system() == "Darwin":
@@ -402,7 +437,7 @@ def test_create_trainer_with_exception(
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(False, False, None, "", "")
+    training_info = get_training_info(0, False, False, None, "", "")
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0

@@ -9,6 +9,9 @@ from typing import Optional, Union
 
 import torch
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
+from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
+from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
+from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
@@ -66,6 +69,14 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
+        self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
+
+        # create callbacks - For now, assume LossCallback by default
+        # TODO(#140): should be defined by the pipeline and passed with training request
+        self._callbacks = {
+            MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
+        }
+
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {
             "model": self._model.model.state_dict(),
@@ -105,9 +116,14 @@ class PytorchTrainer:
 
         self._model.model.train()
 
-        train_iter = enumerate(self._train_dataloader)
+        for _, callback in self._callbacks.items():
+            callback.on_train_begin(self._model.model, self._optimizer)
 
-        for batch_number, batch in train_iter:
+        batch_number = 0
+        for batch_number, batch in enumerate(self._train_dataloader):
+            for _, callback in self._callbacks.items():
+                callback.on_batch_begin(self._model.model, self._optimizer, batch, batch_number)
+
             # As empty() is unreliable
             # we try to fetch an element within 100ms. If there is no
             # element within that timeframe returned, we continue.
@@ -119,20 +135,40 @@ class PytorchTrainer:
             except queue.Empty:
                 pass
 
+            sample_ids = batch[0]
+            data, target = batch[1].to(self._device), batch[2].to(self._device)
+
             self._optimizer.zero_grad()
-            data, target = batch[0].to(self._device), batch[1].to(self._device)
             output = self._model.model(data)
             loss = self._criterion(output, target)
             loss.backward()
+
+            for _, callback in self._callbacks.items():
+                callback.on_batch_before_update(
+                    self._model.model, self._optimizer, batch_number, sample_ids, data, target, output, loss
+                )
+
             self._optimizer.step()
 
             if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
                 checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
                 self.save_state(checkpoint_file_name, batch_number)
 
-            self._num_samples += batch[0].shape[0]
+            self._num_samples += data.shape[0]
 
             logger.info(f"Iteration {batch_number}")
+
+            for _, callback in self._callbacks.items():
+                callback.on_batch_end(
+                    self._model.model, self._optimizer, batch_number, sample_ids, data, target, output, loss
+                )
+
+        for _, callback in self._callbacks.items():
+            callback.on_train_end(self._model.model, self._optimizer, self._num_samples, batch_number)
+
+        for metric in self._callbacks:
+            self._metadata_collector.send_metadata(metric)
+        self._metadata_collector.cleanup()
 
         # save final model
         final_checkpoint_file_name = self._final_checkpoint_path / "model_final.modyn"
