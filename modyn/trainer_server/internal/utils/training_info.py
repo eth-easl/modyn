@@ -15,12 +15,14 @@ class TrainingInfo:
     def __init__(
         self,
         request: StartTrainingRequest,
+        training_id: int,
         storage_address: str,
         selector_address: str,
         final_checkpoint_path: pathlib.Path,
     ) -> None:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id
+        self.training_id = training_id
 
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders

@@ -189,8 +189,9 @@ def test_dataset_iter(test_get_keys, test_get_data, test_insecure_channel, test_
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
-    assert [x[0] for x in all_data] == [bytes(f"sample{x}", "utf-8") for x in range(10)]
-    assert [x[1] for x in all_data] == [1] * 10
+    assert [x[0] for x in all_data] == [str(i) for i in range(10)]
+    assert [x[1] for x in all_data] == [bytes(f"sample{x}", "utf-8") for x in range(10)]
+    assert [x[2] for x in all_data] == [1] * 10
 
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
@@ -215,8 +216,9 @@ def test_dataset_iter_with_parsing(
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
-    assert [x[0] for x in all_data] == [f"sample{i}" for i in range(10)]
-    assert [x[1] for x in all_data] == [1] * 10
+    assert [x[0] for x in all_data] == [str(i) for i in range(10)]
+    assert [x[1] for x in all_data] == [f"sample{i}" for i in range(10)]
+    assert [x[2] for x in all_data] == [1] * 10
 
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
@@ -226,7 +228,7 @@ def test_dataset_iter_with_parsing(
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(16)], [1] * 16)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[str(i) for i in range(10)])
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[str(i) for i in range(16)])
 def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -239,6 +241,7 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
-        assert len(batch) == 2
-        assert torch.equal(batch[0], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
-        assert torch.equal(batch[1], torch.ones(4, dtype=int))
+        assert len(batch) == 3
+        assert batch[0] == (str(4 * i), str(4 * i + 1), str(4 * i + 2), str(4 * i + 3))
+        assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
+        assert torch.equal(batch[2], torch.ones(4, dtype=int))
