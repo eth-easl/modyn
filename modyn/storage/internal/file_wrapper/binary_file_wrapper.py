@@ -108,10 +108,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         invalid_start = start > (total_samples - 1) or start < 0
         invalid_end = end < 1 or end > total_samples
         if invalid_start or invalid_end:
-            raise IndexError(
-                "Indices are out of range. Start and end should be between 0 and "
-                + str(total_samples)
-            )
+            raise IndexError("Indices are out of range. Start and end should be between 0 and " + str(total_samples))
 
         samples = []
         for idx in range(start, end):
@@ -140,10 +137,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         total_samples = len(data) / self.record_size
         invalid_indices = any((idx < 0 or idx > (total_samples - 1)) for idx in indices)
         if invalid_indices:
-            raise IndexError(
-                "Indices are out of range. Indices should be between 0 and "
-                + str(total_samples)
-            )
+            raise IndexError("Indices are out of range. Indices should be between 0 and " + str(total_samples))
 
         samples = []
         for idx in indices:
