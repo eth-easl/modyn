@@ -125,10 +125,10 @@ class PytorchTrainer:
                 callback.on_batch_begin(self._model.model, self._optimizer, batch, batch_number)
 
             # As empty() is unreliable
-            # we try to fetch an element within 100ms. If there is no
+            # we try to fetch an element within 10ms. If there is no
             # element within that timeframe returned, we continue.
             try:
-                req = self._status_query_queue.get(timeout=0.1)
+                req = self._status_query_queue.get(timeout=0.01)
                 if req != TrainerMessages.STATUS_QUERY_MESSAGE:
                     raise ValueError("Unknown message in the status query queue")
                 self.send_state_to_server(batch_number)

@@ -1,4 +1,3 @@
-# TODO: Add more description to the schema and complete the schema
 %YAML 1.1
 ---
 $schema: "http://json-schema.org/draft-04/schema"
@@ -193,9 +192,21 @@ properties:
         type: string
         description: |
           The hostname to use for the selector grpc service.
+    trainer_server:
+      type: object
+      properties:
+      port:
+        type: string
+        description: |
+          The port to use for the trainer_server grpc service.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the trainer_server grpc service.
 
 required:
   - project
   - storage
   - metadata_database
   - selector
+  - trainer_server

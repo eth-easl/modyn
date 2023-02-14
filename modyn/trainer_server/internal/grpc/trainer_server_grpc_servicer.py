@@ -130,6 +130,7 @@ class TrainerServerGRPCServicer:
             }
             cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
+
         exception = self.check_for_training_exception(training_id)
         _, num_batches, num_samples = self.get_latest_checkpoint(training_id)
         response_kwargs_finished: dict[str, Any] = {

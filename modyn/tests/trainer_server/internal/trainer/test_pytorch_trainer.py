@@ -345,11 +345,12 @@ def test_train(
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
-    timeout = 5
+    timeout = 2
     elapsed = 0
+
     while query_status_queue.empty():
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -358,9 +359,10 @@ def test_train(
         trainer.train(pathlib.Path(temp.name))
         assert os.path.exists(temp.name)
         assert trainer._num_samples == 800
+        elapsed = 0
         while not query_status_queue.empty():
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -386,8 +388,8 @@ def test_train(
                 if not status_queue.empty():
                     break
 
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise AssertionError("Did not reach desired queue state after 5 seconds.")

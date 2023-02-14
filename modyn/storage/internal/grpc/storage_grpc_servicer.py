@@ -134,7 +134,7 @@ class StorageGRPCServicer(StorageServicer):
             timestamp = request.timestamp
 
             values = (
-                session.query(Sample.external_key, File.updated_at)
+                session.query(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
@@ -146,7 +146,9 @@ class StorageGRPCServicer(StorageServicer):
                 return GetNewDataSinceResponse()
 
             return GetNewDataSinceResponse(
-                keys=[value[0] for value in values], timestamps=[value[1] for value in values]
+                keys=[value[0] for value in values],
+                timestamps=[value[1] for value in values],
+                labels=[value[2] for value in values],
             )
 
     def GetDataInInterval(
@@ -167,7 +169,7 @@ class StorageGRPCServicer(StorageServicer):
                 return GetDataInIntervalResponse()
 
             values = (
-                session.query(Sample.external_key, File.updated_at)
+                session.query(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
@@ -180,7 +182,9 @@ class StorageGRPCServicer(StorageServicer):
                 return GetDataInIntervalResponse()
 
             return GetDataInIntervalResponse(
-                keys=[value[0] for value in values], timestamps=[value[1] for value in values]
+                keys=[value[0] for value in values],
+                timestamps=[value[1] for value in values],
+                labels=[value[2] for value in values],
             )
 
     # pylint: disable-next=unused-argument,invalid-name
