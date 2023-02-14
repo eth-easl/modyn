@@ -154,18 +154,3 @@ def test_delete_selector_state_metadata(session):
         session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first()
         is None
     )
-
-
-def test_repr(session):
-    selector_state_metadata = SelectorStateMetadata(
-        pipeline_id=1,
-        sample_key="sample_key",
-        seen_in_trigger_id=1,
-        used=False,
-        timestamp=10000,
-        label=10,
-    )
-    session.add(selector_state_metadata)
-    session.commit()
-
-    assert repr(selector_state_metadata) == "<SelectorStateMetadata 1:sample_key>"

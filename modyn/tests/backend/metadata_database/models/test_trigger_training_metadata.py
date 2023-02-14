@@ -21,6 +21,7 @@ def session():
 def test_add_trigger_training_metadata(session):
     trigger_training_metadata = TriggerTrainingMetadata(
         trigger_id=1,
+        pipeline_id=1,
         time_to_train=1.0,
         overall_loss=1.0,
     )
@@ -58,6 +59,7 @@ def test_add_trigger_training_metadata(session):
 def test_update_trigger_training_metadata(session):
     trigger_training_metadata = TriggerTrainingMetadata(
         trigger_id=1,
+        pipeline_id=1,
         time_to_train=1.0,
         overall_loss=1.0,
     )
@@ -99,6 +101,7 @@ def test_update_trigger_training_metadata(session):
 def test_delete_trigger_training_metadata(session):
     trigger_training_metadata = TriggerTrainingMetadata(
         trigger_id=1,
+        pipeline_id=1,
         time_to_train=1.0,
         overall_loss=1.0,
     )
@@ -113,16 +116,3 @@ def test_delete_trigger_training_metadata(session):
         session.query(TriggerTrainingMetadata).filter(TriggerTrainingMetadata.trigger_training_metadata_id == 1).first()
         is None
     )
-
-
-def test_repr(session):
-    trigger_training_metadata = TriggerTrainingMetadata(
-        trigger_id=1,
-        time_to_train=1.0,
-        overall_loss=1.0,
-    )
-
-    session.add(trigger_training_metadata)
-    session.commit()
-
-    assert repr(trigger_training_metadata) == "<TriggerTrainingMetadata 1>"

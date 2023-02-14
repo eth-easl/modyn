@@ -21,6 +21,7 @@ def session():
 def test_add_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
         trigger_id=1,
+        pipeline_id=1,
         sample_key="sample_key",
         loss=1.0,
         gradient=1.0,
@@ -65,6 +66,7 @@ def test_add_sample_training_metadata(session):
 def test_update_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
         trigger_id=1,
+        pipeline_id=1,
         sample_key="sample_key",
         loss=1.0,
         gradient=1.0,
@@ -113,6 +115,7 @@ def test_update_sample_training_metadata(session):
 def test_delete_sample_training_metadata(session):
     sample_training_metadata = SampleTrainingMetadata(
         trigger_id=1,
+        pipeline_id=1,
         sample_key="sample_key",
         loss=1.0,
         gradient=1.0,
@@ -127,16 +130,3 @@ def test_delete_sample_training_metadata(session):
         session.query(SampleTrainingMetadata).filter(SampleTrainingMetadata.sample_training_metadata_id == 1).first()
         is None
     )
-
-
-def test_repr(session):
-    sample_training_metadata = SampleTrainingMetadata(
-        trigger_id=1,
-        sample_key="sample_key",
-        loss=1.0,
-        gradient=1.0,
-    )
-    session.add(sample_training_metadata)
-    session.commit()
-
-    assert repr(sample_training_metadata) == "<SampleTrainingMetadata 1:sample_key>"

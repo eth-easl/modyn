@@ -3,7 +3,6 @@
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from modyn.backend.metadata_database.models import Pipeline
 from sqlalchemy import Column, ForeignKey, Integer
-from sqlalchemy.orm import relationship
 
 
 class Trigger(MetadataBase):
@@ -16,8 +15,3 @@ class Trigger(MetadataBase):
     }
     trigger_id = Column("trigger_id", Integer, primary_key=True)
     pipeline_id = Column(Integer, ForeignKey(Pipeline.pipeline_id), nullable=False, primary_key=True)
-    pipeline = relationship("Pipeline")
-
-    def __repr__(self) -> str:
-        """Return string representation."""
-        return f"<Trigger {self.pipeline_id}:{self.trigger_id}>"

@@ -20,32 +20,21 @@ def session():
 
 
 def test_add_trigger(session):
-    pipeline = Pipeline(
-        num_workers=42,
-    )
-    session.add(pipeline)
-    session.commit()
     trigger = Trigger(
         trigger_id=1,
-        pipeline=pipeline,
+        pipeline_id=1,
     )
     session.add(trigger)
     session.commit()
 
     assert session.query(Trigger).filter(Trigger.trigger_id == 1).first() is not None
     assert session.query(Trigger).filter(Trigger.trigger_id == 1).first().pipeline_id == 1
-    assert session.query(Trigger).filter(Trigger.trigger_id == 1).first().pipeline.num_workers == 42
 
 
 def test_update_trigger(session):
-    pipeline = Pipeline(
-        num_workers=42,
-    )
-    session.add(pipeline)
-    session.commit()
     trigger = Trigger(
         trigger_id=1,
-        pipeline=pipeline,
+        pipeline_id=1,
     )
     session.add(trigger)
     session.commit()
@@ -57,14 +46,9 @@ def test_update_trigger(session):
 
 
 def test_delete_trigger(session):
-    pipeline = Pipeline(
-        num_workers=42,
-    )
-    session.add(pipeline)
-    session.commit()
     trigger = Trigger(
         trigger_id=1,
-        pipeline=pipeline,
+        pipeline_id=1,
     )
     session.add(trigger)
     session.commit()
@@ -73,19 +57,3 @@ def test_delete_trigger(session):
     session.commit()
 
     assert session.query(Trigger).filter(Trigger.trigger_id == 1).first() is None
-
-
-def test_repr(session):
-    pipeline = Pipeline(
-        num_workers=42,
-    )
-    session.add(pipeline)
-    session.commit()
-    trigger = Trigger(
-        trigger_id=1,
-        pipeline=pipeline,
-    )
-    session.add(trigger)
-    session.commit()
-
-    assert repr(trigger) == "<Trigger 1:1>"

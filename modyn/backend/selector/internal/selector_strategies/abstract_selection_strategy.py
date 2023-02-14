@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
 from sqlalchemy import func
 
 
@@ -82,10 +82,18 @@ class AbstractSelectionStrategy(ABC):
               where the first element of the tuple is the key, and the second element is the associated weight.
         """
         trigger_id = self._next_trigger_id
+        training_samples = self._on_trigger()
+
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.session.add(Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id))
             database.session.commit()
-        training_samples = self._on_trigger()
+            database.session.add_all(
+                [
+                    TriggerSample(trigger_id=trigger_id, pipeline_id=self._pipeline_id, sample_key=key)
+                    for key, _ in training_samples
+                ]
+            )
+            database.session.commit()
 
         if self.reset_after_trigger:
             self._reset_state()

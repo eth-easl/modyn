@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -135,6 +135,21 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert len(data) == 1
         assert data[0].trigger_id == 0
         assert data[0].pipeline_id == 42
+
+        data = database.session.query(TriggerSample).all()
+
+        assert len(data) == 3
+        assert data[0].trigger_id == 0
+        assert data[0].sample_key == "a"
+        assert data[0].pipeline_id == 42
+
+        assert data[1].trigger_id == 0
+        assert data[1].sample_key == "b"
+        assert data[1].pipeline_id == 42
+
+        assert data[2].trigger_id == 0
+        assert data[2].sample_key == "c"
+        assert data[2].pipeline_id == 42
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())

@@ -54,13 +54,3 @@ def test_delete_pipeline(session):
     session.commit()
 
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first() is None
-
-
-def test_repr(session):
-    pipeline = Pipeline(
-        num_workers=10,
-    )
-    session.add(pipeline)
-    session.commit()
-
-    assert repr(pipeline) == "<Pipeline 1>"
