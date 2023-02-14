@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
+from sqlalchemy import func
+
 
 class AbstractSelectionStrategy(ABC):
     """This class is the base class for selection strategies.
@@ -30,7 +34,16 @@ class AbstractSelectionStrategy(ABC):
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
-        self._next_trigger_id = 0
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            last_trigger_id = (
+                database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
+                .filter(pipeline_id == self._pipeline_id)
+                .scalar()
+            )
+            if last_trigger_id is None:
+                self._next_trigger_id = 0
+            else:
+                self._next_trigger_id = last_trigger_id + 1
 
     @abstractmethod
     def _on_trigger(self) -> list[tuple[str, float]]:
@@ -71,8 +84,46 @@ class AbstractSelectionStrategy(ABC):
         trigger_id = self._next_trigger_id
         training_samples = self._on_trigger()
 
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.session.add(Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id))
+            database.session.commit()
+            database.session.add_all(
+                [
+                    TriggerSample(trigger_id=trigger_id, pipeline_id=self._pipeline_id, sample_key=key)
+                    for key, _ in training_samples
+                ]
+            )
+            database.session.commit()
+
         if self.reset_after_trigger:
             self._reset_state()
 
         self._next_trigger_id += 1
         return trigger_id, training_samples
+
+    def _persist_samples(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+        """Persists the data in the database.
+
+        Args:
+            keys (list[str]): A list of keys of the data
+            timestamps (list[int]): A list of timestamps of the data.
+            labels (list[int]): A list of labels of the data.
+            database (MetadataDatabaseConnection): The database connection.
+        """
+        # TODO(#116): Right now we persist all datapoint into DB. We might want to
+        # keep this partly in memory for performance.
+        # Even if each sample is 64 byte and we see 2 million samples, it's just 128 MB of data in memory.
+        # This also means that we have to clear this list on reset accordingly etc.
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            new_selector_state_metadata = [
+                SelectorStateMetadata(
+                    pipeline_id=self._pipeline_id,
+                    sample_key=key,
+                    timestamp=timestamp,
+                    label=label,
+                    seen_in_trigger_id=self._next_trigger_id,
+                )
+                for key, timestamp, label in zip(keys, timestamps, labels)
+            ]
+            database.session.add_all(new_selector_state_metadata)
+            database.session.commit()

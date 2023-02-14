@@ -1,5 +1,7 @@
-"""
-TODO: Describe what is in this directory/submodule.
+"""This package contains the database classes for the backend module.
+
+The models are used to abstract the database operations.
+This allows the storage module to be used with different databases.
 """
 import os
 

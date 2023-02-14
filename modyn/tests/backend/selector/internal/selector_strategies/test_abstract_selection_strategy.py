@@ -4,6 +4,8 @@ import pathlib
 from unittest.mock import MagicMock, patch
 
 import pytest
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -20,6 +22,15 @@ def get_minimal_modyn_config():
             "database": f"{database_path}",
         },
     }
+
+
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.create_tables()
+    yield
+
+    os.remove(database_path)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -39,6 +50,10 @@ def test_init():
         AbstractSelectionStrategy(
             {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, ["doesntexist"]
         )
+
+    #  Test reinit works
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42)
+    strat._next_trigger_id = 1
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -98,3 +113,67 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
     test_reset_state.assert_called_once()
     test__on_trigger.assert_called_once()
     assert samples == [("a", 1.0), ("b", 1.0), ("c", 1.0)]
+
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_on_trigger")
+@patch.object(AbstractSelectionStrategy, "_reset_state")
+def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42)
+    assert strat.reset_after_trigger
+    assert strat._next_trigger_id == 0
+
+    test__on_trigger.return_value = [("a", 1.0), ("b", 1.0), ("c", 1.0)]
+
+    trigger_id, _ = strat.trigger()
+    assert trigger_id == 0
+    assert strat._next_trigger_id == 1
+
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        data = database.session.query(Trigger).all()
+
+        assert len(data) == 1
+        assert data[0].trigger_id == 0
+        assert data[0].pipeline_id == 42
+
+        data = database.session.query(TriggerSample).all()
+
+        assert len(data) == 3
+        assert data[0].trigger_id == 0
+        assert data[0].sample_key == "a"
+        assert data[0].pipeline_id == 42
+
+        assert data[1].trigger_id == 0
+        assert data[1].sample_key == "b"
+        assert data[1].pipeline_id == 42
+
+        assert data[2].trigger_id == 0
+        assert data[2].sample_key == "c"
+        assert data[2].pipeline_id == 42
+
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+def test__persist_data():
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42)
+    strat._persist_samples(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
+
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        data = database.session.query(
+            SelectorStateMetadata.sample_key,
+            SelectorStateMetadata.timestamp,
+            SelectorStateMetadata.label,
+            SelectorStateMetadata.pipeline_id,
+            SelectorStateMetadata.used,
+        ).all()
+
+        assert len(data) == 3
+
+        keys, timestamps, labels, pipeline_ids, useds = zip(*data)
+
+        assert not any(useds)
+        for pip_id in pipeline_ids:
+            assert pip_id == 42
+
+        assert keys[0] == "a" and keys[1] == "b" and keys[2] == "c"
+        assert timestamps[0] == 0 and timestamps[1] == 1 and timestamps[2] == 2
+        assert labels[0] == "dog" and labels[1] == "dog" and labels[2] == "cat"

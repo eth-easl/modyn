@@ -5,10 +5,8 @@ from __future__ import annotations
 import logging
 
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.database.models.file import File
-from modyn.storage.internal.database.models.sample import Sample
-from modyn.storage.internal.database.storage_base import Base
+from modyn.storage.internal.database.models import Dataset, File, Sample
+from modyn.storage.internal.database.storage_base import StorageBase
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import exc
@@ -43,7 +41,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         The metadata is a collection of Table objects that inherit from Base and their associated
         schema constructs (such as Column objects, ForeignKey objects, and so on).
         """
-        Base.metadata.create_all(self.engine)
+        StorageBase.metadata.create_all(self.engine)
 
     def add_dataset(
         self,

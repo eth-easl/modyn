@@ -3,17 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
-from modyn.backend.metadata_database.metadata_base import Base
-from modyn.backend.metadata_database.models.metadata import Metadata
-from modyn.backend.metadata_database.models.training import Training
+from modyn.backend.metadata_database.metadata_base import MetadataBase
+from modyn.backend.metadata_database.models import Pipeline
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
-from sqlalchemy import exc
 
 logger = logging.getLogger(__name__)
-
-# TODO(#113): there is no training id anymore
 
 
 class MetadataDatabaseConnection(AbstractDatabaseConnection):
@@ -43,89 +38,19 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         The metadata is a collection of Table objects that inherit from Base and their associated
         schema constructs (such as Column objects, ForeignKey objects, and so on).
         """
-        Base.metadata.create_all(self.engine)
+        MetadataBase.metadata.create_all(self.engine)
 
-    # TODO(#113): this really requires some restructuring
-    def set_metadata(
-        self,
-        keys: list[str],
-        timestamps: list[int],
-        scores: list[float],
-        seens: list[bool],
-        labels: list[int],
-        datas: list[bytes],
-        pipeline_id: int,
-        trigger_id: int,
-    ) -> None:
-        for i, key in enumerate(keys):
-            try:
-                if self.session.query(Metadata).filter(Metadata.key == key).first() is not None:
-                    self.session.query(Metadata).filter(Metadata.key == key).delete()
-                metadata = Metadata(
-                    key=key,
-                    timestamp=timestamps[i],
-                    score=scores[i],
-                    seen=seens[i],
-                    label=labels[i],
-                    data=datas[i],
-                    pipeline_id=pipeline_id,
-                    trigger_id=trigger_id,
-                )
-                self.session.add(metadata)
-                self.session.commit()
-            except exc.SQLAlchemyError as exception:
-                logger.error(f"Could not set metadata: {exception}")
-                self.session.rollback()
-                continue
-
-    def delete_training(self, training_id: int) -> None:
-        """Delete training.
+    def register_pipeline(self, num_workers: int) -> int:
+        """Register a new pipeline in the database.
 
         Args:
-            training_id (int): training id
-        """
-        try:
-            self.session.query(Metadata).filter(Metadata.pipeline_id == training_id).delete()
-            self.session.query(Training).filter(Training.training_id == training_id).delete()
-            self.session.commit()
-        except exc.SQLAlchemyError as exception:
-            logger.error(f"Could not delete training: {exception}")
-            self.session.rollback()
-
-    def register_pipeline(self, number_of_workers: int) -> Optional[int]:
-        """Register training.
-
-        Args:
-            number_of_workers (int): number of workers
+            num_workers (int): Number of workers in the pipeline.
 
         Returns:
-            int: training id
+            int: Id of the newly created pipeline.
         """
-        try:
-            training = Training(number_of_workers=number_of_workers)
-            self.session.add(training)
-            self.session.commit()
-            return training.training_id
-        except exc.SQLAlchemyError as exception:
-            logger.error(f"Could not register training: {exception}")
-            self.session.rollback()
-            return None
-
-    def get_training_information(self, training_id: int) -> Optional[int]:
-        """Get training.
-
-        Args:
-            training_id (int): training id
-
-        Returns:
-            int: number of workers,
-        """
-        try:
-            training = self.session.query(Training).filter(Training.training_id == training_id).first()
-            if training is None:
-                return None
-            return training.number_of_workers
-        except exc.SQLAlchemyError as exception:
-            logger.error(f"Could not get training: {exception}")
-            self.session.rollback()
-            return None
+        pipeline = Pipeline(num_workers=num_workers)
+        self.session.add(pipeline)
+        self.session.commit()
+        pipeline_id = pipeline.pipeline_id
+        return pipeline_id

@@ -7,9 +7,7 @@ import time
 import uuid
 from typing import Any, Optional
 
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.database.models.file import File
-from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper

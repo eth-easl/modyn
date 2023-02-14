@@ -8,9 +8,7 @@ from multiprocessing import Value
 from unittest.mock import patch
 
 import pytest
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.database.models.file import File
-from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
