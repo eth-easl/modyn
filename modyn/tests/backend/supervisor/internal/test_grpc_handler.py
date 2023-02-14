@@ -49,7 +49,6 @@ def get_minimal_pipeline_config() -> dict:
             "dataloader_workers": 1,
             "initial_model": "random",
             "initial_pass": {"activated": False},
-            "learning_rate": 0.1,
             "batch_size": 42,
             "optimizer": {"name": "SGD"},
             "optimization_criterion": {"name": "CrossEntropyLoss"},

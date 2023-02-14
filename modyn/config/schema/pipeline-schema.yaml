@@ -52,10 +52,6 @@ properties:
         type: number
         description: |
           The number of data loader workers on the trainer node that fetch data from storage.
-      learning_rate:
-        type: number
-        description: |
-          The learning rate to be used during training.
       batch_size:
         type: number
         description: |
@@ -168,7 +164,6 @@ properties:
       - gpus
       - device
       - dataloader_workers
-      - learning_rate
       - batch_size
       - selection_strategy
       - initial_model
