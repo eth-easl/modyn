@@ -21,9 +21,9 @@ def test_get_filesystem_wrapper_with_invalid_type():
 
 
 def test_get_file_wrapper():
-    file_wrapper = get_file_wrapper(FileWrapperType.WebdatasetFileWrapper, "/tmp/modyn", "{}", None)
+    file_wrapper = get_file_wrapper(FileWrapperType.SingleSampleFileWrapper, "/tmp/modyn", "{}", None)
     assert file_wrapper is not None
-    assert file_wrapper.file_wrapper_type == FileWrapperType.WebdatasetFileWrapper
+    assert file_wrapper.file_wrapper_type == FileWrapperType.SingleSampleFileWrapper
 
 
 def test_get_file_wrapper_with_invalid_type():

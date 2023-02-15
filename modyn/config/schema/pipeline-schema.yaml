@@ -31,7 +31,7 @@ properties:
         type: string
         description: |
           The ID of the model that should be trained.
-      model_config:
+      config:
         type: object
         description: |
           Configuration dictionary that will be passed to the model on initialization.
@@ -44,39 +44,63 @@ properties:
         type: number
         description: |
           The number of GPUs that should be used for training.
+      device:
+        type: string
+        description: |
+          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu" and let the trainer server figure out the exact device, but for now, this really is the identifier of the device.
       dataloader_workers:
         type: number
         description: |
           The number of data loader workers on the trainer node that fetch data from storage.
-      learning_rate:
-        type: number
-        description: |
-          The learning rate to be used during training.
       batch_size:
         type: number
         description: |
           The batch size to be used during training.
-      strategy:
-        type: string
-        description: |
-          The Selector strategy that the pipeline should use.
-      strategy_config:
+      selection_strategy:
         type: object
         description: |
-          Configuration dictionary that will be passed to the Selector
+          Configuration for the Selector
         properties:
-          limit:
-            type: number
+          name:
+            type: string
             description: |
-              When strategy is finetune, this limits how many data points we finetune on at maximum per triggered training. Set to -1 to disable limit.
+              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy
+          config:
+            type: object
+            description: |
+              Configuration dictionary that will be passed to the strategy
+            properties:
+              limit:
+                type: number
+                description: |
+                  This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.
+              reset_after_trigger:
+                type: boolean
+                description: |
+                  If set to true, the selection strategy resets its internal state after a trigger.
+              unused_data_ratio:
+                type: number
+                description: |
+                 [FreshnessSamplingStrategy] Ratio that defines how much data in the training set per trigger should be from previously unused data (in all previous triggers).
+              limit_reset:
+                type: string
+                description: |
+                 [NewDataStrategy] Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true. Either "lastX" or "sampleUAR" are supported. See class description for further info.
           processor_type:
             type: string
             description: |
               The name of the Metadata Processor strategy that should be used.
+        required:
+          - name
+>>>>>>> main
       initial_model:
         type: string
         description: |
           What type of initial model should be used (random or pretrained).
+      initial_model_path:
+        type: string
+        description: |
+          In case of pretrained initial model, provide path (local on supervisor) to initial model
       initial_pass:
         type: object
         description: |
@@ -92,14 +116,66 @@ properties:
               If we do an initial pass, we define whether we reference a certain percentage of all data (= amount) or all data in an interval (= start_timestamp, end_timestamp)
         required:
           - activated
+      checkpointing:
+        type: object
+        description: |
+          Configuration of checkpointing during training
+        properties:
+          activated:
+            type: boolean
+            description: |
+              Whether we checkpoint or not
+          interval:
+            type: number
+            description: |
+              In what interval we checkpoint
+          path:
+            type: string
+            description: |
+              The path on the training node where the checkpoints are stored
+        required:
+          - activated
+      optimizer:
+        type: object
+        description: |
+          Configuration for the optimizer (e.g., Adam)
+        properties:
+          name:
+            type: string
+            description: |
+              The name of the optimizer the pipeline uses (e.g., SGD)
+          config:
+            type: object
+            description: |
+              Optional configuration of the optimizer, e.g. learning rate/momentum. Passed to the optimizer class as a dict.
+        required:
+          - name
+      optimization_criterion:
+        type: object
+        description: |
+          Configuration for the optimization criterion that we optimize
+        properties:
+          name:
+            type: string
+            description: |
+              The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss)
+          config:
+            type: object
+            description: |
+              Optional configuration of the criterion. Passed to the optimizer class as a dict.
+        required:
+          - name
     required:
       - gpus
+      - device
       - dataloader_workers
-      - learning_rate
       - batch_size
-      - strategy
+      - selection_strategy
       - initial_model
       - initial_pass
+      - checkpointing
+      - optimization_criterion
+      - optimizer
   data:
     type: object
     description: |
@@ -109,8 +185,19 @@ properties:
         type: string
         description: |
           ID of dataset to be used for training.
+      bytes_parser_function:
+        type: string
+        description: |
+          Function used to convert bytes received from the Storage, to a format useful for further transformations (e.g. Tensors).
+          This function is called before any other transformations are performed on the data.
+      transformations:
+        type: array
+        description: |
+          Further (optional) transformations to be applied on the data after bytes_parser_function has been applied.
+          For example, this can be torchvision transformations.
     required:
       - dataset_id
+      - bytes_parser_function
   trigger:
     type: object
     description: |

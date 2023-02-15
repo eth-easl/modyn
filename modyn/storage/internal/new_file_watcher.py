@@ -1,13 +1,13 @@
 """New file watcher."""
 
+import json
 import logging
+import pathlib
 import time
 import uuid
 from typing import Any, Optional
 
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.database.models.file import File
-from modyn.storage.internal.database.models.sample import Sample
+from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
@@ -56,7 +56,6 @@ class NewFileWatcher:
 
         if filesystem_wrapper.exists(dataset.base_path):
             if filesystem_wrapper.isdir(dataset.base_path):
-                print(f"Path {dataset.base_path} is a directory.")
                 self._update_files_in_directory(
                     filesystem_wrapper, dataset.file_wrapper_type, dataset.base_path, timestamp, session, dataset
                 )
@@ -77,6 +76,8 @@ class NewFileWatcher:
     def _file_unknown(self, session: Session, file_path: str) -> bool:
         return session.query(File).filter(File.path == file_path).first() is None
 
+    # pylint: disable=too-many-locals
+
     def _update_files_in_directory(
         self,
         filesystem_wrapper: AbstractFileSystemWrapper,
@@ -92,7 +93,10 @@ class NewFileWatcher:
         if not filesystem_wrapper.isdir(path):
             logger.critical(f"Path {path} is not a directory.")
             return
+        data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
         for file_path in filesystem_wrapper.list(path, recursive=True):
+            if pathlib.Path(file_path).suffix != data_file_extension:
+                continue
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )

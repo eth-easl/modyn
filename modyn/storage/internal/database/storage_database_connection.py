@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
-from modyn.storage.internal.database.models.dataset import Dataset
-from modyn.storage.internal.database.storage_base import Base
+from modyn.storage.internal.database.models import Dataset, File, Sample
+from modyn.storage.internal.database.storage_base import StorageBase
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import exc
@@ -41,7 +41,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         The metadata is a collection of Table objects that inherit from Base and their associated
         schema constructs (such as Column objects, ForeignKey objects, and so on).
         """
-        Base.metadata.create_all(self.engine)
+        StorageBase.metadata.create_all(self.engine)
 
     def add_dataset(
         self,
@@ -72,6 +72,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
                     }
                 )
             else:
+                logger.info(f"Dataset with name {name} does not exist.")
                 dataset = Dataset(
                     name=name,
                     base_path=base_path,
@@ -85,6 +86,23 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
             self.session.commit()
         except exc.SQLAlchemyError as exception:
             logger.error(f"Error adding dataset: {exception}")
+            self.session.rollback()
+            return False
+        return True
+
+    def delete_dataset(self, name: str) -> bool:
+        """Delete dataset from database."""
+        try:
+            samples = self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).all()
+            for sample in samples:
+                self.session.delete(sample)
+            files = self.session.query(File).join(Dataset).filter(Dataset.name == name).all()
+            for file in files:
+                self.session.delete(file)
+            self.session.query(Dataset).filter(Dataset.name == name).delete()
+            self.session.commit()
+        except exc.SQLAlchemyError as exception:
+            logger.error(f"Error deleting dataset: {exception}")
             self.session.rollback()
             return False
         return True

@@ -24,7 +24,7 @@ class MetadataProcessor:
             server.wait_for_termination()
 
     def _get_strategy(self, pipeline_config: dict) -> AbstractProcessorStrategy:
-        strategy = ProcessorStrategyType(pipeline_config["training"]["strategy_config"]["processor_type"])
+        strategy = ProcessorStrategyType(pipeline_config["training"]["selection_strategy"]["processor_type"])
         processor_strategy_module = dynamic_module_import(
             f"modyn.backend.metadata_processor.processor_strategies.{strategy.value}"
         )

@@ -6,22 +6,25 @@ services:
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
+    container_name: modynbase
   metadata-db:
     image: postgres:14.1-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: default_database
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: md5
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - ./metadata-postgres-data:/var/lib/postgresql/data
   storage-db:
     image: postgres:14.1-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: default_database
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: md5
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
   storage:
@@ -32,6 +35,8 @@ services:
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
+    volumes:
+      - storage-data:/app/storage
   metadata_processor:
     restart: on-failure
     depends_on:
@@ -44,15 +49,29 @@ services:
     restart: on-failure
     depends_on:
       - storage
+      - selector
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
+  selector:
+    restart: on-failure
+    depends_on: 
+      - metadata-db
+    build:
+      context: .
+      dockerfile: docker/Selector/Dockerfile
   tests:
     depends_on:
       - modynbase
       - storage
       - metadata-db
       - storage-db
+      - selector
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
+    user: root
+    volumes:
+      - storage-data:/app/storage
+volumes:
+  storage-data:

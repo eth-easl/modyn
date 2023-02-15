@@ -33,7 +33,7 @@ def get_minimal_modyn_config() -> dict:
                     "name": "test",
                     "base_path": "/tmp/modyn",
                     "filesystem_wrapper_type": "LocalFilesystemWrapper",
-                    "file_wrapper_type": "WebdatasetFileWrapper",
+                    "file_wrapper_type": "SingleSampleFileWrapper",
                     "description": "test",
                     "version": "0.0.1",
                     "file_wrapper_config": {},
@@ -50,6 +50,8 @@ def get_minimal_modyn_config() -> dict:
             "port": "0",
             "database": f"{database_path}",
         },
+        "selector": {"hostname": "host", "port": "1337"},
+        "trainer_server": {"hostname": "host", "port": "1337"},
     }
 
 

@@ -1,6 +1,6 @@
 # pylint: disable=redefined-outer-name
 import pytest
-from modyn.storage.internal.database.models.dataset import Dataset
+from modyn.storage.internal.database.models import Dataset
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import create_engine
@@ -25,7 +25,7 @@ def test_add_dataset(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -40,7 +40,7 @@ def test_add_dataset(session):
     )
     assert (
         session.query(Dataset).filter(Dataset.name == "test").first().file_wrapper_type
-        == FileWrapperType.WebdatasetFileWrapper
+        == FileWrapperType.SingleSampleFileWrapper
     )
     assert session.query(Dataset).filter(Dataset.name == "test").first().description == "test"
     assert session.query(Dataset).filter(Dataset.name == "test").first().version == "test"
@@ -51,7 +51,7 @@ def test_update_dataset(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -82,7 +82,7 @@ def test_repr(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )
@@ -97,7 +97,7 @@ def test_delete_dataset(session):
         name="test",
         base_path="test",
         filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-        file_wrapper_type=FileWrapperType.WebdatasetFileWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
     )

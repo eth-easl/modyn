@@ -7,6 +7,8 @@ from typing import Optional
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
+from modyn.utils.utils import current_time_millis
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +17,8 @@ class Supervisor:
     # pylint: disable=too-many-instance-attributes
     # This is a core class and we require the attributes.
 
-    # TODO(#63): Get these from the Trainer and Selector, as soon as that functionality is merged.
-    supported_strategies: list[str] = ["finetune"]
-    supported_initial_models: list[str] = ["random"]
+    # TODO(#63): Get these from Selector
+    supported_strategies: list[str] = ["NewDataStrategy", "FreshnessSamplingStrategy"]
 
     def __init__(
         self,
@@ -28,8 +29,9 @@ class Supervisor:
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
-        self.current_training_id = None
-        self.pipeline_id = None
+        self.current_training_id: Optional[int] = None
+        self.pipeline_id: Optional[int] = None
+        self.previous_model: Optional[pathlib.Path] = None
 
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
@@ -50,6 +52,15 @@ class Supervisor:
             self.stop_replay_at = stop_replay_at
 
         self._setup_trigger()
+        self._setup_model_directory()
+
+    def _setup_model_directory(self) -> None:
+        self.model_storage_directory = (
+            pathlib.Path(os.getcwd())
+            / f"models_{self.pipeline_config['pipeline']['name']}"
+            / str(current_time_millis())
+        )
+        os.makedirs(self.model_storage_directory)
 
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
@@ -80,7 +91,7 @@ class Supervisor:
     def _validate_training_options(self) -> bool:
         is_valid = True
         batch_size = self.pipeline_config["training"]["batch_size"]
-        strategy = self.pipeline_config["training"]["strategy"]
+        strategy = self.pipeline_config["training"]["selection_strategy"]["name"]
         initial_model = self.pipeline_config["training"]["initial_model"]
 
         if self.pipeline_config["training"]["gpus"] != 1:
@@ -95,19 +106,20 @@ class Supervisor:
             logger.error(f"Unsupported strategy: {strategy}. Supported strategies = {Supervisor.supported_strategies}")
             is_valid = False
 
-        if strategy == "finetune":
-            if (
-                "strategy_config" not in self.pipeline_config["training"].keys()
-                or "limit" not in self.pipeline_config["training"]["strategy_config"].keys()
-            ):
-                logger.warning("Did not give any explicit limit on finetuning strategy. Assuming no limit.")
-
-        if initial_model not in Supervisor.supported_initial_models:
-            logger.error(
-                f"Unsupported initial model: {initial_model}."
-                f"Supported initial models = {Supervisor.supported_initial_models}"
-            )
+        if initial_model not in ["random", "pretrained"]:
+            logger.error("Only random and pretrained initial models are supported.")
             is_valid = False
+
+        if initial_model == "pretrained":
+            if "initial_model_path" not in self.pipeline_config["training"]:
+                logger.error("Initial model set to pretrained, but no initial_model_path given")
+                is_valid = False
+            else:
+                self.previous_model = self.pipeline_config["training"]["initial_model_path"]
+                assert self.previous_model is not None  # makes mypy happy
+                if not self.previous_model.exists():
+                    logger.error(f"Path {self.previous_model} does not exist.")
+                    is_valid = False
 
         if self.pipeline_config["training"]["initial_pass"]["activated"]:
             reference = self.pipeline_config["training"]["initial_pass"]["reference"]
@@ -155,7 +167,7 @@ class Supervisor:
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:
-            self.grpc.shutdown_trainer_server(self.current_training_id)
+            self.grpc.stop_training_at_trainer_server(self.current_training_id)
 
     def wait_for_new_data(self, start_timestamp: int) -> None:
         last_timestamp = start_timestamp
@@ -169,14 +181,14 @@ class Supervisor:
             while True:
                 new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
                 # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
-                new_data = [(key, timestamp) for (key, timestamp) in new_data if key not in last_keys]
+                new_data = [(key, timestamp, label) for (key, timestamp, label) in new_data if key not in last_keys]
                 last_timestamp = (
-                    max((timestamp for (_, timestamp) in new_data)) if len(new_data) > 0 else last_timestamp
+                    max((timestamp for (_, timestamp, _) in new_data)) if len(new_data) > 0 else last_timestamp
                 )
 
                 # Remember all data points with last_timestamp so we do not process them again in the next iteration
                 # We use a set to have a O(1) check in the line above.
-                last_keys = {key for (key, timestamp) in new_data if timestamp == last_timestamp}
+                last_keys = {key for (key, timestamp, label) in new_data if timestamp == last_timestamp}
 
                 if not self._handle_new_data(new_data):
                     sleep(2)
@@ -186,36 +198,40 @@ class Supervisor:
             self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
-    def _handle_new_data(self, new_data: list[tuple[str, int]], selector_batch_size: int = 128) -> bool:
+    def _handle_new_data(self, new_data: list[tuple[str, int, int]], selector_batch_size: int = 128) -> bool:
         """This function handles new data during experiments or actual pipeline execution.
         We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
         If a data point within a batch causes a trigger,
         we inform the selector about all data points including that data point.
         Otherwise, the selector is informed
         """
+        logger.info(f"Received {len(new_data)} new data points. Handling batches.")
         new_data.sort(key=lambda tup: tup[1])
         any_training_triggered = False
 
-        for i in range(0, len(new_data), selector_batch_size):
+        for i in tqdm(range(0, len(new_data), selector_batch_size)):
             batch = new_data[i : i + selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             any_training_triggered = any_training_triggered or triggered
 
         return any_training_triggered
 
-    def _handle_new_data_batch(self, batch: list[tuple[str, int]]) -> bool:
+    def _handle_new_data_batch(self, batch: list[tuple[str, int, int]]) -> bool:
         triggering_indices = self.trigger.inform(batch)
 
         if len(triggering_indices) > 0:
+            logger.info(f"There are {len(triggering_indices)} triggers in this batch.")
             self._handle_triggers_within_batch(batch, triggering_indices)
             return True
 
         self.grpc.inform_selector(self.pipeline_id, batch)
         return False
 
-    def _handle_triggers_within_batch(self, batch: list[tuple[str, int]], triggering_indices: list[int]) -> None:
+    def _handle_triggers_within_batch(self, batch: list[tuple[str, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
-        for i, triggering_idx in enumerate(triggering_indices):
+        logger.info("Handling triggers within batch.")
+
+        for i, triggering_idx in enumerate(tqdm(triggering_indices)):
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
@@ -230,6 +246,7 @@ class Supervisor:
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
                 remaining_data = batch[triggering_idx + 1 :]
+                logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0:
                     # These data points will be included in the next trigger
@@ -239,20 +256,28 @@ class Supervisor:
 
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
-        assert self.pipeline_id is not None, "Callback called without a registered pipeline."
-        self.current_training_id = self.grpc.start_trainer_server(self.pipeline_id, trigger_id, self.pipeline_config)
+        assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
+        logger.info(f"Running training for trigger {trigger_id}")
 
+        self.current_training_id = self.grpc.start_training(
+            self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model
+        )
         self.grpc.wait_for_training_completion(self.current_training_id)
 
+        self.previous_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
+
     def initial_pass(self) -> None:
-        # TODO(##10): Implement initial pass.
+        # TODO(#128): Implement initial pass.
         # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
         # for reference = amount, we need support from the storage module to return the required keys
+        # In case self.previous_model is set, respect and update!
         pass
 
     def replay_data(self) -> None:
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
+
+        logger.info("Starting data replay.")
 
         if self.stop_replay_at is None:
             replay_data = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
@@ -261,19 +286,17 @@ class Supervisor:
 
         self._handle_new_data(replay_data)
 
-    def end_pipeline(self) -> None:
-        # deregister etc
-        pass
-
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
 
         self.initial_pass()
+        logger.info("Initial pass completed.")
 
         if self.experiment_mode:
             self.replay_data()
         else:
             self.wait_for_new_data(start_timestamp)
 
+        logger.info("Pipeline done, unregistering.")
         self.grpc.unregister_pipeline_at_selector(self.pipeline_id)

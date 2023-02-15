@@ -6,11 +6,12 @@ package modyn.storage;
 
 service Storage {
   rpc Get (GetRequest) returns (stream GetResponse) {}
-  rpc GetNewDataSince (GetNewDataSinceRequest) returns (stream GetNewDataSinceResponse) {}
-  rpc GetDataInInterval (GetDataInIntervalRequest) returns (stream GetDataInIntervalResponse) {}
+  rpc GetNewDataSince (GetNewDataSinceRequest) returns (GetNewDataSinceResponse) {}
+  rpc GetDataInInterval (GetDataInIntervalRequest) returns (GetDataInIntervalResponse) {}
   rpc CheckAvailability (DatasetAvailableRequest) returns (DatasetAvailableResponse) {}
   rpc RegisterNewDataset (RegisterNewDatasetRequest) returns (RegisterNewDatasetResponse) {}
   rpc GetCurrentTimestamp (google.protobuf.Empty) returns (GetCurrentTimestampResponse) {}
+  rpc DeleteDataset (DatasetAvailableRequest) returns (DeleteDatasetResponse) {}
 }
 
 message GetRequest {
@@ -19,7 +20,7 @@ message GetRequest {
 }
 
 message GetResponse {
-  bytes chunk = 1;
+  repeated bytes samples = 1;
   repeated string keys = 2;
   repeated int64 labels = 3;
 }
@@ -32,6 +33,7 @@ message GetNewDataSinceRequest {
 message GetNewDataSinceResponse {
   repeated string keys = 1;
   repeated int64 timestamps = 2;
+  repeated int64 labels = 3;
 }
 
 message GetDataInIntervalRequest {
@@ -43,6 +45,7 @@ message GetDataInIntervalRequest {
 message GetDataInIntervalResponse {
   repeated string keys = 1;
   repeated int64 timestamps = 2;
+  repeated int64 labels = 3;
 }
 
 message DatasetAvailableRequest {
@@ -69,4 +72,8 @@ message RegisterNewDatasetResponse {
 
 message GetCurrentTimestampResponse {
   int64 timestamp = 1;
+}
+
+message DeleteDatasetResponse {
+  bool success = 1;
 }

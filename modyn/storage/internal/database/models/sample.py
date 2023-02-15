@@ -1,36 +1,23 @@
 """Sample model."""
 
-from typing import Optional
-
-from modyn.storage.internal.database.storage_base import Base
-from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.orm import backref, relationship
+from modyn.storage.internal.database.storage_base import StorageBase
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 
-class Sample(Base):
+class Sample(StorageBase):
     """Sample model."""
 
     __tablename__ = "samples"
-    sample_id = Column(Integer, primary_key=True)
+    # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
+    __table_args__ = {"extend_existing": True}
+    sample_id = Column("sample_id", Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False)
-    file = relationship("File", backref=backref("samples", lazy=True))
+    file = relationship("File")
     external_key = Column(String(120), unique=True, nullable=False)
-    index = Column(Integer, nullable=False)
-    label = Column(Integer, nullable=True)
+    index = Column(BigInteger, nullable=False)
+    label = Column(BigInteger, nullable=True)
 
     def __repr__(self) -> str:
         """Return string representation."""
         return f"<Sample {self.sample_id}>"
-
-    def __init__(self, file: str, external_key: str, index: int, label: Optional[int] = None):
-        """Init sample.
-
-        Args:
-            file (str): file reference
-            external_key (str): external key
-            index (int): index
-        """
-        self.file = file
-        self.external_key = external_key
-        self.index = index
-        self.label = label
