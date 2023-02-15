@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from modyn.backend.metadata_processor.internal.grpc.grpc_handler import GRPCHandler
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
 from modyn.backend.metadata_processor.processor_strategies.processor_strategy_type import ProcessorStrategyType
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
     PerTriggerMetadata, PerSampleMetadata
@@ -16,7 +17,6 @@ class AbstractProcessorStrategy(ABC):
 
     def __init__(self, modyn_config: dict):
         self.config = modyn_config
-        self.grpc = GRPCHandler(modyn_config)
 
     def process_training_metadata(
         self, pipeline_id: int, trigger_id: int,
@@ -30,12 +30,40 @@ class AbstractProcessorStrategy(ABC):
             training_id (int): The training ID.
             data (str): Serialized training metadata.
         """
-        data = self.process_metadata(trigger_metadata, sample_metadata)
-        self.grpc.set_metadata(pipeline_id, trigger_id, data)
+        processed_trigger_metadata = self.process_trigger_metadata(trigger_metadata)
+        processed_sample_metadata = self.process_sample_metadata(sample_metadata)
+
+        with MetadataDatabaseConnection(self.config) as database:
+            if processed_trigger_metadata:
+                database.session.add(
+                    TriggerTrainingMetadata(
+                        trigger_id=trigger_id,
+                        pipeline_id=pipeline_id,
+                        overall_loss=processed_trigger_metadata.get("loss", None),
+                        time_to_train=processed_trigger_metadata.get("time", None)))
+                database.session.commit()
+            if processed_sample_metadata:
+                database.session.add_all(
+                    [
+                        SampleTrainingMetadata(
+                            pipeline_id=pipeline_id,
+                            trigger_id=trigger_id,
+                            sample_key=metadata["sample_id"],
+                            loss=metadata.get("loss", None),
+                            gradient=metadata.get("gradient", None))
+                        for metadata in processed_sample_metadata
+                    ]
+                )
+                database.session.commit()
 
     @abstractmethod
-    def process_metadata(self,
-        trigger_metadata: PerTriggerMetadata,
-        sample_metadata: Iterable[PerSampleMetadata]
+    def process_trigger_metadata(self,
+        trigger_metadata: PerTriggerMetadata
         ) -> dict:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def process_sample_metadata(self,
+        sample_metadata: Iterable[PerSampleMetadata]
+        ) -> list[dict]:
         raise NotImplementedError()
