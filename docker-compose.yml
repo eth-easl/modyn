@@ -52,7 +52,7 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [gpu, utility, compute]
   selector:
     restart: on-failure
     depends_on: 

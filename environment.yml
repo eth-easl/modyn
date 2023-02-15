@@ -23,9 +23,10 @@ dependencies:
   - types-protobuf
   - types-psycopg2
   - types-PyYAML
-  - pytorch
-  - pytorch-cuda=11.7 
-  - torchvision
+  - nvidia::cudatoolkit=11.7
+  - pytorch::pytorch
+  - pytorch::pytorch-cuda=11.7
+  - pytorch::torchvision
   - tqdm
   - pip:
       - "-e ."
