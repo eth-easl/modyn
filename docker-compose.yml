@@ -45,6 +45,14 @@ services:
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
   selector:
     restart: on-failure
     depends_on: 

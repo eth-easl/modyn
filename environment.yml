@@ -6,6 +6,8 @@ name: modyn
 channels:
   - conda-forge
   - anaconda
+  - nvidia
+  - pytorch
 
 dependencies:
   - python>=3.9
@@ -22,6 +24,7 @@ dependencies:
   - types-psycopg2
   - types-PyYAML
   - pytorch
+  - pytorch-cuda=11.7 
   - torchvision
   - tqdm
   - pip:
