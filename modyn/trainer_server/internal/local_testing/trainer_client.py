@@ -26,7 +26,7 @@ class TrainerClient:
     def __init__(self) -> None:
         self._trainer_stub = TrainerServerStub(
             grpc.insecure_channel(
-                "127.0.0.1:5001",
+                "127.0.0.1:50057",
                 options=[("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH)],
             )
         )
@@ -71,8 +71,8 @@ class TrainerClient:
 
     def get_training_status(self, training_id: int) -> None:
         req = TrainingStatusRequest(training_id=training_id)
-        self._trainer_stub.get_training_status(req)
-
+        response = self._trainer_stub.get_training_status(req)
+        print(response)
 
 if __name__ == "__main__":
     client = TrainerClient()

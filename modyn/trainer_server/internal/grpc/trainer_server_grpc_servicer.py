@@ -43,6 +43,8 @@ class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self, config: dict) -> None:
+
+        mp.set_start_method('spawn')
         self._next_training_id = 0
         self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}

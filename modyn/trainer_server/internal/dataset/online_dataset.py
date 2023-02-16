@@ -31,24 +31,13 @@ class OnlineDataset(IterableDataset):
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
-        mod_dict: dict[str, Any] = {}
-        exec(bytes_parser, mod_dict)  # pylint: disable=exec-used
-        if "bytes_parser_function" not in mod_dict or not isfunction(mod_dict["bytes_parser_function"]):
-            raise ValueError("Missing function bytes_parser_function from training invocation")
-        self._bytes_parser_function = mod_dict["bytes_parser_function"]
+        self._mod_dict: dict[str, Any] = {}
+
+        self._bytes_parser = bytes_parser
         self._serialized_transforms = serialized_transforms
-        self._transform = self._bytes_parser_function
-        self._deserialize_torchvision_transforms()
+        self._storage_address = storage_address
+        self._selector_address = selector_address
 
-        selector_channel = grpc.insecure_channel(selector_address)
-        if not grpc_connection_established(selector_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to selector at address {selector_address}.")
-        self._selectorstub = SelectorStub(selector_channel)
-
-        storage_channel = grpc.insecure_channel(storage_address)
-        if not grpc_connection_established(storage_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
-        self._storagestub = StorageStub(storage_channel)
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
@@ -77,6 +66,26 @@ class OnlineDataset(IterableDataset):
             self._transform = transforms.Compose(self._transform_list)
 
     def __iter__(self) -> Generator:
+
+        if self._trainining_set_number == 0:
+            exec(self._bytes_parser, self._mod_dict)  # pylint: disable=exec-used
+            if "bytes_parser_function" not in self._mod_dict or not isfunction(self._mod_dict["bytes_parser_function"]):
+                raise ValueError("Missing function bytes_parser_function from training invocation")
+            self._bytes_parser_function = self._mod_dict["bytes_parser_function"]
+            self._serialized_transforms = self._serialized_transforms
+            self._transform = self._bytes_parser_function
+            self._deserialize_torchvision_transforms()
+
+            selector_channel = grpc.insecure_channel(self._selector_address)
+            if not grpc_connection_established(selector_channel):
+                raise ConnectionError(f"Could not establish gRPC connection to selector at address {self._selector_address}.")
+            self._selectorstub = SelectorStub(selector_channel)
+
+            storage_channel = grpc.insecure_channel(self._storage_address)
+            if not grpc_connection_established(storage_channel):
+                raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
+            self._storagestub = StorageStub(storage_channel)
+
         worker_info = get_worker_info()
         if worker_info is None:
             # Non-multithreaded data loading. We use worker_id 0.
