@@ -37,6 +37,7 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - /mnt/datasets:/datasets
+      - .:/modyn_host
   trainer_server:
     restart: on-failure
     depends_on:
@@ -45,6 +46,8 @@ services:
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
+    volumes:
+      - .:/modyn_host
     runtime: nvidia
     deploy:
       resources:
@@ -60,6 +63,8 @@ services:
     build:
       context: .
       dockerfile: docker/Selector/Dockerfile
+    volumes:
+      - .:/modyn_host
   tests:
     depends_on:
       - modynbase
