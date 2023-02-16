@@ -35,11 +35,6 @@ from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
-path = Path(os.path.abspath(__file__))
-SCRIPT_DIR = path.parent.parent.absolute()
-sys.path.append(os.path.dirname(SCRIPT_DIR))
-
-
 class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
@@ -243,5 +238,5 @@ class TrainerServerGRPCServicer:
                 return state_bytes, num_batches, num_samples
             except Exception as exception:  # pylint: disable=broad-except
                 # checkpoint corrupted
-                logger.error(exception)
+                logger.error(f"The checkpoint {checkpoint} is corrupted: {exception}")
         return None, None, None

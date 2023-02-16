@@ -6,10 +6,11 @@ from time import sleep
 from typing import Optional
 
 import grpc
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, TriggerResponse
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterPipelineRequest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
@@ -123,7 +124,7 @@ class GRPCHandler:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
-        response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp()
+        response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp(storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
         return response.timestamp
 
@@ -153,12 +154,12 @@ class GRPCHandler:
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         self.selector.inform_data(request)
 
-        logging.info(f"Informed selector about {len(keys)} new data points.")
-
     def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
         keys, timestamps, labels = zip(*data)
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
-        trigger_id = self.selector.inform_data_and_trigger(request)
+        response: TriggerResponse = self.selector.inform_data_and_trigger(request)
+
+        trigger_id = response.trigger_id
 
         logging.info(f"Informed and triggerd selector about {len(keys)} new data points. Got trigger id {trigger_id}.")
 
@@ -281,7 +282,7 @@ class GRPCHandler:
                 logger.warning("Trainer Server returned a blocked response: {res}\n")
             else:
                 if res.exception is not None:
-                    logger.error(f"Exception occured during training: {res.exception}\n\n{res}\n")
+                    raise RuntimeError(f"Exception occured during training: {res.exception}\n\n{res}\n")
 
                 if res.state_available:
                     logger.info(
