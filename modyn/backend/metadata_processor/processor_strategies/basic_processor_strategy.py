@@ -1,8 +1,12 @@
 import json
+from typing import Iterable
 
 from modyn.backend.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
 from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
 from modyn.backend.metadata_processor.processor_strategies.processor_strategy_type import ProcessorStrategyType
+from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
+    PerTriggerMetadata, PerSampleMetadata
+)
 
 
 class BasicProcessorStrategy(AbstractProcessorStrategy):
@@ -15,7 +19,6 @@ class BasicProcessorStrategy(AbstractProcessorStrategy):
         super().__init__(modyn_config)
         self.processor_strategy_type = ProcessorStrategyType.BasicProcessorStrategy
 
-    @abstractmethod
     def process_trigger_metadata(self,
         trigger_metadata: PerTriggerMetadata
         ) -> dict:
@@ -25,7 +28,6 @@ class BasicProcessorStrategy(AbstractProcessorStrategy):
             }
         return None
 
-    @abstractmethod
     def process_sample_metadata(self,
         sample_metadata: Iterable[PerSampleMetadata]
         ) -> list[dict]:

@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import metadata_processor_pb2 as metadata__processor__pb2
+import modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 as metadata__processor__pb2
 
 
 class MetadataProcessorStub(object):
