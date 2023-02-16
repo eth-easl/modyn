@@ -20,7 +20,7 @@ storage:
         file_wrapper_config:
           {
             file_extension: ".png",
-            label_file_extension: ".json"
+            label_file_extension: ".label"
           }
       }
     ]
