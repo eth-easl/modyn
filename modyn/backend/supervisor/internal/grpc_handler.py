@@ -29,6 +29,8 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainerAvailableResponse,
     TrainingStatusRequest,
     TrainingStatusResponse,
+    GetFinalModelRequest,
+    GetFinalModelResponse
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.utils import grpc_connection_established
@@ -237,6 +239,7 @@ class GRPCHandler:
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
             pretrained_model=pretrained_model,
+            load_optimizer_state=False, # TODO(#137): Think about this.
             batch_size=pipeline_config["training"]["batch_size"],
             torch_optimizer=pipeline_config["training"]["optimizer"]["name"],
             optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
@@ -300,18 +303,14 @@ class GRPCHandler:
 
     def fetch_trained_model(self, training_id: int, storage_dir: pathlib.Path) -> pathlib.Path:
         logger.info(f"Fetching trained model for training {training_id}")
-        req = TrainingStatusRequest(training_id=training_id)
-        res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
+ 
+        req = GetFinalModelRequest(training_id=training_id)
+        res: GetFinalModelResponse = self.trainer_server.get_final_model(req)
 
-        if not res.valid:
-            raise RuntimeError(f"Cannot fetch trained model for training {training_id} since training is invalid")
+        if not res.valid_state:
+            raise RuntimeError(f"Cannot fetch trained model for training {training_id} since training is invalid or training still running")
 
-        if res.is_running:
-            raise RuntimeError(
-                f"Cannot fetch trained model for training {training_id} since training has not finished yet"
-            )
-
-        model = b""  # TODO(#74): fetch final model from trainer
+        model = res.state
 
         model_path = storage_dir / f"{training_id}.modyn"
         logger.info(f"Fetched model, storing at {model_path}")
