@@ -6,6 +6,7 @@ import pathlib
 import queue
 import sys
 import tempfile
+import shutil
 from pathlib import Path
 from threading import Lock
 from typing import Any, Optional
@@ -48,6 +49,10 @@ class TrainerServerGRPCServicer:
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
         self._modyn_base_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
+        
+        if self._modyn_base_dir.exists() and self._modyn_base_dir.is_dir():
+            shutil.rmtree(self._modyn_base_dir)
+
         self._modyn_base_dir.mkdir()
 
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
