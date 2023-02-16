@@ -14,7 +14,8 @@ from modyn.backend.metadata_processor.processor_strategies.processor_strategy_ty
 
 class AbstractProcessorStrategy(ABC):
     """This class is the base class for Metadata Processors. In order to extend
-    this class to perform custom processing, implement process_metadata
+    this class to perform custom processing, implement process_trigger_metadata
+    and process_sample_metadata
     """
 
     processor_strategy_type: ProcessorStrategyType = None

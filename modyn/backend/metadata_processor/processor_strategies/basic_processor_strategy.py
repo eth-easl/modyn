@@ -10,9 +10,8 @@ from modyn.backend.metadata_processor.processor_strategies.processor_strategy_ty
 
 
 class BasicProcessorStrategy(AbstractProcessorStrategy):
-    """This class represents a basic Metadata Processor strategy that directly
-    saves for each key, the metadata received along with flagging the sample
-    as seen.
+    """This class represents a basic Metadata Processor strategy that takes the
+    values sent by the Collector and stores them in the Database
     """
 
     def __init__(self, modyn_config: dict):
