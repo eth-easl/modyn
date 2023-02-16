@@ -1,13 +1,16 @@
-import json
 import os
 import pathlib
-from typing import Iterable
+from math import isclose
 
 import grpc
 import yaml
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2 import GetByKeysRequest, GetResponse
-from modyn.backend.metadata_database.internal.grpc.generated.metadata_pb2_grpc import MetadataStub
-from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.backend.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
+
+# pylint: disable-next=no-name-in-module
+from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
+    PerSampleMetadata,
+    PerTriggerMetadata,
     TrainingMetadataRequest,
     TrainingMetadataResponse,
 )
@@ -22,19 +25,8 @@ class MetadataProcessorClient:
     def __init__(self, metadata_processor_channel: grpc.Channel) -> None:
         self._stub = MetadataProcessorStub(metadata_processor_channel)
 
-    def send_metadata(self, training_id: int, data: str) -> TrainingMetadataResponse:
-        req = TrainingMetadataRequest(training_id=training_id, data=data)
+    def send_metadata(self, req: TrainingMetadataRequest) -> TrainingMetadataResponse:
         resp = self._stub.ProcessTrainingMetadata(req)
-        return resp
-
-
-class MetadataDatabaseClient:
-    def __init__(self, metadata_database_channel: grpc.Channel) -> None:
-        self._stub = MetadataStub(grpc.insecure_channel())
-
-    def get_metadata(self, training_id: int, keys: Iterable[str]) -> GetResponse:
-        req = GetByKeysRequest(training_id=training_id, keys=keys)
-        resp = self._stub.GetByKeys(req)
         return resp
 
 
@@ -56,47 +48,67 @@ def get_grpc_channel(config: dict, component: str) -> grpc.Channel:
 
 
 def send_metadata_and_check_database(
-    processor_client: MetadataProcessorClient, database_client: MetadataDatabaseClient
+    processor_client: MetadataProcessorClient, config: dict
 ) -> None:
-    training_id = 10
-    data = {
-        "sample1": "metadata01",
-        "sample2": "metadata02",
-        "sample3": "metadata03"
-    }
-    serialized_data = json.loads(data)
+    req = TrainingMetadataRequest(
+        pipeline_id=1,
+        trigger_id=1,
+        trigger_metadata=PerTriggerMetadata(loss=0.5),
+        sample_metadata=[
+            PerSampleMetadata(sample_id="s1", loss=0.1),
+            PerSampleMetadata(sample_id="s2", loss=0.2)
+        ]
+    )
 
-    resp = processor_client.send_metadata(training_id, serialized_data)
+    resp = processor_client.send_metadata(req)
     assert resp, "Coult not send training metadata to the Metadata Processor Server"
 
-    database_resp = database_client.get_metadata(training_id, data.keys())
-    assert database_resp, "Could not get metadata from the Metadata Database Server"
+    with MetadataDatabaseConnection(config) as database:
+        trigger_metadata = (
+            database.session.query(
+                TriggerTrainingMetadata.trigger_id,
+                TriggerTrainingMetadata.pipeline_id,
+                TriggerTrainingMetadata.overall_loss,
+            ).all()
+        )
 
-    assert len(database_resp.keys) == len(data), (
-        f"Metadata database sent back {len(database_resp.keys)} keys, expected {len(data)}")
-    assert len(database_resp.data) == len(data), (
-        f"Metadata database sent back {len(database_resp.data)} metadata values, expected {len(data)}")
-    assert len(database_resp.seen) == len(data), (
-        f"Metadata database sent back {len(database_resp.seen)} seen flags, expected {len(data)}")
+        tids, pids, overall_loss = zip(*trigger_metadata)
 
-    assert database_resp.keys == list(data.keys()), (
-        f"Metadata database sent back keys: {str(database_resp.keys)}, expected: {str(list(data.keys()))}")
-    assert database_resp.seen == [True] * len(data), (
-        f"Metadata database sent back seen flags: {str(database_resp.seen)}, expected all values to be True")
-    assert database_resp.data == list(data.values()), (
-        f"Metadata database sent back metadata values: {str(database_resp.data)}, expected: {str(list(data.values()))}")
+        assert len(trigger_metadata) == 1, (
+            f"Expected 1 entry for trigger metadata in db, found {len(trigger_metadata)}")
+        assert tids[0] == 1, f"Expected trigger ID 1 in db, found {tids[0]}"
+        assert pids[0] == 1, f"Expected pipeline ID 1 in db, found {pids[0]}"
+        assert isclose(overall_loss[0], 0.5), f"Expected overall loss 0.5 in db, found {overall_loss[0]}"
+
+        sample_metadata = (
+            database.session.query(
+                SampleTrainingMetadata.pipeline_id,
+                SampleTrainingMetadata.trigger_id,
+                SampleTrainingMetadata.sample_key,
+                SampleTrainingMetadata.loss
+            ).all()
+        )
+
+        pids, tids, keys, loss = zip(*sample_metadata)
+
+        assert len(sample_metadata) == 2, (
+            f"Expected 2 entries for sample metadata in db, found {len(sample_metadata)}")
+        assert pids[0] == 1 and pids[1] == 1, (
+            f"Expected all sample metadata in db to be for pipeline ID 1, found {pids}")
+        assert tids[0] == 1 and tids[1] == 1, (
+            f"Expected all sample metadata in db to be for trigger ID 1, found {tids}")
+        assert keys == ("s1", "s2"), f"Expected sample keys (s1, s2) in db, found {keys}"
+        assert isclose(loss[0], 0.1, rel_tol=1e-5), f"Expected sample loss 0.1, found {loss[0]}"
+        assert isclose(loss[1], 0.2, rel_tol=1e-5), f"Expected sample loss 0.2, found {loss[1]}"
 
 
 def test_metadata_processor() -> None:
     config = get_modyn_config()
 
     processor_channel = get_grpc_channel(config, "metadata_processor")
-    database_channel = get_grpc_channel(config, "metadata_database")
-
     processor_client = MetadataProcessorClient(processor_channel)
-    database_client = MetadataDatabaseClient(database_channel)
 
-    send_metadata_and_check_database(processor_client, database_client)
+    send_metadata_and_check_database(processor_client, config)
 
 
 if __name__ == "__main__":

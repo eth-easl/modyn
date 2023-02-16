@@ -6,6 +6,8 @@ from math import isclose
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
+
+# pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
     PerSampleMetadata,
     PerTriggerMetadata,
@@ -50,9 +52,9 @@ def test_process_training_metadata():
     strat = BasicProcessorStrategy(get_minimal_modyn_config())
     strat.process_training_metadata(PIPELINE_ID, TRIGGER_ID, TRIGGER_METADATA, SAMPLE_METADATA)
 
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as db:
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = (
-            db.session.query(
+            database.session.query(
                 TriggerTrainingMetadata.trigger_id,
                 TriggerTrainingMetadata.pipeline_id,
                 TriggerTrainingMetadata.overall_loss,
@@ -66,7 +68,7 @@ def test_process_training_metadata():
         assert len(loss) == 1, f"Expected 1 entry for trigger metadata, received {len(loss)}"
         assert loss[0] == TRIGGER_METADATA.loss, f"Expected overall loss {TRIGGER_METADATA.loss}, found {loss[0]}"
 
-        data = db.session.query(
+        data = database.session.query(
             SampleTrainingMetadata.pipeline_id,
             SampleTrainingMetadata.trigger_id,
             SampleTrainingMetadata.sample_key,
