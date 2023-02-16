@@ -36,7 +36,7 @@ services:
       context: .
       dockerfile: docker/Storage/Dockerfile
     volumes:
-      - storage-data:/app/storage
+      - /mnt/datasets:/datasets
   trainer_server:
     restart: on-failure
     depends_on:
