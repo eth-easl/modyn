@@ -92,7 +92,6 @@ properties:
               The name of the Metadata Processor strategy that should be used.
         required:
           - name
->>>>>>> main
       initial_model:
         type: string
         description: |
