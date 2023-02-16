@@ -39,8 +39,12 @@ class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
             response (TrainingMetadataResponse): Empty response, to confirm.
         """
         for request in request_iterator:
-            logger.info(f"Processing training metadata for pipeline ID {request.pipeline_id} and trigger ID {request.trigger_id}")
+            logger.info(
+                f"Processing training metadata for pipeline ID {request.pipeline_id}"
+                f" and trigger ID {request.trigger_id}"
+            )
             self.processor_strategy.process_training_metadata(
-                request.pipeline_id, request.trigger_id, request.trigger_metadata, request.sample_metadata)
+                request.pipeline_id, request.trigger_id, request.trigger_metadata, request.sample_metadata
+            )
 
         return TrainingMetadataResponse()

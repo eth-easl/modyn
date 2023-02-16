@@ -10,12 +10,6 @@ The script should be in PATH after installing the `modyn` module.
 
 ## How to add a new strategy
 
-Strating from the `abstract_processor_strategy` module, a new Strategy should extend the MetadataProcessorStrategy class and implement the `process_metadata` method. This method will receive a training ID and serialized JSON data. What is part of the data string depends on the Collector and the Selector's strategies. The method should return a dictionary:
-```
-{
-	"keys": [ "string" ] | None,
-	"seen": [ "boolean" ] | None,
-	"data": [ "string" ] | None
-}
-```
+Strating from the `abstract_processor_strategy` module, a new Strategy should extend the AbstractProcessorStrategy class and implement the two methods: `process_trigger_metadata` and `process_sample_metadata`.
 
+Provided is a Basic Processor Strategy, which just takes the metadata from the Collector and persists it into the Metadata Database, without any changes.
