@@ -4,9 +4,9 @@ import multiprocessing as mp
 import os
 import pathlib
 import queue
+import shutil
 import sys
 import tempfile
-import shutil
 from pathlib import Path
 from threading import Lock
 from typing import Any, Optional
@@ -34,20 +34,22 @@ from modyn.trainer_server.internal.utils.training_process_info import TrainingPr
 from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG) # TODO(create issue): why is this necessary + why is formatting ignored, even if formatter is set?
+# TODO(create issue): why is this necessary + why is formatting ignored, even if formatter is set?
+logger.setLevel(logging.DEBUG)
+
 
 class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self, config: dict) -> None:
-        mp.set_start_method('spawn')
+        mp.set_start_method("spawn")
 
         self._next_training_id = 0
         self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
         self._modyn_base_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
-        
+
         if self._modyn_base_dir.exists() and self._modyn_base_dir.is_dir():
             shutil.rmtree(self._modyn_base_dir)
 

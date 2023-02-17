@@ -6,11 +6,11 @@ from time import sleep
 from typing import Optional
 
 import grpc
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, TriggerResponse
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterPipelineRequest
-from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterPipelineRequest, TriggerResponse
+from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
@@ -20,7 +20,12 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
+    CheckpointInfo,
+    Data,
+    GetFinalModelRequest,
+    GetFinalModelResponse,
+)
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     PythonString,
@@ -30,13 +35,13 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainerAvailableResponse,
     TrainingStatusRequest,
     TrainingStatusResponse,
-    GetFinalModelRequest,
-    GetFinalModelResponse
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
+
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # TODO(#148): Change model transfer protocol
 
 
 class GRPCHandler:
@@ -79,7 +84,13 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
+        self.trainer_server_channel = grpc.insecure_channel(
+            trainer_server_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
+                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
+            ],
+        )
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
@@ -124,7 +135,9 @@ class GRPCHandler:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
-        response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp(storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
+        response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp(
+            storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty()
+        )
 
         return response.timestamp
 
@@ -240,7 +253,7 @@ class GRPCHandler:
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
             pretrained_model=pretrained_model,
-            load_optimizer_state=False, # TODO(#137): Think about this.
+            load_optimizer_state=False,  # TODO(#137): Think about this.
             batch_size=pipeline_config["training"]["batch_size"],
             torch_optimizer=pipeline_config["training"]["optimizer"]["name"],
             optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
@@ -305,12 +318,14 @@ class GRPCHandler:
 
     def fetch_trained_model(self, training_id: int, storage_dir: pathlib.Path) -> pathlib.Path:
         logger.info(f"Fetching trained model for training {training_id}")
- 
+
         req = GetFinalModelRequest(training_id=training_id)
         res: GetFinalModelResponse = self.trainer_server.get_final_model(req)
 
         if not res.valid_state:
-            raise RuntimeError(f"Cannot fetch trained model for training {training_id} since training is invalid or training still running")
+            raise RuntimeError(
+                f"Cannot fetch trained model for training {training_id} since training is invalid or training still running"
+            )
 
         model = res.state
 

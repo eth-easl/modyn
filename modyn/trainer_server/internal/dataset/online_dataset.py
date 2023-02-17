@@ -1,7 +1,7 @@
+import logging
 from inspect import isfunction
 from typing import Any, Generator
 
-import logging
 import grpc
 
 # pylint: disable-next=no-name-in-module
@@ -40,7 +40,7 @@ class OnlineDataset(IterableDataset):
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
         self._selector_address = selector_address
-    
+
         logger.debug("Initialized OnlineDataset.")
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
@@ -80,7 +80,9 @@ class OnlineDataset(IterableDataset):
     def _init_grpc(self) -> None:
         selector_channel = grpc.insecure_channel(self._selector_address)
         if not grpc_connection_established(selector_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to selector at address {self._selector_address}.")
+            raise ConnectionError(
+                f"Could not establish gRPC connection to selector at address {self._selector_address}."
+            )
         self._selectorstub = SelectorStub(selector_channel)
 
         storage_channel = grpc.insecure_channel(self._storage_address)

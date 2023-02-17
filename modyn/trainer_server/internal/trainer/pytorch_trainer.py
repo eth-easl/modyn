@@ -16,7 +16,6 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
 
-
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes
 
@@ -26,9 +25,8 @@ class PytorchTrainer:
         device: str,
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
-        logger: logging.Logger
+        logger: logging.Logger,
     ) -> None:
-
         self.logger = logger
         self.logger.info("Initializing Pytorch Trainer")
 
@@ -198,17 +196,11 @@ def train(
     file_handler = logging.FileHandler(log_path)
     logger = logging.getLogger(__name__)
     logger.addHandler(file_handler)
-    logger.setLevel(logging.DEBUG) # TODO(create issue): why is formatting ignored, even if formatter is set?
+    logger.setLevel(logging.DEBUG)  # TODO(create issue): why is formatting ignored, even if formatter is set?
     file_handler.setLevel(logging.DEBUG)
 
     try:
-        trainer = PytorchTrainer(
-            training_info,
-            device,
-            status_query_queue,
-            status_response_queue,
-            logger
-        )
+        trainer = PytorchTrainer(training_info, device, status_query_queue, status_response_queue, logger)
         trainer.train()
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()

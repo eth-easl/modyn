@@ -1,6 +1,6 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional
-import logging
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
@@ -92,7 +92,9 @@ class AbstractSelectionStrategy(ABC):
         trigger_id = self._next_trigger_id
         training_samples = self._on_trigger()
 
-        logger.info(f"Strategy for pipeline {self._pipeline_id} got {len(training_samples)} samples for new trigger {trigger_id}.")
+        logger.info(
+            f"Strategy for pipeline {self._pipeline_id} got {len(training_samples)} samples for new trigger {trigger_id}."
+        )
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.session.add(Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id))
