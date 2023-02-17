@@ -221,7 +221,7 @@ class TrainerServerGRPCServicer:
         # either successfully or not, and allow to access the last state
 
         checkpoint_path = self._training_dict[training_id].checkpoint_path
-        if not checkpoint_path.exists():
+        if not checkpoint_path.exists() or checkpoint_path == pathlib.Path(""):
             return None, None, None
 
         checkpoints = list(checkpoint_path.iterdir())
