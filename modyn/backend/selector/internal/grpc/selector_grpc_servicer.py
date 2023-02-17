@@ -8,7 +8,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
     Empty,
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
-    NumberOfSampleResponse,
+    NumberOfSamplesResponse,
     PipelineResponse,
     RegisterPipelineRequest,
     SamplesResponse,
@@ -64,10 +64,10 @@ class SelectorGRPCServicer(SelectorServicer):
 
     def get_number_of_samples(  # pylint: disable-next=unused-argument
         self, request: GetNumberOfSamplesRequest, context: grpc.ServicerContext
-    ) -> NumberOfSampleResponse:
+    ) -> NumberOfSamplesResponse:
         pipeline_id, trigger_id = request.pipeline_id, request.trigger_id
         logger.info(f"[Pipeline {pipeline_id}]: Received number of samples request for trigger id {trigger_id}")
 
         num_samples = self.selector_manager.get_number_of_samples(pipeline_id, trigger_id)
 
-        return SamplesResponse(num_samples=num_samples)
+        return NumberOfSamplesResponse(num_samples=num_samples)

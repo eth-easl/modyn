@@ -11,7 +11,7 @@ import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, GetNumberOfSamplesRequest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
-    NumberOfSampleResponse,
+    NumberOfSamplesResponse,
     RegisterPipelineRequest,
     TriggerResponse,
 )
@@ -287,7 +287,7 @@ class GRPCHandler:
 
     def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
         request = GetNumberOfSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
-        response: NumberOfSampleResponse = self.selector.get_number_of_samples(request)
+        response: NumberOfSamplesResponse = self.selector.get_number_of_samples(request)
 
         return response.num_samples
 

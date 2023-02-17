@@ -36,7 +36,7 @@ class SelectorStub(object):
         self.get_number_of_samples = channel.unary_unary(
                 '/selector.Selector/get_number_of_samples',
                 request_serializer=selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
-                response_deserializer=selector__pb2.NumberOfSampleResponse.FromString,
+                response_deserializer=selector__pb2.NumberOfSamplesResponse.FromString,
                 )
 
 
@@ -99,7 +99,7 @@ def add_SelectorServicer_to_server(servicer, server):
             'get_number_of_samples': grpc.unary_unary_rpc_method_handler(
                     servicer.get_number_of_samples,
                     request_deserializer=selector__pb2.GetNumberOfSamplesRequest.FromString,
-                    response_serializer=selector__pb2.NumberOfSampleResponse.SerializeToString,
+                    response_serializer=selector__pb2.NumberOfSamplesResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -192,6 +192,6 @@ class Selector(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_samples',
             selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
-            selector__pb2.NumberOfSampleResponse.FromString,
+            selector__pb2.NumberOfSamplesResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -7,7 +7,7 @@ service Selector {
     rpc get_sample_keys_and_weights(GetSamplesRequest) returns (SamplesResponse) {}
     rpc inform_data(DataInformRequest) returns (Empty) {}
     rpc inform_data_and_trigger(DataInformRequest) returns (TriggerResponse) {}
-    rpc get_number_of_samples(GetNumberOfSamplesRequest) returns (NumberOfSampleResponse) {}
+    rpc get_number_of_samples(GetNumberOfSamplesRequest) returns (NumberOfSamplesResponse) {}
 }
 
 message Empty {
@@ -54,7 +54,7 @@ message GetNumberOfSamplesRequest {
     int32 trigger_id = 2;
 }
 
-message NumberOfSampleResponse {
+message NumberOfSamplesResponse {
     int32 num_samples = 1;
 }
 

@@ -178,7 +178,7 @@ class GetNumberOfSamplesRequest(google.protobuf.message.Message):
 global___GetNumberOfSamplesRequest = GetNumberOfSamplesRequest
 
 @typing_extensions.final
-class NumberOfSampleResponse(google.protobuf.message.Message):
+class NumberOfSamplesResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     NUM_SAMPLES_FIELD_NUMBER: builtins.int
@@ -190,4 +190,4 @@ class NumberOfSampleResponse(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["num_samples", b"num_samples"]) -> None: ...
 
-global___NumberOfSampleResponse = NumberOfSampleResponse
+global___NumberOfSamplesResponse = NumberOfSamplesResponse
