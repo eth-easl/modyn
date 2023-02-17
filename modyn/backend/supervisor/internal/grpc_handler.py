@@ -279,7 +279,7 @@ class GRPCHandler:
                 raise RuntimeError(f"Training {training_id} is invalid at server: {res}\n")
 
             if res.blocked:
-                logger.warning("Trainer Server returned a blocked response: {res}\n")
+                logger.warning(f"Trainer Server returned a blocked response: {res}\n")
             else:
                 if res.exception is not None:
                     raise RuntimeError(f"Exception occured during training: {res.exception}\n\n{res}\n")

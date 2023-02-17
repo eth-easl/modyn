@@ -35,14 +35,12 @@ class OnlineDataset(IterableDataset):
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
-        mod_dict: dict[str, Any] = {}
-        exec(bytes_parser, mod_dict)  # pylint: disable=exec-used
-        if "bytes_parser_function" not in mod_dict or not isfunction(mod_dict["bytes_parser_function"]):
-            raise ValueError("Missing function bytes_parser_function from training invocation")
-        self._bytes_parser_function = mod_dict["bytes_parser_function"]
+        self._mod_dict: dict[str, Any] = {}
+
+        self._bytes_parser = bytes_parser
         self._serialized_transforms = serialized_transforms
-        self._transform = self._bytes_parser_function
-        self._deserialize_torchvision_transforms()
+        self._storage_address = storage_address
+        self._selector_address = selector_address
 
         selector_channel = grpc.insecure_channel(selector_address)
         if not grpc_connection_established(selector_channel):
@@ -53,9 +51,6 @@ class OnlineDataset(IterableDataset):
         if not grpc_connection_established(storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
         self._storagestub = StorageStub(storage_channel)
-
-        response = self._storagestub.GetCurrentTimestamp(storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
-        logger.info(f"Storage time: {response}")
 
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
@@ -84,6 +79,15 @@ class OnlineDataset(IterableDataset):
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
 
+    def _init_transforms(self) -> None:
+        exec(self._bytes_parser, self._mod_dict)  # pylint: disable=exec-used
+        if "bytes_parser_function" not in self._mod_dict or not isfunction(self._mod_dict["bytes_parser_function"]):
+            raise ValueError("Missing function bytes_parser_function from training invocation")
+        self._bytes_parser_function = self._mod_dict["bytes_parser_function"]
+        self._transform = self._bytes_parser_function
+        self._deserialize_torchvision_transforms()
+
+
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -91,6 +95,9 @@ class OnlineDataset(IterableDataset):
             worker_id = 0
         else:
             worker_id = worker_info.id
+
+        if self._trainining_set_number == 0:
+            self._init_transforms()
         self._trainining_set_number += 1
 
         keys = self._get_keys_from_selector(worker_id)

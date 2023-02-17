@@ -39,6 +39,8 @@ class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self, config: dict) -> None:
+        mp.set_start_method('spawn')
+
         self._next_training_id = 0
         self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
@@ -219,7 +221,8 @@ class TrainerServerGRPCServicer:
         # either successfully or not, and allow to access the last state
 
         checkpoint_path = self._training_dict[training_id].checkpoint_path
-        if not checkpoint_path.exists():
+        checkpoint_interval = self._training_dict[training_id].checkpoint_interval
+        if not checkpoint_path.exists() or checkpoint_path == pathlib.Path("") or checkpoint_interval == 0:
             return None, None, None
 
         checkpoints = list(checkpoint_path.iterdir())
