@@ -8,9 +8,13 @@ from typing import Optional
 import enlighten
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, GetNumberOfSamplesRequest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterPipelineRequest, TriggerResponse
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
+    NumberOfSampleResponse,
+    RegisterPipelineRequest,
+    TriggerResponse,
+)
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
@@ -281,21 +285,26 @@ class GRPCHandler:
 
         return training_id
 
-    def wait_for_training_completion(self, training_id: int) -> None:  # pragma: no cover
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+        request = GetNumberOfSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
+        response: NumberOfSampleResponse = self.selector.get_number_of_samples(request)
+
+        return response.num_samples
+
+    def wait_for_training_completion(
+        self, training_id: int, pipeline_id: int, trigger_id: int
+    ) -> None:  # pragma: no cover
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
         self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
-        total_batches = None  # TODO(create issue/check for existing): obtain total number of batches/samples
-        total_samples = None
-
-        batch_pbar = self.progress_mgr.counter(total=total_batches, desc=f"[Training {training_id}] Processed Batches", unit="batches")
-        sample_pbar = self.progress_mgr.counter(total=total_samples, desc=f"[Training {training_id}] Processed Samples", unit="samples")
-
-        last_batches = 0
+        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         last_samples = 0
+        sample_pbar = self.progress_mgr.counter(
+            total=total_samples, desc=f"[Training {training_id}] Processed Samples", unit="samples"
+        )
 
         while True:
             req = TrainingStatusRequest(training_id=training_id)
@@ -305,7 +314,7 @@ class GRPCHandler:
                 raise RuntimeError(f"Training {training_id} is invalid at server:\n{res}\n")
 
             if res.blocked:
-                logger.warning(f"Trainer Server returned a blocked response, cannot update status.")
+                logger.warning("Trainer Server returned a blocked response, cannot update status.")
             else:
                 if res.HasField("exception") and res.exception is not None:
                     raise RuntimeError(f"Exception at trainer server occured during training:\n{res.exception}\n\n")
@@ -315,12 +324,8 @@ class GRPCHandler:
                         "batches_seen"
                     ), f"Inconsistent server response:\n{res}"
 
-                    new_batches = res.batches_seen - last_batches
                     new_samples = res.samples_seen - last_samples
-
-                    batch_pbar.update(new_batches)
                     sample_pbar.update(new_samples)
-                    last_batches = new_batches
                     last_samples = new_samples
 
                 elif res.is_running:
@@ -331,9 +336,7 @@ class GRPCHandler:
             else:
                 break
 
-        batch_pbar.clear(flush=True)
         sample_pbar.clear(flush=True)
-        batch_pbar.close(clear=True)
         sample_pbar.close(clear=True)
         logger.info("Training completed 🚀")
 

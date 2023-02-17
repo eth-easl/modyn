@@ -83,6 +83,12 @@ class SelectorManager:
         with self._selector_locks[pipeline_id]:
             return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested number of samples from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_number_of_samples(trigger_id)
+
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
         config = selection_strategy["config"] if "config" in selection_strategy else {}

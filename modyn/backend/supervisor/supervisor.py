@@ -223,14 +223,16 @@ class Supervisor:
         any_training_triggered = False
         new_data_len = len(new_data)
 
-        pbar = self.progress_mgr.counter(total=new_data_len, desc=f"[Pipeline {self.pipeline_id}] Processing New Samples", unit="samples")
+        pbar = self.progress_mgr.counter(
+            total=new_data_len, desc=f"[Pipeline {self.pipeline_id}] Processing New Samples", unit="samples"
+        )
 
         for i in range(0, new_data_len, selector_batch_size):
             batch = new_data[i : i + selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
-            pbar.update(selector_batch_size)
+            pbar.update(selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
 
         self.status_bar.update(demo="New data handled")
         pbar.clear(flush=True)
@@ -253,8 +255,6 @@ class Supervisor:
     def _handle_triggers_within_batch(self, batch: list[tuple[str, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
-        pbar = self.progress_mgr.counter(total=len(triggering_indices), desc="Triggers in Batch", unit="Triggers")
-
         for i, triggering_idx in enumerate(triggering_indices):
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
@@ -280,11 +280,6 @@ class Supervisor:
                     # just like other batches with no trigger at all are included.
                     self.grpc.inform_selector(self.pipeline_id, remaining_data)
 
-            pbar.update()
-
-        pbar.clear(flush=True)
-        pbar.close(clear=True)
-
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
@@ -293,7 +288,7 @@ class Supervisor:
         self.current_training_id = self.grpc.start_training(
             self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model
         )
-        self.grpc.wait_for_training_completion(self.current_training_id)
+        self.grpc.wait_for_training_completion(self.current_training_id, self.pipeline_id, trigger_id)
 
         self.previous_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
 
