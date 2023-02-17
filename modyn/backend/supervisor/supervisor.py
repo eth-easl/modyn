@@ -4,11 +4,11 @@ import pathlib
 from time import sleep
 from typing import Optional
 
+import enlighten
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
 from modyn.utils.utils import current_time_millis
-from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,21 @@ class Supervisor:
         self.pipeline_id: Optional[int] = None
         self.previous_model: Optional[pathlib.Path] = None
 
+        self.progess_mgr = enlighten.get_manager()
+        self.status_bar = self.progress_mgr(
+            status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
+            color="bold_underline_bright_white_on_lightslategray",
+            justify=enlighten.Justify.CENTER,
+            demo="Initializing",
+            autorefresh=True,
+            min_delta=0.5,
+        )
+
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
 
         logging.info("Setting up connections to cluster components.")
-        self.grpc = GRPCHandler(modyn_config)
+        self.grpc = GRPCHandler(modyn_config, self.progess_mgr, self.status_bar)
 
         if not self.validate_system():
             raise ValueError("Invalid system configuration")
@@ -179,6 +189,7 @@ class Supervisor:
 
         try:
             while True:
+                self.status_bar.update(demo="Fetching new data")
                 new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
                 # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
                 new_data = [(key, timestamp, label) for (key, timestamp, label) in new_data if key not in last_keys]
@@ -191,6 +202,7 @@ class Supervisor:
                 last_keys = {key for (key, timestamp, label) in new_data if timestamp == last_timestamp}
 
                 if not self._handle_new_data(new_data):
+                    self.status_bar.update(demo="Waiting for new data...")
                     sleep(2)
 
         except KeyboardInterrupt:
@@ -205,14 +217,22 @@ class Supervisor:
         we inform the selector about all data points including that data point.
         Otherwise, the selector is informed
         """
+        self.status_bar.update(demo="Handling new data")
         logger.info(f"Received {len(new_data)} new data points. Handling batches.")
         new_data.sort(key=lambda tup: tup[1])
         any_training_triggered = False
+        new_data_len = len(new_data)
 
-        for i in tqdm(range(0, len(new_data), selector_batch_size)):
+        pbar = self.progess_mgr.counter(total=new_data_len, desc="New Data Points", unit="Samples")
+
+        for i in range(0, new_data_len, selector_batch_size):
             batch = new_data[i : i + selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
+            self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
+            pbar.update(selector_batch_size)
+
+        pbar.close(clear=True)
 
         return any_training_triggered
 
@@ -220,6 +240,7 @@ class Supervisor:
         triggering_indices = self.trigger.inform(batch)
 
         if len(triggering_indices) > 0:
+            self.status_bar.update(demo="Handling triggers")
             logger.info(f"There are {len(triggering_indices)} triggers in this batch.")
             self._handle_triggers_within_batch(batch, triggering_indices)
             return True
@@ -230,8 +251,9 @@ class Supervisor:
     def _handle_triggers_within_batch(self, batch: list[tuple[str, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
+        pbar = self.progess_mgr.counter(total=len(triggering_indices), desc="Triggers in Batch", unit="Triggers")
 
-        for i, triggering_idx in enumerate(tqdm(triggering_indices)):
+        for i, triggering_idx in enumerate(triggering_indices):
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
@@ -240,7 +262,9 @@ class Supervisor:
             # This means the next training call on trigger_id will guarantee
             # that all data until that point has been processed by the selector.
             trigger_id = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
+            self.status_bar.update(demo="Training")
             self._run_training(trigger_id)  # Blocks until training is done.
+            self.status_bar.update(demo="Handling triggers")
 
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
@@ -253,6 +277,10 @@ class Supervisor:
                     # because we inform the Selector about them,
                     # just like other batches with no trigger at all are included.
                     self.grpc.inform_selector(self.pipeline_id, remaining_data)
+
+            pbar.update()
+
+        pbar.close(clear=True)
 
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
@@ -276,7 +304,7 @@ class Supervisor:
     def replay_data(self) -> None:
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
-
+        self.status_bar.update(demo="Replaying data")
         logger.info("Starting data replay.")
 
         if self.stop_replay_at is None:
@@ -289,6 +317,7 @@ class Supervisor:
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
+        self.status_bar.update(demo="Initial Pass")
 
         self.initial_pass()
         logger.info("Initial pass completed.")
@@ -298,5 +327,6 @@ class Supervisor:
         else:
             self.wait_for_new_data(start_timestamp)
 
+        self.status_bar.update(demo="Cleanup")
         logger.info("Pipeline done, unregistering.")
         self.grpc.unregister_pipeline_at_selector(self.pipeline_id)

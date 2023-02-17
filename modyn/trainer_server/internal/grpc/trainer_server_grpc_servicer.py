@@ -5,9 +5,7 @@ import os
 import pathlib
 import queue
 import shutil
-import sys
 import tempfile
-from pathlib import Path
 from threading import Lock
 from typing import Any, Optional
 
@@ -136,11 +134,11 @@ class TrainerServerGRPCServicer:
                 "valid": True,
                 "is_running": True,
                 "blocked": num_batches is None,
-                "state_available": num_batches is not None,
+                "state_available": num_batches is not None and num_samples is not None,
                 "batches_seen": num_batches,
                 "samples_seen": num_samples,
             }
-            cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v}
+            cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v is not None}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
         exception = self.check_for_training_exception(training_id)
@@ -149,12 +147,12 @@ class TrainerServerGRPCServicer:
             "valid": True,
             "is_running": False,
             "blocked": False,
-            "state_available": num_batches is not None,
+            "state_available": num_batches is not None and num_samples is not None,
             "exception": exception,
             "batches_seen": num_batches,
             "samples_seen": num_samples,
         }
-        cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v}
+        cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v is not None}
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
     def get_final_model(

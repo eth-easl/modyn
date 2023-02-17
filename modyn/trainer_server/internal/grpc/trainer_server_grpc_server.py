@@ -12,6 +12,8 @@ from modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer import Trai
 
 logger = logging.getLogger(__name__)
 
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
+
 
 class GRPCServer:
     """GRPC server context manager."""
@@ -23,7 +25,13 @@ class GRPCServer:
             config (dict): Modyn configuration.
         """
         self.config = config
-        self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        self.server = grpc.server(
+            futures.ThreadPoolExecutor(max_workers=10),
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
+                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
+            ],
+        )
 
     def __enter__(self) -> grpc.Server:
         """Enter the context manager.

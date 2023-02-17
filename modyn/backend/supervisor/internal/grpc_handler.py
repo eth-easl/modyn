@@ -5,6 +5,7 @@ import pathlib
 from time import sleep
 from typing import Optional
 
+import enlighten
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
@@ -47,11 +48,13 @@ MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # TODO(#148): Change model transfer pro
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, modyn_config: dict):
+    def __init__(self, modyn_config: dict, progress_mgr: enlighten.Manager, status_bar: enlighten.StatusBar):
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
         self.connected_to_selector = False
+        self.progress_mgr = progress_mgr
+        self.status_bar = status_bar
 
         self.init_storage()
         self.init_selector()
@@ -88,7 +91,7 @@ class GRPCHandler:
             trainer_server_address,
             options=[
                 ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
+                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
             ],
         )
 
@@ -283,6 +286,16 @@ class GRPCHandler:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
+        self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
+
+        total_batches = None  # TODO(create issue/check for existing): obtain total number of batches/samples
+        total_samples = None
+
+        batch_pbar = self.progress_mgr.counter(total=total_batches, desc="Batches", unit="batches")
+        sample_pbar = self.progress_mgr.counter(total=total_samples, desc="Samples", unit="samples")
+
+        last_batches = 0
+        last_samples = 0
 
         while True:
             req = TrainingStatusRequest(training_id=training_id)
@@ -298,33 +311,41 @@ class GRPCHandler:
                     raise RuntimeError(f"Exception at trainer server occured during training:\n{res.exception}\n\n")
 
                 if res.state_available:
-                    assert res.HasField("samples_seen") and res.HasField("batches_seen"), "Inconsistent server response"
-                    logger.info(
-                        f"\r{'⏳' if res.is_running else '✅'} Batch {res.batches_seen}/?"
-                        + f"Sample {res.samples_seen}/?"
-                    )
-                else:
-                    logger.warning(
-                        "Trainer server is not blocked, but no state is available. "
-                        "This might be because we queried status for a finished training.\n"
-                    )
+                    assert res.HasField("samples_seen") and res.HasField(
+                        "batches_seen"
+                    ), f"Inconsistent server response:\n{res}"
+
+                    new_batches = res.batches_seen - last_batches
+                    new_samples = res.samples_seen - last_samples
+
+                    batch_pbar.update(new_batches)
+                    sample_pbar.update(new_samples)
+                    last_batches = new_batches
+                    last_samples = new_samples
+
+                elif not res.is_running:
+                    logger.warning("Trainer server is neither blocked nor running, but no state is available.")
 
             if res.is_running:
-                sleep(3)
+                sleep(2)
             else:
                 break
 
+        batch_pbar.close(clear=True)
+        sample_pbar.close(clear=True)
         logger.info("Training completed 🚀")
 
     def fetch_trained_model(self, training_id: int, storage_dir: pathlib.Path) -> pathlib.Path:
         logger.info(f"Fetching trained model for training {training_id}")
+        self.status_bar.update(demo=f"Fetching model from server (id = {training_id})")
 
         req = GetFinalModelRequest(training_id=training_id)
         res: GetFinalModelResponse = self.trainer_server.get_final_model(req)
 
         if not res.valid_state:
             raise RuntimeError(
-                f"Cannot fetch trained model for training {training_id} since training is invalid or training still running"
+                f"Cannot fetch trained model for training {training_id}"
+                + " since training is invalid or training still running"
             )
 
         model = res.state

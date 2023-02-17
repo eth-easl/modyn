@@ -93,7 +93,8 @@ class AbstractSelectionStrategy(ABC):
         training_samples = self._on_trigger()
 
         logger.info(
-            f"Strategy for pipeline {self._pipeline_id} got {len(training_samples)} samples for new trigger {trigger_id}."
+            f"Strategy for pipeline {self._pipeline_id} got"
+            + "f{len(training_samples)} samples for new trigger {trigger_id}."
         )
 
         with MetadataDatabaseConnection(self._modyn_config) as database:

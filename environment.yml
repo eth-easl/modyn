@@ -28,5 +28,6 @@ dependencies:
   - pytorch::pytorch-cuda=11.7
   - pytorch::torchvision
   - tqdm
+  - conda-forge::enlighten
   - pip:
       - "-e ."

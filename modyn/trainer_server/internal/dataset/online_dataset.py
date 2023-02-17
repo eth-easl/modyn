@@ -99,7 +99,8 @@ class OnlineDataset(IterableDataset):
             worker_id = worker_info.id
 
         if self._trainining_set_number == 0:
-            # We have to initialize transformations and gRPC connections here to do it per dataloader worker, otherwise the transformations/gRPC connections cannot be pickled for the new processes.
+            # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
+            # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
             self._init_grpc()
 
