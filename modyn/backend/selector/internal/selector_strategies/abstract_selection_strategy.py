@@ -43,7 +43,7 @@ class AbstractSelectionStrategy(ABC):
         with MetadataDatabaseConnection(self._modyn_config) as database:
             last_trigger_id = (
                 database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
-                .filter(pipeline_id == self._pipeline_id)
+                .filter(Trigger.pipeline_id == self._pipeline_id)
                 .scalar()
             )
             if last_trigger_id is None:
