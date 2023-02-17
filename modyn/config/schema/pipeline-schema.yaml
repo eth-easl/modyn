@@ -130,21 +130,31 @@ properties:
               The path on the training node where the checkpoints are stored
         required:
           - activated
-      optimizer:
-        type: object
+      optimizers:
+        type: array
         description: |
-          Configuration for the optimizer (e.g., Adam)
-        properties:
-          name:
-            type: string
-            description: |
-              The name of the optimizer the pipeline uses (e.g., SGD)
-          config:
+          An array of the optimizers for the training
+        items:
+          optimizer:
             type: object
             description: |
-              Optional configuration of the optimizer, e.g. learning rate/momentum. Passed to the optimizer class as a dict.
-        required:
-          - name
+              Configuration for the optimizer (e.g., Adam)
+            properties:
+              module:
+                type: string
+                description: |
+                  The submodule of the model that this optimizer is responsible for. To specify an optimizer for the entire model, pass "model".
+              name:
+                type: string
+                description: |
+                  The name of the optimizer the pipeline uses (e.g., SGD)
+              config:
+                type: object
+                description: |
+                  Optional configuration of the optimizer, e.g. learning rate/momentum. Passed to the optimizer class as a dict.
+            required:
+              - module
+              - name
       optimization_criterion:
         type: object
         description: |

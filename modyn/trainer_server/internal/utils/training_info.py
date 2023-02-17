@@ -27,7 +27,7 @@ class TrainingInfo:
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders
 
-        self.optimizer_dict = json.loads(request.optimizer_parameters.value)
+        self.optimizers_dict = json.loads(request.optimizer_parameters.value)
         self.model_configuration_dict = json.loads(request.model_configuration.value)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
 
@@ -42,7 +42,7 @@ class TrainingInfo:
         self.load_optimizer_state = request.load_optimizer_state
         self.pretrained_model = request.pretrained_model
 
-        self.torch_optimizer = request.torch_optimizer
+        self.torch_optimizers = json.loads(request.torch_optimizers.value)
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
 

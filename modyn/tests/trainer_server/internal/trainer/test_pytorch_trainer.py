@@ -105,11 +105,11 @@ def get_training_info(
                 trigger_id=1,
                 device="cpu",
                 data_info=Data(dataset_id="MNIST", num_dataloaders=2),
-                optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
+                optimizer_parameters=JsonString(value=json.dumps({"model": {"lr": 0.1}})),
                 model_configuration=JsonString(value=json.dumps({})),
                 criterion_parameters=JsonString(value=json.dumps({})),
                 model_id="model",
-                torch_optimizer="SGD",
+                torch_optimizers=JsonString(value=json.dumps({"model": "SGD"})),
                 batch_size=32,
                 torch_criterion="CrossEntropyLoss",
                 checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=tmpdirname),
@@ -149,7 +149,7 @@ def get_mock_trainer(
 def test_trainer_init():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None)
     assert isinstance(trainer._model, MockModelWrapper)
-    assert isinstance(trainer._optimizer, torch.optim.SGD)
+    assert isinstance(trainer._optimizers['model'], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert trainer._device == "cpu"
     assert trainer._num_samples == 0
@@ -161,7 +161,7 @@ def test_trainer_init():
 def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state")
     assert isinstance(trainer._model, MockModelWrapper)
-    assert isinstance(trainer._optimizer, torch.optim.SGD)
+    assert isinstance(trainer._optimizers['model'], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert trainer._device == "cpu"
     assert trainer._num_samples == 0
@@ -179,7 +179,7 @@ def test_save_state_to_file():
 
     assert saved_dict == {
         "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
-        "optimizer": {
+        "optimizer-model": {
             "state": {},
             "param_groups": [
                 {
@@ -207,7 +207,7 @@ def test_save_state_to_buffer():
     saved_dict = torch.load(buffer)
     assert saved_dict == {
         "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
-        "optimizer": {
+        "optimizer-model": {
             "state": {},
             "param_groups": [
                 {
@@ -252,7 +252,7 @@ def test_load_state_if_given():
     initial_state = initial_state_buffer.read()
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state)
     assert trainer._model.model.state_dict() == dict_to_save["model"]
-    assert trainer._optimizer.state_dict() == dict_to_save["optimizer"]
+    assert trainer._optimizers["model"].state_dict() == dict_to_save["optimizer"]
 
     new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state)
     assert new_trainer._model.model.state_dict() == dict_to_save["model"]
@@ -268,7 +268,7 @@ def test_send_state_to_server():
     file_like = BytesIO(response["state"])
     assert torch.load(file_like) == {
         "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
-        "optimizer": {
+        "optimizer-model": {
             "state": {},
             "param_groups": [
                 {
@@ -318,7 +318,7 @@ def test_train_invalid_query_message():
                 raise TimeoutError("Did not reach desired queue state within timelimit.")
 
 
-# pylint: disable=too-many-locals
+# # pylint: disable=too-many-locals
 
 
 @patch(
@@ -400,7 +400,7 @@ def test_train(
         status_state = torch.load(io.BytesIO(status["state"]))
         checkpointed_state = {
             "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
-            "optimizer": {
+            "optimizer-model": {
                 "state": {},
                 "param_groups": [
                     {

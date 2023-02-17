@@ -200,10 +200,14 @@ class GRPCHandler:
             use_pretrained_model = False
             pretrained_model = b""
 
-        if "config" in pipeline_config["training"]["optimizer"]:
-            optimizer_config = json.dumps(pipeline_config["training"]["optimizer"]["config"])
-        else:
-            optimizer_config = "{}"
+        optimizers_config = {}
+        optimizers = {}
+        for optimizer in pipeline_config["training"]["optimizers"]:
+            optimizers[optimizer["module"]] = optimizer["name"]
+            if "config" in optimizer:
+                optimizers_config[optimizer["module"]] = optimizer["config"]
+            else:
+                optimizers_config[optimizer["module"]] = {}
 
         if "config" in pipeline_config["training"]["optimization_criterion"]:
             criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"]["config"])
@@ -238,8 +242,8 @@ class GRPCHandler:
             use_pretrained_model=use_pretrained_model,
             pretrained_model=pretrained_model,
             batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizer=pipeline_config["training"]["optimizer"]["name"],
-            optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
+            torch_optimizers=TrainerServerJsonString(value=json.dumps(optimizers)),
+            optimizer_parameters=TrainerServerJsonString(value=json.dumps(optimizers_config)),
             torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
             criterion_parameters=TrainerServerJsonString(value=criterion_config),
             data_info=Data(

@@ -19,7 +19,7 @@ class LossCallback(BaseCallback):
     def on_batch_before_update(
         self,
         model: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
+        optimizer: dict[str, torch.optim.Optimizer],
         batch_number: int,
         sample_ids: list[str],
         data: torch.Tensor,
@@ -35,7 +35,7 @@ class LossCallback(BaseCallback):
         )
 
     def on_train_end(
-        self, model: torch.nn.Module, optimizer: torch.optim.Optimizer, total_samples: int, total_batches: int
+        self, model: torch.nn.Module, optimizer: dict[str, torch.optim.Optimizer], total_samples: int, total_batches: int
     ) -> None:
         super().on_train_end(model, optimizer, total_samples, total_batches)
         self._average_train_loss = self._sum_train_loss / total_samples

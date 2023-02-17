@@ -121,7 +121,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     LOAD_OPTIMIZER_STATE_FIELD_NUMBER: builtins.int
     PRETRAINED_MODEL_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
-    TORCH_OPTIMIZER_FIELD_NUMBER: builtins.int
+    TORCH_OPTIMIZERS_FIELD_NUMBER: builtins.int
     OPTIMIZER_PARAMETERS_FIELD_NUMBER: builtins.int
     TORCH_CRITERION_FIELD_NUMBER: builtins.int
     CRITERION_PARAMETERS_FIELD_NUMBER: builtins.int
@@ -139,7 +139,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     load_optimizer_state: builtins.bool
     pretrained_model: builtins.bytes
     batch_size: builtins.int
-    torch_optimizer: builtins.str
+    @property
+    def torch_optimizers(self) -> global___JsonString: ...
     @property
     def optimizer_parameters(self) -> global___JsonString: ...
     torch_criterion: builtins.str
@@ -165,7 +166,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
         load_optimizer_state: builtins.bool = ...,
         pretrained_model: builtins.bytes = ...,
         batch_size: builtins.int = ...,
-        torch_optimizer: builtins.str = ...,
+        torch_optimizers: global___JsonString | None = ...,
         optimizer_parameters: global___JsonString | None = ...,
         torch_criterion: builtins.str = ...,
         criterion_parameters: global___JsonString | None = ...,
@@ -174,8 +175,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
         bytes_parser: global___PythonString | None = ...,
         transform_list: collections.abc.Iterable[builtins.str] | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "optimizer_parameters", b"optimizer_parameters"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "load_optimizer_state", b"load_optimizer_state", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "pipeline_id", b"pipeline_id", "pretrained_model", b"pretrained_model", "torch_criterion", b"torch_criterion", "torch_optimizer", b"torch_optimizer", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "model_configuration", b"model_configuration", "optimizer_parameters", b"optimizer_parameters", "torch_optimizers", b"torch_optimizers"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "load_optimizer_state", b"load_optimizer_state", "model_configuration", b"model_configuration", "model_id", b"model_id", "optimizer_parameters", b"optimizer_parameters", "pipeline_id", b"pipeline_id", "pretrained_model", b"pretrained_model", "torch_criterion", b"torch_criterion", "torch_optimizers", b"torch_optimizers", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
 
 global___StartTrainingRequest = StartTrainingRequest
 

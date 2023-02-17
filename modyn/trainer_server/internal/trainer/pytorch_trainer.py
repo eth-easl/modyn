@@ -32,8 +32,10 @@ class PytorchTrainer:
         self._model = training_info.model_handler(training_info.model_configuration_dict)
         self._model.model.to(device)
 
-        optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
-        self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
+        self._optimizers = {}
+        for module, optimizer_name in training_info.torch_optimizers.items():
+            optimizer_func = getattr(torch.optim, optimizer_name)
+            self._optimizers[module] = optimizer_func(eval(f"self._model.{module}.parameters()"), **(training_info.optimizers_dict[module]))
 
         if training_info.used_pretrained_model:
             self.load_state_if_given(training_info.pretrained_model, training_info.load_optimizer_state)
@@ -80,8 +82,10 @@ class PytorchTrainer:
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {
             "model": self._model.model.state_dict(),
-            "optimizer": self._optimizer.state_dict(),
         }
+        for optimizer_name, optimizer in self._optimizers.items():
+            dict_to_save[f"optimizer-{optimizer_name}"] = optimizer.state_dict()
+
         if iteration is not None:
             dict_to_save["iteration"] = iteration
 
@@ -92,8 +96,10 @@ class PytorchTrainer:
         checkpoint = torch.load(checkpoint_buffer)
         assert "model" in checkpoint
         self._model.model.load_state_dict(checkpoint["model"])
-        if load_optimizer_state and "optimizer" in checkpoint:
-            self._optimizer.load_state_dict(checkpoint["optimizer"])
+        if load_optimizer_state:
+            for optimizer_name, optimizer in self._optimizers.items():
+                if optimizer_name in checkpoint:
+                    optimizer.load_state_dict(checkpoint["optimizer"])
 
     def send_state_to_server(self, batch_number: int) -> None:
         buffer = io.BytesIO()
@@ -117,12 +123,12 @@ class PytorchTrainer:
         self._model.model.train()
 
         for _, callback in self._callbacks.items():
-            callback.on_train_begin(self._model.model, self._optimizer)
+            callback.on_train_begin(self._model.model, self._optimizers)
 
         batch_number = 0
         for batch_number, batch in enumerate(self._train_dataloader):
             for _, callback in self._callbacks.items():
-                callback.on_batch_begin(self._model.model, self._optimizer, batch, batch_number)
+                callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
 
             # As empty() is unreliable
             # we try to fetch an element within 10ms. If there is no
@@ -138,17 +144,20 @@ class PytorchTrainer:
             sample_ids = batch[0]
             data, target = batch[1].to(self._device), batch[2].to(self._device)
 
-            self._optimizer.zero_grad()
+            for _,optimizer in self._optimizers.items():
+                optimizer.zero_grad()
+
             output = self._model.model(data)
             loss = self._criterion(output, target)
             loss.backward()
 
             for _, callback in self._callbacks.items():
                 callback.on_batch_before_update(
-                    self._model.model, self._optimizer, batch_number, sample_ids, data, target, output, loss
+                    self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                 )
 
-            self._optimizer.step()
+            for _,optimizer in self._optimizers.items():
+                optimizer.step()
 
             if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
                 checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
@@ -160,11 +169,11 @@ class PytorchTrainer:
 
             for _, callback in self._callbacks.items():
                 callback.on_batch_end(
-                    self._model.model, self._optimizer, batch_number, sample_ids, data, target, output, loss
+                    self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                 )
 
         for _, callback in self._callbacks.items():
-            callback.on_train_end(self._model.model, self._optimizer, self._num_samples, batch_number)
+            callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
 
         for metric in self._callbacks:
             self._metadata_collector.send_metadata(metric)
