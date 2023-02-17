@@ -1,0 +1,52 @@
+pipeline:
+  name: CRITEO DLRM Pipeline
+  description: Training DLRM (NVIDIA version) with CRITEO dataset
+  version: 1.0.0
+model:
+  id: ResNet18
+  config:
+    vectors_per_gpu: []
+    embedding_dim: []
+    interaction_op: "dot"
+    hash_indices: false
+    categorical_feature_sizes: []
+    num_numerical_features: 1
+    bottom_mlp_sizes: 1
+    embedding_type: "multi-table"
+    use_cpp_mlp: False
+    fp16: False
+training:
+  gpus: 1
+  device: "cuda:0"
+  dataloader_workers: 2
+  initial_model: random
+  initial_pass:
+    activated: False
+  batch_size: 65536
+  optimizers:
+    - module: "top_model"
+      name: "SGD"
+      config:
+        lr: 0.1
+    - module: "bottom_model.embeddings"
+      name: "SGD"
+      config:
+        lr: 0.1
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: False
+  selection_strategy:
+    name: NewDataStrategy
+    config:
+      limit: -1
+      reset_after_trigger: True
+data:
+  dataset_id: criteo
+  bytes_parser_function: |
+    lambda x: x
+
+trigger:
+  id: DataAmountTrigger
+  trigger_config:
+    data_points_for_trigger: 2000
