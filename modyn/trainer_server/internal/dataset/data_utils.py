@@ -17,6 +17,7 @@ def prepare_dataloaders(
     transform: list[str],
     storage_address: str,
     selector_address: str,
+    training_id: int,
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -38,7 +39,7 @@ def prepare_dataloaders(
     """
     logger.debug("Creating OnlineDataset.")
     train_set = OnlineDataset(
-        pipeline_id, trigger_id, dataset_id, bytes_parser, transform, storage_address, selector_address
+        pipeline_id, trigger_id, dataset_id, bytes_parser, transform, storage_address, selector_address, training_id
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)

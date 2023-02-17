@@ -28,6 +28,9 @@ class PytorchTrainer:
         logger: logging.Logger,
     ) -> None:
         self.logger = logger
+        self.pipeline_id = training_info.pipeline_id
+        self.training_id = training_info.training_id
+
         self._info("Initializing Pytorch Trainer")
 
         # setup model and optimizer
@@ -58,6 +61,7 @@ class PytorchTrainer:
             training_info.transform_list,
             training_info.storage_address,
             training_info.selector_address,
+            training_info.training_id,
         )
 
         self._device = device
@@ -76,8 +80,6 @@ class PytorchTrainer:
         self._num_samples = 0
 
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
-        self.pipeline_id = training_info.pipeline_id
-        self.training_id = training_info.training_id
 
         # create callbacks - For now, assume LossCallback by default
         # TODO(#140): should be defined by the pipeline and passed with training request
@@ -86,7 +88,7 @@ class PytorchTrainer:
         }
 
     def _info(self, msg: str) -> None:
-        self._info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+        self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
 
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {

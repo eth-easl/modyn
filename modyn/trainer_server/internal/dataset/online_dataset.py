@@ -1,6 +1,6 @@
 import logging
 from inspect import isfunction
-from typing import Any, Generator
+from typing import Any, Generator, Optional
 
 import grpc
 
@@ -28,9 +28,11 @@ class OnlineDataset(IterableDataset):
         serialized_transforms: list[str],
         storage_address: str,
         selector_address: str,
+        training_id: int,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
+        self._training_id = training_id
         self._dataset_id = dataset_id
         self._dataset_len = 0
         self._trainining_set_number = 0
@@ -94,6 +96,9 @@ class OnlineDataset(IterableDataset):
         pil_logger = logging.getLogger("PIL")
         pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
 
+    def _info(self, msg: str, worker_id: Optional[None]) -> None:
+        logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}][Worker {worker_id}] {msg}")
+
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -103,23 +108,24 @@ class OnlineDataset(IterableDataset):
             worker_id = worker_info.id
 
         if self._trainining_set_number == 0:
-            logger.info(f"[Worker {worker_id}] This is the first run of iter, making gRPC connections.")
+            self._info("This is the first run of iter, making gRPC connections.", worker_id)
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
             self._init_grpc()
             self._silence_pil()
-            logger.info(f"[Worker {worker_id}] gRPC initialized.")
+            self._info("gRPC initialized.", worker_id)
 
         self._trainining_set_number += 1
 
-        logger.info(f"[Worker {worker_id}] Getting keys from selector")
+        self._info("Getting keys from selector", worker_id)
         keys = self._get_keys_from_selector(worker_id)
-        logger.info(f"[Worker {worker_id}] Getting data from storage")
+        self._info("Getting data from storage", worker_id)
+        # TODO(#149): Optimize this
         data, labels = self._get_data_from_storage(keys)
 
         self._dataset_len = len(data)
-        logger.info(f"[Worker {worker_id}] Data obtained (len = {self._dataset_len})")
+        self._info("Data obtained (len = {self._dataset_len})", worker_id)
 
         for key, sample, label in zip(keys, data, labels):
             yield key, self._transform(sample), label
