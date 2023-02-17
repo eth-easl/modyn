@@ -33,7 +33,7 @@ class Supervisor:
         self.pipeline_id: Optional[int] = None
         self.previous_model: Optional[pathlib.Path] = None
 
-        self.progess_mgr = enlighten.get_manager()
+        self.progress_mgr = enlighten.get_manager()
         self.status_bar = self.progress_mgr(
             status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
             color="bold_underline_bright_white_on_lightslategray",
@@ -47,7 +47,7 @@ class Supervisor:
             raise ValueError("Invalid pipeline configuration")
 
         logging.info("Setting up connections to cluster components.")
-        self.grpc = GRPCHandler(modyn_config, self.progess_mgr, self.status_bar)
+        self.grpc = GRPCHandler(modyn_config, self.progress_mgr, self.status_bar)
 
         if not self.validate_system():
             raise ValueError("Invalid system configuration")
@@ -223,7 +223,7 @@ class Supervisor:
         any_training_triggered = False
         new_data_len = len(new_data)
 
-        pbar = self.progess_mgr.counter(total=new_data_len, desc="New Data Points", unit="Samples")
+        pbar = self.progress_mgr.counter(total=new_data_len, desc="New Data Points", unit="Samples")
 
         for i in range(0, new_data_len, selector_batch_size):
             batch = new_data[i : i + selector_batch_size]
@@ -251,7 +251,7 @@ class Supervisor:
     def _handle_triggers_within_batch(self, batch: list[tuple[str, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
-        pbar = self.progess_mgr.counter(total=len(triggering_indices), desc="Triggers in Batch", unit="Triggers")
+        pbar = self.progress_mgr.counter(total=len(triggering_indices), desc="Triggers in Batch", unit="Triggers")
 
         for i, triggering_idx in enumerate(triggering_indices):
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
