@@ -291,8 +291,8 @@ class GRPCHandler:
         total_batches = None  # TODO(create issue/check for existing): obtain total number of batches/samples
         total_samples = None
 
-        batch_pbar = self.progress_mgr.counter(total=total_batches, desc="Batches", unit="batches")
-        sample_pbar = self.progress_mgr.counter(total=total_samples, desc="Samples", unit="samples")
+        batch_pbar = self.progress_mgr.counter(total=total_batches, desc=f"[Training {training_id}] Processed Batches", unit="batches")
+        sample_pbar = self.progress_mgr.counter(total=total_samples, desc=f"[Training {training_id}] Processed Samples", unit="samples")
 
         last_batches = 0
         last_samples = 0
@@ -302,10 +302,10 @@ class GRPCHandler:
             res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
 
             if not res.valid:
-                raise RuntimeError(f"Training {training_id} is invalid at server: {res}\n")
+                raise RuntimeError(f"Training {training_id} is invalid at server:\n{res}\n")
 
             if res.blocked:
-                logger.warning(f"Trainer Server returned a blocked response: {res}\n")
+                logger.warning(f"Trainer Server returned a blocked response, cannot update status.")
             else:
                 if res.HasField("exception") and res.exception is not None:
                     raise RuntimeError(f"Exception at trainer server occured during training:\n{res.exception}\n\n")
@@ -323,14 +323,16 @@ class GRPCHandler:
                     last_batches = new_batches
                     last_samples = new_samples
 
-                elif not res.is_running:
-                    logger.warning("Trainer server is neither blocked nor running, but no state is available.")
+                elif res.is_running:
+                    logger.warning("Trainer server is not blocked and running, but no state is available.")
 
             if res.is_running:
                 sleep(2)
             else:
                 break
 
+        batch_pbar.clear(flush=True)
+        sample_pbar.clear(flush=True)
         batch_pbar.close(clear=True)
         sample_pbar.close(clear=True)
         logger.info("Training completed 🚀")

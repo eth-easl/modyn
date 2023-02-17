@@ -34,7 +34,7 @@ class Supervisor:
         self.previous_model: Optional[pathlib.Path] = None
 
         self.progress_mgr = enlighten.get_manager()
-        self.status_bar = self.progress_mgr(
+        self.status_bar = self.progress_mgr.status_bar(
             status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
             color="bold_underline_bright_white_on_lightslategray",
             justify=enlighten.Justify.CENTER,
@@ -223,7 +223,7 @@ class Supervisor:
         any_training_triggered = False
         new_data_len = len(new_data)
 
-        pbar = self.progress_mgr.counter(total=new_data_len, desc="New Data Points", unit="Samples")
+        pbar = self.progress_mgr.counter(total=new_data_len, desc=f"[Pipeline {self.pipeline_id}] Processing New Samples", unit="samples")
 
         for i in range(0, new_data_len, selector_batch_size):
             batch = new_data[i : i + selector_batch_size]
@@ -232,6 +232,8 @@ class Supervisor:
             any_training_triggered = any_training_triggered or triggered
             pbar.update(selector_batch_size)
 
+        self.status_bar.update(demo="New data handled")
+        pbar.clear(flush=True)
         pbar.close(clear=True)
 
         return any_training_triggered
@@ -280,6 +282,7 @@ class Supervisor:
 
             pbar.update()
 
+        pbar.clear(flush=True)
         pbar.close(clear=True)
 
     def _run_training(self, trigger_id: int) -> None:
@@ -313,6 +316,7 @@ class Supervisor:
             replay_data = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
 
         self._handle_new_data(replay_data)
+        self.status_bar.update(demo="Replay done")
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
