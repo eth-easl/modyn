@@ -90,6 +90,10 @@ class OnlineDataset(IterableDataset):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(storage_channel)
 
+    def _silence_pil(self) -> None:
+        pil_logger = logging.getLogger("PIL")
+        pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
+
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -99,17 +103,23 @@ class OnlineDataset(IterableDataset):
             worker_id = worker_info.id
 
         if self._trainining_set_number == 0:
+            logger.info(f"[Worker {worker_id}] This is the first run of iter, making gRPC connections.")
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
             self._init_grpc()
+            self._silence_pil()
+            logger.info(f"[Worker {worker_id}] gRPC initialized.")
 
         self._trainining_set_number += 1
 
+        logger.info(f"[Worker {worker_id}] Getting keys from selector")
         keys = self._get_keys_from_selector(worker_id)
+        logger.info(f"[Worker {worker_id}] Getting data from storage")
         data, labels = self._get_data_from_storage(keys)
 
         self._dataset_len = len(data)
+        logger.info(f"[Worker {worker_id}] Data obtained (len = {self._dataset_len})")
 
         for key, sample, label in zip(keys, data, labels):
             yield key, self._transform(sample), label

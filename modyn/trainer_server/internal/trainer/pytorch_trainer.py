@@ -28,7 +28,7 @@ class PytorchTrainer:
         logger: logging.Logger,
     ) -> None:
         self.logger = logger
-        self.logger.info("Initializing Pytorch Trainer")
+        self._info("Initializing Pytorch Trainer")
 
         # setup model and optimizer
         self._model = training_info.model_handler(training_info.model_configuration_dict)
@@ -37,17 +37,17 @@ class PytorchTrainer:
         optimizer_func = getattr(torch.optim, training_info.torch_optimizer)
         self._optimizer = optimizer_func(self._model.model.parameters(), **training_info.optimizer_dict)
 
-        self.logger.info("Model and optimizer created.")
+        self._info("Model and optimizer created.")
 
         if training_info.used_pretrained_model:
-            self.logger.info("Loading model state from pretrained model.")
+            self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model, training_info.load_optimizer_state)
 
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
 
         # setup dataloaders
-        self.logger.info("Setting up data loaders.")
+        self._info("Setting up data loaders.")
         self._train_dataloader, self._val_dataloader = prepare_dataloaders(
             training_info.pipeline_id,
             training_info.trigger_id,
@@ -76,12 +76,17 @@ class PytorchTrainer:
         self._num_samples = 0
 
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
+        self.pipeline_id = training_info.pipeline_id
+        self.training_id = training_info.training_id
 
         # create callbacks - For now, assume LossCallback by default
         # TODO(#140): should be defined by the pipeline and passed with training request
         self._callbacks = {
             MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
+    def _info(self, msg: str) -> None:
+        self._info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
 
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {
@@ -115,12 +120,14 @@ class PytorchTrainer:
         )
 
     def train(self) -> None:
-        self.logger.info(f"Process {os.getpid()} starts training")
+        self._info(f"Process {os.getpid()} starts training")
 
         self._model.model.train()
 
         for _, callback in self._callbacks.items():
             callback.on_train_begin(self._model.model, self._optimizer)
+
+        self._info("Handled OnBegin Callbacks.")
 
         batch_number = 0
         for batch_number, batch in enumerate(self._train_dataloader):
@@ -164,7 +171,7 @@ class PytorchTrainer:
                     self._model.model, self._optimizer, batch_number, sample_ids, data, target, output, loss
                 )
 
-        self.logger.info(f"Finished training: {self._num_samples} samples, {batch_number} batches.")
+        self._info(f"Finished training: {self._num_samples} samples, {batch_number} batches.")
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizer, self._num_samples, batch_number)
 
@@ -176,7 +183,7 @@ class PytorchTrainer:
         final_checkpoint_file_name = self._final_checkpoint_path / "model_final.modyn"
         self.save_state(final_checkpoint_file_name)
 
-        self.logger.info("Training complete!")
+        self._info("Training complete!")
 
 
 def train(
