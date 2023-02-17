@@ -34,6 +34,7 @@ from modyn.trainer_server.internal.utils.training_process_info import TrainingPr
 from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG) # TODO(create issue): why is this necessary + why is formatting ignored, even if formatter is set?
 
 class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""

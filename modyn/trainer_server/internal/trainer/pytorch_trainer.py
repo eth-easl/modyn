@@ -198,7 +198,7 @@ def train(
     file_handler = logging.FileHandler(log_path)
     logger = logging.getLogger(__name__)
     logger.addHandler(file_handler)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.DEBUG) # TODO(create issue): why is formatting ignored, even if formatter is set?
     file_handler.setLevel(logging.DEBUG)
 
     try:
