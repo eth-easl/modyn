@@ -6,6 +6,8 @@ services:
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
+    volumes:
+      - .:/modyn_host
     container_name: modynbase
   metadata-db:
     image: postgres:14.1-alpine
