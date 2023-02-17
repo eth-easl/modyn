@@ -13,7 +13,6 @@ from modyn.utils.utils import grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
-import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 logger = logging.getLogger(__name__)
 
 
@@ -51,7 +50,8 @@ class OnlineDataset(IterableDataset):
         if not grpc_connection_established(storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
         self._storagestub = StorageStub(storage_channel)
-
+    
+        logger.debug("Initialized OnlineDataset.")
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)

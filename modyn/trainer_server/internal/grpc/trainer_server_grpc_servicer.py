@@ -55,6 +55,8 @@ class TrainerServerGRPCServicer:
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
 
+        logger.info("TrainerServer gRPC Servicer initialized.")
+
     def trainer_available(
         self,
         request: TrainerAvailableRequest,  # pylint: disable=unused-argument
@@ -72,6 +74,8 @@ class TrainerServerGRPCServicer:
         request: StartTrainingRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
+        logger.info("Received start training request.")
+
         if not hasattr(dynamic_module_import("modyn.models"), request.model_id):
             logger.error(f"Model {request.model_id} not available!")
             return StartTrainingResponse(training_started=False)
@@ -106,6 +110,7 @@ class TrainerServerGRPCServicer:
             process, exception_queue, status_query_queue, status_response_queue
         )
 
+        logger.info(f"Started training {training_id}")
         return StartTrainingResponse(training_started=True, training_id=training_id)
 
     def get_training_status(
@@ -113,7 +118,8 @@ class TrainerServerGRPCServicer:
         request: TrainingStatusRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainingStatusResponse:
-        training_id = request.training_id
+        training_id = request.training_id´
+        logger.info(f"Received status request for training {training_id}")
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
@@ -121,6 +127,7 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
+            logger.info(f"Training {training_id} is still running, obtaining info from running process.")
             _, num_batches, num_samples = self.get_status(training_id)
             response_kwargs_running: dict[str, Any] = {
                 "valid": True,
@@ -153,6 +160,7 @@ class TrainerServerGRPCServicer:
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> GetFinalModelResponse:
         training_id = request.training_id
+        logger.info(f"Received get final model request for training {training_id}.")
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
@@ -179,6 +187,7 @@ class TrainerServerGRPCServicer:
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> GetLatestModelResponse:
         training_id = request.training_id
+        logger.info(f"Received get latest model request for training {training_id}.")
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
