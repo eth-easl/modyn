@@ -118,7 +118,7 @@ class TrainerServerGRPCServicer:
         request: TrainingStatusRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainingStatusResponse:
-        training_id = request.training_id´
+        training_id = request.training_id
         logger.info(f"Received status request for training {training_id}")
 
         if training_id not in self._training_dict:
