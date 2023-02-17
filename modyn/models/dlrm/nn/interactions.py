@@ -14,7 +14,7 @@
 
 import torch
 
-from dlrm.cuda_ext import dotBasedInteract
+from modyn.models.dlrm.cuda_ext import dotBasedInteract
 
 
 def padding_size(n: int) -> int:

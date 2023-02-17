@@ -25,6 +25,12 @@ training:
         momentum: 0.001
   optimization_criterion:
     name: "CrossEntropyLoss"
+  lr_scheduler:
+    name: "StepLR"
+    custom: True
+    config:
+      step_size: 10
+      gamma: 0.1
   checkpointing:
     activated: True
     interval: 10

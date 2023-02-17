@@ -16,7 +16,6 @@ import copy
 from typing import Sequence, List, Iterable
 
 import torch
-from absl import logging # TODO(fotstrt): check if this is needed
 from torch import nn
 
 from modyn.models.dlrm import cuda_ext
@@ -132,7 +131,7 @@ class JointEmbedding(Embeddings):
         if self.hash_indices:
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
-                logging.log_first_n(logging.WARNING, f"Hashed indices out of range.", 1)
+
 
         return [self.embedding(categorical_inputs + self.offsets[:-1])]
 
@@ -203,7 +202,6 @@ class FusedJointEmbedding(Embeddings):
         if self.hash_indices:
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
-                logging.log_first_n(logging.WARNING, f"Hashed indices out of range.", 1)
 
         return [BuckleEmbeddingFusedGatherFunction.apply(self.weight, categorical_inputs, self.offsets, self.amp_train)]
 
@@ -242,7 +240,6 @@ class JointSparseEmbedding(Embeddings):
         if self.hash_indices:
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
-                logging.log_first_n(logging.WARNING, f"Hashed indices out of range.", 1)
 
         return [
             self.embedding(categorical_inputs)

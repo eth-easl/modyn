@@ -170,6 +170,24 @@ properties:
               Optional configuration of the criterion. Passed to the optimizer class as a dict.
         required:
           - name
+      lr_scheduler:
+        type: object
+        description: |
+          Configuration for the Torch-based Learning Rate (LR) scheduler used for training.
+        properties:
+          name:
+            type: string
+            description: The name of the LR scheduler.
+          custom:
+            type: boolean
+            description: Whether this is a custom LR scheduler or provided by an ML framework (only PyTorch for now).
+          config:
+            type: object
+            description: |
+              Optional configuration of the lr scheduler. Passed to the lr scheduler as a dict.
+        required:
+          - name
+          - custom
     required:
       - gpus
       - device
@@ -180,7 +198,7 @@ properties:
       - initial_pass
       - checkpointing
       - optimization_criterion
-      - optimizer
+      - optimizers
   data:
     type: object
     description: |

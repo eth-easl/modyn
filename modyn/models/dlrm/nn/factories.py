@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from dlrm.nn.embeddings import (
+from modyn.models.dlrm.nn.embeddings import (
     JointEmbedding, MultiTableEmbeddings, FusedJointEmbedding, JointSparseEmbedding,
     Embeddings
 )

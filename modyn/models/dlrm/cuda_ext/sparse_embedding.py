@@ -15,8 +15,7 @@
 import copy
 
 import torch
-from apex import amp  # TODO(fotstrt): check if this is needed
-from dlrm.cuda_ext import sparse_gather
+# from apex import amp  # TODO(fotstrt): check if this is needed
 from torch import nn
 from torch.autograd import Function
 
@@ -25,6 +24,7 @@ class EmbeddingGatherFunction(Function):
     """Customized embedding gather with fused plain SGD"""
     @staticmethod
     def forward(ctx, embedding, indices):
+        from modyn.models.dlrm.cuda_ext import sparse_gather
         output = sparse_gather.gather_gpu_fwd(embedding, indices)
         ctx.save_for_backward(indices)
         ctx.num_features = embedding.size(0)
@@ -32,6 +32,7 @@ class EmbeddingGatherFunction(Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        from modyn.models.dlrm.cuda_ext import sparse_gather
         indices = ctx.saved_tensors[0]
 
         grad_embedding = sparse_gather.gather_gpu_bwd(grad_output, indices, ctx.num_features)
@@ -65,5 +66,5 @@ class JointSparseEmbedding(nn.Module):
 
         return embedding_out
 
-
-embedding_gather = amp.float_function(EmbeddingGatherFunction.apply)
+# TODO(fotstrt): fix this
+embedding_gather = None #amp.float_function(EmbeddingGatherFunction.apply)

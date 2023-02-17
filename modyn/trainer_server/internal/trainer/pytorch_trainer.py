@@ -14,6 +14,7 @@ from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callb
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
+from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,16 @@ class PytorchTrainer:
 
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
+
+        self._lr_scheduler = None
+        if training_info.torch_lr_scheduler != "":
+            torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.torch_lr_scheduler)
+            self._lr_scheduler = torch_lr_scheduler(**training_info.lr_scheduler_configs)
+        elif training_info.custom_lr_scheduler != "":
+            lr_scheduler_module = dynamic_module_import("modyn.custom_lr_schedulers")
+            custom_lr_scheduler = getattr(lr_scheduler_module, training_info.custom_lr_scheduler)
+            self._lr_scheduler = custom_lr_scheduler(**training_info.lr_scheduler_configs)
+
 
         # setup dataloaders
         self._train_dataloader, self._val_dataloader = prepare_dataloaders(
@@ -146,6 +157,10 @@ class PytorchTrainer:
 
             for _,optimizer in self._optimizers.items():
                 optimizer.zero_grad()
+
+            # TODO(): where to perform lr_scheduler.step? make it configurable
+            if self._lr_scheduler is not None:
+                self._lr_scheduler.step()
 
             output = self._model.model(data)
             loss = self._criterion(output, target)

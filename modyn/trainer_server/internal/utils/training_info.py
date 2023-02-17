@@ -46,6 +46,10 @@ class TrainingInfo:
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
 
+        self.torch_lr_scheduler = request.torch_lr_scheduler
+        self.custom_lr_scheduler = request.custom_lr_scheduler
+        self.lr_scheduler_configs = request.lr_scheduler_configs
+
         self.checkpoint_path = pathlib.Path(request.checkpoint_info.checkpoint_path)
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
 

@@ -20,7 +20,7 @@ def get_minimal_pipeline_config() -> dict:
             "initial_pass": {"activated": False},
             "learning_rate": 0.1,
             "batch_size": 42,
-            "optimizer": {"name": "SGD"},
+            "optimizers": [{"module": "model", "name": "SGD"}],
             "optimization_criterion": {"name": "CrossEntropyLoss"},
             "checkpointing": {"activated": False},
             "selection_strategy": {"name": "NewDataStrategy"},
