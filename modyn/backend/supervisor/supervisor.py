@@ -67,7 +67,7 @@ class Supervisor:
     def _setup_model_directory(self) -> None:
         self.model_storage_directory = (
             pathlib.Path(os.getcwd())
-            / f"models_{self.pipeline_config['pipeline']['name']}"
+            / f"models_{self.pipeline_config['pipeline']['name'].replace(' ', '_')}"
             / str(current_time_millis())
         )
         os.makedirs(self.model_storage_directory)

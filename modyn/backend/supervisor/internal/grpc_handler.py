@@ -180,8 +180,7 @@ class GRPCHandler:
         response: TriggerResponse = self.selector.inform_data_and_trigger(request)
 
         trigger_id = response.trigger_id
-
-        logging.info(f"Informed and triggerd selector about {len(keys)} new data points. Got trigger id {trigger_id}.")
+        logging.info(f"Informed selector about trigger. Got trigger id {trigger_id}.")
 
         return trigger_id
 
@@ -303,7 +302,7 @@ class GRPCHandler:
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         last_samples = 0
         sample_pbar = self.progress_mgr.counter(
-            total=total_samples, desc=f"[Training {training_id}] Training on Sample6s", unit="samples"
+            total=total_samples, desc=f"[Training {training_id}] Training on Samples", unit="samples"
         )
 
         while True:

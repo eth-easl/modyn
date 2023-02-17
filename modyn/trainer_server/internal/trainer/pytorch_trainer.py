@@ -122,7 +122,6 @@ class PytorchTrainer:
         for _, callback in self._callbacks.items():
             callback.on_train_begin(self._model.model, self._optimizer)
 
-        total_samples = 0
         batch_number = 0
         for batch_number, batch in enumerate(self._train_dataloader):
             for _, callback in self._callbacks.items():
@@ -196,8 +195,6 @@ def train(
     file_handler = logging.FileHandler(log_path)
     logger = logging.getLogger(__name__)
     logger.addHandler(file_handler)
-    logger.setLevel(logging.DEBUG)  # TODO(create issue): why is formatting ignored, even if formatter is set?
-    file_handler.setLevel(logging.DEBUG)
 
     try:
         trainer = PytorchTrainer(training_info, device, status_query_queue, status_response_queue, logger)
