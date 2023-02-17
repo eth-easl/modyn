@@ -122,6 +122,7 @@ class PytorchTrainer:
         for _, callback in self._callbacks.items():
             callback.on_train_begin(self._model.model, self._optimizer)
 
+        total_samples = 0
         batch_number = 0
         for batch_number, batch in enumerate(self._train_dataloader):
             for _, callback in self._callbacks.items():
@@ -159,13 +160,12 @@ class PytorchTrainer:
 
             self._num_samples += data.shape[0]
 
-            self.logger.info(f"Iteration {batch_number}")
-
             for _, callback in self._callbacks.items():
                 callback.on_batch_end(
                     self._model.model, self._optimizer, batch_number, sample_ids, data, target, output, loss
                 )
 
+        self.logger.info(f"Finished training: {self._num_samples} samples, {batch_number} batches.")
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizer, self._num_samples, batch_number)
 

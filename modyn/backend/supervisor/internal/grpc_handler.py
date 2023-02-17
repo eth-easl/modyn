@@ -303,7 +303,7 @@ class GRPCHandler:
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         last_samples = 0
         sample_pbar = self.progress_mgr.counter(
-            total=total_samples, desc=f"[Training {training_id}] Processed Samples", unit="samples"
+            total=total_samples, desc=f"[Training {training_id}] Training on Sample6s", unit="samples"
         )
 
         while True:
@@ -336,6 +336,7 @@ class GRPCHandler:
             else:
                 break
 
+        sample_pbar.update(sample_pbar.total - sample_pbar.count)
         sample_pbar.clear(flush=True)
         sample_pbar.close(clear=True)
         logger.info("Training completed 🚀")
