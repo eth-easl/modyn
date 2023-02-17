@@ -40,16 +40,6 @@ class OnlineDataset(IterableDataset):
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
         self._selector_address = selector_address
-
-        selector_channel = grpc.insecure_channel(selector_address)
-        if not grpc_connection_established(selector_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to selector at address {selector_address}.")
-        self._selectorstub = SelectorStub(selector_channel)
-
-        storage_channel = grpc.insecure_channel(storage_address)
-        if not grpc_connection_established(storage_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
-        self._storagestub = StorageStub(storage_channel)
     
         logger.debug("Initialized OnlineDataset.")
 
@@ -87,6 +77,16 @@ class OnlineDataset(IterableDataset):
         self._transform = self._bytes_parser_function
         self._deserialize_torchvision_transforms()
 
+    def _init_grpc(self) -> None:
+        selector_channel = grpc.insecure_channel(self._selector_address)
+        if not grpc_connection_established(selector_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to selector at address {self._selector_address}.")
+        self._selectorstub = SelectorStub(selector_channel)
+
+        storage_channel = grpc.insecure_channel(self._storage_address)
+        if not grpc_connection_established(storage_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
+        self._storagestub = StorageStub(storage_channel)
 
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
@@ -97,7 +97,10 @@ class OnlineDataset(IterableDataset):
             worker_id = worker_info.id
 
         if self._trainining_set_number == 0:
+            # We have to initialize transformations and gRPC connections here to do it per dataloader worker, otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
+            self._init_grpc()
+
         self._trainining_set_number += 1
 
         keys = self._get_keys_from_selector(worker_id)

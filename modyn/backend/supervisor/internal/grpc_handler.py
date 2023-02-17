@@ -281,13 +281,14 @@ class GRPCHandler:
             if res.blocked:
                 logger.warning(f"Trainer Server returned a blocked response: {res}\n")
             else:
-                if res.exception is not None:
-                    raise RuntimeError(f"Exception occured during training: {res.exception}\n\n{res}\n")
+                if res.HasField("exception") and res.exception is not None:
+                    raise RuntimeError(f"Exception at trainer server occured during training:\n{res.exception}\n\n")
 
                 if res.state_available:
+                    assert res.HasField("samples_seen") and res.HasField("batches_seen"), "Inconsistent server response"
                     logger.info(
-                        f"\r{'⏳' if res.is_running else '✅'} Batch {res.batches_seen}/{res.batches_total}"
-                        + f"Sample {res.samples_seen}/{res.samples_total}"
+                        f"\r{'⏳' if res.is_running else '✅'} Batch {res.batches_seen}/?"
+                        + f"Sample {res.samples_seen}/?"
                     )
                 else:
                     logger.warning(
