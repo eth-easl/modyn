@@ -313,6 +313,7 @@ class GRPCHandler:
                 raise RuntimeError(f"Training {training_id} is invalid at server:\n{res}\n")
 
             if res.blocked:
+                # TODO(MaxiBoether): only warn after 3 blocked responses in a row.
                 logger.warning("Trainer Server returned a blocked response, cannot update status.")
             else:
                 if res.HasField("exception") and res.exception is not None:

@@ -97,7 +97,10 @@ class OnlineDataset(IterableDataset):
         pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
 
     def _info(self, msg: str, worker_id: Optional[None]) -> None:
-        logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}][Worker {worker_id}] {msg}")
+        logger.info(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
+
+    def _debug(self, msg: str, worker_id: Optional[None]) -> None:
+        logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
@@ -108,13 +111,13 @@ class OnlineDataset(IterableDataset):
             worker_id = worker_info.id
 
         if self._trainining_set_number == 0:
-            self._info("This is the first run of iter, making gRPC connections.", worker_id)
+            self._debug("This is the first run of iter, making gRPC connections.", worker_id)
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
             self._init_grpc()
             self._silence_pil()
-            self._info("gRPC initialized.", worker_id)
+            self._debug("gRPC initialized.", worker_id)
 
         self._trainining_set_number += 1
 
