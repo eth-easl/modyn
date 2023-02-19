@@ -4,12 +4,13 @@ FROM python:3.10-slim
 ENV PYTHONUNBUFFERED=1
 
 # Setup basic system
-RUN apt-get update -q \
-  && apt-get upgrade -q \
+RUN apt-get update -qy \
+  && apt-get upgrade -qy \
   && apt-get install --no-install-recommends -qy \
     build-essential \
     gcc \
     g++ \
+    git \
     inetutils-ping \
     wget \
     nano \
@@ -32,13 +33,16 @@ RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; 
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda update -n base -c defaults conda && conda update --all && conda init bash
 
+RUN git clone https://github.com/NVIDIA/apex /apex
+
 # Mount modyn directory to container, make it working directory
 ADD . /src
 WORKDIR /src
 RUN chown -R appuser /src
 
 # Create modyn environment (delete old if exists)
-RUN conda env remove -n modyn && conda env create -f ./environment.yml
+RUN conda env remove -n modyn
+RUN conda env create -f ./environment.yml
 ENV CONDA_DEFAULT_ENV modyn
 
 # Initialize again for user shell

@@ -6,23 +6,31 @@ name: modyn
 channels:
   - conda-forge
   - anaconda
+  - nvidia
+  - pytorch
 
 dependencies:
   - python>=3.9
   - pip
-  - tqdm
-  - protobuf
-  - grpcio
-  - jsonschema
-  - psycopg2
-  - sqlalchemy>=2.0
-  - pyaml
-  - numpy
-  - types-protobuf
-  - types-psycopg2
-  - types-PyYAML
-  - pytorch
-  - torchvision
-  - tqdm
+  - packaging
+  - pytorch::pytorch
+    #- tqdm
+    #- protobuf
+    #- grpcio
+    #- jsonschema
+    #- psycopg2
+    #- sqlalchemy>=2.0
+    #- pyaml
+    #- numpy
+    #- types-protobuf
+    #- types-psycopg2
+    #- types-PyYAML
+    #- nvidia::cudatoolkit=11.7
+    #- pytorch::pytorch
+    #- pytorch::pytorch-cuda=11.7
+    #- pytorch::torchvision
+    #- tqdm
   - pip:
+      - /apex
       - "-e ."
+

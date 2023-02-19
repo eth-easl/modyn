@@ -1,8 +1,10 @@
 from typing import Any, Sequence
 from torch import nn
+import numpy as np
 
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
+from modyn.models.dlrm.utils.feature_spec import FeatureSpec, get_device_mapping, get_embedding_sizes
 
 class DLRM(nn.Module):
     def __init__(
@@ -12,20 +14,30 @@ class DLRM(nn.Module):
 
         super().__init__()
 
-        self._vectors_per_gpu = model_configuration['vectors_per_gpu']
+        feature_spec = FeatureSpec.from_yaml("feature_spec.yaml")
+
+        world_embedding_sizes = get_embedding_sizes(feature_spec, max_table_size=model_configuration["max_table_size"])
+        world_categorical_feature_sizes = np.asarray(world_embedding_sizes)
+        device_mapping = get_device_mapping(world_embedding_sizes, num_gpus=1)
+
+        # Embedding sizes for each GPU
+        categorical_feature_sizes = world_categorical_feature_sizes[device_mapping['embedding'][0]].tolist()
+        num_numerical_features = feature_spec.get_number_of_numerical_features()
+
+        self._vectors_per_gpu = device_mapping['vectors_per_gpu']
+        self._embedding_device_mapping = device_mapping['embedding']
         self._embedding_dim = model_configuration['embedding_dim']
         self._interaction_op = model_configuration['interaction_op']
         self._hash_indices = model_configuration['hash_indices']
 
-        world_num_categorical_features = len(model_configuration['categorical_feature_sizes'])
-
         # TODO(fotstrt): fix this
-        interaction = create_interaction(self._interaction_op, world_num_categorical_features, self._embedding_dim)
+        interaction = create_interaction(self._interaction_op, len(world_categorical_feature_sizes)
+, self._embedding_dim)
 
         # ignore device here since it is handled by the trainer
         self.bottom_model = DlrmBottom(
-            model_configuration['num_numerical_features'],
-            model_configuration['categorical_feature_sizes'],
+            num_numerical_features,
+            categorical_feature_sizes,
             model_configuration['bottom_mlp_sizes'],
             model_configuration['embedding_type'],
             self._embedding_dim,

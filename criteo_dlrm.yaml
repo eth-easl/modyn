@@ -6,15 +6,18 @@ model:
   id: ResNet18
   config:
     vectors_per_gpu: []
-    embedding_dim: []
-    interaction_op: "dot"
-    hash_indices: false
+    embedding_dim: 128
+    interaction_op: "cuda_dot"
+    hash_indices: False
     categorical_feature_sizes: []
     num_numerical_features: 1
-    bottom_mlp_sizes: 1
-    embedding_type: "multi-table"
-    use_cpp_mlp: False
+    bottom_mlp_sizes: [512, 256, 128]
+    top_mlp_sizes: [1024, 1024, 512, 256, 1]
+    embedding_type: "joint_cuda"
+    use_cpp_mlp: True
     fp16: False
+    bottom_features_ordered: False
+    max_table_size: None
 training:
   gpus: 1
   device: "cuda:0"
