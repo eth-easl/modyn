@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14trainer_server.proto\x12\x07trainer\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\"\x1d\n\x0cPythonString\x12\r\n\x05value\x18\x01 \x01(\t\"3\n\x04\x44\x61ta\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\"\x19\n\x17TrainerAvailableRequest\"-\n\x18TrainerAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\"F\n\x0e\x43heckpointInfo\x12\x1b\n\x13\x63heckpoint_interval\x18\x01 \x01(\x05\x12\x17\n\x0f\x63heckpoint_path\x18\x02 \x01(\t\"\xb0\x05\n\x14StartTrainingRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\x12\x0e\n\x06\x64\x65vice\x18\x03 \x01(\t\x12\x10\n\x08model_id\x18\x04 \x01(\t\x12\x30\n\x13model_configuration\x18\x05 \x01(\x0b\x32\x13.trainer.JsonString\x12\x1c\n\x14use_pretrained_model\x18\x06 \x01(\x08\x12\x1c\n\x14load_optimizer_state\x18\x07 \x01(\x08\x12\x18\n\x10pretrained_model\x18\x08 \x01(\x0c\x12\x12\n\nbatch_size\x18\t \x01(\x05\x12-\n\x10torch_optimizers\x18\n \x01(\x0b\x32\x13.trainer.JsonString\x12\x31\n\x14optimizer_parameters\x18\x0b \x01(\x0b\x32\x13.trainer.JsonString\x12\x17\n\x0ftorch_criterion\x18\x0c \x01(\t\x12\x31\n\x14\x63riterion_parameters\x18\r \x01(\x0b\x32\x13.trainer.JsonString\x12 \n\tdata_info\x18\x0e \x01(\x0b\x32\r.trainer.Data\x12\x30\n\x0f\x63heckpoint_info\x18\x0f \x01(\x0b\x32\x17.trainer.CheckpointInfo\x12+\n\x0c\x62ytes_parser\x18\x10 \x01(\x0b\x32\x15.trainer.PythonString\x12\x16\n\x0etransform_list\x18\x11 \x03(\t\x12\x1a\n\x12torch_lr_scheduler\x18\x12 \x01(\t\x12\x1b\n\x13\x63ustom_lr_scheduler\x18\x13 \x01(\t\x12\x31\n\x14lr_scheduler_configs\x18\x14 \x01(\x0b\x32\x13.trainer.JsonString\"F\n\x15StartTrainingResponse\x12\x18\n\x10training_started\x18\x01 \x01(\x08\x12\x13\n\x0btraining_id\x18\x02 \x01(\x05\",\n\x15TrainingStatusRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"\xe3\x01\n\x16TrainingStatusResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x12\n\nis_running\x18\x02 \x01(\x08\x12\x17\n\x0fstate_available\x18\x03 \x01(\x08\x12\x0f\n\x07\x62locked\x18\x04 \x01(\x08\x12\x16\n\texception\x18\x05 \x01(\tH\x00\x88\x01\x01\x12\x19\n\x0c\x62\x61tches_seen\x18\x06 \x01(\x05H\x01\x88\x01\x01\x12\x19\n\x0csamples_seen\x18\x07 \x01(\x05H\x02\x88\x01\x01\x42\x0c\n\n_exceptionB\x0f\n\r_batches_seenB\x0f\n\r_samples_seen\"+\n\x14GetFinalModelRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\";\n\x15GetFinalModelResponse\x12\x13\n\x0bvalid_state\x18\x01 \x01(\x08\x12\r\n\x05state\x18\x02 \x01(\x0c\",\n\x15GetLatestModelRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"<\n\x16GetLatestModelResponse\x12\x13\n\x0bvalid_state\x18\x01 \x01(\x08\x12\r\n\x05state\x18\x02 \x01(\x0c\x32\xc3\x03\n\rTrainerServer\x12Z\n\x11trainer_available\x12 .trainer.TrainerAvailableRequest\x1a!.trainer.TrainerAvailableResponse\"\x00\x12Q\n\x0estart_training\x12\x1d.trainer.StartTrainingRequest\x1a\x1e.trainer.StartTrainingResponse\"\x00\x12X\n\x13get_training_status\x12\x1e.trainer.TrainingStatusRequest\x1a\x1f.trainer.TrainingStatusResponse\"\x00\x12R\n\x0fget_final_model\x12\x1d.trainer.GetFinalModelRequest\x1a\x1e.trainer.GetFinalModelResponse\"\x00\x12U\n\x10get_latest_model\x12\x1e.trainer.GetLatestModelRequest\x1a\x1f.trainer.GetLatestModelResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14trainer_server.proto\x12\x07trainer\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\"\x1d\n\x0cPythonString\x12\r\n\x05value\x18\x01 \x01(\t\"3\n\x04\x44\x61ta\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\"\x19\n\x17TrainerAvailableRequest\"-\n\x18TrainerAvailableResponse\x12\x11\n\tavailable\x18\x01 \x01(\x08\"F\n\x0e\x43heckpointInfo\x12\x1b\n\x13\x63heckpoint_interval\x18\x01 \x01(\x05\x12\x17\n\x0f\x63heckpoint_path\x18\x02 \x01(\t\"\x8b\x05\n\x14StartTrainingRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\x12\x0e\n\x06\x64\x65vice\x18\x03 \x01(\t\x12\x10\n\x08model_id\x18\x04 \x01(\t\x12\x30\n\x13model_configuration\x18\x05 \x01(\x0b\x32\x13.trainer.JsonString\x12\x1c\n\x14use_pretrained_model\x18\x06 \x01(\x08\x12\x1c\n\x14load_optimizer_state\x18\x07 \x01(\x08\x12\x18\n\x10pretrained_model\x18\x08 \x01(\x0c\x12\x12\n\nbatch_size\x18\t \x01(\x05\x12;\n\x1etorch_optimizers_configuration\x18\n \x01(\x0b\x32\x13.trainer.JsonString\x12\x17\n\x0ftorch_criterion\x18\x0b \x01(\t\x12\x31\n\x14\x63riterion_parameters\x18\x0c \x01(\x0b\x32\x13.trainer.JsonString\x12 \n\tdata_info\x18\r \x01(\x0b\x32\r.trainer.Data\x12\x30\n\x0f\x63heckpoint_info\x18\x0e \x01(\x0b\x32\x17.trainer.CheckpointInfo\x12+\n\x0c\x62ytes_parser\x18\x0f \x01(\x0b\x32\x15.trainer.PythonString\x12\x16\n\x0etransform_list\x18\x10 \x03(\t\x12\x1a\n\x12torch_lr_scheduler\x18\x11 \x01(\t\x12\x1b\n\x13\x63ustom_lr_scheduler\x18\x12 \x01(\t\x12\x31\n\x14lr_scheduler_configs\x18\x13 \x01(\x0b\x32\x13.trainer.JsonString\"F\n\x15StartTrainingResponse\x12\x18\n\x10training_started\x18\x01 \x01(\x08\x12\x13\n\x0btraining_id\x18\x02 \x01(\x05\",\n\x15TrainingStatusRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"\xe3\x01\n\x16TrainingStatusResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x12\n\nis_running\x18\x02 \x01(\x08\x12\x17\n\x0fstate_available\x18\x03 \x01(\x08\x12\x0f\n\x07\x62locked\x18\x04 \x01(\x08\x12\x16\n\texception\x18\x05 \x01(\tH\x00\x88\x01\x01\x12\x19\n\x0c\x62\x61tches_seen\x18\x06 \x01(\x05H\x01\x88\x01\x01\x12\x19\n\x0csamples_seen\x18\x07 \x01(\x05H\x02\x88\x01\x01\x42\x0c\n\n_exceptionB\x0f\n\r_batches_seenB\x0f\n\r_samples_seen\"+\n\x14GetFinalModelRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\";\n\x15GetFinalModelResponse\x12\x13\n\x0bvalid_state\x18\x01 \x01(\x08\x12\r\n\x05state\x18\x02 \x01(\x0c\",\n\x15GetLatestModelRequest\x12\x13\n\x0btraining_id\x18\x01 \x01(\x05\"<\n\x16GetLatestModelResponse\x12\x13\n\x0bvalid_state\x18\x01 \x01(\x08\x12\r\n\x05state\x18\x02 \x01(\x0c\x32\xc3\x03\n\rTrainerServer\x12Z\n\x11trainer_available\x12 .trainer.TrainerAvailableRequest\x1a!.trainer.TrainerAvailableResponse\"\x00\x12Q\n\x0estart_training\x12\x1d.trainer.StartTrainingRequest\x1a\x1e.trainer.StartTrainingResponse\"\x00\x12X\n\x13get_training_status\x12\x1e.trainer.TrainingStatusRequest\x1a\x1f.trainer.TrainingStatusResponse\"\x00\x12R\n\x0fget_final_model\x12\x1d.trainer.GetFinalModelRequest\x1a\x1e.trainer.GetFinalModelResponse\"\x00\x12U\n\x10get_latest_model\x12\x1e.trainer.GetLatestModelRequest\x1a\x1f.trainer.GetLatestModelResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'trainer_server_pb2', globals())
@@ -33,21 +33,21 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _CHECKPOINTINFO._serialized_start=220
   _CHECKPOINTINFO._serialized_end=290
   _STARTTRAININGREQUEST._serialized_start=293
-  _STARTTRAININGREQUEST._serialized_end=981
-  _STARTTRAININGRESPONSE._serialized_start=983
-  _STARTTRAININGRESPONSE._serialized_end=1053
-  _TRAININGSTATUSREQUEST._serialized_start=1055
-  _TRAININGSTATUSREQUEST._serialized_end=1099
-  _TRAININGSTATUSRESPONSE._serialized_start=1102
-  _TRAININGSTATUSRESPONSE._serialized_end=1329
-  _GETFINALMODELREQUEST._serialized_start=1331
-  _GETFINALMODELREQUEST._serialized_end=1374
-  _GETFINALMODELRESPONSE._serialized_start=1376
-  _GETFINALMODELRESPONSE._serialized_end=1435
-  _GETLATESTMODELREQUEST._serialized_start=1437
-  _GETLATESTMODELREQUEST._serialized_end=1481
-  _GETLATESTMODELRESPONSE._serialized_start=1483
-  _GETLATESTMODELRESPONSE._serialized_end=1543
-  _TRAINERSERVER._serialized_start=1546
-  _TRAINERSERVER._serialized_end=1997
+  _STARTTRAININGREQUEST._serialized_end=944
+  _STARTTRAININGRESPONSE._serialized_start=946
+  _STARTTRAININGRESPONSE._serialized_end=1016
+  _TRAININGSTATUSREQUEST._serialized_start=1018
+  _TRAININGSTATUSREQUEST._serialized_end=1062
+  _TRAININGSTATUSRESPONSE._serialized_start=1065
+  _TRAININGSTATUSRESPONSE._serialized_end=1292
+  _GETFINALMODELREQUEST._serialized_start=1294
+  _GETFINALMODELREQUEST._serialized_end=1337
+  _GETFINALMODELRESPONSE._serialized_start=1339
+  _GETFINALMODELRESPONSE._serialized_end=1398
+  _GETLATESTMODELREQUEST._serialized_start=1400
+  _GETLATESTMODELREQUEST._serialized_end=1444
+  _GETLATESTMODELRESPONSE._serialized_start=1446
+  _GETLATESTMODELRESPONSE._serialized_end=1506
+  _TRAINERSERVER._serialized_start=1509
+  _TRAINERSERVER._serialized_end=1960
 # @@protoc_insertion_point(module_scope)

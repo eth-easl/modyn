@@ -201,13 +201,14 @@ class GRPCHandler:
             pretrained_model = b""
 
         optimizers_config = {}
-        optimizers = {}
         for optimizer in pipeline_config["training"]["optimizers"]:
-            optimizers[optimizer["module"]] = optimizer["name"]
-            if "config" in optimizer:
-                optimizers_config[optimizer["module"]] = optimizer["config"]
-            else:
-                optimizers_config[optimizer["module"]] = {}
+            optimizer_config = {}
+            optimizer_config["algorithm"] = optimizer["algorithm"]
+            optimizer_config["param_groups"] = []
+            for param_group in optimizer["param_groups"]:
+                config_dict = param_group["config"] if "config" in param_group else {}
+                optimizer_config["param_groups"].append({"module": param_group["module"], "config": config_dict})
+            optimizers_config[optimizer["name"]] = optimizer_config
 
         torch_lr_scheduler = ""
         custom_lr_scheduler = ""
@@ -253,8 +254,7 @@ class GRPCHandler:
             use_pretrained_model=use_pretrained_model,
             pretrained_model=pretrained_model,
             batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizers=TrainerServerJsonString(value=json.dumps(optimizers)),
-            optimizer_parameters=TrainerServerJsonString(value=json.dumps(optimizers_config)),
+            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
             torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
             criterion_parameters=TrainerServerJsonString(value=criterion_config),
             data_info=Data(

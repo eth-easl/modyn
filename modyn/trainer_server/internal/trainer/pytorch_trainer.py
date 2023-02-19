@@ -34,9 +34,16 @@ class PytorchTrainer:
         self._model.model.to(device)
 
         self._optimizers = {}
-        for module, optimizer_name in training_info.torch_optimizers.items():
-            optimizer_func = getattr(torch.optim, optimizer_name)
-            self._optimizers[module] = optimizer_func(eval(f"self._model.{module}.parameters()"), **(training_info.optimizers_dict[module]))
+        for name, optimizer_config in training_info.torch_optimizers_configuration.items():
+            # TODO(fotstrt): allow apex optimizers here
+            optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
+            optimizer_config_list = []
+            for param_group in optimizer_config["param_groups"]:
+                module = param_group["module"]
+                param_group["config"]["params"] = eval(f"self._model.{module}.parameters()")
+                optimizer_config_list.append(param_group["config"])
+            self._optimizers[name] = optimizer_func(optimizer_config_list)
+
 
         if training_info.used_pretrained_model:
             self.load_state_if_given(training_info.pretrained_model, training_info.load_optimizer_state)
@@ -109,8 +116,8 @@ class PytorchTrainer:
         self._model.model.load_state_dict(checkpoint["model"])
         if load_optimizer_state:
             for optimizer_name, optimizer in self._optimizers.items():
-                if optimizer_name in checkpoint:
-                    optimizer.load_state_dict(checkpoint["optimizer"])
+                if f"optimizer-{optimizer_name}" in checkpoint:
+                    optimizer.load_state_dict(checkpoint[f"optimizer-{optimizer_name}"])
 
     def send_state_to_server(self, batch_number: int) -> None:
         buffer = io.BytesIO()

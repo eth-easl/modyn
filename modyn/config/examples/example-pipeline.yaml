@@ -18,11 +18,13 @@ training:
     amount: 0.5
   batch_size: 64
   optimizers:
-    - module: "model"
-      name: "SGD"
-      config:
-        lr: 0.1
-        momentum: 0.001
+    - name: "default"
+      algorithm: "SGD"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.1
+            momentum: 0.001
   optimization_criterion:
     name: "CrossEntropyLoss"
   lr_scheduler:

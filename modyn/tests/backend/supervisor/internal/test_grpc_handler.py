@@ -50,7 +50,9 @@ def get_minimal_pipeline_config() -> dict:
             "initial_model": "random",
             "initial_pass": {"activated": False},
             "batch_size": 42,
-            "optimizers": [{"module": "model", "name": "SGD"}],
+            "optimizers": [
+                {"name": "default", "algorithm": "SGD", "param_groups": [{"module": "model"}]}
+            ],
             "optimization_criterion": {"name": "CrossEntropyLoss"},
             "checkpointing": {"activated": False},
             "selection_strategy": {"name": "NewDataStrategy"},

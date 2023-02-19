@@ -27,14 +27,21 @@ training:
     activated: False
   batch_size: 65536
   optimizers:
-    - module: "top_model"
-      name: "SGD"
-      config:
-        lr: 0.1
-    - module: "bottom_model.embeddings"
-      name: "SGD"
-      config:
-        lr: 0.1
+    - name: "opt_1"
+      algorithm: "SGD"
+      param_groups:
+        - module: "model.top_model"
+          config:
+            lr: 0.1
+        - module: "model.bottom_model.mlp"
+          config:
+            lr: 0.1
+    - name: "opt_1"
+      algorithm: "SGD"
+      param_groups:
+        - module: "model.bottom_model.embeddings"
+          config:
+            lr: 0.1
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:

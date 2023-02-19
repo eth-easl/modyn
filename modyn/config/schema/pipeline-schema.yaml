@@ -140,21 +140,37 @@ properties:
             description: |
               Configuration for the optimizer (e.g., Adam)
             properties:
-              module:
-                type: string
-                description: |
-                  The submodule of the model that this optimizer is responsible for. To specify an optimizer for the entire model, pass "model".
               name:
                 type: string
                 description: |
-                  The name of the optimizer the pipeline uses (e.g., SGD)
-              config:
-                type: object
+                  The name of the optimizer (like an ID)
+              algorithm:
+                type: string
                 description: |
-                  Optional configuration of the optimizer, e.g. learning rate/momentum. Passed to the optimizer class as a dict.
+                  The type of the optimizer (e.g. SGD)
+              param_groups:
+                type: array
+                description: |
+                  An array of the parameter groups (parameters and optional configs) that this optimizer is responsible for
+                items:
+                  param_group:
+                    type: object
+                    description: |
+                      Configuration for a parameter group
+                    properties:
+                      parameter:
+                        type: string
+                        description: |
+                          A set of parameters
+                        config: object
+                        description: |
+                          Optional configuration for the parameter group (e.g. learning rate)
+                    required:
+                      - parameter
             required:
-              - module
               - name
+              - algorithm
+              - param_groups
       optimization_criterion:
         type: object
         description: |
