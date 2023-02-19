@@ -182,78 +182,6 @@ class FeatureSpec:
             # check that all features appeared in mapping
             assert sorted(mapping_features) == sorted(feature_spec_features)
 
-    @staticmethod
-    def get_default_feature_spec(number_of_numerical_features, categorical_feature_cardinalities):
-        numerical_feature_fstring = "num_{}"
-        categorical_feature_fstring = "cat_{}.bin"
-        label_feature_name = "label"
-
-        numerical_file_name = "numerical.bin"
-        categorical_file_fstring = "{}"  # TODO remove .bin from feature name, add to file name
-        label_file_name = "label.bin"
-
-        number_of_categorical_features = len(categorical_feature_cardinalities)
-        numerical_feature_names = [numerical_feature_fstring.format(i) for i in range(number_of_numerical_features)]
-        categorical_feature_names = [categorical_feature_fstring.format(i) for i in
-                                     range(number_of_categorical_features)]
-        cat_feature_types = [get_categorical_feature_type(int(cat_size)) for cat_size in
-                             categorical_feature_cardinalities]
-
-        feature_dict = {f_name: {DTYPE_SELECTOR: str(np.dtype(f_type)), CARDINALITY_SELECTOR: f_size}
-                        for f_name, f_type, f_size in
-                        zip(categorical_feature_names, cat_feature_types, categorical_feature_cardinalities)}
-        for f_name in numerical_feature_names:
-            feature_dict[f_name] = {DTYPE_SELECTOR: str(np.dtype(np.float16))}
-        feature_dict[label_feature_name] = {DTYPE_SELECTOR: str(np.dtype(np.bool))}
-
-        channel_spec = {CATEGORICAL_CHANNEL: categorical_feature_names,
-                        NUMERICAL_CHANNEL: numerical_feature_names,
-                        LABEL_CHANNEL: [label_feature_name]}
-        source_spec = {}
-
-        for filename in (TRAIN_MAPPING, TEST_MAPPING):
-            source_spec[filename] = []
-            dst_folder = filename
-
-            numerical_file_path = os.path.join(dst_folder, numerical_file_name)
-            source_spec[filename].append({TYPE_SELECTOR: SPLIT_BINARY,
-                                          FEATURES_SELECTOR: numerical_feature_names,
-                                          FILES_SELECTOR: [numerical_file_path]})
-
-            label_file_path = os.path.join(dst_folder, label_file_name)
-            source_spec[filename].append({TYPE_SELECTOR: SPLIT_BINARY,
-                                          FEATURES_SELECTOR: [label_feature_name],
-                                          FILES_SELECTOR: [label_file_path]})
-
-            for feature_name in categorical_feature_names:
-                categorical_file_name = categorical_file_fstring.format(feature_name)
-                categorical_file_path = os.path.join(dst_folder, categorical_file_name)
-                source_spec[filename].append({TYPE_SELECTOR: SPLIT_BINARY,
-                                              FEATURES_SELECTOR: [feature_name],
-                                              FILES_SELECTOR: [categorical_file_path]})
-
-        return FeatureSpec(feature_spec=feature_dict, source_spec=source_spec, channel_spec=channel_spec, metadata={})
-
-    def get_mapping_paths(self, mapping_name: str):
-        label_feature_name = self.channel_spec[LABEL_CHANNEL][0]
-        set_of_categorical_features = set(self.channel_spec[CATEGORICAL_CHANNEL])
-        set_of_numerical_features = set(self.channel_spec[NUMERICAL_CHANNEL])
-
-        label_path = None
-        numerical_path = None
-        categorical_paths = dict()
-        for chunk in self.source_spec[mapping_name]:
-            local_path = os.path.join(self.base_directory, chunk[FILES_SELECTOR][0])
-            if chunk[FEATURES_SELECTOR][0] in set_of_numerical_features:
-                numerical_path = local_path
-            elif chunk[FEATURES_SELECTOR][0] in set_of_categorical_features:
-                local_feature = chunk[FEATURES_SELECTOR][0]
-                categorical_paths[local_feature] = local_path
-            elif chunk[FEATURES_SELECTOR][0] == label_feature_name:
-                label_path = local_path
-
-        return label_path, numerical_path, categorical_paths
-
 
 def get_embedding_sizes(fspec: FeatureSpec, max_table_size: Optional[int]) -> List[int]:
     if max_table_size is not None:
@@ -290,7 +218,7 @@ def distribute_to_buckets(sizes: Sequence[int], buckets_num: int):
     return final_buckets
 
 
-def get_device_mapping(embedding_sizes: Sequence[int], num_gpus: int = 8):
+def get_device_mapping(embedding_sizes: Sequence[int], num_gpus: int = 1):
     """Get device mappings for hybrid parallelism
 
     Bottom MLP running on device 0. Embeddings will be distributed across among all the devices.
@@ -306,12 +234,7 @@ def get_device_mapping(embedding_sizes: Sequence[int], num_gpus: int = 8):
     Returns:
         device_mapping (dict):
     """
-    if num_gpus > 4:
-        # for higher no. of GPUs, make sure the one with bottom mlp has no embeddings
-        gpu_buckets = distribute_to_buckets(embedding_sizes, num_gpus - 1)  # leave one device out for the bottom MLP
-        gpu_buckets.insert(0, [])
-    else:
-        gpu_buckets = distribute_to_buckets(embedding_sizes, num_gpus)
+    gpu_buckets = distribute_to_buckets(embedding_sizes, num_gpus)
 
     vectors_per_gpu = [len(bucket) for bucket in gpu_buckets]
     vectors_per_gpu[0] += 1  # count bottom mlp
