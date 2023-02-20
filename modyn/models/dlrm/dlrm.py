@@ -14,6 +14,8 @@ class DLRM(nn.Module):
 
         super().__init__()
 
+
+
         feature_spec = FeatureSpec.from_yaml("feature_spec.yaml")
 
         world_embedding_sizes = get_embedding_sizes(feature_spec, max_table_size=model_configuration["max_table_size"])

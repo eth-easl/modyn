@@ -25,9 +25,9 @@ class DotBasedInteract(Function):
     @torch.cuda.amp.custom_fwd(cast_inputs=torch.half)
     def forward(ctx, input, bottom_mlp_output):
         if torch.cuda.get_device_capability()[0] >= 8:
-            from dlrm.cuda_ext import interaction_ampere as interaction
+            from modyn.models.dlrm.cuda_ext import interaction_ampere as interaction
         else:
-            from dlrm.cuda_ext import interaction_volta as interaction
+            from modyn.models.dlrm.cuda_ext import interaction_volta as interaction
 
         output = interaction.dotBasedInteractFwd(input, bottom_mlp_output)
         ctx.save_for_backward(input)
@@ -37,9 +37,9 @@ class DotBasedInteract(Function):
     @torch.cuda.amp.custom_bwd
     def backward(ctx, grad_output):
         if torch.cuda.get_device_capability()[0] >= 8:
-            from dlrm.cuda_ext import interaction_ampere as interaction
+            from modyn.models.dlrm.cuda_ext import interaction_ampere as interaction
         else:
-            from dlrm.cuda_ext import interaction_volta as interaction
+            from modyn.models.dlrm.cuda_ext import interaction_volta as interaction
 
         input, = ctx.saved_tensors
         grad, mlp_grad = interaction.dotBasedInteractBwd(input, grad_output)

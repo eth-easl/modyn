@@ -158,7 +158,7 @@ properties:
                     description: |
                       Configuration for a parameter group
                     properties:
-                      parameter:
+                      module:
                         type: string
                         description: |
                           A set of parameters

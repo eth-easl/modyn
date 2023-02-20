@@ -44,6 +44,11 @@ class MockModelWrapper:
         self.model = MockModel()
 
 
+class MockSuperModelWrapper:
+    def __init__(self, model_configuration=None) -> None:
+        self.model = MockSuperModel()
+
+
 class MockModel(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -51,6 +56,15 @@ class MockModel(torch.nn.Module):
 
     def forward(self, data):
         return data
+
+class MockSuperModel(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.moda = MockModel()
+        self.modb = MockModel()
+
+    def forward(self, data):
+        return self.moda(self.modb(data))
 
 
 class MockDataset(torch.utils.data.IterableDataset):
@@ -95,8 +109,44 @@ def get_training_info(
     pretrained_model: Any,
     storage_address: str,
     selector_address: str,
+    num_optimizers: int,
     dynamic_module_patch: MagicMock,
 ):
+    print(num_optimizers)
+    if num_optimizers == 1:
+        torch_optimizers_configuration={
+            "default" : {
+                "algorithm": "SGD",
+                "param_groups": [
+                    {
+                        "module": "model",
+                        "config": {"lr": 0.1}
+                    }
+                ]
+            }
+        }
+    else:
+        torch_optimizers_configuration={
+            "opt1" : {
+                "algorithm": "SGD",
+                "param_groups": [
+                    {
+                        "module": "model.moda",
+                        "config": {"lr": 0.1}
+                    }
+                ]
+            },
+            "opt2" : {
+                "algorithm": "Adam",
+                "param_groups": [
+                    {
+                        "module": "model.modb",
+                        "config": {"lr": 0.5}
+                    }
+                ]
+            }
+        }
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         with tempfile.TemporaryDirectory() as final_tmpdirname:
             dynamic_module_patch.return_value = MockModule()
@@ -105,19 +155,7 @@ def get_training_info(
                 trigger_id=1,
                 device="cpu",
                 data_info=Data(dataset_id="MNIST", num_dataloaders=2),
-                torch_optimizers_configuration=JsonString(value=json.dumps(
-                    {
-                        "default" : {
-                            "algorithm": "SGD",
-                            "param_groups": [
-                                {
-                                    "module": "model",
-                                    "config": {"lr": 0.1}
-                                }
-                            ]
-                        }
-                    }
-                )),
+                torch_optimizers_configuration=JsonString(value=json.dumps(torch_optimizers_configuration)),
                 model_configuration=JsonString(value=json.dumps({})),
                 criterion_parameters=JsonString(value=json.dumps({})),
                 model_id="model",
@@ -147,18 +185,19 @@ def get_mock_trainer(
     use_pretrained: bool,
     load_optimizer_state: bool,
     pretrained_model: Any,
+    num_optimizers: int,
     dynamic_module_patch: MagicMock,
     test_insecure_channel: MagicMock,
     test_grpc_connection_established: MagicMock,
 ):
     dynamic_module_patch.return_value = MockModule()
-    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "")
+    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers)
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue)
     return trainer
 
 
 def test_trainer_init():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1)
     assert isinstance(trainer._model, MockModelWrapper)
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
@@ -168,9 +207,13 @@ def test_trainer_init():
     assert os.path.isdir(trainer._checkpoint_path)
 
 
+def test_trainer_init_multi_optimizers():
+    # TODO(fotstrt): add test
+    pass
+
 @patch.object(PytorchTrainer, "load_state_if_given")
 def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state", 1)
     assert isinstance(trainer._model, MockModelWrapper)
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
@@ -182,7 +225,7 @@ def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
 
 
 def test_save_state_to_file():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1)
     with tempfile.NamedTemporaryFile() as temp:
         trainer.save_state(temp.name, 10)
         assert os.path.exists(temp.name)
@@ -211,7 +254,7 @@ def test_save_state_to_file():
 
 
 def test_save_state_to_buffer():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1)
     buffer = io.BytesIO()
     trainer.save_state(buffer)
     buffer.seek(0)
@@ -261,18 +304,18 @@ def test_load_state_if_given():
     torch.save(dict_to_save, initial_state_buffer)
     initial_state_buffer.seek(0)
     initial_state = initial_state_buffer.read()
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state, 1)
     assert trainer._model.model.state_dict() == dict_to_save["model"]
     assert trainer._optimizers["default"].state_dict() == dict_to_save["optimizer-default"]
 
-    new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state)
+    new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state, 1)
     assert new_trainer._model.model.state_dict() == dict_to_save["model"]
 
 
 def test_send_state_to_server():
     response_queue = mp.Queue()
     query_queue = mp.Queue()
-    trainer = get_mock_trainer(query_queue, response_queue, False, False, None)
+    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1)
     trainer.send_state_to_server(20)
     response = response_queue.get()
     assert response["num_batches"] == 20
@@ -305,7 +348,7 @@ def test_send_state_to_server():
 def test_train_invalid_query_message():
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None)
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1)
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
@@ -354,7 +397,7 @@ def test_train(
 ):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None)
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
     timeout = 2
     elapsed = 0
@@ -450,7 +493,7 @@ def test_create_trainer_with_exception(
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(0, False, False, None, "", "")
+    training_info = get_training_info(0, False, False, None, "", "", 1)
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
