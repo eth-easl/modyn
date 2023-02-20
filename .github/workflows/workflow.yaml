@@ -64,7 +64,9 @@ jobs:
       - name: Isort
         run: |
           conda run -n modyn isort --version
-          conda run -n modyn isort . --check --diff
+          conda run -n modyn isort modyn --check --diff
+          conda run -n modyn isort integrationtests --check --diff
+          conda run -n modyn isort benchmark --check --diff
 
   black:
     runs-on: self-hosted
