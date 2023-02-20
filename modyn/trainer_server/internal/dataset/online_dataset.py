@@ -42,6 +42,11 @@ class OnlineDataset(IterableDataset):
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
         self._selector_address = selector_address
+        self._transform_list = None
+        self._transform = None
+        self._storagestub = None
+        self._selectorstub = None
+        self._bytes_parser_function = None
 
         logger.debug("Initialized OnlineDataset.")
 

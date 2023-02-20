@@ -45,6 +45,7 @@ def test_invalid_bytes_parser():
             serialized_transforms=[],
             storage_address="localhost:1234",
             selector_address="localhost:1234",
+            training_id=42,
         )
 
     with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
@@ -56,6 +57,7 @@ def test_invalid_bytes_parser():
             serialized_transforms=[],
             storage_address="localhost:1234",
             selector_address="localhost:1234",
+            training_id=42,
         )
 
 
@@ -72,6 +74,7 @@ def test_init(test_insecure_channel, test_grpc_connection_established):
         serialized_transforms=[],
         storage_address="localhost:1234",
         selector_address="localhost:1234",
+        training_id=42,
     )
     assert online_dataset._pipeline_id == 1
     assert online_dataset._trigger_id == 1
@@ -97,6 +100,7 @@ def test_get_keys_from_selector(test_insecure_channel, test_grpc_connection_esta
         serialized_transforms=[],
         storage_address="localhost:1234",
         selector_address="localhost:1234",
+        training_id=42,
     )
     assert online_dataset._get_keys_from_selector(0) == ["1", "2", "3"]
 
@@ -114,6 +118,7 @@ def test_get_data_from_storage(test_insecure_channel, test_grpc_connection_estab
         serialized_transforms=[],
         storage_address="localhost:1234",
         selector_address="localhost:1234",
+        training_id=42,
     )
     assert online_dataset._get_data_from_storage([str(x) for x in range(10)]) == (
         [bytes(f"sample{x}", "utf-8") for x in range(10)],
@@ -161,6 +166,7 @@ def test_deserialize_torchvision_transforms(
         serialized_transforms=serialized_transforms,
         storage_address="localhost:1234",
         selector_address="localhost:1234",
+        training_id=42,
     )
     online_dataset._deserialize_torchvision_transforms()
     assert isinstance(online_dataset._transform.transforms, list)
@@ -186,6 +192,7 @@ def test_dataset_iter(test_get_keys, test_get_data, test_insecure_channel, test_
         serialized_transforms=[],
         storage_address="localhost:1234",
         selector_address="localhost:1234",
+        training_id=42,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -213,6 +220,7 @@ def test_dataset_iter_with_parsing(
         serialized_transforms=[],
         storage_address="localhost:1234",
         selector_address="localhost:1234",
+        training_id=42,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -238,6 +246,7 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
         serialized_transforms=[],
         storage_address="localhost:1234",
         selector_address="localhost:1234",
+        training_id=42,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):

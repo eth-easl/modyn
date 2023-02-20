@@ -7,7 +7,6 @@ from typing import Optional
 
 import enlighten
 import grpc
-import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, GetNumberOfSamplesRequest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
@@ -16,6 +15,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
     TriggerResponse,
 )
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.storage.internal.grpc.generated import storage_pb2
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
@@ -305,6 +305,8 @@ class GRPCHandler:
             total=total_samples, desc=f"[Training {training_id}] Training on Samples", unit="samples"
         )
 
+        blocked_in_a_row = 0
+
         while True:
             req = TrainingStatusRequest(training_id=training_id)
             res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
@@ -313,11 +315,18 @@ class GRPCHandler:
                 raise RuntimeError(f"Training {training_id} is invalid at server:\n{res}\n")
 
             if res.blocked:
-                # TODO(MaxiBoether): only warn after 3 blocked responses in a row.
-                logger.warning("Trainer Server returned a blocked response, cannot update status.")
+                blocked_in_a_row += 1
+
+                if blocked_in_a_row >= 3:
+                    logger.warning(
+                        f"Trainer Server returned {blocked_in_a_row} blocked responses in a row, cannot update status."
+                    )
+
             else:
                 if res.HasField("exception") and res.exception is not None:
                     raise RuntimeError(f"Exception at trainer server occured during training:\n{res.exception}\n\n")
+
+                blocked_in_a_row = 0
 
                 if res.state_available:
                     assert res.HasField("samples_seen") and res.HasField(
