@@ -85,3 +85,13 @@ def test_inform_data_and_trigger(test_trigger: MagicMock, test_inform_data: Magi
     test_inform_data.assert_called_once_with(["a", "b", "c"], [0, 1, 2], ["cat", "dog", "cat"])
     assert trigger_id == 42
     assert selector._trigger_cache[42] == [("a", 1.0)]
+
+
+def test_get_number_of_samples():
+    selector = Selector(MockStrategy(), 42, 3)
+    selector._trigger_cache[42] = [("a", 1.0), ("b", 1.0)]
+
+    assert selector.get_number_of_samples(42) == 2
+
+    with pytest.raises(ValueError):
+        selector.get_number_of_samples(21)

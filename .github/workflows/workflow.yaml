@@ -7,7 +7,7 @@ defaults:
 
 jobs:
   flake8:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out code
@@ -22,7 +22,7 @@ jobs:
           conda run -n modyn flake8 --statistics
 
   mypy-typechecking:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out code
@@ -37,7 +37,7 @@ jobs:
           conda run -n modyn mypy modyn
 
   pylint:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out code
@@ -52,7 +52,7 @@ jobs:
           conda run -n modyn pylint modyn
 
   isort:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out code
@@ -67,7 +67,7 @@ jobs:
           conda run -n modyn isort . --check --diff
 
   black:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out code
@@ -82,7 +82,7 @@ jobs:
           conda run -n modyn black --check modyn --verbose --config black.toml
 
   unittests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out code
@@ -102,7 +102,7 @@ jobs:
 # TODO(#51): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
 # Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
   coverage-newarchitecture:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out code
@@ -120,7 +120,7 @@ jobs:
 
 # Checks whether the base container works correctly.
   dockerized-unittests:
-      runs-on: ubuntu-latest
+      runs-on: self-hosted
       needs:
         - flake8
         - mypy-typechecking
@@ -144,7 +144,7 @@ jobs:
 # Tests whether docker-compose up starts all components successfully and integration tests run through
 # Only one job to reduce Github CI usage
   integrationtests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs:
       - flake8
       - mypy-typechecking
