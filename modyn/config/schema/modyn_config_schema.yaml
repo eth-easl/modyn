@@ -88,15 +88,11 @@ properties:
                 record_size:
                   type: number
                   description: |
-                    The size of each record in bytes for a binary file wrapper.
+                    The size of each full record in bytes (label + features) for a binary file wrapper.
                 label_size:
                   type: number
                   description: |
                     The size of the label field in bytes for a binary file wrapper.
-                label_offset:
-                  type: number
-                  description: |
-                    The offset of the label field from the start of a record, for a binary file wrapper.
                 byteorder:
                   type: string
                   description: |

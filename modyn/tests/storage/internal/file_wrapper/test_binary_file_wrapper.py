@@ -12,7 +12,6 @@ FILE_DATA = b"\x00\x01\x00\x02\x00\x01\x00\x0f\x00\x00\x07\xd0"  # [1,2,1,15,0,2
 INVALID_FILE_EXTENSION_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.txt")
 FILE_WRAPPER_CONFIG = {
     "record_size": 4,
-    "label_offset": 0,
     "label_size": 2,
     "byteorder": "big",
 }
@@ -66,10 +65,10 @@ def test_get_number_of_samples_with_invalid_file_extension():
 def test_get_sample():
     file_wrapper = BinaryFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     sample = file_wrapper.get_sample(0)
-    assert sample == b"\x00\x01\x00\x02"
+    assert sample == b"\x00\x02"
 
     sample = file_wrapper.get_sample(2)
-    assert sample == b"\x00\x00\x07\xd0"
+    assert sample == b"\x07\xd0"
 
 
 def test_get_sample_with_invalid_file_extension():
@@ -117,12 +116,12 @@ def test_get_samples():
     file_wrapper = BinaryFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples(0, 1)
     assert len(samples) == 1
-    assert samples[0] == b"\x00\x01\x00\x02"
+    assert samples[0] == b"\x00\x02"
 
     samples = file_wrapper.get_samples(0, 2)
     assert len(samples) == 2
-    assert samples[0] == b"\x00\x01\x00\x02"
-    assert samples[1] == b"\x00\x01\x00\x0f"
+    assert samples[0] == b"\x00\x02"
+    assert samples[1] == b"\x00\x0f"
 
 
 def test_get_samples_with_invalid_file_extension():
@@ -141,15 +140,15 @@ def test_get_samples_with_invalid_index():
         file_wrapper.get_samples(0, 5)
 
     with pytest.raises(IndexError):
-        file_wrapper.get_samples(3, 3)
+        file_wrapper.get_samples(3, 4)
 
 
 def test_get_samples_from_indices():
     file_wrapper = BinaryFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples_from_indices([0, 2])
     assert len(samples) == 2
-    assert samples[0] == b"\x00\x01\x00\x02"
-    assert samples[1] == b"\x00\x00\x07\xd0"
+    assert samples[0] == b"\x00\x02"
+    assert samples[1] == b"\x07\xd0"
 
 
 def test_get_samples_from_indices_with_invalid_file_extension():
