@@ -14,6 +14,10 @@ def get_mock_bytes_parser():
     return "def bytes_parser_function(x):\n\treturn x"
 
 
+def bytes_parser_function(data):
+    return data
+
+
 class MockSelectorStub:
     def __init__(self, channel) -> None:
         pass
@@ -46,7 +50,7 @@ def test_invalid_bytes_parser():
             storage_address="localhost:1234",
             selector_address="localhost:1234",
             training_id=42,
-        )
+        )._init_transforms()
 
     with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
         OnlineDataset(
@@ -58,7 +62,7 @@ def test_invalid_bytes_parser():
             storage_address="localhost:1234",
             selector_address="localhost:1234",
             training_id=42,
-        )
+        )._init_transforms()
 
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
@@ -81,10 +85,9 @@ def test_init(test_insecure_channel, test_grpc_connection_established):
     assert online_dataset._dataset_id == "MNIST"
     assert online_dataset._dataset_len == 0
     assert online_dataset._trainining_set_number == 0
-    assert online_dataset._bytes_parser_function
-    assert online_dataset._transform.transforms[0].__name__ == "bytes_parser_function"
-    assert isinstance(online_dataset._selectorstub, MockSelectorStub)
-    assert isinstance(online_dataset._storagestub, MockStorageStub)
+    assert online_dataset._bytes_parser_function is None
+    assert online_dataset._selectorstub is None
+    assert online_dataset._storagestub is None
 
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
@@ -102,6 +105,8 @@ def test_get_keys_from_selector(test_insecure_channel, test_grpc_connection_esta
         selector_address="localhost:1234",
         training_id=42,
     )
+
+    online_dataset._init_grpc()
     assert online_dataset._get_keys_from_selector(0) == ["1", "2", "3"]
 
 
@@ -120,6 +125,7 @@ def test_get_data_from_storage(test_insecure_channel, test_grpc_connection_estab
         selector_address="localhost:1234",
         training_id=42,
     )
+    online_dataset._init_grpc()
     assert online_dataset._get_data_from_storage([str(x) for x in range(10)]) == (
         [bytes(f"sample{x}", "utf-8") for x in range(10)],
         list(range(10)),
@@ -168,6 +174,7 @@ def test_deserialize_torchvision_transforms(
         selector_address="localhost:1234",
         training_id=42,
     )
+    online_dataset._bytes_parser_function = bytes_parser_function
     online_dataset._deserialize_torchvision_transforms()
     assert isinstance(online_dataset._transform.transforms, list)
     assert online_dataset._transform.transforms[0].__name__ == "bytes_parser_function"

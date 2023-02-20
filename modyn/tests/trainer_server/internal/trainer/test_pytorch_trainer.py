@@ -68,15 +68,16 @@ def get_mock_bytes_parser():
 
 
 def mock_get_dataloaders(
-    training_id,
+    pipeline_id,
+    trigger_id,
     dataset_id,
     num_dataloaders,
     batch_size,
     bytes_parser,
-    transform_list,
-    sample_id,
+    transform,
     storage_address,
     selector_address,
+    training_id,
 ):
     mock_train_dataloader = iter(
         [(("1",) * 8, torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
@@ -484,4 +485,4 @@ def test_create_trainer_with_exception(
         exception = exception_queue.get()
         assert "ValueError: Unknown message in the status query queue" in exception
 
-        assert pathlib.Path(temp).exists()
+        assert pathlib.Path(temp.name).exists()
