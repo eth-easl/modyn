@@ -117,6 +117,7 @@ def get_training_info(
         torch_optimizers_configuration={
             "default" : {
                 "algorithm": "SGD",
+                "source": "PyTorch",
                 "param_groups": [
                     {
                         "module": "model",
@@ -129,6 +130,7 @@ def get_training_info(
         torch_optimizers_configuration={
             "opt1" : {
                 "algorithm": "SGD",
+                "source": "PyTorch",
                 "param_groups": [
                     {
                         "module": "model.moda",
@@ -138,6 +140,7 @@ def get_training_info(
             },
             "opt2" : {
                 "algorithm": "Adam",
+                "source": "PyTorch",
                 "param_groups": [
                     {
                         "module": "model.modb",

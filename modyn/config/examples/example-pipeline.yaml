@@ -20,6 +20,7 @@ training:
   optimizers:
     - name: "default"
       algorithm: "SGD"
+      source: "PyTorch"
       param_groups:
         - module: "model"
           config:

@@ -204,6 +204,7 @@ class GRPCHandler:
         for optimizer in pipeline_config["training"]["optimizers"]:
             optimizer_config = {}
             optimizer_config["algorithm"] = optimizer["algorithm"]
+            optimizer_config["source"] = optimizer["source"]
             optimizer_config["param_groups"] = []
             for param_group in optimizer["param_groups"]:
                 config_dict = param_group["config"] if "config" in param_group else {}

@@ -5,6 +5,7 @@ import numpy as np
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.feature_spec import FeatureSpec, get_device_mapping, get_embedding_sizes
+from modyn.models.dlrm.utils.install_lib import install_cuda_ext
 
 class DLRM(nn.Module):
     def __init__(
@@ -14,7 +15,7 @@ class DLRM(nn.Module):
 
         super().__init__()
 
-
+        install_cuda_ext()
 
         feature_spec = FeatureSpec.from_yaml("feature_spec.yaml")
 

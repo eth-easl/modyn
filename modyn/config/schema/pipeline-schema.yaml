@@ -148,6 +148,9 @@ properties:
                 type: string
                 description: |
                   The type of the optimizer (e.g. SGD)
+              source:
+                type: string
+                description: The framework/package the optimizer comes from. Currently PyTorch and APEX are supported
               param_groups:
                 type: array
                 description: |

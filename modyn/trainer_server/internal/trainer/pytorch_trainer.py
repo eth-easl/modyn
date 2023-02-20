@@ -36,7 +36,13 @@ class PytorchTrainer:
         self._optimizers = {}
         for name, optimizer_config in training_info.torch_optimizers_configuration.items():
             # TODO(fotstrt): allow apex optimizers here
-            optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
+            if optimizer_config["source"] == "PyTorch":
+                optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
+            elif optimizer_config["source"] == "APEX":
+                import apex
+                optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
+            else:
+                raise ValueError(f"Unsupported optimizer from {optimizer_config['source']}. Currently only PyTorch and APEX optimizers are supported")
             optimizer_config_list = []
             for param_group in optimizer_config["param_groups"]:
                 module = param_group["module"]

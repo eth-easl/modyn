@@ -27,8 +27,9 @@ training:
     activated: False
   batch_size: 65536
   optimizers:
-    - name: "opt_1"
+    - name: "mlp"
       algorithm: "SGD"
+      source: "APEX"
       param_groups:
         - module: "model.top_model"
           config:
@@ -38,6 +39,7 @@ training:
             lr: 0.1
     - name: "opt_1"
       algorithm: "SGD"
+      source: "PyTorch"
       param_groups:
         - module: "model.bottom_model.embeddings"
           config:
