@@ -27,12 +27,24 @@ class BinaryFileWrapper(AbstractFileWrapper):
             file_path (str): Path to file
             file_wrapper_config (dict): File wrapper config
             filesystem_wrapper (AbstractFileSystemWrapper): File system wrapper to abstract storage of the file
+
+        Raises:
+            ValueError: If the file has the wrong file extension
+            ValueError: If the file does not contain an exact number of samples of given size
         """
         super().__init__(file_path, file_wrapper_config, filesystem_wrapper)
         self.file_wrapper_type = FileWrapperType.BinaryFileWrapper
+        self.byteorder = file_wrapper_config["byteorder"]
+
         self.record_size = file_wrapper_config["record_size"]
         self.label_size = file_wrapper_config["label_size"]
-        self.byteorder = file_wrapper_config["byteorder"]
+        if self.record_size - self.label_size < 1:
+            raise ValueError("Each record must have at least 1 byte of data other than the label.")
+
+        self._validate_file_extension()
+        self.file_size = self.filesystem_wrapper.get_size(self.file_path)
+        if self.file_size % self.record_size != 0:
+            raise ValueError("File does not contain exact number of records of size " + str(self.record_size))
 
     def _validate_file_extension(self) -> None:
         """Validates the file extension as bin
@@ -64,10 +76,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         Returns:
             int: Number of samples in file
         """
-        self._validate_file_extension()
-
-        file_size = self.filesystem_wrapper.get_size(self.file_path)
-        return file_size / self.record_size
+        return self.file_size / self.record_size
 
     def get_label(self, index: int) -> int:
         """Get the label of the sample at the given index.
@@ -76,13 +85,11 @@ class BinaryFileWrapper(AbstractFileWrapper):
             index (int): Index
 
         Raises:
-            ValueError: If the file has the wrong file extension
             IndexError: If the index is out of bounds
 
         Returns:
             int: Label for the sample
         """
-        self._validate_file_extension()
         data = self.filesystem_wrapper.get(self.file_path)
 
         total_samples = len(data) / self.record_size
@@ -100,7 +107,6 @@ class BinaryFileWrapper(AbstractFileWrapper):
             index (int): Index
 
         Raises:
-            ValueError: If the file has the wrong file extension
             IndexError: If the index is out of bounds
 
         Returns:
@@ -117,7 +123,6 @@ class BinaryFileWrapper(AbstractFileWrapper):
             end (int): End index
 
         Raises:
-            ValueError: If the file has the wrong file extension
             IndexError: If the index is out of bounds
 
         Returns:
@@ -133,13 +138,11 @@ class BinaryFileWrapper(AbstractFileWrapper):
             indices (list): List of indices of the required samples
 
         Raises:
-            ValueError: If the file has the wrong file extension
             IndexError: If the index is out of bounds
 
         Returns:
             bytes: Sample
         """
-        self._validate_file_extension()
         data = self.filesystem_wrapper.get(self.file_path)
 
         total_samples = len(data) / self.record_size

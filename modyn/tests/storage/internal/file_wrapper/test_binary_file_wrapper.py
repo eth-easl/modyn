@@ -15,6 +15,16 @@ FILE_WRAPPER_CONFIG = {
     "label_size": 2,
     "byteorder": "big",
 }
+SMALL_RECORD_SIZE_CONFIG = {
+    "record_size": 2,
+    "label_size": 2,
+    "byteorder": "big",
+}
+INDIVISIBLE_RECORD_SIZE_CONFIG = {
+    "record_size": 5,
+    "label_size": 2,
+    "byteorder": "big",
+}
 
 
 def setup():
@@ -47,19 +57,32 @@ def test_init():
     assert file_wrapper.file_wrapper_type == FileWrapperType.BinaryFileWrapper
 
 
+def test_init_with_small_record_size_config():
+    with pytest.raises(ValueError):
+        BinaryFileWrapper(FILE_PATH, SMALL_RECORD_SIZE_CONFIG, MockFileSystemWrapper(FILE_PATH))
+
+
+def test_init_with_invalid_file_extension():
+    with pytest.raises(ValueError):
+        BinaryFileWrapper(
+            INVALID_FILE_EXTENSION_PATH,
+            FILE_WRAPPER_CONFIG,
+            MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH),
+        )
+
+
+def test_init_with_indivisiable_record_size():
+    with pytest.raises(ValueError):
+        BinaryFileWrapper(
+            FILE_PATH,
+            INDIVISIBLE_RECORD_SIZE_CONFIG,
+            MockFileSystemWrapper(FILE_PATH),
+        )
+
+
 def test_get_number_of_samples():
     file_wrapper = BinaryFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     assert file_wrapper.get_number_of_samples() == 3
-
-
-def test_get_number_of_samples_with_invalid_file_extension():
-    file_wrapper = BinaryFileWrapper(
-        INVALID_FILE_EXTENSION_PATH,
-        FILE_WRAPPER_CONFIG,
-        MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH),
-    )
-    with pytest.raises(ValueError):
-        file_wrapper.get_number_of_samples()
 
 
 def test_get_sample():
@@ -69,16 +92,6 @@ def test_get_sample():
 
     sample = file_wrapper.get_sample(2)
     assert sample == b"\x07\xd0"
-
-
-def test_get_sample_with_invalid_file_extension():
-    file_wrapper = BinaryFileWrapper(
-        INVALID_FILE_EXTENSION_PATH,
-        FILE_WRAPPER_CONFIG,
-        MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH),
-    )
-    with pytest.raises(ValueError):
-        file_wrapper.get_sample(0)
 
 
 def test_get_sample_with_invalid_index():
@@ -94,16 +107,6 @@ def test_get_label():
 
     label = file_wrapper.get_label(2)
     assert label == 0
-
-
-def test_get_label_with_invalid_file_extension():
-    file_wrapper = BinaryFileWrapper(
-        INVALID_FILE_EXTENSION_PATH,
-        FILE_WRAPPER_CONFIG,
-        MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH),
-    )
-    with pytest.raises(ValueError):
-        file_wrapper.get_label(0)
 
 
 def test_get_label_with_invalid_index():
@@ -124,16 +127,6 @@ def test_get_samples():
     assert samples[1] == b"\x00\x0f"
 
 
-def test_get_samples_with_invalid_file_extension():
-    file_wrapper = BinaryFileWrapper(
-        INVALID_FILE_EXTENSION_PATH,
-        FILE_WRAPPER_CONFIG,
-        MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH),
-    )
-    with pytest.raises(ValueError):
-        file_wrapper.get_samples(0, 1)
-
-
 def test_get_samples_with_invalid_index():
     file_wrapper = BinaryFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     with pytest.raises(IndexError):
@@ -149,16 +142,6 @@ def test_get_samples_from_indices():
     assert len(samples) == 2
     assert samples[0] == b"\x00\x02"
     assert samples[1] == b"\x07\xd0"
-
-
-def test_get_samples_from_indices_with_invalid_file_extension():
-    file_wrapper = BinaryFileWrapper(
-        INVALID_FILE_EXTENSION_PATH,
-        FILE_WRAPPER_CONFIG,
-        MockFileSystemWrapper(INVALID_FILE_EXTENSION_PATH),
-    )
-    with pytest.raises(ValueError):
-        file_wrapper.get_samples_from_indices([1])
 
 
 def test_get_samples_from_indices_with_invalid_indices():
