@@ -12,15 +12,18 @@ The first is achieved by outputting the data into many binary files that follow 
 The second is done by re-embedding the categorical features.
 First off, we filter out low frequency values, ie, values that occur less than a chosen threshold - T by embedding them all as a default value.
 This helps the training as the model learns to ignore that default value rather than learning from multiple infrequent features.
-We also re-embedded the values into a range from 1 to the number of unique values (eg 100 if there 100 unique high frequency values in the category), which helps represent the data as int8 or int16 instead of int32, saving space.
+We also re-embedded the values into a range from 1 to the x+1 where x is the number of high frequency values.
+For example, if there are 100 unique high frequency values, we re-embed the values in the cateogry to values in the range 1 to 101, where 1-100 are used for the high frequency value and 101 is used to denote all the low frequency values.
+This helps represent the data as int8 or int16 instead of int32, saving space.
 
 This preprocessing is done with the help of Spark. First all files are read to count the frequency of all categorical values and create a dictionary of the counts.
-Secondly a spark processes is triggered to apply this transformation to the data in each file which does it in parallel and outputs multiple parquet files.
+Secondly a spark processes is triggered to apply this transformation to the data in each day's file one by one. Each file is processed parallely by multiple Spark threads, which works on a subset of the records and outputs the transformed records into a parquet file in the output folder for that day.
+Since there are 600 shuffle partitions configured in the Spark job, 600 output parquet files are created per day, each containing a subset of the records of the overall day file.
 Finally another script reads the parquet file output by the spark processes and saves it as binary files.
 
-Note: The original NVIDIA script has additional steps which involes merging all the parquet files for the training/validation/test into single large binary files, as well splitting the files by their cateogries (ie one file per category and one file for numerical values).
+Note: The original NVIDIA script has additional steps which merges all separate binary files into a single large binary files, as well splitting the files by their categories (i.e., one file per category and one file for numerical values).
 However since we use a dynamic selection of data, we chose not to use either of the above steps and hence have been removed in the patch.
-For more detailed information on the steps performed in the processing, once can check the scripts in the mentioned NVIDIA github repository
+For more detailed information on the steps performed in the processing, once can check the scripts in the mentioned NVIDIA Github repository.
 
 
 ## Detailed steps
@@ -28,7 +31,7 @@ Here is a set of detailed steps for setting up a google cloud console and pre pr
 
 
 Setup of machines:
-1. Create Instance - I used an n1-standard-8 VM with a V100 GPU attached.
+1. Create Instance - While testing, we used an n1-standard-8 VM with a V100 GPU attached.
 2. Create and attach Disk on Cloud Dashboard - Use at least a 4TB hardisk as the Spark Temporary output will cause the size to go above 2TB at least.
 3. SSH into instance (gcloud compute ssh <vm_name> after doing gcloud init)
 4. Perform first time installations:
@@ -66,7 +69,7 @@ Setup of machines:
 		sudo apt-get install git
 		```
 
-	6. Setup if using GPU: 
+	6. Perform the follow setup if you are using a GPU. If the processing is to be done only with CPU, this can be skipped  
 		```
 		# Setup nvidia runtime (https://github.com/NVIDIA/nvidia-container-runtime#installation)
 		sudo apt-get install nvidia-container-runtime
@@ -116,6 +119,7 @@ Preprocessing Data:
 3. Clone the dlrm repo: 
 	```
 	git clone https://github.com/NVIDIA/DeepLearningExamples
+	git checkout ca5ae20
 	```
 4. Download and apply the patch:
 	```
@@ -123,12 +127,15 @@ Preprocessing Data:
 	curl -O https://github.com/eth-easl/dynamic_datasets_dsl/tree/main/benchmark/criteo_1TB/preprocessing/modyn.patch
 	git apply modyn.patch
 	```
+	TODO(#156): Update the patch to optimally use the resources of a chosen VM.
 5. Build docker image:
 	```
 	cd ~/DeepLearningExamples/PyTorch/Recommendation/DLRM
 	sudo docker build -t nvidia_dlrm_preprocessing -f Dockerfile_preprocessing . --build-arg DGX_VERSION=DGX-A100
 	```
-	Note: If you are not using a GPU, you can still set the version argument as DGX-A100, but then run the preprocessing script with a different argument
+	Note: The DGX_VERSION here helps setup which config file to use. We edit the DGX-A100 config file using the patch and hence set the build-arg here to DGX-A100.
+	If you are using V100 or another GPU, leave this the same, but update the patch to fix the config file that is used.
+	If you are using CPU only, set the build-arg to DGX-A100 as well. It will not affect the preprocessing CPU scripts.
 
 6. Login to container - 
 	```
@@ -136,7 +143,12 @@ Preprocessing Data:
 	sudo docker run -it --rm --ipc=host --runtime=nvidia -v ${CRITEO_DATASET_PARENT_DIRECTORY}:/data/dlrm nvidia_dlrm_preprocessing bash
 	```
 
-7. Set the number of GPUs in /opt/spark/conf/spark-defaults.conf. If you are not using GPUs, then set it to 0
+7. Set the number of GPUs in /opt/spark/conf/spark-defaults.conf. Update the line
+	```
+	spark.worker.resource.gpu.amount    8
+	```
+	in the file to match the number of gpus. If you are not using GPUs, then set it to 0
+
 8. Change to the preprocessing directory
 	```
 	cd /workspace/dlrm/preproc`
@@ -146,11 +158,11 @@ Preprocessing Data:
 	```
 	./prepare_dataset.sh <frequency-threshold> <CPU|GPU> Spark
 	```
-	The frequency-threshold parameter controls what consists of "high" frequency vs "low" frequency features as explained in the Preprocessing Information section
+	The frequency-threshold parameter controls what consists of "high" frequency vs "low" frequency features as explained in the Preprocessing Information section. NVIDIA suggests 15 for a smaller model, or 2 or 1 for larger models. 
 	The second argument is to specify if you want to use the CPU or GPU processing.
 
-Uploading Data to GCS:
-1. Create a bucket on the Google Console eg "dds-criteo"
+## Uploading Data to GCS:
+1. Create a bucket on the Google Console
 2. Initialize gcloud with your credentials
 	```
 	gcloud compute init
@@ -158,5 +170,5 @@ Uploading Data to GCS:
 3. Upload the processed data to the cloud storage - 
 	```
 	cd /mnt/disks/criteo/
-	gcloud storage cp -r output gs://dds-criteo
+	gcloud storage cp -r output gs://<bucket name>
 	```

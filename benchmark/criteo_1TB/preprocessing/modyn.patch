@@ -9,7 +9,10 @@ index ecb4e865..09d940f0 100644
 -export TOTAL_CORES=256
 +
 +# MODYN:
-+# Note this is setup for the 1 GPU setup with a n1-18-standard VM with 32gig. Edit it is the config is different.
++# Note this is a working setup for the 1 GPU setup with a n1-18-standard VM with 32gig. Edit it if the config 
++# is different. The cores and executors were setup based on working runs, while the memory was setup to fit within
++# the 32GB of the VM used.
++# TODO(#156): Update this config to optimally use the resources of the chosen VM and explain the updates made.
 +export TOTAL_CORES=1
  
  # set the number of executors
@@ -132,15 +135,6 @@ diff --git a/PyTorch/Recommendation/DLRM/preproc/run_spark_gpu_DGX-A100.sh b/PyT
 index a38d5214..d3130b0c 100644
 --- a/PyTorch/Recommendation/DLRM/preproc/run_spark_gpu_DGX-A100.sh
 +++ b/PyTorch/Recommendation/DLRM/preproc/run_spark_gpu_DGX-A100.sh
-@@ -28,7 +28,7 @@ export OUTPUT_PATH=${2:-'/data/dlrm/output'}
- 
- export FREQUENCY_LIMIT=${3:-'15'}
- 
--HARDWARE_PLATFORM='DGX-A100'
-+export HARDWARE_PLATFORM='V100'
- 
- # spark local dir should have about 3TB
- # the temporary path used for spark shuffle write
 @@ -49,6 +49,7 @@ echo "Starting spark standalone"
  start-master.sh
  start-slave.sh $MASTER

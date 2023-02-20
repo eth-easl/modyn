@@ -16,4 +16,5 @@ The MNIST storage script downloads the MNIST dataset into a given directory. For
 
 
 ### Criteo 1TB Dataset
-Readme contains information on how data is downloaded and preprocessed. 
+We provide scripts and guidelines for using the Criteo 1TB benchmark data set.
+The README in the subfolder contains information on how data is downloaded and preprocessed. 

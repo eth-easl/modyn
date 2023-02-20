@@ -23,11 +23,12 @@ It can be dowloaded from: https://labs.criteo.com/2013/12/download-terabyte-clic
 
 The preprocessing is done for a couple of reasons.
 Firstly, there are a lot of null values present and also some categorical values have a large range with small frequency (eg 5 million+ unique values with a lot of them appearing only once or twice).
-For efficiency, we only want to learn those features with a high frequence (in this case 15) and hence we filter out values with a low frequency into one single value.
-We thus change the embedding into a continous range from 1 till the number of unique high frequency values (eg 100 if there are 100 unique values in that column) + 1 for the default.
-This allows us to save space by representing that column with an int8 value rather than an int32.
+For efficiency, we only want to learn those features with a high frequency (in this case 15 or more) and hence we filter out values with a low frequency into one single value.
+For example if a category 'c1' had the values 'unique1', 'unique2' and 'unique3' appearing only once, we would like to convert them to the same default value, say '0' such that the total number of unique values in that category reduces.
+In this way, if there were 100 different values in the category, but only 10 of them appeared more than 15 times, we would need only 11 values to represent the data in the column (1 for the default and 10 for the 10 high frequency values) rather than 100.
+Removing out the low frequency values by mapping them all to the same default value can help speedup the model a lot at the cost of a little accuracy.
 Also we want to convert the format into something that takes less space and is more effeciently read.
-The final preprocessing converts all the input files into parquet files while re embedding the categorical values.
+The final preprocessing converts all the input files into binary files while re embedding the categorical values to filter out the low frequency values.
 
 
 ### Preprocessing Steps
@@ -43,4 +44,4 @@ The steps to run the preprocessing as well as the patch to apply to the above sc
 
 
 ### Output
-The preprocessed data is finally output as a set of binary files per "split". For each split, for example - day 23, there is a folder containing binary files that hold the pre processed rows for all data for that day.
+The preprocessed data is finally output as a set of binary files per day. For each day, there is an individual folder containing binary files. Each binary file contains a subset of the preprocessed samples.
