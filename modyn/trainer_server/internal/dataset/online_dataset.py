@@ -72,7 +72,7 @@ class OnlineDataset(IterableDataset):
 
     def _deserialize_torchvision_transforms(self) -> None:
         assert self._bytes_parser_function is not None
-        
+
         self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used

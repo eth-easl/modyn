@@ -1,6 +1,7 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
 from unittest.mock import patch
 
+import enlighten
 import grpc
 import pytest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
@@ -8,6 +9,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
     JsonString,
     PipelineResponse,
     RegisterPipelineRequest,
+    TriggerResponse,
 )
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
@@ -66,7 +68,11 @@ def get_minimal_pipeline_config() -> dict:
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
-    return GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+    return GRPCHandler(get_simple_config(), mgr, bar)
 
 
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
@@ -75,7 +81,11 @@ def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init(test_insecure_channel, test_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
 
     assert handler.connected_to_storage
     assert handler.connected_to_trainer_server
@@ -89,9 +99,13 @@ def test_init(test_insecure_channel, test_connection_established):
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage(test_insecure_channel, test_connection_established):
     handler = None
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
 
     with patch.object(GRPCHandler, "init_storage", return_value=None):
-        handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
+        handler = GRPCHandler(get_simple_config(), mgr, bar)  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -109,11 +123,15 @@ def test_init_storage(test_insecure_channel, test_connection_established):
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage_throws(test_insecure_channel, test_connection_established):
     handler = None
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
 
     with patch.object(GRPCHandler, "init_storage", return_value=None):
         with patch.object(GRPCHandler, "init_trainer_server", return_value=None):
             with patch.object(GRPCHandler, "init_selector", return_value=None):
-                handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
+                handler = GRPCHandler(get_simple_config(), mgr, bar)  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -129,9 +147,13 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_selector(test_insecure_channel, test_connection_established):
     handler = None
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
 
     with patch.object(GRPCHandler, "init_selector", return_value=None):
-        handler = GRPCHandler(get_simple_config())  # don't call init storage in constructor
+        handler = GRPCHandler(get_simple_config(), mgr, bar)  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_selector
@@ -144,7 +166,12 @@ def test_init_selector(test_insecure_channel, test_connection_established):
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_dataset_available(test_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
 
     assert handler.storage is not None
 
@@ -170,7 +197,12 @@ def test_get_new_data_since_throws():
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_get_new_data_since(test_grpc_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
         mock.return_value = GetNewDataSinceResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])
@@ -190,7 +222,12 @@ def test_get_data_in_interval_throws():
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_get_data_in_interval(test_grpc_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
         mock.return_value = GetDataInIntervalResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])
@@ -205,7 +242,12 @@ def test_get_data_in_interval(test_grpc_connection_established):
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_register_pipeline_at_selector(test_grpc_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
 
     with patch.object(handler.selector, "register_pipeline") as mock:
         mock.return_value = PipelineResponse(pipeline_id=42)
@@ -228,7 +270,12 @@ def test_unregister_pipeline_at_selector():
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_inform_selector(test_grpc_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
 
     with patch.object(handler.selector, "inform_data") as mock:
         mock.return_value = None
@@ -242,10 +289,15 @@ def test_inform_selector(test_grpc_connection_established):
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_inform_selector_and_trigger(test_grpc_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
 
     with patch.object(handler.selector, "inform_data_and_trigger") as mock:
-        mock.return_value = 12
+        mock.return_value = TriggerResponse(trigger_id=12)
 
         assert 12 == handler.inform_selector_and_trigger(42, [("a", 42, 0), ("b", 43, 1)])
 
@@ -256,7 +308,12 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_trainer_server_available(test_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
     assert handler.trainer_server is not None
 
     with patch.object(
@@ -276,7 +333,12 @@ def test_stop_training_at_trainer_server():
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_start_training(test_connection_established):
-    handler = GRPCHandler(get_simple_config())
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, bar)
     assert handler.trainer_server is not None
 
     pipeline_id = 42
@@ -295,15 +357,21 @@ def test_start_training(test_connection_established):
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_wait_for_training_completion(test_connection_established):
     # This test primarily checks whether we terminate.
-    handler = GRPCHandler(get_simple_config())
-    assert handler.trainer_server is not None
+    mgr = enlighten.get_manager()
+    bar = mgr.status_bar(
+        status_format="Test",
+    )
 
-    with patch.object(
-        handler.trainer_server,
-        "get_training_status",
-        return_value=TrainingStatusResponse(
-            valid=True, blocked=False, exception=None, state_available=False, is_running=False
-        ),
-    ) as avail_method:
-        handler.wait_for_training_completion(42)
-        avail_method.assert_called_once()
+    with patch.object(GRPCHandler, "get_number_of_samples", return_value=22):
+        handler = GRPCHandler(get_simple_config(), mgr, bar)
+        assert handler.trainer_server is not None
+
+        with patch.object(
+            handler.trainer_server,
+            "get_training_status",
+            return_value=TrainingStatusResponse(
+                valid=True, blocked=False, exception=None, state_available=False, is_running=False
+            ),
+        ) as avail_method:
+            handler.wait_for_training_completion(42, 21, 22)
+            avail_method.assert_called_once()
