@@ -143,7 +143,7 @@ class GRPCHandler:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
         response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp(
-            storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty()
+            storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty()  # type: ignore
         )
 
         return response.timestamp

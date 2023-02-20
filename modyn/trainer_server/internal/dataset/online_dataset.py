@@ -1,11 +1,11 @@
 import logging
 from inspect import isfunction
-from typing import Any, Generator, Optional
+from typing import Any, Callable, Generator, Optional
 
 import grpc
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest, SamplesResponse
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
@@ -42,17 +42,19 @@ class OnlineDataset(IterableDataset):
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
         self._selector_address = selector_address
-        self._transform_list = None
-        self._transform = None
-        self._storagestub = None
-        self._selectorstub = None
-        self._bytes_parser_function = None
+        self._transform_list: list[Callable] = []
+        self._transform: Optional[Callable] = None
+        self._storagestub: StorageStub = None
+        self._selectorstub: SelectorStub = None
+        self._bytes_parser_function: Optional[Callable] = None
 
         logger.debug("Initialized OnlineDataset.")
 
     def _get_keys_from_selector(self, worker_id: int) -> list[str]:
+        assert self._selectorstub is not None
+
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
-        samples_response = self._selectorstub.get_sample_keys_and_weights(req)
+        samples_response: SamplesResponse = self._selectorstub.get_sample_keys_and_weights(req)
         return samples_response.training_samples_subset  # TODO(#138): take into account sample weights when needed
 
     def _get_data_from_storage(self, selector_keys: list[str]) -> tuple[list[bytes], list[int]]:
@@ -69,6 +71,8 @@ class OnlineDataset(IterableDataset):
         return sample_list, label_list
 
     def _deserialize_torchvision_transforms(self) -> None:
+        assert self._bytes_parser_function is not None
+        
         self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
@@ -101,10 +105,10 @@ class OnlineDataset(IterableDataset):
         pil_logger = logging.getLogger("PIL")
         pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
 
-    def _info(self, msg: str, worker_id: Optional[None]) -> None:
+    def _info(self, msg: str, worker_id: Optional[int]) -> None:
         logger.info(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _debug(self, msg: str, worker_id: Optional[None]) -> None:
+    def _debug(self, msg: str, worker_id: Optional[int]) -> None:
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def __iter__(self) -> Generator:
@@ -124,6 +128,7 @@ class OnlineDataset(IterableDataset):
             self._silence_pil()
             self._debug("gRPC initialized.", worker_id)
 
+        assert self._transform is not None
         self._trainining_set_number += 1
 
         self._info("Getting keys from selector", worker_id)
@@ -136,7 +141,8 @@ class OnlineDataset(IterableDataset):
         self._info("Data obtained (len = {self._dataset_len})", worker_id)
 
         for key, sample, label in zip(keys, data, labels):
-            yield key, self._transform(sample), label
+            # mypy complains here because _transform has unknown type, which is ok
+            yield key, self._transform(sample), label  # type: ignore
 
     def __len__(self) -> int:
         return self._dataset_len
