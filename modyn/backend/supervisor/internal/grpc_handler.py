@@ -154,7 +154,11 @@ class GRPCHandler:
         logging.info(f"Informed selector about {len(keys)} new data points.")
 
     def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
-        keys, timestamps, labels = zip(*data)
+        if len(data) == 0:
+            keys, timestamps, labels = [], [], []
+        else:
+            keys, timestamps, labels = zip(*data)
+            
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         trigger_id = self.selector.inform_data_and_trigger(request)
 

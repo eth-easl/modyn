@@ -74,7 +74,10 @@ class Selector:
         self._strategy.inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(self, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
-        self._strategy.inform_data(keys, timestamps, labels)
+        assert len(keys) == len(timestamps) and len(keys) == len(labels), "Inconsistent list lengths"
+        
+        if len(keys) > 0:
+            self._strategy.inform_data(keys, timestamps, labels)
 
         # Calculates the actual training set for that trigger.
         trigger_id, data = self._strategy.trigger()
