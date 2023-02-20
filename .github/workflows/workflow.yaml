@@ -19,7 +19,7 @@ jobs:
       - name: Flake8
         run: |
           conda run -n modyn flake8 --version
-          conda run -n modyn flake8 --statistics
+          conda run -n modyn flake8 modyn --statistics
 
   mypy-typechecking:
     runs-on: self-hosted
