@@ -4,9 +4,9 @@ import os
 import pathlib
 import random
 import shutil
+import time
 
 import tensorflow as tf
-from modyn.utils.utils import current_time_millis
 from PIL import Image
 
 logging.basicConfig(
@@ -86,7 +86,7 @@ def _set_file_timestamp(file: str, timestamp_option: str, current: int):
     elif timestamp_option == "INCREASING":
         os.utime(file, (current, current))
     else:
-        random_timestamp = random.randint(0, current_time_millis())
+        random_timestamp = random.randint(0, int(round(time.time() * 1000)))
         os.utime(file, (random_timestamp, random_timestamp))
 
 

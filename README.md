@@ -65,12 +65,49 @@ We use docker-compose to manage the system setup.
 The `docker-compose.yml` file describes our setup. 
 Use `docker compose up --build` to start all containers and `docker compose up --build --abort-on-container-exit --exit-code-from tests` to run the integration tests once and exit.
 The `tests` service runs integration tests, if started (e.g., in the Github Workflow).
-On macOS, you might be required to set the `DOCKER_BUILDKIT` environment variable to 0, if you run into problems during the build process.
+Currently, we are required to set the `DOCKER_BUILDKIT` environment variable to 0 by running `export DOCKER_BUILDKIT=0` before starting docker-compose.
+This is because docker compose tries to fetch `modynbase` from Docker Hub in parallel while building it locally, which fails as this image only exists locally as an intermediate step.
+We need to investigate why this is the case and how to fix this.
 In case you encounter issues when running integration tests, you can try deleting the local postgres data folders.
-If you make changes to modyn, run `docker-compose down && docker-compise up --build` to rebuild the containers.
 
 ### tmuxp Setup
 For local deployment, you can use tmuxp, which enables to load a tmux session from a file.
 After running `docker-compose up`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
 You will have access to a supervisor container in which you can submit pipelines, to panes for administrating the databases, and to all gRPC components.
 To end the session, run CTRL+B (or your tmux modifier), and enter `:kill-session`.
+
+## Example: Running a Pipeline
+
+In this section, we give an example on how to run an experiment on a Google Cloud VM with an NVIDIA GPU.
+We assume you have NVIDIA drivers/CUDA, `docker`, and `nvidia-docker` installed.
+Furthermore, we assume that a disk is mounted at `/mnt/datasets` where we can store datasets.
+
+### [Optional] Creating an example dataset
+If you do not have a dataset yet, you can create an example MNIST dataset.
+For this, follow the instructions in `benchmarks/mnist/README.md` to install the necessary dependencies.
+Then, run `python data_generation.py --timestamps INCREASING --dir /mnt/datasets/mnist` to download the dataset to `/mnst/datasets/mnist`.
+
+### Updating the dependencies to use CUDA
+Next, in the `environment.yml` file, you want to uncomment the two lines that install `pytorch-cuda` and `cudatoolkit`.
+If necessary, you can adjust the CUDA version.
+Until #104 is solved, all dependencies are managed there.
+
+### Adjusting the docker-compose configurations
+Next, we need to update the `docker-compose.yml` file to reflect the local setup.
+First, for the `trainer_server` service, you should enable the `runtime` and `deploy` options such that we have access to the GPU in the trainer server container.
+Next, for the `storage` service, you should uncomment the `volumes` option to mount `/mnt/datasets` to `/datasets` in the container.
+Optionally, you can uncomment the `.:/modyn_host` mount for all services to enable faster development cycles.
+This is not required if you do not iterate.
+
+### Starting the containers and the pipeline
+Next, run `export DOCKER_BUILDKIT=0 && docker compose up --build` to build the containers and start them. 
+This may take several minutes.
+After building the containers, run `tmuxp load tmuxp.yaml` to have access to all container shells and logs.
+Switch to the supervisor pane (using regular tmux bindings).
+There, you can now submit a pipeline using the `modyn-supervisor` command.
+For example, you can run `modyn-supervisor --start-replay-at 0 benchmark/mnist/mnist.yaml modyn/config/examples/modyn_config.yaml`.
+
+### Iterating
+Since we copy the Modyn sources into the containers, if we change something locally outside of the containers, this does not get reflected in the containers.
+To avoid rebuilding the containers every time you want to test a change, if you mounted `/modyn_host` into the containers, you can switch into the pane of the service you want to update, and run `cd /modyn_host && pip install -e .`.
+Afterwards, run `docker compose restart <SERVICE>` on the host machine to reflect the changes on the running system.
