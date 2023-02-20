@@ -90,6 +90,7 @@ Then, run `python data_generation.py --timestamps INCREASING --dir /mnt/datasets
 ### Updating the dependencies to use CUDA
 Next, in the `environment.yml` file, you want to uncomment the two lines that install `pytorch-cuda` and `cudatoolkit`.
 If necessary, you can adjust the CUDA version.
+Furthermore, you need to comment out the line that installes `cpuonly` from the pytorch channel.
 Until #104 is solved, all dependencies are managed there.
 
 ### Adjusting the docker-compose configurations
