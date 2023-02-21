@@ -19,7 +19,7 @@ jobs:
       - name: Flake8
         run: |
           conda run -n modyn flake8 --version
-          conda run -n modyn flake8 --statistics
+          conda run -n modyn flake8 modyn --statistics
 
   mypy-typechecking:
     runs-on: ubuntu-latest
@@ -64,7 +64,9 @@ jobs:
       - name: Isort
         run: |
           conda run -n modyn isort --version
-          conda run -n modyn isort . --check --diff
+          conda run -n modyn isort modyn --check --diff
+          conda run -n modyn isort integrationtests --check --diff
+          conda run -n modyn isort benchmark --check --diff
 
   black:
     runs-on: ubuntu-latest

@@ -83,3 +83,9 @@ class Selector:
         self._trigger_cache[trigger_id] = data
 
         return trigger_id
+
+    def get_number_of_samples(self, trigger_id: int) -> int:
+        if trigger_id not in self._trigger_cache:
+            raise ValueError(f"Trigger ID {trigger_id} does not exist!")
+
+        return len(self._trigger_cache[trigger_id])

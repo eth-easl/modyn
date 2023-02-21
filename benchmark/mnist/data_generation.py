@@ -1,13 +1,12 @@
 import argparse
-import json
 import logging
 import os
 import pathlib
 import random
 import shutil
+import time
 
 import tensorflow as tf
-from modyn.utils.utils import current_time_millis
 from PIL import Image
 
 logging.basicConfig(
@@ -75,11 +74,10 @@ def _store_data(data_dir: pathlib.Path, timestamp_option: str):
         image = Image.fromarray(data)
         image.save(data_dir / f"{i}.png")
         _set_file_timestamp(data_dir / f"{i}.png", timestamp_option, i)
-    # store labels in json format for each png an individual label field
     for i, label in enumerate(y_train):
-        with open(data_dir / f"{i}.json", "w", encoding="utf-8") as file:
-            file.write(json.dumps({"label": int(label)}))
-        _set_file_timestamp(data_dir / f"{i}.json", timestamp_option, i)
+        with open(data_dir / f"{i}.label", "w", encoding="utf-8") as file:
+            file.write(str(int(label)))
+        _set_file_timestamp(data_dir / f"{i}.label", timestamp_option, i)
 
 
 def _set_file_timestamp(file: str, timestamp_option: str, current: int):
@@ -88,7 +86,7 @@ def _set_file_timestamp(file: str, timestamp_option: str, current: int):
     elif timestamp_option == "INCREASING":
         os.utime(file, (current, current))
     else:
-        random_timestamp = random.randint(0, current_time_millis())
+        random_timestamp = random.randint(0, int(round(time.time() * 1000)))
         os.utime(file, (random_timestamp, random_timestamp))
 
 
