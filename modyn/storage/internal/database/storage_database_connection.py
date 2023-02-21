@@ -81,7 +81,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
                     description=description,
                     version=version,
                     file_wrapper_config=file_wrapper_config,
-                    last_timestamp=-1,
+                    last_timestamp=-1,  # Set to -1 as this is a new dataset
                 )
                 self.session.add(dataset)
             self.session.commit()
