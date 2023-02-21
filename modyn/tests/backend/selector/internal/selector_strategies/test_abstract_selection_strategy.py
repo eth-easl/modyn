@@ -177,3 +177,32 @@ def test__persist_data():
         assert keys[0] == "a" and keys[1] == "b" and keys[2] == "c"
         assert timestamps[0] == 0 and timestamps[1] == 1 and timestamps[2] == 2
         assert labels[0] == "dog" and labels[1] == "dog" and labels[2] == "cat"
+
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_on_trigger")
+def test_two_strategies_increase_next_trigger_separately(test__on_trigger: MagicMock):
+    test__on_trigger.return_value = []
+
+    strat1 = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42)
+    assert strat1._pipeline_id == 42
+    assert strat1._next_trigger_id == 0
+
+    strat1.trigger()
+    assert strat1._next_trigger_id == 1
+    strat1.trigger()
+    assert strat1._next_trigger_id == 2
+
+    strat2 = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 21)
+    assert strat2._pipeline_id == 21
+    assert strat2._next_trigger_id == 0
+
+    strat2.trigger()
+    assert strat2._next_trigger_id == 1
+    assert strat1._next_trigger_id == 2
+    strat1.trigger()
+    assert strat1._next_trigger_id == 3
+    assert strat2._next_trigger_id == 1
+    strat2.trigger()
+    assert strat1._next_trigger_id == 3
+    assert strat2._next_trigger_id == 2

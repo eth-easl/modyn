@@ -1,5 +1,5 @@
 pipeline:
-  name: Example Pipeline
+  name: MNIST Test Pipeline
   description: Example pipeline
   version: 1.0.0
 model:
@@ -8,13 +8,11 @@ model:
     num_classes: 10
 training:
   gpus: 1
-  device: "cpu"
+  device: "cuda:0"
   dataloader_workers: 2
   initial_model: random
   initial_pass:
-    activated: True
-    reference: amount
-    amount: 0.5
+    activated: False
   batch_size: 64
   optimizer:
     name: "SGD"
@@ -24,9 +22,7 @@ training:
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
-    activated: True
-    interval: 10
-    path: "results"
+    activated: False
   selection_strategy: 
     name: NewDataStrategy
     config:
@@ -45,4 +41,4 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 100
+    data_points_for_trigger: 2000
