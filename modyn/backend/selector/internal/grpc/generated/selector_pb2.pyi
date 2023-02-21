@@ -158,3 +158,36 @@ class SamplesResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["training_samples_subset", b"training_samples_subset", "training_samples_weights", b"training_samples_weights"]) -> None: ...
 
 global___SamplesResponse = SamplesResponse
+
+@typing_extensions.final
+class GetNumberOfSamplesRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    TRIGGER_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    trigger_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+        trigger_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]) -> None: ...
+
+global___GetNumberOfSamplesRequest = GetNumberOfSamplesRequest
+
+@typing_extensions.final
+class NumberOfSamplesResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    NUM_SAMPLES_FIELD_NUMBER: builtins.int
+    num_samples: builtins.int
+    def __init__(
+        self,
+        *,
+        num_samples: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["num_samples", b"num_samples"]) -> None: ...
+
+global___NumberOfSamplesResponse = NumberOfSamplesResponse

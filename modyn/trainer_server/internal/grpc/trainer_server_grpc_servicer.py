@@ -4,9 +4,8 @@ import multiprocessing as mp
 import os
 import pathlib
 import queue
-import sys
+import shutil
 import tempfile
-from pathlib import Path
 from threading import Lock
 from typing import Any, Optional
 
@@ -34,24 +33,36 @@ from modyn.utils.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
-path = Path(os.path.abspath(__file__))
-SCRIPT_DIR = path.parent.parent.absolute()
-sys.path.append(os.path.dirname(SCRIPT_DIR))
-
 
 class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self, config: dict) -> None:
+        try:
+            mp.set_start_method("spawn")
+        except RuntimeError as error:
+            # Tests create multiple GRPCServicers in the same process, but we can only set the start method once
+            # Hence, we do not fail if setting the method fails, but warn the user.
+            logger.warning(
+                "RuntimeError occured while setting multiprocessing start method. This should only happen during tests."
+            )
+            logger.warning(error)
+
         self._next_training_id = 0
         self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
         self._modyn_base_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
+
+        if self._modyn_base_dir.exists() and self._modyn_base_dir.is_dir():
+            shutil.rmtree(self._modyn_base_dir)
+
         self._modyn_base_dir.mkdir()
 
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
+
+        logger.info("TrainerServer gRPC Servicer initialized.")
 
     def trainer_available(
         self,
@@ -70,6 +81,8 @@ class TrainerServerGRPCServicer:
         request: StartTrainingRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> StartTrainingResponse:
+        logger.info("Received start training request.")
+
         if not hasattr(dynamic_module_import("modyn.models"), request.model_id):
             logger.error(f"Model {request.model_id} not available!")
             return StartTrainingResponse(training_started=False)
@@ -104,6 +117,7 @@ class TrainerServerGRPCServicer:
             process, exception_queue, status_query_queue, status_response_queue
         )
 
+        logger.info(f"Started training {training_id}")
         return StartTrainingResponse(training_started=True, training_id=training_id)
 
     def get_training_status(
@@ -112,6 +126,7 @@ class TrainerServerGRPCServicer:
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainingStatusResponse:
         training_id = request.training_id
+        logger.info(f"Received status request for training {training_id}")
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
@@ -119,16 +134,17 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
+            logger.info(f"Training {training_id} is still running, obtaining info from running process.")
             _, num_batches, num_samples = self.get_status(training_id)
             response_kwargs_running: dict[str, Any] = {
                 "valid": True,
                 "is_running": True,
                 "blocked": num_batches is None,
-                "state_available": num_batches is not None,
+                "state_available": num_batches is not None and num_samples is not None,
                 "batches_seen": num_batches,
                 "samples_seen": num_samples,
             }
-            cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v}
+            cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v is not None}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
         exception = self.check_for_training_exception(training_id)
@@ -137,12 +153,12 @@ class TrainerServerGRPCServicer:
             "valid": True,
             "is_running": False,
             "blocked": False,
-            "state_available": num_batches is not None,
+            "state_available": num_batches is not None and num_samples is not None,
             "exception": exception,
             "batches_seen": num_batches,
             "samples_seen": num_samples,
         }
-        cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v}
+        cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v is not None}
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
     def get_final_model(
@@ -151,6 +167,7 @@ class TrainerServerGRPCServicer:
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> GetFinalModelResponse:
         training_id = request.training_id
+        logger.info(f"Received get final model request for training {training_id}.")
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
@@ -177,6 +194,7 @@ class TrainerServerGRPCServicer:
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> GetLatestModelResponse:
         training_id = request.training_id
+        logger.info(f"Received get latest model request for training {training_id}.")
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
@@ -219,7 +237,8 @@ class TrainerServerGRPCServicer:
         # either successfully or not, and allow to access the last state
 
         checkpoint_path = self._training_dict[training_id].checkpoint_path
-        if not checkpoint_path.exists():
+        checkpoint_interval = self._training_dict[training_id].checkpoint_interval
+        if not checkpoint_path.exists() or checkpoint_path == pathlib.Path("") or checkpoint_interval == 0:
             return None, None, None
 
         checkpoints = list(checkpoint_path.iterdir())
@@ -238,5 +257,5 @@ class TrainerServerGRPCServicer:
                 return state_bytes, num_batches, num_samples
             except Exception as exception:  # pylint: disable=broad-except
                 # checkpoint corrupted
-                logger.error(exception)
+                logger.error(f"The checkpoint {checkpoint} is corrupted: {exception}")
         return None, None, None

@@ -1,6 +1,7 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import io
 import json
+import logging
 import multiprocessing as mp
 import os
 import pathlib
@@ -95,15 +96,16 @@ def get_mock_bytes_parser():
 
 
 def mock_get_dataloaders(
-    training_id,
+    pipeline_id,
+    trigger_id,
     dataset_id,
     num_dataloaders,
     batch_size,
     bytes_parser,
-    transform_list,
-    sample_id,
+    transform,
     storage_address,
     selector_address,
+    training_id,
 ):
     mock_train_dataloader = iter(
         [(("1",) * 8, torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
@@ -236,7 +238,7 @@ def get_mock_trainer(
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
     training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers, lr_scheduler)
-    trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue)
+    trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue, logging.getLogger(__name__))
     return trainer
 
 
@@ -504,17 +506,16 @@ def test_train_invalid_query_message():
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
 
-    with tempfile.NamedTemporaryFile() as temp:
-        with pytest.raises(ValueError, match="Unknown message in the status query queue"):
-            trainer.train(temp.name)
+    with pytest.raises(ValueError, match="Unknown message in the status query queue"):
+        trainer.train()
 
-        elapsed = 0
-        while not (query_status_queue.empty() and status_queue.empty()):
-            sleep(1)
-            elapsed += 1
+    elapsed = 0
+    while not (query_status_queue.empty() and status_queue.empty()):
+        sleep(1)
+        elapsed += 1
 
-            if elapsed >= timeout:
-                raise TimeoutError("Did not reach desired queue state within timelimit.")
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
 
 
 # # pylint: disable=too-many-locals
@@ -556,45 +557,42 @@ def test_train(
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
 
-    with tempfile.NamedTemporaryFile() as temp:
-        trainer.train(pathlib.Path(temp.name))
-        assert os.path.exists(temp.name)
-        assert trainer._num_samples == 800
-        elapsed = 0
-        while not query_status_queue.empty():
-            sleep(0.1)
-            elapsed += 0.1
+    trainer.train()
+    assert trainer._num_samples == 800
+    elapsed = 0
+    while not query_status_queue.empty():
+        sleep(0.1)
+        elapsed += 0.1
 
-            if elapsed >= timeout:
-                raise TimeoutError("Did not reach desired queue state within timelimit.")
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
 
-        assert test_on_train_begin.call_count == len(trainer._callbacks)
-        assert test_on_train_end.call_count == len(trainer._callbacks)
-        assert test_on_batch_begin.call_count == len(trainer._callbacks) * 100
-        assert test_on_batch_end.call_count == len(trainer._callbacks) * 100
-        assert test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
-        assert test_send_metadata.call_count == len(trainer._callbacks)
-        assert test_step.call_count == 100
-        test_cleanup.assert_called_once()
+    assert test_on_train_begin.call_count == len(trainer._callbacks)
+    assert test_on_train_end.call_count == len(trainer._callbacks)
+    assert test_on_batch_begin.call_count == len(trainer._callbacks) * 100
+    assert test_on_batch_end.call_count == len(trainer._callbacks) * 100
+    assert test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
+    assert test_send_metadata.call_count == len(trainer._callbacks)
+    test_cleanup.assert_called_once()
 
+    if not platform.system() == "Darwin":
+        assert status_queue.qsize() == 1
+    else:
+        assert not status_queue.empty()
+    elapsed = 0
+    while True:
         if not platform.system() == "Darwin":
-            assert status_queue.qsize() == 1
+            if status_queue.qsize() == 1:
+                break
         else:
-            assert not status_queue.empty()
-        elapsed = 0
-        while True:
-            if not platform.system() == "Darwin":
-                if status_queue.qsize() == 1:
-                    break
-            else:
-                if not status_queue.empty():
-                    break
+            if not status_queue.empty():
+                break
 
-            sleep(0.1)
-            elapsed += 0.1
+        sleep(0.1)
+        elapsed += 0.1
 
-            if elapsed >= timeout:
-                raise AssertionError("Did not reach desired queue state after 5 seconds.")
+        if elapsed >= timeout:
+            raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
         status = status_queue.get()
         assert status["num_batches"] == 0
@@ -719,3 +717,5 @@ def test_create_trainer_with_exception(
 
         exception = exception_queue.get()
         assert "ValueError: Unknown message in the status query queue" in exception
+
+        assert pathlib.Path(temp.name).exists()

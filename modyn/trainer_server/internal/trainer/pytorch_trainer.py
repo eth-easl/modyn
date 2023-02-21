@@ -16,8 +16,6 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils.utils import dynamic_module_import
 
-logger = logging.getLogger(__name__)
-
 
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes
@@ -28,7 +26,14 @@ class PytorchTrainer:
         device: str,
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
+        logger: logging.Logger,
     ) -> None:
+        self.logger = logger
+        self.pipeline_id = training_info.pipeline_id
+        self.training_id = training_info.training_id
+
+        self._info("Initializing Pytorch Trainer")
+
         # setup model and optimizer
         self._model = training_info.model_handler(training_info.model_configuration_dict)
         self._model.model.to(device)
@@ -51,7 +56,10 @@ class PytorchTrainer:
             self._optimizers[name] = optimizer_func(optimizer_config_list)
 
 
+        self._info("Model and optimizer created.")
+
         if training_info.used_pretrained_model:
+            self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model, training_info.load_optimizer_state)
 
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
@@ -70,6 +78,7 @@ class PytorchTrainer:
 
 
         # setup dataloaders
+        self._info("Setting up data loaders.")
         self._train_dataloader, self._val_dataloader = prepare_dataloaders(
             training_info.pipeline_id,
             training_info.trigger_id,
@@ -80,6 +89,7 @@ class PytorchTrainer:
             training_info.transform_list,
             training_info.storage_address,
             training_info.selector_address,
+            training_info.training_id,
         )
 
         self._device = device
@@ -104,6 +114,9 @@ class PytorchTrainer:
         self._callbacks = {
             MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
+    def _info(self, msg: str) -> None:
+        self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
 
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {
@@ -140,16 +153,15 @@ class PytorchTrainer:
             }
         )
 
-    def train(self, log_path: pathlib.Path) -> None:
-        file_handler = logging.FileHandler(log_path)
-        logger.addHandler(file_handler)
-
-        logger.info(f"Process {os.getpid()} starts training")
+    def train(self) -> None:
+        self._info(f"Process {os.getpid()} starts training")
 
         self._model.model.train()
 
         for _, callback in self._callbacks.items():
             callback.on_train_begin(self._model.model, self._optimizers)
+
+        self._info("Handled OnBegin Callbacks.")
 
         batch_number = 0
         for batch_number, batch in enumerate(self._train_dataloader):
@@ -195,13 +207,12 @@ class PytorchTrainer:
 
             self._num_samples += data.shape[0]
 
-            logger.info(f"Iteration {batch_number}")
-
             for _, callback in self._callbacks.items():
                 callback.on_batch_end(
                     self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                 )
 
+        self._info(f"Finished training: {self._num_samples} samples, {batch_number} batches.")
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
 
@@ -213,8 +224,7 @@ class PytorchTrainer:
         final_checkpoint_file_name = self._final_checkpoint_path / "model_final.modyn"
         self.save_state(final_checkpoint_file_name)
 
-        logger.info("Training complete!")
-        logger.removeHandler(file_handler)
+        self._info("Training complete!")
 
 
 def train(
@@ -225,14 +235,18 @@ def train(
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue,
 ) -> None:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
+        datefmt="%Y-%m-%d:%H:%M:%S",
+    )
+    file_handler = logging.FileHandler(log_path)
+    logger = logging.getLogger(__name__)
+    logger.addHandler(file_handler)
+
     try:
-        trainer = PytorchTrainer(
-            training_info,
-            device,
-            status_query_queue,
-            status_response_queue,
-        )
-        trainer.train(log_path)
+        trainer = PytorchTrainer(training_info, device, status_query_queue, status_response_queue, logger)
+        trainer.train()
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)

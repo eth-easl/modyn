@@ -1,5 +1,8 @@
 # Environment file for modyn
 # This contains all dependencies to run modyn and modyn itself, but not the dependencies to run the tests/development
+# By default, we disable CUDA to reduce the size of installed packages.
+# When deploying on a real system, please uncomment the according lines.
+# Furthermore, we need to separate the dependencies for the individual components, since not all components require all dependencies (e.g., only the trainer server needs PyTorch). This is issue #104.
 
 name: modyn
 
@@ -13,6 +16,8 @@ dependencies:
   - python>=3.9
   - pip
   - packaging
+  - tqdm
+  - conda-forge::enlighten
   - protobuf
   - grpcio
   - jsonschema
@@ -23,10 +28,10 @@ dependencies:
   - types-protobuf
   - types-psycopg2
   - types-PyYAML
-  - nvidia::cudatoolkit=11.7
   - pytorch::pytorch
-  - pytorch::pytorch-cuda=11.7
   - pytorch::torchvision
-  - tqdm
+  - pytorch::cpuonly # comment out if commenting in lines below for CUDA
+#  - nvidia::cudatoolkit=11.7
+#  - pytorch::pytorch-cuda=11.7
   - pip:
       - "-e ."
