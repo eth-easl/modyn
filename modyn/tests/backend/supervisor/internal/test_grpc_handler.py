@@ -313,7 +313,7 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
 
     # Test empty trigger
     with patch.object(handler.selector, "inform_data_and_trigger") as mock:
-        mock.return_value = 13
+        mock.return_value = TriggerResponse(trigger_id=13)
         assert 13 == handler.inform_selector_and_trigger(42, [])
 
         mock.assert_called_once_with(DataInformRequest(pipeline_id=42, keys=[], timestamps=[], labels=[]))

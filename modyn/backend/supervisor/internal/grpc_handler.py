@@ -182,7 +182,7 @@ class GRPCHandler:
             keys, timestamps, labels = [], [], []
         else:
             # mypy fails to recognize that this is correct
-            keys, timestamps, labels = zip(*data) # type: ignore
+            keys, timestamps, labels = zip(*data)  # type: ignore
 
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         response: TriggerResponse = self.selector.inform_data_and_trigger(request)
