@@ -5,11 +5,17 @@ import pathlib
 from time import sleep
 from typing import Optional
 
+import enlighten
 import grpc
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, GetNumberOfSamplesRequest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import RegisterPipelineRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
+    NumberOfSamplesResponse,
+    RegisterPipelineRequest,
+    TriggerResponse,
+)
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.storage.internal.grpc.generated import storage_pb2
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
@@ -19,7 +25,12 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
+    CheckpointInfo,
+    Data,
+    GetFinalModelRequest,
+    GetFinalModelResponse,
+)
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     PythonString,
@@ -35,15 +46,19 @@ from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # TODO(#148): Change model transfer protocol
+
 
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, modyn_config: dict):
+    def __init__(self, modyn_config: dict, progress_mgr: enlighten.Manager, status_bar: enlighten.StatusBar):
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
         self.connected_to_selector = False
+        self.progress_mgr = progress_mgr
+        self.status_bar = status_bar
 
         self.init_storage()
         self.init_selector()
@@ -76,7 +91,13 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
+        self.trainer_server_channel = grpc.insecure_channel(
+            trainer_server_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
+                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
+            ],
+        )
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
@@ -121,7 +142,9 @@ class GRPCHandler:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
-        response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp()
+        response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp(
+            storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty()  # type: ignore
+        )
 
         return response.timestamp
 
@@ -151,8 +174,6 @@ class GRPCHandler:
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         self.selector.inform_data(request)
 
-        logging.info(f"Informed selector about {len(keys)} new data points.")
-
     def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
         keys: list[str]
         timestamps: list[int]
@@ -164,9 +185,10 @@ class GRPCHandler:
             keys, timestamps, labels = zip(*data) # type: ignore
 
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
-        trigger_id = self.selector.inform_data_and_trigger(request)
+        response: TriggerResponse = self.selector.inform_data_and_trigger(request)
 
-        logging.info(f"Informed and triggerd selector about {len(keys)} new data points. Got trigger id {trigger_id}.")
+        trigger_id = response.trigger_id
+        logging.info(f"Informed selector about trigger. Got trigger id {trigger_id}.")
 
         return trigger_id
 
@@ -245,6 +267,7 @@ class GRPCHandler:
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
             pretrained_model=pretrained_model,
+            load_optimizer_state=False,  # TODO(#137): Think about this.
             batch_size=pipeline_config["training"]["batch_size"],
             torch_optimizer=pipeline_config["training"]["optimizer"]["name"],
             optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
@@ -269,57 +292,86 @@ class GRPCHandler:
 
         return training_id
 
-    def wait_for_training_completion(self, training_id: int) -> None:  # pragma: no cover
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+        request = GetNumberOfSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
+        response: NumberOfSamplesResponse = self.selector.get_number_of_samples(request)
+
+        return response.num_samples
+
+    def wait_for_training_completion(
+        self, training_id: int, pipeline_id: int, trigger_id: int
+    ) -> None:  # pragma: no cover
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
+        self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
+
+        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
+        last_samples = 0
+        sample_pbar = self.progress_mgr.counter(
+            total=total_samples, desc=f"[Training {training_id}] Training on Samples", unit="samples"
+        )
+
+        blocked_in_a_row = 0
 
         while True:
             req = TrainingStatusRequest(training_id=training_id)
             res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
 
             if not res.valid:
-                raise RuntimeError(f"Training {training_id} is invalid at server: {res}\n")
+                raise RuntimeError(f"Training {training_id} is invalid at server:\n{res}\n")
 
             if res.blocked:
-                logger.warning("Trainer Server returned a blocked response: {res}\n")
+                blocked_in_a_row += 1
+
+                if blocked_in_a_row >= 3:
+                    logger.warning(
+                        f"Trainer Server returned {blocked_in_a_row} blocked responses in a row, cannot update status."
+                    )
+
             else:
-                if res.exception is not None:
-                    logger.error(f"Exception occured during training: {res.exception}\n\n{res}\n")
+                if res.HasField("exception") and res.exception is not None:
+                    raise RuntimeError(f"Exception at trainer server occured during training:\n{res.exception}\n\n")
+
+                blocked_in_a_row = 0
 
                 if res.state_available:
-                    logger.info(
-                        f"\r{'⏳' if res.is_running else '✅'} Batch {res.batches_seen}/{res.batches_total}"
-                        + f"Sample {res.samples_seen}/{res.samples_total}"
-                    )
-                else:
-                    logger.warning(
-                        "Trainer server is not blocked, but no state is available. "
-                        "This might be because we queried status for a finished training.\n"
-                    )
+                    assert res.HasField("samples_seen") and res.HasField(
+                        "batches_seen"
+                    ), f"Inconsistent server response:\n{res}"
+
+                    new_samples = res.samples_seen - last_samples
+                    sample_pbar.update(new_samples)
+                    last_samples = new_samples
+
+                elif res.is_running:
+                    logger.warning("Trainer server is not blocked and running, but no state is available.")
 
             if res.is_running:
-                sleep(3)
+                sleep(2)
             else:
                 break
 
+        sample_pbar.update(sample_pbar.total - sample_pbar.count)
+        sample_pbar.clear(flush=True)
+        sample_pbar.close(clear=True)
         logger.info("Training completed 🚀")
 
     def fetch_trained_model(self, training_id: int, storage_dir: pathlib.Path) -> pathlib.Path:
         logger.info(f"Fetching trained model for training {training_id}")
-        req = TrainingStatusRequest(training_id=training_id)
-        res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
+        self.status_bar.update(demo=f"Fetching model from server (id = {training_id})")
 
-        if not res.valid:
-            raise RuntimeError(f"Cannot fetch trained model for training {training_id} since training is invalid")
+        req = GetFinalModelRequest(training_id=training_id)
+        res: GetFinalModelResponse = self.trainer_server.get_final_model(req)
 
-        if res.is_running:
+        if not res.valid_state:
             raise RuntimeError(
-                f"Cannot fetch trained model for training {training_id} since training has not finished yet"
+                f"Cannot fetch trained model for training {training_id}"
+                + " since training is invalid or training still running"
             )
 
-        model = b""  # TODO(#74): fetch final model from trainer
+        model = res.state
 
         model_path = storage_dir / f"{training_id}.modyn"
         logger.info(f"Fetched model, storing at {model_path}")

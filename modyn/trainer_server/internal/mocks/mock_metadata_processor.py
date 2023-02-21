@@ -1,15 +1,4 @@
-import logging
-import os
-import sys
-from pathlib import Path
 from typing import Any
-
-path = Path(os.path.abspath(__file__))
-SCRIPT_DIR = path.parent.parent.absolute()
-sys.path.append(os.path.dirname(SCRIPT_DIR))
-
-
-logging.basicConfig(format="%(asctime)s %(message)s")
 
 
 class TrainingMetadataRequest:

@@ -399,7 +399,7 @@ def test__run_training(
 
     assert sup.current_training_id == 1337
 
-    test_wait_for_training_completion.assert_called_once_with(1337)
+    test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
     test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None)
     test_fetch_trained_model.assert_called_once()
 
