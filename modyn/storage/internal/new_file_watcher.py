@@ -31,6 +31,7 @@ class NewFileWatcher:
 
         Args:
             modyn_config (dict): Configuration of the modyn module.
+            should_stop (Any): Value that indicates if the new file watcher should stop.
         """
         self.modyn_config = modyn_config
         self.__should_stop = should_stop
@@ -40,10 +41,10 @@ class NewFileWatcher:
             self.__ignore_last_timestamp = False
 
     def _seek(self) -> None:
-        """Seek the filesystem for files with a timestamp that is equal or greater than the given timestamp.
+        """Seek the filesystem for all the datasets for new files and add them to the database.
 
-        Args:
-            timestamp (int): Timestamp to compare the files with.
+        If last timestamp is not ignored, the last timestamp of the dataset will be used to only
+        seek for files that have a timestamp that is equal or greater than the last timestamp.
         """
         with StorageDatabaseConnection(self.modyn_config) as database:
             session = database.session
@@ -62,6 +63,16 @@ class NewFileWatcher:
                 session.commit()
 
     def _seek_dataset(self, session: Session, dataset: Dataset, timestamp: int) -> None:
+        """Seek the filesystem for a dataset for new files and add them to the database.
+
+        If last timestamp is not ignored, the last timestamp of the dataset will be used to
+        only seek for files that have a timestamp that is equal or greater than the last timestamp.
+
+        Args:
+            session (Session): Database session.
+            dataset (Dataset): Dataset to seek.
+            timestamp (int): Timestamp to use for seeking.
+        """
         filesystem_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
 
         if filesystem_wrapper.exists(dataset.base_path):
@@ -75,6 +86,7 @@ class NewFileWatcher:
             logger.warning(f"Path {dataset.base_path} does not exist.")
 
     def _get_datasets(self, session: Session) -> list[Dataset]:
+        """Get all datasets."""
         datasets: Optional[list[Dataset]] = session.query(Dataset).all()
 
         if datasets is None or len(datasets) == 0:
@@ -84,6 +96,11 @@ class NewFileWatcher:
         return datasets
 
     def _file_unknown(self, session: Session, file_path: str) -> bool:
+        """Check if a file is unknown.
+
+        TODO (#147): This is a very inefficient way to check if a file is unknown. It should be replaced
+        by a more efficient method.
+        """
         return session.query(File).filter(File.path == file_path).first() is None
 
     # pylint: disable=too-many-locals
