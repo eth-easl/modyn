@@ -128,9 +128,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     CHECKPOINT_INFO_FIELD_NUMBER: builtins.int
     BYTES_PARSER_FIELD_NUMBER: builtins.int
     TRANSFORM_LIST_FIELD_NUMBER: builtins.int
-    TORCH_LR_SCHEDULER_FIELD_NUMBER: builtins.int
-    CUSTOM_LR_SCHEDULER_FIELD_NUMBER: builtins.int
-    LR_SCHEDULER_CONFIGS_FIELD_NUMBER: builtins.int
+    LR_SCHEDULER_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -154,10 +152,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def bytes_parser(self) -> global___PythonString: ...
     @property
     def transform_list(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
-    torch_lr_scheduler: builtins.str
-    custom_lr_scheduler: builtins.str
     @property
-    def lr_scheduler_configs(self) -> global___JsonString: ...
+    def lr_scheduler(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
@@ -177,12 +173,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
         checkpoint_info: global___CheckpointInfo | None = ...,
         bytes_parser: global___PythonString | None = ...,
         transform_list: collections.abc.Iterable[builtins.str] | None = ...,
-        torch_lr_scheduler: builtins.str = ...,
-        custom_lr_scheduler: builtins.str = ...,
-        lr_scheduler_configs: global___JsonString | None = ...,
+        lr_scheduler: global___JsonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "lr_scheduler_configs", b"lr_scheduler_configs", "model_configuration", b"model_configuration", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "custom_lr_scheduler", b"custom_lr_scheduler", "data_info", b"data_info", "device", b"device", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler_configs", b"lr_scheduler_configs", "model_configuration", b"model_configuration", "model_id", b"model_id", "pipeline_id", b"pipeline_id", "pretrained_model", b"pretrained_model", "torch_criterion", b"torch_criterion", "torch_lr_scheduler", b"torch_lr_scheduler", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "model_id", b"model_id", "pipeline_id", b"pipeline_id", "pretrained_model", b"pretrained_model", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
 
 global___StartTrainingRequest = StartTrainingRequest
 

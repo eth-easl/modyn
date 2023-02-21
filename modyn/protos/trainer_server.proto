@@ -53,9 +53,7 @@ message StartTrainingRequest {
     CheckpointInfo checkpoint_info = 14;
     PythonString bytes_parser = 15;
     repeated string transform_list = 16;
-    string torch_lr_scheduler = 17;
-    string custom_lr_scheduler = 18;
-    JsonString lr_scheduler_configs = 19;
+    JsonString lr_scheduler = 17;
 }
 
 message StartTrainingResponse {

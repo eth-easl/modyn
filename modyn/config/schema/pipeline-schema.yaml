@@ -134,46 +134,48 @@ properties:
         type: array
         description: |
           An array of the optimizers for the training
+        minItems: 1
         items:
-          optimizer:
-            type: object
-            description: |
-              Configuration for the optimizer (e.g., Adam)
-            properties:
-              name:
-                type: string
+          type: object
+          description: |
+            Configuration for the optimizer (e.g., Adam)
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the optimizer (like an ID)
+            algorithm:
+              type: string
+              description: |
+                The type of the optimizer (e.g. SGD)
+            source:
+              type: string
+              description: The framework/package the optimizer comes from. Currently PyTorch and APEX are supported
+            param_groups:
+              type: array
+              description: |
+                An array of the parameter groups (parameters and optional configs) that this optimizer is responsible for
+              minItems: 1
+              items:
+                type: object
                 description: |
-                  The name of the optimizer (like an ID)
-              algorithm:
-                type: string
-                description: |
-                  The type of the optimizer (e.g. SGD)
-              source:
-                type: string
-                description: The framework/package the optimizer comes from. Currently PyTorch and APEX are supported
-              param_groups:
-                type: array
-                description: |
-                  An array of the parameter groups (parameters and optional configs) that this optimizer is responsible for
-                items:
-                  param_group:
+                  Configuration for a parameter group
+                properties:
+                  module:
+                    type: string
+                    description: |
+                      A set of parameters
+                  config:
                     type: object
                     description: |
-                      Configuration for a parameter group
-                    properties:
-                      module:
-                        type: string
-                        description: |
-                          A set of parameters
-                        config: object
-                        description: |
-                          Optional configuration for the parameter group (e.g. learning rate)
-                    required:
-                      - parameter
-            required:
-              - name
-              - algorithm
-              - param_groups
+                      Optional configuration for the parameter group (e.g. learning rate)
+                required:
+                  - module
+          required:
+            - name
+            - algorithm
+            - source
+            - param_groups
       optimization_criterion:
         type: object
         description: |
@@ -200,6 +202,13 @@ properties:
           custom:
             type: boolean
             description: Whether this is a custom LR scheduler or provided by an ML framework (only PyTorch for now).
+          optimizers:
+            type: array
+            minItems: 1
+            description: |
+              List of optimizers that this scheduler is responsible for. In case a PyTorch LR scheduler is used, this list should have only one item.
+            items:
+              type: string
           config:
             type: object
             description: |
@@ -207,6 +216,7 @@ properties:
         required:
           - name
           - custom
+          - optimizers
     required:
       - gpus
       - device

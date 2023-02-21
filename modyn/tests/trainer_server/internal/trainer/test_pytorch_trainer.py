@@ -32,12 +32,14 @@ from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
 
 class MockModule:
-    def __init__(self) -> None:
-        self.model = MockModelWrapper
+    def __init__(self, num_optimizers) -> None:
+        if num_optimizers == 1:
+            self.model = MockModelWrapper
+        else:
+            self.model = MockSuperModelWrapper
 
     def train(self) -> None:
         pass
-
 
 class MockModelWrapper:
     def __init__(self, model_configuration=None) -> None:
@@ -62,6 +64,7 @@ class MockSuperModel(torch.nn.Module):
         super().__init__()
         self.moda = MockModel()
         self.modb = MockModel()
+        self.modc = MockModel()
 
     def forward(self, data):
         return self.moda(self.modb(data))
@@ -75,6 +78,17 @@ class MockDataset(torch.utils.data.IterableDataset):
     def __iter__(self):
         return iter(range(100))
 
+
+class MockLRSchedulerModule():
+    def __init__(self) -> None:
+        self.custom_scheduler = CustomLRScheduler
+
+class CustomLRScheduler():
+    def __init__(self, optimizers, config={}) -> None:
+        pass
+
+    def step(self):
+        pass
 
 def get_mock_bytes_parser():
     return "def bytes_parser_function(x):\n\treturn x"
@@ -110,7 +124,8 @@ def get_training_info(
     storage_address: str,
     selector_address: str,
     num_optimizers: int,
-    dynamic_module_patch: MagicMock,
+    lr_scheduler: str,
+    model_dynamic_module_patch: MagicMock,
 ):
     print(num_optimizers)
     if num_optimizers == 1:
@@ -145,14 +160,35 @@ def get_training_info(
                     {
                         "module": "model.modb",
                         "config": {"lr": 0.5}
+                    },
+                    {
+                        "module": "model.modc",
+                        "config": {"lr": 0.8}
                     }
                 ]
             }
         }
 
+    if lr_scheduler == "torch":
+        lr_scheduler_config = {
+            "name": "StepLR",
+            "custom": False,
+            "optimizers": ["default"] if num_optimizers == 1 else ["opt1"],
+            "config": {"step_size": 10}
+        }
+    elif lr_scheduler == "custom":
+        lr_scheduler_config = {
+            "name": "custom_scheduler",
+            "custom": True,
+            "optimizers": ["default"] if num_optimizers == 1 else ["opt1", "opt2"],
+            "config": {}
+        }
+    else:
+        lr_scheduler_config = {}
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         with tempfile.TemporaryDirectory() as final_tmpdirname:
-            dynamic_module_patch.return_value = MockModule()
+            model_dynamic_module_patch.return_value = MockModule(num_optimizers)
             request = StartTrainingRequest(
                 pipeline_id=1,
                 trigger_id=1,
@@ -170,6 +206,7 @@ def get_training_info(
                 use_pretrained_model=use_pretrained,
                 load_optimizer_state=load_optimizer_state,
                 pretrained_model=pretrained_model,
+                lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
             )
             training_info = TrainingInfo(
                 request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname)
@@ -182,6 +219,7 @@ def get_training_info(
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
+@patch("modyn.trainer_server.internal.trainer.pytorch_trainer.dynamic_module_import")
 def get_mock_trainer(
     query_queue: mp.Queue(),
     response_queue: mp.Queue(),
@@ -189,21 +227,26 @@ def get_mock_trainer(
     load_optimizer_state: bool,
     pretrained_model: Any,
     num_optimizers: int,
-    dynamic_module_patch: MagicMock,
+    lr_scheduler: str,
+    lr_scheduler_dynamic_module_patch: MagicMock,
+    model_dynamic_module_patch: MagicMock,
     test_insecure_channel: MagicMock,
     test_grpc_connection_established: MagicMock,
 ):
-    dynamic_module_patch.return_value = MockModule()
-    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers)
+    model_dynamic_module_patch.return_value = MockModule(num_optimizers)
+    lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
+    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers, lr_scheduler)
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue)
     return trainer
 
 
 def test_trainer_init():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "")
     assert isinstance(trainer._model, MockModelWrapper)
+    assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
+    assert not trainer._lr_scheduler
     assert trainer._device == "cpu"
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
@@ -211,12 +254,48 @@ def test_trainer_init():
 
 
 def test_trainer_init_multi_optimizers():
-    # TODO(fotstrt): add test
-    pass
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, b"state", 2, "")
+    assert isinstance(trainer._model, MockSuperModelWrapper)
+    assert len(trainer._optimizers) == 2
+    assert isinstance(trainer._optimizers['opt1'], torch.optim.SGD)
+    assert isinstance(trainer._optimizers['opt2'], torch.optim.Adam)
+    assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
+    assert not trainer._lr_scheduler
+    assert trainer._device == "cpu"
+    assert trainer._num_samples == 0
+    assert trainer._checkpoint_interval == 10
+    assert os.path.isdir(trainer._checkpoint_path)
+
+
+def test_trainer_init_torch_lr_scheduler():
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "torch")
+    assert isinstance(trainer._model, MockModelWrapper)
+    assert len(trainer._optimizers) == 1
+    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
+    assert isinstance(trainer._lr_scheduler, torch.optim.lr_scheduler.StepLR)
+    assert trainer._device == "cpu"
+    assert trainer._num_samples == 0
+    assert trainer._checkpoint_interval == 10
+    assert os.path.isdir(trainer._checkpoint_path)
+
+
+def test_trainer_init_custom_lr_scheduler():
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "custom")
+    assert isinstance(trainer._model, MockModelWrapper)
+    assert len(trainer._optimizers) == 1
+    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
+    assert isinstance(trainer._lr_scheduler, CustomLRScheduler)
+    assert trainer._device == "cpu"
+    assert trainer._num_samples == 0
+    assert trainer._checkpoint_interval == 10
+    assert os.path.isdir(trainer._checkpoint_path)
+
 
 @patch.object(PytorchTrainer, "load_state_if_given")
 def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state", 1)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state", 1, "")
     assert isinstance(trainer._model, MockModelWrapper)
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
@@ -228,15 +307,15 @@ def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
 
 
 def test_save_state_to_file():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 2, "")
     with tempfile.NamedTemporaryFile() as temp:
         trainer.save_state(temp.name, 10)
         assert os.path.exists(temp.name)
         saved_dict = torch.load(temp.name)
 
     assert saved_dict == {
-        "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
-        "optimizer-default": {
+        "model": OrderedDict([("moda._weight", torch.tensor([1.0])), ("modb._weight", torch.tensor([1.0])), ("modc._weight", torch.tensor([1.0]))]),
+        "optimizer-opt1": {
             "state": {},
             "param_groups": [
                 {
@@ -252,12 +331,43 @@ def test_save_state_to_file():
                 }
             ],
         },
+        "optimizer-opt2": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.5,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": False,
+                    "params": [0]
+                },
+                {
+                    "lr": 0.8,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": False,
+                    "params": [1]
+                },
+            ],
+        },
         "iteration": 10,
     }
 
 
 def test_save_state_to_buffer():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "")
     buffer = io.BytesIO()
     trainer.save_state(buffer)
     buffer.seek(0)
@@ -285,12 +395,12 @@ def test_save_state_to_buffer():
 
 def test_load_state_if_given():
     dict_to_save = {
-        "model": OrderedDict([("_weight", torch.tensor([100.0]))]),
-        "optimizer-default": {
+        "model": OrderedDict([("moda._weight", torch.tensor([1.0])), ("modb._weight", torch.tensor([1.0])), ("modc._weight", torch.tensor([1.0]))]),
+        "optimizer-opt1": {
             "state": {},
             "param_groups": [
                 {
-                    "lr": 0.5,
+                    "lr": 1.0,
                     "momentum": 0,
                     "dampening": 0,
                     "weight_decay": 0,
@@ -302,23 +412,55 @@ def test_load_state_if_given():
                 }
             ],
         },
+        "optimizer-opt2": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 1.5,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": False,
+                    "params": [0]
+                },
+                {
+                    "lr": 1.8,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": False,
+                    "params": [1]
+                },
+            ],
+        },
     }
     initial_state_buffer = io.BytesIO()
     torch.save(dict_to_save, initial_state_buffer)
     initial_state_buffer.seek(0)
     initial_state = initial_state_buffer.read()
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state, 1)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state, 2, "")
     assert trainer._model.model.state_dict() == dict_to_save["model"]
-    assert trainer._optimizers["default"].state_dict() == dict_to_save["optimizer-default"]
+    assert trainer._optimizers["opt1"].state_dict() == dict_to_save["optimizer-opt1"]
+    assert trainer._optimizers["opt2"].state_dict() == dict_to_save["optimizer-opt2"]
 
-    new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state, 1)
+    new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state, 2, "")
     assert new_trainer._model.model.state_dict() == dict_to_save["model"]
 
 
 def test_send_state_to_server():
     response_queue = mp.Queue()
     query_queue = mp.Queue()
-    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1)
+    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "")
     trainer.send_state_to_server(20)
     response = response_queue.get()
     assert response["num_batches"] == 20
@@ -351,7 +493,7 @@ def test_send_state_to_server():
 def test_train_invalid_query_message():
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1)
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1, "")
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
@@ -389,7 +531,9 @@ def test_train_invalid_query_message():
 @patch.object(BaseCallback, "on_batch_before_update", return_value=None)
 @patch.object(MetadataCollector, "send_metadata", return_value=None)
 @patch.object(MetadataCollector, "cleanup", return_value=None)
+@patch.object(CustomLRScheduler, "step", return_value=None)
 def test_train(
+    test_step,
     test_cleanup,
     test_send_metadata,
     test_on_batch_before_update,
@@ -400,7 +544,7 @@ def test_train(
 ):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1)
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 2, "custom")
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
     timeout = 2
     elapsed = 0
@@ -430,6 +574,7 @@ def test_train(
         assert test_on_batch_end.call_count == len(trainer._callbacks) * 100
         assert test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
         assert test_send_metadata.call_count == len(trainer._callbacks)
+        assert test_step.call_count == 100
         test_cleanup.assert_called_once()
 
         if not platform.system() == "Darwin":
@@ -456,8 +601,8 @@ def test_train(
         assert status["num_samples"] == 0
         status_state = torch.load(io.BytesIO(status["state"]))
         checkpointed_state = {
-            "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
-            "optimizer-default": {
+            "model": OrderedDict([("moda._weight", torch.tensor([1.0])), ("modb._weight", torch.tensor([1.0])), ("modc._weight", torch.tensor([1.0]))]),
+            "optimizer-opt1": {
                 "state": {},
                 "param_groups": [
                     {
@@ -473,7 +618,39 @@ def test_train(
                     }
                 ],
             },
+            "optimizer-opt2": {
+                "state": {},
+                "param_groups": [
+                    {
+                        "lr": 0.5,
+                        "betas": (0.9, 0.999),
+                        "eps": 1e-08,
+                        "weight_decay": 0,
+                        "amsgrad": False,
+                        "maximize": False,
+                        "foreach": None,
+                        "capturable": False,
+                        "differentiable": False,
+                        "fused": False,
+                        "params": [0]
+                    },
+                    {
+                        "lr": 0.8,
+                        "betas": (0.9, 0.999),
+                        "eps": 1e-08,
+                        "weight_decay": 0,
+                        "amsgrad": False,
+                        "maximize": False,
+                        "foreach": None,
+                        "capturable": False,
+                        "differentiable": False,
+                        "fused": False,
+                        "params": [1]
+                    },
+                ],
+            },
         }
+        print(status_state)
         assert status_state == checkpointed_state
         assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
         final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
@@ -492,11 +669,11 @@ def test_train(
 def test_create_trainer_with_exception(
     test_dynamic_module_import, test_insecure_channel, test_grpc_connection_established
 ):
-    test_dynamic_module_import.return_value = MockModule()
+    test_dynamic_module_import.return_value = MockModule(1)
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(0, False, False, None, "", "", 1)
+    training_info = get_training_info(0, False, False, None, "", "", 1, "")
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0

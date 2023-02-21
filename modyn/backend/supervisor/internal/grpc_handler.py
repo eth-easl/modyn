@@ -211,16 +211,11 @@ class GRPCHandler:
                 optimizer_config["param_groups"].append({"module": param_group["module"], "config": config_dict})
             optimizers_config[optimizer["name"]] = optimizer_config
 
-        torch_lr_scheduler = ""
-        custom_lr_scheduler = ""
-        lr_scheduler_configs = "{}"
+        lr_scheduler_configs = {}
         if "lr_scheduler" in pipeline_config["training"]:
-            if pipeline_config["training"]["lr_scheduler"]["custom"]:
-                custom_lr_scheduler = pipeline_config["training"]["lr_scheduler"]["name"]
-            else:
-                torch_lr_scheduler = pipeline_config["training"]["lr_scheduler"]["name"]
-            if "config" in pipeline_config["training"]["lr_scheduler"]:
-                lr_scheduler_configs = json.dumps(pipeline_config["training"]["lr_scheduler"]["config"])
+            lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
+            if "config" not in lr_scheduler_configs:
+                lr_scheduler_configs["config"] = {}
 
         if "config" in pipeline_config["training"]["optimization_criterion"]:
             criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"]["config"])
@@ -265,9 +260,7 @@ class GRPCHandler:
             checkpoint_info=checkpoint_info,
             transform_list=transform_list,
             bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
-            torch_lr_scheduler=torch_lr_scheduler,
-            custom_lr_scheduler=custom_lr_scheduler,
-            lr_scheduler_configs=TrainerServerJsonString(value=lr_scheduler_configs)
+            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs))
         )
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)
