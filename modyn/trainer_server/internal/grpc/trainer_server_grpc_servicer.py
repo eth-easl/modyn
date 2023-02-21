@@ -41,6 +41,8 @@ class TrainerServerGRPCServicer:
         try:
             mp.set_start_method("spawn")
         except RuntimeError as error:
+            # Tests create multiple GRPCServicers in the same process, but we can only set the start method once
+            # Hence, we do not fail if setting the method fails, but warn the user.
             logger.warning(
                 "RuntimeError occured while setting multiprocessing start method. This should only happen during tests."
             )
