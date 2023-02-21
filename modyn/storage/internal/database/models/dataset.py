@@ -20,6 +20,7 @@ class Dataset(StorageBase):
     file_wrapper_type = Column(Enum(FileWrapperType), nullable=False)
     base_path = Column(String(120), unique=False, nullable=False)
     file_wrapper_config = Column(String(240), unique=False, nullable=True)
+    last_timestamp = Column(Integer, unique=False, nullable=False)
 
     def __repr__(self) -> str:
         """Return string representation."""

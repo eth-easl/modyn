@@ -2,9 +2,10 @@
 import os
 import pathlib
 import shutil
+import time
 import typing
 from ctypes import c_bool
-from multiprocessing import Value
+from multiprocessing import Process, Value
 from unittest.mock import patch
 
 import pytest
@@ -35,7 +36,7 @@ def get_minimal_modyn_config() -> dict:
                 "port": 0,
                 "database": TEST_DATABASE,
             },
-            "new_file_watcher": {"interval": 1},
+            "new_file_watcher": {"interval": 0},
         }
     }
 
@@ -69,6 +70,8 @@ def session():
     with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
         yield database.session
+        database.session.query(Dataset).delete()
+        database.session.commit()
 
 
 class MockFileSystemWrapper(AbstractFileSystemWrapper):
@@ -149,7 +152,7 @@ class MockQuery:
 def test_seek(test__seek_dataset, session) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    session.query(Dataset).delete()
+
     session.add(
         Dataset(
             name="test1",
@@ -157,11 +160,12 @@ def test_seek(test__seek_dataset, session) -> None:  # noqa: E501
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
             file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path=TEST_DIR,
+            last_timestamp=FILE_TIMESTAMP - 1,
         )
     )
     session.commit()
 
-    new_file_watcher._seek(FILE_TIMESTAMP - 1)
+    new_file_watcher._seek()
     assert test__seek_dataset.called
 
 
@@ -169,7 +173,7 @@ def test_seek(test__seek_dataset, session) -> None:  # noqa: E501
 def test_seek_dataset(test__update_files_in_directory, session) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    session.query(Dataset).delete()
+
     session.add(
         Dataset(
             name="test2",
@@ -177,6 +181,7 @@ def test_seek_dataset(test__update_files_in_directory, session) -> None:  # noqa
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
             file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path=TEST_DIR,
+            last_timestamp=FILE_TIMESTAMP - 1,
         )
     )
     session.commit()
@@ -189,7 +194,7 @@ def test_seek_dataset(test__update_files_in_directory, session) -> None:  # noqa
 def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    session.query(Dataset).delete()
+
     session.add(
         Dataset(
             name="test",
@@ -197,11 +202,12 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
             file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path="/notexists",
+            last_timestamp=FILE_TIMESTAMP - 1,
         )
     )
     session.commit()
 
-    new_file_watcher._seek(FILE_TIMESTAMP - 1)
+    new_file_watcher._seek()
     assert not test__update_files_in_directory.called
 
 
@@ -210,7 +216,7 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
 def test_seek_path_not_dir(test_get_filesystem_wrapper, test__update_files_in_directory, session):  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    session.query(Dataset).delete()
+
     session.add(
         Dataset(
             name="test4",
@@ -218,11 +224,12 @@ def test_seek_path_not_dir(test_get_filesystem_wrapper, test__update_files_in_di
             filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
             file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
             base_path=TEST_FILE1,
+            last_timestamp=FILE_TIMESTAMP - 1,
         )
     )
     session.commit()
 
-    new_file_watcher._seek(FILE_TIMESTAMP - 1)
+    new_file_watcher._seek()
     assert not test__update_files_in_directory.called
 
 
@@ -232,7 +239,7 @@ def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_dir
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
 
-    new_file_watcher._seek(FILE_TIMESTAMP - 1)
+    new_file_watcher._seek()
     assert not test__update_files_in_directory.called
 
 
@@ -241,7 +248,7 @@ def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_dir
 def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wrapper, session) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    session.query(Dataset).delete()
+
     dataset = Dataset(
         name="test5",
         description="test description",
@@ -249,6 +256,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         base_path=TEST_DIR,
         file_wrapper_config='{"file_extension": ".txt"}',
+        last_timestamp=FILE_TIMESTAMP - 1,
     )
     session.add(dataset)
     session.commit()
@@ -295,8 +303,50 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
     assert result is not None
     assert len(result) == 4
     assert result[0].file_id == 1
-    session.query(Dataset).delete()
+
+
+@patch("modyn.storage.internal.new_file_watcher.get_file_wrapper", return_value=MockFileWrapper())
+@patch("modyn.storage.internal.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper())
+def test_update_files_in_directory_ignore_last_timestamp(
+    test_get_file_wrapper, test_get_filesystem_wrapper, session
+) -> None:  # noqa: E501
+    should_stop = Value(c_bool, False)
+    new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
+    new_file_watcher.__ignore_last_timestamp = True
+
+    dataset = Dataset(
+        name="test6",
+        description="test description",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
+        base_path=TEST_DIR,
+        file_wrapper_config='{"file_extension": ".txt"}',
+        last_timestamp=FILE_TIMESTAMP - 1,
+    )
+    session.add(dataset)
     session.commit()
+
+    new_file_watcher._update_files_in_directory(
+        filesystem_wrapper=MockFileSystemWrapper(),
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
+        path=TEST_DIR,
+        timestamp=FILE_TIMESTAMP + 10,
+        session=session,
+        dataset=dataset,
+    )
+
+    result = session.query(File).all()
+    assert result is not None
+    assert len(result) == 2
+    assert result[0].path == TEST_FILE1
+    assert result[0].created_at == FILE_TIMESTAMP
+    assert result[0].number_of_samples == 2
+    assert result[0].dataset_id == 1
+
+    result = session.query(Sample).all()
+    assert result is not None
+    assert len(result) == 4
+    assert result[0].file_id == 1
 
 
 def test_update_files_in_directory_not_exists(session) -> None:
@@ -315,12 +365,27 @@ def test_update_files_in_directory_not_exists(session) -> None:
 
 
 @patch.object(NewFileWatcher, "_seek", return_value=None)
-@patch("modyn.storage.internal.new_file_watcher.current_time_millis", return_value=-2)
-def test_run(mock_seek, mock_time) -> None:
+def test_run(mock_seek, session) -> None:
+    dataset = Dataset(
+        name="test7",
+        description="test description",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
+        base_path=TEST_DIR,
+        file_wrapper_config='{"file_extension": ".txt"}',
+        last_timestamp=0,
+    )
+    session.add(dataset)
+    session.commit()
+
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    new_file_watcher.run()
-    assert new_file_watcher._seek.called
+    watcher_process = Process(target=new_file_watcher.run, args=())
+    watcher_process.start()
+    time.sleep(1)
+    should_stop.value = True  # type: ignore
+    watcher_process.join()
+    assert session.query(Dataset).all()[0].last_timestamp > 0
 
 
 def test_get_datasets(session):

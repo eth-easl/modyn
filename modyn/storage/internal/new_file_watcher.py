@@ -33,23 +33,33 @@ class NewFileWatcher:
             modyn_config (dict): Configuration of the modyn module.
         """
         self.modyn_config = modyn_config
-        self._last_timestamp: int = -1
-        self.should_stop = should_stop
+        self.__should_stop = should_stop
+        if "ignore_last_timestamp" in self.modyn_config["storage"]["new_file_watcher"]:
+            self.__ignore_last_timestamp = self.modyn_config["storage"]["new_file_watcher"]["ignore_last_timestamp"]
+        else:
+            self.__ignore_last_timestamp = False
 
-    def _seek(self, timestamp: int) -> None:
+    def _seek(self) -> None:
         """Seek the filesystem for files with a timestamp that is equal or greater than the given timestamp.
 
         Args:
             timestamp (int): Timestamp to compare the files with.
         """
-        logger.debug(f"Seeking for files with a timestamp that is equal or greater than {timestamp}")
         with StorageDatabaseConnection(self.modyn_config) as database:
             session = database.session
 
             datasets = self._get_datasets(session)
 
             for dataset in datasets:
-                self._seek_dataset(session, dataset, timestamp)
+                logger.debug(
+                    f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
+                    is equal or greater than {dataset.last_timestamp}"
+                )
+                self._seek_dataset(session, dataset, dataset.last_timestamp)
+                session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
+                    {"last_timestamp": current_time_millis()}
+                )
+                session.commit()
 
     def _seek_dataset(self, session: Session, dataset: Dataset, timestamp: int) -> None:
         filesystem_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
@@ -100,7 +110,11 @@ class NewFileWatcher:
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
-            if filesystem_wrapper.get_modified(file_path) >= timestamp and self._file_unknown(session, file_path):
+            if (
+                self.__ignore_last_timestamp
+                or filesystem_wrapper.get_modified(file_path) >= timestamp
+                and self._file_unknown(session, file_path)
+            ):
                 try:
                     number_of_samples = file_wrapper.get_number_of_samples()
                     file: File = File(
@@ -131,10 +145,9 @@ class NewFileWatcher:
     def run(self) -> None:
         """Run the dataset watcher."""
         logger.info("Starting dataset watcher.")
-        while self._last_timestamp >= -1 and not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
+        while not self.__should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
             time.sleep(self.modyn_config["storage"]["new_file_watcher"]["interval"])
-            self._seek(self._last_timestamp)
-            self._last_timestamp = current_time_millis()
+            self._seek()
 
 
 def run_watcher(modyn_config: dict, should_stop: Any) -> None:  # See https://github.com/python/typeshed/issues/8799

@@ -28,6 +28,7 @@ def test_add_dataset(session):
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
+        last_timestamp=0,
     )
     session.add(dataset)
     session.commit()
@@ -54,6 +55,7 @@ def test_update_dataset(session):
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
+        last_timestamp=0,
     )
     session.add(dataset)
     session.commit()
@@ -85,6 +87,7 @@ def test_repr(session):
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
+        last_timestamp=0,
     )
     session.add(dataset)
     session.commit()
@@ -100,6 +103,7 @@ def test_delete_dataset(session):
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         description="test",
         version="test",
+        last_timestamp=0,
     )
     session.add(dataset)
     session.commit()
