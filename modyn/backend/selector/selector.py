@@ -75,7 +75,7 @@ class Selector:
 
     def inform_data_and_trigger(self, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
         assert len(keys) == len(timestamps) and len(keys) == len(labels), "Inconsistent list lengths"
-        
+
         if len(keys) > 0:
             self._strategy.inform_data(keys, timestamps, labels)
 

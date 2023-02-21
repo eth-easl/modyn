@@ -1,6 +1,8 @@
-from modyn.backend.supervisor.internal.trigger import Trigger
-from modyn.utils import validate_timestr, convert_timestr_to_seconds
 from typing import Optional
+
+from modyn.backend.supervisor.internal.trigger import Trigger
+from modyn.utils import convert_timestr_to_seconds, validate_timestr
+
 
 class TimeTrigger(Trigger):
     """Triggers after a certain amount of time has passed.
@@ -9,7 +11,7 @@ class TimeTrigger(Trigger):
 
     def __init__(self, trigger_config: dict):
         if "trigger_every" not in trigger_config.keys():
-            raise ValueError("Trigger config is missing `trigger_every` field") # TODO add to schema
+            raise ValueError("Trigger config is missing `trigger_every` field")
 
         timestr = trigger_config["trigger_every"]
         if not validate_timestr(timestr):
@@ -26,25 +28,25 @@ class TimeTrigger(Trigger):
     def inform(self, new_data: list[tuple[str, int, int]]) -> list[int]:
         if self.next_trigger_at is None:
             if len(new_data) > 0:
-                self.next_trigger_at = min([timestamp for _, timestamp, _ in new_data]) + self.trigger_every_ms
+                self.next_trigger_at = min((timestamp for _, timestamp, _ in new_data)) + self.trigger_every_ms
             else:
                 return []
 
-        # We use the fact that new_data is sorted
-        max_timestamp = new_data[-1][1]
+        max_timestamp = new_data[-1][1]  # We use the fact that new_data is sorted
         triggering_indices = []
-        search_start = 0
 
         while self.next_trigger_at <= max_timestamp:
             # The next line gets the first item which has a timestamp larger or equal to the triggering timestamp
-            idx = next(idx for (idx, (_, timestamp, _)) in list(enumerate(new_data))[search_start:] if timestamp >= self.next_trigger_at)
-            # Since this is the first item not belonging to the trigger, we need to fetch the index of the previous item
-            # TODO: We might need to emit multiple -1 in case idx == 0, in case we trigger every s and 5s have passed then 5 empty triggers
+            idx = next(idx for (idx, (_, timestamp, _)) in enumerate(new_data) if timestamp >= self.next_trigger_at)
+            # This index `idx` describes the first item not belonging to the trigger.
+            # Hence, the previous item causes a trigger.
+            # If this is the first item, then we need to emit a trigger for index -1.
+            # This means that there was a trigger before the first item that we got informed about
+            # However, there might have been multiple triggers, e.g., if there is one trigger every second
+            # and 5 seconds have passed since the last item came through
+            # This is caught by our while loop which increases step by step for `trigger_every_ms`.
 
             triggering_indices.append(idx - 1)
             self.next_trigger_at += self.trigger_every_ms
-            search_start = idx
-
-            # TODO write tests for selector/supervisor that we can deal with -1 indices (also multiple)
 
         return triggering_indices
