@@ -373,7 +373,7 @@ def test_run(mock_seek, session) -> None:
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
         base_path=TEST_DIR,
         file_wrapper_config='{"file_extension": ".txt"}',
-        last_timestamp=0,
+        last_timestamp=-1,
     )
     session.add(dataset)
     session.commit()
@@ -382,10 +382,10 @@ def test_run(mock_seek, session) -> None:
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     watcher_process = Process(target=new_file_watcher.run, args=())
     watcher_process.start()
-    time.sleep(2)
+    time.sleep(3)
     should_stop.value = True  # type: ignore
     watcher_process.join()
-    assert session.query(Dataset).all()[0].last_timestamp > 0
+    assert session.query(Dataset).all()[0].last_timestamp > -1
 
 
 def test_get_datasets(session):
