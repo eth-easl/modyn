@@ -1,5 +1,5 @@
 diff --git a/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh b/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh
-index ecb4e865..7d617ee1 100644
+index ecb4e865..6f6b4dd9 100644
 --- a/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh
 +++ b/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh
 @@ -20,19 +20,25 @@
@@ -9,9 +9,9 @@ index ecb4e865..7d617ee1 100644
 -export TOTAL_CORES=256
 +
 +# MODYN:
-+# Note this is a working setup for the 1 GPU setup with a n1-18-standard VM with 32gig. Edit it if the config 
-+# is different. The cores and executors were setup based on working runs, while the memory was setup to fit within
-+# the 32GB of the VM used.
++# Note this is a working setup for the 1 GPU setup with a n1-18-standard VM with 32gig. Edit it if
++# the config is different. The cores and executors were setup based on working runs, while the memory
++# was setup to fit within the 32GB of the VM used.
 +# TODO(#156): Update this config to optimally use the resources of the chosen VM and explain the updates made.
 +export TOTAL_CORES=1
  
