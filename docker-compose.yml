@@ -41,7 +41,8 @@ services:
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
-#    volumes:
+    volumes:
+      - storage-data:/app/storage
 #      - /mnt/datasets:/datasets
 #      - .:/modyn_host
   trainer_server:
