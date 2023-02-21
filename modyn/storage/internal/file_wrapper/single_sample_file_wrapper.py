@@ -24,6 +24,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         Args:
             file_path (str): File path
             file_wrapper_config (dict): File wrapper config
+            filesystem_wrapper (AbstractFileSystemWrapper): File system wrapper to abstract storage of the file
         """
         super().__init__(file_path, file_wrapper_config, filesystem_wrapper)
         self.file_wrapper_type = FileWrapperType.SingleSampleFileWrapper
