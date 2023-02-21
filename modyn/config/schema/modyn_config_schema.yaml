@@ -85,6 +85,18 @@ properties:
                   type: string
                   description: |
                     The label file extension of the dataset. Starts with a dot.
+                record_size:
+                  type: number
+                  description: |
+                    The size of each full record in bytes (label + features) for a binary file wrapper.
+                label_size:
+                  type: number
+                  description: |
+                    The size of the label field in bytes for a binary file wrapper.
+                byteorder:
+                  type: string
+                  description: |
+                    The byteorder when reading an integer from multibyte data in a binary file. Should either be "big" or "little".
             ignore_last_timestamp:
               type: boolean
               description: |
