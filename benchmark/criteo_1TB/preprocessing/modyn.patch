@@ -1,8 +1,8 @@
 diff --git a/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh b/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh
-index ecb4e865..09d940f0 100644
+index ecb4e865..7d617ee1 100644
 --- a/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh
 +++ b/PyTorch/Recommendation/DLRM/preproc/DGX-A100_config.sh
-@@ -20,19 +20,22 @@
+@@ -20,19 +20,25 @@
  
  # below numbers should be adjusted according to the resource of your running environment
  # set the total number of CPU cores, spark can use
@@ -94,10 +94,15 @@ index f71255e8..af3b09f9 100644
  
  if __name__ == '__main__':
 diff --git a/PyTorch/Recommendation/DLRM/preproc/prepare_dataset.sh b/PyTorch/Recommendation/DLRM/preproc/prepare_dataset.sh
-index 6b995d0a..9e7a78c2 100644
+index 6b995d0a..36aabfe4 100644
 --- a/PyTorch/Recommendation/DLRM/preproc/prepare_dataset.sh
 +++ b/PyTorch/Recommendation/DLRM/preproc/prepare_dataset.sh
-@@ -65,28 +65,10 @@ final_output_dir=${final_output_dir:-'/data/dlrm/binary_dataset'}
+@@ -60,33 +60,13 @@ else
+     preprocessing_version=Spark
+ fi
+ 
+-conversion_intermediate_dir=${conversion_intermediate_dir:-'/data/dlrm/intermediate_binary'}
+ final_output_dir=${final_output_dir:-'/data/dlrm/binary_dataset'}
  
  source ${DGX_VERSION}_config.sh
  
@@ -105,7 +110,11 @@ index 6b995d0a..9e7a78c2 100644
 -   && [ -d ${final_output_dir}/validation ] \
 -   && [ -d ${final_output_dir}/test ] \
 -   && [ -f ${final_output_dir}/feature_spec.yaml ]; then
--
++echo "Performing final conversion to a custom data format"
++python parquet_to_binary.py --parallel_jobs ${TOTAL_CORES} --src_dir ${output_path} \
++                            --dst_dir ${final_output_dir}
++cp "${output_path}/model_size.json" "${final_output_dir}/model_size.json"
+ 
 -    echo "Final conversion already done"
 -else
 -    echo "Performing final conversion to a custom data format"
@@ -124,26 +133,15 @@ index 6b995d0a..9e7a78c2 100644
 -    mv ${final_output_dir}/split/* ${final_output_dir}
 -    rm -rf ${final_output_dir}/split
 -fi
-+echo "Performing final conversion to a custom data format"
-+python parquet_to_binary.py --parallel_jobs ${TOTAL_CORES} --src_dir ${output_path} \
-+                            --intermediate_dir  ${conversion_intermediate_dir} \
-+                            --dst_dir ${final_output_dir}
-+cp "${output_path}/model_size.json" "${final_output_dir}/model_size.json"
- 
- echo "Done preprocessing the Criteo Kaggle Dataset"
+-
+-echo "Done preprocessing the Criteo Kaggle Dataset"
++echo "Done preprocessing the Criteo Kaggle Dataset"
+\ No newline at end of file
 diff --git a/PyTorch/Recommendation/DLRM/preproc/run_spark_gpu_DGX-A100.sh b/PyTorch/Recommendation/DLRM/preproc/run_spark_gpu_DGX-A100.sh
-index a38d5214..d3130b0c 100644
+index a38d5214..0bfc3266 100644
 --- a/PyTorch/Recommendation/DLRM/preproc/run_spark_gpu_DGX-A100.sh
 +++ b/PyTorch/Recommendation/DLRM/preproc/run_spark_gpu_DGX-A100.sh
-@@ -49,6 +49,7 @@ echo "Starting spark standalone"
- start-master.sh
- start-slave.sh $MASTER
- 
-+echo "${EXECUTOR_MEMORY}G"
- echo "Generating the dictionary..."
- spark-submit --master $MASTER \
-     --driver-memory "${DRIVER_MEMORY}G" \
-@@ -79,13 +80,15 @@ spark-submit --master $MASTER \
+@@ -79,13 +79,15 @@ spark-submit --master $MASTER \
      --model_folder $OUTPUT_PATH/models \
      --write_mode overwrite --low_mem 2>&1 | tee submit_dict_log.txt
  
@@ -162,7 +160,7 @@ index a38d5214..d3130b0c 100644
      --conf spark.sql.files.maxPartitionBytes=1073741824 \
      --conf spark.sql.shuffle.partitions=600 \
      --conf spark.driver.maxResultSize=2G \
-@@ -104,87 +107,12 @@ spark-submit --master $MASTER \
+@@ -104,87 +106,12 @@ spark-submit --master $MASTER \
      --conf spark.executor.extraJavaOptions="-Dcom.nvidia.cudf.prefer-pinned=true\ -Djava.io.tmpdir=$SPARK_LOCAL_DIRS" \
      spark_data_utils.py --mode transform \
      --input_folder $INPUT_PATH \
