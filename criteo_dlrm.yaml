@@ -56,7 +56,14 @@ training:
 data:
   dataset_id: criteo
   bytes_parser_function: |
-    lambda x: x
+    def bytes_parser_function(x: bytes) -> dict:
+      num_features = x[:52]
+      cat_features = x[52:]
+
+      return {
+        "numerical_features": torch.frombuffer(num_features, dtype=torch.float32),
+        "categorical_features": torch.frombuffer(cat_features, dtype=torch.int32).to(torch.long)
+      }
 
 trigger:
   id: DataAmountTrigger
