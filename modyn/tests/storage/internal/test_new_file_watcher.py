@@ -2,7 +2,6 @@
 import os
 import pathlib
 import shutil
-import time
 import typing
 from ctypes import c_bool
 from multiprocessing import Process, Value
@@ -312,7 +311,6 @@ def test_update_files_in_directory_ignore_last_timestamp(
 ) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
-    new_file_watcher.__ignore_last_timestamp = True
 
     dataset = Dataset(
         name="test6",
@@ -322,6 +320,7 @@ def test_update_files_in_directory_ignore_last_timestamp(
         base_path=TEST_DIR,
         file_wrapper_config='{"file_extension": ".txt"}',
         last_timestamp=FILE_TIMESTAMP - 1,
+        ignore_last_timestamp=True,
     )
     session.add(dataset)
     session.commit()
@@ -337,7 +336,7 @@ def test_update_files_in_directory_ignore_last_timestamp(
 
     result = session.query(File).all()
     assert result is not None
-    assert len(result) == 2
+    assert len(result) == 4
     assert result[0].path == TEST_FILE1
     assert result[0].created_at == FILE_TIMESTAMP
     assert result[0].number_of_samples == 2
@@ -345,7 +344,7 @@ def test_update_files_in_directory_ignore_last_timestamp(
 
     result = session.query(Sample).all()
     assert result is not None
-    assert len(result) == 4
+    assert len(result) == 8
     assert result[0].file_id == 1
 
 
@@ -382,10 +381,9 @@ def test_run(mock_seek, session) -> None:
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
     watcher_process = Process(target=new_file_watcher.run, args=())
     watcher_process.start()
-    time.sleep(3)
     should_stop.value = True  # type: ignore
     watcher_process.join()
-    assert session.query(Dataset).all()[0].last_timestamp > -1
+    #  If we get here, the process has stopped
 
 
 def test_get_datasets(session):

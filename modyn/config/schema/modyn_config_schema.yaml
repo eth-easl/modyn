@@ -41,10 +41,6 @@ properties:
             type: number
             description: |
               The interval in seconds to check for new files and samples for each dataset.
-          ignore_last_timestamp:
-            type: boolean
-            description: |
-              Whether to ignore the last timestamp of the dataset when checking for new files.
         required:
           - interval
       datasets:
@@ -89,6 +85,10 @@ properties:
                   type: string
                   description: |
                     The label file extension of the dataset. Starts with a dot.
+            ignore_last_timestamp:
+              type: boolean
+              description: |
+                Whether to ignore the last timestamp of the dataset.
           required:
             - name
             - description

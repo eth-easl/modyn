@@ -8,7 +8,6 @@ storage:
   hostname: "storage"
   new_file_watcher:
     interval: 5
-    ignore_last_timestamp: true
   datasets:
     [
       {
@@ -22,7 +21,8 @@ storage:
           {
             file_extension: ".png",
             label_file_extension: ".label"
-          }
+          },
+        ignore_last_timestamp: false,
       }
     ]
   database:

@@ -35,10 +35,6 @@ class NewFileWatcher:
         """
         self.modyn_config = modyn_config
         self.__should_stop = should_stop
-        if "ignore_last_timestamp" in self.modyn_config["storage"]["new_file_watcher"]:
-            self.__ignore_last_timestamp = self.modyn_config["storage"]["new_file_watcher"]["ignore_last_timestamp"]
-        else:
-            self.__ignore_last_timestamp = False
 
     def _seek(self) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
@@ -128,7 +124,7 @@ class NewFileWatcher:
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
             if (
-                self.__ignore_last_timestamp
+                dataset.ignore_last_timestamp
                 or filesystem_wrapper.get_modified(file_path) >= timestamp
                 and self._file_unknown(session, file_path)
             ):
