@@ -167,7 +167,7 @@ Preprocessing Data:
 	```
 	gcloud compute init
 	```
-3. Upload the processed data to the cloud storage - 
+3. Upload the processed data to the cloud storage
 	```
 	cd /mnt/disks/criteo/
 	gcloud storage cp -r output gs://<bucket name>
