@@ -22,6 +22,20 @@ storage:
             file_extension: ".png",
             label_file_extension: ".label"
           }
+      },
+      {
+        name: "criteo",
+        description: "Criteo Dataset",
+        version: "0.0.1",
+        base_path: "/datasets/criteo",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "little",
+            record_size: 156,
+            label_size: 4
+          }
       }
     ]
   database:

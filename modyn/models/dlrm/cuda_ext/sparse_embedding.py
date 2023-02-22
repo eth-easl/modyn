@@ -15,7 +15,7 @@
 import copy
 
 import torch
-# from apex import amp  # TODO(fotstrt): check if this is needed
+from apex import amp
 from torch import nn
 from torch.autograd import Function
 
@@ -66,5 +66,4 @@ class JointSparseEmbedding(nn.Module):
 
         return embedding_out
 
-# TODO(fotstrt): fix this
-embedding_gather = None #amp.float_function(EmbeddingGatherFunction.apply)
+embedding_gather = amp.float_function(EmbeddingGatherFunction.apply)

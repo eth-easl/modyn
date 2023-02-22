@@ -40,7 +40,6 @@ class PytorchTrainer:
 
         self._optimizers = {}
         for name, optimizer_config in training_info.torch_optimizers_configuration.items():
-            # TODO(fotstrt): allow apex optimizers here
             if optimizer_config["source"] == "PyTorch":
                 optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
             elif optimizer_config["source"] == "APEX":
