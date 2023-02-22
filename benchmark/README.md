@@ -3,11 +3,6 @@
 In this directory, you find different scripts and examples that assist in running benchmarks on Modyn.
 Currently, we provide an MNIST example and a Criteo 1TB Advertising dataset example 
 
-## Install additional dependencies
-
-To install the additional dependencies necessary to run the scripts in this directory, update the conda environment:
-
-`conda env update --name modyn --file benchmark_environment.yml`
 
 ## Benchmarks
 
