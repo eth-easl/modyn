@@ -48,7 +48,7 @@ runs:
 
       - name: Add conda to path 
         if: steps.check_files.outputs.files_exists == 'false'
-        run: echo "${CONDAPATH}/bin/conda" >> $GITHUB_PATH 
+        run: echo "${CONDAPATH}/bin" >> $GITHUB_PATH 
         shell: bash
 
       - name: Set cache date
