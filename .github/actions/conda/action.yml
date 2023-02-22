@@ -12,25 +12,36 @@ runs:
         with:
           files: "/usr/share/miniconda/envs"
 
-      - name: Set shared conda path
+      - name: Set Github runner Conda path
         if: steps.check_files.outputs.files_exists == 'true'
         run: echo "CONDAPATH=/usr/share/miniconda/envs" >> $GITHUB_ENV 
         shell: bash
 
-      - name: Miniconda exists, fix permissions
+      - name: Fix permissions for Github runner
         if: steps.check_files.outputs.files_exists == 'true'
         run: sudo chown -R $(whoami):$(id -ng) ${CONDAPATH}
         shell: bash
-
-      - name: Setup miniconda if not exists
+        
+      - name: If non Github runner, check if CONDA environment variable is set
+        id: check_conda_env
+        shell: bash
+        run: |
+          if [ "$CONDA" == "" ]; then
+            echo "condapresent=false" >> $GITHUB_OUTPUT
+          else
+            echo "condapresent=true" >> $GITHUB_OUTPUT
+          fi
         if: steps.check_files.outputs.files_exists == 'false'
+
+      - name: Setup miniconda if not exists on non Github runner
+        if: (steps.check_files.outputs.files_exists == 'false') && (steps.check_conda_env.outputs.condapresent == 'false')
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
           python-version: '3.10'
           miniconda-version: "latest"
 
-      - name: Set custom conda path
+      - name: Set custom conda path for either existing or new conda installation, both reside in CONDA
         if: steps.check_files.outputs.files_exists == 'false'
         run: echo "CONDAPATH=${CONDA}" >> $GITHUB_ENV 
         shell: bash
