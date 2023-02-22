@@ -58,7 +58,7 @@ Setup of machines:
 		wget https://download.docker.com/linux/debian/dists/bullseye/pool/stable/amd64/docker-compose-plugin_2.6.0~debian-bullseye_amd64.deb  
 		dpkg -I ./containerd.io_1.6.9-1_amd64.deb  ./docker-compose-plugin_2.6.0~debian-bullseye_amd64.deb  ./docker-ce_20.10.9~3-0~debian-bullseye_amd64.deb  ./docker-ce-cli_20.10.9~3-0~debian-bullseye_amd64.deb
 		```
-		Test the installation -  
+		Test the installation
 		```
 		sudo service docker start
 		sudo docker run hello-world
