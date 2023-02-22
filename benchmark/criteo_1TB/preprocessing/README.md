@@ -39,7 +39,7 @@ Setup of machines:
 		```
 		sudo lsblk
 		```
-    2. Mount external hard disk to a fixed location where disk_path is the path for that disk as found in the previous step (eg: /dev/sdb) :
+	2. Mount external hard disk to a fixed location where disk_path is the path for that disk as found in the previous step (eg: /dev/sdb) :
 		```
 		sudo mount -o discard,defaults ${disk_path} /mnt/disks/criteo
 		sudo chmod a+w /mnt/disks/criteo
