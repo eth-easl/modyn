@@ -15,8 +15,11 @@
 """
 Fused Buckle Embedding
 """
+try:
+    import apex
+except Exception as e:
+    pass
 
-from apex import amp
 from torch.autograd import Function
 
 class BuckleEmbeddingFusedGatherFunction(Function):
@@ -36,5 +39,4 @@ class BuckleEmbeddingFusedGatherFunction(Function):
         grad_weights = fused_embedding.gather_gpu_fused_bwd(embedding, indices, offsets, grad_output)
         return grad_weights, None, None, None
 
- # TODO(fotstrt): fix this
-buckle_embedding_fused_gather = amp.float_function(BuckleEmbeddingFusedGatherFunction.apply)
+buckle_embedding_fused_gather = apex.amp.float_function(BuckleEmbeddingFusedGatherFunction.apply)

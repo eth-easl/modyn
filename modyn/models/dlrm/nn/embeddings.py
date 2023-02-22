@@ -19,7 +19,12 @@ import torch
 from torch import nn
 
 from modyn.models.dlrm import cuda_ext
-from modyn.models.dlrm.cuda_ext.fused_gather_embedding import BuckleEmbeddingFusedGatherFunction
+
+try:
+    import apex
+    from modyn.models.dlrm.cuda_ext.fused_gather_embedding import BuckleEmbeddingFusedGatherFunction
+except Exception as e:
+    pass
 
 
 class Embeddings(nn.Module):

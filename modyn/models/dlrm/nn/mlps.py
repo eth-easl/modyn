@@ -14,7 +14,10 @@
 
 import math
 from typing import Sequence, List, Iterable
-import apex.mlp
+try:
+    import apex.mlp
+except Exception as e:
+    pass
 
 import torch
 from torch import nn
@@ -34,13 +37,15 @@ class AmpMlpFunction(torch.autograd.Function):
 
 mlp_function = AmpMlpFunction.apply
 
-class AmpMlp(apex.mlp.MLP):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+try:
+    class AmpMlp(apex.mlp.MLP):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
 
-    def forward(self, input):
-        return mlp_function(self.bias, self.activation, input, *self.weights, *self.biases)
-
+        def forward(self, input):
+            return mlp_function(self.bias, self.activation, input, *self.weights, *self.biases)
+except Exception as e:
+    pass
 
 class AbstractMlp(nn.Module):
     """

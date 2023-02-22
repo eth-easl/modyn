@@ -5,8 +5,7 @@ from modyn.models.dlrm.nn.embeddings import (
     Embeddings
 )
 from modyn.models.dlrm.nn.interactions import Interaction, CudaDotInteraction, DotInteraction, CatInteraction
-from modyn.models.dlrm.nn.mlps import AbstractMlp, CppMlp, TorchMlp
-
+from modyn.models.dlrm.nn.mlps import AbstractMlp, TorchMlp, CppMlp
 
 def create_mlp(input_dim: int, sizes: Sequence[int], use_cpp_mlp: bool) -> AbstractMlp:
     return CppMlp(input_dim, sizes) if use_cpp_mlp else TorchMlp(input_dim, sizes)

@@ -50,7 +50,9 @@ class DotInteraction(Interaction):
         self._tril_indices = torch.tensor([[i for i in range(self._num_interaction_inputs)
                                             for _ in range(i)],
                                            [j for i in range(self._num_interaction_inputs)
-                                            for j in range(i)]]).cuda()
+                                            for j in range(i)]])
+        if torch.cuda.is_available():
+            self._tril_indices = self._tril_indices.cuda()
         # THIS IS NOT A REGULAR TRIANGULAR LOWER MATRIX! THE MAIN DIAGONAL IS NOT INCLUDED
 
     @property

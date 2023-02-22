@@ -23,7 +23,8 @@ class DLRM_model(nn.Module):
 
         super().__init__()
 
-        install_cuda_ext()
+        if "cuda" in model_configuration['device']:
+            install_cuda_ext()
 
         feature_spec = FeatureSpec.from_yaml("feature_spec.yaml")
 
@@ -41,9 +42,7 @@ class DLRM_model(nn.Module):
         self._interaction_op = model_configuration['interaction_op']
         self._hash_indices = model_configuration['hash_indices']
 
-        # TODO(fotstrt): fix this
-        interaction = create_interaction(self._interaction_op, len(world_categorical_feature_sizes)
-, self._embedding_dim)
+        interaction = create_interaction(self._interaction_op, len(world_categorical_feature_sizes), self._embedding_dim)
 
         # ignore device here since it is handled by the trainer
         self.bottom_model = DlrmBottom(
@@ -54,7 +53,8 @@ class DLRM_model(nn.Module):
             self._embedding_dim,
             hash_indices=self._hash_indices,
             use_cpp_mlp=model_configuration['use_cpp_mlp'],
-            fp16=model_configuration['fp16']
+            fp16=model_configuration['fp16'],
+            device=model_configuration['device']
         )
 
         self.top_model = DlrmTop(
@@ -82,7 +82,7 @@ class DLRM_model(nn.Module):
             batch_sizes_per_gpu (Sequence[int]):
         """
         numerical_input = input['numerical_input']
-        categorical_inputs = input['categorical_inputs']
+        categorical_inputs = input['categorical_input']
 
         # bottom mlp output may be not present before all to all communication
         from_bottom, bottom_mlp_output = self.bottom_model(numerical_input, categorical_inputs)
