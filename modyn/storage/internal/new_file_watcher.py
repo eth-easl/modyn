@@ -124,8 +124,8 @@ class NewFileWatcher:
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
             if (
-                dataset.ignore_last_timestamp
-                or filesystem_wrapper.get_modified(file_path) >= timestamp
+                (dataset.ignore_last_timestamp
+                or filesystem_wrapper.get_modified(file_path) >= timestamp)
                 and self._file_unknown(session, file_path)
             ):
                 try:
