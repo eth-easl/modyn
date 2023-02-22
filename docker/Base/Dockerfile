@@ -33,8 +33,6 @@ RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; 
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda update -n base -c defaults conda && conda update --all && conda init bash
 
-RUN git clone https://github.com/NVIDIA/apex /apex
-
 # Mount modyn directory to container, make it working directory
 ADD . /src
 WORKDIR /src

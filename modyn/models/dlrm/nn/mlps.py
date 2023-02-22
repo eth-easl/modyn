@@ -14,6 +14,7 @@
 
 import math
 from typing import Sequence, List, Iterable
+import apex.mlp
 
 import torch
 from torch import nn
@@ -23,28 +24,22 @@ class AmpMlpFunction(torch.autograd.Function):
     @staticmethod
     @torch.cuda.amp.custom_fwd(cast_inputs=torch.half)
     def forward(*args, **kwargs):
-        import apex.mlp # TODO(fotstrt): are we keeping this?
         return apex.mlp.MlpFunction.forward(*args, **kwargs)
 
     @staticmethod
     @torch.cuda.amp.custom_fwd(cast_inputs=torch.half)
     def backward(*args, **kwargs):
-        import apex.mlp # TODO(fotstrt): are we keeping this?
         return apex.mlp.MlpFunction.backward(*args, **kwargs)
 
 
 mlp_function = AmpMlpFunction.apply
 
-# TODO(fotstrt): fix this
-class AmpMlp():
-    def __init__(self) -> None:
-        pass
-# class AmpMlp(apex.mlp.MLP):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
+class AmpMlp(apex.mlp.MLP):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-#     def forward(self, input):
-#         return mlp_function(self.bias, self.activation, input, *self.weights, *self.biases)
+    def forward(self, input):
+        return mlp_function(self.bias, self.activation, input, *self.weights, *self.biases)
 
 
 class AbstractMlp(nn.Module):

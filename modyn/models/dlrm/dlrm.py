@@ -7,7 +7,15 @@ from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.feature_spec import FeatureSpec, get_device_mapping, get_embedding_sizes
 from modyn.models.dlrm.utils.install_lib import install_cuda_ext
 
-class DLRM(nn.Module):
+class DLRM():
+    def __init__(
+        self,
+        model_configuration: dict[str, Any],
+    ) -> None:
+
+        self.model = DLRM_model(model_configuration)
+
+class DLRM_model(nn.Module):
     def __init__(
         self,
         model_configuration: dict[str, Any],
@@ -19,7 +27,7 @@ class DLRM(nn.Module):
 
         feature_spec = FeatureSpec.from_yaml("feature_spec.yaml")
 
-        world_embedding_sizes = get_embedding_sizes(feature_spec, max_table_size=model_configuration["max_table_size"])
+        world_embedding_sizes = get_embedding_sizes(feature_spec, max_table_size=model_configuration["max_table_size"] if "max_table_size" in model_configuration else None)
         world_categorical_feature_sizes = np.asarray(world_embedding_sizes)
         device_mapping = get_device_mapping(world_embedding_sizes, num_gpus=1)
 

@@ -3,21 +3,17 @@ pipeline:
   description: Training DLRM (NVIDIA version) with CRITEO dataset
   version: 1.0.0
 model:
-  id: ResNet18
+  id: DLRM
   config:
-    vectors_per_gpu: []
     embedding_dim: 128
     interaction_op: "cuda_dot"
     hash_indices: False
-    categorical_feature_sizes: []
-    num_numerical_features: 1
     bottom_mlp_sizes: [512, 256, 128]
     top_mlp_sizes: [1024, 1024, 512, 256, 1]
-    embedding_type: "joint_cuda"
+    embedding_type: "joint_fused"
     use_cpp_mlp: True
     fp16: False
     bottom_features_ordered: False
-    max_table_size: None
 training:
   gpus: 1
   device: "cuda:0"
@@ -28,22 +24,34 @@ training:
   batch_size: 65536
   optimizers:
     - name: "mlp"
-      algorithm: "SGD"
+      algorithm: "FusedSGD"
       source: "APEX"
       param_groups:
         - module: "model.top_model"
           config:
-            lr: 0.1
+            lr: 24
         - module: "model.bottom_model.mlp"
           config:
-            lr: 0.1
+            lr: 24
     - name: "opt_1"
       algorithm: "SGD"
       source: "PyTorch"
       param_groups:
         - module: "model.bottom_model.embeddings"
           config:
-            lr: 0.1
+            lr: 24
+  lr_scheduler:
+    name: "DLRMscheduler"
+    custom: True
+    optimizers: ["mlp", "opt_1"]
+    config:
+      base_lrs: [24, 24]
+      warmup_steps: 8000
+      warmup_factor: 0
+      decay_steps: 24000
+      decay_start_step: 48000
+      decay_power: 2
+      end_lr_factor: 0
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
@@ -56,6 +64,8 @@ training:
 data:
   dataset_id: criteo
   bytes_parser_function: |
+    import torch
+
     def bytes_parser_function(x: bytes) -> dict:
       num_features = x[:52]
       cat_features = x[52:]
