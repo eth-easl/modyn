@@ -7,7 +7,7 @@ Currently, we provide an MNIST example and a Criteo 1TB Advertising dataset exam
 ## Benchmarks
 
 ### MNIST 
-The MNIST storage script downloads the MNIST dataset into a given directory. For more information on parameters run with `-h`.
+In the `mnist` directory, you find files to running experiments on a dynamic version of the MNIST data set.
 
 
 ### Criteo 1TB Dataset
