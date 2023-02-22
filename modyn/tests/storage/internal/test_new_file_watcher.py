@@ -70,6 +70,8 @@ def session():
         database.create_tables()
         yield database.session
         database.session.query(Dataset).delete()
+        database.session.query(File).delete()
+        database.session.query(Sample).delete()
         database.session.commit()
 
 
@@ -152,20 +154,24 @@ def test_seek(test__seek_dataset, session) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
 
+    dataset = Dataset(
+        name="test1",
+        description="test description",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
+        base_path=TEST_DIR,
+        last_timestamp=FILE_TIMESTAMP - 1,
+    )
+    session.add(dataset)
+    session.commit()
     session.add(
-        Dataset(
-            name="test1",
-            description="test description",
-            filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
-            base_path=TEST_DIR,
-            last_timestamp=FILE_TIMESTAMP - 1,
-        )
+        File(dataset=dataset, path="/tmp/modyn/test", created_at=0, updated_at=FILE_TIMESTAMP + 10, number_of_samples=1)
     )
     session.commit()
 
     new_file_watcher._seek()
     assert test__seek_dataset.called
+    assert session.query(Dataset).first().last_timestamp == FILE_TIMESTAMP + 10
 
 
 @patch.object(NewFileWatcher, "_update_files_in_directory", return_value=None)
@@ -185,7 +191,7 @@ def test_seek_dataset(test__update_files_in_directory, session) -> None:  # noqa
     )
     session.commit()
     dataset = session.query(Dataset).first()
-    new_file_watcher._seek_dataset(session, dataset, FILE_TIMESTAMP - 1)
+    new_file_watcher._seek_dataset(session, dataset)
     assert test__update_files_in_directory.called
 
 
@@ -194,20 +200,24 @@ def test_seek_path_not_exists(test__update_files_in_directory, session) -> None:
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), should_stop)
 
+    dataset = Dataset(
+        name="test1",
+        description="test description",
+        filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
+        file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
+        base_path="/notexists",
+        last_timestamp=FILE_TIMESTAMP - 1,
+    )
+    session.add(dataset)
+    session.commit()
     session.add(
-        Dataset(
-            name="test",
-            description="test description",
-            filesystem_wrapper_type=FilesystemWrapperType.LocalFilesystemWrapper,
-            file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
-            base_path="/notexists",
-            last_timestamp=FILE_TIMESTAMP - 1,
-        )
+        File(dataset=dataset, path="/tmp/modyn/test", created_at=0, updated_at=FILE_TIMESTAMP + 10, number_of_samples=1)
     )
     session.commit()
 
     new_file_watcher._seek()
     assert not test__update_files_in_directory.called
+    assert session.query(Dataset).first().last_timestamp == FILE_TIMESTAMP + 10
 
 
 @patch.object(NewFileWatcher, "_update_files_in_directory", return_value=None)
@@ -336,7 +346,7 @@ def test_update_files_in_directory_ignore_last_timestamp(
 
     result = session.query(File).all()
     assert result is not None
-    assert len(result) == 4
+    assert len(result) == 2
     assert result[0].path == TEST_FILE1
     assert result[0].created_at == FILE_TIMESTAMP
     assert result[0].number_of_samples == 2
@@ -344,7 +354,7 @@ def test_update_files_in_directory_ignore_last_timestamp(
 
     result = session.query(Sample).all()
     assert result is not None
-    assert len(result) == 8
+    assert len(result) == 4
     assert result[0].file_id == 1
 
 

@@ -11,7 +11,6 @@ from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
-from modyn.utils import current_time_millis
 from sqlalchemy import exc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
@@ -52,13 +51,20 @@ class NewFileWatcher:
                     f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
                     is equal or greater than {dataset.last_timestamp}"
                 )
-                self._seek_dataset(session, dataset, dataset.last_timestamp)
-                session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
-                    {"last_timestamp": current_time_millis()}
+                self._seek_dataset(session, dataset)
+                last_timestamp = (
+                    session.query(File.updated_at)
+                    .filter(File.dataset_id == dataset.dataset_id)
+                    .order_by(File.updated_at.desc())
+                    .first()
                 )
-                session.commit()
+                if last_timestamp is not None:
+                    session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
+                        {"last_timestamp": last_timestamp[0]}
+                    )
+                    session.commit()
 
-    def _seek_dataset(self, session: Session, dataset: Dataset, timestamp: int) -> None:
+    def _seek_dataset(self, session: Session, dataset: Dataset) -> None:
         """Seek the filesystem for a dataset for new files and add them to the database.
 
         If last timestamp is not ignored, the last timestamp of the dataset will be used to
@@ -67,14 +73,18 @@ class NewFileWatcher:
         Args:
             session (Session): Database session.
             dataset (Dataset): Dataset to seek.
-            timestamp (int): Timestamp to use for seeking.
         """
         filesystem_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
 
         if filesystem_wrapper.exists(dataset.base_path):
             if filesystem_wrapper.isdir(dataset.base_path):
                 self._update_files_in_directory(
-                    filesystem_wrapper, dataset.file_wrapper_type, dataset.base_path, timestamp, session, dataset
+                    filesystem_wrapper,
+                    dataset.file_wrapper_type,
+                    dataset.base_path,
+                    dataset.last_timestamp,
+                    session,
+                    dataset,
                 )
             else:
                 logger.critical(f"Path {dataset.base_path} is not a directory.")
@@ -124,10 +134,8 @@ class NewFileWatcher:
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
             if (
-                (dataset.ignore_last_timestamp
-                or filesystem_wrapper.get_modified(file_path) >= timestamp)
-                and self._file_unknown(session, file_path)
-            ):
+                dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
+            ) and self._file_unknown(session, file_path):
                 try:
                     number_of_samples = file_wrapper.get_number_of_samples()
                     file: File = File(
