@@ -138,7 +138,7 @@ class OnlineDataset(IterableDataset):
         data, labels = self._get_data_from_storage(keys)
 
         self._dataset_len = len(data)
-        self._info("Data obtained (len = {self._dataset_len})", worker_id)
+        self._info(f"Data obtained (len = {self._dataset_len})", worker_id)
 
         for key, sample, label in zip(keys, data, labels):
             # mypy complains here because _transform has unknown type, which is ok

@@ -45,7 +45,7 @@ training:
     custom: True
     optimizers: ["mlp", "opt_1"]
     config:
-      base_lrs: [24, 24]
+      base_lrs: [[24, 24], [24]]
       warmup_steps: 8000
       warmup_factor: 0
       decay_steps: 24000

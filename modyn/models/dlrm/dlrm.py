@@ -86,4 +86,4 @@ class DLRM_model(nn.Module):
 
         # bottom mlp output may be not present before all to all communication
         from_bottom, bottom_mlp_output = self.bottom_model(numerical_input, categorical_inputs)
-        return self.top_model(from_bottom, bottom_mlp_output)
+        return self.top_model(from_bottom, bottom_mlp_output).squeeze()
