@@ -129,7 +129,7 @@ class NewFileWatcher:
                         for i in range(number_of_samples)
                     ]
                     logger.debug("Samples generated, inserting.")
-                    session.add_all(samples)
+                    session.bulk_save_objects(samples)
                     session.commit()
                     logger.debug(f"Inserted {number_of_samples} samples.")
                 except exc.SQLAlchemyError as exception:
