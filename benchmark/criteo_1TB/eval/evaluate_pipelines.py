@@ -1,9 +1,9 @@
 import argparse
+import json
 import logging
 import os
 import pathlib
 import sys
-import json
 
 from evaluation_support import evaluate_model
 

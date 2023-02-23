@@ -1,9 +1,9 @@
-import sys
-import os
 import json
+import os
+import sys
+
 import matplotlib
 import matplotlib.pyplot as plt
-
 
 #######################################
 # Plotting

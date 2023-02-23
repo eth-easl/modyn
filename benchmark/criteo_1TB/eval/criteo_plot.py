@@ -1,7 +1,8 @@
 import sys
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 from plotting.common import *
+
 
 def plot_accuracy(pipelines_data, ax):
     for pipeline in sorted(pipelines_data):

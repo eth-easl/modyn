@@ -1,5 +1,7 @@
 import pathlib
+
 import torch
+
 
 def instantiate_model():
     pass # do stuff like CUDA, model.eval() here
