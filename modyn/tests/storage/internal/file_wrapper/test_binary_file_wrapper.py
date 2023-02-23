@@ -109,6 +109,11 @@ def test_get_label():
     assert label == 0
 
 
+def test_get_all_labels():
+    file_wrapper = BinaryFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
+    assert file_wrapper.get_all_labels() == [1, 1, 0]
+
+
 def test_get_label_with_invalid_index():
     file_wrapper = BinaryFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     with pytest.raises(IndexError):

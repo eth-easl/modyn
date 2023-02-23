@@ -76,7 +76,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         Returns:
             int: Number of samples in file
         """
-        return self.file_size / self.record_size
+        return int(self.file_size / self.record_size)
 
     def get_label(self, index: int) -> int:
         """Get the label of the sample at the given index.
@@ -92,12 +92,28 @@ class BinaryFileWrapper(AbstractFileWrapper):
         """
         data = self.filesystem_wrapper.get(self.file_path)
 
-        total_samples = len(data) / self.record_size
+        total_samples = self.get_number_of_samples()
         self._validate_request_indices(total_samples, [index])
 
         record_start = index * self.record_size
         lable_bytes = data[record_start : record_start + self.label_size]
         return int.from_bytes(lable_bytes, byteorder=self.byteorder)
+
+    def get_all_labels(self) -> list[int]:
+        """Returns a list of all labels of all samples in the file.
+
+        Returns:
+            list[int]: List of labels
+        """
+        data = self.filesystem_wrapper.get(self.file_path)
+        num_samples = self.get_number_of_samples()
+        labels = [
+            int.from_bytes(
+                data[(idx * self.record_size) : (idx * self.record_size) + self.label_size], byteorder=self.byteorder
+            )
+            for idx in range(num_samples)
+        ]
+        return labels
 
     def get_sample(self, index: int) -> bytes:
         """Get the sample at the given index.
