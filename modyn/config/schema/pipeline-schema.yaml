@@ -247,6 +247,10 @@ properties:
         description: |
           Further (optional) transformations to be applied on the data after bytes_parser_function has been applied.
           For example, this can be torchvision transformations.
+      label_transformer_function:
+        type: string
+        description: |
+          (Optional) function used to transform the label (tensors of integers).
     required:
       - dataset_id
       - bytes_parser_function

@@ -283,6 +283,7 @@ class GRPCHandler:
             checkpoint_info=checkpoint_info,
             transform_list=transform_list,
             bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
+            label_transformer=PythonString(value=pipeline_config["data"]["label_transformer_function"] if "label_transformer_function" in pipeline_config["data"] else ""),
             lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs))
         )
 

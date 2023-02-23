@@ -54,6 +54,7 @@ message StartTrainingRequest {
     PythonString bytes_parser = 15;
     repeated string transform_list = 16;
     JsonString lr_scheduler = 17;
+    PythonString label_transformer = 18;
 }
 
 message StartTrainingResponse {

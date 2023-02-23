@@ -1,3 +1,4 @@
+from inspect import isfunction
 import io
 import logging
 import multiprocessing as mp
@@ -91,6 +92,15 @@ class PytorchTrainer:
             training_info.training_id,
         )
 
+        self._mod_dict = {}
+        if training_info.label_transformer != "":
+            exec(training_info.label_transformer, self._mod_dict)  # pylint: disable=exec-used
+            if "label_transformer_function" not in self._mod_dict or not isfunction(self._mod_dict["label_transformer_function"]):
+                raise ValueError("Invalid label_transformer_function is provided")
+            self._label_tranformer_function = self._mod_dict["label_transformer_function"]
+        else:
+            self._label_tranformer_function = None
+
         self._device = device
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
@@ -179,7 +189,17 @@ class PytorchTrainer:
                 pass
 
             sample_ids = batch[0]
-            data, target = batch[1].to(self._device), batch[2].to(self._device)
+            if self._label_tranformer_function is None:
+                target = batch[2].to(self._device)
+            else:
+                target = self._label_tranformer_function(batch[2]).to(self._device)
+
+            if isinstance(batch[1], torch.Tensor):
+                data = batch[1].to(self._device)
+            elif isinstance(batch[1], dict):
+                data: dict[str, torch.Tensor] = {}
+                for name, tensor in batch[1].items():
+                    data[name] = tensor.to(self._device)
 
             for _,optimizer in self._optimizers.items():
                 optimizer.zero_grad()

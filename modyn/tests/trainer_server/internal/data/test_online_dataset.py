@@ -260,7 +260,7 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
         assert len(batch) == 3
         assert batch[0] == (str(4 * i), str(4 * i + 1), str(4 * i + 2), str(4 * i + 3))
         assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
-        assert torch.equal(batch[2], torch.ones(4, dtype=int))
+        assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
 
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)

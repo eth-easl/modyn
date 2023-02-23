@@ -21,7 +21,7 @@ training:
   initial_model: random
   initial_pass:
     activated: False
-  batch_size: 65536
+  batch_size: 64
   optimizers:
     - name: "mlp"
       algorithm: "FusedSGD"
@@ -29,23 +29,23 @@ training:
       param_groups:
         - module: "model.top_model"
           config:
-            lr: 24
+            lr: 0.1
         - module: "model.bottom_model.mlp"
           config:
-            lr: 24
+            lr: 0.1
     - name: "opt_1"
       algorithm: "SGD"
       source: "PyTorch"
       param_groups:
         - module: "model.bottom_model.embeddings"
           config:
-            lr: 24
+            lr: 0.1
   lr_scheduler:
     name: "DLRMscheduler"
     custom: True
     optimizers: ["mlp", "opt_1"]
     config:
-      base_lrs: [[24, 24], [24]]
+      base_lrs: [[0.1, 0.1], [0.1]]
       warmup_steps: 8000
       warmup_factor: 0
       decay_steps: 24000
@@ -89,4 +89,4 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 2000
+    data_points_for_trigger: 100

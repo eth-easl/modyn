@@ -33,6 +33,7 @@ class TrainingInfo:
 
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
+        self.label_transformer = request.label_transformer.value
 
         self.model_id = request.model_id
         model_module = dynamic_module_import("modyn.models")

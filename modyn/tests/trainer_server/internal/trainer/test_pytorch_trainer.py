@@ -94,6 +94,9 @@ class CustomLRScheduler():
 def get_mock_bytes_parser():
     return "def bytes_parser_function(x):\n\treturn x"
 
+def get_mock_label_transformer():
+    return "import torch\ndef label_transformer_function(x: torch.Tensor) -> torch.Tensor:\n\treturn x.to(torch.float32)"
+
 
 def mock_get_dataloaders(
     pipeline_id,
@@ -127,6 +130,7 @@ def get_training_info(
     selector_address: str,
     num_optimizers: int,
     lr_scheduler: str,
+    transform_label: bool,
     model_dynamic_module_patch: MagicMock,
 ):
     print(num_optimizers)
@@ -188,6 +192,7 @@ def get_training_info(
     else:
         lr_scheduler_config = {}
 
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         with tempfile.TemporaryDirectory() as final_tmpdirname:
             model_dynamic_module_patch.return_value = MockModule(num_optimizers)
@@ -209,6 +214,7 @@ def get_training_info(
                 load_optimizer_state=load_optimizer_state,
                 pretrained_model=pretrained_model,
                 lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
+                label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else "")
             )
             training_info = TrainingInfo(
                 request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname)
@@ -230,6 +236,7 @@ def get_mock_trainer(
     pretrained_model: Any,
     num_optimizers: int,
     lr_scheduler: str,
+    transform_label: bool,
     lr_scheduler_dynamic_module_patch: MagicMock,
     model_dynamic_module_patch: MagicMock,
     test_insecure_channel: MagicMock,
@@ -237,13 +244,13 @@ def get_mock_trainer(
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
-    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers, lr_scheduler)
+    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers, lr_scheduler, transform_label)
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue, logging.getLogger(__name__))
     return trainer
 
 
 def test_trainer_init():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
@@ -253,10 +260,11 @@ def test_trainer_init():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
+    assert trainer._label_tranformer_function is None
 
 
 def test_trainer_init_multi_optimizers():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, b"state", 2, "")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, b"state", 2, "", False)
     assert isinstance(trainer._model, MockSuperModelWrapper)
     assert len(trainer._optimizers) == 2
     assert isinstance(trainer._optimizers['opt1'], torch.optim.SGD)
@@ -267,10 +275,10 @@ def test_trainer_init_multi_optimizers():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-
+    assert trainer._label_tranformer_function is None
 
 def test_trainer_init_torch_lr_scheduler():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "torch")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "torch", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
@@ -280,10 +288,10 @@ def test_trainer_init_torch_lr_scheduler():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-
+    assert trainer._label_tranformer_function is None
 
 def test_trainer_init_custom_lr_scheduler():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "custom")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "custom", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
@@ -293,11 +301,11 @@ def test_trainer_init_custom_lr_scheduler():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-
+    assert trainer._label_tranformer_function is None
 
 @patch.object(PytorchTrainer, "load_state_if_given")
 def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state", 1, "")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state", 1, "", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
@@ -306,10 +314,28 @@ def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
     load_state_if_given_mock.assert_called_once_with(b"state", False)
+    assert trainer._label_tranformer_function is None
+
+
+def test_trainer_init_with_label_transformer():
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", True)
+    assert isinstance(trainer._model, MockModelWrapper)
+    assert len(trainer._optimizers) == 1
+    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
+    assert not trainer._lr_scheduler
+    assert trainer._device == "cpu"
+    assert trainer._num_samples == 0
+    assert trainer._checkpoint_interval == 10
+    assert os.path.isdir(trainer._checkpoint_path)
+    assert trainer._label_tranformer_function is not None
+    test_tensor = torch.ones(10, dtype=torch.int32)
+    assert torch.equal(trainer._label_tranformer_function(test_tensor), torch.ones(10, dtype=torch.float32))
+    assert trainer._label_tranformer_function(test_tensor).dtype == torch.float32
 
 
 def test_save_state_to_file():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 2, "")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
     with tempfile.NamedTemporaryFile() as temp:
         trainer.save_state(temp.name, 10)
         assert os.path.exists(temp.name)
@@ -369,7 +395,7 @@ def test_save_state_to_file():
 
 
 def test_save_state_to_buffer():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", False)
     buffer = io.BytesIO()
     trainer.save_state(buffer)
     buffer.seek(0)
@@ -450,19 +476,19 @@ def test_load_state_if_given():
     torch.save(dict_to_save, initial_state_buffer)
     initial_state_buffer.seek(0)
     initial_state = initial_state_buffer.read()
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state, 2, "")
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state, 2, "", False)
     assert trainer._model.model.state_dict() == dict_to_save["model"]
     assert trainer._optimizers["opt1"].state_dict() == dict_to_save["optimizer-opt1"]
     assert trainer._optimizers["opt2"].state_dict() == dict_to_save["optimizer-opt2"]
 
-    new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state, 2, "")
+    new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state, 2, "", False)
     assert new_trainer._model.model.state_dict() == dict_to_save["model"]
 
 
 def test_send_state_to_server():
     response_queue = mp.Queue()
     query_queue = mp.Queue()
-    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "")
+    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "", False)
     trainer.send_state_to_server(20)
     response = response_queue.get()
     assert response["num_batches"] == 20
@@ -495,7 +521,7 @@ def test_send_state_to_server():
 def test_train_invalid_query_message():
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1, "")
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1, "", False)
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
@@ -545,7 +571,7 @@ def test_train(
 ):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 2, "custom")
+    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 2, "custom", False)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
     timeout = 2
     elapsed = 0
@@ -671,7 +697,7 @@ def test_create_trainer_with_exception(
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(0, False, False, None, "", "", 1, "")
+    training_info = get_training_info(0, False, False, None, "", "", 1, "", False)
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
