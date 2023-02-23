@@ -70,11 +70,22 @@ data:
       num_features = x[:52]
       cat_features = x[52:]
 
-      return {
-        "numerical_input": torch.frombuffer(num_features, dtype=torch.float32),
-        "categorical_input": torch.frombuffer(cat_features, dtype=torch.int32).to(torch.long)
-      }
+      num_features_array = np.frombuffer(num_features, dtype=np.float32)
+      cat_features_array = np.frombuffer(cat_features, dtype=np.int32)
 
+      order = [19, 0, 21, 9, 20, 10, 22, 11, 1, 4, 2, 23, 14, 3, 6, 13, 7, 17, 15, 24, 8, 25, 18, 12, 5, 16]
+      cat_features_ordered = [cat_features_array[i] for i in order]
+      cat_features_ordered = np.asarray(cat_features_ordered, dtype=np.int32)
+
+      return {
+        "numerical_input": torch.asarray(num_features_array, copy=True, dtype=torch.float32),
+        "categorical_input": torch.asarray(cat_features_ordered, copy=True, dtype=torch.int32)
+      }
+  label_transformer_function: |
+    import torch
+
+    def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
+      return x.to(torch.float32)
 trigger:
   id: DataAmountTrigger
   trigger_config:
