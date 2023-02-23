@@ -70,6 +70,7 @@ runs:
         run: |
           conda update -n base -c defaults conda
           conda update --all
+          conda env remove -n modyn || true
           conda env create -f ./environment.yml
           conda run -n modyn pip install -r dev-requirements.txt
         if: steps.cache.outputs.cache-hit != 'true'
