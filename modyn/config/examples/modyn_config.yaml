@@ -11,19 +11,6 @@ storage:
   datasets:
     [
       {
-        name: "mnist",
-        description: "MNIST Dataset",
-        version: "0.0.1",
-        base_path: "/datasets/mnist",
-        filesystem_wrapper_type: "LocalFilesystemWrapper",
-        file_wrapper_type: "SingleSampleFileWrapper",
-        file_wrapper_config:
-          {
-            file_extension: ".png",
-            label_file_extension: ".label"
-          }
-      },
-      {
         name: "criteo",
         description: "Criteo Dataset",
         version: "0.0.1",
@@ -33,8 +20,9 @@ storage:
         file_wrapper_config:
           {
             byteorder: "little",
-            record_size: 156,
-            label_size: 4
+            record_size: 160,
+            label_size: 4,
+            file_extension: "bin"
           }
       }
     ]
