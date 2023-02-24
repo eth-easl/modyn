@@ -52,3 +52,4 @@ selector:
 trainer_server:
   hostname: "trainer_server"
   port: "50057"
+  ftp_port: "50058"

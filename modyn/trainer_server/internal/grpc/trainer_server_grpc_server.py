@@ -2,8 +2,6 @@
 
 import logging
 import pathlib
-import shutil
-import tempfile
 from concurrent import futures
 
 import grpc
@@ -18,13 +16,14 @@ MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 class GRPCServer:
     """GRPC server context manager."""
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict, tempdir: pathlib.Path) -> None:
         """Initialize the GRPC server.
 
         Args:
             config (dict): Modyn configuration.
         """
         self.config = config
+        self.tempdir = tempdir
         self.server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=10),
             options=[
@@ -40,7 +39,7 @@ class GRPCServer:
             grpc.Server: GRPC server
         """
 
-        add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(self.config), self.server)
+        add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(self.config, self.tempdir), self.server)
         logger.info(f"Starting trainer server. Listening on port {self.config['trainer_server']['port']}")
         self.server.add_insecure_port("[::]:" + self.config["trainer_server"]["port"])
         logger.info("start serving!")
@@ -55,6 +54,4 @@ class GRPCServer:
             exc_val (Exception): exception value
             exc_tb (Exception): exception traceback
         """
-
-        shutil.rmtree(pathlib.Path(tempfile.gettempdir()) / "modyn")
         self.server.stop(0)
