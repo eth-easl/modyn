@@ -3,7 +3,7 @@
 from modyn.storage.internal.database.storage_base import StorageBase
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
-from sqlalchemy import Boolean, Column, Enum, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, Enum, Integer, String
 
 
 class Dataset(StorageBase):
@@ -20,7 +20,7 @@ class Dataset(StorageBase):
     file_wrapper_type = Column(Enum(FileWrapperType), nullable=False)
     base_path = Column(String(120), unique=False, nullable=False)
     file_wrapper_config = Column(String(240), unique=False, nullable=True)
-    last_timestamp = Column(Integer, unique=False, nullable=False)
+    last_timestamp = Column(BigInteger, unique=False, nullable=False)
     ignore_last_timestamp = Column(Boolean, unique=False, nullable=False, default=False)
 
     def __repr__(self) -> str:
