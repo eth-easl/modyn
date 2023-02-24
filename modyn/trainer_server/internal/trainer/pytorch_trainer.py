@@ -71,16 +71,20 @@ class PytorchTrainer:
 
         self._lr_scheduler = None
         if training_info.lr_scheduler:
-            if training_info.lr_scheduler["custom"]:
-                lr_scheduler_module = dynamic_module_import("modyn.custom_lr_schedulers")
+            if training_info.lr_scheduler["source"] == "Custom":
+                lr_scheduler_module = dynamic_module_import("modyn.trainer_server.custom_lr_schedulers")
                 custom_lr_scheduler = getattr(lr_scheduler_module, training_info.lr_scheduler["name"])
                 optimizers = [self._optimizers[opt] for opt in training_info.lr_scheduler["optimizers"]]
                 self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
-            else:
+            elif training_info.lr_scheduler["source"] == "PyTorch":
                 torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
                 self._lr_scheduler = torch_lr_scheduler(
                     self._optimizers[training_info.lr_scheduler["optimizers"][0]],
                     **training_info.lr_scheduler["config"],
+                )
+            else:
+                raise ValueError(
+                    f"Unsupported LR scheduler of source {training_info.lr_scheduler['source']}. PyTorch and Custom are supported"
                 )
 
         # setup dataloaders

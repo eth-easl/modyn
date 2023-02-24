@@ -172,14 +172,14 @@ def get_training_info(
     if lr_scheduler == "torch":
         lr_scheduler_config = {
             "name": "StepLR",
-            "custom": False,
+            "source": "PyTorch",
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1"],
             "config": {"step_size": 10},
         }
     elif lr_scheduler == "custom":
         lr_scheduler_config = {
             "name": "custom_scheduler",
-            "custom": True,
+            "source": "Custom",
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1", "opt2"],
             "config": {},
         }

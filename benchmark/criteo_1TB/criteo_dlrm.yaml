@@ -43,7 +43,7 @@ training:
             lr: 0.1
   lr_scheduler:
     name: "DLRMScheduler"
-    custom: True
+    source: "Custom"
     optimizers: ["mlp", "opt_1"]
     config:
       base_lrs: [[0.1, 0.1], [0.1]]
