@@ -45,6 +45,7 @@ class PytorchTrainer:
                 optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
             elif optimizer_config["source"] == "APEX":
                 import apex  # pylint: disable=import-outside-toplevel, import-error
+
                 optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
             else:
                 raise ValueError(
