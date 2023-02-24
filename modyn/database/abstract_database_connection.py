@@ -12,13 +12,15 @@ from sqlalchemy.orm.session import Session
 
 
 class AbstractDatabaseConnection(ABC):
-    def __init__(self, modyn_config: dict) -> None:
+    def __init__(self, modyn_config: dict, print_queries: bool = False) -> None:
         """Initialize the database connection.
 
         Args:
             modyn_config (dict): Configuration of the modyn module.
+            print_queries (bool): Whether to log the queries to DB that SQLAlchemy makes
         """
         self.modyn_config = modyn_config
+        self.print_queries = print_queries
         self.session: Session = None
         self.engine: Engine = None
         self.url = None
@@ -43,7 +45,7 @@ class AbstractDatabaseConnection(ABC):
             port=self.port,
             database=self.database,
         )
-        self.engine = create_engine(self.url, echo=True)
+        self.engine = create_engine(self.url, echo=self.print_queries)
         self.session = sessionmaker(bind=self.engine)()
         return self
 
