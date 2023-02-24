@@ -57,6 +57,7 @@ ignore-paths=^modyn/frontend/.*$,
              ^modyn/models/dlrm/cuda_ext/.*$,
              ^modyn/models/dlrm/cuda_src/.*$,
              ^modyn/models/dlrm/utils/.*$,
+             ^modyn/models/dlrm/nn/.*$,
 
 # Files or directories matching the regex patterns are skipped. The regex
 # matches against base names, not paths. The default value ignores Emacs file

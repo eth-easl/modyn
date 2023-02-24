@@ -1,4 +1,3 @@
-from inspect import isfunction
 import io
 import logging
 import multiprocessing as mp
@@ -6,7 +5,8 @@ import os
 import pathlib
 import queue
 import traceback
-from typing import Optional, Union
+from inspect import isfunction
+from typing import Any, Callable, Optional, Union
 
 import torch
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
@@ -19,7 +19,7 @@ from modyn.utils.utils import dynamic_module_import
 
 
 class PytorchTrainer:
-    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
 
     def __init__(
         self,
@@ -44,17 +44,21 @@ class PytorchTrainer:
             if optimizer_config["source"] == "PyTorch":
                 optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
             elif optimizer_config["source"] == "APEX":
-                import apex
+                import apex  # pylint: disable=import-outside-toplevel
+
                 optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
             else:
-                raise ValueError(f"Unsupported optimizer from {optimizer_config['source']}. Currently only PyTorch and APEX optimizers are supported")
+                raise ValueError(
+                    f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
+                )
             optimizer_config_list = []
             for param_group in optimizer_config["param_groups"]:
                 module = param_group["module"]
-                param_group["config"]["params"] = eval(f"self._model.{module}.parameters()")
+                param_group["config"]["params"] = eval(
+                    f"self._model.{module}.parameters()"
+                )  # pylint: disable=eval-used
                 optimizer_config_list.append(param_group["config"])
             self._optimizers[name] = optimizer_func(optimizer_config_list)
-
 
         self._info("Model and optimizer created.")
 
@@ -74,8 +78,10 @@ class PytorchTrainer:
                 self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
             else:
                 torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
-                self._lr_scheduler = torch_lr_scheduler(self._optimizers[training_info.lr_scheduler["optimizers"][0]], **training_info.lr_scheduler["config"])
-
+                self._lr_scheduler = torch_lr_scheduler(
+                    self._optimizers[training_info.lr_scheduler["optimizers"][0]],
+                    **training_info.lr_scheduler["config"],
+                )
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -92,14 +98,15 @@ class PytorchTrainer:
             training_info.training_id,
         )
 
-        self._mod_dict = {}
+        self._mod_dict: dict[str, Any] = {}
+        self._label_tranformer_function: Optional[Callable] = None
         if training_info.label_transformer != "":
             exec(training_info.label_transformer, self._mod_dict)  # pylint: disable=exec-used
-            if "label_transformer_function" not in self._mod_dict or not isfunction(self._mod_dict["label_transformer_function"]):
+            if "label_transformer_function" not in self._mod_dict or not isfunction(
+                self._mod_dict["label_transformer_function"]
+            ):
                 raise ValueError("Invalid label_transformer_function is provided")
             self._label_tranformer_function = self._mod_dict["label_transformer_function"]
-        else:
-            self._label_tranformer_function = None
 
         self._device = device
         self._checkpoint_path = training_info.checkpoint_path
@@ -162,7 +169,7 @@ class PytorchTrainer:
             }
         )
 
-    def train(self) -> None:
+    def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
 
         self._model.model.train()
@@ -194,14 +201,15 @@ class PytorchTrainer:
             else:
                 target = self._label_tranformer_function(batch[2]).to(self._device)
 
+            data: Union[torch.Tensor, dict]
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(self._device)
             elif isinstance(batch[1], dict):
-                data: dict[str, torch.Tensor] = {}
+                data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
                 for name, tensor in batch[1].items():
                     data[name] = tensor.to(self._device)
 
-            for _,optimizer in self._optimizers.items():
+            for _, optimizer in self._optimizers.items():
                 optimizer.zero_grad()
 
             # TODO(): where to perform lr_scheduler.step? make it configurable
@@ -217,14 +225,14 @@ class PytorchTrainer:
                     self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                 )
 
-            for _,optimizer in self._optimizers.items():
+            for _, optimizer in self._optimizers.items():
                 optimizer.step()
 
             if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
                 checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
                 self.save_state(checkpoint_file_name, batch_number)
 
-            self._num_samples += data.shape[0]
+            self._num_samples += target.shape[0]
 
             for _, callback in self._callbacks.items():
                 callback.on_batch_end(

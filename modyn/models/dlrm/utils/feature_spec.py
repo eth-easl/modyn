@@ -12,18 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import deque
+# flake8: noqa
+# mypy: ignore-errors
+
 import math
-import yaml
 import os
-from typing import Dict, Optional, Sequence
-from typing import List
+from collections import deque
+from typing import Dict, List, Optional, Sequence
+
 import numpy as np
-from modyn.models.dlrm.utils.data_defaults import CATEGORICAL_CHANNEL, NUMERICAL_CHANNEL, LABEL_CHANNEL, \
-    TRAIN_MAPPING, TEST_MAPPING, \
-    TYPE_SELECTOR, FEATURES_SELECTOR, FILES_SELECTOR, CARDINALITY_SELECTOR, DTYPE_SELECTOR, \
-    SPLIT_BINARY, \
-    get_categorical_feature_type
+import yaml
+from modyn.models.dlrm.utils.data_defaults import (
+    CARDINALITY_SELECTOR,
+    CATEGORICAL_CHANNEL,
+    DTYPE_SELECTOR,
+    FEATURES_SELECTOR,
+    FILES_SELECTOR,
+    LABEL_CHANNEL,
+    NUMERICAL_CHANNEL,
+    SPLIT_BINARY,
+    TEST_MAPPING,
+    TRAIN_MAPPING,
+    TYPE_SELECTOR,
+    get_categorical_feature_type,
+)
 
 """ For performance reasons, numerical features are required to appear in the same order
     in both source_spec and channel_spec.
@@ -40,7 +52,7 @@ class FeatureSpec:
 
     @classmethod
     def from_yaml(cls, path):
-        with open(path, 'r') as feature_spec_file:
+        with open(path, "r") as feature_spec_file:
             base_directory = os.path.dirname(path)
             feature_spec = yaml.safe_load(feature_spec_file)
             return cls.from_dict(feature_spec, base_directory=base_directory)
@@ -50,7 +62,7 @@ class FeatureSpec:
         return cls(base_directory=base_directory, **source_dict)
 
     def to_dict(self) -> Dict:
-        attributes_to_dump = ['feature_spec', 'source_spec', 'channel_spec', 'metadata']
+        attributes_to_dump = ["feature_spec", "source_spec", "channel_spec", "metadata"]
         return {attr: self.__dict__[attr] for attr in attributes_to_dump}
 
     def to_string(self):
@@ -58,8 +70,8 @@ class FeatureSpec:
 
     def to_yaml(self, output_path=None):
         if not output_path:
-            output_path = self.base_directory + '/feature_spec.yaml'
-        with open(output_path, 'w') as output_file:
+            output_path = self.base_directory + "/feature_spec.yaml"
+        with open(output_path, "w") as output_file:
             print(yaml.dump(self.to_dict()), file=output_file)
 
     def get_number_of_numerical_features(self) -> int:
@@ -72,15 +84,14 @@ class FeatureSpec:
         return [feature_names[i] for i in positions]
 
     def get_categorical_feature_names(self):
-        """ Provides the categorical feature names. The returned order should me maintained."""
+        """Provides the categorical feature names. The returned order should me maintained."""
         return self.channel_spec[CATEGORICAL_CHANNEL]
 
     def get_categorical_sizes(self) -> List[int]:
         """For a given feature spec, this function is expected to return the sizes in the order corresponding to the
-        order in the channel_spec section """
+        order in the channel_spec section"""
         categorical_features = self.get_categorical_feature_names()
-        cardinalities = [self.feature_spec[feature_name][CARDINALITY_SELECTOR] for feature_name in
-                         categorical_features]
+        cardinalities = [self.feature_spec[feature_name][CARDINALITY_SELECTOR] for feature_name in categorical_features]
 
         return cardinalities
 
@@ -111,9 +122,9 @@ class FeatureSpec:
 
         # check that all features used in channel spec are exactly ones defined in feature_spec
         feature_spec_features = list(self.feature_spec.keys())
-        channel_spec_features = list(set.union(set_of_categorical_features,
-                                               set_of_numerical_features,
-                                               {label_feature_name}))
+        channel_spec_features = list(
+            set.union(set_of_categorical_features, set_of_numerical_features, {label_feature_name})
+        )
         assert sorted(feature_spec_features) == sorted(channel_spec_features)
 
         # check that correct dtypes are provided for all features
@@ -131,7 +142,6 @@ class FeatureSpec:
                 assert isinstance(feature_dict[CARDINALITY_SELECTOR], int)
 
         for mapping_name in [TRAIN_MAPPING, TEST_MAPPING]:
-
             mapping = self.source_spec[mapping_name]
             mapping_features = set()
             for chunk in mapping:
@@ -240,7 +250,7 @@ def get_device_mapping(embedding_sizes: Sequence[int], num_gpus: int = 1):
     vectors_per_gpu[0] += 1  # count bottom mlp
 
     return {
-        'bottom_mlp': 0,
-        'embedding': gpu_buckets,
-        'vectors_per_gpu': vectors_per_gpu,
+        "bottom_mlp": 0,
+        "embedding": gpu_buckets,
+        "vectors_per_gpu": vectors_per_gpu,
     }

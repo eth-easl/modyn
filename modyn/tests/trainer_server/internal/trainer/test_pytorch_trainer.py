@@ -42,6 +42,7 @@ class MockModule:
     def train(self) -> None:
         pass
 
+
 class MockModelWrapper:
     def __init__(self, model_configuration=None) -> None:
         self.model = MockModel()
@@ -59,6 +60,7 @@ class MockModel(torch.nn.Module):
 
     def forward(self, data):
         return data
+
 
 class MockSuperModel(torch.nn.Module):
     def __init__(self) -> None:
@@ -80,22 +82,29 @@ class MockDataset(torch.utils.data.IterableDataset):
         return iter(range(100))
 
 
-class MockLRSchedulerModule():
+class MockLRSchedulerModule:
     def __init__(self) -> None:
         self.custom_scheduler = CustomLRScheduler
 
-class CustomLRScheduler():
+
+# pylint: disable=dangerous-default-value
+class CustomLRScheduler:
     def __init__(self, optimizers, config={}) -> None:
         pass
 
     def step(self):
         pass
 
+
 def get_mock_bytes_parser():
     return "def bytes_parser_function(x):\n\treturn x"
 
+
 def get_mock_label_transformer():
-    return "import torch\ndef label_transformer_function(x: torch.Tensor) -> torch.Tensor:\n\treturn x.to(torch.float32)"
+    return (
+        "import torch\ndef label_transformer_function(x: torch.Tensor) -> "
+        "torch.Tensor:\n\treturn x.to(torch.float32)"
+    )
 
 
 def mock_get_dataloaders(
@@ -120,6 +129,7 @@ def noop_constructor_mock(self, channel):
     pass
 
 
+# # pylint: disable=too-many-locals
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
 def get_training_info(
     training_id: int,
@@ -135,44 +145,28 @@ def get_training_info(
 ):
     print(num_optimizers)
     if num_optimizers == 1:
-        torch_optimizers_configuration={
-            "default" : {
+        torch_optimizers_configuration = {
+            "default": {
                 "algorithm": "SGD",
                 "source": "PyTorch",
-                "param_groups": [
-                    {
-                        "module": "model",
-                        "config": {"lr": 0.1}
-                    }
-                ]
+                "param_groups": [{"module": "model", "config": {"lr": 0.1}}],
             }
         }
     else:
-        torch_optimizers_configuration={
-            "opt1" : {
+        torch_optimizers_configuration = {
+            "opt1": {
                 "algorithm": "SGD",
                 "source": "PyTorch",
-                "param_groups": [
-                    {
-                        "module": "model.moda",
-                        "config": {"lr": 0.1}
-                    }
-                ]
+                "param_groups": [{"module": "model.moda", "config": {"lr": 0.1}}],
             },
-            "opt2" : {
+            "opt2": {
                 "algorithm": "Adam",
                 "source": "PyTorch",
                 "param_groups": [
-                    {
-                        "module": "model.modb",
-                        "config": {"lr": 0.5}
-                    },
-                    {
-                        "module": "model.modc",
-                        "config": {"lr": 0.8}
-                    }
-                ]
-            }
+                    {"module": "model.modb", "config": {"lr": 0.5}},
+                    {"module": "model.modc", "config": {"lr": 0.8}},
+                ],
+            },
         }
 
     if lr_scheduler == "torch":
@@ -180,18 +174,17 @@ def get_training_info(
             "name": "StepLR",
             "custom": False,
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1"],
-            "config": {"step_size": 10}
+            "config": {"step_size": 10},
         }
     elif lr_scheduler == "custom":
         lr_scheduler_config = {
             "name": "custom_scheduler",
             "custom": True,
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1", "opt2"],
-            "config": {}
+            "config": {},
         }
     else:
         lr_scheduler_config = {}
-
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         with tempfile.TemporaryDirectory() as final_tmpdirname:
@@ -214,7 +207,7 @@ def get_training_info(
                 load_optimizer_state=load_optimizer_state,
                 pretrained_model=pretrained_model,
                 lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
-                label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else "")
+                label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
             )
             training_info = TrainingInfo(
                 request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname)
@@ -244,7 +237,9 @@ def get_mock_trainer(
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
-    training_info = get_training_info(0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers, lr_scheduler, transform_label)
+    training_info = get_training_info(
+        0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers, lr_scheduler, transform_label
+    )
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue, logging.getLogger(__name__))
     return trainer
 
@@ -253,7 +248,7 @@ def test_trainer_init():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
-    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert not trainer._lr_scheduler
     assert trainer._device == "cpu"
@@ -267,8 +262,8 @@ def test_trainer_init_multi_optimizers():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, b"state", 2, "", False)
     assert isinstance(trainer._model, MockSuperModelWrapper)
     assert len(trainer._optimizers) == 2
-    assert isinstance(trainer._optimizers['opt1'], torch.optim.SGD)
-    assert isinstance(trainer._optimizers['opt2'], torch.optim.Adam)
+    assert isinstance(trainer._optimizers["opt1"], torch.optim.SGD)
+    assert isinstance(trainer._optimizers["opt2"], torch.optim.Adam)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert not trainer._lr_scheduler
     assert trainer._device == "cpu"
@@ -277,11 +272,12 @@ def test_trainer_init_multi_optimizers():
     assert os.path.isdir(trainer._checkpoint_path)
     assert trainer._label_tranformer_function is None
 
+
 def test_trainer_init_torch_lr_scheduler():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "torch", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
-    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert isinstance(trainer._lr_scheduler, torch.optim.lr_scheduler.StepLR)
     assert trainer._device == "cpu"
@@ -290,11 +286,12 @@ def test_trainer_init_torch_lr_scheduler():
     assert os.path.isdir(trainer._checkpoint_path)
     assert trainer._label_tranformer_function is None
 
+
 def test_trainer_init_custom_lr_scheduler():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "custom", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
-    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert isinstance(trainer._lr_scheduler, CustomLRScheduler)
     assert trainer._device == "cpu"
@@ -303,11 +300,12 @@ def test_trainer_init_custom_lr_scheduler():
     assert os.path.isdir(trainer._checkpoint_path)
     assert trainer._label_tranformer_function is None
 
+
 @patch.object(PytorchTrainer, "load_state_if_given")
 def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state", 1, "", False)
     assert isinstance(trainer._model, MockModelWrapper)
-    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert trainer._device == "cpu"
     assert trainer._num_samples == 0
@@ -321,7 +319,7 @@ def test_trainer_init_with_label_transformer():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", True)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
-    assert isinstance(trainer._optimizers['default'], torch.optim.SGD)
+    assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert not trainer._lr_scheduler
     assert trainer._device == "cpu"
@@ -342,7 +340,13 @@ def test_save_state_to_file():
         saved_dict = torch.load(temp.name)
 
     assert saved_dict == {
-        "model": OrderedDict([("moda._weight", torch.tensor([1.0])), ("modb._weight", torch.tensor([1.0])), ("modc._weight", torch.tensor([1.0]))]),
+        "model": OrderedDict(
+            [
+                ("moda._weight", torch.tensor([1.0])),
+                ("modb._weight", torch.tensor([1.0])),
+                ("modc._weight", torch.tensor([1.0])),
+            ]
+        ),
         "optimizer-opt1": {
             "state": {},
             "param_groups": [
@@ -373,7 +377,7 @@ def test_save_state_to_file():
                     "capturable": False,
                     "differentiable": False,
                     "fused": False,
-                    "params": [0]
+                    "params": [0],
                 },
                 {
                     "lr": 0.8,
@@ -386,7 +390,7 @@ def test_save_state_to_file():
                     "capturable": False,
                     "differentiable": False,
                     "fused": False,
-                    "params": [1]
+                    "params": [1],
                 },
             ],
         },
@@ -423,7 +427,13 @@ def test_save_state_to_buffer():
 
 def test_load_state_if_given():
     dict_to_save = {
-        "model": OrderedDict([("moda._weight", torch.tensor([1.0])), ("modb._weight", torch.tensor([1.0])), ("modc._weight", torch.tensor([1.0]))]),
+        "model": OrderedDict(
+            [
+                ("moda._weight", torch.tensor([1.0])),
+                ("modb._weight", torch.tensor([1.0])),
+                ("modc._weight", torch.tensor([1.0])),
+            ]
+        ),
         "optimizer-opt1": {
             "state": {},
             "param_groups": [
@@ -454,7 +464,7 @@ def test_load_state_if_given():
                     "capturable": False,
                     "differentiable": False,
                     "fused": False,
-                    "params": [0]
+                    "params": [0],
                 },
                 {
                     "lr": 1.8,
@@ -467,7 +477,7 @@ def test_load_state_if_given():
                     "capturable": False,
                     "differentiable": False,
                     "fused": False,
-                    "params": [1]
+                    "params": [1],
                 },
             ],
         },
@@ -625,7 +635,13 @@ def test_train(
         assert status["num_samples"] == 0
         status_state = torch.load(io.BytesIO(status["state"]))
         checkpointed_state = {
-            "model": OrderedDict([("moda._weight", torch.tensor([1.0])), ("modb._weight", torch.tensor([1.0])), ("modc._weight", torch.tensor([1.0]))]),
+            "model": OrderedDict(
+                [
+                    ("moda._weight", torch.tensor([1.0])),
+                    ("modb._weight", torch.tensor([1.0])),
+                    ("modc._weight", torch.tensor([1.0])),
+                ]
+            ),
             "optimizer-opt1": {
                 "state": {},
                 "param_groups": [
@@ -656,7 +672,7 @@ def test_train(
                         "capturable": False,
                         "differentiable": False,
                         "fused": False,
-                        "params": [0]
+                        "params": [0],
                     },
                     {
                         "lr": 0.8,
@@ -669,7 +685,7 @@ def test_train(
                         "capturable": False,
                         "differentiable": False,
                         "fused": False,
-                        "params": [1]
+                        "params": [1],
                     },
                 ],
             },

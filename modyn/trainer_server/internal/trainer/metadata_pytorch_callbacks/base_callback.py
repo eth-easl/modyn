@@ -11,12 +11,20 @@ class BaseCallback(ABC):
         pass
 
     def on_train_end(
-        self, model: torch.nn.Module, optimizer: dict[str, torch.optim.Optimizer], total_samples: int, total_batches: int
+        self,
+        model: torch.nn.Module,
+        optimizer: dict[str, torch.optim.Optimizer],
+        total_samples: int,
+        total_batches: int,
     ) -> None:
         pass
 
     def on_batch_begin(
-        self, model: torch.nn.Module, optimizer: dict[str, torch.optim.Optimizer], batch: torch.Tensor, batch_number: int
+        self,
+        model: torch.nn.Module,
+        optimizer: dict[str, torch.optim.Optimizer],
+        batch: torch.Tensor,
+        batch_number: int,
     ) -> None:
         pass
 

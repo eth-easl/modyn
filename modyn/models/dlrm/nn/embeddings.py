@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# flake8: noqa
+# mypy: ignore-errors
+
 import copy
-from typing import Sequence, List, Iterable
+from typing import Iterable, List, Sequence
 
 import torch
-from torch import nn
-
 from modyn.models.dlrm import cuda_ext
+from torch import nn
 
 try:
     import apex
@@ -28,7 +30,6 @@ except Exception as e:
 
 
 class Embeddings(nn.Module):
-
     def forward(self, categorical_inputs) -> List[torch.Tensor]:
         raise NotImplementedError()
 
@@ -44,13 +45,12 @@ class Embeddings(nn.Module):
 
 
 class MultiTableEmbeddings(Embeddings):
-
     def __init__(
-            self,
-            categorical_feature_sizes: Sequence[int],
-            embedding_dim: int,
-            hash_indices: bool = False,
-            device: str = "cuda"
+        self,
+        categorical_feature_sizes: Sequence[int],
+        embedding_dim: int,
+        hash_indices: bool = False,
+        device: str = "cuda",
     ):
         super().__init__()
         self._categorical_feature_sizes = copy.copy(categorical_feature_sizes)
@@ -102,7 +102,10 @@ class MultiTableEmbeddings(Embeddings):
             embedding.weight.data = weight
             embedding.weight.data.requires_grad_()
 
+
 Embeddings
+
+
 class JointEmbedding(Embeddings):
     """Buckle multiple one hot embedding together
 
@@ -116,11 +119,11 @@ class JointEmbedding(Embeddings):
     """
 
     def __init__(
-            self,
-            categorical_feature_sizes: Sequence[int],
-            embedding_dim: int,
-            device: str = "cuda",
-            hash_indices: bool = False
+        self,
+        categorical_feature_sizes: Sequence[int],
+        embedding_dim: int,
+        device: str = "cuda",
+        hash_indices: bool = False,
     ):
         super().__init__()
         self._categorical_feature_sizes = copy.copy(categorical_feature_sizes)
@@ -137,7 +140,6 @@ class JointEmbedding(Embeddings):
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
 
-
         return [self.embedding(categorical_inputs + self.offsets[:-1])]
 
     def extra_repr(self):
@@ -148,15 +150,17 @@ class JointEmbedding(Embeddings):
 
     @property
     def weights(self):
-        return [self.embedding.weight.data[self.offsets[cat]:self.offsets[cat + 1]]
-                for cat in range(len(self._categorical_feature_sizes))]
+        return [
+            self.embedding.weight.data[self.offsets[cat]: self.offsets[cat + 1]]
+            for cat in range(len(self._categorical_feature_sizes))
+        ]
 
     def load_weights(self, weights: Iterable[torch.Tensor]):
         data = self.embedding.weight.data
         offsets = self.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat]:offsets[cat + 1]] = weight
+            data[offsets[cat]: offsets[cat + 1]] = weight
 
 
 # If you want ot use a fused joint embedding for a different number of variables, firstly change
@@ -176,12 +180,12 @@ class FusedJointEmbedding(Embeddings):
     """
 
     def __init__(
-            self,
-            categorical_feature_sizes: Sequence[int],
-            embedding_dim: int,
-            device: str = "cuda",
-            hash_indices: bool = False,
-            amp_train: bool = False
+        self,
+        categorical_feature_sizes: Sequence[int],
+        embedding_dim: int,
+        device: str = "cuda",
+        hash_indices: bool = False,
+        amp_train: bool = False,
     ):
         super().__init__()
         self._categorical_feature_sizes = copy.copy(categorical_feature_sizes)
@@ -192,15 +196,20 @@ class FusedJointEmbedding(Embeddings):
 
         self.register_buffer("offsets", torch.tensor([0] + categorical_feature_sizes).cumsum(0).to(device))
 
-        self.register_parameter("weight", torch.nn.Parameter(
-            torch.empty((self.offsets[-1].item(), embedding_dim), device=device), requires_grad=True))
+        self.register_parameter(
+            "weight",
+            torch.nn.Parameter(
+                torch.empty((self.offsets[-1].item(), embedding_dim), device=device), requires_grad=True
+            ),
+        )
 
         if len(categorical_feature_sizes) != FUSED_JOINT_EMBEDDING_NUMBER_OF_CATEGORICAL_VARIABLES:
             raise ValueError(
                 f"Number of categorical features must be equal to"
                 f" {FUSED_JOINT_EMBEDDING_NUMBER_OF_CATEGORICAL_VARIABLES}, got {len(categorical_feature_sizes)}\n"
                 f"If you want to train on a different number, you need to recompile cuda kernels to support it or "
-                f"use different embedding type.")
+                f"use different embedding type."
+            )
 
     def forward(self, categorical_inputs) -> List[torch.Tensor]:
         # Check input has the right shape
@@ -211,30 +220,28 @@ class FusedJointEmbedding(Embeddings):
         return [BuckleEmbeddingFusedGatherFunction.apply(self.weight, categorical_inputs, self.offsets, self.amp_train)]
 
     def extra_repr(self):
-        return 'embedding_dim={}, categorical_feature_sizes={}, offsets={}'.format(
-            self.embedding_dim, self._categorical_feature_sizes, self.offsets)
+        return "embedding_dim={}, categorical_feature_sizes={}, offsets={}".format(
+            self.embedding_dim, self._categorical_feature_sizes, self.offsets
+        )
 
     @property
     def weights(self) -> List[torch.Tensor]:
-        return [self.weight.data[self.offsets[cat]:self.offsets[cat + 1]]
-                for cat in range(len(self._categorical_feature_sizes))]
+        return [
+            self.weight.data[self.offsets[cat]: self.offsets[cat + 1]]
+            for cat in range(len(self._categorical_feature_sizes))
+        ]
 
     def load_weights(self, weights: Iterable[torch.Tensor]):
         data = self.weight.data
         offsets = self.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat]:offsets[cat + 1]] = weight
+            data[offsets[cat]: offsets[cat + 1]] = weight
 
 
 class JointSparseEmbedding(Embeddings):
-
     def __init__(
-            self,
-            categorical_feature_sizes: List[int],
-            embedding_dim: int,
-            device: str = "cuda",
-            hash_indices: bool = False
+        self, categorical_feature_sizes: List[int], embedding_dim: int, device: str = "cuda", hash_indices: bool = False
     ):
         super().__init__()
         self._categorical_feature_sizes = categorical_feature_sizes
@@ -246,19 +253,17 @@ class JointSparseEmbedding(Embeddings):
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
 
-        return [
-            self.embedding(categorical_inputs)
-        ]
+        return [self.embedding(categorical_inputs)]
 
     @property
     def weights(self):
         data = self.embedding.weights.data
         offsets = self.embedding.offsets
-        return [data[offsets[cat]:offsets[cat + 1]] for cat in range(len(self._categorical_feature_sizes))]
+        return [data[offsets[cat]: offsets[cat + 1]] for cat in range(len(self._categorical_feature_sizes))]
 
     def load_weights(self, weights: Iterable[torch.Tensor]):
         data = self.embedding.weights.data
         offsets = self.embedding.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat]:offsets[cat + 1]] = weight
+            data[offsets[cat]: offsets[cat + 1]] = weight

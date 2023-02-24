@@ -96,7 +96,7 @@ class BinaryFileWrapper(AbstractFileWrapper):
         self._validate_request_indices(total_samples, [index])
 
         record_start = index * self.record_size
-        lable_bytes = data[record_start : record_start + self.label_size]
+        lable_bytes = data[record_start: record_start + self.label_size]
         return int.from_bytes(lable_bytes, byteorder=self.byteorder)
 
     def get_sample(self, index: int) -> bytes:
@@ -148,5 +148,5 @@ class BinaryFileWrapper(AbstractFileWrapper):
         total_samples = len(data) / self.record_size
         self._validate_request_indices(total_samples, indices)
 
-        samples = [data[(idx * self.record_size) + self.label_size : (idx + 1) * self.record_size] for idx in indices]
+        samples = [data[(idx * self.record_size) + self.label_size: (idx + 1) * self.record_size] for idx in indices]
         return samples

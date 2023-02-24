@@ -1,6 +1,7 @@
 import torch
 from modyn.models.dlrm.dlrm import DLRM
 
+
 def test_dlrm_init():
     model_configuration = {
         "embedding_dim": 128,
@@ -12,12 +13,11 @@ def test_dlrm_init():
         "use_cpp_mlp": False,
         "fp16": False,
         "bottom_features_ordered": False,
-        "device": "cpu"
+        "device": "cpu",
     }
     model = DLRM(model_configuration)
-    labels = torch.ones(64, dtype=torch.int32)
     data = {
-        "numerical_input": torch.ones((64,13), dtype=torch.float32),
-        "categorical_input": torch.ones((64,26), dtype=torch.long)
+        "numerical_input": torch.ones((64, 13), dtype=torch.float32),
+        "categorical_input": torch.ones((64, 26), dtype=torch.long),
     }
-    output = model.model(data)
+    model.model(data)

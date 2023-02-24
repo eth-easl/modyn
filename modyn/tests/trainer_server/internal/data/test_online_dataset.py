@@ -267,11 +267,11 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
-@patch.object(
-    OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(4)], [1] * 4)
-)
+@patch.object(OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(4)], [1] * 4))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[str(i) for i in range(4)])
-def test_dataloader_dataset_multi_worker(test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established):
+def test_dataloader_dataset_multi_worker(
+    test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
     online_dataset = OnlineDataset(
         pipeline_id=1,
         trigger_id=1,
@@ -285,7 +285,7 @@ def test_dataloader_dataset_multi_worker(test_get_data, test_get_keys, test_inse
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
     for i, batch in enumerate(dataloader):
         assert len(batch) == 3
-        assert batch[0] == ('0', '1', '2', '3')
+        assert batch[0] == ("0", "1", "2", "3")
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
 

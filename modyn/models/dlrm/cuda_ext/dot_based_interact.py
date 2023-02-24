@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# mypy: ignore-errors
+
 import torch
 from torch.autograd import Function
 
 
 class DotBasedInteract(Function):
-    """ Forward and Backward paths of cuda extension for dot-based feature interact."""
+    """Forward and Backward paths of cuda extension for dot-based feature interact."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -41,7 +44,7 @@ class DotBasedInteract(Function):
         else:
             from modyn.models.dlrm.cuda_ext import interaction_volta as interaction
 
-        input, = ctx.saved_tensors
+        (input,) = ctx.saved_tensors
         grad, mlp_grad = interaction.dotBasedInteractBwd(input, grad_output)
         return grad, mlp_grad
 

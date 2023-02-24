@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# flake8: noqa
+# mypy: ignore-errors
+
 import math
-from typing import Sequence, List, Iterable
+from typing import Iterable, List, Sequence
+
 try:
     import apex.mlp
 except Exception as e:
@@ -38,14 +42,17 @@ class AmpMlpFunction(torch.autograd.Function):
 mlp_function = AmpMlpFunction.apply
 
 try:
+
     class AmpMlp(apex.mlp.MLP):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
         def forward(self, input):
             return mlp_function(self.bias, self.activation, input, *self.weights, *self.biases)
+
 except Exception as e:
     pass
+
 
 class AbstractMlp(nn.Module):
     """
@@ -96,8 +103,8 @@ class TorchMlp(AbstractMlp):
     def _initialize_weights(self):
         for module in self.modules():
             if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight.data, 0., math.sqrt(2. / (module.in_features + module.out_features)))
-                nn.init.normal_(module.bias.data, 0., math.sqrt(1. / module.out_features))
+                nn.init.normal_(module.weight.data, 0.0, math.sqrt(2.0 / (module.in_features + module.out_features)))
+                nn.init.normal_(module.bias.data, 0.0, math.sqrt(1.0 / module.out_features))
 
     @property
     def weights(self):
@@ -119,7 +126,6 @@ class TorchMlp(AbstractMlp):
 
 
 class CppMlp(AbstractMlp):
-
     def __init__(self, input_dim: int, sizes: Sequence[int]):
         super().__init__()
 

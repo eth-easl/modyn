@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# flake8: noqa
+# mypy: ignore-errors
+
 import copy
 
 import torch
@@ -22,9 +25,11 @@ from torch.autograd import Function
 
 class EmbeddingGatherFunction(Function):
     """Customized embedding gather with fused plain SGD"""
+
     @staticmethod
     def forward(ctx, embedding, indices):
         from modyn.models.dlrm.cuda_ext import sparse_gather
+
         output = sparse_gather.gather_gpu_fwd(embedding, indices)
         ctx.save_for_backward(indices)
         ctx.num_features = embedding.size(0)
@@ -33,6 +38,7 @@ class EmbeddingGatherFunction(Function):
     @staticmethod
     def backward(ctx, grad_output):
         from modyn.models.dlrm.cuda_ext import sparse_gather
+
         indices = ctx.saved_tensors[0]
 
         grad_embedding = sparse_gather.gather_gpu_bwd(grad_output, indices, ctx.num_features)
@@ -50,6 +56,7 @@ class JointSparseEmbedding(nn.Module):
         embedding_dim (int): the size of each embedding vector
         device (torch.device): where to create the embedding. Default "cuda"
     """
+
     def __init__(self, categorical_feature_sizes, embedding_dim, device="cuda"):
         super(JointSparseEmbedding, self).__init__()
         self.embedding_dim = embedding_dim
@@ -65,5 +72,6 @@ class JointSparseEmbedding(nn.Module):
         embedding_out = embedding_gather(self.weights, categorical_inputs + self.offsets[:-1])
 
         return embedding_out
+
 
 embedding_gather = amp.float_function(EmbeddingGatherFunction.apply)

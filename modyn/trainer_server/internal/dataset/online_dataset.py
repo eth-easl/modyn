@@ -142,7 +142,7 @@ class OnlineDataset(IterableDataset):
 
         for key, sample, label in zip(keys, data, labels):
             # mypy complains here because _transform has unknown type, which is ok
-            yield key, self._transform(sample), label # type: ignore
+            yield key, self._transform(sample), label  # type: ignore
 
     def __len__(self) -> int:
         return self._dataset_len

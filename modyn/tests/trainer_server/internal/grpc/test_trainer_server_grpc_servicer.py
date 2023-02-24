@@ -67,19 +67,10 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         model_id="model" if valid_model else "unknown",
         batch_size=32,
         torch_optimizers_configuration=JsonString(
-            value=json.dumps({
-                "default" : {
-                    "algorithm": "SGD",
-                    "param_groups": [
-                        {
-                            "module": "model",
-                            "config": {"lr": 0.1}
-                        }
-                    ]
-                    }
-                }
-                )
-            ),
+            value=json.dumps(
+                {"default": {"algorithm": "SGD", "param_groups": [{"module": "model", "config": {"lr": 0.1}}]}}
+            )
+        ),
         torch_criterion="CrossEntropyLoss",
         model_configuration=JsonString(value=json.dumps({})),
         criterion_parameters=JsonString(value=json.dumps({})),
@@ -89,7 +80,7 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         transform_list=[],
         use_pretrained_model=False,
         pretrained_model=None,
-        lr_scheduler=JsonString(value=json.dumps({}))
+        lr_scheduler=JsonString(value=json.dumps({})),
     )
 
 

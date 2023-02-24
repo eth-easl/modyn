@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# flake8: noqa
+# mypy: ignore-errors
+
 """
 Fused Buckle Embedding
 """
@@ -22,11 +25,14 @@ except Exception as e:
 
 from torch.autograd import Function
 
+
 class BuckleEmbeddingFusedGatherFunction(Function):
-    """Customized embedding gather """
+    """Customized embedding gather"""
+
     @staticmethod
     def forward(ctx, embedding, indices, offsets, amp_train):
         from modyn.models.dlrm.cuda_ext import fused_embedding
+
         output = fused_embedding.gather_gpu_fused_fwd(embedding, indices, offsets, amp_train)
         ctx.save_for_backward(embedding, indices, offsets)
         return output
@@ -34,9 +40,11 @@ class BuckleEmbeddingFusedGatherFunction(Function):
     @staticmethod
     def backward(ctx, grad_output):
         from modyn.models.dlrm.cuda_ext import fused_embedding
+
         embedding, indices, offsets = ctx.saved_tensors
 
         grad_weights = fused_embedding.gather_gpu_fused_bwd(embedding, indices, offsets, grad_output)
         return grad_weights, None, None, None
+
 
 buckle_embedding_fused_gather = apex.amp.float_function(BuckleEmbeddingFusedGatherFunction.apply)

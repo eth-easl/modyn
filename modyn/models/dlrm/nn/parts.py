@@ -1,45 +1,46 @@
+# flake8: noqa
+# mypy: ignore-errors
+
 import copy
 import math
-from typing import Sequence, Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
-from torch import nn
 import torch
-
-from modyn.models.dlrm.nn.factories import create_embeddings, create_mlp
 from modyn.models.dlrm.nn.embeddings import Embeddings
+from modyn.models.dlrm.nn.factories import create_embeddings, create_mlp
 from modyn.models.dlrm.nn.interactions import Interaction
+from torch import nn
+
 
 class DlrmBottom(nn.Module):
-
     def __init__(
-            self,
-            num_numerical_features: int,
-            categorical_feature_sizes: Sequence[int],
-            bottom_mlp_sizes: Optional[Sequence[int]] = None,
-            embedding_type: str = "multi_table",
-            embedding_dim: int = 128,
-            hash_indices: bool = False,
-            use_cpp_mlp: bool = False,
-            fp16: bool = False,
-            device: str = "cuda"
+        self,
+        num_numerical_features: int,
+        categorical_feature_sizes: Sequence[int],
+        bottom_mlp_sizes: Optional[Sequence[int]] = None,
+        embedding_type: str = "multi_table",
+        embedding_dim: int = 128,
+        hash_indices: bool = False,
+        use_cpp_mlp: bool = False,
+        fp16: bool = False,
+        device: str = "cuda",
     ):
         super().__init__()
-        assert bottom_mlp_sizes is None or embedding_dim == bottom_mlp_sizes[-1], "The last bottom MLP layer must" \
-                                                                                  " have same size as embedding."
+        assert bottom_mlp_sizes is None or embedding_dim == bottom_mlp_sizes[-1], (
+            "The last bottom MLP layer must" " have same size as embedding."
+        )
         self._embedding_dim = embedding_dim
         self._categorical_feature_sizes = copy.copy(categorical_feature_sizes)
         self._fp16 = fp16
 
         self.embeddings = create_embeddings(
-            embedding_type,
-            categorical_feature_sizes,
-            embedding_dim,
-            device,
-            hash_indices,
-            fp16
+            embedding_type, categorical_feature_sizes, embedding_dim, device, hash_indices, fp16
         )
-        self.mlp = (create_mlp(num_numerical_features, bottom_mlp_sizes, use_cpp_mlp).to(device)
-                    if bottom_mlp_sizes else torch.nn.ModuleList())
+        self.mlp = (
+            create_mlp(num_numerical_features, bottom_mlp_sizes, use_cpp_mlp).to(device)
+            if bottom_mlp_sizes
+            else torch.nn.ModuleList()
+        )
 
         self._initialize_embeddings_weights(self.embeddings, categorical_feature_sizes)
 
@@ -47,11 +48,7 @@ class DlrmBottom(nn.Module):
         assert len(embeddings.weights) == len(categorical_feature_sizes)
 
         for size, weight in zip(categorical_feature_sizes, embeddings.weights):
-            nn.init.uniform_(
-                weight,
-                -math.sqrt(1. / size),
-                math.sqrt(1. / size)
-            )
+            nn.init.uniform_(weight, -math.sqrt(1.0 / size), math.sqrt(1.0 / size))
 
     @property
     def num_categorical_features(self) -> int:
@@ -94,9 +91,7 @@ class DlrmBottom(nn.Module):
         return torch.cat(bottom_output, dim=1), bottom_mlp_output
 
 
-
 class DlrmTop(nn.Module):
-
     def __init__(self, top_mlp_sizes: Sequence[int], interaction: Interaction, use_cpp_mlp: bool = False):
         super().__init__()
 
