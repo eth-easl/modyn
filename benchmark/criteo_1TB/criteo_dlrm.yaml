@@ -4,7 +4,7 @@ pipeline:
   version: 1.0.0
 model:
   id: DLRM
-  config:
+  config: # these parameters are consistent with the parameters used for the experiments shown in the NVIDIA repo:  https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Recommendation/DLRM
     device: "cuda:0"
     embedding_dim: 128
     interaction_op: "cuda_dot"
@@ -42,7 +42,7 @@ training:
           config:
             lr: 0.1
   lr_scheduler:
-    name: "DLRMscheduler"
+    name: "DLRMScheduler"
     custom: True
     optimizers: ["mlp", "opt_1"]
     config:
@@ -84,6 +84,9 @@ data:
       }
   label_transformer_function: |
     import torch
+
+    # we need to convert our integer-type labels to floats,
+    # since the BCEWithLogitsLoss function does not work with integers.
 
     def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
       return x.to(torch.float32)

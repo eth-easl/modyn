@@ -212,7 +212,7 @@ class PytorchTrainer:
             for _, optimizer in self._optimizers.items():
                 optimizer.zero_grad()
 
-            # TODO(): where to perform lr_scheduler.step? make it configurable
+            # TODO(#163): where to perform lr_scheduler.step? make it configurable
             if self._lr_scheduler is not None:
                 self._lr_scheduler.step()
 

@@ -15,7 +15,6 @@ channels:
 dependencies:
   - python>=3.9
   - pip
-  - packaging
   - tqdm
   - conda-forge::enlighten
   - protobuf

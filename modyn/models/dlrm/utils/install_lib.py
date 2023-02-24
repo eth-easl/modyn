@@ -4,7 +4,7 @@ from pathlib import Path
 import modyn
 
 
-def install_cuda_ext() -> None:
+def install_cuda_extensions_if_not_present() -> None:
     cwd = os.getcwd()
     modyn_base_path = Path(modyn.__path__[0])
     dlrm_path = modyn_base_path / "models/dlrm"

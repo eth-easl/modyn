@@ -39,8 +39,7 @@ WORKDIR /src
 RUN chown -R appuser /src
 
 # Create modyn environment (delete old if exists)
-RUN conda env remove -n modyn
-RUN conda env create -f ./environment.yml
+RUN conda env remove -n modyn && conda env create -f ./environment.yml
 ENV CONDA_DEFAULT_ENV modyn
 
 # Initialize again for user shell

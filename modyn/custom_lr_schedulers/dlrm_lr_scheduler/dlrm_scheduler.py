@@ -4,7 +4,7 @@ from typing import Any
 import torch
 
 
-class DLRMscheduler:
+class DLRMScheduler:
     def __init__(self, optimizers: list[torch.optim.Optimizer], scheduler_config: dict[str, Any]) -> None:
         self.current_step = 0
         self.optimizers = optimizers
