@@ -130,7 +130,9 @@ class NewFileWatcher:
         for file_path in filesystem_wrapper.list(path, recursive=True):
             if pathlib.Path(file_path).suffix != data_file_extension:
                 continue
-            if (dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp) and self._file_unknown(session, file_path):
+            if (
+                dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
+            ) and self._file_unknown(session, file_path):
                 file_wrapper = get_file_wrapper(
                     file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
                 )
