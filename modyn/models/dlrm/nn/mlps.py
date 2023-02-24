@@ -18,10 +18,11 @@
 import math
 from typing import Iterable, List, Sequence
 
-try:
+from modyn.utils import package_available_and_can_be_imported
+
+if package_available_and_can_be_imported("apex"):
     import apex.mlp
-except Exception as e:
-    pass
+
 
 import torch
 from torch import nn

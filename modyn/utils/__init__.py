@@ -12,6 +12,7 @@ from .utils import (  # noqa: F401
     model_available,
     trigger_available,
     validate_yaml,
+    package_available_and_can_be_imported,
 )
 
 files = os.listdir(os.path.dirname(__file__))

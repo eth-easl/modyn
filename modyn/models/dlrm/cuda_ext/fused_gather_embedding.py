@@ -18,12 +18,12 @@
 """
 Fused Buckle Embedding
 """
-try:
-    import apex
-except Exception as e:
-    pass
 
 from torch.autograd import Function
+from modyn.utils import package_available_and_can_be_imported
+
+if package_available_and_can_be_imported("apex"):
+    import apex
 
 
 class BuckleEmbeddingFusedGatherFunction(Function):
