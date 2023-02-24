@@ -112,6 +112,8 @@ def evaluate_model(model_path: pathlib.Path, evaluation_data: pathlib.Path) -> d
     dataset = EvaluationDataset(evaluation_data)
     dataloader = DataLoader(dataset, batch_size=15360, num_workers=8)
 
+    logger.info(f"Running evaluation on {len(dataset)} samples.")
+
     with torch.no_grad():
         y_true = []
         y_score = []
