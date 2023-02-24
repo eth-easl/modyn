@@ -44,8 +44,7 @@ class PytorchTrainer:
             if optimizer_config["source"] == "PyTorch":
                 optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
             elif optimizer_config["source"] == "APEX":
-                import apex  # pylint: disable=import-outside-toplevel
-
+                import apex  # pylint: disable=import-outside-toplevel, import-error
                 optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
             else:
                 raise ValueError(
@@ -54,9 +53,9 @@ class PytorchTrainer:
             optimizer_config_list = []
             for param_group in optimizer_config["param_groups"]:
                 module = param_group["module"]
-                param_group["config"]["params"] = eval(
+                param_group["config"]["params"] = eval( # pylint: disable=eval-used
                     f"self._model.{module}.parameters()"
-                )  # pylint: disable=eval-used
+                )
                 optimizer_config_list.append(param_group["config"])
             self._optimizers[name] = optimizer_func(optimizer_config_list)
 

@@ -151,7 +151,7 @@ class JointEmbedding(Embeddings):
     @property
     def weights(self):
         return [
-            self.embedding.weight.data[self.offsets[cat]: self.offsets[cat + 1]]
+            self.embedding.weight.data[self.offsets[cat] : self.offsets[cat + 1]]
             for cat in range(len(self._categorical_feature_sizes))
         ]
 
@@ -160,7 +160,7 @@ class JointEmbedding(Embeddings):
         offsets = self.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat]: offsets[cat + 1]] = weight
+            data[offsets[cat] : offsets[cat + 1]] = weight
 
 
 # If you want ot use a fused joint embedding for a different number of variables, firstly change
@@ -227,7 +227,7 @@ class FusedJointEmbedding(Embeddings):
     @property
     def weights(self) -> List[torch.Tensor]:
         return [
-            self.weight.data[self.offsets[cat]: self.offsets[cat + 1]]
+            self.weight.data[self.offsets[cat] : self.offsets[cat + 1]]
             for cat in range(len(self._categorical_feature_sizes))
         ]
 
@@ -236,7 +236,7 @@ class FusedJointEmbedding(Embeddings):
         offsets = self.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat]: offsets[cat + 1]] = weight
+            data[offsets[cat] : offsets[cat + 1]] = weight
 
 
 class JointSparseEmbedding(Embeddings):
@@ -259,11 +259,11 @@ class JointSparseEmbedding(Embeddings):
     def weights(self):
         data = self.embedding.weights.data
         offsets = self.embedding.offsets
-        return [data[offsets[cat]: offsets[cat + 1]] for cat in range(len(self._categorical_feature_sizes))]
+        return [data[offsets[cat] : offsets[cat + 1]] for cat in range(len(self._categorical_feature_sizes))]
 
     def load_weights(self, weights: Iterable[torch.Tensor]):
         data = self.embedding.weights.data
         offsets = self.embedding.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat]: offsets[cat + 1]] = weight
+            data[offsets[cat] : offsets[cat + 1]] = weight

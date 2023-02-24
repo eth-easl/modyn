@@ -5,6 +5,7 @@ pipeline:
 model:
   id: DLRM
   config:
+    device: "cuda:0"
     embedding_dim: 128
     interaction_op: "cuda_dot"
     hash_indices: False
