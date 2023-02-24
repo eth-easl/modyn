@@ -53,7 +53,7 @@ class PytorchTrainer:
             optimizer_config_list = []
             for param_group in optimizer_config["param_groups"]:
                 module = param_group["module"]
-                param_group["config"]["params"] = eval( # pylint: disable=eval-used
+                param_group["config"]["params"] = eval(  # pylint: disable=eval-used
                     f"self._model.{module}.parameters()"
                 )
                 optimizer_config_list.append(param_group["config"])
