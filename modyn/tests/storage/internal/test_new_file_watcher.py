@@ -128,6 +128,9 @@ class MockFileWrapper:
     def get_label(self, index: int) -> bytes:
         return b"test"
 
+    def get_all_labels(self) -> list[bytes]:
+        return [b"test", b"test"]
+
 
 class MockDataset:
     def __init__(self):

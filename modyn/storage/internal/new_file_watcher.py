@@ -130,12 +130,11 @@ class NewFileWatcher:
         for file_path in filesystem_wrapper.list(path, recursive=True):
             if pathlib.Path(file_path).suffix != data_file_extension:
                 continue
-            file_wrapper = get_file_wrapper(
-                file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
-            )
-            if (
-                dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
-            ) and self._file_unknown(session, file_path):
+            if filesystem_wrapper.get_modified(file_path) >= timestamp and self._file_unknown(session, file_path):
+                file_wrapper = get_file_wrapper(
+                    file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
+                )
+
                 try:
                     number_of_samples = file_wrapper.get_number_of_samples()
                     file: File = File(
@@ -151,12 +150,21 @@ class NewFileWatcher:
                     logger.warning(f"Could not create file {file_path} in database: {exception}")
                     session.rollback()
                     continue
+
+                file_id = file.file_id
+                logger.debug(f"Encountered new file and inserted with file id = {file_id}: {file_path}")
+                logger.info(f"Extracting and inserting samples for file {file_path}")
+                labels = file_wrapper.get_all_labels()
+
                 try:
-                    for i in range(number_of_samples):
-                        label = file_wrapper.get_label(i)
-                        sample: Sample = Sample(file=file, external_key=str(uuid.uuid4()), index=i, label=label)
-                        session.add(sample)
+                    samples = [
+                        Sample(file=file, file_id=file_id, external_key=str(uuid.uuid4()), index=i, label=labels[i])
+                        for i in range(number_of_samples)
+                    ]
+                    logger.debug("Samples generated, inserting.")
+                    session.bulk_save_objects(samples)
                     session.commit()
+                    logger.debug(f"Inserted {number_of_samples} samples.")
                 except exc.SQLAlchemyError as exception:
                     logger.warning(f"Could not create samples for file {file_path} in database: {exception}")
                     session.rollback()
