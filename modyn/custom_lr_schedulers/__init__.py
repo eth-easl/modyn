@@ -1,4 +1,4 @@
-"""Models.
+"""Learning rate schedulers.
 
 """
 import os
