@@ -22,7 +22,7 @@ import torch
 from modyn.models.dlrm import cuda_ext
 from torch import nn
 
-from modyn.utils import package_available_and_can_be_imported
+from modyn.utils.utils import package_available_and_can_be_imported
 
 if package_available_and_can_be_imported("apex"):
     import apex

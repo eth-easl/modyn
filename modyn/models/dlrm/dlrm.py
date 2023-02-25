@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
-from modyn.models.dlrm.utils.feature_spec import FeatureSpec, get_device_mapping, get_embedding_sizes
+from modyn.models.dlrm.utils.feature_spec import get_device_mapping
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
 from torch import nn
 
@@ -15,6 +15,7 @@ class DLRM:
         model_configuration: dict[str, Any],
     ) -> None:
         self.model = DlrmModel(model_configuration)
+        self.model.to(model_configuration["device"])
 
 
 class DlrmModel(nn.Module):
@@ -24,21 +25,26 @@ class DlrmModel(nn.Module):
     ) -> None:
         super().__init__()
 
-        if "cuda" in model_configuration["device"]:
+        if (
+            model_configuration["embedding_type"] == "joint_sparse"
+            or model_configuration["embedding_type"] == "joint_fused"
+            or model_configuration["interaction_op"] == "cuda_dot"
+        ):
             install_cuda_extensions_if_not_present()
 
-        feature_spec = FeatureSpec.from_yaml("feature_spec.yaml")
+        categorical_features_info = model_configuration["categorical_features_info"]
+        categorical_features_info_sizes = list(categorical_features_info.values())
 
-        world_embedding_sizes = get_embedding_sizes(
-            feature_spec,
-            max_table_size=(model_configuration["max_table_size"] if "max_table_size" in model_configuration else None),
-        )
+        if "max_table_size" in model_configuration:
+            world_embedding_sizes = [min(s, model_configuration["max_table_size"]) for s in categorical_features_info_sizes]
+        else:
+            world_embedding_sizes = categorical_features_info_sizes
+
         world_categorical_feature_sizes = np.asarray(world_embedding_sizes)
         device_mapping = get_device_mapping(world_embedding_sizes, num_gpus=1)
 
         # Embedding sizes for each GPU
         categorical_feature_sizes = world_categorical_feature_sizes[device_mapping["embedding"][0]].tolist()
-        num_numerical_features = feature_spec.get_number_of_numerical_features()
 
         self._vectors_per_gpu = device_mapping["vectors_per_gpu"]
         self._embedding_device_mapping = device_mapping["embedding"]
@@ -52,7 +58,7 @@ class DlrmModel(nn.Module):
 
         # ignore device here since it is handled by the trainer
         self.bottom_model = DlrmBottom(
-            num_numerical_features,
+            model_configuration["num_numerical_features"],
             categorical_feature_sizes,
             model_configuration["bottom_mlp_sizes"],
             model_configuration["embedding_type"],

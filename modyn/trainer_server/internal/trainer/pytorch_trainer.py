@@ -35,8 +35,8 @@ class PytorchTrainer:
         self._info("Initializing Pytorch Trainer")
 
         # setup model and optimizer
+        training_info.model_configuration_dict["device"] = device
         self._model = training_info.model_handler(training_info.model_configuration_dict)
-        self._model.model.to(device)
 
         self._optimizers = {}
         for name, optimizer_config in training_info.torch_optimizers_configuration.items():
@@ -79,6 +79,8 @@ class PytorchTrainer:
                 self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
             elif training_info.lr_scheduler["source"] == "PyTorch":
                 torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
+                if len(training_info.lr_scheduler["optimizers"]) > 1:
+                    self._warning("Provided a LR scheduler from PyTorch, but multiple optimizers")
                 self._lr_scheduler = torch_lr_scheduler(
                     self._optimizers[training_info.lr_scheduler["optimizers"][0]],
                     **training_info.lr_scheduler["config"],
@@ -138,6 +140,9 @@ class PytorchTrainer:
 
     def _info(self, msg: str) -> None:
         self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+
+    def _warning(self, msg: str) -> None:
+        self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
 
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {

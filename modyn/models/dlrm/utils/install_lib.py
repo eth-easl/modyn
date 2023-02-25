@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import subprocess
 
 import modyn
 
@@ -14,4 +15,4 @@ def install_cuda_extensions_if_not_present() -> None:
 
     if shared_libraries_names != [ "fused_embedding", "interaction_volta", "interaction_ampere", "sparse_gather"]:
         # install
-        os.system(f"cd {dlrm_path} && pip install -v -e . && cd {cwd}")
+        subprocess.run(["pip", "install", "-v", "-e", "."], check=True, cwd=cwd)
