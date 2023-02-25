@@ -267,6 +267,7 @@ class GRPCHandler:
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             device=pipeline_config["training"]["device"],
+            amp=pipeline_config["training"]["amp"],
             model_id=pipeline_config["model"]["id"],
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,

@@ -11,7 +11,7 @@ def test_dlrm_init():
         "top_mlp_sizes": [1024, 1024, 512, 256, 1],
         "embedding_type": "multi_table",
         "use_cpp_mlp": False,
-        "fp16": False,
+        "amp": False,
         "device": "cpu",
         "num_numerical_features": 13,
         "categorical_features_info": {

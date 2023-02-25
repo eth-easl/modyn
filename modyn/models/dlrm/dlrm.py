@@ -68,7 +68,7 @@ class DlrmModel(nn.Module):
             self._embedding_dim,
             hash_indices=self._hash_indices,
             use_cpp_mlp=model_configuration["use_cpp_mlp"],
-            fp16=model_configuration["fp16"],
+            fp16=model_configuration["amp"],
             device=self._device,
         )
 

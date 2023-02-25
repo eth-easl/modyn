@@ -54,6 +54,7 @@ def get_minimal_pipeline_config() -> dict:
         "training": {
             "gpus": 1,
             "device": "cpu",
+            "amp": False,
             "dataloader_workers": 1,
             "initial_model": "random",
             "initial_pass": {"activated": False},

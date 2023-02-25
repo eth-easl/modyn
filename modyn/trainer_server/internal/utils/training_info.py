@@ -45,6 +45,7 @@ class TrainingInfo:
 
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
+        self.amp = request.amp
 
         self.lr_scheduler = json.loads(request.lr_scheduler.value)
 

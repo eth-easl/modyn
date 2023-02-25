@@ -64,6 +64,7 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         pipeline_id=1,
         trigger_id=1,
         device="cpu",
+        amp=False,
         model_id="model" if valid_model else "unknown",
         batch_size=32,
         torch_optimizers_configuration=JsonString(

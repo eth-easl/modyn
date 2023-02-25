@@ -48,6 +48,10 @@ properties:
         type: string
         description: |
           The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu" and let the trainer server figure out the exact device, but for now, this really is the identifier of the device.
+      amp:
+        type: boolean
+        description: |
+          If True, automatic mixed precision will be used.
       dataloader_workers:
         type: number
         description: |

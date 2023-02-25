@@ -13,7 +13,6 @@ model:
     embedding_type: "joint_fused"
     num_numerical_features: 13
     use_cpp_mlp: True
-    fp16: False
     categorical_features_info:
       cat_0: 7912889
       cat_1: 33823
@@ -44,6 +43,7 @@ model:
 training:
   gpus: 1
   device: "cuda:0"
+  amp: False
   dataloader_workers: 2
   initial_model: random
   initial_pass:

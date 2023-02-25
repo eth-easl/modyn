@@ -193,6 +193,7 @@ def get_training_info(
                 pipeline_id=1,
                 trigger_id=1,
                 device="cpu",
+                amp=False,
                 data_info=Data(dataset_id="MNIST", num_dataloaders=2),
                 torch_optimizers_configuration=JsonString(value=json.dumps(torch_optimizers_configuration)),
                 model_configuration=JsonString(value=json.dumps({})),

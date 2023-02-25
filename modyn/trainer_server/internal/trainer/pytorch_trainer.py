@@ -36,6 +36,7 @@ class PytorchTrainer:
 
         # setup model and optimizer
         training_info.model_configuration_dict["device"] = device
+        training_info.model_configuration_dict["amp"] = training_info.amp
         self._model = training_info.model_handler(training_info.model_configuration_dict)
 
         self._optimizers = {}
@@ -116,6 +117,8 @@ class PytorchTrainer:
             self._label_tranformer_function = self._mod_dict["label_transformer_function"]
 
         self._device = device
+        self._device_type = "cuda" if "cuda" in self._device else "cpu"
+        self._amp = training_info.amp
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
@@ -226,8 +229,10 @@ class PytorchTrainer:
             if self._lr_scheduler is not None:
                 self._lr_scheduler.step()
 
-            output = self._model.model(data)
-            loss = self._criterion(output, target)
+            with torch.autocast(self._device_type, enabled=self._amp):
+                output = self._model.model(data)
+                loss = self._criterion(output, target)
+
             loss.backward()
 
             for _, callback in self._callbacks.items():

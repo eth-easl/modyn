@@ -9,6 +9,7 @@ model:
 training:
   gpus: 1
   device: "cpu"
+  amp: False
   dataloader_workers: 2
   initial_model: random
   initial_pass:
