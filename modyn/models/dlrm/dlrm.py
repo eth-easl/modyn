@@ -45,6 +45,9 @@ class DlrmModel(nn.Module):
 
         # Embedding sizes for each GPU
         categorical_feature_sizes = world_categorical_feature_sizes[device_mapping["embedding"][0]].tolist()
+        self._device = model_configuration["device"]
+
+        self._embedding_ordering = torch.tensor(device_mapping["embedding"][0]).to(self._device)
 
         self._vectors_per_gpu = device_mapping["vectors_per_gpu"]
         self._embedding_device_mapping = device_mapping["embedding"]
@@ -66,7 +69,7 @@ class DlrmModel(nn.Module):
             hash_indices=self._hash_indices,
             use_cpp_mlp=model_configuration["use_cpp_mlp"],
             fp16=model_configuration["fp16"],
-            device=model_configuration["device"],
+            device=self._device,
         )
 
         self.top_model = DlrmTop(
@@ -76,10 +79,11 @@ class DlrmModel(nn.Module):
     def extra_repr(self) -> str:
         return f"interaction_op={self._interaction_op}, hash_indices={self._hash_indices}"
 
-    @classmethod
-    def from_dict(cls, obj_dict, **kwargs) -> str:  # type: ignore
-        """Create from json str"""
-        return cls(**obj_dict, **kwargs)
+    def reorder_categorical_input(self, input: torch.Tensor) -> torch.Tensor:
+        """Reorder categorical input based on embedding ordering"""
+        dim0 = input.shape[0]
+        order = self._embedding_ordering.expand(dim0, -1)
+        return torch.gather(input, 1, order)
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         """
@@ -90,8 +94,8 @@ class DlrmModel(nn.Module):
             batch_sizes_per_gpu (Sequence[int]):
         """
         numerical_input = data["numerical_input"]
-        categorical_inputs = data["categorical_input"]
+        categorical_input = data["categorical_input"]
 
         # bottom mlp output may be not present before all to all communication
-        from_bottom, bottom_mlp_output = self.bottom_model(numerical_input, categorical_inputs)
+        from_bottom, bottom_mlp_output = self.bottom_model(numerical_input, self.reorder_categorical_input(categorical_input))
         return self.top_model(from_bottom, bottom_mlp_output).squeeze()
