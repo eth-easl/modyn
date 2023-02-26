@@ -64,6 +64,17 @@ class AbstractFileWrapper(ABC):
         """
         raise NotImplementedError  # pragma: no cover
 
+    def get_all_labels(self) -> list[Optional[int]]:
+        """Returns a list of all labels of all samples in the file.
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+
+        Returns:
+            list[Optional[int]]: List of labels
+        """
+        raise NotImplementedError  # pragma: no cover
+
     @abstractmethod
     def get_sample(self, index: int) -> bytes:
         """Get the sample at the given index.

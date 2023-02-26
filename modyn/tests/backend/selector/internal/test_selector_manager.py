@@ -147,3 +147,22 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test__instantiate_strategy():
     pass  # TODO(MaxiBoether): Implement this at a later point
+
+
+@patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+@patch.object(SelectorManager, "_instantiate_strategy")
+@patch.object(Selector, "get_number_of_samples")
+def test_get_number_of_samples(selector_get_number_of_samples: MagicMock, test__instantiate_strategy: MagicMock):
+    selec = SelectorManager(get_modyn_config())
+    test__instantiate_strategy.return_value = MockStrategy()
+
+    with pytest.raises(ValueError):
+        selec.get_number_of_samples(0, 0)
+
+    pipe_id = selec.register_pipeline(2, "{}")
+    selector_get_number_of_samples.return_value = 12
+
+    assert selec.get_number_of_samples(pipe_id, 21) == 12
+
+    selector_get_number_of_samples.assert_called_once_with(21)

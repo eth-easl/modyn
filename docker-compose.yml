@@ -1,11 +1,17 @@
 version: '3.8'
 
+# By default, we disable mountain the current directory under /modyn_host. However, this might be helpful for local development.
+# For the trainer server, you additionally might want to enable the runtime and deployment option to enable the GPU in the container.
+# For the storage, you probably want to mount some volume containing the datasets.
+
 services:
   modynbase:
     image: modynbase
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
+#    volumes:
+#      - .:/modyn_host
     container_name: modynbase
   metadata-db:
     image: postgres:14.1-alpine
@@ -37,6 +43,8 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - storage-data:/app/storage
+#      - /mnt/datasets:/datasets
+#      - .:/modyn_host
   metadata_processor:
     restart: on-failure
     depends_on:
@@ -53,6 +61,16 @@ services:
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
+#    volumes:
+#      - .:/modyn_host
+#    runtime: nvidia
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [gpu, utility, compute]
   selector:
     restart: on-failure
     depends_on: 
@@ -60,6 +78,8 @@ services:
     build:
       context: .
       dockerfile: docker/Selector/Dockerfile
+#    volumes:
+#      - .:/modyn_host
   tests:
     depends_on:
       - modynbase

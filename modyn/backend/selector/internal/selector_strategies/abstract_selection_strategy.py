@@ -1,9 +1,12 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
 from sqlalchemy import func
+
+logger = logging.getLogger(__name__)
 
 
 class AbstractSelectionStrategy(ABC):
@@ -34,15 +37,20 @@ class AbstractSelectionStrategy(ABC):
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
+
+        logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
+
         with MetadataDatabaseConnection(self._modyn_config) as database:
             last_trigger_id = (
                 database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
-                .filter(pipeline_id == self._pipeline_id)
+                .filter(Trigger.pipeline_id == self._pipeline_id)
                 .scalar()
             )
             if last_trigger_id is None:
+                logger.info(f"Did not find previous trigger id DB for pipeline {pipeline_id}, next trigger is 0.")
                 self._next_trigger_id = 0
             else:
+                logger.info(f"Last trigger in DB for pipeline {pipeline_id} was {last_trigger_id}.")
                 self._next_trigger_id = last_trigger_id + 1
 
     @abstractmethod
@@ -83,6 +91,13 @@ class AbstractSelectionStrategy(ABC):
         """
         trigger_id = self._next_trigger_id
         training_samples = self._on_trigger()
+
+        logger.info(
+            "Strategy for pipeline {} got {} samples for new trigger {}.",
+            self._pipeline_id,
+            len(training_samples),
+            trigger_id,
+        )
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.session.add(Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id))

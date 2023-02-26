@@ -24,6 +24,7 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         Args:
             file_path (str): File path
             file_wrapper_config (dict): File wrapper config
+            filesystem_wrapper (AbstractFileSystemWrapper): File system wrapper to abstract storage of the file
         """
         super().__init__(file_path, file_wrapper_config, filesystem_wrapper)
         self.file_wrapper_type = FileWrapperType.SingleSampleFileWrapper
@@ -106,6 +107,14 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             label = label.decode("utf-8")
             return int(label)
         return None
+
+    def get_all_labels(self) -> list[Optional[int]]:
+        """Returns a list of all labels of all samples in the file.
+
+        Returns:
+            list[Optional[int]]: List of labels
+        """
+        return [self.get_label(0)]
 
     def get_samples_from_indices(self, indices: list) -> list[bytes]:
         """Get the samples from the file.

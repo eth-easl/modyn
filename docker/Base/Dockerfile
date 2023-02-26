@@ -4,8 +4,8 @@ FROM python:3.10-slim
 ENV PYTHONUNBUFFERED=1
 
 # Setup basic system
-RUN apt-get update -q \
-  && apt-get upgrade -q \
+RUN apt-get update -yq \
+  && apt-get upgrade -yq \
   && apt-get install --no-install-recommends -qy \
     build-essential \
     gcc \

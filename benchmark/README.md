@@ -1,15 +1,13 @@
 # Benchmark
 
-Benchmark is a collection of scripts that enable the running of benchmarks on the modyn system.
+In this directory, you find different scripts and examples that assist in running benchmarks on Modyn.
+Currently, we provide an MNIST example and a Criteo 1TB Advertising dataset example 
 
-## Install additional dependencies
+## Benchmarks
 
-To install the additional dependencies necessary to run the scripts in this directory, update the conda environment:
+### MNIST 
+In the `mnist` directory, you find files to running experiments on a dynamic version of the MNIST data set.
 
-`conda env update --name modyn --file benchmark_environment.yml`
-
-## Scripts
-
-### MNIST Benchmark Storage Script
-
-Downloads the MNIST dataset into a given directory. For more information on parameters run with `-h`.
+### Criteo 1TB Dataset
+We provide scripts and guidelines for using the Criteo 1TB benchmark data set.
+The README in the subfolder contains information on how data is downloaded and preprocessed. 

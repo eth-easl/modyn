@@ -4,8 +4,10 @@ from unittest.mock import MagicMock, patch
 
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611
     DataInformRequest,
+    GetNumberOfSamplesRequest,
     GetSamplesRequest,
     JsonString,
+    NumberOfSamplesResponse,
     PipelineResponse,
     RegisterPipelineRequest,
     SamplesResponse,
@@ -80,3 +82,17 @@ def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
     assert response.trigger_id == 42
 
     test_inform_data_and_trigger.assert_called_once_with(0, ["a", "b"], [1, 2], [0, 1])
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+@patch.object(SelectorManager, "get_number_of_samples")
+def test_get_number_of_samples(test_get_number_of_samples: MagicMock):
+    mgr = SelectorManager({})
+    servicer = SelectorGRPCServicer(mgr)
+    request = GetNumberOfSamplesRequest(pipeline_id=42, trigger_id=21)
+    test_get_number_of_samples.return_value = 12
+
+    response: NumberOfSamplesResponse = servicer.get_number_of_samples(request, None)
+    assert response.num_samples == 12
+
+    test_get_number_of_samples.assert_called_once_with(42, 21)
