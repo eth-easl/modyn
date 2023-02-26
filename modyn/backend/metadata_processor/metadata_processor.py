@@ -23,42 +23,8 @@ class MetadataProcessor:
 
     def process_training_metadata(
         self,
-        pipeline_id: int,
         trigger_id: int,
         trigger_metadata: PerTriggerMetadata,
         sample_metadata: Iterable[PerSampleMetadata],
     ) -> None:
-        processed_trigger_metadata = self.strategy.process_trigger_metadata(trigger_metadata)
-        processed_sample_metadata = self.strategy.process_sample_metadata(sample_metadata)
-        self.persist_metadata(processed_trigger_metadata, processed_sample_metadata)
-        
-    def persist_metadata(
-        self,
-        processed_trigger_metadata: Optional[dict],
-        processed_sample_metadata: Optional[list[dict]]
-    ) -> None:
-        with MetadataDatabaseConnection(self.config) as database:
-            if processed_trigger_metadata is not None:
-                database.session.add(
-                    TriggerTrainingMetadata(
-                        trigger_id=trigger_id,
-                        pipeline_id=pipeline_id,
-                        overall_loss=processed_trigger_metadata.get("loss", None),
-                        time_to_train=processed_trigger_metadata.get("time", None),
-                    )
-                )
-                database.session.commit()
-            if processed_sample_metadata is not None:
-                database.session.add_all(
-                    [
-                        SampleTrainingMetadata(
-                            pipeline_id=pipeline_id,
-                            trigger_id=trigger_id,
-                            sample_key=metadata["sample_id"],
-                            loss=metadata.get("loss", None),
-                            gradient=metadata.get("gradient", None),
-                        )
-                        for metadata in processed_sample_metadata
-                    ]
-                )
-                database.session.commit()
+        self.strategy.process_training_metadata(trigger_id, trigger_metadata, sample_metadata)

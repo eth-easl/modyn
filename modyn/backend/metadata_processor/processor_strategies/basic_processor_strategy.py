@@ -14,8 +14,8 @@ class BasicProcessorStrategy(AbstractProcessorStrategy):
     values sent by the Collector and stores them in the Database
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, modyn_config: dict, pipeline_id: int):
+        super().__init__(modyn_config, pipeline_id)
         self.processor_strategy_type = ProcessorStrategyType.BasicProcessorStrategy
 
     def process_trigger_metadata(self, trigger_metadata: PerTriggerMetadata) -> Optional[dict]:

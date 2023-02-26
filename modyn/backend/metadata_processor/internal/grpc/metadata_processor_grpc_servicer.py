@@ -32,7 +32,7 @@ class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
         self.processor_manager.register_pipeline(request.pipeline_id, request.processor_type)
         return PipelineResponse()
 
-    def ProcessTrainingMetadata(
+    def process_training_metadata(
         self, request: TrainingMetadataRequest, context: grpc.ServicerContext
     ) -> TrainingMetadataResponse:
         logger.info(

@@ -14,13 +14,13 @@ class MetadataProcessorStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.RegisterPipeline = channel.unary_unary(
-                '/metadata_processor.MetadataProcessor/RegisterPipeline',
+        self.register_pipeline = channel.unary_unary(
+                '/metadata_processor.MetadataProcessor/register_pipeline',
                 request_serializer=metadata__processor__pb2.RegisterPipelineRequest.SerializeToString,
                 response_deserializer=metadata__processor__pb2.PipelineResponse.FromString,
                 )
-        self.ProcessTrainingMetadata = channel.unary_unary(
-                '/metadata_processor.MetadataProcessor/ProcessTrainingMetadata',
+        self.process_training_metadata = channel.unary_unary(
+                '/metadata_processor.MetadataProcessor/process_training_metadata',
                 request_serializer=metadata__processor__pb2.TrainingMetadataRequest.SerializeToString,
                 response_deserializer=metadata__processor__pb2.TrainingMetadataResponse.FromString,
                 )
@@ -29,13 +29,13 @@ class MetadataProcessorStub(object):
 class MetadataProcessorServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def RegisterPipeline(self, request, context):
+    def register_pipeline(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ProcessTrainingMetadata(self, request, context):
+    def process_training_metadata(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -44,13 +44,13 @@ class MetadataProcessorServicer(object):
 
 def add_MetadataProcessorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'RegisterPipeline': grpc.unary_unary_rpc_method_handler(
-                    servicer.RegisterPipeline,
+            'register_pipeline': grpc.unary_unary_rpc_method_handler(
+                    servicer.register_pipeline,
                     request_deserializer=metadata__processor__pb2.RegisterPipelineRequest.FromString,
                     response_serializer=metadata__processor__pb2.PipelineResponse.SerializeToString,
             ),
-            'ProcessTrainingMetadata': grpc.unary_unary_rpc_method_handler(
-                    servicer.ProcessTrainingMetadata,
+            'process_training_metadata': grpc.unary_unary_rpc_method_handler(
+                    servicer.process_training_metadata,
                     request_deserializer=metadata__processor__pb2.TrainingMetadataRequest.FromString,
                     response_serializer=metadata__processor__pb2.TrainingMetadataResponse.SerializeToString,
             ),
@@ -65,7 +65,7 @@ class MetadataProcessor(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def RegisterPipeline(request,
+    def register_pipeline(request,
             target,
             options=(),
             channel_credentials=None,
@@ -75,14 +75,14 @@ class MetadataProcessor(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/metadata_processor.MetadataProcessor/RegisterPipeline',
+        return grpc.experimental.unary_unary(request, target, '/metadata_processor.MetadataProcessor/register_pipeline',
             metadata__processor__pb2.RegisterPipelineRequest.SerializeToString,
             metadata__processor__pb2.PipelineResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def ProcessTrainingMetadata(request,
+    def process_training_metadata(request,
             target,
             options=(),
             channel_credentials=None,
@@ -92,7 +92,7 @@ class MetadataProcessor(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/metadata_processor.MetadataProcessor/ProcessTrainingMetadata',
+        return grpc.experimental.unary_unary(request, target, '/metadata_processor.MetadataProcessor/process_training_metadata',
             metadata__processor__pb2.TrainingMetadataRequest.SerializeToString,
             metadata__processor__pb2.TrainingMetadataResponse.FromString,
             options, channel_credentials,

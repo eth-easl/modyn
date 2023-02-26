@@ -23,10 +23,11 @@ class MetadataProcessorServer:
         self.config = modyn_config
         self.processor_manager = MetadataProcessorManager(modyn_config)
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        self._add_servicer_to_server_func = add_MetadataProcessorServicer_to_server
 
     def prepare_server(self) -> grpc.server:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        add_MetadataProcessorServicer_to_server(
+        self._add_servicer_to_server_func(
             MetadataProcessorGRPCServicer(self.processor_manager), server)
         return server
 
