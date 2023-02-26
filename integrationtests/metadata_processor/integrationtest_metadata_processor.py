@@ -50,8 +50,11 @@ def get_grpc_channel(config: dict, component: str) -> grpc.Channel:
 def send_metadata_and_check_database(
     processor_client: MetadataProcessorClient, config: dict
 ) -> None:
+    with MetadataDatabaseConnection(config) as database:
+        pipeline_id = database.register_pipeline(10)
+
     req = TrainingMetadataRequest(
-        pipeline_id=1,
+        pipeline_id=pipeline_id,
         trigger_id=1,
         trigger_metadata=PerTriggerMetadata(loss=0.5),
         sample_metadata=[
@@ -77,7 +80,7 @@ def send_metadata_and_check_database(
         assert len(trigger_metadata) == 1, (
             f"Expected 1 entry for trigger metadata in db, found {len(trigger_metadata)}")
         assert tids[0] == 1, f"Expected trigger ID 1 in db, found {tids[0]}"
-        assert pids[0] == 1, f"Expected pipeline ID 1 in db, found {pids[0]}"
+        assert pids[0] == pipeline_id, f"Expected pipeline ID 1 in db, found {pids[0]}"
         assert isclose(overall_loss[0], 0.5), f"Expected overall loss 0.5 in db, found {overall_loss[0]}"
 
         sample_metadata = (
@@ -93,7 +96,7 @@ def send_metadata_and_check_database(
 
         assert len(sample_metadata) == 2, (
             f"Expected 2 entries for sample metadata in db, found {len(sample_metadata)}")
-        assert pids[0] == 1 and pids[1] == 1, (
+        assert pids[0] == pipeline_id and pids[1] == pipeline_id, (
             f"Expected all sample metadata in db to be for pipeline ID 1, found {pids}")
         assert tids[0] == 1 and tids[1] == 1, (
             f"Expected all sample metadata in db to be for trigger ID 1, found {tids}")
@@ -102,13 +105,22 @@ def send_metadata_and_check_database(
         assert isclose(loss[1], 0.2, rel_tol=1e-5), f"Expected sample loss 0.2, found {loss[1]}"
 
 
+def clear_database(config: dict, pipeline_id: int):
+    with MetadataDatabaseConnection(config) as database:
+        database.session.query(TriggerTrainingMetadata).delete()
+        database.session.query(SampleTrainingMetadata).delete()
+        database.session.commit()
+
+
 def test_metadata_processor() -> None:
     config = get_modyn_config()
 
     processor_channel = get_grpc_channel(config, "metadata_processor")
     processor_client = MetadataProcessorClient(processor_channel)
 
-    send_metadata_and_check_database(processor_client, config)
+    pipeline_id = send_metadata_and_check_database(processor_client, config)
+
+    clear_database(config, pipeline_id)
 
 
 if __name__ == "__main__":
