@@ -47,5 +47,4 @@ def test_process_training_metadata(test__process_training_metadata: MagicMock):
     response = servicer.process_training_metadata(request, None)
 
     assert isinstance(response, TrainingMetadataResponse)
-    test__process_training_metadata.assert_called_once_with(
-        56, 1, request.trigger_metadata, request.sample_metadata)
+    test__process_training_metadata.assert_called_once_with(56, 1, request.trigger_metadata, request.sample_metadata)
