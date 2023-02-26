@@ -6,6 +6,8 @@ from math import isclose
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
+
+# pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
     PerSampleMetadata,
     PerTriggerMetadata,

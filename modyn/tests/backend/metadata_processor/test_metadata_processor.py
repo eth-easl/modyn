@@ -2,6 +2,7 @@
 from typing import Iterable, Optional
 from unittest.mock import MagicMock, patch
 
+# pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
     PerSampleMetadata,
     PerTriggerMetadata,
@@ -15,7 +16,7 @@ class MockStrategy(AbstractProcessorStrategy):
         pass
 
     def process_training_metadata(
-        trigger_id: int, trigger_metadata: PerTriggerMetadata, sample_metadata: PerSampleMetadata
+        self, trigger_id: int, trigger_metadata: PerTriggerMetadata, sample_metadata: PerSampleMetadata
     ) -> None:
         pass
 

@@ -1,6 +1,6 @@
-# pylint: disable-next=no-name-in-module
 from unittest.mock import MagicMock, patch
 
+# pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
     PerSampleMetadata,
     PerTriggerMetadata,

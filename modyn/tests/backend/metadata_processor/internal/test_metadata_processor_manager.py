@@ -3,6 +3,8 @@ from typing import Iterable, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
     PerSampleMetadata,
     PerTriggerMetadata,
@@ -33,7 +35,7 @@ class MockStrategy(AbstractProcessorStrategy):
         pass
 
     def process_training_metadata(
-        trigger_id: int, trigger_metadata: PerTriggerMetadata, sample_metadata: PerSampleMetadata
+        self, trigger_id: int, trigger_metadata: PerTriggerMetadata, sample_metadata: PerSampleMetadata
     ) -> None:
         pass
 
@@ -58,7 +60,7 @@ def test_register_pipeline(test__instantiate_strategy: MagicMock):
     manager.register_pipeline(56, "..")
     assert len(manager.processors) == 1
 
-    assert 56 in manager.processors.keys()
+    assert 56 in manager.processors
     assert isinstance(manager.processors[56].strategy, MockStrategy)
 
 
