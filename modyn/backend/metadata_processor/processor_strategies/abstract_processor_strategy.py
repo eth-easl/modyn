@@ -33,12 +33,12 @@ class AbstractProcessorStrategy(ABC):
         processed_trigger_metadata = self.process_trigger_metadata(trigger_metadata)
         processed_sample_metadata = self.process_sample_metadata(sample_metadata)
         self.persist_metadata(trigger_id, processed_trigger_metadata, processed_sample_metadata)
-        
+
     def persist_metadata(
         self,
         trigger_id: int,
         processed_trigger_metadata: Optional[dict],
-        processed_sample_metadata: Optional[list[dict]]
+        processed_sample_metadata: Optional[list[dict]],
     ) -> None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
             if processed_trigger_metadata is not None:

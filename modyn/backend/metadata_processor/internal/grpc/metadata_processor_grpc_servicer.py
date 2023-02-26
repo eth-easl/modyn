@@ -1,21 +1,20 @@
 """GRPC Servicer for Metadata Processor"""
 
 import logging
+
 import grpc
 
 # pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
-    RegisterPipelineRequest,
     PipelineResponse,
+    RegisterPipelineRequest,
     TrainingMetadataRequest,
     TrainingMetadataResponse,
 )
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
     MetadataProcessorServicer,
 )
-from modyn.backend.metadata_processor.internal.metadata_processor_manager import (
-    MetadataProcessorManager,
-)
+from modyn.backend.metadata_processor.internal.metadata_processor_manager import MetadataProcessorManager
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,7 @@ class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
             f" and trigger ID {request.trigger_id}"
         )
         self.processor_manager.process_training_metadata(
-            request.pipeline_id, request.trigger_id, request.trigger_metadata, request.sample_metadata)
+            request.pipeline_id, request.trigger_id, request.trigger_metadata, request.sample_metadata
+        )
 
         return TrainingMetadataResponse()

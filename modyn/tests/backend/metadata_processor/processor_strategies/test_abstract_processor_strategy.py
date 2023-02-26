@@ -5,10 +5,8 @@ from math import isclose
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
-
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
     PerSampleMetadata,
     PerTriggerMetadata,
@@ -56,7 +54,7 @@ def test_constructor():
 def test_process_training_metadata(
     test__persist_metadata: MagicMock,
     test__process_sample_metadata: MagicMock,
-    test__process_trigger_metadata: MagicMock
+    test__process_trigger_metadata: MagicMock,
 ):
     strat = AbstractProcessorStrategy(get_minimal_modyn_config(), 56)
 
@@ -90,14 +88,11 @@ def test_persist_metadata():
     strat.persist_metadata(1, {"loss": 0.05}, [{"sample_id": "s1", "loss": 0.1}])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        data = (
-            database.session.query(
-                TriggerTrainingMetadata.trigger_id,
-                TriggerTrainingMetadata.pipeline_id,
-                TriggerTrainingMetadata.overall_loss,
-            )
-            .all()
-        )
+        data = database.session.query(
+            TriggerTrainingMetadata.trigger_id,
+            TriggerTrainingMetadata.pipeline_id,
+            TriggerTrainingMetadata.overall_loss,
+        ).all()
 
         _, _, loss = zip(*data)
         assert len(loss) == 1, f"Expected 1 entry for trigger metadata, received {len(loss)}"

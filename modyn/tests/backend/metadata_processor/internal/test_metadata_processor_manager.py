@@ -1,19 +1,15 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name
-from unittest.mock import MagicMock, patch
 from typing import Iterable, Optional
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
     PerSampleMetadata,
     PerTriggerMetadata,
 )
 from modyn.backend.metadata_processor.internal.metadata_processor_manager import MetadataProcessorManager
 from modyn.backend.metadata_processor.metadata_processor import MetadataProcessor
-from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import (
-    AbstractProcessorStrategy,
-)
-
+from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
 
 TRIGGER_METATDATA = PerTriggerMetadata(loss=0.05)
 SAMPLE_METADATA = [PerSampleMetadata(sample_id="s1", loss=0.1)]
@@ -37,9 +33,7 @@ class MockStrategy(AbstractProcessorStrategy):
         pass
 
     def process_training_metadata(
-        trigger_id: int,
-        trigger_metadata: PerTriggerMetadata,
-        sample_metadata: PerSampleMetadata
+        trigger_id: int, trigger_metadata: PerTriggerMetadata, sample_metadata: PerSampleMetadata
     ) -> None:
         pass
 
@@ -51,7 +45,7 @@ class MockStrategy(AbstractProcessorStrategy):
 
 
 def test_constructor():
-    manager = MetadataProcessorManager(get_modyn_config())
+    MetadataProcessorManager(get_modyn_config())
 
 
 @patch.object(MetadataProcessorManager, "_instantiate_strategy")

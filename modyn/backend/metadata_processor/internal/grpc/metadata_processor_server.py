@@ -9,9 +9,7 @@ from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor
 from modyn.backend.metadata_processor.internal.grpc.metadata_processor_grpc_servicer import (
     MetadataProcessorGRPCServicer,
 )
-from modyn.backend.metadata_processor.internal.metadata_processor_manager import (
-    MetadataProcessorManager
-)
+from modyn.backend.metadata_processor.internal.metadata_processor_manager import MetadataProcessorManager
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +25,7 @@ class MetadataProcessorServer:
 
     def prepare_server(self) -> grpc.server:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        self._add_servicer_to_server_func(
-            MetadataProcessorGRPCServicer(self.processor_manager), server)
+        self._add_servicer_to_server_func(MetadataProcessorGRPCServicer(self.processor_manager), server)
         return server
 
     def run(self) -> None:
