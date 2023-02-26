@@ -51,7 +51,7 @@ def send_metadata_and_check_database(
     processor_client: MetadataProcessorClient, config: dict
 ) -> None:
     with MetadataDatabaseConnection(config) as database:
-        pipeline_id = database.register_pipeline(10)
+        pipeline_id = database.register_pipeline(2)
 
     req = TrainingMetadataRequest(
         pipeline_id=pipeline_id,
