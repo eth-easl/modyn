@@ -102,7 +102,7 @@ data:
 
       return {
         "numerical_input": torch.asarray(num_features_array, copy=True, dtype=torch.float32),
-        "categorical_input": torch.asarray(cat_features_array, copy=True, dtype=torch.int32)
+        "categorical_input": torch.asarray(cat_features_array, copy=True, dtype=torch.long)
       }
   label_transformer_function: |
     import torch

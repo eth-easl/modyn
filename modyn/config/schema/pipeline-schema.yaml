@@ -203,9 +203,9 @@ properties:
           name:
             type: string
             description: The name of the LR scheduler.
-          custom:
-            type: boolean
-            description: Whether this is a custom LR scheduler or provided by an ML framework (only PyTorch for now).
+          source:
+            type: string
+            description: Source of the LR scheduler (for now, only PyTorch and custom are supported).
           optimizers:
             type: array
             minItems: 1
@@ -219,7 +219,7 @@ properties:
               Optional configuration of the lr scheduler. Passed to the lr scheduler as a dict.
         required:
           - name
-          - custom
+          - source
           - optimizers
     required:
       - gpus

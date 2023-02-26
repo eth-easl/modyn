@@ -96,6 +96,7 @@ def package_available_and_can_be_imported(package: str) -> bool:
 
     try:
         importlib.import_module(package)
+        return True
     except Exception as e:
         logger.warning(f"Importing module {package} throws exception {e}")
         UNAVAILABLE_PKGS.append(package)

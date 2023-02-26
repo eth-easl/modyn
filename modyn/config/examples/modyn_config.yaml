@@ -22,7 +22,7 @@ storage:
             byteorder: "little",
             record_size: 160,
             label_size: 4,
-            file_extension: "bin"
+            file_extension: ".bin"
           }
       }
     ]
