@@ -5,7 +5,7 @@ import logging
 import pathlib
 
 import yaml
-from modyn.backend.metadata_processor.metadata_processor import MetadataProcessor
+from modyn.backend.metadata_processor.internal.grpc.metadata_processor_server import MetadataProcessorServer
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -43,7 +43,7 @@ def main() -> None:
         config = yaml.safe_load(config_file)
 
     logger.info("Initializing Metadata Processor")
-    processor = MetadataProcessor(config)
+    processor = MetadataProcessorServer(config)
     logger.info("Starting Metadata Processor")
     processor.run()
 
