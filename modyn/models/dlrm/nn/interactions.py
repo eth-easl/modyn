@@ -15,7 +15,7 @@
 # mypy: ignore-errors
 
 import torch
-from modyn.models.dlrm.cuda_ext import dotBasedInteract
+from modyn.models.dlrm.cuda_ext.dot_based_interact import dotBasedInteract
 
 
 def padding_size(n: int) -> int:

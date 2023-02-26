@@ -15,7 +15,7 @@ setup(
                 os.path.join(abspath, "cuda_src/pytorch_embedding_ops.cpp"),
                 os.path.join(abspath, "cuda_src/gather_gpu_fused_pytorch_impl.cu"),
             ],
-            extra_compile_args={"cxx": [], "nvcc": ["-arch=sm_70", "-gencode", "arch=compute_80,code=sm_80"]},
+            extra_compile_args={"cxx": [], "nvcc": ["-gencode", "arch=native"]},
         ),
         CUDAExtension(
             name="cuda_ext.interaction_volta",
@@ -59,7 +59,7 @@ setup(
                 os.path.join(abspath, "cuda_src/sparse_gather/sparse_pytorch_ops.cpp"),
                 os.path.join(abspath, "cuda_src/sparse_gather/gather_gpu.cu"),
             ],
-            extra_compile_args={"cxx": [], "nvcc": ["-arch=sm_70", "-gencode", "arch=compute_80,code=sm_80"]},
+            extra_compile_args={"cxx": [], "nvcc": ["-gencode", "arch=native"]},
         ),
     ],
     cmdclass={"build_ext": BuildExtension},
