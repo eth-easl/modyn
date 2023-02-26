@@ -1,19 +1,21 @@
 """GRPC Servicer for Metadata Processor"""
 
 import logging
-from typing import Iterable
-
 import grpc
 
 # pylint: disable-next=no-name-in-module
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (
+    RegisterPipelineRequest,
+    PipelineResponse,
     TrainingMetadataRequest,
     TrainingMetadataResponse,
 )
 from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
     MetadataProcessorServicer,
 )
-from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
+from modyn.backend.metadata_processor.internal.metadata_processor_manager import (
+    MetadataProcessorManager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,30 +23,23 @@ logger = logging.getLogger(__name__)
 class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
     """GRPC Servicer for the MetadataProcessor module."""
 
-    def __init__(self, strategy: AbstractProcessorStrategy) -> None:
+    def __init__(self, processor_manager: MetadataProcessorManager) -> None:
         super().__init__()
-        self.processor_strategy = strategy
+        self.processor_manager = processor_manager
+
+    def register_pipeline(self, request: RegisterPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
+        logger.info(f"Registering pipeline with request - {str(request)}")
+        self.processor_manager.register_pipeline(request.pipeline_id, request.processor_type)
+        return PipelineResponse()
 
     def ProcessTrainingMetadata(
-        self, request_iterator: Iterable[TrainingMetadataRequest], context: grpc.ServicerContext
+        self, request: TrainingMetadataRequest, context: grpc.ServicerContext
     ) -> TrainingMetadataResponse:
-        """Process training metadata.
-
-        Args:
-            request_iterator (Iterable[TrainingMetadataRequest]): Requests
-                containing the training ID and the metadata
-            context (grpc.ServicerContext): Context of the request.
-
-        Returns:
-            response (TrainingMetadataResponse): Empty response, to confirm.
-        """
-        for request in request_iterator:
-            logger.info(
-                f"Processing training metadata for pipeline ID {request.pipeline_id}"
-                f" and trigger ID {request.trigger_id}"
-            )
-            self.processor_strategy.process_training_metadata(
-                request.pipeline_id, request.trigger_id, request.trigger_metadata, request.sample_metadata
-            )
+        logger.info(
+            f"Processing training metadata for pipeline ID {request.pipeline_id}"
+            f" and trigger ID {request.trigger_id}"
+        )
+        self.processor_manager.process_training_metadata(
+            request.pipeline_id, request.trigger_id, request.trigger_metadata, request.sample_metadata)
 
         return TrainingMetadataResponse()

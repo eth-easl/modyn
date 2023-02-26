@@ -28,12 +28,6 @@ def setup_argparser() -> argparse.ArgumentParser:
         action="store",
         help="Modyn infrastructure configuration file",
     )
-    parser_.add_argument(
-        "pipeline",
-        type=pathlib.Path,
-        action="store",
-        help="Modyn pipeline configuration file",
-    )
 
     return parser_
 
@@ -48,11 +42,8 @@ def main() -> None:
     with open(args.config, "r", encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
-    with open(args.pipeline, "r", encoding="utf-8") as pipeline_file:
-        pipeline_config = yaml.safe_load(pipeline_file)
-
     logger.info("Initializing Metadata Processor")
-    processor = MetadataProcessor(config, pipeline_config)
+    processor = MetadataProcessor(config)
     logger.info("Starting Metadata Processor")
     processor.run()
 

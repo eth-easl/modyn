@@ -17,6 +17,34 @@ else:
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
 @typing_extensions.final
+class RegisterPipelineRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    PROCESSOR_TYPE_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    processor_type: builtins.str
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+        processor_type: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id", "processor_type", b"processor_type"]) -> None: ...
+
+global___RegisterPipelineRequest = RegisterPipelineRequest
+
+@typing_extensions.final
+class PipelineResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___PipelineResponse = PipelineResponse
+
+@typing_extensions.final
 class TrainingMetadataRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 

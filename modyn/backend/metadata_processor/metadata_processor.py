@@ -15,18 +15,48 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataProcessor:
-    def __init__(self, modyn_config: dict, pipeline_config: dict) -> None:
-        self.config = modyn_config
-        self.strategy = self._get_strategy(pipeline_config)
+    def __init__(self, strategy: AbstractProcessorStrategy, pipeline_id: int) -> None:
+        self.strategy = strategy
+        self.pipeline_id = pipeline_id
 
-    def run(self) -> None:
-        with GRPCServer(self.config, self.strategy) as server:
-            server.wait_for_termination()
-
-    def _get_strategy(self, pipeline_config: dict) -> AbstractProcessorStrategy:
-        strategy = ProcessorStrategyType(pipeline_config["training"]["selection_strategy"]["processor_type"])
-        processor_strategy_module = dynamic_module_import(
-            f"modyn.backend.metadata_processor.processor_strategies.{strategy.value}"
-        )
-        processor_strategy = getattr(processor_strategy_module, f"{strategy.name}")
-        return processor_strategy(self.config)
+    def process_training_metadata(
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        trigger_metadata: PerTriggerMetadata,
+        sample_metadata: Iterable[PerSampleMetadata],
+    ) -> None:
+        processed_trigger_metadata = self.strategy.process_trigger_metadata(trigger_metadata)
+        processed_sample_metadata = self.strategy.process_sample_metadata(sample_metadata)
+        self.persist_metadata(processed_trigger_metadata, processed_sample_metadata)
+        
+    def persist_metadata(
+        self,
+        processed_trigger_metadata: Optional[dict],
+        processed_sample_metadata: Optional[list[dict]]
+    ) -> None:
+        with MetadataDatabaseConnection(self.config) as database:
+            if processed_trigger_metadata is not None:
+                database.session.add(
+                    TriggerTrainingMetadata(
+                        trigger_id=trigger_id,
+                        pipeline_id=pipeline_id,
+                        overall_loss=processed_trigger_metadata.get("loss", None),
+                        time_to_train=processed_trigger_metadata.get("time", None),
+                    )
+                )
+                database.session.commit()
+            if processed_sample_metadata is not None:
+                database.session.add_all(
+                    [
+                        SampleTrainingMetadata(
+                            pipeline_id=pipeline_id,
+                            trigger_id=trigger_id,
+                            sample_key=metadata["sample_id"],
+                            loss=metadata.get("loss", None),
+                            gradient=metadata.get("gradient", None),
+                        )
+                        for metadata in processed_sample_metadata
+                    ]
+                )
+                database.session.commit()

@@ -3,7 +3,16 @@ syntax = "proto3";
 package metadata_processor;
 
 service MetadataProcessor {
-    rpc ProcessTrainingMetadata (stream TrainingMetadataRequest) returns (TrainingMetadataResponse) {}
+	rpc RegisterPipeline (RegisterPipelineRequest) returns (PipelineResponse) {}
+    rpc ProcessTrainingMetadata (TrainingMetadataRequest) returns (TrainingMetadataResponse) {}
+}
+
+message RegisterPipelineRequest {
+	int32 pipeline_id = 1;
+	string processor_type = 2;
+}
+
+message PipelineResponse {
 }
 
 message TrainingMetadataRequest {
