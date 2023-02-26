@@ -19,8 +19,8 @@
 Fused Buckle Embedding
 """
 
-from torch.autograd import Function
 from modyn.utils import package_available_and_can_be_imported
+from torch.autograd import Function
 
 if package_available_and_can_be_imported("apex"):
     import apex

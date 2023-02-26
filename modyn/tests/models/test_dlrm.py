@@ -41,24 +41,21 @@ def test_dlrm_init():
             "cat_23": 12022,
             "cat_24": 97,
             "cat_25": 35,
-        }
+        },
     }
     model = DLRM(model_configuration)
     order_list = [19, 0, 21, 9, 20, 10, 22, 11, 1, 4, 2, 23, 14, 3, 6, 13, 7, 17, 15, 24, 8, 25, 18, 12, 5, 16]
 
-    assert torch.equal(
-        model.model._embedding_ordering,
-        torch.tensor(order_list)
-    )
+    assert torch.equal(model.model._embedding_ordering, torch.tensor(order_list))
     data = {
         "numerical_input": torch.ones((64, 13), dtype=torch.float32),
         "categorical_input": torch.ones((64, 26), dtype=torch.long),
     }
     model.model(data)
 
-    test_data = torch.tensor(list(range(26,52)), dtype=torch.long).expand(64, -1)
-    input_data =  torch.tensor([x+26 for x in order_list], dtype=torch.long).expand(64, -1)
+    test_data = torch.tensor(list(range(26, 52)), dtype=torch.long).expand(64, -1)
+    input_data = torch.tensor([x + 26 for x in order_list], dtype=torch.long).expand(64, -1)
     reordered_test_data = model.model.reorder_categorical_input(test_data)
-    assert reordered_test_data.shape == (64,26)
+    assert reordered_test_data.shape == (64, 26)
     assert reordered_test_data.dtype == torch.long
     assert torch.equal(reordered_test_data, input_data)

@@ -1,11 +1,12 @@
 import importlib
+import importlib.util
 import inspect
+import logging
 import pathlib
+import sys
 import time
 from types import ModuleType
 from typing import Optional
-import sys
-import logging
 
 import grpc
 import yaml
@@ -15,6 +16,7 @@ from jsonschema.exceptions import ValidationError
 logger = logging.getLogger(__name__)
 
 UNAVAILABLE_PKGS = []
+
 
 def dynamic_module_import(name: str) -> ModuleType:
     """
@@ -32,7 +34,8 @@ def dynamic_module_import(name: str) -> ModuleType:
 def model_available(model_type: str) -> bool:
     # this import is moved due to circular import errors caused by modyn.models
     # importing the 'package_available_and_can_be_imported' function
-    import modyn.models
+    import modyn.models  # pylint: disable=import-outside-toplevel
+
     available_models = list(x[0] for x in inspect.getmembers(modyn.models, inspect.isclass))
     return model_type in available_models
 
@@ -97,7 +100,7 @@ def package_available_and_can_be_imported(package: str) -> bool:
     try:
         importlib.import_module(package)
         return True
-    except Exception as e:
-        logger.warning(f"Importing module {package} throws exception {e}")
+    except Exception as exception:
+        logger.warning(f"Importing module {package} throws exception {exception}")
         UNAVAILABLE_PKGS.append(package)
         return False

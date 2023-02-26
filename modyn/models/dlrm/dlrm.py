@@ -19,6 +19,7 @@ class DLRM:
 
 
 class DlrmModel(nn.Module):
+    # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         model_configuration: dict[str, Any],
@@ -36,7 +37,9 @@ class DlrmModel(nn.Module):
         categorical_features_info_sizes = list(categorical_features_info.values())
 
         if "max_table_size" in model_configuration:
-            world_embedding_sizes = [min(s, model_configuration["max_table_size"]) for s in categorical_features_info_sizes]
+            world_embedding_sizes = [
+                min(s, model_configuration["max_table_size"]) for s in categorical_features_info_sizes
+            ]
         else:
             world_embedding_sizes = categorical_features_info_sizes
 
@@ -79,11 +82,11 @@ class DlrmModel(nn.Module):
     def extra_repr(self) -> str:
         return f"interaction_op={self._interaction_op}, hash_indices={self._hash_indices}"
 
-    def reorder_categorical_input(self, input: torch.Tensor) -> torch.Tensor:
+    def reorder_categorical_input(self, cat_input: torch.Tensor) -> torch.Tensor:
         """Reorder categorical input based on embedding ordering"""
-        dim0 = input.shape[0]
+        dim0 = cat_input.shape[0]
         order = self._embedding_ordering.expand(dim0, -1)
-        return torch.gather(input, 1, order)
+        return torch.gather(cat_input, 1, order)
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         """
@@ -97,5 +100,7 @@ class DlrmModel(nn.Module):
         categorical_input = data["categorical_input"]
 
         # bottom mlp output may be not present before all to all communication
-        from_bottom, bottom_mlp_output = self.bottom_model(numerical_input, self.reorder_categorical_input(categorical_input))
+        from_bottom, bottom_mlp_output = self.bottom_model(
+            numerical_input, self.reorder_categorical_input(categorical_input)
+        )
         return self.top_model(from_bottom, bottom_mlp_output).squeeze()

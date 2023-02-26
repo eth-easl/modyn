@@ -19,13 +19,13 @@ import copy
 from typing import Iterable, List, Sequence
 
 import torch
-from torch import nn
-
 from modyn.utils.utils import package_available_and_can_be_imported
+from torch import nn
 
 if package_available_and_can_be_imported("apex"):
     from modyn.models.dlrm.cuda_ext.fused_gather_embedding import BuckleEmbeddingFusedGatherFunction
     from modyn.models.dlrm.cuda_ext.sparse_embedding import JointSparseEmbedding as CudaExtJointSparseEmbedding
+
 
 class Embeddings(nn.Module):
     def forward(self, categorical_inputs) -> List[torch.Tensor]:

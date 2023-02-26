@@ -17,6 +17,7 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import dynamic_module_import, package_available_and_can_be_imported
 
+
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
 
@@ -45,7 +46,8 @@ class PytorchTrainer:
                 optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
             elif optimizer_config["source"] == "APEX":
                 if package_available_and_can_be_imported("apex"):
-                    import apex
+                    import apex  # pylint: disable=import-outside-toplevel, import-error
+
                     optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
                 else:
                     raise ValueError("Apex Optimizer defined, but apex is not available in the system")
@@ -88,7 +90,8 @@ class PytorchTrainer:
                 )
             else:
                 raise ValueError(
-                    f"Unsupported LR scheduler of source {training_info.lr_scheduler['source']}. PyTorch and Custom are supported"
+                    f"Unsupported LR scheduler of source {training_info.lr_scheduler['source']}."
+                    "PyTorch and Custom are supported"
                 )
 
         # setup dataloaders
