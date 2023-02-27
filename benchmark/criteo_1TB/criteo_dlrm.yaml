@@ -81,6 +81,8 @@ training:
       end_lr_factor: 0
   optimization_criterion:
     name: "BCEWithLogitsLoss"
+  grad_scaler_config:
+    growth_interval: 1000000000
   checkpointing:
     activated: False
   selection_strategy:

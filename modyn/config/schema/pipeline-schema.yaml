@@ -221,6 +221,10 @@ properties:
           - name
           - source
           - optimizers
+      grad_scaler_config:
+        type: object
+        description: |
+          Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.
     required:
       - gpus
       - device

@@ -56,6 +56,7 @@ message StartTrainingRequest {
     repeated string transform_list = 17;
     JsonString lr_scheduler = 18;
     PythonString label_transformer = 19;
+    JsonString grad_scaler_configuration = 20;
 }
 
 message StartTrainingResponse {

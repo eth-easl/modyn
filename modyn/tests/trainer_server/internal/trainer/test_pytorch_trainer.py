@@ -209,6 +209,7 @@ def get_training_info(
                 pretrained_model=pretrained_model,
                 lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
+                grad_scaler_configuration=JsonString(value=json.dumps({})),
             )
             training_info = TrainingInfo(
                 request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname)

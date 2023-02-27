@@ -270,6 +270,11 @@ class GRPCHandler:
 
         amp = pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False
 
+        if "grad_scaler_config" in pipeline_config["training"]:
+            grad_scaler_config = pipeline_config["training"]["grad_scaler_config"]
+        else:
+            grad_scaler_config = {}
+
         req = StartTrainingRequest(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
@@ -293,6 +298,7 @@ class GRPCHandler:
             bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
             label_transformer=PythonString(value=label_transformer),
             lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
         )
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)

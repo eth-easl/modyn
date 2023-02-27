@@ -7,6 +7,7 @@ from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 abspath = os.path.dirname(os.path.realpath(__file__))
 
+# TODO(165): check if these libraries work in devices with compute capability > 8.0
 setup(
     ext_modules=[
         CUDAExtension(

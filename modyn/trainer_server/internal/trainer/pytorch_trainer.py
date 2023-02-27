@@ -43,6 +43,9 @@ class PytorchTrainer:
         self._setup_lr_scheduler(training_info)
         self._info("LR scheduler created.")
 
+        self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
+        self._info("Grad scaler created.")
+
         if training_info.used_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model, training_info.load_optimizer_state)
@@ -239,7 +242,7 @@ class PytorchTrainer:
                 output = self._model.model(data)
                 loss = self._criterion(output, target)
 
-            loss.backward()
+            self._scaler.scale(loss).backward()
 
             for _, callback in self._callbacks.items():
                 callback.on_batch_before_update(
@@ -247,7 +250,9 @@ class PytorchTrainer:
                 )
 
             for _, optimizer in self._optimizers.items():
-                optimizer.step()
+                self._scaler.step(optimizer)
+
+            self._scaler.update()
 
             if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
                 checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"

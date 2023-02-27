@@ -105,7 +105,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         assert self.has_limit
         assert self.training_set_size_limit > 0
 
-        return samples[-self.training_set_size_limit :]
+        return samples[-self.training_set_size_limit:]
 
     def _sample_uar(self, samples: list[str]) -> list[str]:
         assert self.has_limit

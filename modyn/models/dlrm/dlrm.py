@@ -45,12 +45,13 @@ class DlrmModel(nn.Module):
         categorical_feature_sizes = np.asarray(categorical_features_info_sizes)
         # Derive ordering of embeddings based on their cardinality
         # Partition embeddings in the GPUs. As we only train with one GPU, all embeddings will be placed there
+        # 'device_mapping' contains the embeddings placed on the GPU
         device_mapping = get_device_mapping(categorical_features_info_sizes, num_gpus=1)
+
         self._embedding_ordering = torch.tensor(device_mapping["embedding"][0]).to(self._device)
 
         # Get embedding sizes for each GPU
         categorical_feature_sizes = categorical_feature_sizes[device_mapping["embedding"][0]].tolist()
-        print("categorical_feature_sizes: ", categorical_feature_sizes)
 
         self._vectors_per_gpu = device_mapping["vectors_per_gpu"]
         self._embedding_device_mapping = device_mapping["embedding"]

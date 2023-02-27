@@ -30,6 +30,7 @@ class TrainingInfo:
         self.torch_optimizers_configuration = json.loads(request.torch_optimizers_configuration.value)
         self.model_configuration_dict = json.loads(request.model_configuration.value)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
+        self.grad_scaler_configuration = json.loads(request.grad_scaler_configuration.value)
 
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
