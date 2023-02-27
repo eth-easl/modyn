@@ -44,7 +44,7 @@ message StartTrainingRequest {
     JsonString model_configuration = 5;
     bool use_pretrained_model = 6;
     bool load_optimizer_state = 7;
-    bytes pretrained_model = 8;
+    string pretrained_model_path = 8;
     int32 batch_size = 9;
     string torch_optimizer = 10;
     JsonString optimizer_parameters = 11;

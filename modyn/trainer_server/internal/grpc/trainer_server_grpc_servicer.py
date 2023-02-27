@@ -74,13 +74,25 @@ class TrainerServerGRPCServicer:
             logger.error(f"Model {request.model_id} not available!")
             return StartTrainingResponse(training_started=False)
 
+        pretrained_model_path: Optional[pathlib.Path] = None
+        if request.pretrained_model_path is not None and request.pretrained_model_path != "":
+            pretrained_model_path = self._modyn_base_dir / pathlib.Path(request.pretrained_model_path)
+            if not pretrained_model_path.exists():
+                logger.error(f"Pretrained Model Path {pretrained_model_path} does not exist. Cannot start training.")
+                return StartTrainingResponse(training_started=False)
+
         with self._lock:
             training_id = self._next_training_id
             self._next_training_id += 1
 
         final_checkpoint_path = self._modyn_base_dir / f"training_{training_id}"
         training_info = TrainingInfo(
-            request, training_id, self._storage_address, self._selector_address, final_checkpoint_path
+            request,
+            training_id,
+            self._storage_address,
+            self._selector_address,
+            final_checkpoint_path,
+            pretrained_model_path,
         )
         self._training_dict[training_id] = training_info
 

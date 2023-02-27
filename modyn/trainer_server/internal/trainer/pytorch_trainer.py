@@ -42,9 +42,9 @@ class PytorchTrainer:
 
         self._info("Model and optimizer created.")
 
-        if training_info.used_pretrained_model:
+        if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
-            self.load_state_if_given(training_info.pretrained_model, training_info.load_optimizer_state)
+            self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
 
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
@@ -100,9 +100,11 @@ class PytorchTrainer:
 
         torch.save(dict_to_save, destination)
 
-    def load_state_if_given(self, initial_state: bytes, load_optimizer_state: bool = False) -> None:
-        checkpoint_buffer = io.BytesIO(initial_state)
-        checkpoint = torch.load(checkpoint_buffer)
+    def load_state_if_given(self, path: pathlib.Path, load_optimizer_state: bool = False) -> None:
+        assert path.exists(), "Cannot load state from non-existing file"
+        with open(path, "rb") as state_file:
+            checkpoint = torch.load(io.BytesIO(state_file.read()))
+
         assert "model" in checkpoint
         self._model.model.load_state_dict(checkpoint["model"])
         if load_optimizer_state and "optimizer" in checkpoint:
