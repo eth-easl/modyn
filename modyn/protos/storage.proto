@@ -64,6 +64,7 @@ message RegisterNewDatasetRequest {
   string base_path = 5;
   string version = 6;
   string file_wrapper_config = 7;
+  bool ignore_last_timestamp = 8;
 }
 
 message RegisterNewDatasetResponse {

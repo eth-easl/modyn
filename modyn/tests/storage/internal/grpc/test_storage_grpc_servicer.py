@@ -81,6 +81,7 @@ def setup():
             description="test",
             version="0.0.1",
             file_wrapper_config=json.dumps({"file_extension": "png"}),
+            last_timestamp=now,
         )
 
         session.add(dataset)

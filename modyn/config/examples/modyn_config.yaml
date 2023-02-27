@@ -21,7 +21,8 @@ storage:
           {
             file_extension: ".png",
             label_file_extension: ".label"
-          }
+          },
+        ignore_last_timestamp: false,
       },
       {
         name: "criteo",
@@ -36,7 +37,8 @@ storage:
             record_size: 160,
             label_size: 4,
             file_extension: ".bin"
-          }
+          },
+        ignore_last_timestamp: false,
       }
     ]
   database:

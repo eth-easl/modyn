@@ -187,6 +187,7 @@ class RegisterNewDatasetRequest(google.protobuf.message.Message):
     BASE_PATH_FIELD_NUMBER: builtins.int
     VERSION_FIELD_NUMBER: builtins.int
     FILE_WRAPPER_CONFIG_FIELD_NUMBER: builtins.int
+    IGNORE_LAST_TIMESTAMP_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     filesystem_wrapper_type: builtins.str
     file_wrapper_type: builtins.str
@@ -194,6 +195,7 @@ class RegisterNewDatasetRequest(google.protobuf.message.Message):
     base_path: builtins.str
     version: builtins.str
     file_wrapper_config: builtins.str
+    ignore_last_timestamp: builtins.bool
     def __init__(
         self,
         *,
@@ -204,8 +206,9 @@ class RegisterNewDatasetRequest(google.protobuf.message.Message):
         base_path: builtins.str = ...,
         version: builtins.str = ...,
         file_wrapper_config: builtins.str = ...,
+        ignore_last_timestamp: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["base_path", b"base_path", "dataset_id", b"dataset_id", "description", b"description", "file_wrapper_config", b"file_wrapper_config", "file_wrapper_type", b"file_wrapper_type", "filesystem_wrapper_type", b"filesystem_wrapper_type", "version", b"version"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["base_path", b"base_path", "dataset_id", b"dataset_id", "description", b"description", "file_wrapper_config", b"file_wrapper_config", "file_wrapper_type", b"file_wrapper_type", "filesystem_wrapper_type", b"filesystem_wrapper_type", "ignore_last_timestamp", b"ignore_last_timestamp", "version", b"version"]) -> None: ...
 
 global___RegisterNewDatasetRequest = RegisterNewDatasetRequest
 
