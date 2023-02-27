@@ -30,9 +30,11 @@ class FTPServer:
         self.handler.authorizer = self.authorizer
 
         self.address = ("", self.config["trainer_server"]["ftp_port"])
-        self.server = pyFTPServer(self.address, self.handler)
+        self.thread = threading.Thread(target=self.create_server_and_serve)
 
-        self.thread = threading.Thread(target=self.server.serve_forever)
+    def create_server_and_serve(self) -> None:
+        self.server = pyFTPServer(self.address, self.handler)
+        self.server.serve_forever()
 
     def __enter__(self) -> pyFTPServer:
         """Enter the context manager.
@@ -42,7 +44,7 @@ class FTPServer:
         """
 
         self.thread.start()  # As serve_forever is blocking, we run it in another thread.
-        return self.server
+        return self
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
         """Exit the context manager.

@@ -17,10 +17,7 @@ class TrainerServer:
         try:
             mp.set_start_method("spawn")
         except RuntimeError as error:
-            if "PYTEST_CURRENT_TEST" in os.environ:
-                logger.warning("RuntimeError occured while setting multiprocessing start method during test, ignoring.")
-                logger.warning(error)
-            else:
+            if mp.get_start_method() != "spawn":
                 raise error
 
         self.temp_directory = pathlib.Path(tempfile.gettempdir()) / "modyn"
