@@ -108,6 +108,14 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
             return int(label)
         return None
 
+    def get_all_labels(self) -> list[Optional[int]]:
+        """Returns a list of all labels of all samples in the file.
+
+        Returns:
+            list[Optional[int]]: List of labels
+        """
+        return [self.get_label(0)]
+
     def get_samples_from_indices(self, indices: list) -> list[bytes]:
         """Get the samples from the file.
 
