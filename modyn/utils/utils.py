@@ -100,7 +100,7 @@ def package_available_and_can_be_imported(package: str) -> bool:
     try:
         importlib.import_module(package)
         return True
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         logger.warning(f"Importing module {package} throws exception {exception}")
         UNAVAILABLE_PKGS.append(package)
         return False

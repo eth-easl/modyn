@@ -8,6 +8,19 @@ In according with the LICENSE of the NVIDIA code, we list our changes here:
 - We remove data prefetching
 - We remove distributed training
 
+# Overview of the different model features and requirements
+Two important features of the DLRM model are the `embedding_type` and `interaction_op`. For information regarding their functionality, check the NVIDIA [guide](https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/Recommendation/DLRM/README.md). Here we provide an overview of the different values of these features, along with their requirements:
+- `embedding_type`:
+   * `multi_table`: PyTorch
+   * `joint`: PyTorch
+   * `joint_fused`: PyTorch + CUDA + APEX
+   * `joint_sparse`: PyTorch + CUDA + APEX
+
+- `interaction_op`:
+   * `dot`: PyTorch
+   * `cat`: PyTorch
+   * `cuda_dot`: PyTorch + CUDA
+
 # Original License
 The code falls under the Apache 2.0 LICENSE
 
