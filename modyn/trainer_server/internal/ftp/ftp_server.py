@@ -3,6 +3,7 @@
 import logging
 import pathlib
 import threading
+from typing import Optional
 
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
@@ -31,6 +32,7 @@ class FTPServer:
 
         self.address = ("", self.config["trainer_server"]["ftp_port"])
         self.thread = threading.Thread(target=self.create_server_and_serve)
+        self.server: Optional[pyFTPServer] = None
 
     def create_server_and_serve(self) -> None:
         self.server = pyFTPServer(self.address, self.handler)
@@ -54,6 +56,7 @@ class FTPServer:
             exc_val (Exception): exception value
             exc_tb (Exception): exception traceback
         """
+        assert self.server is not None
         self.server.close_all()  # Blocks until server stopped.
         self.thread.join()  # Wait for thread cleanup.
         logger.debug("Closed FTP Server.")

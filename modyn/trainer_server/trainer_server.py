@@ -1,6 +1,4 @@
 import logging
-import multiprocessing as mp
-import os
 import pathlib
 import shutil
 import tempfile
@@ -14,12 +12,6 @@ logger = logging.getLogger(__name__)
 class TrainerServer:
     def __init__(self, config: dict) -> None:
         self.config = config
-        try:
-            mp.set_start_method("spawn")
-        except RuntimeError as error:
-            if mp.get_start_method() != "spawn":
-                raise error
-
         self.temp_directory = pathlib.Path(tempfile.gettempdir()) / "modyn"
 
         if self.temp_directory.exists() and self.temp_directory.is_dir():
