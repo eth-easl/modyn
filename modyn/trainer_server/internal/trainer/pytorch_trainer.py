@@ -100,7 +100,7 @@ class PytorchTrainer:
             MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
 
-    def _setup_optimizers(self, training_info) -> None:
+    def _setup_optimizers(self, training_info: TrainingInfo) -> None:
         self._optimizers = {}
         for name, optimizer_config in training_info.torch_optimizers_configuration.items():
             if optimizer_config["source"] == "PyTorch":

@@ -202,7 +202,7 @@ class GRPCHandler:
         # TODO(#130): Implement this at trainer server.
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
 
-    # pylint: disable=too-many-branches,too-many-locals
+    # pylint: disable=too-many-branches,too-many-locals, too-many-statements
     def start_training(
         self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model: Optional[pathlib.Path]
     ) -> int:

@@ -19,9 +19,8 @@
 Fused Buckle Embedding
 """
 
-from torch.autograd import Function
-
 import apex
+from torch.autograd import Function
 
 
 class BuckleEmbeddingFusedGatherFunction(Function):

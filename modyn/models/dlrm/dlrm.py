@@ -4,11 +4,10 @@ import numpy as np
 import torch
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
-from modyn.models.dlrm.utils.utils import get_device_mapping
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
-from torch import nn
-
+from modyn.models.dlrm.utils.utils import get_device_mapping
 from modyn.utils.utils import package_available_and_can_be_imported
+from torch import nn
 
 
 class DLRM:
@@ -31,24 +30,27 @@ class DlrmModel(nn.Module):
         ):
             install_cuda_extensions_if_not_present()
 
+        self._device = device
+
+        # get the sizes of categorical features
         categorical_features_info = model_configuration["categorical_features_info"]
         categorical_features_info_sizes = list(categorical_features_info.values())
 
+        # limit embedding sizes if needed
         if "max_table_size" in model_configuration:
-            world_embedding_sizes = [
+            categorical_features_info_sizes = [
                 min(s, model_configuration["max_table_size"]) for s in categorical_features_info_sizes
             ]
-        else:
-            world_embedding_sizes = categorical_features_info_sizes
 
-        world_categorical_feature_sizes = np.asarray(world_embedding_sizes)
-        device_mapping = get_device_mapping(world_embedding_sizes, num_gpus=1)
-
-        # Embedding sizes for each GPU
-        categorical_feature_sizes = world_categorical_feature_sizes[device_mapping["embedding"][0]].tolist()
-        self._device = device
-
+        categorical_feature_sizes = np.asarray(categorical_features_info_sizes)
+        # Derive ordering of embeddings based on their cardinality
+        # Partition embeddings in the GPUs. As we only train with one GPU, all embeddings will be placed there
+        device_mapping = get_device_mapping(categorical_features_info_sizes, num_gpus=1)
         self._embedding_ordering = torch.tensor(device_mapping["embedding"][0]).to(self._device)
+
+        # Get embedding sizes for each GPU
+        categorical_feature_sizes = categorical_feature_sizes[device_mapping["embedding"][0]].tolist()
+        print("categorical_feature_sizes: ", categorical_feature_sizes)
 
         self._vectors_per_gpu = device_mapping["vectors_per_gpu"]
         self._embedding_device_mapping = device_mapping["embedding"]
@@ -56,9 +58,7 @@ class DlrmModel(nn.Module):
         self._interaction_op = model_configuration["interaction_op"]
         self._hash_indices = model_configuration["hash_indices"]
 
-        interaction = create_interaction(
-            self._interaction_op, len(world_categorical_feature_sizes), self._embedding_dim
-        )
+        interaction = create_interaction(self._interaction_op, len(categorical_feature_sizes), self._embedding_dim)
 
         # ignore device here since it is handled by the trainer
         self.bottom_model = DlrmBottom(
@@ -103,15 +103,13 @@ class DlrmModel(nn.Module):
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            input: a dict containing:
+            data: a dict containing:
                 numerical_input (Tensor): with shape [batch_size, num_numerical_features]
                 categorical_inputs (Tensor): with shape [batch_size, num_categorical_features]
-            batch_sizes_per_gpu (Sequence[int]):
         """
         numerical_input = data["numerical_input"]
         categorical_input = data["categorical_input"]
 
-        # bottom mlp output may be not present before all to all communication
         from_bottom, bottom_mlp_output = self.bottom_model(
             numerical_input, self.reorder_categorical_input(categorical_input)
         )
