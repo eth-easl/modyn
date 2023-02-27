@@ -1,5 +1,6 @@
 import logging
 import multiprocessing as mp
+import os
 import pathlib
 import shutil
 import tempfile
@@ -16,12 +17,11 @@ class TrainerServer:
         try:
             mp.set_start_method("spawn")
         except RuntimeError as error:
-            # Tests create multiple GRPCServicers in the same process, but we can only set the start method once
-            # Hence, we do not fail if setting the method fails, but warn the user.
-            logger.warning(
-                "RuntimeError occured while setting multiprocessing start method. This should only happen during tests."
-            )
-            logger.warning(error)
+            if "PYTEST_CURRENT_TEST" in os.environ:
+                logger.warning("RuntimeError occured while setting multiprocessing start method during test, ignoring.")
+                logger.warning(error)
+            else:
+                raise error
 
         self.temp_directory = pathlib.Path(tempfile.gettempdir()) / "modyn"
 

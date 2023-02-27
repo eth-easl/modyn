@@ -5,7 +5,7 @@ import os
 import pathlib
 import queue
 from threading import Lock
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import grpc
 import torch
@@ -35,12 +35,12 @@ logger = logging.getLogger(__name__)
 class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
-    def __init__(self, config: dict, tempdir: pathlib.Path) -> None:
+    def __init__(self, config: dict, tempdir: Union[str, pathlib.Path]) -> None:
         self._next_training_id = 0
         self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
         self._training_process_dict: dict[int, TrainingProcessInfo] = {}
-        self._modyn_base_dir = tempdir
+        self._modyn_base_dir = pathlib.Path(tempdir)
 
         assert self._modyn_base_dir.exists(), f"Temporary Directory {self._modyn_base_dir} should have been created."
 

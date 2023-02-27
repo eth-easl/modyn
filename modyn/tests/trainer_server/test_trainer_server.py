@@ -1,3 +1,5 @@
+import pathlib
+import tempfile
 from unittest.mock import patch
 
 from modyn.trainer_server.internal.grpc.trainer_server_grpc_server import GRPCServer
@@ -18,7 +20,7 @@ class MockGRPCServer(GRPCServer):
 
 
 def get_modyn_config():
-    return {"trainer_server": {"port": "5001", "type": "grpc"}}
+    return {"trainer_server": {"port": "5001", "type": "grpc", "ftp_port": "5002"}}
 
 
 def test_init():
@@ -28,7 +30,20 @@ def test_init():
 
 
 @patch("modyn.trainer_server.trainer_server.GRPCServer", MockGRPCServer)
+@patch("modyn.trainer_server.trainer_server.FTPServer", MockGRPCServer)
 def test_run():
     config = get_modyn_config()
     trainer_server = TrainerServer(config)
     trainer_server.run()
+
+
+@patch("modyn.trainer_server.trainer_server.GRPCServer", MockGRPCServer)
+@patch("modyn.trainer_server.trainer_server.FTPServer", MockGRPCServer)
+def test_cleanup_at_exit():
+    modyn_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
+    assert not modyn_dir.exists()
+
+    trainer_server = TrainerServer(get_modyn_config())
+    assert modyn_dir.exists()
+    trainer_server.run()
+    assert not modyn_dir.exists()
