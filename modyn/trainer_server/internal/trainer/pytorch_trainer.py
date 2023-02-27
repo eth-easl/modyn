@@ -102,6 +102,7 @@ class PytorchTrainer:
 
     def load_state_if_given(self, path: pathlib.Path, load_optimizer_state: bool = False) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
+        self._info(f"Loading model state from {path}")
         with open(path, "rb") as state_file:
             checkpoint = torch.load(io.BytesIO(state_file.read()))
 

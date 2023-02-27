@@ -214,7 +214,7 @@ class GRPCHandler:
             total=size, desc=f"[Pipeline {pipeline_id}][Trigger {trigger_id}] Uploading Previous Model", unit="bytes"
         )
 
-        logger.info("Uploading previous model to trainer server. Total size = {} bytes.", size)
+        logger.info(f"Uploading previous model to trainer server. Total size = {size} bytes.")
 
         with open(model, "rb") as local_file:
 
@@ -408,10 +408,8 @@ class GRPCHandler:
         pbar = self.progress_mgr.counter(total=size, desc=f"[Training {training_id}] Downloading Model", unit="bytes")
 
         logger.info(
-            "Remote model path is {}, storing at {}. Fetching via FTP! Total size = {} bytes.",
-            remote_model_path,
-            local_model_path,
-            size,
+            f"Remote model path is {remote_model_path}, storing at {local_model_path}."
+            + f"Fetching via FTP! Total size = {size} bytes."
         )
 
         with open(local_model_path, "wb") as local_file:
