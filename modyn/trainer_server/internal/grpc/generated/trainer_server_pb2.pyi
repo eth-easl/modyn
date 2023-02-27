@@ -272,16 +272,16 @@ class GetFinalModelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     VALID_STATE_FIELD_NUMBER: builtins.int
-    STATE_FIELD_NUMBER: builtins.int
+    MODEL_PATH_FIELD_NUMBER: builtins.int
     valid_state: builtins.bool
-    state: builtins.bytes
+    model_path: builtins.str
     def __init__(
         self,
         *,
         valid_state: builtins.bool = ...,
-        state: builtins.bytes = ...,
+        model_path: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["state", b"state", "valid_state", b"valid_state"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "valid_state", b"valid_state"]) -> None: ...
 
 global___GetFinalModelResponse = GetFinalModelResponse
 
@@ -305,15 +305,15 @@ class GetLatestModelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     VALID_STATE_FIELD_NUMBER: builtins.int
-    STATE_FIELD_NUMBER: builtins.int
+    MODEL_PATH_FIELD_NUMBER: builtins.int
     valid_state: builtins.bool
-    state: builtins.bytes
+    model_path: builtins.str
     def __init__(
         self,
         *,
         valid_state: builtins.bool = ...,
-        state: builtins.bytes = ...,
+        model_path: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["state", b"state", "valid_state", b"valid_state"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "valid_state", b"valid_state"]) -> None: ...
 
 global___GetLatestModelResponse = GetLatestModelResponse

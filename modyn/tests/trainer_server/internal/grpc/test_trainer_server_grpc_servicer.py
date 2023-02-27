@@ -360,13 +360,14 @@ def test_get_latest_checkpoint_found():
                 checkpoint_file = training_info.checkpoint_path / "checkp"
                 torch.save(dict_to_save, checkpoint_file)
 
-                training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
+                checkpoint, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
                 assert num_batches == 10
                 assert num_samples == 100
 
                 dict_to_save.pop("num_batches")
                 dict_to_save.pop("num_samples")
-                assert torch.load(BytesIO(training_state))["state"] == dict_to_save["state"]
+                with open(checkpoint, "rb") as file:
+                    assert torch.load(BytesIO(file.read()))["state"] == dict_to_save["state"]
 
 
 def test_get_latest_checkpoint_invalid():
@@ -383,8 +384,8 @@ def test_get_latest_checkpoint_invalid():
             checkpoint_file = training_info.checkpoint_path / "checkp"
             torch.save(dict_to_save, checkpoint_file)
 
-            training_state, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
-            assert training_state is None
+            checkpoint, num_batches, num_samples = trainer_server.get_latest_checkpoint(1)
+            assert checkpoint is None
             assert num_batches is None
             assert num_samples is None
 
@@ -423,21 +424,22 @@ def test_get_final_model_not_found(test_is_alive):
 def test_get_final_model_found(test_is_alive):
     with tempfile.TemporaryDirectory() as temp:
         with tempfile.TemporaryDirectory() as final_temp:
-            with tempfile.TemporaryDirectory() as modyn_temp:
-                trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
-                training_info = get_training_info(
-                    1, temp, final_temp, trainer_server._storage_address, trainer_server._selector_address
-                )
-                dict_to_save = {"state": {"weight": 10}}
+            base_path = pathlib.Path(final_temp)
+            trainer_server = TrainerServerGRPCServicer(modyn_config, base_path)
+            training_info = get_training_info(
+                1, temp, final_temp, trainer_server._storage_address, trainer_server._selector_address
+            )
+            dict_to_save = {"state": {"weight": 10}}
 
-                checkpoint_file = final_temp + "/model_final.modyn"
-                torch.save(dict_to_save, checkpoint_file)
+            checkpoint_file = base_path / "model_final.modyn"
+            torch.save(dict_to_save, checkpoint_file)
 
-                trainer_server._training_dict[1] = training_info
-                trainer_server._training_process_dict[1] = get_training_process_info()
-                response = trainer_server.get_final_model(get_final_model_request, None)
-                assert response.valid_state
-                assert torch.load(BytesIO(response.state)) == {"state": {"weight": 10}}
+            trainer_server._training_dict[1] = training_info
+            trainer_server._training_process_dict[1] = get_training_process_info()
+            response = trainer_server.get_final_model(get_final_model_request, None)
+            assert response.valid_state
+            with open(base_path / response.model_path, "rb") as file:
+                assert torch.load(BytesIO(file.read())) == {"state": {"weight": 10}}
 
 
 def test_get_latest_model_not_registered():
@@ -467,7 +469,8 @@ def test_get_latest_model_alive_found(test_get_status, test_is_alive):
         trainer_server._training_dict[1] = None
         response = trainer_server.get_latest_model(get_latest_model_request, None)
         assert response.valid_state
-        assert response.state == b"state"
+        with open(pathlib.Path(tempdir) / response.model_path, "rb") as file:
+            assert file.read() == b"state"
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -482,12 +485,13 @@ def test_get_latest_model_finished_not_found(test_get_latest_checkpoint, test_is
 
 
 @patch.object(mp.Process, "is_alive", return_value=False)
-@patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100))
+@patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_latest_model_finished_found(test_get_latest_checkpoint, test_is_alive):
     with tempfile.TemporaryDirectory() as tempdir:
+        test_get_latest_checkpoint.return_value = (pathlib.Path(tempdir) / "testtesttest", 10, 100)
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         trainer_server._training_dict[1] = None
         trainer_server._training_process_dict[1] = get_training_process_info()
         response = trainer_server.get_latest_model(get_latest_model_request, None)
         assert response.valid_state
-        assert response.state == b"state"
+        assert response.model_path == "testtesttest"

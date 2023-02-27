@@ -81,7 +81,7 @@ message GetFinalModelRequest {
 
 message GetFinalModelResponse {
     bool valid_state = 1;
-    bytes state = 2;
+    string model_path = 2;
 }
 
 message GetLatestModelRequest {
@@ -90,5 +90,5 @@ message GetLatestModelRequest {
 
 message GetLatestModelResponse {
     bool valid_state = 1;
-    bytes state = 2;
+    string model_path = 2;
 }
