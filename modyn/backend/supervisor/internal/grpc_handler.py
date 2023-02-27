@@ -2,6 +2,7 @@
 import json
 import logging
 import pathlib
+from ftplib import FTP
 from time import sleep
 from typing import Optional
 
@@ -46,8 +47,6 @@ from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
-MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # TODO(#148): Change model transfer protocol
-
 
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
@@ -91,13 +90,7 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(
-            trainer_server_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
-            ],
-        )
+        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
@@ -363,14 +356,40 @@ class GRPCHandler:
                 + " since training is invalid or training still running"
             )
 
-        model = res.state
+        remote_model_path = f"/{res.model_path}"
+        local_model_path = storage_dir / f"{training_id}.modyn"
 
-        model_path = storage_dir / f"{training_id}.modyn"
-        logger.info(f"Fetched model, storing at {model_path}")
+        ftp = FTP()
+        ftp.connect(
+            self.config["trainer_server"]["hostname"], int(self.config["trainer_server"]["ftp_port"]), timeout=800
+        )
 
-        with open(model_path, "wb") as file:
-            file.write(model)
+        ftp.login("modyn", "modyn")
+        ftp.sendcmd("TYPE i")  # Switch to binary mode, required to obtain size
+        size = ftp.size(remote_model_path)
+
+        self.status_bar.update(demo="Downloading model")
+        pbar = self.progress_mgr.counter(total=size, desc=f"[Training {training_id}] Downloading Model", unit="bytes")
+
+        logger.info(
+            f"Remote model path is {remote_model_path},"
+            + f" storing at {local_model_path}. Fetching via FTP!"
+            + f" Total size = {size} bytes."
+        )
+
+        with open(local_model_path, "wb") as local_file:
+
+            def write_callback(data):
+                local_file.write(data)
+                pbar.update(min(len(data), pbar.total - pbar.count))
+
+            ftp.retrbinary(f"RETR {remote_model_path}", write_callback)
+
+        ftp.close()
+        pbar.update(pbar.total - pbar.count)
+        pbar.clear(flush=True)
+        pbar.close(clear=True)
 
         logger.info("Wrote model to disk.")
 
-        return model_path
+        return local_model_path

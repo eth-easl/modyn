@@ -2,6 +2,7 @@
 
 import logging
 import pathlib
+import threading
 
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
@@ -31,13 +32,16 @@ class FTPServer:
         self.address = ("", self.config["trainer_server"]["ftp_port"])
         self.server = pyFTPServer(self.address, self.handler)
 
+        self.thread = threading.Thread(target=self.server.serve_forever)
+
     def __enter__(self) -> pyFTPServer:
         """Enter the context manager.
 
         Returns:
             FTPServer: self
         """
-        self.server.serve_forever(blocking=False)  # We spawn a new thread per connection
+
+        self.thread.start()  # As serve_forever is blocking, we run it in another thread.
         return self.server
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
@@ -49,4 +53,5 @@ class FTPServer:
             exc_tb (Exception): exception traceback
         """
         self.server.close_all()  # Blocks until server stopped.
+        self.thread.join()  # Wait for thread cleanup.
         logger.debug("Closed FTP Server.")
