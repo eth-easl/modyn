@@ -42,7 +42,7 @@ start_training_request = StartTrainingRequest(
     bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
     transform_list=[],
     use_pretrained_model=False,
-    pretrained_model=None,
+    pretrained_model_path="",
 )
 trainer_available_request = TrainerAvailableRequest()
 get_status_request = TrainingStatusRequest(training_id=1)
@@ -93,7 +93,7 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
         transform_list=[],
         use_pretrained_model=False,
-        pretrained_model=None,
+        pretrained_model_path="",
     )
 
 

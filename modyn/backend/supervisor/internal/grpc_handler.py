@@ -5,7 +5,7 @@ import os
 import pathlib
 from ftplib import FTP
 from time import sleep
-from typing import Optional
+from typing import Optional, Any
 
 import enlighten
 import grpc
@@ -214,11 +214,11 @@ class GRPCHandler:
             total=size, desc=f"[Pipeline {pipeline_id}][Trigger {trigger_id}] Uploading Previous Model", unit="bytes"
         )
 
-        logger.info("Uploading previous model to trainer server." + f" Total size = {size} bytes.")
+        logger.info("Uploading previous model to trainer server. Total size = {} bytes.", size)
 
         with open(model, "rb") as local_file:
 
-            def upload_callback(data):
+            def upload_callback(data: Any) -> None:
                 pbar.update(min(len(data), pbar.total - pbar.count))
 
             ftp.storbinary(f"STOR {remote_path}", local_file, callback=upload_callback)
@@ -408,14 +408,15 @@ class GRPCHandler:
         pbar = self.progress_mgr.counter(total=size, desc=f"[Training {training_id}] Downloading Model", unit="bytes")
 
         logger.info(
-            f"Remote model path is {remote_model_path},"
-            + f" storing at {local_model_path}. Fetching via FTP!"
-            + f" Total size = {size} bytes."
+            "Remote model path is {}, storing at {}. Fetching via FTP! Total size = {} bytes.",
+            remote_model_path,
+            local_model_path,
+            size,
         )
 
         with open(local_model_path, "wb") as local_file:
 
-            def write_callback(data):
+            def write_callback(data: Any) -> None:
                 local_file.write(data)
                 pbar.update(min(len(data), pbar.total - pbar.count))
 

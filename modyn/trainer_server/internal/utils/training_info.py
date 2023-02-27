@@ -20,7 +20,7 @@ class TrainingInfo:
         storage_address: str,
         selector_address: str,
         final_checkpoint_path: pathlib.Path,
-        pretrained_model_path: Optional[pathlib.Path],
+        pretrained_model_path: Optional[pathlib.Path] = None,
     ) -> None:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id
