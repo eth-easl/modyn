@@ -11,7 +11,6 @@ from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
-from modyn.utils import current_time_millis
 from sqlalchemy import exc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
@@ -31,33 +30,61 @@ class NewFileWatcher:
 
         Args:
             modyn_config (dict): Configuration of the modyn module.
+            should_stop (Any): Value that indicates if the new file watcher should stop.
         """
         self.modyn_config = modyn_config
-        self._last_timestamp: int = -1
-        self.should_stop = should_stop
+        self.__should_stop = should_stop
 
-    def _seek(self, timestamp: int) -> None:
-        """Seek the filesystem for files with a timestamp that is equal or greater than the given timestamp.
+    def _seek(self) -> None:
+        """Seek the filesystem for all the datasets for new files and add them to the database.
 
-        Args:
-            timestamp (int): Timestamp to compare the files with.
+        If last timestamp is not ignored, the last timestamp of the dataset will be used to only
+        seek for files that have a timestamp that is equal or greater than the last timestamp.
         """
-        logger.debug(f"Seeking for files with a timestamp that is equal or greater than {timestamp}")
         with StorageDatabaseConnection(self.modyn_config) as database:
             session = database.session
 
             datasets = self._get_datasets(session)
 
             for dataset in datasets:
-                self._seek_dataset(session, dataset, timestamp)
+                logger.debug(
+                    f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
+                    is equal or greater than {dataset.last_timestamp}"
+                )
+                self._seek_dataset(session, dataset)
+                last_timestamp = (
+                    session.query(File.updated_at)
+                    .filter(File.dataset_id == dataset.dataset_id)
+                    .order_by(File.updated_at.desc())
+                    .first()
+                )
+                if last_timestamp is not None:
+                    session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
+                        {"last_timestamp": last_timestamp[0]}
+                    )
+                    session.commit()
 
-    def _seek_dataset(self, session: Session, dataset: Dataset, timestamp: int) -> None:
+    def _seek_dataset(self, session: Session, dataset: Dataset) -> None:
+        """Seek the filesystem for a dataset for new files and add them to the database.
+
+        If last timestamp is not ignored, the last timestamp of the dataset will be used to
+        only seek for files that have a timestamp that is equal or greater than the last timestamp.
+
+        Args:
+            session (Session): Database session.
+            dataset (Dataset): Dataset to seek.
+        """
         filesystem_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
 
         if filesystem_wrapper.exists(dataset.base_path):
             if filesystem_wrapper.isdir(dataset.base_path):
                 self._update_files_in_directory(
-                    filesystem_wrapper, dataset.file_wrapper_type, dataset.base_path, timestamp, session, dataset
+                    filesystem_wrapper,
+                    dataset.file_wrapper_type,
+                    dataset.base_path,
+                    dataset.last_timestamp,
+                    session,
+                    dataset,
                 )
             else:
                 logger.critical(f"Path {dataset.base_path} is not a directory.")
@@ -65,6 +92,7 @@ class NewFileWatcher:
             logger.warning(f"Path {dataset.base_path} does not exist.")
 
     def _get_datasets(self, session: Session) -> list[Dataset]:
+        """Get all datasets."""
         datasets: Optional[list[Dataset]] = session.query(Dataset).all()
 
         if datasets is None or len(datasets) == 0:
@@ -74,6 +102,11 @@ class NewFileWatcher:
         return datasets
 
     def _file_unknown(self, session: Session, file_path: str) -> bool:
+        """Check if a file is unknown.
+
+        TODO (#147): This is a very inefficient way to check if a file is unknown. It should be replaced
+        by a more efficient method.
+        """
         return session.query(File).filter(File.path == file_path).first() is None
 
     # pylint: disable=too-many-locals
@@ -97,7 +130,9 @@ class NewFileWatcher:
         for file_path in filesystem_wrapper.list(path, recursive=True):
             if pathlib.Path(file_path).suffix != data_file_extension:
                 continue
-            if filesystem_wrapper.get_modified(file_path) >= timestamp and self._file_unknown(session, file_path):
+            if (
+                dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
+            ) and self._file_unknown(session, file_path):
                 file_wrapper = get_file_wrapper(
                     file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
                 )
@@ -141,10 +176,9 @@ class NewFileWatcher:
     def run(self) -> None:
         """Run the dataset watcher."""
         logger.info("Starting dataset watcher.")
-        while self._last_timestamp >= -1 and not self.should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
+        while not self.__should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
             time.sleep(self.modyn_config["storage"]["new_file_watcher"]["interval"])
-            self._seek(self._last_timestamp)
-            self._last_timestamp = current_time_millis()
+            self._seek()
 
 
 def run_watcher(modyn_config: dict, should_stop: Any) -> None:  # See https://github.com/python/typeshed/issues/8799

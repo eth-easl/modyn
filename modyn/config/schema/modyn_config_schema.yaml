@@ -97,6 +97,10 @@ properties:
                   type: string
                   description: |
                     The byteorder when reading an integer from multibyte data in a binary file. Should either be "big" or "little".
+            ignore_last_timestamp:
+              type: boolean
+              description: |
+                Whether to ignore the last timestamp when scanning for new files, i.e., if this is set to false, in case a new file gets added to the storage that has a smaller timestamp than the latest file that the storage has already processed, the file is not processed.
           required:
             - name
             - description
