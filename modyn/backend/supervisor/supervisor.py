@@ -228,7 +228,7 @@ class Supervisor:
         )
 
         for i in range(0, new_data_len, selector_batch_size):
-            batch = new_data[i : i + selector_batch_size]
+            batch = new_data[i: i + selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
@@ -256,7 +256,7 @@ class Supervisor:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         for i, triggering_idx in enumerate(triggering_indices):
-            triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
+            triggering_data = batch[previous_trigger_idx: triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
             # This call informs the selector about the data until (and including)
@@ -271,7 +271,7 @@ class Supervisor:
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1 :]
+                remaining_data = batch[triggering_idx + 1:]
                 logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0:

@@ -36,9 +36,7 @@ class PytorchTrainer:
         self._info("Initializing Pytorch Trainer")
 
         # setup model and optimizer
-        training_info.model_configuration_dict["device"] = device
-        training_info.model_configuration_dict["amp"] = training_info.amp
-        self._model = training_info.model_handler(training_info.model_configuration_dict)
+        self._model = training_info.model_handler(training_info.model_configuration_dict, device, training_info.amp)
 
         self._optimizers = {}
         for name, optimizer_config in training_info.torch_optimizers_configuration.items():

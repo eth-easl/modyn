@@ -10,20 +10,14 @@ from torch import nn
 
 
 class DLRM:
-    def __init__(
-        self,
-        model_configuration: dict[str, Any],
-    ) -> None:
-        self.model = DlrmModel(model_configuration)
-        self.model.to(model_configuration["device"])
+    def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
+        self.model = DlrmModel(model_configuration, device, amp)
+        self.model.to(device)
 
 
 class DlrmModel(nn.Module):
     # pylint: disable=too-many-instance-attributes
-    def __init__(
-        self,
-        model_configuration: dict[str, Any],
-    ) -> None:
+    def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
 
         if (
@@ -48,7 +42,7 @@ class DlrmModel(nn.Module):
 
         # Embedding sizes for each GPU
         categorical_feature_sizes = world_categorical_feature_sizes[device_mapping["embedding"][0]].tolist()
-        self._device = model_configuration["device"]
+        self._device = device
 
         self._embedding_ordering = torch.tensor(device_mapping["embedding"][0]).to(self._device)
 
@@ -71,7 +65,7 @@ class DlrmModel(nn.Module):
             self._embedding_dim,
             hash_indices=self._hash_indices,
             use_cpp_mlp=model_configuration["use_cpp_mlp"],
-            fp16=model_configuration["amp"],
+            fp16=amp,
             device=self._device,
         )
 

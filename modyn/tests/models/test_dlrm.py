@@ -11,8 +11,6 @@ def test_dlrm_init():
         "top_mlp_sizes": [64, 64, 32, 16, 1],
         "embedding_type": "multi_table",
         "use_cpp_mlp": False,
-        "amp": False,
-        "device": "cpu",
         "num_numerical_features": 13,
         "categorical_features_info": {
             "cat_0": 7912889,
@@ -43,7 +41,7 @@ def test_dlrm_init():
             "cat_25": 35,
         },
     }
-    model = DLRM(model_configuration)
+    model = DLRM(model_configuration, "cpu", False)
     order_list = [19, 0, 21, 9, 20, 10, 22, 11, 1, 4, 2, 23, 14, 3, 6, 13, 7, 17, 15, 24, 8, 25, 18, 12, 5, 16]
 
     assert torch.equal(model.model._embedding_ordering, torch.tensor(order_list))

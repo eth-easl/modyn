@@ -44,12 +44,12 @@ class MockModule:
 
 
 class MockModelWrapper:
-    def __init__(self, model_configuration=None) -> None:
+    def __init__(self, model_configuration=None, device="cpu", amp=False) -> None:
         self.model = MockModel()
 
 
 class MockSuperModelWrapper:
-    def __init__(self, model_configuration=None) -> None:
+    def __init__(self, model_configuration=None, device="cpu", amp=False) -> None:
         self.model = MockSuperModel()
 
 

@@ -249,6 +249,11 @@ class GRPCHandler:
         else:
             transform_list = []
 
+        if "label_transformer_function" in pipeline_config["data"]:
+            label_transformer = pipeline_config["data"]["label_transformer_function"]
+        else:
+            label_transformer = ""
+
         if pipeline_config["training"]["checkpointing"]["activated"]:
             if (
                 "interval" not in pipeline_config["training"]["checkpointing"]
@@ -263,11 +268,13 @@ class GRPCHandler:
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
+        amp = pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False
+
         req = StartTrainingRequest(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             device=pipeline_config["training"]["device"],
-            amp=pipeline_config["training"]["amp"],
+            amp=amp,
             model_id=pipeline_config["model"]["id"],
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
@@ -284,13 +291,7 @@ class GRPCHandler:
             checkpoint_info=checkpoint_info,
             transform_list=transform_list,
             bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
-            label_transformer=PythonString(
-                value=(
-                    pipeline_config["data"]["label_transformer_function"]
-                    if "label_transformer_function" in pipeline_config["data"]
-                    else ""
-                )
-            ),
+            label_transformer=PythonString(value=label_transformer),
             lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
         )
 
