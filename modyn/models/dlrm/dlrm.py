@@ -4,9 +4,11 @@ import numpy as np
 import torch
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
-from modyn.models.dlrm.utils.feature_spec import get_device_mapping
+from modyn.models.dlrm.utils.utils import get_device_mapping
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
 from torch import nn
+
+from modyn.utils.utils import package_available_and_can_be_imported
 
 
 class DLRM:
@@ -19,6 +21,8 @@ class DlrmModel(nn.Module):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
+
+        self.validate_config(model_configuration, device)
 
         if (
             model_configuration["embedding_type"] == "joint_sparse"
@@ -72,6 +76,20 @@ class DlrmModel(nn.Module):
         self.top_model = DlrmTop(
             model_configuration["top_mlp_sizes"], interaction, use_cpp_mlp=model_configuration["use_cpp_mlp"]
         )
+
+    def validate_config(self, model_configuration: dict[str, Any], device: str) -> None:
+        if (
+            model_configuration["embedding_type"] == "joint_fused"
+            or model_configuration["embedding_type"] == "joint_sparse"
+            or model_configuration["interaction_op"] == "cuda_dot"
+            or model_configuration["use_cpp_mlp"]
+        ):
+            if "cuda" not in device:
+                raise ValueError("The given DLRM configuration requires training on a GPU")
+            if not torch.cuda.is_available():
+                raise ValueError("The given DLRM configuration requires PyTorch-CUDA support")
+            if not package_available_and_can_be_imported("apex"):
+                raise ValueError("The given DLRM configuration requires NVIDIA APEX to be installed")
 
     def extra_repr(self) -> str:
         return f"interaction_op={self._interaction_op}, hash_indices={self._hash_indices}"

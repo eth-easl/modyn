@@ -19,11 +19,9 @@
 Fused Buckle Embedding
 """
 
-from modyn.utils import package_available_and_can_be_imported
 from torch.autograd import Function
 
-if package_available_and_can_be_imported("apex"):
-    import apex
+import apex
 
 
 class BuckleEmbeddingFusedGatherFunction(Function):

@@ -37,32 +37,11 @@ class PytorchTrainer:
 
         # setup model and optimizer
         self._model = training_info.model_handler(training_info.model_configuration_dict, device, training_info.amp)
-
-        self._optimizers = {}
-        for name, optimizer_config in training_info.torch_optimizers_configuration.items():
-            if optimizer_config["source"] == "PyTorch":
-                optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
-            elif optimizer_config["source"] == "APEX":
-                if package_available_and_can_be_imported("apex"):
-                    import apex  # pylint: disable=import-outside-toplevel, import-error
-
-                    optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
-                else:
-                    raise ValueError("Apex Optimizer defined, but apex is not available in the system")
-            else:
-                raise ValueError(
-                    f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
-                )
-            optimizer_config_list = []
-            for param_group in optimizer_config["param_groups"]:
-                module = param_group["module"]
-                param_group["config"]["params"] = eval(  # pylint: disable=eval-used
-                    f"self._model.{module}.parameters()"
-                )
-                optimizer_config_list.append(param_group["config"])
-            self._optimizers[name] = optimizer_func(optimizer_config_list)
-
+        self._setup_optimizers(training_info)
         self._info("Model and optimizer created.")
+
+        self._setup_lr_scheduler(training_info)
+        self._info("LR scheduler created.")
 
         if training_info.used_pretrained_model:
             self._info("Loading model state from pretrained model.")
@@ -70,27 +49,6 @@ class PytorchTrainer:
 
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
-
-        self._lr_scheduler = None
-        if training_info.lr_scheduler:
-            if training_info.lr_scheduler["source"] == "Custom":
-                lr_scheduler_module = dynamic_module_import("modyn.trainer_server.custom_lr_schedulers")
-                custom_lr_scheduler = getattr(lr_scheduler_module, training_info.lr_scheduler["name"])
-                optimizers = [self._optimizers[opt] for opt in training_info.lr_scheduler["optimizers"]]
-                self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
-            elif training_info.lr_scheduler["source"] == "PyTorch":
-                torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
-                if len(training_info.lr_scheduler["optimizers"]) > 1:
-                    self._warning("Provided a LR scheduler from PyTorch, but multiple optimizers")
-                self._lr_scheduler = torch_lr_scheduler(
-                    self._optimizers[training_info.lr_scheduler["optimizers"][0]],
-                    **training_info.lr_scheduler["config"],
-                )
-            else:
-                raise ValueError(
-                    f"Unsupported LR scheduler of source {training_info.lr_scheduler['source']}."
-                    "PyTorch and Custom are supported"
-                )
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -141,6 +99,53 @@ class PytorchTrainer:
         self._callbacks = {
             MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
+    def _setup_optimizers(self, training_info) -> None:
+        self._optimizers = {}
+        for name, optimizer_config in training_info.torch_optimizers_configuration.items():
+            if optimizer_config["source"] == "PyTorch":
+                optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
+            elif optimizer_config["source"] == "APEX":
+                if package_available_and_can_be_imported("apex"):
+                    import apex  # pylint: disable=import-outside-toplevel, import-error
+
+                    optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
+                else:
+                    raise ValueError("Apex Optimizer defined, but apex is not available in the system")
+            else:
+                raise ValueError(
+                    f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
+                )
+            optimizer_config_list = []
+            for param_group in optimizer_config["param_groups"]:
+                module = param_group["module"]
+                param_group["config"]["params"] = eval(  # pylint: disable=eval-used
+                    f"self._model.{module}.parameters()"
+                )
+                optimizer_config_list.append(param_group["config"])
+            self._optimizers[name] = optimizer_func(optimizer_config_list)
+
+    def _setup_lr_scheduler(self, training_info: TrainingInfo) -> None:
+        self._lr_scheduler = None
+        if training_info.lr_scheduler:
+            if training_info.lr_scheduler["source"] == "Custom":
+                lr_scheduler_module = dynamic_module_import("modyn.trainer_server.custom_lr_schedulers")
+                custom_lr_scheduler = getattr(lr_scheduler_module, training_info.lr_scheduler["name"])
+                optimizers = [self._optimizers[opt] for opt in training_info.lr_scheduler["optimizers"]]
+                self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
+            elif training_info.lr_scheduler["source"] == "PyTorch":
+                torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
+                if len(training_info.lr_scheduler["optimizers"]) > 1:
+                    self._warning("Provided a LR scheduler from PyTorch, but multiple optimizers")
+                self._lr_scheduler = torch_lr_scheduler(
+                    self._optimizers[training_info.lr_scheduler["optimizers"][0]],
+                    **training_info.lr_scheduler["config"],
+                )
+            else:
+                raise ValueError(
+                    f"Unsupported LR scheduler of source {training_info.lr_scheduler['source']}."
+                    "PyTorch and Custom are supported"
+                )
 
     def _info(self, msg: str) -> None:
         self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")

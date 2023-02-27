@@ -101,9 +101,6 @@ class MultiTableEmbeddings(Embeddings):
             embedding.weight.data.requires_grad_()
 
 
-Embeddings
-
-
 class JointEmbedding(Embeddings):
     """Buckle multiple one hot embedding together
 
