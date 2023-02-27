@@ -1,6 +1,7 @@
 import argparse
 import logging
 import multiprocessing as mp
+import os
 import pathlib
 
 import yaml
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 try:
     mp.set_start_method("spawn")
 except RuntimeError as error:
-    if mp.get_start_method() != "spawn":
+    if mp.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
         logger.error("Start method is already set to {}", mp.get_start_method())
         raise error
 

@@ -264,6 +264,10 @@ def test_load_state_if_given():
         trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, state_path)
         assert trainer._model.model.state_dict() == dict_to_save["model"]
         assert trainer._optimizer.state_dict() == dict_to_save["optimizer"]
+        initial_state_buffer.seek(0)
+        state_path = pathlib.Path(tempdir) / "test.state"
+        with open(state_path, "wb") as file:
+            file.write(initial_state_buffer.read())
 
         new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, state_path)
         assert new_trainer._model.model.state_dict() == dict_to_save["model"]

@@ -111,6 +111,8 @@ class PytorchTrainer:
         if load_optimizer_state and "optimizer" in checkpoint:
             self._optimizer.load_state_dict(checkpoint["optimizer"])
 
+        os.remove(path)
+
     def send_state_to_server(self, batch_number: int) -> None:
         buffer = io.BytesIO()
         self.save_state(buffer)
