@@ -16,6 +16,9 @@ Two important features of the DLRM model are the `embedding_type` and `interacti
    * `joint_fused`: PyTorch + CUDA + APEX
    * `joint_sparse`: PyTorch + CUDA + APEX
 
+If you want to use an embedding type that requires Apex, make sure that Apex is installed on the trainer server.
+When using the provided trainer server by Modyn, this can be done by uncommenting lines in the trainer server Dockerfile (TODO #104: make this more easily configurable).
+
 - `interaction_op`:
    * `dot`: PyTorch
    * `cat`: PyTorch
