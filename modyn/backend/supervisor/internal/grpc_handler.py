@@ -5,7 +5,7 @@ import os
 import pathlib
 from ftplib import FTP
 from time import sleep
-from typing import Optional, Any
+from typing import Any, Optional
 
 import enlighten
 import grpc
