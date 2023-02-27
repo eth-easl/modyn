@@ -4,7 +4,7 @@
 # When deploying on a real system, please uncomment the according lines.
 # Furthermore, we need to separate the dependencies for the individual components, since not all components require all dependencies (e.g., only the trainer server needs PyTorch). This is issue #104.
 
-name: modyn2
+name: modyn
 
 channels:
   - conda-forge
