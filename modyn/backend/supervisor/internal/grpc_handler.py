@@ -198,7 +198,7 @@ class GRPCHandler:
 
     def upload_model(self, pipeline_id: int, trigger_id: int, model: pathlib.Path) -> str:
         assert model.exists(), "Cannot upload non-existing model"
-        # TODO(issue): Not necessary with a central model registry.
+        # TODO(#167): This function can be removed again when we have a model storage component.
         remote_path = f"{pipeline_id}-{trigger_id}-{current_time_millis()}.modyn"
         ftp = FTP()
         ftp.connect(
