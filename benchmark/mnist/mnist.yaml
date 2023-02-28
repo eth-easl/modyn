@@ -23,7 +23,7 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy: 
+  selection_strategy:
     name: NewDataStrategy
     config:
       limit: -1
@@ -37,7 +37,7 @@ data:
     import io
     def bytes_parser_function(data: bytes) -> Image:
       return Image.open(io.BytesIO(data))
-                  
+
 trigger:
   id: DataAmountTrigger
   trigger_config:

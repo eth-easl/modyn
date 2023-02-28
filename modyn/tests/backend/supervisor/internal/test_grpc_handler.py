@@ -54,11 +54,14 @@ def get_minimal_pipeline_config() -> dict:
         "training": {
             "gpus": 1,
             "device": "cpu",
+            "amp": False,
             "dataloader_workers": 1,
             "initial_model": "random",
             "initial_pass": {"activated": False},
             "batch_size": 42,
-            "optimizer": {"name": "SGD"},
+            "optimizers": [
+                {"name": "default", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
+            ],
             "optimization_criterion": {"name": "CrossEntropyLoss"},
             "checkpointing": {"activated": False},
             "selection_strategy": {"name": "NewDataStrategy"},
@@ -310,6 +313,13 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
         mock.assert_called_once_with(
             DataInformRequest(pipeline_id=42, keys=["a", "b"], timestamps=[42, 43], labels=[0, 1])
         )
+
+    # Test empty trigger
+    with patch.object(handler.selector, "inform_data_and_trigger") as mock:
+        mock.return_value = TriggerResponse(trigger_id=13)
+        assert 13 == handler.inform_selector_and_trigger(42, [])
+
+        mock.assert_called_once_with(DataInformRequest(pipeline_id=42, keys=[], timestamps=[], labels=[]))
 
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

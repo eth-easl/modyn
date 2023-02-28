@@ -4,8 +4,7 @@ from torchvision import models
 
 
 class ResNet18:
-    def __init__(
-        self,
-        model_configuration: dict[str, Any],
-    ) -> None:
+    # pylint: disable-next=unused-argument
+    def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         self.model = models.__dict__["resnet18"](**model_configuration)
+        self.model.to(device)

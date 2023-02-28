@@ -56,7 +56,7 @@ class SelectorGRPCServicer(SelectorServicer):
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
         logger.info(
             f"[Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points"
-            + f"+ trigger at timestamp {timestamps[-1]}"
+            + f"+ trigger at timestamp {timestamps[-1] if len(keys) > 0 else 'n/a'}"
         )
 
         trigger_id = self.selector_manager.inform_data_and_trigger(pipeline_id, keys, timestamps, labels)

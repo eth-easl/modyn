@@ -160,6 +160,13 @@ Preprocessing Data:
 	```
 	The frequency-threshold parameter controls what consists of "high" frequency vs "low" frequency features as explained in the Preprocessing Information section. NVIDIA suggests 15 for a smaller model, or 2 or 1 for larger models. 
 	The second argument is to specify if you want to use the CPU or GPU processing.
+10. Adjust the file timestamps to reflect the individual days using the script we provide.
+	For this, identify the folder in which the final processed binary dataset resides (should be `/mnt/disks/criteo/binary_dataset`).
+	Then, run
+	```
+	python criteo_timestamps.py <DIRECTORY_PATH>
+	```
+	to adjust the modified timestamps such that Modyn recognizes the files as from multiple days.
 
 ## Uploading Data to GCS:
 1. Create a bucket on the Google Console

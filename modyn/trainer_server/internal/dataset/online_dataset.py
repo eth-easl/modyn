@@ -16,6 +16,9 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
+
+
 class OnlineDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
@@ -96,7 +99,13 @@ class OnlineDataset(IterableDataset):
             )
         self._selectorstub = SelectorStub(selector_channel)
 
-        storage_channel = grpc.insecure_channel(self._storage_address)
+        storage_channel = grpc.insecure_channel(
+            self._storage_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
+                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
+            ],
+        )
         if not grpc_connection_established(storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(storage_channel)
@@ -138,7 +147,7 @@ class OnlineDataset(IterableDataset):
         data, labels = self._get_data_from_storage(keys)
 
         self._dataset_len = len(data)
-        self._info("Data obtained (len = {self._dataset_len})", worker_id)
+        self._info(f"Data obtained (len = {self._dataset_len})", worker_id)
 
         for key, sample, label in zip(keys, data, labels):
             # mypy complains here because _transform has unknown type, which is ok
