@@ -54,11 +54,14 @@ def get_minimal_pipeline_config() -> dict:
         "training": {
             "gpus": 1,
             "device": "cpu",
+            "amp": False,
             "dataloader_workers": 1,
             "initial_model": "random",
             "initial_pass": {"activated": False},
             "batch_size": 42,
-            "optimizer": {"name": "SGD"},
+            "optimizers": [
+                {"name": "default", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
+            ],
             "optimization_criterion": {"name": "CrossEntropyLoss"},
             "checkpointing": {"activated": False},
             "selection_strategy": {"name": "NewDataStrategy"},

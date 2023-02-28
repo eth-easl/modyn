@@ -7,23 +7,31 @@ class BaseCallback(ABC):
     def __init__(self) -> None:
         pass
 
-    def on_train_begin(self, model: torch.nn.Module, optimizer: torch.optim.Optimizer) -> None:
+    def on_train_begin(self, model: torch.nn.Module, optimizer: dict[str, torch.optim.Optimizer]) -> None:
         pass
 
     def on_train_end(
-        self, model: torch.nn.Module, optimizer: torch.optim.Optimizer, total_samples: int, total_batches: int
+        self,
+        model: torch.nn.Module,
+        optimizer: dict[str, torch.optim.Optimizer],
+        total_samples: int,
+        total_batches: int,
     ) -> None:
         pass
 
     def on_batch_begin(
-        self, model: torch.nn.Module, optimizer: torch.optim.Optimizer, batch: torch.Tensor, batch_number: int
+        self,
+        model: torch.nn.Module,
+        optimizer: dict[str, torch.optim.Optimizer],
+        batch: torch.Tensor,
+        batch_number: int,
     ) -> None:
         pass
 
     def on_batch_before_update(
         self,
         model: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
+        optimizer: dict[str, torch.optim.Optimizer],
         batch_number: int,
         sample_ids: list[str],
         data: torch.Tensor,
@@ -36,7 +44,7 @@ class BaseCallback(ABC):
     def on_batch_end(
         self,
         model: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
+        optimizer: dict[str, torch.optim.Optimizer],
         batch_number: int,
         sample_ids: list[str],
         data: torch.Tensor,

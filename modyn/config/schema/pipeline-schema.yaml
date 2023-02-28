@@ -48,6 +48,10 @@ properties:
         type: string
         description: |
           The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu" and let the trainer server figure out the exact device, but for now, this really is the identifier of the device.
+      amp:
+        type: boolean
+        description: |
+          If True, automatic mixed precision will be used.
       dataloader_workers:
         type: number
         description: |
@@ -130,21 +134,52 @@ properties:
               The path on the training node where the checkpoints are stored
         required:
           - activated
-      optimizer:
-        type: object
+      optimizers:
+        type: array
         description: |
-          Configuration for the optimizer (e.g., Adam)
-        properties:
-          name:
-            type: string
-            description: |
-              The name of the optimizer the pipeline uses (e.g., SGD)
-          config:
-            type: object
-            description: |
-              Optional configuration of the optimizer, e.g. learning rate/momentum. Passed to the optimizer class as a dict.
-        required:
-          - name
+          An array of the optimizers for the training
+        minItems: 1
+        items:
+          type: object
+          description: |
+            Configuration for the optimizer (e.g., Adam)
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the optimizer (like an ID)
+            algorithm:
+              type: string
+              description: |
+                The type of the optimizer (e.g. SGD)
+            source:
+              type: string
+              description: The framework/package the optimizer comes from. Currently PyTorch and APEX are supported
+            param_groups:
+              type: array
+              description: |
+                An array of the parameter groups (parameters and optional configs) that this optimizer is responsible for
+              minItems: 1
+              items:
+                type: object
+                description: |
+                  Configuration for a parameter group
+                properties:
+                  module:
+                    type: string
+                    description: |
+                      A set of parameters
+                  config:
+                    type: object
+                    description: |
+                      Optional configuration for the parameter group (e.g. learning rate)
+                required:
+                  - module
+          required:
+            - name
+            - algorithm
+            - source
+            - param_groups
       optimization_criterion:
         type: object
         description: |
@@ -160,6 +195,36 @@ properties:
               Optional configuration of the criterion. Passed to the optimizer class as a dict.
         required:
           - name
+      lr_scheduler:
+        type: object
+        description: |
+          Configuration for the Torch-based Learning Rate (LR) scheduler used for training.
+        properties:
+          name:
+            type: string
+            description: The name of the LR scheduler.
+          source:
+            type: string
+            description: Source of the LR scheduler (for now, only PyTorch and custom are supported).
+          optimizers:
+            type: array
+            minItems: 1
+            description: |
+              List of optimizers that this scheduler is responsible for. In case a PyTorch LR scheduler is used, this list should have only one item.
+            items:
+              type: string
+          config:
+            type: object
+            description: |
+              Optional configuration of the lr scheduler. Passed to the lr scheduler as a dict.
+        required:
+          - name
+          - source
+          - optimizers
+      grad_scaler_config:
+        type: object
+        description: |
+          Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.
     required:
       - gpus
       - device
@@ -170,7 +235,7 @@ properties:
       - initial_pass
       - checkpointing
       - optimization_criterion
-      - optimizer
+      - optimizers
   data:
     type: object
     description: |
@@ -190,6 +255,10 @@ properties:
         description: |
           Further (optional) transformations to be applied on the data after bytes_parser_function has been applied.
           For example, this can be torchvision transformations.
+      label_transformer_function:
+        type: string
+        description: |
+          (Optional) function used to transform the label (tensors of integers).
     required:
       - dataset_id
       - bytes_parser_function
