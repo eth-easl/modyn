@@ -29,12 +29,14 @@ class TrainingInfo:
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders
 
-        self.optimizer_dict = json.loads(request.optimizer_parameters.value)
+        self.torch_optimizers_configuration = json.loads(request.torch_optimizers_configuration.value)
         self.model_configuration_dict = json.loads(request.model_configuration.value)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
+        self.grad_scaler_configuration = json.loads(request.grad_scaler_configuration.value)
 
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
+        self.label_transformer = request.label_transformer.value
 
         self.model_id = request.model_id
         model_module = dynamic_module_import("modyn.models")
@@ -47,9 +49,11 @@ class TrainingInfo:
         if self.use_pretrained_model:
             assert self.pretrained_model_path, "Inconsistent pretrained model configuration"
 
-        self.torch_optimizer = request.torch_optimizer
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
+        self.amp = request.amp
+
+        self.lr_scheduler = json.loads(request.lr_scheduler.value)
 
         self.checkpoint_path = pathlib.Path(request.checkpoint_info.checkpoint_path)
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval

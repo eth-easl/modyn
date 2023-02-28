@@ -40,20 +40,23 @@ message StartTrainingRequest {
     int32 pipeline_id = 1;
     int32 trigger_id = 2;
     string device = 3;
-    string model_id = 4;
-    JsonString model_configuration = 5;
-    bool use_pretrained_model = 6;
-    bool load_optimizer_state = 7;
-    string pretrained_model_path = 8;
-    int32 batch_size = 9;
-    string torch_optimizer = 10;
-    JsonString optimizer_parameters = 11;
+    bool amp = 4;
+    string model_id = 5;
+    JsonString model_configuration = 6;
+    bool use_pretrained_model = 7;
+    bool load_optimizer_state = 8;
+    string pretrained_model_path = 9;
+    int32 batch_size = 10;
+    JsonString torch_optimizers_configuration = 11;
     string torch_criterion = 12;
     JsonString criterion_parameters = 13;
     Data data_info = 14;
     CheckpointInfo checkpoint_info = 15;
     PythonString bytes_parser = 16;
     repeated string transform_list = 17;
+    JsonString lr_scheduler = 18;
+    PythonString label_transformer = 19;
+    JsonString grad_scaler_configuration = 20;
 }
 
 message StartTrainingResponse {

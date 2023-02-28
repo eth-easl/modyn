@@ -17,7 +17,7 @@ class MockModel(torch.nn.Module):
 
 def get_mocks():
     model = MockModel()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    optimizer = {"model": torch.optim.SGD(model.parameters(), lr=0.1)}
     return model, optimizer
 
 

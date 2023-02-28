@@ -169,7 +169,15 @@ class GRPCHandler:
         self.selector.inform_data(request)
 
     def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
-        keys, timestamps, labels = zip(*data)
+        keys: list[str]
+        timestamps: list[int]
+        labels: list[int]
+        if len(data) == 0:
+            keys, timestamps, labels = [], [], []
+        else:
+            # mypy fails to recognize that this is correct
+            keys, timestamps, labels = zip(*data)  # type: ignore
+
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         response: TriggerResponse = self.selector.inform_data_and_trigger(request)
 
@@ -231,8 +239,7 @@ class GRPCHandler:
 
         return remote_path
 
-    # pylint: disable=too-many-branches,too-many-locals
-
+    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
     def start_training(
         self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model: Optional[pathlib.Path]
     ) -> int:
@@ -251,10 +258,22 @@ class GRPCHandler:
             use_pretrained_model = False
             pretrained_model_path = ""
 
-        if "config" in pipeline_config["training"]["optimizer"]:
-            optimizer_config = json.dumps(pipeline_config["training"]["optimizer"]["config"])
-        else:
-            optimizer_config = "{}"
+        optimizers_config = {}
+        for optimizer in pipeline_config["training"]["optimizers"]:
+            optimizer_config = {}
+            optimizer_config["algorithm"] = optimizer["algorithm"]
+            optimizer_config["source"] = optimizer["source"]
+            optimizer_config["param_groups"] = []
+            for param_group in optimizer["param_groups"]:
+                config_dict = param_group["config"] if "config" in param_group else {}
+                optimizer_config["param_groups"].append({"module": param_group["module"], "config": config_dict})
+            optimizers_config[optimizer["name"]] = optimizer_config
+
+        lr_scheduler_configs = {}
+        if "lr_scheduler" in pipeline_config["training"]:
+            lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
+            if "config" not in lr_scheduler_configs:
+                lr_scheduler_configs["config"] = {}
 
         if "config" in pipeline_config["training"]["optimization_criterion"]:
             criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"]["config"])
@@ -265,6 +284,11 @@ class GRPCHandler:
             transform_list = pipeline_config["data"]["transformations"]
         else:
             transform_list = []
+
+        if "label_transformer_function" in pipeline_config["data"]:
+            label_transformer = pipeline_config["data"]["label_transformer_function"]
+        else:
+            label_transformer = ""
 
         if pipeline_config["training"]["checkpointing"]["activated"]:
             if (
@@ -280,18 +304,25 @@ class GRPCHandler:
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
+        amp = pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False
+
+        if "grad_scaler_config" in pipeline_config["training"]:
+            grad_scaler_config = pipeline_config["training"]["grad_scaler_config"]
+        else:
+            grad_scaler_config = {}
+
         req = StartTrainingRequest(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             device=pipeline_config["training"]["device"],
+            amp=amp,
             model_id=pipeline_config["model"]["id"],
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
             pretrained_model_path=pretrained_model_path,
             load_optimizer_state=False,  # TODO(#137): Think about this.
             batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizer=pipeline_config["training"]["optimizer"]["name"],
-            optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
+            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
             torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
             criterion_parameters=TrainerServerJsonString(value=criterion_config),
             data_info=Data(
@@ -301,6 +332,9 @@ class GRPCHandler:
             checkpoint_info=checkpoint_info,
             transform_list=transform_list,
             bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
+            label_transformer=PythonString(value=label_transformer),
+            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
         )
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)

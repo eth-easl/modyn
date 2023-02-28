@@ -26,24 +26,6 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 
-start_training_request = StartTrainingRequest(
-    pipeline_id=1,
-    trigger_id=1,
-    device="cpu",
-    model_id="test",
-    batch_size=32,
-    torch_optimizer="SGD",
-    torch_criterion="CrossEntropyLoss",
-    optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
-    model_configuration=JsonString(value=json.dumps({})),
-    criterion_parameters=JsonString(value=json.dumps({})),
-    data_info=Data(dataset_id="Dataset", num_dataloaders=1),
-    checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path="/tmp"),
-    bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
-    transform_list=[],
-    use_pretrained_model=False,
-    pretrained_model_path="",
-)
 trainer_available_request = TrainerAvailableRequest()
 get_status_request = TrainingStatusRequest(training_id=1)
 get_final_model_request = GetFinalModelRequest(training_id=1)
@@ -81,11 +63,15 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         pipeline_id=1,
         trigger_id=1,
         device="cpu",
+        amp=False,
         model_id="model" if valid_model else "unknown",
         batch_size=32,
-        torch_optimizer="SGD",
+        torch_optimizers_configuration=JsonString(
+            value=json.dumps(
+                {"default": {"algorithm": "SGD", "param_groups": [{"module": "model", "config": {"lr": 0.1}}]}}
+            )
+        ),
         torch_criterion="CrossEntropyLoss",
-        optimizer_parameters=JsonString(value=json.dumps({"lr": 0.1})),
         model_configuration=JsonString(value=json.dumps({})),
         criterion_parameters=JsonString(value=json.dumps({})),
         data_info=Data(dataset_id="Dataset", num_dataloaders=1),
@@ -94,6 +80,8 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         transform_list=[],
         use_pretrained_model=False,
         pretrained_model_path="",
+        lr_scheduler=JsonString(value=json.dumps({})),
+        grad_scaler_configuration=JsonString(value=json.dumps({})),
     )
 
 

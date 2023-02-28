@@ -1,15 +1,21 @@
 import importlib
+import importlib.util
 import inspect
+import logging
 import pathlib
+import sys
 import time
 from types import ModuleType
 from typing import Optional
 
 import grpc
-import modyn.models
 import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
+
+logger = logging.getLogger(__name__)
+UNAVAILABLE_PKGS = []
+SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -26,6 +32,10 @@ def dynamic_module_import(name: str) -> ModuleType:
 
 
 def model_available(model_type: str) -> bool:
+    # this import is moved due to circular import errors caused by modyn.models
+    # importing the 'package_available_and_can_be_imported' function
+    import modyn.models  # pylint: disable=import-outside-toplevel
+
     available_models = list(x[0] for x in inspect.getmembers(modyn.models, inspect.isclass))
     return model_type in available_models
 
@@ -71,4 +81,40 @@ def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> 
         grpc.channel_ready_future(channel).result(timeout=timeout_sec)
         return True
     except grpc.FutureTimeoutError:
+        return False
+
+
+def validate_timestr(timestr: str) -> bool:
+    if timestr[-1] not in SECONDS_PER_UNIT:
+        return False
+
+    if not timestr[:-1].isdigit():
+        return False
+
+    return True
+
+
+def convert_timestr_to_seconds(timestr: str) -> int:
+    return int(timestr[:-1]) * SECONDS_PER_UNIT[timestr[-1]]
+
+
+def package_available_and_can_be_imported(package: str) -> bool:
+    if package in UNAVAILABLE_PKGS:
+        return False
+
+    if package in sys.modules:
+        # already imported
+        return True
+
+    package_spec = importlib.util.find_spec(package)
+    if package_spec is None:
+        UNAVAILABLE_PKGS.append(package)
+        return False
+
+    try:
+        importlib.import_module(package)
+        return True
+    except Exception as exception:  # pylint: disable=broad-except
+        logger.warning(f"Importing module {package} throws exception {exception}")
+        UNAVAILABLE_PKGS.append(package)
         return False
