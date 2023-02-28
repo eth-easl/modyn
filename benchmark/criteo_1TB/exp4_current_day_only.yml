@@ -1,5 +1,5 @@
 pipeline:
-    name: CRITEO DLRM Pipeline
+    name: exp4_retrain_nokeeping
     description: Training DLRM (NVIDIA version) with CRITEO dataset
     version: 1.0.0
   model:
