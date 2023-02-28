@@ -270,7 +270,7 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(4)], [1] * 4))
 @patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[str(i) for i in range(4)])
 def test_dataloader_dataset_multi_worker(
-    test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+    test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established, test_another
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -288,6 +288,7 @@ def test_dataloader_dataset_multi_worker(
         assert batch[0] == ("0", "1", "2", "3")
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
+
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
