@@ -66,6 +66,7 @@ class Storage:
                     dataset["description"],
                     dataset["version"],
                     json.dumps(dataset["file_wrapper_config"]),
+                    dataset["ignore_last_timestamp"] if "ignore_last_timestamp" in dataset else False,
                 ):
                     raise ValueError(f"Failed to add dataset {dataset['name']}")
 

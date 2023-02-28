@@ -102,6 +102,11 @@ def test_get_label():
     assert label == 42
 
 
+def test_get_all_labels():
+    file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
+    assert file_wrapper.get_all_labels() == [42]
+
+
 def test_get_label_with_invalid_index():
     file_wrapper = SingleSampleFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     with pytest.raises(IndexError):
