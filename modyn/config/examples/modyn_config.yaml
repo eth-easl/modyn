@@ -6,6 +6,7 @@ project:
 storage:
   port: "50051"
   hostname: "storage"
+  sample_batch_size: 1024
   new_file_watcher:
     interval: 5
   datasets:

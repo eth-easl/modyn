@@ -39,7 +39,7 @@ class StorageGRPCServicer(StorageServicer):
             config (dict): Configuration of the storage module.
         """
         self.modyn_config = config
-        self._sample_batch_size = 1024
+        self._sample_batch_size = self.modyn_config["storage"]["sample_batch_size"]
         super().__init__()
 
     # pylint: disable-next=unused-argument,invalid-name

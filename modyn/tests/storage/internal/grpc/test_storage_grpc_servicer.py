@@ -29,6 +29,7 @@ def get_minimal_modyn_config() -> dict:
     return {
         "storage": {
             "filesystem": {"type": "LocalFilesystemWrapper", "base_path": os.path.dirname(TMP_FILE)},
+            "sample_batch_size": 1024,
             "database": {
                 "drivername": "sqlite",
                 "username": "",
