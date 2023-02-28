@@ -44,8 +44,6 @@ from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
-MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # TODO(#148): Change model transfer protocol
-
 
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
@@ -65,13 +63,7 @@ class GRPCHandler:
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
-        self.storage_channel = grpc.insecure_channel(
-            storage_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
-            ],
-        )
+        self.storage_channel = grpc.insecure_channel(storage_address)
 
         if not grpc_connection_established(self.storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
@@ -95,13 +87,7 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(
-            trainer_server_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
-            ],
-        )
+        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
