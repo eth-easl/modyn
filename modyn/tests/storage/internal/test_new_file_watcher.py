@@ -254,7 +254,7 @@ def test_seek_no_datasets(test_get_filesystem_wrapper, test__update_files_in_dir
     new_file_watcher._seek()
     assert not test__update_files_in_directory.called
 
-
+# TODO(MaxiBoether): use https://github.com/elritsch/python-sharedmock here
 @patch("modyn.storage.internal.new_file_watcher.get_file_wrapper", return_value=MockFileWrapper())
 @patch("modyn.storage.internal.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper())
 def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wrapper, session) -> None:  # noqa: E501
