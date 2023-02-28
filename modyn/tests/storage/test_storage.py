@@ -18,6 +18,7 @@ def get_minimal_modyn_config() -> dict:
         "storage": {
             "port": "50051",
             "hostname": "localhost",
+            "sample_batch_size": 1024,
             "filesystem": {"type": "LocalFilesystemWrapper", "base_path": "/tmp/modyn"},
             "database": {
                 "drivername": "sqlite",

@@ -201,7 +201,7 @@ def test_get_new_data_since_throws():
     handler = get_non_connecting_handler()
     handler.connected_to_storage = False
     with pytest.raises(ConnectionError):
-        handler.get_new_data_since("dataset_id", 0)
+        list(handler.get_new_data_since("dataset_id", 0))
 
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
@@ -214,11 +214,32 @@ def test_get_new_data_since(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
-        mock.return_value = GetNewDataSinceResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])
+        mock.return_value = [GetNewDataSinceResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])]
 
-        result = handler.get_new_data_since("test_dataset", 21)
+        result = list(handler.get_new_data_since("test_dataset", 21))
 
-        assert result == [("test1", 41, 0), ("test2", 42, 1)]
+        assert result == [[("test1", 41, 0), ("test2", 42, 1)]]
+        mock.assert_called_once_with(GetNewDataSinceRequest(dataset_id="test_dataset", timestamp=21))
+
+
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_get_new_data_since_batched(test_grpc_connection_established):
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+
+    with patch.object(handler.storage, "GetNewDataSince") as mock:
+        mock.return_value = [
+            GetNewDataSinceResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1]),
+            GetNewDataSinceResponse(keys=["test3", "test4"], timestamps=[42, 43], labels=[0, 1]),
+        ]
+
+        result = list(handler.get_new_data_since("test_dataset", 21))
+
+        assert result == [[("test1", 41, 0), ("test2", 42, 1)], [("test3", 42, 0), ("test4", 43, 1)]]
         mock.assert_called_once_with(GetNewDataSinceRequest(dataset_id="test_dataset", timestamp=21))
 
 
@@ -226,7 +247,7 @@ def test_get_data_in_interval_throws():
     handler = get_non_connecting_handler()
     handler.connected_to_storage = False
     with pytest.raises(ConnectionError):
-        handler.get_data_in_interval("dataset_id", 0, 1)
+        list(handler.get_data_in_interval("dataset_id", 0, 1))
 
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
@@ -239,11 +260,34 @@ def test_get_data_in_interval(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
-        mock.return_value = GetDataInIntervalResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])
+        mock.return_value = [GetDataInIntervalResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])]
 
-        result = handler.get_data_in_interval("test_dataset", 21, 45)
+        result = list(handler.get_data_in_interval("test_dataset", 21, 45))
 
-        assert result == [("test1", 41, 0), ("test2", 42, 1)]
+        assert result == [[("test1", 41, 0), ("test2", 42, 1)]]
+        mock.assert_called_once_with(
+            GetDataInIntervalRequest(dataset_id="test_dataset", start_timestamp=21, end_timestamp=45)
+        )
+
+
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_get_data_in_interval_batched(test_grpc_connection_established):
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+
+    with patch.object(handler.storage, "GetDataInInterval") as mock:
+        mock.return_value = [
+            GetDataInIntervalResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1]),
+            GetDataInIntervalResponse(keys=["test3", "test4"], timestamps=[42, 43], labels=[0, 1]),
+        ]
+
+        result = list(handler.get_data_in_interval("test_dataset", 21, 45))
+
+        assert result == [[("test1", 41, 0), ("test2", 42, 1)], [("test3", 42, 0), ("test4", 43, 1)]]
         mock.assert_called_once_with(
             GetDataInIntervalRequest(dataset_id="test_dataset", start_timestamp=21, end_timestamp=45)
         )

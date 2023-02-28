@@ -3,7 +3,7 @@ import json
 import logging
 import pathlib
 from time import sleep
-from typing import Optional
+from typing import Iterable, Optional
 
 import enlighten
 import grpc
@@ -20,9 +20,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
-    GetDataInIntervalResponse,
     GetNewDataSinceRequest,
-    GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -46,8 +44,6 @@ from modyn.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
-MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # TODO(#148): Change model transfer protocol
-
 
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
@@ -67,13 +63,7 @@ class GRPCHandler:
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
-        self.storage_channel = grpc.insecure_channel(
-            storage_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
-            ],
-        )
+        self.storage_channel = grpc.insecure_channel(storage_address)
 
         if not grpc_connection_established(self.storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
@@ -97,13 +87,7 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(
-            trainer_server_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
-            ],
-        )
+        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
@@ -120,18 +104,18 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(self, dataset_id: str, timestamp: int) -> list[tuple[str, int, int]]:
+    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[list[tuple[str, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
-        response: GetNewDataSinceResponse = self.storage.GetNewDataSince(request)
-
-        return list(zip(response.keys, response.timestamps, response.labels))
+        for response in self.storage.GetNewDataSince(request):
+            data = list(zip(response.keys, response.timestamps, response.labels))
+            yield data
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
-    ) -> list[tuple[str, int, int]]:
+    ) -> Iterable[list[tuple[str, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -140,9 +124,9 @@ class GRPCHandler:
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
         )
-        response: GetDataInIntervalResponse = self.storage.GetDataInInterval(request)
-
-        return list(zip(response.keys, response.timestamps, response.labels))
+        for response in self.storage.GetDataInInterval(request):
+            data = list(zip(response.keys, response.timestamps, response.labels))
+            yield data
 
     def get_time_at_storage(self) -> int:
         if not self.connected_to_storage:
