@@ -12,6 +12,7 @@ from modyn.storage.internal.database.storage_database_connection import StorageD
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from sqlalchemy import exc
+from sqlalchemy.orm import exc as orm_exc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
@@ -25,7 +26,9 @@ class NewFileWatcher:
     will be added to the database.
     """
 
-    def __init__(self, modyn_config: dict, should_stop: Any):  # See https://github.com/python/typeshed/issues/8799
+    def __init__(
+        self, modyn_config: dict, dataset_id: int, should_stop: Any
+    ):  # See https://github.com/python/typeshed/issues/8799
         """Initialize the new file watcher.
 
         Args:
@@ -34,19 +37,18 @@ class NewFileWatcher:
         """
         self.modyn_config = modyn_config
         self.__should_stop = should_stop
+        self.__dataset_id = dataset_id
 
-    def _seek(self) -> None:
+    def _seek(self, session: sessionmaker) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
 
         If last timestamp is not ignored, the last timestamp of the dataset will be used to only
         seek for files that have a timestamp that is equal or greater than the last timestamp.
         """
-        with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.session
+        dataset = session.query(Dataset).filter(Dataset.dataset_id == self.__dataset_id).first()
 
-            datasets = self._get_datasets(session)
-
-            for dataset in datasets:
+        if dataset is not None:
+            try:
                 logger.debug(
                     f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
                     is equal or greater than {dataset.last_timestamp}"
@@ -63,6 +65,27 @@ class NewFileWatcher:
                         {"last_timestamp": last_timestamp[0]}
                     )
                     session.commit()
+                time.sleep(dataset.file_watcher_interval)
+            except orm_exc.ObjectDeletedError as error:
+                logger.warning(
+                    f"Dataset {self.__dataset_id} not found. Shutting down "
+                    + f"file watcher for dataset {self.__dataset_id}."
+                )
+                logger.debug(error)
+                session.rollback()
+                #  Clean up possible orphaned files and samples
+                self.session.query(Sample).join(File).join(Dataset).filter(
+                    Dataset.dataset_id == self.__dataset_id
+                ).delete(synchronize_session="fetch")
+                self.session.query(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).delete(
+                    synchronize_session="fetch"
+                )
+                self.__should_stop.value = True
+        else:
+            logger.warning(
+                f"Dataset {self.__dataset_id} not found. Shutting down file watcher for dataset {self.__dataset_id}."
+            )
+            self.__should_stop.value = True
 
     def _seek_dataset(self, session: Session, dataset: Dataset) -> None:
         """Seek the filesystem for a dataset for new files and add them to the database.
@@ -176,17 +199,18 @@ class NewFileWatcher:
     def run(self) -> None:
         """Run the dataset watcher."""
         logger.info("Starting dataset watcher.")
-        while not self.__should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
-            time.sleep(self.modyn_config["storage"]["new_file_watcher"]["interval"])
-            self._seek()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
+            while not self.__should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
+                self._seek(session)
 
 
-def run_watcher(modyn_config: dict, should_stop: Any) -> None:  # See https://github.com/python/typeshed/issues/8799
-    """Run the new file watcher.
+def run_new_file_watcher(modyn_config: dict, dataset_id: int, should_stop: Any) -> None:
+    """Run the file watcher for a dataset.
 
     Args:
-        modyn_config (dict): Configuration of the modyn module.
-        should_stop (Value): Value that indicates if the watcher should stop.
+        dataset_id (int): Dataset id.
+        should_stop (Value): Value to check if the file watcher should stop.
     """
-    watcher = NewFileWatcher(modyn_config, should_stop)
-    watcher.run()
+    file_watcher = NewFileWatcher(modyn_config, dataset_id, should_stop)
+    file_watcher.run()

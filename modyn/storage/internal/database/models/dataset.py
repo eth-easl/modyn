@@ -22,6 +22,7 @@ class Dataset(StorageBase):
     file_wrapper_config = Column(String(240), unique=False, nullable=True)
     last_timestamp = Column(BigInteger, unique=False, nullable=False)
     ignore_last_timestamp = Column(Boolean, unique=False, nullable=False, default=False)
+    file_watcher_interval = Column(Integer, unique=False, nullable=False, default=5)
 
     def __repr__(self) -> str:
         """Return string representation."""

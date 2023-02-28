@@ -237,6 +237,7 @@ class StorageGRPCServicer(StorageServicer):
                 request.version,
                 request.file_wrapper_config,
                 request.ignore_last_timestamp,
+                request.file_watcher_interval,
             )
             return RegisterNewDatasetResponse(success=success)
 
