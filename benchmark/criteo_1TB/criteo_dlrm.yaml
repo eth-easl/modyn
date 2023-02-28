@@ -56,23 +56,23 @@ training:
       param_groups:
         - module: "model.top_model"
           config:
-            lr: 0.1
+            lr: 24
         - module: "model.bottom_model.mlp"
           config:
-            lr: 0.1
+            lr: 24
     - name: "opt_1"
       algorithm: "SGD"
       source: "PyTorch"
       param_groups:
         - module: "model.bottom_model.embeddings"
           config:
-            lr: 0.1
+            lr: 24
   lr_scheduler:
     name: "DLRMScheduler"
     source: "Custom"
     optimizers: ["mlp", "opt_1"]
     config:
-      base_lrs: [[0.1, 0.1], [0.1]]
+      base_lrs: [[24, 24], [24]]
       warmup_steps: 8000
       warmup_factor: 0
       decay_steps: 24000
