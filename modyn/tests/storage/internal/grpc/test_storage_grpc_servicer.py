@@ -234,7 +234,12 @@ def test_get_new_data_since_invalid_dataset():
     request = GetNewDataSinceRequest(dataset_id="test3", timestamp=0)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 0
+    assert len(responses) == 1
+    response = responses[0]
+    assert response is not None
+    assert response.keys == []
+    assert response.timestamps == []
+    assert response.labels == []
 
 
 def test_get_new_data_since_no_new_data():
@@ -298,7 +303,12 @@ def test_get_data_in_interval_invalid_dataset():
     request = GetDataInIntervalRequest(dataset_id="test2", start_timestamp=0, end_timestamp=NOW + 100000)
 
     responses = list(server.GetDataInInterval(request, None))
-    assert len(responses) == 0
+    assert len(responses) == 1
+    response = responses[0]
+    assert response is not None
+    assert response.keys == []
+    assert response.timestamps == []
+    assert response.labels == []
 
 
 def test_check_availability():
