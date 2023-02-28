@@ -21,7 +21,7 @@ def test_ftp_server():
 
         with ftp_server:
             ftp = FTP()
-            ftp.connect("localhost", 1337, timeout=3)
+            ftp.connect("127.0.0.1", 1337, timeout=3)
             ftp.login("modyn", "modyn")
 
             files = []
