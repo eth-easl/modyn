@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module
+import platform
 from unittest.mock import patch
 
 import grpc
@@ -272,6 +273,11 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
 def test_dataloader_dataset_multi_worker(
     test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
 ):
+    if platform.system() == "Darwin":
+        # On macOS, spawn is the default, which loses the mocks
+        # Hence the test does not work on macOS, only on Linux.
+        return
+
     online_dataset = OnlineDataset(
         pipeline_id=1,
         trigger_id=1,
