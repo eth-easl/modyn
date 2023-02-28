@@ -79,16 +79,20 @@ class DlrmModel(nn.Module):
         )
 
     def validate_config(self, model_configuration: dict[str, Any], device: str) -> None:
-        if (
+        apex_required = (
             model_configuration["embedding_type"] == "joint_fused"
             or model_configuration["embedding_type"] == "joint_sparse"
-            or model_configuration["interaction_op"] == "cuda_dot"
             or model_configuration["use_cpp_mlp"]
-        ):
+        )
+        cuda_required = apex_required or (model_configuration["interaction_op"] == "cuda_dot")
+
+        if cuda_required:
             if "cuda" not in device:
                 raise ValueError("The given DLRM configuration requires training on a GPU")
             if not torch.cuda.is_available():
                 raise ValueError("The given DLRM configuration requires PyTorch-CUDA support")
+
+        if apex_required:
             if not package_available_and_can_be_imported("apex"):
                 raise ValueError("The given DLRM configuration requires NVIDIA APEX to be installed")
 
