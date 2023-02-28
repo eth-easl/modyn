@@ -40,7 +40,7 @@ data:
     from PIL import Image
     import io
     def bytes_parser_function(data: bytes) -> Image:
-      return Image.open(io.BytesIO(data))
+      return Image.open(io.BytesIO(data)).convert("RGB")
 
 trigger:
   id: DataAmountTrigger
