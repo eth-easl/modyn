@@ -28,11 +28,11 @@ class TimeTrigger(Trigger):
     def inform(self, new_data: list[tuple[str, int, int]]) -> list[int]:
         if self.next_trigger_at is None:
             if len(new_data) > 0:
-                self.next_trigger_at = min((timestamp for _, timestamp, _ in new_data)) + self.trigger_every_ms
+                self.next_trigger_at = new_data[0][1] + self.trigger_every_ms  # new_data is sorted
             else:
                 return []
 
-        max_timestamp = new_data[-1][1]  # We use the fact that new_data is sorted
+        max_timestamp = new_data[-1][1]  # new_data is sorted
         triggering_indices = []
 
         while self.next_trigger_at <= max_timestamp:
