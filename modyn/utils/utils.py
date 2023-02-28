@@ -14,8 +14,8 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
-
 UNAVAILABLE_PKGS = []
+SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -82,6 +82,20 @@ def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> 
         return True
     except grpc.FutureTimeoutError:
         return False
+
+
+def validate_timestr(timestr: str) -> bool:
+    if timestr[-1] not in SECONDS_PER_UNIT:
+        return False
+
+    if not timestr[:-1].isdigit():
+        return False
+
+    return True
+
+
+def convert_timestr_to_seconds(timestr: str) -> int:
+    return int(timestr[:-1]) * SECONDS_PER_UNIT[timestr[-1]]
 
 
 def package_available_and_can_be_imported(package: str) -> bool:

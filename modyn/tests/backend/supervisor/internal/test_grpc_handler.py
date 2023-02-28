@@ -358,6 +358,13 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
             DataInformRequest(pipeline_id=42, keys=["a", "b"], timestamps=[42, 43], labels=[0, 1])
         )
 
+    # Test empty trigger
+    with patch.object(handler.selector, "inform_data_and_trigger") as mock:
+        mock.return_value = TriggerResponse(trigger_id=13)
+        assert 13 == handler.inform_selector_and_trigger(42, [])
+
+        mock.assert_called_once_with(DataInformRequest(pipeline_id=42, keys=[], timestamps=[], labels=[]))
+
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_trainer_server_available(test_connection_established):

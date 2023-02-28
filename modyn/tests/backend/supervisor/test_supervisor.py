@@ -408,6 +408,37 @@ def test__handle_triggers_within_batch(
     test_inform_selector.assert_called_once_with(42, [("g", 7)])
 
 
+@patch.object(Supervisor, "_run_training")
+@patch.object(GRPCHandler, "inform_selector_and_trigger")
+@patch.object(GRPCHandler, "inform_selector")
+def test__handle_triggers_within_batch_empty_triggers(
+    test_inform_selector: MagicMock, test_inform_selector_and_trigger: MagicMock, test__run_training: MagicMock
+):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.pipeline_id = 42
+    batch = [("a", 1), ("b", 2), ("c", 3), ("d", 4), ("e", 5), ("f", 6), ("g", 7)]
+    triggering_indices = [-1, -1, 3]
+    trigger_ids = [0, 1, 2]
+    test_inform_selector_and_trigger.side_effect = trigger_ids
+
+    sup._handle_triggers_within_batch(batch, triggering_indices)
+
+    inform_selector_and_trigger_expected_args = [
+        call(42, []),
+        call(42, []),
+        call(42, [("a", 1), ("b", 2), ("c", 3), ("d", 4)]),
+    ]
+    assert test_inform_selector_and_trigger.call_count == 3
+    assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
+
+    run_training_expected_args = [call(0), call(1), call(2)]
+    assert test__run_training.call_count == 3
+    assert test__run_training.call_args_list == run_training_expected_args
+
+    assert test_inform_selector.call_count == 1
+    test_inform_selector.assert_called_once_with(42, [("e", 5), ("f", 6), ("g", 7)])
+
+
 @patch.object(GRPCHandler, "fetch_trained_model", return_value=pathlib.Path("/"))
 @patch.object(GRPCHandler, "start_training", return_value=1337)
 @patch.object(GRPCHandler, "wait_for_training_completion")
