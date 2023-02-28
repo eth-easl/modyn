@@ -14,11 +14,15 @@ training:
   initial_pass:
     activated: False
   batch_size: 64
-  optimizer:
-    name: "SGD"
-    config:
-      lr: 0.1
-      momentum: 0.001
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.1
+            momentum: 0.001
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
