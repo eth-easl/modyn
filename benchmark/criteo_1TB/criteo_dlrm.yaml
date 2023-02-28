@@ -67,7 +67,7 @@ training:
       param_groups:
         - module: "model.bottom_model.embeddings"
           config:
-            lr: 0.1
+            lr: 24
   lr_scheduler:
     name: "DLRMScheduler"
     source: "Custom"
