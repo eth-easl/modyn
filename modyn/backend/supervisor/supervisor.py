@@ -190,18 +190,27 @@ class Supervisor:
         try:
             while True:
                 self.status_bar.update(demo="Fetching new data")
-                new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
-                # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
-                new_data = [(key, timestamp, label) for (key, timestamp, label) in new_data if key not in last_keys]
-                last_timestamp = (
-                    max((timestamp for (_, timestamp, _) in new_data)) if len(new_data) > 0 else last_timestamp
-                )
+                trigger_occured = False
+                for idx, new_data in enumerate(self.grpc.get_new_data_since(dataset_id, last_timestamp)):
+                    # Since get_new_data_since is inclusive, we need to filter out the keys
+                    # we have already processed in the previous get_new_data_since request
+                    new_data = [(key, timestamp, label) for (key, timestamp, label) in new_data if key not in last_keys]
+                    last_timestamp = (
+                        max((timestamp for (_, timestamp, _) in new_data)) if len(new_data) > 0 else last_timestamp
+                    )
 
-                # Remember all data points with last_timestamp so we do not process them again in the next iteration
-                # We use a set to have a O(1) check in the line above.
-                last_keys = {key for (key, timestamp, label) in new_data if timestamp == last_timestamp}
+                    # Remember all data points with last_timestamp so we do not process them again in the next iteration
+                    # We use a set to have a O(1) check in the line above.
+                    _last_keys = {key for (key, timestamp, _) in new_data if timestamp == last_timestamp}
+                    if idx == 0:
+                        last_keys = _last_keys
+                    else:
+                        last_keys.update(_last_keys)  # last_keys is maintained per call to get_new_data_since
 
-                if not self._handle_new_data(new_data):
+                    if self._handle_new_data(new_data):
+                        trigger_occured = True
+
+                if not trigger_occured:
                     self.status_bar.update(demo="Waiting for new data...")
                     sleep(2)
 
@@ -306,11 +315,13 @@ class Supervisor:
         logger.info("Starting data replay.")
 
         if self.stop_replay_at is None:
-            replay_data = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
+            generator = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
         else:
-            replay_data = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
+            generator = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
 
-        self._handle_new_data(replay_data)
+        for replay_data in generator:
+            self._handle_new_data(replay_data)
+
         self.status_bar.update(demo="Replay done")
 
     def pipeline(self) -> None:

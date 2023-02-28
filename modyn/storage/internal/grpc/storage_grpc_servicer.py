@@ -39,6 +39,7 @@ class StorageGRPCServicer(StorageServicer):
             config (dict): Configuration of the storage module.
         """
         self.modyn_config = config
+        self._sample_batch_size = 1024
         super().__init__()
 
     # pylint: disable-next=unused-argument,invalid-name
@@ -114,7 +115,7 @@ class StorageGRPCServicer(StorageServicer):
     # pylint: disable-next=unused-argument,invalid-name
     def GetNewDataSince(
         self, request: GetNewDataSinceRequest, context: grpc.ServicerContext
-    ) -> GetNewDataSinceResponse:
+    ) -> Iterable[GetNewDataSinceResponse]:
         """Get all new data since the given timestamp.
 
         Returns:
@@ -127,7 +128,8 @@ class StorageGRPCServicer(StorageServicer):
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
-                return GetNewDataSinceResponse()
+                yield GetNewDataSinceResponse()
+                return
 
             timestamp = request.timestamp
 
@@ -139,19 +141,24 @@ class StorageGRPCServicer(StorageServicer):
                 .all()
             )
 
-            if len(values) == 0:
-                logger.info(f"No new data since {timestamp}")
-                return GetNewDataSinceResponse()
+            num_items = len(values)
 
-            return GetNewDataSinceResponse(
-                keys=[value[0] for value in values],
-                timestamps=[value[1] for value in values],
-                labels=[value[2] for value in values],
-            )
+            if num_items == 0:
+                logger.info(f"No new data since {timestamp}")
+                yield GetNewDataSinceResponse()
+                return
+
+            for i in range(0, num_items, self._sample_batch_size):
+                batch = values[i : i + self._sample_batch_size]
+                yield GetNewDataSinceResponse(
+                    keys=[value[0] for value in batch],
+                    timestamps=[value[1] for value in batch],
+                    labels=[value[2] for value in batch],
+                )
 
     def GetDataInInterval(
         self, request: GetDataInIntervalRequest, context: grpc.ServicerContext
-    ) -> GetDataInIntervalResponse:
+    ) -> Iterable[GetDataInIntervalResponse]:
         """Get all data in the given interval.
 
         Returns:
@@ -164,7 +171,8 @@ class StorageGRPCServicer(StorageServicer):
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
-                return GetDataInIntervalResponse()
+                yield GetDataInIntervalResponse()
+                return
 
             values = (
                 session.query(Sample.external_key, File.updated_at, Sample.label)
@@ -175,15 +183,20 @@ class StorageGRPCServicer(StorageServicer):
                 .all()
             )
 
-            if len(values) == 0:
-                logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
-                return GetDataInIntervalResponse()
+            num_items = len(values)
 
-            return GetDataInIntervalResponse(
-                keys=[value[0] for value in values],
-                timestamps=[value[1] for value in values],
-                labels=[value[2] for value in values],
-            )
+            if num_items == 0:
+                logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
+                yield GetDataInIntervalResponse()
+                return
+
+            for i in range(0, num_items, self._sample_batch_size):
+                batch = values[i : i + self._sample_batch_size]
+                yield GetDataInIntervalResponse(
+                    keys=[value[0] for value in batch],
+                    timestamps=[value[1] for value in batch],
+                    labels=[value[2] for value in batch],
+                )
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(
