@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+from typing import Optional
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import StartTrainingRequest
@@ -19,6 +20,7 @@ class TrainingInfo:
         storage_address: str,
         selector_address: str,
         final_checkpoint_path: pathlib.Path,
+        pretrained_model_path: Optional[pathlib.Path] = None,
     ) -> None:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id
@@ -40,9 +42,12 @@ class TrainingInfo:
         model_module = dynamic_module_import("modyn.models")
         self.model_handler = getattr(model_module, self.model_id)
 
-        self.used_pretrained_model = request.use_pretrained_model
+        self.use_pretrained_model = request.use_pretrained_model
         self.load_optimizer_state = request.load_optimizer_state
-        self.pretrained_model = request.pretrained_model
+        self.pretrained_model_path = pretrained_model_path
+
+        if self.use_pretrained_model:
+            assert self.pretrained_model_path, "Inconsistent pretrained model configuration"
 
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion

@@ -10,6 +10,7 @@ training:
   gpus: 1
   device: "cuda:0"
   dataloader_workers: 2
+  use_previous_model: True
   initial_model: random
   initial_pass:
     activated: False

@@ -1,5 +1,7 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
+import glob
 import pathlib
+import platform
 import tempfile
 from unittest.mock import patch
 
@@ -25,6 +27,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.trainer_server.internal.ftp.ftp_server import FTPServer
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     GetFinalModelRequest,
     GetFinalModelResponse,
@@ -42,7 +45,7 @@ def noop_constructor_mock(self, channel: grpc.Channel) -> None:
 def get_simple_config() -> dict:
     return {
         "storage": {"hostname": "test", "port": 42},
-        "trainer_server": {"hostname": "test", "port": 42},
+        "trainer_server": {"hostname": "localhost", "port": 42, "ftp_port": 1337},
         "selector": {"hostname": "test", "port": 42},
     }
 
@@ -455,7 +458,44 @@ def test_wait_for_training_completion(test_connection_established):
 
 
 @patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_upload_model(test_connection_established):
+    if platform.system() == "Darwin":
+        # On macOS, the ftpserver works but throws a file descriptor error upon termination in tests
+        return
+
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+
+    with tempfile.TemporaryDirectory() as ftp_root:
+        ftp_root_path = pathlib.Path(ftp_root)
+        created_path = ftp_root_path / "created.file"
+        with FTPServer({"trainer_server": {"ftp_port": 1337}}, ftp_root_path):
+            with open(created_path, "w", encoding="utf-8") as file:
+                file.write("test")
+
+            assert created_path.exists()
+
+            handler.upload_model(1, 1, created_path)
+
+        files = glob.glob(str(ftp_root_path / "*.modyn"))
+        assert len(files) == 1
+
+        file = files[0]
+
+        with open(file, "r", encoding="utf-8") as file:
+            assert file.read() == "test"
+
+
+@patch("modyn.backend.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_fetch_trained_model(test_connection_established):
+    if platform.system() == "Darwin":
+        # On macOS, the ftpserver works but throws a file descriptor error upon termination in tests
+        return
+
     mgr = enlighten.get_manager()
     pbar = mgr.status_bar(
         status_format="Test",
@@ -464,20 +504,27 @@ def test_fetch_trained_model(test_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
     assert handler.trainer_server is not None
 
-    payload = b"\xe7\xb7\x91\xe8\x8c\xb6\xe3\x81\x8c\xe5\xa5\xbd\xe3\x81\x8d"
-    res: GetFinalModelResponse = GetFinalModelResponse(valid_state=True, state=payload)
+    with tempfile.TemporaryDirectory() as ftp_root:
+        ftp_root_path = pathlib.Path(ftp_root)
+        with FTPServer({"trainer_server": {"ftp_port": 1337}}, ftp_root_path):
+            payload = b"\xe7\xb7\x91\xe8\x8c\xb6\xe3\x81\x8c\xe5\xa5\xbd\xe3\x81\x8d"
+            with open(ftp_root_path / "test.bin", "wb") as file:
+                file.write(payload)
 
-    with tempfile.TemporaryDirectory() as temp:
-        with patch.object(handler.trainer_server, "get_final_model", return_value=res) as get_method:
-            temp_path = pathlib.Path(temp)
-            handler.fetch_trained_model(21, temp_path)
-            get_method.assert_called_once_with(GetFinalModelRequest(training_id=21))
+            res: GetFinalModelResponse = GetFinalModelResponse(valid_state=True, model_path="test.bin")
 
-            model_path = temp_path / "21.modyn"
-            assert model_path.exists()
+            with tempfile.TemporaryDirectory() as temp:
+                with patch.object(handler.trainer_server, "get_final_model", return_value=res) as get_method:
+                    temp_path = pathlib.Path(temp)
 
-            with open(model_path, "rb") as file:
-                data = file.read()
+                    handler.fetch_trained_model(21, temp_path)
+                    get_method.assert_called_once_with(GetFinalModelRequest(training_id=21))
 
-            assert data == payload
-            assert data.decode("utf-8") == "緑茶が好き"
+                    model_path = temp_path / "21.modyn"
+                    assert model_path.exists()
+
+                    with open(model_path, "rb") as file:
+                        data = file.read()
+
+                    assert data == payload
+                    assert data.decode("utf-8") == "緑茶が好き"

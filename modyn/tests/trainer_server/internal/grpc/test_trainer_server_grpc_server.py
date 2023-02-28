@@ -1,5 +1,4 @@
 # pylint: disable=unused-argument
-import pathlib
 import tempfile
 from unittest.mock import patch
 
@@ -16,8 +15,9 @@ def get_modyn_config():
 
 def test_init():
     config = get_modyn_config()
-    grpc_server = GRPCServer(config)
-    assert grpc_server.config == config
+    with tempfile.TemporaryDirectory() as tempdir:
+        grpc_server = GRPCServer(config, tempdir)
+        assert grpc_server.config == config
 
 
 @patch(
@@ -25,17 +25,6 @@ def test_init():
     return_value=None,
 )
 def test_enter(mock_add_trainer_server_servicer_to_server):
-    with GRPCServer(get_modyn_config()) as grpc_server:
-        assert grpc_server is not None
-
-
-@patch(
-    "modyn.trainer_server.internal.grpc.trainer_server_grpc_server.add_TrainerServerServicer_to_server",
-    return_value=None,
-)
-def test_cleanup_at_exit(mock_add_trainer_server_servicer_to_server):
-    modyn_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
-    with GRPCServer(get_modyn_config()) as _:
-        assert modyn_dir.exists()
-
-    assert not modyn_dir.exists()
+    with tempfile.TemporaryDirectory() as tempdir:
+        with GRPCServer(get_modyn_config(), tempdir) as grpc_server:
+            assert grpc_server is not None

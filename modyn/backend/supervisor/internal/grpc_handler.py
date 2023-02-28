@@ -1,9 +1,11 @@
 # pylint: disable=no-name-in-module
 import json
 import logging
+import os
 import pathlib
+from ftplib import FTP
 from time import sleep
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import enlighten
 import grpc
@@ -40,7 +42,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.utils import grpc_connection_established
+from modyn.utils import current_time_millis, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +202,42 @@ class GRPCHandler:
         # TODO(#130): Implement this at trainer server.
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
 
-    # pylint: disable=too-many-branches,too-many-locals, too-many-statements
+    def upload_model(self, pipeline_id: int, trigger_id: int, model: pathlib.Path) -> str:
+        assert model.exists(), "Cannot upload non-existing model"
+        # TODO(#167): This function can be removed again when we have a model storage component.
+        remote_path = f"{pipeline_id}-{trigger_id}-{current_time_millis()}.modyn"
+        ftp = FTP()
+        ftp.connect(
+            self.config["trainer_server"]["hostname"], int(self.config["trainer_server"]["ftp_port"]), timeout=3
+        )
+        ftp.login("modyn", "modyn")
+        ftp.sendcmd("TYPE i")  # Switch to binary mode
+
+        size = os.stat(model).st_size
+
+        self.status_bar.update(demo="Uploading model")
+        pbar = self.progress_mgr.counter(
+            total=size, desc=f"[Pipeline {pipeline_id}][Trigger {trigger_id}] Uploading Previous Model", unit="bytes"
+        )
+
+        logger.info(f"Uploading previous model to trainer server. Total size = {size} bytes.")
+
+        with open(model, "rb") as local_file:
+
+            def upload_callback(data: Any) -> None:
+                pbar.update(min(len(data), pbar.total - pbar.count))
+
+            ftp.storbinary(f"STOR {remote_path}", local_file, callback=upload_callback)
+
+        logger.info("Model uploaded.")
+        ftp.close()
+        pbar.update(pbar.total - pbar.count)
+        pbar.clear(flush=True)
+        pbar.close(clear=True)
+
+        return remote_path
+
+    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
     def start_training(
         self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model: Optional[pathlib.Path]
     ) -> int:
@@ -214,11 +251,10 @@ class GRPCHandler:
 
         if previous_model is not None:
             use_pretrained_model = True
-            with open(previous_model, "rb") as file:
-                pretrained_model = file.read()
+            pretrained_model_path = self.upload_model(pipeline_id, trigger_id, previous_model)
         else:
             use_pretrained_model = False
-            pretrained_model = b""
+            pretrained_model_path = ""
 
         optimizers_config = {}
         for optimizer in pipeline_config["training"]["optimizers"]:
@@ -281,7 +317,7 @@ class GRPCHandler:
             model_id=pipeline_config["model"]["id"],
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
-            pretrained_model=pretrained_model,
+            pretrained_model_path=pretrained_model_path,
             load_optimizer_state=False,  # TODO(#137): Think about this.
             batch_size=pipeline_config["training"]["batch_size"],
             torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
@@ -388,14 +424,39 @@ class GRPCHandler:
                 + " since training is invalid or training still running"
             )
 
-        model = res.state
+        remote_model_path = f"/{res.model_path}"
+        local_model_path = storage_dir / f"{training_id}.modyn"
 
-        model_path = storage_dir / f"{training_id}.modyn"
-        logger.info(f"Fetched model, storing at {model_path}")
+        ftp = FTP()
+        ftp.connect(
+            self.config["trainer_server"]["hostname"], int(self.config["trainer_server"]["ftp_port"]), timeout=3
+        )
 
-        with open(model_path, "wb") as file:
-            file.write(model)
+        ftp.login("modyn", "modyn")
+        ftp.sendcmd("TYPE i")  # Switch to binary mode
+        size = ftp.size(remote_model_path)
+
+        self.status_bar.update(demo="Downloading model")
+        pbar = self.progress_mgr.counter(total=size, desc=f"[Training {training_id}] Downloading Model", unit="bytes")
+
+        logger.info(
+            f"Remote model path is {remote_model_path}, storing at {local_model_path}."
+            + f"Fetching via FTP! Total size = {size} bytes."
+        )
+
+        with open(local_model_path, "wb") as local_file:
+
+            def write_callback(data: Any) -> None:
+                local_file.write(data)
+                pbar.update(min(len(data), pbar.total - pbar.count))
+
+            ftp.retrbinary(f"RETR {remote_model_path}", write_callback)
+
+        ftp.close()
+        pbar.update(pbar.total - pbar.count)
+        pbar.clear(flush=True)
+        pbar.close(clear=True)
 
         logger.info("Wrote model to disk.")
 
-        return model_path
+        return local_model_path
