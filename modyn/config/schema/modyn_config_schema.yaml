@@ -34,6 +34,10 @@ properties:
         type: string
         description: |
           The hostname to use for the storage server.
+      sample_batch_size:
+        type: number
+        description: |
+          The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce the size of a single answer the keys are batched in sizes of `sample_batch_size`.
       new_file_watcher:
         type: object
         properties:
@@ -148,6 +152,8 @@ properties:
       - hostname
       - new_file_watcher
       - database
+      - sample_batch_size
+
   metadata_database:
     type: object
     properties:

@@ -250,7 +250,7 @@ def test_shutdown_trainer():
     pass
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[("a", 42, 0), ("b", 43, 1)])
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[[("a", 42, 0), ("b", 43, 1)]])
 @patch.object(Supervisor, "_handle_new_data", return_value=False, side_effect=KeyboardInterrupt)
 def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     # This is a simple test and does not the inclusivity filtering!
@@ -261,14 +261,31 @@ def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_s
     test__handle_new_data.assert_called_once_with([("a", 42, 0), ("b", 43, 1)])
 
 
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[[("a", 42, 0)], [("b", 43, 1)]])
+@patch.object(Supervisor, "_handle_new_data", return_value=False, side_effect=[None, KeyboardInterrupt])
+def test_wait_for_new_data_batched(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
+    # This is a simple test and does not the inclusivity filtering!
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+
+    sup.wait_for_new_data(21)
+    test_get_new_data_since.assert_called_once_with("test", 21)
+
+    expected_calls = [
+        call([("a", 42, 0)]),
+        call([("b", 43, 1)]),
+    ]
+
+    assert test__handle_new_data.call_args_list == expected_calls
+
+
 def test_wait_for_new_data_filtering():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     mocked__handle_new_data_return_vals = [True, True, KeyboardInterrupt]
     mocked_get_new_data_since = [
-        [("a", 42, 0), ("b", 43, 0), ("c", 43, 1)],
-        [("b", 43, 0), ("c", 43, 1), ("d", 43, 2), ("e", 45, 3)],
-        [],
+        [[("a", 42, 0), ("b", 43, 0), ("c", 43, 1)]],
+        [[("b", 43, 0), ("c", 43, 1), ("d", 43, 2), ("e", 45, 3)]],
+        [[]],
         ValueError,
     ]
 
@@ -284,6 +301,40 @@ def test_wait_for_new_data_filtering():
             expected_handle_mock_arg_list = [
                 call([("a", 42, 0), ("b", 43, 0), ("c", 43, 1)]),
                 call([("d", 43, 2), ("e", 45, 3)]),
+                call([]),
+            ]
+            assert handle_mock.call_args_list == expected_handle_mock_arg_list
+
+            expected_get_new_data_arg_list = [call("test", 21), call("test", 43), call("test", 45)]
+            assert get_new_data_mock.call_args_list == expected_get_new_data_arg_list
+
+
+def test_wait_for_new_data_filtering_batched():
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+
+    mocked__handle_new_data_return_vals = [True, True, True, True, True, KeyboardInterrupt]
+    mocked_get_new_data_since = [
+        [[("a", 42, 0), ("b", 43, 0)], [("c", 43, 1)]],
+        [[("b", 43, 0)], [("c", 43, 1), ("d", 43, 2)], [("e", 45, 3)]],
+        [[]],
+        ValueError,
+    ]
+
+    handle_mock: MagicMock
+    with patch.object(sup, "_handle_new_data", side_effect=mocked__handle_new_data_return_vals) as handle_mock:
+        get_new_data_mock: MagicMock
+        with patch.object(sup.grpc, "get_new_data_since", side_effect=mocked_get_new_data_since) as get_new_data_mock:
+            sup.wait_for_new_data(21)
+
+            assert handle_mock.call_count == 6
+            assert get_new_data_mock.call_count == 3
+
+            expected_handle_mock_arg_list = [
+                call([("a", 42, 0), ("b", 43, 0)]),
+                call([("c", 43, 1)]),
+                call([]),
+                call([("d", 43, 2)]),
+                call([("e", 45, 3)]),
                 call([]),
             ]
             assert handle_mock.call_args_list == expected_handle_mock_arg_list
@@ -414,7 +465,7 @@ def test_initial_pass():
     sup.initial_pass()
 
 
-@patch.object(GRPCHandler, "get_data_in_interval", return_value=[("a", 1), ("b", 2)])
+@patch.object(GRPCHandler, "get_data_in_interval", return_value=[[("a", 1), ("b", 2)]])
 @patch.object(Supervisor, "_handle_new_data")
 def test_replay_data_closed_inteval(test__handle_new_data: MagicMock, test_get_data_in_interval: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -426,7 +477,20 @@ def test_replay_data_closed_inteval(test__handle_new_data: MagicMock, test_get_d
     test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)])
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[("a", 1), ("b", 2)])
+@patch.object(GRPCHandler, "get_data_in_interval", return_value=[[("a", 1)], [("b", 2)]])
+@patch.object(Supervisor, "_handle_new_data")
+def test_replay_data_closed_inteval_batched(test__handle_new_data: MagicMock, test_get_data_in_interval: MagicMock):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.start_replay_at = 0
+    sup.stop_replay_at = 42
+    sup.replay_data()
+
+    test_get_data_in_interval.assert_called_once_with("test", 0, 42)
+    assert test__handle_new_data.call_count == 2
+    assert test__handle_new_data.call_args_list == [call([("a", 1)]), call([("b", 2)])]
+
+
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[[("a", 1), ("b", 2)]])
 @patch.object(Supervisor, "_handle_new_data")
 def test_replay_data_open_inteval(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -436,6 +500,19 @@ def test_replay_data_open_inteval(test__handle_new_data: MagicMock, test_get_new
 
     test_get_new_data_since.assert_called_once_with("test", 0)
     test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)])
+
+
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[[("a", 1)], [("b", 2)]])
+@patch.object(Supervisor, "_handle_new_data")
+def test_replay_data_open_inteval_batched(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.start_replay_at = 0
+    sup.stop_replay_at = None
+    sup.replay_data()
+
+    test_get_new_data_since.assert_called_once_with("test", 0)
+    assert test__handle_new_data.call_count == 2
+    assert test__handle_new_data.call_args_list == [call([("a", 1)]), call([("b", 2)])]
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)

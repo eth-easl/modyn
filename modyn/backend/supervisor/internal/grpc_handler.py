@@ -5,7 +5,7 @@ import os
 import pathlib
 from ftplib import FTP
 from time import sleep
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import enlighten
 import grpc
@@ -22,9 +22,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
-    GetDataInIntervalResponse,
     GetNewDataSinceRequest,
-    GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -108,18 +106,18 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(self, dataset_id: str, timestamp: int) -> list[tuple[str, int, int]]:
+    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[list[tuple[str, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
-        response: GetNewDataSinceResponse = self.storage.GetNewDataSince(request)
-
-        return list(zip(response.keys, response.timestamps, response.labels))
+        for response in self.storage.GetNewDataSince(request):
+            data = list(zip(response.keys, response.timestamps, response.labels))
+            yield data
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
-    ) -> list[tuple[str, int, int]]:
+    ) -> Iterable[list[tuple[str, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -128,9 +126,9 @@ class GRPCHandler:
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
         )
-        response: GetDataInIntervalResponse = self.storage.GetDataInInterval(request)
-
-        return list(zip(response.keys, response.timestamps, response.labels))
+        for response in self.storage.GetDataInInterval(request):
+            data = list(zip(response.keys, response.timestamps, response.labels))
+            yield data
 
     def get_time_at_storage(self) -> int:
         if not self.connected_to_storage:
