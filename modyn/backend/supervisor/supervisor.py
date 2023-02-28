@@ -98,6 +98,7 @@ class Supervisor:
 
         return True
 
+    # pylint: disable=too-many-branches
     def _validate_training_options(self) -> bool:
         is_valid = True
         batch_size = self.pipeline_config["training"]["batch_size"]
@@ -121,6 +122,13 @@ class Supervisor:
             is_valid = False
 
         if initial_model == "pretrained":
+            if not self.pipeline_config["training"]["use_previous_model"]:
+                logger.error(
+                    "Cannot have use_previous_model == False and use a pretrained initial model."
+                    "Initial model would get lost after first trigger."
+                )
+                is_valid = False
+
             if "initial_model_path" not in self.pipeline_config["training"]:
                 logger.error("Initial model set to pretrained, but no initial_model_path given")
                 is_valid = False
@@ -290,7 +298,12 @@ class Supervisor:
         )
         self.grpc.wait_for_training_completion(self.current_training_id, self.pipeline_id, trigger_id)
 
-        self.previous_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
+        # We download the trained model for evaluation in any case.
+        trained_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
+
+        # Only if the pipeline actually wants to continue the training on it, we set previous model.
+        if self.pipeline_config["training"]["use_previous_model"]:
+            self.previous_model = trained_model
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.

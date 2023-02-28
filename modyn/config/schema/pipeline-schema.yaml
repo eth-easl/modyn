@@ -60,6 +60,11 @@ properties:
         type: number
         description: |
           The batch size to be used during training.
+      use_previous_model:
+        type: boolean
+        description: |
+          If True, on trigger, we continue training on the model outputted by the previous trigger. If False, we start with random weights.
+          If `initial_model` is "pretrained", cannot be False.
       selection_strategy:
         type: object
         description: |
@@ -233,6 +238,7 @@ properties:
       - selection_strategy
       - initial_model
       - initial_pass
+      - use_previous_model
       - checkpointing
       - optimization_criterion
       - optimizers

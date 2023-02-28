@@ -16,6 +16,7 @@ def get_minimal_pipeline_config() -> dict:
             "gpus": 1,
             "device": "cpu",
             "dataloader_workers": 1,
+            "use_previous_model": True,
             "initial_model": "random",
             "initial_pass": {"activated": False},
             "learning_rate": 0.1,
