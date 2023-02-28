@@ -10,15 +10,20 @@ training:
   gpus: 1
   device: "cuda:0"
   dataloader_workers: 2
+  use_previous_model: True
   initial_model: random
   initial_pass:
     activated: False
   batch_size: 64
-  optimizer:
-    name: "SGD"
-    config:
-      lr: 0.1
-      momentum: 0.001
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.1
+            momentum: 0.001
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
@@ -36,7 +41,7 @@ data:
     from PIL import Image
     import io
     def bytes_parser_function(data: bytes) -> Image:
-      return Image.open(io.BytesIO(data))
+      return Image.open(io.BytesIO(data)).convert("RGB")
 
 trigger:
   id: DataAmountTrigger

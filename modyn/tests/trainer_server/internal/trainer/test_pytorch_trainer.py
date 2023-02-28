@@ -10,7 +10,6 @@ import tempfile
 from collections import OrderedDict
 from io import BytesIO
 from time import sleep
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import grpc
@@ -135,7 +134,7 @@ def get_training_info(
     training_id: int,
     use_pretrained: bool,
     load_optimizer_state: bool,
-    pretrained_model: Any,
+    pretrained_model_path: pathlib.Path,
     storage_address: str,
     selector_address: str,
     num_optimizers: int,
@@ -206,13 +205,18 @@ def get_training_info(
                 transform_list=[],
                 use_pretrained_model=use_pretrained,
                 load_optimizer_state=load_optimizer_state,
-                pretrained_model=pretrained_model,
+                pretrained_model_path=str(pretrained_model_path),
                 lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),
             )
             training_info = TrainingInfo(
-                request, training_id, storage_address, selector_address, pathlib.Path(final_tmpdirname)
+                request,
+                training_id,
+                storage_address,
+                selector_address,
+                pathlib.Path(final_tmpdirname),
+                pretrained_model_path,
             )
             return training_info
 
@@ -228,7 +232,7 @@ def get_mock_trainer(
     response_queue: mp.Queue(),
     use_pretrained: bool,
     load_optimizer_state: bool,
-    pretrained_model: Any,
+    pretrained_model_path: pathlib.Path,
     num_optimizers: int,
     lr_scheduler: str,
     transform_label: bool,
@@ -240,7 +244,15 @@ def get_mock_trainer(
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
     training_info = get_training_info(
-        0, use_pretrained, load_optimizer_state, pretrained_model, "", "", num_optimizers, lr_scheduler, transform_label
+        0,
+        use_pretrained,
+        load_optimizer_state,
+        pretrained_model_path,
+        "",
+        "",
+        num_optimizers,
+        lr_scheduler,
+        transform_label,
     )
     trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue, logging.getLogger(__name__))
     return trainer
@@ -305,7 +317,7 @@ def test_trainer_init_custom_lr_scheduler():
 
 @patch.object(PytorchTrainer, "load_state_if_given")
 def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, b"state", 1, "", False)
+    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, "/path/to/model", 1, "", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
@@ -313,7 +325,7 @@ def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-    load_state_if_given_mock.assert_called_once_with(b"state", False)
+    load_state_if_given_mock.assert_called_once_with("/path/to/model", False)
     assert trainer._label_tranformer_function is None
 
 
@@ -484,17 +496,25 @@ def test_load_state_if_given():
             ],
         },
     }
-    initial_state_buffer = io.BytesIO()
-    torch.save(dict_to_save, initial_state_buffer)
-    initial_state_buffer.seek(0)
-    initial_state = initial_state_buffer.read()
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, initial_state, 2, "", False)
-    assert trainer._model.model.state_dict() == dict_to_save["model"]
-    assert trainer._optimizers["opt1"].state_dict() == dict_to_save["optimizer-opt1"]
-    assert trainer._optimizers["opt2"].state_dict() == dict_to_save["optimizer-opt2"]
+    with tempfile.TemporaryDirectory() as tempdir:
+        initial_state_buffer = io.BytesIO()
+        torch.save(dict_to_save, initial_state_buffer)
+        initial_state_buffer.seek(0)
+        state_path = pathlib.Path(tempdir) / "test.state"
+        with open(state_path, "wb") as file:
+            file.write(initial_state_buffer.read())
 
-    new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, initial_state, 2, "", False)
-    assert new_trainer._model.model.state_dict() == dict_to_save["model"]
+        trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, state_path, 2, "", False)
+        assert trainer._model.model.state_dict() == dict_to_save["model"]
+        assert trainer._optimizers["opt1"].state_dict() == dict_to_save["optimizer-opt1"]
+        assert trainer._optimizers["opt2"].state_dict() == dict_to_save["optimizer-opt2"]
+        initial_state_buffer.seek(0)
+        state_path = pathlib.Path(tempdir) / "test.state"
+        with open(state_path, "wb") as file:
+            file.write(initial_state_buffer.read())
+
+        new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, state_path, 2, "", False)
+        assert new_trainer._model.model.state_dict() == dict_to_save["model"]
 
 
 def test_send_state_to_server():
