@@ -29,6 +29,7 @@ def get_minimal_modyn_config() -> dict:
     return {
         "storage": {
             "filesystem": {"type": "LocalFilesystemWrapper", "base_path": os.path.dirname(TMP_FILE)},
+            "sample_batch_size": 1024,
             "database": {
                 "drivername": "sqlite",
                 "username": "",
@@ -190,11 +191,42 @@ def test_get_new_data_since():
 
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
 
-    response = server.GetNewDataSince(request, None)
+    responses = list(server.GetNewDataSince(request, None))
+    assert len(responses) == 1
+    response = responses[0]
+
     assert response is not None
     assert response.keys == ["test", "test3", "test5"]
     assert response.timestamps == [NOW, NOW, NOW - 1]
     assert response.labels == [1, 3, 5]
+
+
+def test_get_new_data_since_batched():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+    server._sample_batch_size = 1
+
+    request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
+
+    responses = list(server.GetNewDataSince(request, None))
+    assert len(responses) == 3
+    response1 = responses[0]
+    response2 = responses[1]
+    response3 = responses[2]
+
+    assert response1 is not None
+    assert response1.keys == ["test"]
+    assert response1.timestamps == [NOW]
+    assert response1.labels == [1]
+
+    assert response2 is not None
+    assert response2.keys == ["test3"]
+    assert response2.timestamps == [NOW]
+    assert response2.labels == [3]
+
+    assert response3 is not None
+    assert response3.keys == ["test5"]
+    assert response3.timestamps == [NOW - 1]
+    assert response3.labels == [5]
 
 
 def test_get_new_data_since_invalid_dataset():
@@ -202,7 +234,9 @@ def test_get_new_data_since_invalid_dataset():
 
     request = GetNewDataSinceRequest(dataset_id="test3", timestamp=0)
 
-    response = server.GetNewDataSince(request, None)
+    responses = list(server.GetNewDataSince(request, None))
+    assert len(responses) == 1
+    response = responses[0]
     assert response is not None
     assert response.keys == []
     assert response.timestamps == []
@@ -214,7 +248,10 @@ def test_get_new_data_since_no_new_data():
 
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=NOW + 100000)
 
-    response = server.GetNewDataSince(request, None)
+    responses = list(server.GetNewDataSince(request, None))
+    assert len(responses) == 1
+    response = responses[0]
+
     assert response is not None
     assert response.keys == []
     assert response.timestamps == []
@@ -226,7 +263,11 @@ def test_get_data_in_interval():
 
     request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW + 100000)
 
-    response = server.GetDataInInterval(request, None)
+    responses = list(server.GetDataInInterval(request, None))
+
+    assert len(responses) == 1
+    response = responses[0]
+
     assert response is not None
     assert response.keys == ["test", "test3", "test5"]
     assert response.timestamps == [NOW, NOW, NOW - 1]
@@ -234,7 +275,11 @@ def test_get_data_in_interval():
 
     request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1)
 
-    response = server.GetDataInInterval(request, None)
+    responses = list(server.GetDataInInterval(request, None))
+
+    assert len(responses) == 1
+    response = responses[0]
+
     assert response is not None
     assert response.keys == ["test5"]
     assert response.timestamps == [NOW - 1]
@@ -242,7 +287,11 @@ def test_get_data_in_interval():
 
     request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=10)
 
-    response = server.GetDataInInterval(request, None)
+    responses = list(server.GetDataInInterval(request, None))
+
+    assert len(responses) == 1
+    response = responses[0]
+
     assert response is not None
     assert response.keys == []
     assert response.timestamps == []
@@ -254,7 +303,9 @@ def test_get_data_in_interval_invalid_dataset():
 
     request = GetDataInIntervalRequest(dataset_id="test2", start_timestamp=0, end_timestamp=NOW + 100000)
 
-    response = server.GetDataInInterval(request, None)
+    responses = list(server.GetDataInInterval(request, None))
+    assert len(responses) == 1
+    response = responses[0]
     assert response is not None
     assert response.keys == []
     assert response.timestamps == []
