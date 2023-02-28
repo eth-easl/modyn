@@ -210,12 +210,17 @@ def test_storage() -> None:
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
 
+    response = None
     for i in range(20):
-        response = get_new_data_since(0)
-        if len(response.keys) == 10:
-            break
+        responses = list(get_new_data_since(0))
+        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
+        if len(responses) == 1:
+            response = responses[0]
+            if len(response.keys) == 10:
+                break
         time.sleep(1)
 
+    assert response is not None, "Did not get any response from Storage"
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
@@ -223,16 +228,22 @@ def test_storage() -> None:
     add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
 
     for i in range(20):
-        response = get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1)
-        if len(response.keys) == 10:
-            break
+        responses = get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1)
+        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
+        if len(responses) == 1:
+            response = responses[0]
+            if len(response.keys) == 10:
+                break
         time.sleep(1)
 
+    assert response is not None, "Did not get any response from Storage"
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, SECOND_ADDED_IMAGES)
 
-    response = get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9])
+    responses = get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9])
+    assert len(responses) == 1, f"Received batched/no response, shouldn't happen: {responses}"
+    response = responses[0]
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
 
