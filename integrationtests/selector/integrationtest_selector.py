@@ -111,5 +111,103 @@ def test_newdata() -> None:
     assert len(worker_2_samples) == 3
 
 
+def test_empty_triggers() -> None:
+    selector_channel = connect_to_selector_servicer()
+    selector = SelectorStub(selector_channel)
+    # We test without reset, i.e., after an empty trigger we get the same data
+
+    strategy_config = {"name": "NewDataStrategy", "config": {"limit": -1, "reset_after_trigger": False}}
+
+    pipeline_id = selector.register_pipeline(
+        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+    ).pipeline_id
+
+    selector.inform_data(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=["key_0", "key_1", "key_2"],
+            timestamps=[1, 2, 3],
+            labels=[1, 0, 1],
+        )
+    )
+
+    trigger_id = selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=[],
+            timestamps=[],
+            labels=[],
+        )
+    ).trigger_id
+
+    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0)
+    )
+
+    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1)
+    )
+
+    worker_1_samples = list(worker1_response.training_samples_subset)
+    worker_2_samples = list(worker2_response.training_samples_subset)
+
+    assert set(worker_1_samples + worker_2_samples) == set(
+        ["key_" + str(i) for i in range(3)]
+    ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+
+    next_trigger_id = selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=[],
+            timestamps=[],
+            labels=[],
+        )
+    ).trigger_id
+
+    assert next_trigger_id > trigger_id
+
+    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0)
+    )
+
+    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1)
+    )
+
+    worker_1_samples = list(worker1_response.training_samples_subset)
+    worker_2_samples = list(worker2_response.training_samples_subset)
+
+    assert set(worker_1_samples + worker_2_samples) == set(
+        ["key_" + str(i) for i in range(3)]
+    ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+
+    next_trigger_id2 = selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=["key_3", "key_4", "key_5"],
+            timestamps=[10, 11, 12],
+            labels=[0, 0, 1],
+        )
+    ).trigger_id
+
+    assert next_trigger_id2 > next_trigger_id
+
+    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=0)
+    )
+
+    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
+        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=1)
+    )
+
+    worker_1_samples = list(worker1_response.training_samples_subset)
+    worker_2_samples = list(worker2_response.training_samples_subset)
+
+    assert set(worker_1_samples + worker_2_samples) == set(
+        ["key_" + str(i) for i in range(6)]
+    ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+
+
 if __name__ == "__main__":
     test_newdata()
+    test_empty_triggers()
