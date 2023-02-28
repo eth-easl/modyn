@@ -312,10 +312,10 @@ def test_wait_for_new_data_filtering():
 def test_wait_for_new_data_filtering_batched():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
-    mocked__handle_new_data_return_vals = [True, True, True, True, KeyboardInterrupt]
+    mocked__handle_new_data_return_vals = [True, True, True, True, True, KeyboardInterrupt]
     mocked_get_new_data_since = [
         [[("a", 42, 0), ("b", 43, 0)], [("c", 43, 1)]],
-        [[("b", 43, 0), ("c", 43, 1), ("d", 43, 2)], [("e", 45, 3)]],
+        [[("b", 43, 0)], [("c", 43, 1), ("d", 43, 2)], [("e", 45, 3)]],
         [[]],
         ValueError,
     ]
@@ -326,12 +326,13 @@ def test_wait_for_new_data_filtering_batched():
         with patch.object(sup.grpc, "get_new_data_since", side_effect=mocked_get_new_data_since) as get_new_data_mock:
             sup.wait_for_new_data(21)
 
-            assert handle_mock.call_count == 5
+            assert handle_mock.call_count == 6
             assert get_new_data_mock.call_count == 3
 
             expected_handle_mock_arg_list = [
                 call([("a", 42, 0), ("b", 43, 0)]),
                 call([("c", 43, 1)]),
+                call([]),
                 call([("d", 43, 2)]),
                 call([("e", 45, 3)]),
                 call([]),

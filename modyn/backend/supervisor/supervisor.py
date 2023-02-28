@@ -183,7 +183,7 @@ class Supervisor:
         last_timestamp = start_timestamp
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
-        last_keys = set()
+        previous_largest_keys = set()
 
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
@@ -191,25 +191,27 @@ class Supervisor:
             while True:
                 self.status_bar.update(demo="Fetching new data")
                 trigger_occured = False
-                for idx, new_data in enumerate(self.grpc.get_new_data_since(dataset_id, last_timestamp)):
+                largest_keys = set()
+                for new_data in self.grpc.get_new_data_since(dataset_id, last_timestamp):
                     # Since get_new_data_since is inclusive, we need to filter out the keys
                     # we have already processed in the previous get_new_data_since request
-                    new_data = [(key, timestamp, label) for (key, timestamp, label) in new_data if key not in last_keys]
+                    new_data = [
+                        (key, timestamp, label)
+                        for (key, timestamp, label) in new_data
+                        if key not in previous_largest_keys
+                    ]
                     last_timestamp = (
                         max((timestamp for (_, timestamp, _) in new_data)) if len(new_data) > 0 else last_timestamp
                     )
 
                     # Remember all data points with last_timestamp so we do not process them again in the next iteration
                     # We use a set to have a O(1) check in the line above.
-                    _last_keys = {key for (key, timestamp, _) in new_data if timestamp == last_timestamp}
-                    if idx == 0:
-                        last_keys = _last_keys
-                    else:
-                        last_keys.update(_last_keys)  # last_keys is maintained per call to get_new_data_since
+                    largest_keys.update({key for (key, timestamp, _) in new_data if timestamp == last_timestamp})
 
                     if self._handle_new_data(new_data):
                         trigger_occured = True
 
+                previous_largest_keys = largest_keys
                 if not trigger_occured:
                     self.status_bar.update(demo="Waiting for new data...")
                     sleep(2)
