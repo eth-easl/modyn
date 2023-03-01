@@ -30,8 +30,9 @@ dependencies:
   - types-PyYAML
   - pytorch::pytorch
   - pytorch::torchvision
-  - nvidia::cudatoolkit=11.7
-  - nvidia::cuda-nvprof=11.7
-  - pytorch::pytorch-cuda=11.7
+  - pytorch::cpuonly # comment out if commenting in lines below for CUDA
+#  - nvidia::cudatoolkit=11.7
+#  - nvidia::cuda-nvprof=11.7
+#  - pytorch::pytorch-cuda=11.7
   - pip:
       - "-e ."
