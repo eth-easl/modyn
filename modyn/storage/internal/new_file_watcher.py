@@ -202,13 +202,6 @@ class NewFileWatcher:
             logger.critical(f"Path {path} is not a directory.")
             return
 
-        try:
-            multiprocessing.set_start_method("spawn")
-        except RuntimeError as error:
-            if multiprocessing.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
-                logger.error("Start method is already set to {}", multiprocessing.get_start_method())
-                raise error
-
         data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
 
         file_paths = filesystem_wrapper.list(path, recursive=True)
