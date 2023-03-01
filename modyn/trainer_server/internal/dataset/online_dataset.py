@@ -20,12 +20,17 @@ MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 
 
 # TODO(#169): remove them when this is supported at the selector
-class GetNumPartitionsRequest():
+class GetNumPartitionsDataLenRequest():
     def __init__(self, pipeline_id, trigger_id, training_id, worker_id) -> None:
         pass
 
-def get_num_partitions(request):
-    return 1
+class GetNumPartitionsDataLenResponse():
+    def __init__(self) -> None:
+        num_partitions = 1
+        num_samples = 1
+
+def get_num_partitions_and_data_len(request: GetNumPartitionsDataLenRequest) -> GetNumPartitionsDataLenResponse:
+    return GetNumPartitionsDataLenResponse()
 
 class OnlineDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
@@ -136,13 +141,13 @@ class OnlineDataset(IterableDataset):
         data, labels = self._get_data_from_storage(keys)
         return keys, data, labels
 
-    def _get_num_data_partitions(self, worker_id: int) -> int:
+    def _get_num_data_partitions_and_data_len(self, worker_id: int) -> tuple(int, int):
         assert self._selectorstub is not None
 
         # TODO(#169): replace these with actual calls to the selector
-        num_partitions_request = GetNumPartitionsRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
-        num_partitions = get_num_partitions(num_partitions_request)
-        return num_partitions
+        num_partitions_request = GetNumPartitionsDataLenRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
+        response = get_num_partitions_and_data_len(num_partitions_request)
+        return response.num_partitions, response.num_samples
 
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
@@ -163,25 +168,27 @@ class OnlineDataset(IterableDataset):
 
         assert self._transform is not None
         self._trainining_set_number += 1
-        self._num_partitions = self._get_num_data_partitions(worker_id=worker_id)
-        keys, data, labels = self._get_data(worker_id=worker_id, partition_nr=0)
-        self._dataset_len = len(data) # TODO: what to do with this?
-        self._info(f"Data obtained (len = {self._dataset_len})", worker_id)
+        self._num_partitions, self._dataset_len = self._get_num_data_partitions_and_data_len(worker_id=worker_id)
+        self._info(f"Total number of samples will be {self._dataset_len}. Total number of partitions will be {self._num_partitions}", worker_id)
 
+        keys, data, labels = self._get_data(worker_id=worker_id, partition_nr=0)
 
         for partition in range(self._num_partitions):
 
-            idx = 0
-            for key, sample, label in zip(keys, data, labels):
+            num_samples_on_this_partition = len(keys)
+            fetch_next_partition_idx = int(num_samples_on_this_partition*0.8) # set arbitrarily to when we have seen 80% of the current dataset
+            self._info(f"Train on partition {partition}, on {num_samples_on_this_partition} batches", worker_id)
+
+            for idx, (key, sample, label) in enumerate(zip(keys, data, labels)):
                 # mypy complains here because _transform has unknown type, which is ok
-                idx += 1
-                if idx == 100: # TODO: change this
+                if partition < self._num_partitions-1 and idx == fetch_next_partition_idx:
+                    # this blocks training, can we parallelize?
                     new_keys, new_data, new_labels = self._get_data(worker_id=worker_id, partition_nr=partition+1)
                 yield key, self._transform(sample), label  # type: ignore
 
-            # this should mean we keep only two partitions in mem, as the previous lists have no references, and should be freed
-            # TODO: CHECK THIS!!!!
-            keys, data, labels = new_keys, new_data, new_labels
+            # this should mean we keep only two partitions in mem
+            if partition < self._num_partitions-1:
+                keys, data, labels = new_keys, new_data, new_labels
 
     def __len__(self) -> int:
         return self._dataset_len
