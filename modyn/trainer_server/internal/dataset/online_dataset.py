@@ -19,6 +19,14 @@ logger = logging.getLogger(__name__)
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 
 
+# TODO(#169): remove them when this is supported at the selector
+class GetNumPartitionsRequest():
+    def __init__(self, pipeline_id, trigger_id, training_id, worker_id) -> None:
+        pass
+
+def get_num_partitions(request):
+    return 1
+
 class OnlineDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
@@ -53,9 +61,10 @@ class OnlineDataset(IterableDataset):
 
         logger.debug("Initialized OnlineDataset.")
 
-    def _get_keys_from_selector(self, worker_id: int) -> list[str]:
+    def _get_keys_from_selector(self, worker_id: int, partition_nr: int) -> list[str]:
         assert self._selectorstub is not None
 
+        # TODO(#169): provide partition_nr in the request?
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
         samples_response: SamplesResponse = self._selectorstub.get_sample_keys_and_weights(req)
         return samples_response.training_samples_subset  # TODO(#138): take into account sample weights when needed
@@ -120,6 +129,21 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
+    def _get_data(self, worker_id: int, partition_nr: int) -> tuple[list[str], list[bytes], list[int]]:
+        self._info("Getting keys from selector", worker_id)
+        keys = self._get_keys_from_selector(worker_id, partition_nr)
+        self._info("Getting data from storage", worker_id)
+        data, labels = self._get_data_from_storage(keys)
+        return keys, data, labels
+
+    def _get_num_data_partitions(self, worker_id: int) -> int:
+        assert self._selectorstub is not None
+
+        # TODO(#169): replace these with actual calls to the selector
+        num_partitions_request = GetNumPartitionsRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
+        num_partitions = get_num_partitions(num_partitions_request)
+        return num_partitions
+
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -139,19 +163,25 @@ class OnlineDataset(IterableDataset):
 
         assert self._transform is not None
         self._trainining_set_number += 1
-
-        self._info("Getting keys from selector", worker_id)
-        keys = self._get_keys_from_selector(worker_id)
-        self._info("Getting data from storage", worker_id)
-        # TODO(#149): Optimize this
-        data, labels = self._get_data_from_storage(keys)
-
-        self._dataset_len = len(data)
+        self._num_partitions = self._get_num_data_partitions(worker_id=worker_id)
+        keys, data, labels = self._get_data(worker_id=worker_id, partition_nr=0)
+        self._dataset_len = len(data) # TODO: what to do with this?
         self._info(f"Data obtained (len = {self._dataset_len})", worker_id)
 
-        for key, sample, label in zip(keys, data, labels):
-            # mypy complains here because _transform has unknown type, which is ok
-            yield key, self._transform(sample), label  # type: ignore
+
+        for partition in range(self._num_partitions):
+
+            idx = 0
+            for key, sample, label in zip(keys, data, labels):
+                # mypy complains here because _transform has unknown type, which is ok
+                idx += 1
+                if idx == 100: # TODO: change this
+                    new_keys, new_data, new_labels = self._get_data(worker_id=worker_id, partition_nr=partition+1)
+                yield key, self._transform(sample), label  # type: ignore
+
+            # this should mean we keep only two partitions in mem, as the previous lists have no references, and should be freed
+            # TODO: CHECK THIS!!!!
+            keys, data, labels = new_keys, new_data, new_labels
 
     def __len__(self) -> int:
         return self._dataset_len
