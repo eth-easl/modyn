@@ -121,11 +121,14 @@ class NewFileWatcher:
         filesystem_wrapper: AbstractFileSystemWrapper,
         file_wrapper_type: str,
         timestamp: int,
-        dataset: Dataset,
+        dataset_name: str,
         forced_file_wrapper: Optional[Type],
     ) -> None:
         with StorageDatabaseConnection(modyn_config) as database:
             session = database.session
+
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
+
             for file_path in file_paths:
                 if pathlib.Path(file_path).suffix != data_file_extension:
                     return
@@ -229,7 +232,7 @@ class NewFileWatcher:
                         filesystem_wrapper,
                         file_wrapper_type,
                         timestamp,
-                        dataset,
+                        dataset.name,
                         forced_file_wrapper,
                     ),
                 )
