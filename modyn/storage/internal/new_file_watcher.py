@@ -130,11 +130,12 @@ class NewFileWatcher:
 
             for file_path in file_paths:
                 if pathlib.Path(file_path).suffix != data_file_extension:
-                    return
+                    continue
 
                 if (
                     dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
                 ) and NewFileWatcher._file_unknown(session, str(file_path)):
+                    logger.info("File is unknown.")
                     file_wrapper = get_file_wrapper(
                         file_wrapper_type,
                         file_path,
@@ -157,7 +158,7 @@ class NewFileWatcher:
                     except exc.SQLAlchemyError as exception:
                         logger.warning(f"Could not create file {file_path} in database: {exception}")
                         session.rollback()
-                        return
+                        continue
 
                     file_id = file.file_id
                     logger.debug(f"Encountered new file and inserted with file id = {file_id}: {file_path}")
@@ -178,7 +179,7 @@ class NewFileWatcher:
                         logger.error(f"Could not create samples for file {file_path} in database: {exception}")
                         session.rollback()
                         session.delete(file)
-                        return
+                        continue
 
     # TODO(MaxiBoether): fix unused arg, explain forced_file_wrapper
     # TODO(MaxiBoether): this function is currently only tested together with handle paths
@@ -214,7 +215,7 @@ class NewFileWatcher:
             end_idx = start_idx + files_per_proc if i < num_procs - 1 else len(file_paths)
             paths = file_paths[start_idx:end_idx]
             if len(paths) > 0:
-                logger.error("starting porc")
+                logger.error(f"Starting process for {len(paths)} paths: {paths}")
                 proc = multiprocessing.Process(
                     target=NewFileWatcher._handle_file_paths,
                     args=(
