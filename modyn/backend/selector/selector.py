@@ -1,6 +1,7 @@
 from __future__ import annotations
+import itertools
 
-from typing import Dict
+from typing import Dict, Iterable
 
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
@@ -18,6 +19,10 @@ class Selector:
         # To avoid recalculation, for each trigger_id, we cache the key and return the samples,
         # which is a list of tuples (sample_key, sample_weight)
         self._trigger_cache: Dict[int, list[tuple[str, float]]] = {}
+        self._maximum_keys_in_cache = 5000000 # TODO(MaxiBoether): add configuration option
+        self._current_keys_in_cache = 0
+
+        self._trigger_size_cache: Dict[int, list[tuple[str, float]]] = {}
 
     def _get_training_set_partition(
         self, training_samples: list[tuple[str, float]], worker_id: int
@@ -49,7 +54,7 @@ class Selector:
 
         return training_samples_subset
 
-    def get_sample_keys_and_weights(self, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
+    def get_sample_keys_and_weights(self, trigger_id: int, worker_id: int, subpartition: int) -> list[tuple[str, float]]:
         """
         For a given trigger and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.
@@ -61,14 +66,16 @@ class Selector:
             List of tuples for the samples to be returned to that particular worker. The first
             index of the tuple will be the key, and the second index will be that sample's weight.
         """
-        if trigger_id not in self._trigger_cache:
+        if trigger_id not in self._trigger_size_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
         if worker_id < 0 or worker_id >= self._num_workers:
             raise ValueError(f"Asked for worker id {worker_id}, but only have {self._num_workers} workers!")
 
-        training_samples = self._trigger_cache[trigger_id]
-        return self._get_training_set_partition(training_samples, worker_id)
+        # TODO: adapt, see get_trigger_keys in abstraction selection strategy
+
+        for subpartition in self._get_training_set_partition(training_samples, worker_id):
+            yield 
 
     def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         self._strategy.inform_data(keys, timestamps, labels)
@@ -80,15 +87,21 @@ class Selector:
             self._strategy.inform_data(keys, timestamps, labels)
 
         # Calculates the actual training set for that trigger.
-        trigger_id, data = self._strategy.trigger()
+        trigger_id, total_keys_in_trigger = self._strategy.trigger()
         assert trigger_id not in self._trigger_cache, "Trigger ID already exists, something went wrong."
 
-        self._trigger_cache[trigger_id] = data
+        if self._current_keys_in_cache + total_keys_in_trigger <= self._maximum_keys_in_cache:
+            # TODO(create issue): offer function to delete old triggers from cache, e.g., after a training is done.
+            self._trigger_cache[trigger_id] = list(itertools.chain.from_iterable(self._strategy.get_trigger_keys()))
+            self._current_keys_in_cache += total_keys_in_trigger
+            assert total_keys_in_trigger == len(self._trigger_cache[trigger_id]), "Inconsistency in DB and Strategy"
+
+        self._trigger_size_cache[trigger_id] = total_keys_in_trigger
 
         return trigger_id
 
     def get_number_of_samples(self, trigger_id: int) -> int:
-        if trigger_id not in self._trigger_cache:
+        if trigger_id not in self._trigger_size_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
-        return len(self._trigger_cache[trigger_id])
+        return self._trigger_size_cache[trigger_id]
