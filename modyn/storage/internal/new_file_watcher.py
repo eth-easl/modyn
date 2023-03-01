@@ -6,7 +6,7 @@ import multiprocessing
 import pathlib
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any, Optional, Type
 
 from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
@@ -121,6 +121,7 @@ class NewFileWatcher:
         file_wrapper_type: str,
         timestamp: int,
         dataset: Dataset,
+        forced_file_wrapper: Optional[Type],
     ) -> None:
         with StorageDatabaseConnection(modyn_config) as database:
             session = database.session
@@ -132,7 +133,11 @@ class NewFileWatcher:
                     dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
                 ) and NewFileWatcher._file_unknown(session, str(file_path)):
                     file_wrapper = get_file_wrapper(
-                        file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
+                        file_wrapper_type,
+                        file_path,
+                        dataset.file_wrapper_config,
+                        filesystem_wrapper,
+                        forced_file_wrapper,
                     )
 
                     try:
@@ -172,7 +177,9 @@ class NewFileWatcher:
                         session.delete(file)
                         return
 
-    # TODO(MaxiBoether): fix unused arg
+    # TODO(MaxiBoether): fix unused arg, explain forced_file_wrapper
+    # TODO(MaxiBoether): this function is currently only tested together with handle paths
+    # TODO(MaxiBoether): hence we should write separate test functions
     # pylint: disable=too-many-locals, unused-argument
     def _update_files_in_directory(
         self,
@@ -182,6 +189,7 @@ class NewFileWatcher:
         timestamp: int,
         session: sessionmaker,
         dataset: Dataset,
+        forced_file_wrapper: Optional[Type] = None,
     ) -> None:
         """Recursively get all files in a directory.
 
@@ -202,6 +210,7 @@ class NewFileWatcher:
             end_idx = start_idx + files_per_proc if i < num_procs - 1 else len(file_paths)
             paths = file_paths[start_idx:end_idx]
             if len(paths) > 0:
+                logger.error("starting porc")
                 proc = multiprocessing.Process(
                     target=NewFileWatcher._handle_file_paths,
                     args=(
@@ -212,6 +221,7 @@ class NewFileWatcher:
                         file_wrapper_type,
                         timestamp,
                         dataset,
+                        forced_file_wrapper,
                     ),
                 )
                 proc.start()
