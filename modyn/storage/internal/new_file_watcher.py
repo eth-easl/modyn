@@ -206,7 +206,7 @@ class NewFileWatcher:
 
         file_paths = filesystem_wrapper.list(path, recursive=True)
 
-        num_procs = 23  # TODO(MaxiBoether): add config
+        num_procs = 100  # TODO(MaxiBoether): add config
         files_per_proc = int(len(file_paths) / num_procs)
         processes: list[multiprocessing.Process] = []
 
