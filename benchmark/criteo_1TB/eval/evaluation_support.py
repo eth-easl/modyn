@@ -1,15 +1,15 @@
-import pathlib
-import logging
-import torch
-import math
-from modyn.models import DLRM
-from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
-from modyn.storage.internal.file_wrapper.binary_file_wrapper import BinaryFileWrapper
-from tqdm import tqdm
 import io
-import numpy as np
-from torch.utils.data import DataLoader
+import logging
+import math
+import pathlib
 
+import numpy as np
+import torch
+from modyn.models import DLRM
+from modyn.storage.internal.file_wrapper.binary_file_wrapper import BinaryFileWrapper
+from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 

@@ -122,6 +122,9 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
 
 
 class MockFileWrapper:
+    def __init__(self, *args, **kwargs):
+        pass
+
     def get_number_of_samples(self) -> int:
         return 2
 
@@ -279,6 +282,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
         timestamp=FILE_TIMESTAMP - 1,
         session=session,
         dataset=dataset,
+        forced_file_wrapper=MockFileWrapper,
     )
 
     result = session.query(File).all()
@@ -301,6 +305,7 @@ def test_update_files_in_directory(test_get_file_wrapper, test_get_filesystem_wr
         timestamp=FILE_TIMESTAMP - 1,
         session=session,
         dataset=dataset,
+        forced_file_wrapper=MockFileWrapper,
     )
 
     result = session.query(File).all()
@@ -345,6 +350,7 @@ def test_update_files_in_directory_ignore_last_timestamp(
         timestamp=FILE_TIMESTAMP + 10,
         session=session,
         dataset=dataset,
+        forced_file_wrapper=MockFileWrapper,
     )
 
     result = session.query(File).all()
