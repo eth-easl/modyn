@@ -91,7 +91,7 @@ def test_newdata() -> None:
         assert len(worker_1_samples) == 1
         assert len(worker_2_samples) == 1
 
-        total_samples.append(worker_1_samples + worker_2_samples)
+        total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
         ["key_" + str(i) for i in range(6)]
@@ -151,7 +151,7 @@ def test_newdata() -> None:
         assert len(worker_1_samples) == 1
         assert len(worker_2_samples) == 1
 
-        total_samples.append(worker_1_samples + worker_2_samples)
+        total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
         ["key_" + str(i) for i in range(6, 12)]
@@ -221,7 +221,7 @@ def test_empty_triggers() -> None:
         assert len(worker_1_samples) <= 1
         assert len(worker_2_samples) <= 1
 
-        total_samples.append(worker_1_samples + worker_2_samples)
+        total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
         ["key_" + str(i) for i in range(3)]
@@ -268,7 +268,7 @@ def test_empty_triggers() -> None:
         assert len(worker_1_samples) <= 1
         assert len(worker_2_samples) <= 1
 
-        total_samples.append(worker_1_samples + worker_2_samples)
+        total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
         ["key_" + str(i) for i in range(3)]
@@ -319,7 +319,7 @@ def test_empty_triggers() -> None:
         assert len(worker_1_samples) == 1
         assert len(worker_2_samples) == 1
 
-        total_samples.append(worker_1_samples + worker_2_samples)
+        total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
         ["key_" + str(i) for i in range(6)]
