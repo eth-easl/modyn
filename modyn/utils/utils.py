@@ -12,7 +12,7 @@ import grpc
 import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
-from sqlalchemy import Query
+from sqlalchemy.orm import Query
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_PKGS = []
@@ -120,16 +120,21 @@ def package_available_and_can_be_imported(package: str) -> bool:
         UNAVAILABLE_PKGS.append(package)
         return False
 
+
 # TODO(MaxiBoether): return type?
-def window_query(q: Query, column: str, windowsize: int) -> Iterable[Any]:
-    """"Break a Query into chunks on a given column.
+
+
+def window_query(query: Query, column: str, windowsize: int, ordering_required: bool) -> Iterable[Any]:
+    """ "Break a Query into chunks on a given column.
     Returns Iterator over chunks."""
 
-    q = q.add_column(column).order_by(column)
+    query = query.add_column(column)
+    if ordering_required:
+        query = query.order_by(column)
     last_id = None
 
     while True:
-        subq = q
+        subq = query
         if last_id is not None:
             subq = subq.filter(column > last_id)
         chunk = subq.limit(windowsize).all()

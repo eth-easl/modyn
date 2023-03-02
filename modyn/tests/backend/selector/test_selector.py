@@ -11,7 +11,7 @@ class MockStrategy(AbstractSelectionStrategy):
         pass
 
     def _on_trigger(self) -> list[tuple[str, float]]:
-        return []
+        return [[]]
 
     def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         pass
@@ -51,19 +51,23 @@ def test_get_training_set_partition():
 
 
 @patch.object(Selector, "_get_training_set_partition")
-def test_get_sample_keys_and_weight(test_get_training_set_partition: MagicMock):
+def test_get_sample_keys_and_weight_cached(test_get_training_set_partition: MagicMock):
     selector = Selector(MockStrategy(), 42, 3)
-    selector._trigger_cache[42] = [("a", 1.0), ("b", 1.0)]
+    selector._trigger_cache[42] = [[("a", 1.0), ("b", 1.0)], [("c", 1.0), ("d", 1.0)]]
+    selector._trigger_partition_cache[42] = 2
+    test_get_training_set_partition.side_effect = lambda x, y: x
 
-    test_get_training_set_partition.return_value = [("a", 1.0), ("b", 1.0)]
-
-    result = selector.get_sample_keys_and_weights(42, 2)
-
+    result = selector.get_sample_keys_and_weights(42, 2, 0)
     assert result == [("a", 1.0), ("b", 1.0)]
     test_get_training_set_partition.assert_called_once_with([("a", 1.0), ("b", 1.0)], 2)
 
     with pytest.raises(ValueError):
-        selector.get_sample_keys_and_weights(42, 1337)
+        selector.get_sample_keys_and_weights(42, 1337, 0)
+
+    result = selector.get_sample_keys_and_weights(42, 2, 1)
+    assert result == [("c", 1.0), ("d", 1.0)]
+
+    # TODO(MaxiBoether): write non cached test
 
 
 @patch.object(MockStrategy, "inform_data")
@@ -76,20 +80,56 @@ def test_inform_data(test_inform_data: MagicMock):
 
 @patch.object(MockStrategy, "inform_data")
 @patch.object(MockStrategy, "trigger")
-def test_inform_data_and_trigger(test_trigger: MagicMock, test_inform_data: MagicMock):
+@patch.object(MockStrategy, "get_trigger_partition_keys")
+def test_inform_data_and_trigger_caching(
+    test_get_trigger_partition_keys: MagicMock, test_trigger: MagicMock, test_inform_data: MagicMock
+):
     selector = Selector(MockStrategy(), 42, 3)
-    test_trigger.return_value = (42, [("a", 1.0)])
+    assert selector._current_keys_in_cache == 0
+
+    test_trigger.return_value = (42, 2, 2)  # 2 keys in trigger, 2 partitions
+    test_get_trigger_partition_keys.return_value = [("a", 1.0)]
+
+    selector._maximum_keys_in_cache = 10  # Enforce that 2 keys fit into cache
 
     trigger_id = selector.inform_data_and_trigger(["a", "b", "c"], [0, 1, 2], ["cat", "dog", "cat"])
 
     test_inform_data.assert_called_once_with(["a", "b", "c"], [0, 1, 2], ["cat", "dog", "cat"])
     assert trigger_id == 42
-    assert selector._trigger_cache[42] == [("a", 1.0)]
+    # We have two partitions with [("a", 1.0)] as data
+
+    # This test configures the selector to store the partitions in memory
+    assert selector._trigger_cache[42] == [[("a", 1.0)], [("a", 1.0)]]
+
+
+@patch.object(MockStrategy, "inform_data")
+@patch.object(MockStrategy, "trigger")
+@patch.object(MockStrategy, "get_trigger_partition_keys")
+def test_inform_data_and_trigger_nocaching(
+    test_get_trigger_partition_keys: MagicMock, test_trigger: MagicMock, test_inform_data: MagicMock
+):
+    selector = Selector(MockStrategy(), 42, 3)
+    assert selector._current_keys_in_cache == 0
+
+    test_trigger.return_value = (42, 2, 2)  # 2 keys in trigger, 2 partitions
+    test_get_trigger_partition_keys.return_value = [("a", 1.0)]
+
+    # Enforce that 1 key fit into cache => we can't cache 2 keys
+    selector._maximum_keys_in_cache = 1
+
+    trigger_id = selector.inform_data_and_trigger(["a", "b", "c"], [0, 1, 2], ["cat", "dog", "cat"])
+    test_inform_data.assert_called_once_with(["a", "b", "c"], [0, 1, 2], ["cat", "dog", "cat"])
+    assert trigger_id == 42
+
+    # This test configures the selector such that the partitions do not fit into cache
+    assert 42 not in selector._trigger_cache
+    assert selector._trigger_size_cache[42] == 2
+    assert selector._trigger_partition_cache[42] == 2
 
 
 def test_get_number_of_samples():
     selector = Selector(MockStrategy(), 42, 3)
-    selector._trigger_cache[42] = [("a", 1.0), ("b", 1.0)]
+    selector._trigger_size_cache[42] = 2
 
     assert selector.get_number_of_samples(42) == 2
 

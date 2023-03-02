@@ -46,9 +46,11 @@ class SelectorManager:
         self._selector_locks[pipeline_id] = Lock()
         return pipeline_id
 
-    def get_sample_keys_and_weights(self, pipeline_id: int, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
+    def get_sample_keys_and_weights(
+        self, pipeline_id: int, trigger_id: int, worker_id: int, partition_id: int
+    ) -> list[tuple[str, float]]:
         """
-        For a given pipeline, trigger and worker, this function returns the subset of sample
+        For a given pipeline, trigger, partition of that trigger, and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.
         This weight can be used during training to support advanced strategies that want to weight the
         gradient descent step for different samples differently. Explicitly, instead of changing parameters
@@ -65,7 +67,7 @@ class SelectorManager:
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {pipeline_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id)
+        return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id, partition_id)
 
     def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
         if pipeline_id not in self._selectors:
@@ -88,6 +90,12 @@ class SelectorManager:
             raise ValueError(f"Requested number of samples from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_number_of_samples(trigger_id)
+
+    def get_number_of_partitions(self, pipeline_id: int, trigger_id: int) -> int:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested number of partitions from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_number_of_partitions(trigger_id)
 
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]

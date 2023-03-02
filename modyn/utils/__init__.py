@@ -15,7 +15,7 @@ from .utils import (  # noqa: F401
     trigger_available,
     validate_timestr,
     validate_yaml,
-    window_query
+    window_query,
 )
 
 files = os.listdir(os.path.dirname(__file__))

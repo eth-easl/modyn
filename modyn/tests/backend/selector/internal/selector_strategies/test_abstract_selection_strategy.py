@@ -87,13 +87,17 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
 
     test__on_trigger.return_value = [("a", 1.0), ("b", 1.0), ("c", 1.0)]
 
-    trigger_id, samples = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
 
     assert trigger_id == 0
     assert strat._next_trigger_id == 1
+    assert trigger_num_keys == 3
+    assert trigger_num_partitions == 1
+
     test_reset_state.assert_not_called()
     test__on_trigger.assert_called_once()
-    assert samples == [("a", 1.0), ("b", 1.0), ("c", 1.0)]
+
+    assert strat.get_trigger_partition_keys(trigger_id, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0)]
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
