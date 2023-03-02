@@ -128,7 +128,7 @@ def window_query(query: Query, column: str, windowsize: int, ordering_required: 
     """ "Break a Query into chunks on a given column.
     Returns Iterator over chunks."""
 
-    query = query.add_column(column)
+    query = query.add_columns(column)
     if ordering_required:
         query = query.order_by(column)
     last_id = None

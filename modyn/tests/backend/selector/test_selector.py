@@ -67,7 +67,23 @@ def test_get_sample_keys_and_weight_cached(test_get_training_set_partition: Magi
     result = selector.get_sample_keys_and_weights(42, 2, 1)
     assert result == [("c", 1.0), ("d", 1.0)]
 
-    # TODO(MaxiBoether): write non cached test
+
+@patch.object(Selector, "_get_training_set_partition")
+@patch.object(MockStrategy, "get_trigger_partition_keys")
+def test_get_sample_keys_and_weight_no_cache(
+    test_get_trigger_partition_keys: MagicMock, test_get_training_set_partition: MagicMock
+):
+    selector = Selector(MockStrategy(), 42, 3)
+    selector._trigger_partition_cache[42] = 2
+    test_get_training_set_partition.side_effect = lambda x, y: x
+    test_get_trigger_partition_keys.return_value = [("a", 1.0), ("b", 1.0)]
+
+    result = selector.get_sample_keys_and_weights(42, 2, 0)
+    assert result == [("a", 1.0), ("b", 1.0)]
+    test_get_training_set_partition.assert_called_once_with([("a", 1.0), ("b", 1.0)], 2)
+
+    with pytest.raises(ValueError):
+        selector.get_sample_keys_and_weights(42, 1337, 0)
 
 
 @patch.object(MockStrategy, "inform_data")
@@ -100,6 +116,7 @@ def test_inform_data_and_trigger_caching(
 
     # This test configures the selector to store the partitions in memory
     assert selector._trigger_cache[42] == [[("a", 1.0)], [("a", 1.0)]]
+    assert selector._trigger_partition_cache[42] == 2
 
 
 @patch.object(MockStrategy, "inform_data")

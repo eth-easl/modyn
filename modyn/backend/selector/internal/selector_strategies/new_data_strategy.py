@@ -135,7 +135,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
-            for chunk in window_query(query, "timestamp", self._maximum_keys_in_memory, False):
+            for chunk in window_query(query, SelectorStateMetadata.timestamp, self._maximum_keys_in_memory, False):
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
                 else:
@@ -154,7 +154,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
-            for chunk in window_query(query, "timestamp", self._maximum_keys_in_memory, False):
+            for chunk in window_query(query, SelectorStateMetadata.timestamp, self._maximum_keys_in_memory, False):
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
                 else:

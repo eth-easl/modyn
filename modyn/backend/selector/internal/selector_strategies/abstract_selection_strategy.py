@@ -39,6 +39,9 @@ class AbstractSelectionStrategy(ABC):
         self._pipeline_id = pipeline_id
         self._maximum_keys_in_memory = config["maximum_keys_in_memory"]
 
+        if self._maximum_keys_in_memory < 1:
+            raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")
+
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
