@@ -135,14 +135,15 @@ class AbstractSelectionStrategy(ABC):
 
             # Update Trigger about number of partitions and keys
             trigger.num_keys = total_keys_in_trigger
-            trigger.num_partitions = partition + 1 if partition is not None else 0
+            num_partitions = partition + 1 if partition is not None else 0
+            trigger.num_partitions = num_partitions
             database.session.commit()
 
         if self.reset_after_trigger:
             self._reset_state()
 
         self._next_trigger_id += 1
-        return trigger_id, total_keys_in_trigger, trigger.num_partitions
+        return trigger_id, total_keys_in_trigger, num_partitions
 
     def get_trigger_partition_keys(self, trigger_id: int, partition_id: int) -> list[tuple[str, float]]:
         # TODO(MaxiBoether): Write docstring
