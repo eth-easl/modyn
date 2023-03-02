@@ -163,7 +163,7 @@ def test_get_training_status_not_registered():
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(b"state", 10, 100))
+@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(10, 100))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive(
@@ -189,7 +189,7 @@ def test_get_training_status_alive(
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None, None))
+@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive_blocked(
@@ -269,8 +269,7 @@ def test_get_training_status():
         training_process_info = get_training_process_info()
         trainer_server._training_process_dict[1] = training_process_info
         training_process_info.status_response_queue.put(state_dict)
-        state, num_batches, num_samples = trainer_server.get_status(1)
-        assert state == state_dict["state"]
+        num_batches, num_samples = trainer_server.get_status(1)
         assert num_batches == state_dict["num_batches"]
         assert num_samples == state_dict["num_samples"]
 
@@ -438,8 +437,8 @@ def test_get_latest_model_not_registered():
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None, None))
-def test_get_latest_model_alive_not_found(test_get_status, test_is_alive):
+@patch.object(TrainerServerGRPCServicer, "get_model_state", return_value=None)
+def test_get_latest_model_alive_not_found(test_get_model_state, test_is_alive):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         trainer_server._training_dict[1] = None
@@ -449,8 +448,8 @@ def test_get_latest_model_alive_not_found(test_get_status, test_is_alive):
 
 
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(b"state", 10, 100))
-def test_get_latest_model_alive_found(test_get_status, test_is_alive):
+@patch.object(TrainerServerGRPCServicer, "get_model_state", return_value=b"state")
+def test_get_latest_model_alive_found(test_get_model_state, test_is_alive):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         trainer_server._training_process_dict[1] = get_training_process_info()

@@ -517,14 +517,13 @@ def test_load_state_if_given():
         assert new_trainer._model.model.state_dict() == dict_to_save["model"]
 
 
-def test_send_state_to_server():
+def test_send_model_state_to_server():
     response_queue = mp.Queue()
     query_queue = mp.Queue()
     trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "", False)
-    trainer.send_state_to_server(20)
+    trainer.send_model_state_to_server()
     response = response_queue.get()
-    assert response["num_batches"] == 20
-    file_like = BytesIO(response["state"])
+    file_like = BytesIO(response)
     assert torch.load(file_like) == {
         "model": OrderedDict([("_weight", torch.tensor([1.0]))]),
         "optimizer-default": {
@@ -544,6 +543,16 @@ def test_send_state_to_server():
             ],
         },
     }
+
+
+def test_send_status_to_server():
+    response_queue = mp.Queue()
+    query_queue = mp.Queue()
+    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "", False)
+    trainer.send_status_to_server(20)
+    response = response_queue.get()
+    assert response["num_batches"] == 20
+    assert response["num_samples"] == 0
 
 
 @patch(

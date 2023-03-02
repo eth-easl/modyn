@@ -134,7 +134,7 @@ class TrainerServerGRPCServicer:
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
             logger.info(f"Training {training_id} is still running, obtaining info from running process.")
-            _, num_batches, num_samples = self.get_status(training_id)
+            num_batches, num_samples = self.get_status(training_id)
             response_kwargs_running: dict[str, Any] = {
                 "valid": True,
                 "is_running": True,
@@ -198,7 +198,7 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
-            training_state, _, _ = self.get_status(training_id)
+            training_state = self.get_model_state(training_id)
             if training_state is not None:
                 checkpoint_path = self._modyn_base_dir / "tmp-state" / f"{current_time_millis()}-{training_id}"
                 self.persist_state_to_disk(training_state, checkpoint_path)
@@ -212,15 +212,25 @@ class TrainerServerGRPCServicer:
             return GetLatestModelResponse(valid_state=True, model_path=prefix_path)
         return GetLatestModelResponse(valid_state=False)
 
-    def get_status(self, training_id: int) -> tuple[Optional[bytes], Optional[int], Optional[int]]:
+    def get_status(self, training_id: int) -> tuple[Optional[int], Optional[int]]:
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
             # blocks for 30 seconds
             response = self._training_process_dict[training_id].status_response_queue.get(timeout=30)
-            return response["state"], response["num_batches"], response["num_samples"]
+            return response["num_batches"], response["num_samples"]
         except queue.Empty:
-            return None, None, None
+            return None, None
+
+    def get_model_state(self, training_id: int) -> Optional[bytes]:
+        status_query_queue = self._training_process_dict[training_id].status_query_queue
+        status_query_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
+        try:
+            # blocks for 30 seconds
+            response = self._training_process_dict[training_id].status_response_queue.get(timeout=30)
+            return response
+        except queue.Empty:
+            return None
 
     def check_for_training_exception(self, training_id: int) -> Optional[str]:
         exception_queue = self._training_process_dict[training_id].exception_queue
