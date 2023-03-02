@@ -93,16 +93,18 @@ def test_get_sample_keys_and_weights(
     pipe_id = selec.register_pipeline(2, "{}")
 
     with pytest.raises(ValueError):
-        selec.get_sample_keys_and_weights(pipe_id + 1, 0, 0)
+        # Non existing pipeline
+        selec.get_sample_keys_and_weights(pipe_id + 1, 0, 0, 0)
 
     with pytest.raises(ValueError):
-        selec.get_sample_keys_and_weights(pipe_id, 0, 2)
+        # Too many workers
+        selec.get_sample_keys_and_weights(pipe_id, 0, 2, 0)
 
     selector_get_sample_keys_and_weight.return_value = [("a", 1.0), ("b", 1.0)]
 
-    assert selec.get_sample_keys_and_weights(0, 0, 0) == [("a", 1.0), ("b", 1.0)]
+    assert selec.get_sample_keys_and_weights(0, 0, 0, 0) == [("a", 1.0), ("b", 1.0)]
 
-    selector_get_sample_keys_and_weight.assert_called_once_with(0, 0)
+    selector_get_sample_keys_and_weight.assert_called_once_with(0, 0, 0)
 
 
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
