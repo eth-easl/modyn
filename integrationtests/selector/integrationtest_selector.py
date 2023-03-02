@@ -1,9 +1,11 @@
 import json
+from typing import Iterable
 
 import grpc
 from integrationtests.utils import get_modyn_config
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
+    GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     JsonString,
     RegisterPipelineRequest,
@@ -31,8 +33,13 @@ def test_newdata() -> None:
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
     # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit
+    # We also enforce high partitioning (maximum_keys_in_memory == 2) to ensure that works
 
-    strategy_config = {"name": "NewDataStrategy", "config": {"limit": -1, "reset_after_trigger": True}}
+    strategy_config = {
+        "name": "NewDataStrategy",
+        "maximum_keys_in_memory": 2,
+        "config": {"limit": -1, "reset_after_trigger": True},
+    }
 
     pipeline_id = selector.register_pipeline(
         RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
@@ -56,22 +63,37 @@ def test_newdata() -> None:
         )
     ).trigger_id
 
-    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0)
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
     )
 
-    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1)
-    )
+    assert number_of_partitions == 3, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+    for partition in range(number_of_partitions):
+        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+        )
 
-    worker_1_samples = list(worker1_response.training_samples_subset)
-    worker_2_samples = list(worker2_response.training_samples_subset)
+        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+        )
 
-    assert set(worker_1_samples + worker_2_samples) == set(
+        assert len(worker1_responses) == 1
+        worker1_response = worker1_responses[0]
+        assert len(worker2_responses) == 1
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+        assert len(worker_1_samples) == 1
+        assert len(worker_2_samples) == 1
+
+        total_samples.append(worker_1_samples + worker_2_samples)
+
+    assert set(total_samples) == set(
         ["key_" + str(i) for i in range(6)]
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
-    assert len(worker_1_samples) == 3
-    assert len(worker_2_samples) == 3
+    assert len(total_samples) == 6
 
     selector.inform_data(
         DataInformRequest(
@@ -93,22 +115,37 @@ def test_newdata() -> None:
 
     assert next_trigger_id > trigger_id
 
-    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0)
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id)
     )
 
-    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1)
-    )
+    assert number_of_partitions == 3, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+    for partition in range(number_of_partitions):
+        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0, partition_id=partition)
+        )
 
-    worker_1_samples = list(worker1_response.training_samples_subset)
-    worker_2_samples = list(worker2_response.training_samples_subset)
+        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1, partition_id=partition)
+        )
 
-    assert set(worker_1_samples + worker_2_samples) == set(
+        assert len(worker1_responses) == 1
+        worker1_response = worker1_responses[0]
+        assert len(worker2_responses) == 1
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+        assert len(worker_1_samples) == 1
+        assert len(worker_2_samples) == 1
+
+        total_samples.append(worker_1_samples + worker_2_samples)
+
+    assert set(total_samples) == set(
         ["key_" + str(i) for i in range(6, 12)]
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
-    assert len(worker_1_samples) == 3
-    assert len(worker_2_samples) == 3
+    assert len(total_samples) == 6
 
 
 def test_empty_triggers() -> None:
@@ -116,7 +153,11 @@ def test_empty_triggers() -> None:
     selector = SelectorStub(selector_channel)
     # We test without reset, i.e., after an empty trigger we get the same data
 
-    strategy_config = {"name": "NewDataStrategy", "config": {"limit": -1, "reset_after_trigger": False}}
+    strategy_config = {
+        "name": "NewDataStrategy",
+        "maximum_keys_in_memory": 2,
+        "config": {"limit": -1, "reset_after_trigger": False},
+    }
 
     pipeline_id = selector.register_pipeline(
         RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
@@ -140,20 +181,37 @@ def test_empty_triggers() -> None:
         )
     ).trigger_id
 
-    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0)
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
     )
 
-    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1)
-    )
+    assert number_of_partitions == 2, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+    for partition in range(number_of_partitions):
+        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+        )
 
-    worker_1_samples = list(worker1_response.training_samples_subset)
-    worker_2_samples = list(worker2_response.training_samples_subset)
+        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+        )
 
-    assert set(worker_1_samples + worker_2_samples) == set(
+        assert len(worker1_responses) == 1
+        worker1_response = worker1_responses[0]
+        assert len(worker2_responses) == 1
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+        assert len(worker_1_samples) <= 1
+        assert len(worker_2_samples) <= 1
+
+        total_samples.append(worker_1_samples + worker_2_samples)
+
+    assert set(total_samples) == set(
         ["key_" + str(i) for i in range(3)]
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+    assert len(total_samples) == 3
 
     next_trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
@@ -166,20 +224,37 @@ def test_empty_triggers() -> None:
 
     assert next_trigger_id > trigger_id
 
-    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0)
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
     )
 
-    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1)
-    )
+    assert number_of_partitions == 2, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+    for partition in range(number_of_partitions):
+        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+        )
 
-    worker_1_samples = list(worker1_response.training_samples_subset)
-    worker_2_samples = list(worker2_response.training_samples_subset)
+        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+        )
 
-    assert set(worker_1_samples + worker_2_samples) == set(
+        assert len(worker1_responses) == 1
+        worker1_response = worker1_responses[0]
+        assert len(worker2_responses) == 1
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+        assert len(worker_1_samples) <= 1
+        assert len(worker_2_samples) <= 1
+
+        total_samples.append(worker_1_samples + worker_2_samples)
+
+    assert set(total_samples) == set(
         ["key_" + str(i) for i in range(3)]
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+    assert len(total_samples) == 3
 
     next_trigger_id2 = selector.inform_data_and_trigger(
         DataInformRequest(
@@ -192,20 +267,37 @@ def test_empty_triggers() -> None:
 
     assert next_trigger_id2 > next_trigger_id
 
-    worker1_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=0)
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2)
     )
 
-    worker2_response: SamplesResponse = selector.get_sample_keys_and_weights(
-        GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=1)
-    )
+    assert number_of_partitions == 3, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+    for partition in range(number_of_partitions):
+        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=0, partition_id=partition)
+        )
 
-    worker_1_samples = list(worker1_response.training_samples_subset)
-    worker_2_samples = list(worker2_response.training_samples_subset)
+        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
+            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=1, partition_id=partition)
+        )
 
-    assert set(worker_1_samples + worker_2_samples) == set(
+        assert len(worker1_responses) == 1
+        worker1_response = worker1_responses[0]
+        assert len(worker2_responses) == 1
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+        assert len(worker_1_samples) == 1
+        assert len(worker_2_samples) == 1
+
+        total_samples.append(worker_1_samples + worker_2_samples)
+
+    assert set(total_samples) == set(
         ["key_" + str(i) for i in range(6)]
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+    assert len(total_samples) == 6
 
 
 if __name__ == "__main__":
