@@ -189,7 +189,7 @@ class OnlineDataset(IterableDataset):
 
         for partition in range(self._num_partitions):
             num_samples_on_this_partition = len(keys)
-            # set arbitrarily to when we have seen 80% of the current dataset
+            # set arbitrarily to when we have seen 80% of the current partition
             fetch_next_partition_idx = int(num_samples_on_this_partition * 0.8)
             self._info(f"Train on partition {partition}, on {num_samples_on_this_partition} batches", worker_id)
 
