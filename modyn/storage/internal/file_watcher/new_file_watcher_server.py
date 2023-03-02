@@ -1,7 +1,7 @@
 import logging
 from ctypes import c_bool
 from multiprocessing import Process, Value
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from modyn.storage.internal.database.models import Dataset
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
@@ -20,9 +20,9 @@ class NewFileWatcherServer:
         """
         self.modyn_config = modyn_config
         self.__should_stop = should_stop
-        self.__file_watchers: Dict[int, (Process, Any)] = {}
+        self._file_watcher_processes: Dict[int, Tuple[Process, Any]] = {}
 
-    def __manage_file_watchers(self) -> None:
+    def _manage_file_watcher_processes(self) -> None:
         """Manage the file watchers.
 
         This method will check if there are file watchers that are not watching a dataset anymore. If that is the case,
@@ -31,27 +31,21 @@ class NewFileWatcherServer:
         with StorageDatabaseConnection(self.modyn_config) as storage_database_connection:
             session = storage_database_connection.session
             dataset_ids = [dataset.dataset_id for dataset in session.query(Dataset).all()]
-
-            for dataset_id in self.__file_watchers:
+            dataset_ids_in_file_watcher_processes = list(self._file_watcher_processes.keys())
+            for dataset_id in dataset_ids_in_file_watcher_processes:
                 if dataset_id not in dataset_ids:
                     logger.debug(f"Stopping file watcher for dataset {dataset_id}")
-                    self.__stop_file_watcher(dataset_id)
+                    self._stop_file_watcher_process(dataset_id)
 
             for dataset_id in dataset_ids:
-                if dataset_id not in self.__file_watchers:
+                if dataset_id not in self._file_watcher_processes:
                     logger.debug(f"Starting file watcher for dataset {dataset_id}")
-                    self.__start_file_watcher(dataset_id)
-                elif self.__file_watchers[dataset_id][0].exitcode is not None:
-                    logger.debug(
-                        f"File watcher for dataset {dataset_id} has an exit code of "
-                        + f"{self.__file_watchers[dataset_id][0].exitcode}"
-                    )
-                    self.__start_file_watcher(dataset_id)
-                elif not self.__file_watchers[dataset_id][0].is_alive():
-                    logger.debug(f"File watcher for dataset {dataset_id} is not alive anymore")
-                    self.__start_file_watcher(dataset_id)
+                    self._start_file_watcher_process(dataset_id)
+                elif not self._file_watcher_processes[dataset_id][0].is_alive():
+                    logger.debug(f"File watcher for dataset {dataset_id} is not alive. Restarting it.")
+                    self._start_file_watcher_process(dataset_id)
 
-    def __start_file_watcher(self, dataset_id: int) -> None:
+    def _start_file_watcher_process(self, dataset_id: int) -> None:
         """Start a file watcher.
 
         Args:
@@ -60,18 +54,18 @@ class NewFileWatcherServer:
         should_stop = Value(c_bool, False)
         file_watcher = Process(target=run_new_file_watcher, args=(self.modyn_config, dataset_id, should_stop))
         file_watcher.start()
-        self.__file_watchers[dataset_id] = (file_watcher, should_stop)
+        self._file_watcher_processes[dataset_id] = (file_watcher, should_stop)
 
-    def __stop_file_watcher(self, dataset_id: int) -> None:
+    def _stop_file_watcher_process(self, dataset_id: int) -> None:
         """Stop a file watcher.
 
         Args:
             dataset_id (int): ID of the dataset that should be watched.
         """
-        self.__file_watchers[dataset_id][1] = True
-        self.__file_watchers[dataset_id][0].terminate()
-        self.__file_watchers[dataset_id][0].join()
-        del self.__file_watchers[dataset_id]
+        self._file_watcher_processes[dataset_id][1].value = True
+        self._file_watcher_processes[dataset_id][0].terminate()
+        self._file_watcher_processes[dataset_id][0].join()
+        del self._file_watcher_processes[dataset_id]
 
     def run(self) -> None:
         """Run the new file watcher.
@@ -81,13 +75,13 @@ class NewFileWatcherServer:
             should_stop (Value): Value that indicates if the watcher should stop.
         """
         while not self.__should_stop.value:
-            self.__manage_file_watchers()
+            self._manage_file_watcher_processes()
 
-        for dataset_id in self.__file_watchers:
-            self.__stop_file_watcher(dataset_id)
+        for dataset_id in self._file_watcher_processes:
+            self._stop_file_watcher_process(dataset_id)
 
 
-def run_watcher_server(modyn_config: dict, should_stop: Any):
+def run_watcher_server(modyn_config: dict, should_stop: Any):  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
     """Run the new file watcher server.
 
     Args:

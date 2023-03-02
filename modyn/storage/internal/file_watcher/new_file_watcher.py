@@ -67,19 +67,21 @@ class NewFileWatcher:
                     session.commit()
                 time.sleep(dataset.file_watcher_interval)
             except orm_exc.ObjectDeletedError as error:
+                # If the dataset was deleted, we should stop the file watcher and delete all the
+                # orphaned files and samples
                 logger.warning(
-                    f"Dataset {self.__dataset_id} not found. Shutting down "
-                    + f"file watcher for dataset {self.__dataset_id}."
+                    f"Dataset {self.__dataset_id} was deleted. Shutting down "
+                    + f"file watcher for dataset {self.__dataset_id}. Error: {error}"
                 )
-                logger.debug(error)
                 session.rollback()
-                #  Clean up possible orphaned files and samples
-                self.session.query(Sample).join(File).join(Dataset).filter(
-                    Dataset.dataset_id == self.__dataset_id
-                ).delete(synchronize_session="fetch")
-                self.session.query(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).delete(
+                session.query(Sample).join(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).delete(
                     synchronize_session="fetch"
                 )
+                session.query(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).delete(
+                    synchronize_session="fetch"
+                )
+                session.commit()
+                logger.warning(session.query(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).all())
                 self.__should_stop.value = True
         else:
             logger.warning(
@@ -201,7 +203,7 @@ class NewFileWatcher:
         logger.info("Starting dataset watcher.")
         with StorageDatabaseConnection(self.modyn_config) as database:
             session = database.session
-            while not self.__should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
+            while not self.__should_stop.value:
                 self._seek(session)
 
 
