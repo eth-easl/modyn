@@ -8,6 +8,7 @@ import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.new_data_strategy import NewDataStrategy
+from modyn.utils import flatten
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -588,10 +589,6 @@ def test__get_current_trigger_data_no_partitions():
     current_data = list(strat._get_current_trigger_data())[0]
 
     assert set(current_data) == set(data2)
-
-
-def flatten(l):
-    return [item for sublist in l for item in sublist]
 
 
 def test__get_current_trigger_data_partitions():

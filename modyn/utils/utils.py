@@ -142,3 +142,7 @@ def window_query(query: Query, column: str, windowsize: int, ordering_required: 
             break
         last_id = chunk[-1][-1]
         yield chunk
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]

@@ -102,7 +102,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         # We then always concatenate the two windows of the subsample to create a window of _maximum_keys_in_memory which we yield
 
         unused_generator = self._get_data_sample(num_unused_samples, False)
-        used_generator = self._get_data_sample(num_unused_samples, True)
+        used_generator = self._get_data_sample(num_used_samples, True)
 
         next_unused_sample: list[str] = next(unused_generator, [])
         next_used_sample: list[str] = next(used_generator, [])
@@ -156,13 +156,13 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             stmt = (
                 select(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
                 # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-                .execution_options(yield_per=int(self._maximum_keys_in_memory / 2))
+                .execution_options(yield_per=max(int(self._maximum_keys_in_memory / 2), 1))
                 .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used)
                 .order_by(func.random())  # TODO(MB): Pylint complains that random is not callable - why??
                 .limit(sample_size)
             )
 
-            for chunk in database.session.scalars(stmt).partitions():
+            for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
                     keys, used_data = zip(*chunk)
                     if used:
@@ -173,7 +173,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 else:
                     keys = []
 
-                yield keys
+                yield list(keys)
 
     def _get_all_unused_data(self) -> Iterator[list[str]]:
         """Returns all unused samples
@@ -188,14 +188,14 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
-            for chunk in window_query(query, "timestamp", self._maximum_keys_in_memory, False):
+            for chunk in window_query(query, SelectorStateMetadata.timestamp, self._maximum_keys_in_memory, False):
                 if len(chunk) > 0:
-                    keys, used = zip(*chunk)
+                    keys, used, _ = zip(*chunk)
                     assert not any(used), "Queried unused data, but got used data."
                 else:
                     keys, used = [], []
 
-                yield keys
+                yield list(keys)
 
     def _get_count_of_data(self, used: bool) -> int:
         """Returns all unused samples

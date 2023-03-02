@@ -9,6 +9,7 @@ from .utils import (  # noqa: F401
     convert_timestr_to_seconds,
     current_time_millis,
     dynamic_module_import,
+    flatten,
     grpc_connection_established,
     model_available,
     package_available_and_can_be_imported,

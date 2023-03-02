@@ -59,7 +59,10 @@ class AbstractSelectionStrategy(ABC):
 
         if self.has_limit and self.training_set_size_limit > self._maximum_keys_in_memory:
             # Otherwise, we need to somehow sample over multiple not-in-memory partitions, which is a problem
-            # TODO(MB): create an issue
+            # Right now, we interpret the limit as a limit per partition (this means a limit of 2 with 4 partitions with lead to 8 data points!)
+            # This is also problematic since the limit now depends on the chunking. However, we need to think about
+            # how to do this carefully
+            # TODO(MB): create an issue to back to a limit per trigger
             raise ValueError(
                 "We currently do not support a limit that is "
                 "larger than the maximum amount of keys we may hold in memory."
