@@ -37,7 +37,7 @@ class AbstractSelectionStrategy(ABC):
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
-        self._maximum_keys_in_memory = 500000  # TODO(MaxiBoether): add config option
+        self._maximum_keys_in_memory = config["maximum_keys_in_memory"]
 
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
