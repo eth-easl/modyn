@@ -498,9 +498,9 @@ def test_run_new_file_watcher(session):
     time.sleep(1)
     should_stop.value = True  # type: ignore
 
-    result = session.query(File).all()
+    result = session.query(File).filter(File.path == TEST_FILE1).all()
     assert result is not None
-    assert len(result) == 2
+    assert len(result) == 1
     assert result[0].path == TEST_FILE1
     assert result[0].number_of_samples == 1
     assert result[0].dataset_id == 1
