@@ -45,7 +45,7 @@ class Selector:
             worker_subset_size += 1
 
         start_index = worker_id * worker_subset_size
-        training_samples_subset = training_samples[start_index: start_index + worker_subset_size]
+        training_samples_subset = training_samples[start_index : start_index + worker_subset_size]
 
         return training_samples_subset
 

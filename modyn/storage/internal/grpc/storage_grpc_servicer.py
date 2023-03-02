@@ -149,7 +149,7 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             for i in range(0, num_items, self._sample_batch_size):
-                batch = values[i: i + self._sample_batch_size]
+                batch = values[i : i + self._sample_batch_size]
                 yield GetNewDataSinceResponse(
                     keys=[value[0] for value in batch],
                     timestamps=[value[1] for value in batch],
@@ -191,7 +191,7 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             for i in range(0, num_items, self._sample_batch_size):
-                batch = values[i: i + self._sample_batch_size]
+                batch = values[i : i + self._sample_batch_size]
                 yield GetDataInIntervalResponse(
                     keys=[value[0] for value in batch],
                     timestamps=[value[1] for value in batch],
