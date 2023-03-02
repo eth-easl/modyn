@@ -144,5 +144,5 @@ def window_query(query: Query, column: str, windowsize: int, ordering_required: 
         yield chunk
 
 
-def flatten(l):
-    return [item for sublist in l for item in sublist]
+def flatten(non_flat_list: list[list[Any]]) -> list[Any]:
+    return [item for sublist in non_flat_list for item in sublist]

@@ -234,8 +234,8 @@ def test__get_trigger_data_limit(
     def sampler(size, used):
         if used:
             return iter([random.sample(["e", "f", "g", "h"], size)])
-        else:
-            return iter([random.sample(["a", "b", "c", "d"], size)])
+
+        return iter([random.sample(["a", "b", "c", "d"], size)])
 
     test__get_data_sample.side_effect = sampler
 
@@ -270,8 +270,8 @@ def test__get_trigger_data_no_limit(
     def sampler(size, used):
         if used:
             return iter([random.sample(["e", "f", "g", "h"], size)])
-        else:
-            return iter([random.sample(["a", "b", "c", "d"], size)])
+
+        return iter([random.sample(["a", "b", "c", "d"], size)])
 
     test__get_data_sample.side_effect = sampler
 

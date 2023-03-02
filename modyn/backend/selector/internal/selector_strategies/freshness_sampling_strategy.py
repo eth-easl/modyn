@@ -158,7 +158,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=max(int(self._maximum_keys_in_memory / 2), 1))
                 .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used)
-                .order_by(func.random())  # TODO(MB): Pylint complains that random is not callable - why??
+                .order_by(func.random())  # pylint: disable=not-callable
                 .limit(sample_size)
             )
 
