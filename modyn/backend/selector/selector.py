@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict
 
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.utils.utils import flatten
 
 
 class Selector:
@@ -100,7 +101,9 @@ class Selector:
                 for partition_id in range(partitions_in_trigger)
             ]
             self._current_keys_in_cache += total_keys_in_trigger
-            assert total_keys_in_trigger == len(self._trigger_cache[trigger_id]), "Inconsistency in DB and Strategy"
+            assert total_keys_in_trigger == len(
+                flatten(self._trigger_cache[trigger_id])
+            ), "Inconsistency in DB and Strategy"
 
         self._trigger_size_cache[trigger_id] = total_keys_in_trigger
         self._trigger_partition_cache[trigger_id] = partitions_in_trigger
