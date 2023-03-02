@@ -11,7 +11,7 @@ def noop_init_metadata_db(self):
 
 
 def get_modyn_config():
-    return {"selector": {"port": "1337", "keys_in_selector_cache": 1000}}
+    return {"selector": {"port": "1337", "keys_in_selector_cache": 1000, "sample_batch_size": 8096}}
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)

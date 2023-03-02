@@ -1,12 +1,15 @@
 # pylint: disable=unused-argument, no-name-in-module, redefined-outer-name
 
+from typing import Iterable
 from unittest.mock import MagicMock, patch
 
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611
     DataInformRequest,
+    GetNumberOfPartitionsRequest,
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
     JsonString,
+    NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
     RegisterPipelineRequest,
@@ -24,7 +27,7 @@ def noop_init_metadata_db(self):
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
-    servicer = SelectorGRPCServicer(mgr)
+    servicer = SelectorGRPCServicer(mgr, 8096)
     assert servicer.selector_manager == mgr
 
 
@@ -32,7 +35,7 @@ def test_init():
 @patch.object(SelectorManager, "register_pipeline")
 def test_register_pipeline(test_register_pipeline: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
-    servicer = SelectorGRPCServicer(mgr)
+    servicer = SelectorGRPCServicer(mgr, 8096)
     request = RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value="strat"))
     test_register_pipeline.return_value = 42
 
@@ -46,23 +49,45 @@ def test_register_pipeline(test_register_pipeline: MagicMock):
 @patch.object(SelectorManager, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights(test_get_sample_keys_and_weights: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
-    servicer = SelectorGRPCServicer(mgr)
-    request = GetSamplesRequest(pipeline_id=0, trigger_id=1, worker_id=2)
+    servicer = SelectorGRPCServicer(mgr, 8096)
+    request = GetSamplesRequest(pipeline_id=0, trigger_id=1, worker_id=2, partition_id=3)
     test_get_sample_keys_and_weights.return_value = [("a", 1.0), ("b", 1.0)]
 
-    response: SamplesResponse = servicer.get_sample_keys_and_weights(request, None)
-
+    responses: Iterable[SamplesResponse] = list(servicer.get_sample_keys_and_weights(request, None))
+    assert len(responses) == 1
+    response = responses[0]
     assert response.training_samples_subset == ["a", "b"]
     assert response.training_samples_weights == [1.0, 1.0]
 
-    test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2)
+    test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+@patch.object(SelectorManager, "get_sample_keys_and_weights")
+def test_get_sample_keys_and_weights_batching(test_get_sample_keys_and_weights: MagicMock):
+    mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
+    servicer = SelectorGRPCServicer(mgr, 1)
+    request = GetSamplesRequest(pipeline_id=0, trigger_id=1, worker_id=2, partition_id=3)
+    test_get_sample_keys_and_weights.return_value = [("a", 1.0), ("b", 1.0)]
+
+    responses: Iterable[SamplesResponse] = list(servicer.get_sample_keys_and_weights(request, None))
+    assert len(responses) == 2
+    response1 = responses[0]
+    assert response1.training_samples_subset == ["a"]
+    assert response1.training_samples_weights == [1.0]
+
+    response2 = responses[1]
+    assert response2.training_samples_subset == ["b"]
+    assert response2.training_samples_weights == [1.0]
+
+    test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "inform_data")
 def test_inform_data(test_inform_data: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
-    servicer = SelectorGRPCServicer(mgr)
+    servicer = SelectorGRPCServicer(mgr, 8096)
     request = DataInformRequest(pipeline_id=0, keys=["a", "b"], timestamps=[1, 2], labels=[0, 1])
     test_inform_data.return_value = None
 
@@ -74,7 +99,7 @@ def test_inform_data(test_inform_data: MagicMock):
 @patch.object(SelectorManager, "inform_data_and_trigger")
 def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
-    servicer = SelectorGRPCServicer(mgr)
+    servicer = SelectorGRPCServicer(mgr, 8096)
     request = DataInformRequest(pipeline_id=0, keys=["a", "b"], timestamps=[1, 2], labels=[0, 1])
     test_inform_data_and_trigger.return_value = 42
 
@@ -88,7 +113,7 @@ def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
 @patch.object(SelectorManager, "get_number_of_samples")
 def test_get_number_of_samples(test_get_number_of_samples: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
-    servicer = SelectorGRPCServicer(mgr)
+    servicer = SelectorGRPCServicer(mgr, 8096)
     request = GetNumberOfSamplesRequest(pipeline_id=42, trigger_id=21)
     test_get_number_of_samples.return_value = 12
 
@@ -96,3 +121,17 @@ def test_get_number_of_samples(test_get_number_of_samples: MagicMock):
     assert response.num_samples == 12
 
     test_get_number_of_samples.assert_called_once_with(42, 21)
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+@patch.object(SelectorManager, "get_number_of_partitions")
+def test__get_number_of_partitions(test_get_number_of_partitions: MagicMock):
+    mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
+    servicer = SelectorGRPCServicer(mgr, 8096)
+    request = GetNumberOfPartitionsRequest(pipeline_id=42, trigger_id=21)
+    test_get_number_of_partitions.return_value = 12
+
+    response: NumberOfPartitionsResponse = servicer.get_number_of_partitions(request, None)
+    assert response.num_partitions == 12
+
+    test_get_number_of_partitions.assert_called_once_with(42, 21)
