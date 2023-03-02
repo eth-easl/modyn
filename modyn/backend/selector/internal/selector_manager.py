@@ -18,6 +18,7 @@ class SelectorManager:
         self._selectors: dict[int, Selector] = {}
         self._selector_locks: dict[int, Lock] = {}
         self._next_pipeline_lock = Lock()
+        self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
         self.init_metadata_db()
 
@@ -41,7 +42,7 @@ class SelectorManager:
                 pipeline_id = database.register_pipeline(num_workers)
 
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
-        selector = Selector(selection_strategy, pipeline_id, num_workers)
+        selector = Selector(selection_strategy, pipeline_id, num_workers, self._selector_cache_size)
         self._selectors[pipeline_id] = selector
         self._selector_locks[pipeline_id] = Lock()
         return pipeline_id
@@ -99,6 +100,7 @@ class SelectorManager:
 
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
+        maximum_keys_in_memory = selection_strategy["maximum_keys_in_memory"]
         config = selection_strategy["config"] if "config" in selection_strategy else {}
         default_configs = {"limit": -1, "reset_after_trigger": False}
 
@@ -113,4 +115,4 @@ class SelectorManager:
 
         strategy_handler = getattr(strategy_module, strategy_name)
 
-        return strategy_handler(config, self._modyn_config, pipeline_id)
+        return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)

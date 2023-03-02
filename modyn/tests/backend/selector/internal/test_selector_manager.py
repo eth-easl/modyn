@@ -17,7 +17,8 @@ def get_modyn_config():
             "database": "db",
             "host": "derhorst",
             "port": "1337",
-        }
+        },
+        "selector": {"keys_in_selector_cache": 1000},
     }
 
 

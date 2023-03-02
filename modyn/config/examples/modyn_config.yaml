@@ -66,6 +66,7 @@ ptmp:
 selector:
   hostname: "selector"
   port: "50056"
+  keys_in_selector_cache: 500000
 
 trainer_server:
   hostname: "trainer_server"

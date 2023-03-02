@@ -10,13 +10,15 @@ class Selector:
     This class implements the functionality of the Selector for a concrete pipeline.
     """
 
-    def __init__(self, strategy: AbstractSelectionStrategy, pipeline_id: int, num_workers: int) -> None:
+    def __init__(
+        self, strategy: AbstractSelectionStrategy, pipeline_id: int, num_workers: int, cache_size: int = 100000
+    ) -> None:
         self._strategy = strategy
         self._pipeline_id = pipeline_id
         self._num_workers = num_workers
 
         self._trigger_cache: Dict[int, list[list[tuple[str, float]]]] = {}
-        self._maximum_keys_in_cache = 5000000  # TODO(MaxiBoether): add configuration option
+        self._maximum_keys_in_cache = cache_size
         self._current_keys_in_cache = 0
 
         self._trigger_size_cache: Dict[int, int] = {}

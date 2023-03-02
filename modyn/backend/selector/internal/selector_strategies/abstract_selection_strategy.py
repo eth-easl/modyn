@@ -20,7 +20,12 @@ class AbstractSelectionStrategy(ABC):
     """
 
     def __init__(
-        self, config: dict, modyn_config: dict, pipeline_id: int, required_configs: Optional[list[str]] = None
+        self,
+        config: dict,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
+        required_configs: Optional[list[str]] = None,
     ):
         self._config = config
 
@@ -37,7 +42,7 @@ class AbstractSelectionStrategy(ABC):
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
-        self._maximum_keys_in_memory = config["maximum_keys_in_memory"]
+        self._maximum_keys_in_memory = maximum_keys_in_memory
 
         if self._maximum_keys_in_memory < 1:
             raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")

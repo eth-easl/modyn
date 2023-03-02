@@ -29,8 +29,10 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
-        super().__init__(config, modyn_config, pipeline_id, required_configs=["unused_data_ratio"])
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+        super().__init__(
+            config, modyn_config, pipeline_id, maximum_keys_in_memory, required_configs=["unused_data_ratio"]
+        )
         self.unused_data_ratio = self._config["unused_data_ratio"]
         self._is_first_trigger = True
 

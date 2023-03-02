@@ -34,8 +34,8 @@ class NewDataStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
-        super().__init__(config, modyn_config, pipeline_id)
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
         if self.has_limit and not self.reset_after_trigger and "limit_reset" not in config:
             raise ValueError("Please define how to deal with the limit without resets using the 'limit_reset' option.")

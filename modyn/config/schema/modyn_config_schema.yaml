@@ -214,6 +214,10 @@ properties:
         type: string
         description: |
           The hostname to use for the selector grpc service.
+      keys_in_selector_cache:
+        type: number
+        description: |
+          How many keys each selector is allowed to cache in memory.
     trainer_server:
       type: object
       properties:
