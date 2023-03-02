@@ -24,7 +24,7 @@ class MockSelectorStub:
         pass
 
     def get_sample_keys_and_weights(self, request):
-        return SamplesResponse(training_samples_subset=["1", "2", "3"], training_samples_weights=[1.0, 1.0, 1.0])
+        return [SamplesResponse(training_samples_subset=["1", "2", "3"], training_samples_weights=[1.0, 1.0, 1.0])]
 
 
 class MockStorageStub:

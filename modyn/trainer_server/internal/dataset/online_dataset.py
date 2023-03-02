@@ -6,7 +6,7 @@ from typing import Any, Callable, Generator, Optional
 import grpc
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest, SamplesResponse
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
@@ -21,20 +21,21 @@ MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 
 
 # TODO(#169): remove this when partitions are supported at the selector
-class GetNumPartitionsRequest:
-    def __init__(self, pipeline_id: int, trigger_id: int, training_id: int, worker_id: int) -> None:
+class GetNumberOfPartitionsRequest:
+    def __init__(self, pipeline_id: int, trigger_id: int) -> None:
         pass
 
 
 # TODO(#169): remove this when partitions are supported at the selector
-class GetNumPartitionsResponse:
+class GetNumberOfPartitionsResponse:
     def __init__(self) -> None:
         self.num_partitions = 10
 
 
 # TODO(#169): remove this when partitions are supported at the selector
-def get_num_partitions(request: GetNumPartitionsRequest) -> GetNumPartitionsResponse:  # pylint: disable=unused-argument
-    return GetNumPartitionsResponse()
+# pylint: disable=unused-argument
+def get_num_partitions(request: GetNumberOfPartitionsRequest) -> GetNumberOfPartitionsResponse:
+    return GetNumberOfPartitionsResponse()
 
 
 class OnlineDataset(IterableDataset):
@@ -78,8 +79,10 @@ class OnlineDataset(IterableDataset):
 
         # TODO(#169): provide partition_nr in the request, when enabled at the selector
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
-        samples_response: SamplesResponse = self._selectorstub.get_sample_keys_and_weights(req)
-        return samples_response.training_samples_subset  # TODO(#138): take into account sample weights when needed
+        keys = []
+        for _, response in enumerate(self._selectorstub.get_sample_keys_and_weights(req)):
+            keys += list(response.training_samples_subset)  # TODO(#138): take into account sample weights when needed
+        return keys
 
     def _get_data_from_storage(self, selector_keys: list[str]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -148,15 +151,13 @@ class OnlineDataset(IterableDataset):
         data, labels = self._get_data_from_storage(keys)
         return keys, data, labels
 
-    def _get_num_data_partitions(self, worker_id: int) -> int:
+    def _get_num_data_partitions(self) -> int:
         assert self._selectorstub is not None
 
         # TODO(#169): replace these with actual calls to the selector
-        num_partitions_request = GetNumPartitionsRequest(
+        num_partitions_request = GetNumberOfPartitionsRequest(
             pipeline_id=self._pipeline_id,
-            training_id=self._training_id,
             trigger_id=self._trigger_id,
-            worker_id=worker_id,
         )
         response = get_num_partitions(num_partitions_request)
         return response.num_partitions
@@ -181,7 +182,7 @@ class OnlineDataset(IterableDataset):
 
         assert self._transform is not None
         self._trainining_set_number += 1
-        self._num_partitions = self._get_num_data_partitions(worker_id=worker_id)
+        self._num_partitions = self._get_num_data_partitions()
         self._info(f"Total number of partitions will be {self._num_partitions}", worker_id)
 
         keys, data, labels = self._get_data(worker_id=worker_id, partition_nr=0)
