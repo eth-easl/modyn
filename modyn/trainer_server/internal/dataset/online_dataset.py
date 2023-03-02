@@ -80,7 +80,7 @@ class OnlineDataset(IterableDataset):
         # TODO(#169): provide partition_nr in the request, when enabled at the selector
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
         keys = []
-        for _, response in enumerate(self._selectorstub.get_sample_keys_and_weights(req)):
+        for response in self._selectorstub.get_sample_keys_and_weights(req):
             keys += list(response.training_samples_subset)  # TODO(#138): take into account sample weights when needed
         return keys
 

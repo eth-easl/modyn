@@ -415,6 +415,69 @@ def test_iter_multi_partition(
     OnlineDataset,
     "_get_data_from_storage",
     side_effect=[
+        ([x.to_bytes(2, "big") for x in range(16)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(16, 32)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(32, 48)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(48, 64)], [1] * 16),
+    ],
+)
+@patch.object(
+    OnlineDataset,
+    "_get_keys_from_selector",
+    side_effect=[
+        [str(i) for i in range(16)],
+        [str(i) for i in range(16, 32)],
+        [str(i) for i in range(32, 48)],
+        [str(i) for i in range(48, 64)],
+    ],
+)
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=4)
+def test_iter_multi_partition_cross(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=6)
+
+    idx = 0
+    for idx, batch in enumerate(dataloader):
+        assert len(batch) == 3
+        if idx < 10:
+            assert batch[0] == (
+                str(6 * idx),
+                str(6 * idx + 1),
+                str(6 * idx + 2),
+                str(6 * idx + 3),
+                str(6 * idx + 4),
+                str(6 * idx + 5),
+            )
+            assert torch.equal(
+                batch[1], torch.Tensor([6 * idx, 6 * idx + 1, 6 * idx + 2, 6 * idx + 3, 6 * idx + 4, 6 * idx + 5])
+            )
+            assert torch.equal(batch[2], torch.ones(6, dtype=torch.float64))
+        else:
+            assert batch[0] == ("60", "61", "62", "63")
+            assert torch.equal(batch[1], torch.Tensor([60, 61, 62, 63]))
+            assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+    assert idx == 10
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset,
+    "_get_data_from_storage",
+    side_effect=[
         ([x.to_bytes(2, "big") for x in range(4)], [1] * 4),
         ([x.to_bytes(2, "big") for x in range(4)], [1] * 4),
     ],
