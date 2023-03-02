@@ -22,7 +22,7 @@ storage:
             label_file_extension: ".label"
           },
         ignore_last_timestamp: false,
-        interval: 5
+        file_watcher_interval: 5
       },
       {
         name: "criteo",
@@ -39,7 +39,7 @@ storage:
             file_extension: ".bin"
           },
         ignore_last_timestamp: false,
-        interval: 5
+        file_watcher_interval: 5
       }
     ]
   database:

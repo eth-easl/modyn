@@ -38,15 +38,6 @@ properties:
         type: number
         description: |
           The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce the size of a single answer the keys are batched in sizes of `sample_batch_size`.
-      new_file_watcher:
-        type: object
-        properties:
-          interval:
-            type: number
-            description: |
-              The interval in seconds to check for new files and samples for each dataset.
-        required:
-          - interval
       datasets:
         type: array
         items:
@@ -106,10 +97,10 @@ properties:
               description: |
                 Whether to ignore the last timestamp when scanning for new files, i.e., if this is set to false, in case a new file gets added to the storage that has a smaller timestamp than the latest file that the storage has already processed, the file is not processed.
               default: false
-            interval:
+            file_watcher_interval:
               type: number
               description: |
-                The interval in seconds to wait between checking for new files.
+                The interval in seconds for the file watcher to wait between checking for new files.
               default: 5
           required:
             - name
@@ -156,7 +147,6 @@ properties:
     required:
       - port
       - hostname
-      - new_file_watcher
       - database
       - sample_batch_size
 
