@@ -1,5 +1,4 @@
 import json
-from typing import Iterable
 
 import grpc
 from integrationtests.utils import get_modyn_config
@@ -65,17 +64,21 @@ def test_newdata() -> None:
 
     number_of_partitions = selector.get_number_of_partitions(
         GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
-    )
+    ).num_partitions
 
     assert number_of_partitions == 3, f"Invalid number of partitions: {number_of_partitions}"
     total_samples = []
     for partition in range(number_of_partitions):
-        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+            )
         )
 
-        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+            )
         )
 
         assert len(worker1_responses) == 1
@@ -117,17 +120,25 @@ def test_newdata() -> None:
 
     number_of_partitions = selector.get_number_of_partitions(
         GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id)
-    )
+    ).num_partitions
 
     assert number_of_partitions == 3, f"Invalid number of partitions: {number_of_partitions}"
     total_samples = []
     for partition in range(number_of_partitions):
-        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0, partition_id=partition)
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(
+                    pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0, partition_id=partition
+                )
+            )
         )
 
-        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1, partition_id=partition)
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(
+                    pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1, partition_id=partition
+                )
+            )
         )
 
         assert len(worker1_responses) == 1
@@ -183,17 +194,21 @@ def test_empty_triggers() -> None:
 
     number_of_partitions = selector.get_number_of_partitions(
         GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
-    )
+    ).num_partitions
 
     assert number_of_partitions == 2, f"Invalid number of partitions: {number_of_partitions}"
     total_samples = []
     for partition in range(number_of_partitions):
-        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+            )
         )
 
-        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+            )
         )
 
         assert len(worker1_responses) == 1
@@ -226,17 +241,21 @@ def test_empty_triggers() -> None:
 
     number_of_partitions = selector.get_number_of_partitions(
         GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
-    )
+    ).num_partitions
 
     assert number_of_partitions == 2, f"Invalid number of partitions: {number_of_partitions}"
     total_samples = []
     for partition in range(number_of_partitions):
-        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+            )
         )
 
-        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+            )
         )
 
         assert len(worker1_responses) == 1
@@ -269,17 +288,25 @@ def test_empty_triggers() -> None:
 
     number_of_partitions = selector.get_number_of_partitions(
         GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2)
-    )
+    ).num_partitions
 
     assert number_of_partitions == 3, f"Invalid number of partitions: {number_of_partitions}"
     total_samples = []
     for partition in range(number_of_partitions):
-        worker1_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=0, partition_id=partition)
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(
+                    pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=0, partition_id=partition
+                )
+            )
         )
 
-        worker2_responses: Iterable[SamplesResponse] = selector.get_sample_keys_and_weights(
-            GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=1, partition_id=partition)
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(
+                    pipeline_id=pipeline_id, trigger_id=next_trigger_id2, worker_id=1, partition_id=partition
+                )
+            )
         )
 
         assert len(worker1_responses) == 1

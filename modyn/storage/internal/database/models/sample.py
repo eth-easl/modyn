@@ -2,7 +2,10 @@
 
 from modyn.storage.internal.database.storage_base import StorageBase
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
+from sqlalchemy.dialects import sqlite
 from sqlalchemy.orm import relationship
+
+BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 
 class Sample(StorageBase):
@@ -11,7 +14,7 @@ class Sample(StorageBase):
     __tablename__ = "samples"
     # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
     __table_args__ = {"extend_existing": True}
-    sample_id = Column("sample_id", Integer, primary_key=True)
+    sample_id = Column("sample_id", BIGINT, autoincrement=True, primary_key=True)
     file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False)
     file = relationship("File")
     external_key = Column(String(120), unique=True, nullable=False)

@@ -122,10 +122,8 @@ class AbstractSelectionStrategy(ABC):
 
             for partition, training_samples in enumerate(self._on_trigger()):
                 logger.info(
-                    "Strategy for pipeline {} returned batch of {} samples for new trigger {}.",
-                    self._pipeline_id,
-                    len(training_samples),
-                    trigger_id,
+                    f"Strategy for pipeline {self._pipeline_id} returned batch of"
+                    + f" {len(training_samples)} samples for new trigger {trigger_id}."
                 )
 
                 total_keys_in_trigger += len(training_samples)
