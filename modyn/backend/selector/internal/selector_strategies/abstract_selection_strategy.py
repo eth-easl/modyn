@@ -108,7 +108,7 @@ class AbstractSelectionStrategy(ABC):
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
 
         Returns:
-            tuple[int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
+            tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
         trigger_id = self._next_trigger_id
         total_keys_in_trigger = 0
@@ -155,8 +155,14 @@ class AbstractSelectionStrategy(ABC):
         return trigger_id, total_keys_in_trigger, num_partitions
 
     def get_trigger_partition_keys(self, trigger_id: int, partition_id: int) -> list[tuple[str, float]]:
-        # TODO(MaxiBoether): Write docstring
+        """
+        Given a trigger id and partition id, returns a list of all keys in this partition
 
+        Returns:
+            list[tuple[str, float]]: list of training samples.
+                Each entry is a training sample, where the first element of the tuple
+                is the key, and the second element is the associated weight.
+        """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             data = (
                 database.session.query(TriggerSample.sample_key, TriggerSample.sample_weight)

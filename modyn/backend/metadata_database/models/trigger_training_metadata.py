@@ -2,7 +2,7 @@
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from modyn.backend.metadata_database.models.triggers import Trigger
-from sqlalchemy import BigInteger, Column, Double, Integer
+from sqlalchemy import BigInteger, Column, Double, Index, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.schema import ForeignKeyConstraint
 
@@ -26,5 +26,6 @@ class TriggerTrainingMetadata(MetadataBase):
     overall_loss = Column("overall_loss", Double)
     __table_args__ = (
         ForeignKeyConstraint([pipeline_id, trigger_id], [Trigger.pipeline_id, Trigger.trigger_id]),
+        Index("ttm_trigger_pipeline_idx", "trigger_id", "pipeline_id"),
         {"extend_existing": True},
     )

@@ -19,7 +19,7 @@ class SelectorStateMetadata(MetadataBase):
     # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
     __table_args__ = {"extend_existing": True}
     selector_state_metadata_id = Column("selector_state_metadata_id", BIGINT, autoincrement=True, primary_key=True)
-    pipeline_id = Column("pipeline_id", Integer, ForeignKey("pipelines.pipeline_id"), nullable=False)
+    pipeline_id = Column("pipeline_id", Integer, ForeignKey("pipelines.pipeline_id"), nullable=False, index=True)
     sample_key = Column("sample_key", String(120), nullable=False)
     seen_in_trigger_id = Column("seen_in_trigger_id", Integer)
     used = Column("used", Boolean, default=False)
