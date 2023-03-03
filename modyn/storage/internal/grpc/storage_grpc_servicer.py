@@ -135,7 +135,7 @@ class StorageGRPCServicer(StorageServicer):
             timestamp = request.timestamp
 
             num_items = (
-                session.query(func.count(Sample.sample_id))  # pylint: disable-next=not-callable
+                session.query(func.count(Sample.sample_id))  # pylint: disable=not-callable
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
@@ -182,7 +182,7 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             num_items = (
-                session.query(func.count(Sample.sample_id))  # pylint: disable-next=not-callable
+                session.query(func.count(Sample.sample_id))  # pylint: disable=not-callable
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
