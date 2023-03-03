@@ -180,6 +180,17 @@ class Supervisor:
 
         return available
 
+    def get_dataset_selector_batch_size(self) -> int:
+        selector_batch_size = 128
+        # system configuration already validated, so the dataset_id will be present in the configuration file
+        dataset_id = self.pipeline_config["data"]["dataset_id"]
+        for dataset in self.modyn_config["storage"]["datasets"]:
+            if dataset["name"] == dataset_id:
+                if "selector_batch_size" in dataset:
+                    selector_batch_size = dataset["selector_batch_size"]
+
+        return selector_batch_size
+
     def validate_system(self) -> bool:
         return self.dataset_available() and self.grpc.trainer_server_available()
 
@@ -187,7 +198,7 @@ class Supervisor:
         if self.current_training_id is not None:
             self.grpc.stop_training_at_trainer_server(self.current_training_id)
 
-    def wait_for_new_data(self, start_timestamp: int) -> None:
+    def wait_for_new_data(self, start_timestamp: int, dataset_selector_batch_size: int) -> None:
         last_timestamp = start_timestamp
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
@@ -216,7 +227,7 @@ class Supervisor:
                     # We use a set to have a O(1) check in the line above.
                     largest_keys.update({key for (key, timestamp, _) in new_data if timestamp == last_timestamp})
 
-                    if self._handle_new_data(new_data):
+                    if self._handle_new_data(new_data, dataset_selector_batch_size):
                         trigger_occured = True
 
                 previous_largest_keys = largest_keys
@@ -229,7 +240,7 @@ class Supervisor:
             self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
-    def _handle_new_data(self, new_data: list[tuple[str, int, int]], selector_batch_size: int = 128) -> bool:
+    def _handle_new_data(self, new_data: list[tuple[str, int, int]], selector_batch_size: int) -> bool:
         """This function handles new data during experiments or actual pipeline execution.
         We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
         If a data point within a batch causes a trigger,
@@ -323,7 +334,7 @@ class Supervisor:
         # In case self.previous_model is set, respect and update!
         pass
 
-    def replay_data(self) -> None:
+    def replay_data(self, dataset_selector_batch_size: int) -> None:
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
         self.status_bar.update(demo="Replaying data")
@@ -335,7 +346,7 @@ class Supervisor:
             generator = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
 
         for replay_data in generator:
-            self._handle_new_data(replay_data)
+            self._handle_new_data(replay_data, dataset_selector_batch_size)
 
         self.status_bar.update(demo="Replay done")
 
@@ -347,10 +358,11 @@ class Supervisor:
         self.initial_pass()
         logger.info("Initial pass completed.")
 
+        dataset_selector_batch_size = self.get_dataset_selector_batch_size()
         if self.experiment_mode:
-            self.replay_data()
+            self.replay_data(dataset_selector_batch_size)
         else:
-            self.wait_for_new_data(start_timestamp)
+            self.wait_for_new_data(start_timestamp, dataset_selector_batch_size)
 
         self.status_bar.update(demo="Cleanup")
         logger.info("Pipeline done, unregistering.")

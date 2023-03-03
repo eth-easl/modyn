@@ -246,6 +246,17 @@ def test_validate_system(test_trainer_server_available):
     assert not sup.validate_system()
 
 
+def test_get_dataset_selector_batch_size():
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.modyn_config = {"storage": {"datasets": [{"name": "test", "selector_batch_size": 2048}]}}
+    assert sup.get_dataset_selector_batch_size() == 2048
+
+    sup.modyn_config = {"storage": {"datasets": [{"name": "test"}]}}
+    assert sup.get_dataset_selector_batch_size() == 128
+
+
 def test_shutdown_trainer():
     # TODO(MaxiBoether): implement
     pass
@@ -257,9 +268,9 @@ def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_s
     # This is a simple test and does not the inclusivity filtering!
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
-    sup.wait_for_new_data(21)
+    sup.wait_for_new_data(21, 1)
     test_get_new_data_since.assert_called_once_with("test", 21)
-    test__handle_new_data.assert_called_once_with([("a", 42, 0), ("b", 43, 1)])
+    test__handle_new_data.assert_called_once_with([("a", 42, 0), ("b", 43, 1)], 1)
 
 
 @patch.object(GRPCHandler, "get_new_data_since", return_value=[[("a", 42, 0)], [("b", 43, 1)]])
@@ -268,12 +279,12 @@ def test_wait_for_new_data_batched(test__handle_new_data: MagicMock, test_get_ne
     # This is a simple test and does not the inclusivity filtering!
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
-    sup.wait_for_new_data(21)
+    sup.wait_for_new_data(21, 128)
     test_get_new_data_since.assert_called_once_with("test", 21)
 
     expected_calls = [
-        call([("a", 42, 0)]),
-        call([("b", 43, 1)]),
+        call([("a", 42, 0)], 128),
+        call([("b", 43, 1)], 128),
     ]
 
     assert test__handle_new_data.call_args_list == expected_calls
@@ -294,15 +305,15 @@ def test_wait_for_new_data_filtering():
     with patch.object(sup, "_handle_new_data", side_effect=mocked__handle_new_data_return_vals) as handle_mock:
         get_new_data_mock: MagicMock
         with patch.object(sup.grpc, "get_new_data_since", side_effect=mocked_get_new_data_since) as get_new_data_mock:
-            sup.wait_for_new_data(21)
+            sup.wait_for_new_data(21, 128)
 
             assert handle_mock.call_count == 3
             assert get_new_data_mock.call_count == 3
 
             expected_handle_mock_arg_list = [
-                call([("a", 42, 0), ("b", 43, 0), ("c", 43, 1)]),
-                call([("d", 43, 2), ("e", 45, 3)]),
-                call([]),
+                call([("a", 42, 0), ("b", 43, 0), ("c", 43, 1)], 128),
+                call([("d", 43, 2), ("e", 45, 3)], 128),
+                call([], 128),
             ]
             assert handle_mock.call_args_list == expected_handle_mock_arg_list
 
@@ -325,18 +336,18 @@ def test_wait_for_new_data_filtering_batched():
     with patch.object(sup, "_handle_new_data", side_effect=mocked__handle_new_data_return_vals) as handle_mock:
         get_new_data_mock: MagicMock
         with patch.object(sup.grpc, "get_new_data_since", side_effect=mocked_get_new_data_since) as get_new_data_mock:
-            sup.wait_for_new_data(21)
+            sup.wait_for_new_data(21, 128)
 
             assert handle_mock.call_count == 6
             assert get_new_data_mock.call_count == 3
 
             expected_handle_mock_arg_list = [
-                call([("a", 42, 0), ("b", 43, 0)]),
-                call([("c", 43, 1)]),
-                call([]),
-                call([("d", 43, 2)]),
-                call([("e", 45, 3)]),
-                call([]),
+                call([("a", 42, 0), ("b", 43, 0)], 128),
+                call([("c", 43, 1)], 128),
+                call([], 128),
+                call([("d", 43, 2)], 128),
+                call([("e", 45, 3)], 128),
+                call([], 128),
             ]
             assert handle_mock.call_args_list == expected_handle_mock_arg_list
 
@@ -472,10 +483,10 @@ def test_replay_data_closed_inteval(test__handle_new_data: MagicMock, test_get_d
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.start_replay_at = 0
     sup.stop_replay_at = 42
-    sup.replay_data()
+    sup.replay_data(1)
 
     test_get_data_in_interval.assert_called_once_with("test", 0, 42)
-    test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)])
+    test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)], 1)
 
 
 @patch.object(GRPCHandler, "get_data_in_interval", return_value=[[("a", 1)], [("b", 2)]])
@@ -484,11 +495,11 @@ def test_replay_data_closed_inteval_batched(test__handle_new_data: MagicMock, te
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.start_replay_at = 0
     sup.stop_replay_at = 42
-    sup.replay_data()
+    sup.replay_data(2)
 
     test_get_data_in_interval.assert_called_once_with("test", 0, 42)
     assert test__handle_new_data.call_count == 2
-    assert test__handle_new_data.call_args_list == [call([("a", 1)]), call([("b", 2)])]
+    assert test__handle_new_data.call_args_list == [call([("a", 1)], 2), call([("b", 2)], 2)]
 
 
 @patch.object(GRPCHandler, "get_new_data_since", return_value=[[("a", 1), ("b", 2)]])
@@ -497,10 +508,10 @@ def test_replay_data_open_inteval(test__handle_new_data: MagicMock, test_get_new
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.start_replay_at = 0
     sup.stop_replay_at = None
-    sup.replay_data()
+    sup.replay_data(128)
 
     test_get_new_data_since.assert_called_once_with("test", 0)
-    test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)])
+    test__handle_new_data.assert_called_once_with([("a", 1), ("b", 2)], 128)
 
 
 @patch.object(GRPCHandler, "get_new_data_since", return_value=[[("a", 1)], [("b", 2)]])
@@ -509,15 +520,16 @@ def test_replay_data_open_inteval_batched(test__handle_new_data: MagicMock, test
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.start_replay_at = 0
     sup.stop_replay_at = None
-    sup.replay_data()
+    sup.replay_data(128)
 
     test_get_new_data_since.assert_called_once_with("test", 0)
     assert test__handle_new_data.call_count == 2
-    assert test__handle_new_data.call_args_list == [call([("a", 1)]), call([("b", 2)])]
+    assert test__handle_new_data.call_args_list == [call([("a", 1)], 128), call([("b", 2)], 128)]
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
 @patch.object(GRPCHandler, "register_pipeline_at_selector", return_value=42)
+@patch.object(Supervisor, "get_dataset_selector_batch_size", return_value=10)
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
@@ -527,6 +539,7 @@ def test_non_experiment_pipeline(
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
+    test_get_dataset_selector_batch_size: MagicMock,
     test_register_pipeline_at_selector: MagicMock,
     test_get_time_at_storage: MagicMock,
 ):
@@ -537,13 +550,15 @@ def test_non_experiment_pipeline(
     test_get_time_at_storage.assert_called_once()
     test_register_pipeline_at_selector.assert_called_once()
     test_initial_pass.assert_called_once()
-    test_wait_for_new_data.assert_called_once_with(21)
+    test_get_dataset_selector_batch_size.assert_called_once()
+    test_wait_for_new_data.assert_called_once_with(21, 10)
     test_replay_data.assert_not_called()
     test_unregister_pipeline_at_selector.assert_called_once_with(42)
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
 @patch.object(GRPCHandler, "register_pipeline_at_selector", return_value=42)
+@patch.object(Supervisor, "get_dataset_selector_batch_size", return_value=10)
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
@@ -553,6 +568,7 @@ def test_experiment_pipeline(
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
+    test_get_dataset_selector_batch_size: MagicMock,
     test_register_pipeline_at_selector: MagicMock,
     test_get_time_at_storage: MagicMock,
 ):
@@ -563,6 +579,7 @@ def test_experiment_pipeline(
     test_get_time_at_storage.assert_called_once()
     test_register_pipeline_at_selector.assert_called_once()
     test_initial_pass.assert_called_once()
+    test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_not_called()
     test_replay_data.assert_called_once()
     test_unregister_pipeline_at_selector.assert_called_once_with(42)
