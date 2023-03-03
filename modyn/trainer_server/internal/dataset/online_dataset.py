@@ -6,11 +6,15 @@ from typing import Any, Callable, Generator, Optional
 import grpc
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
+    GetNumberOfPartitionsRequest,
+    GetSamplesRequest,
+    NumberOfPartitionsResponse,
+)
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils.utils import grpc_connection_established
+from modyn.utils.utils import flatten, grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -18,24 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
-
-
-# TODO(#169): remove this when partitions are supported at the selector
-class GetNumberOfPartitionsRequest:
-    def __init__(self, pipeline_id: int, trigger_id: int) -> None:
-        pass
-
-
-# TODO(#169): remove this when partitions are supported at the selector
-class GetNumberOfPartitionsResponse:
-    def __init__(self) -> None:
-        self.num_partitions = 10
-
-
-# TODO(#169): remove this when partitions are supported at the selector
-# pylint: disable=unused-argument
-def get_num_partitions(request: GetNumberOfPartitionsRequest) -> GetNumberOfPartitionsResponse:
-    return GetNumberOfPartitionsResponse()
 
 
 class OnlineDataset(IterableDataset):
@@ -74,15 +60,16 @@ class OnlineDataset(IterableDataset):
         logger.debug("Initialized OnlineDataset.")
 
     # pylint: disable=unused-argument
-    def _get_keys_from_selector(self, worker_id: int, partition_nr: int) -> list[str]:
+    def _get_keys_from_selector(self, worker_id: int, partition_id: int) -> list[str]:
         assert self._selectorstub is not None
 
-        # TODO(#169): provide partition_nr in the request, when enabled at the selector
-        req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
-        keys = []
-        for response in self._selectorstub.get_sample_keys_and_weights(req):
-            keys += list(response.training_samples_subset)  # TODO(#138): take into account sample weights when needed
-        return keys
+        req = GetSamplesRequest(
+            pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id, partition_id=partition_id
+        )
+        # TODO(#138): take into account sample weights when needed
+        return flatten(
+            [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
+        )
 
     def _get_data_from_storage(self, selector_keys: list[str]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -144,9 +131,9 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _get_data(self, worker_id: int, partition_nr: int) -> tuple[list[str], list[bytes], list[int]]:
+    def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[str], list[bytes], list[int]]:
         self._info("Getting keys from selector", worker_id)
-        keys = self._get_keys_from_selector(worker_id, partition_nr)
+        keys = self._get_keys_from_selector(worker_id, partition_id)
         self._info("Getting data from storage", worker_id)
         data, labels = self._get_data_from_storage(keys)
         return keys, data, labels
@@ -154,12 +141,12 @@ class OnlineDataset(IterableDataset):
     def _get_num_data_partitions(self) -> int:
         assert self._selectorstub is not None
 
-        # TODO(#169): replace these with actual calls to the selector
         num_partitions_request = GetNumberOfPartitionsRequest(
             pipeline_id=self._pipeline_id,
             trigger_id=self._trigger_id,
         )
-        response = get_num_partitions(num_partitions_request)
+
+        response: NumberOfPartitionsResponse = self._selectorstub.get_number_of_partitions(num_partitions_request)
         return response.num_partitions
 
     # pylint: disable=too-many-locals
@@ -185,18 +172,18 @@ class OnlineDataset(IterableDataset):
         self._num_partitions = self._get_num_data_partitions()
         self._info(f"Total number of partitions will be {self._num_partitions}", worker_id)
 
-        keys, data, labels = self._get_data(worker_id=worker_id, partition_nr=0)
+        keys, data, labels = self._get_data(worker_id=worker_id, partition_id=0)
 
         for partition in range(self._num_partitions):
             num_samples_on_this_partition = len(keys)
-            # set arbitrarily to when we have seen 80% of the current partition
+            # We (arbitrarily) fetch the next partition when we have seen 80% of the current partition
             fetch_next_partition_idx = int(num_samples_on_this_partition * 0.8)
             self._info(f"Train on partition {partition}, on {num_samples_on_this_partition} batches", worker_id)
 
             for idx, (key, sample, label) in enumerate(zip(keys, data, labels)):
                 if partition < self._num_partitions - 1 and idx == fetch_next_partition_idx:
                     # TODO(#175) in case this blocks training
-                    new_keys, new_data, new_labels = self._get_data(worker_id=worker_id, partition_nr=partition + 1)
+                    new_keys, new_data, new_labels = self._get_data(worker_id=worker_id, partition_id=partition + 1)
                 # mypy complains here because _transform has unknown type, which is ok
                 yield key, self._transform(sample), label  # type: ignore
 
