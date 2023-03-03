@@ -133,6 +133,7 @@ class StorageGRPCServicer(StorageServicer):
 
             timestamp = request.timestamp
 
+            # TODO(#184): This materializes all keys in memory.
             values = (
                 session.query(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)
@@ -174,6 +175,7 @@ class StorageGRPCServicer(StorageServicer):
                 yield GetDataInIntervalResponse()
                 return
 
+            # TODO(#184): This materializes all keys in memory.
             values = (
                 session.query(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)

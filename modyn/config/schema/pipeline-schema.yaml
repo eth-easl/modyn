@@ -74,6 +74,10 @@ properties:
             type: string
             description: |
               The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy
+          maximum_keys_in_memory:
+            type: number
+            description: |
+              Limits how many keys should be materialized at a time in the strategy.
           config:
             type: object
             description: |

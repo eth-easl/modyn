@@ -24,7 +24,7 @@ class FTPServer:
         self.config = config
         self.serving_directory = temp_directory
         self.authorizer = DummyAuthorizer()
-        # TODO(create issue): Only allow connections from supervisor as soon as it has a ip?
+        # TODO(#180): Only allow connections from supervisor as soon as it has a ip?
         self.authorizer.add_user("modyn", "modyn", str(self.serving_directory), perm="elradfmwMT")
 
         self.handler = FTPHandler  # Intentionally a class reference

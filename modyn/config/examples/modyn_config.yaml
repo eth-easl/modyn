@@ -6,7 +6,7 @@ project:
 storage:
   port: "50051"
   hostname: "storage"
-  sample_batch_size: 1024
+  sample_batch_size: 65536
   datasets:
     [
       {
@@ -66,6 +66,8 @@ ptmp:
 selector:
   hostname: "selector"
   port: "50056"
+  keys_in_selector_cache: 500000
+  sample_batch_size: 65536
 
 trainer_server:
   hostname: "trainer_server"
