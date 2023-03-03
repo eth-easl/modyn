@@ -1,5 +1,5 @@
 pipeline:
-    name: exp1_ablation
+    name: criteo_scalability_test
     description: Training DLRM (NVIDIA version) with CRITEO dataset
     version: 1.0.0
 model:
@@ -92,7 +92,7 @@ training:
       limit: -1
       reset_after_trigger: True
 data:
-  dataset_id: criteo-ablation # This shows that just having "more data" shown to the model (same data multiple times) is not as good as newer data
+  dataset_id: criteo
   bytes_parser_function: |
     import torch
     import numpy as np
@@ -117,6 +117,6 @@ data:
     def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
       return x.to(torch.float32)
 trigger:
-  id: TimeTrigger
+  id: DataAmountTrigger
   trigger_config:
-    trigger_every: "1d"
+    data_points_for_trigger: 10000000
