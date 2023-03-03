@@ -19,7 +19,7 @@ class File(StorageBase):
     dataset = relationship("Dataset")
     path = Column(String(120), unique=False, nullable=False)
     created_at = Column(BigInteger, nullable=False)
-    updated_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False, index=True)
     number_of_samples = Column(Integer, nullable=False)
 
     def __repr__(self) -> str:

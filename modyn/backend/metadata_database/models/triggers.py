@@ -14,4 +14,4 @@ class Trigger(MetadataBase):
     pipeline_id = Column("pipeline_id", Integer, ForeignKey(Pipeline.pipeline_id), nullable=False, primary_key=True)
     num_keys = Column("num_keys", BigInteger, nullable=True)
     num_partitions = Column("num_partitions", Integer, nullable=True)
-    __table_args__ = (Index("t_trigger_pipeline_idx", "trigger_id", "pipeline_id"), {"extend_existing": True})
+    __table_args__ = (Index("t_trigger_pipeline_idx", "pipeline_id", "trigger_id"), {"extend_existing": True})

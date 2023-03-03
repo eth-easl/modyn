@@ -26,6 +26,6 @@ class TriggerSample(MetadataBase):
     sample_weight = Column("sample_weight", Float, nullable=False)
     __table_args__ = (
         ForeignKeyConstraint([pipeline_id, trigger_id], [Trigger.pipeline_id, Trigger.trigger_id]),
-        Index("tstm_trigger_pipeline_partition_idx", "trigger_id", "pipeline_id", "partition_id"),
+        Index("tstm_trigger_pipeline_partition_idx", "pipeline_id", "trigger_id", "partition_id"),
         {"extend_existing": True},
     )

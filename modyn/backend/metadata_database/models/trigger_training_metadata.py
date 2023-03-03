@@ -20,12 +20,12 @@ class TriggerTrainingMetadata(MetadataBase):
     __tablename__ = "trigger_training_metadata"
     # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
     trigger_training_metadata_id = Column("trigger_training_metadata_id", BIGINT, autoincrement=True, primary_key=True)
-    trigger_id = Column("trigger_id", Integer, nullable=False)
     pipeline_id = Column("pipeline_id", Integer, nullable=False)
+    trigger_id = Column("trigger_id", Integer, nullable=False)
     time_to_train = Column("time_to_train", Double)
     overall_loss = Column("overall_loss", Double)
     __table_args__ = (
         ForeignKeyConstraint([pipeline_id, trigger_id], [Trigger.pipeline_id, Trigger.trigger_id]),
-        Index("ttm_trigger_pipeline_idx", "trigger_id", "pipeline_id"),
+        Index("ttm_trigger_pipeline_idx", "pipeline_id", "trigger_id"),
         {"extend_existing": True},
     )
