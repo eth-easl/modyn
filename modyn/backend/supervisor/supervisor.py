@@ -188,6 +188,7 @@ class Supervisor:
             if dataset["name"] == dataset_id:
                 if "selector_batch_size" in dataset:
                     selector_batch_size = dataset["selector_batch_size"]
+                break
 
         return selector_batch_size
 

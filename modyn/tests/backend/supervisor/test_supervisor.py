@@ -250,7 +250,11 @@ def test_get_dataset_selector_batch_size():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     sup.pipeline_config = get_minimal_pipeline_config()
-    sup.modyn_config = {"storage": {"datasets": [{"name": "test", "selector_batch_size": 2048}]}}
+    sup.modyn_config = {
+        "storage": {
+            "datasets": [{"name": "test", "selector_batch_size": 2048}, {"name": "test1", "selector_batch_size": 128}]
+        }
+    }
     assert sup.get_dataset_selector_batch_size() == 2048
 
     sup.modyn_config = {"storage": {"datasets": [{"name": "test"}]}}
