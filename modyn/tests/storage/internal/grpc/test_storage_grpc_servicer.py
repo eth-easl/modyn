@@ -192,7 +192,7 @@ def test_get_new_data_since():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 1
+    assert 1 == len(responses)
     response = responses[0]
 
     assert response is not None
@@ -208,7 +208,8 @@ def test_get_new_data_since_batched():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 3
+
+    assert 3 == len(responses)
     response1 = responses[0]
     response2 = responses[1]
     response3 = responses[2]

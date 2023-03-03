@@ -139,6 +139,7 @@ def window_query(query: Query, column: str, windowsize: int, ordering_required: 
         if not chunk:
             break
         last_id = chunk[-1][-1]
+        logger.error(f"last_id: {last_id}")
         yield chunk
 
 

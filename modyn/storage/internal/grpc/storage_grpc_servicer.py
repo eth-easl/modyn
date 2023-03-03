@@ -24,7 +24,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     RegisterNewDatasetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
-from modyn.utils.utils import current_time_millis
+from modyn.utils.utils import current_time_millis, window_query
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -133,29 +134,34 @@ class StorageGRPCServicer(StorageServicer):
 
             timestamp = request.timestamp
 
-            # TODO(#184): This materializes all keys in memory.
-            values = (
-                session.query(Sample.external_key, File.updated_at, Sample.label)
+            num_items = (
+                session.query(func.count(Sample.sample_id))  # pylint: disable-next=not-callable
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
-                .all()
+                .scalar()
             )
-
-            num_items = len(values)
 
             if num_items == 0:
                 logger.info(f"No new data since {timestamp}")
                 yield GetNewDataSinceResponse()
                 return
 
-            for i in range(0, num_items, self._sample_batch_size):
-                batch = values[i : i + self._sample_batch_size]
-                yield GetNewDataSinceResponse(
-                    keys=[value[0] for value in batch],
-                    timestamps=[value[1] for value in batch],
-                    labels=[value[2] for value in batch],
-                )
+            query = (
+                session.query(Sample.external_key, File.updated_at, Sample.label)
+                .join(File)
+                .filter(File.dataset_id == dataset.dataset_id)
+                .filter(File.updated_at >= timestamp)
+                .order_by(Sample.sample_id)
+            )
+
+            for batch in window_query(query, Sample.sample_id, self._sample_batch_size, False):
+                if len(batch) > 0:
+                    yield GetNewDataSinceResponse(
+                        keys=[value[0] for value in batch],
+                        timestamps=[value[1] for value in batch],
+                        labels=[value[2] for value in batch],
+                    )
 
     def GetDataInInterval(
         self, request: GetDataInIntervalRequest, context: grpc.ServicerContext
@@ -175,30 +181,36 @@ class StorageGRPCServicer(StorageServicer):
                 yield GetDataInIntervalResponse()
                 return
 
-            # TODO(#184): This materializes all keys in memory.
-            values = (
-                session.query(Sample.external_key, File.updated_at, Sample.label)
+            num_items = (
+                session.query(func.count(Sample.sample_id))  # pylint: disable-next=not-callable
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
                 .filter(File.updated_at <= request.end_timestamp)
-                .all()
+                .scalar()
             )
-
-            num_items = len(values)
 
             if num_items == 0:
                 logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
                 yield GetDataInIntervalResponse()
                 return
 
-            for i in range(0, num_items, self._sample_batch_size):
-                batch = values[i : i + self._sample_batch_size]
-                yield GetDataInIntervalResponse(
-                    keys=[value[0] for value in batch],
-                    timestamps=[value[1] for value in batch],
-                    labels=[value[2] for value in batch],
-                )
+            query = (
+                session.query(Sample.external_key, File.updated_at, Sample.label)
+                .join(File)
+                .filter(File.dataset_id == dataset.dataset_id)
+                .filter(File.updated_at >= request.start_timestamp)
+                .filter(File.updated_at <= request.end_timestamp)
+                .order_by(Sample.sample_id)
+            )
+
+            for batch in window_query(query, Sample.sample_id, self._sample_batch_size, False):
+                if len(batch) > 0:
+                    yield GetDataInIntervalResponse(
+                        keys=[value[0] for value in batch],
+                        timestamps=[value[1] for value in batch],
+                        labels=[value[2] for value in batch],
+                    )
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(
