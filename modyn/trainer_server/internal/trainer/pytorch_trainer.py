@@ -157,9 +157,8 @@ class PytorchTrainer:
         self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
 
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
-        dict_to_save = {
-            "model": self._model.model.state_dict(),
-        }
+        dict_to_save = {}
+        dict_to_save["model"] = self._model.model.state_dict()
         for optimizer_name, optimizer in self._optimizers.items():
             dict_to_save[f"optimizer-{optimizer_name}"] = optimizer.state_dict()
 
@@ -183,18 +182,15 @@ class PytorchTrainer:
 
         os.remove(path)
 
-    def send_state_to_server(self, batch_number: int) -> None:
+    def send_model_state_to_server(self) -> None:
         buffer = io.BytesIO()
         self.save_state(buffer)
         buffer.seek(0)
         bytes_state = buffer.read()
-        self._status_response_queue.put(
-            {
-                "state": bytes_state,
-                "num_batches": batch_number,
-                "num_samples": self._num_samples,
-            }
-        )
+        self._status_response_queue.put(bytes_state)
+
+    def send_status_to_server(self, batch_number: int) -> None:
+        self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -216,9 +212,12 @@ class PytorchTrainer:
             # element within that timeframe returned, we continue.
             try:
                 req = self._status_query_queue.get(timeout=0.01)
-                if req != TrainerMessages.STATUS_QUERY_MESSAGE:
+                if req == TrainerMessages.STATUS_QUERY_MESSAGE:
+                    self.send_status_to_server(batch_number)
+                elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
+                    self.send_model_state_to_server()
+                else:
                     raise ValueError("Unknown message in the status query queue")
-                self.send_state_to_server(batch_number)
             except queue.Empty:
                 pass
 

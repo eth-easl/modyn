@@ -20,9 +20,7 @@ def session():
 
 def test_add_trigger_sample_list(session):
     trigger_sample_list = TriggerSample(
-        trigger_id=1,
-        pipeline_id=1,
-        sample_key="sample_key",
+        trigger_id=1, pipeline_id=1, partition_id=1, sample_key="sample_key", sample_weight=1.0
     )
     session.add(trigger_sample_list)
     session.commit()
@@ -30,13 +28,12 @@ def test_add_trigger_sample_list(session):
     assert session.query(TriggerSample).filter(TriggerSample.trigger_sample_list_id == 1).first() is not None
     assert session.query(TriggerSample).filter(TriggerSample.trigger_id == 1).first().trigger_sample_list_id == 1
     assert session.query(TriggerSample).filter(TriggerSample.pipeline_id == 1).first().sample_key == "sample_key"
+    assert session.query(TriggerSample).filter(TriggerSample.pipeline_id == 1).first().partition_id == 1
 
 
 def test_update_trigger_sample_list(session):
     trigger_sample_list = TriggerSample(
-        trigger_id=1,
-        pipeline_id=1,
-        sample_key="sample_key",
+        trigger_id=1, pipeline_id=1, partition_id=1, sample_key="sample_key", sample_weight=1.0
     )
     session.add(trigger_sample_list)
     session.commit()
@@ -47,6 +44,8 @@ def test_update_trigger_sample_list(session):
 
     assert session.query(TriggerSample).filter(TriggerSample.trigger_sample_list_id == 1).first() is not None
     assert session.query(TriggerSample).filter(TriggerSample.trigger_sample_list_id == 1).first().trigger_id == 1
+    assert session.query(TriggerSample).filter(TriggerSample.trigger_sample_list_id == 1).first().partition_id == 1
+
     assert (
         session.query(TriggerSample).filter(TriggerSample.trigger_sample_list_id == 1).first().sample_key
         == "sample_key"
@@ -55,9 +54,7 @@ def test_update_trigger_sample_list(session):
 
 def test_delete_trigger_sample_list(session):
     trigger_sample_list = TriggerSample(
-        trigger_id=1,
-        pipeline_id=1,
-        sample_key="sample_key",
+        trigger_id=1, pipeline_id=1, partition_id=1, sample_key="sample_key", sample_weight=1.0
     )
     session.add(trigger_sample_list)
     session.commit()

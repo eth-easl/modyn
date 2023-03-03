@@ -1,6 +1,7 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name,singleton-comparison
 import os
 import pathlib
+import random
 from math import isclose
 from unittest.mock import MagicMock, patch
 
@@ -8,6 +9,7 @@ import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
+from modyn.utils import flatten
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -38,7 +40,7 @@ def setup_and_teardown():
 
 
 def test_constructor():
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     assert strat._is_first_trigger
 
 
@@ -47,17 +49,17 @@ def test_constructor_throws_on_invalid_config():
     conf["reset_after_trigger"] = True
 
     with pytest.raises(ValueError):
-        FreshnessSamplingStrategy(conf, get_minimal_modyn_config(), 0)
+        FreshnessSamplingStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
     conf = get_freshness_config()
     conf["unused_data_ratio"] = 0
 
     with pytest.raises(ValueError):
-        FreshnessSamplingStrategy(conf, get_minimal_modyn_config(), 0)
+        FreshnessSamplingStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
 
 def test_inform_data():
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
@@ -88,14 +90,16 @@ def test_inform_data():
 def test__on_trigger_first_trigger(
     test__mark_used: MagicMock, test__get_trigger_data: MagicMock, test__get_first_trigger_data: MagicMock
 ):
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat._is_first_trigger = True
 
     test__mark_used.return_value = None
     test__get_trigger_data.return_value = []
-    test__get_first_trigger_data.return_value = ["a", "b", "c", "d"]
+    test__get_first_trigger_data.return_value = [["a", "b", "c", "d"]]
 
-    result = strat._on_trigger()
+    result = list(strat._on_trigger())
+    assert len(result) == 1
+    result = result[0]
 
     test__get_trigger_data.assert_not_called()
     test__mark_used.assert_called_once()
@@ -114,14 +118,16 @@ def test__on_trigger_first_trigger(
 def test__on_trigger_subsequent_trigger(
     test__mark_used: MagicMock, test__get_trigger_data: MagicMock, test__get_first_trigger_data: MagicMock
 ):
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat._is_first_trigger = False
 
     test__mark_used.return_value = None
-    test__get_trigger_data.return_value = ["a", "b", "c", "d"]
+    test__get_trigger_data.return_value = [["a", "b", "c", "d"]]
     test__get_first_trigger_data.return_value = []
 
-    result = strat._on_trigger()
+    result = list(strat._on_trigger())
+    assert len(result) == 1
+    result = result[0]
 
     test__get_first_trigger_data.assert_not_called()
     test__mark_used.assert_called_once()
@@ -135,106 +141,164 @@ def test__on_trigger_subsequent_trigger(
 
 
 @patch.object(FreshnessSamplingStrategy, "_get_all_unused_data")
-@patch.object(FreshnessSamplingStrategy, "_get_all_used_data")
 @patch.object(FreshnessSamplingStrategy, "_calc_num_samples_no_limit")
 @patch.object(FreshnessSamplingStrategy, "_calc_num_samples_limit")
 def test__get_first_trigger_data(
     test__calc_num_samples_limit: MagicMock,
     test__calc_num_samples_no_limit: MagicMock,
-    test__get_all_used_data: MagicMock,
     test__get_all_unused_data: MagicMock,
 ):
-    test__get_all_unused_data.return_value = ["a", "b", "c", "d"]
-    test__get_all_used_data.return_value = ["e", "f", "g", "h"]
+    test__get_all_unused_data.return_value = [["a", "b", "c", "d"]]
     test__calc_num_samples_no_limit.return_value = (4, 4)
     test__calc_num_samples_limit.return_value = (2, 2)
     config = get_freshness_config()
 
-    strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
     strat._is_first_trigger = True
 
-    result = strat._get_first_trigger_data()
+    result = list(strat._get_first_trigger_data())
+    assert len(result) == 1
+    result = result[0]
+
     test__get_all_unused_data.assert_called_once()
-    test__get_all_used_data.assert_not_called()
 
     assert not strat._is_first_trigger
     assert result == ["a", "b", "c", "d"]
 
     with pytest.raises(AssertionError):
-        strat._get_first_trigger_data()
+        list(strat._get_first_trigger_data())
 
     strat.has_limit = True
     strat.training_set_size_limit = 20000
     strat._is_first_trigger = True
-    assert strat._get_first_trigger_data() == ["a", "b", "c", "d"]
+    result = list(strat._get_first_trigger_data())
+    assert len(result) == 1
+    result = result[0]
+    assert result == ["a", "b", "c", "d"]
 
     strat.training_set_size_limit = 2
     strat._is_first_trigger = True
-    result = strat._get_first_trigger_data()
+    result = list(strat._get_first_trigger_data())
+    assert len(result) == 1
+    result = result[0]
 
     assert len(result) == 2
     assert set(result) < set(["a", "b", "c", "d"])
 
 
 @patch.object(FreshnessSamplingStrategy, "_get_all_unused_data")
-@patch.object(FreshnessSamplingStrategy, "_get_all_used_data")
+@patch.object(FreshnessSamplingStrategy, "_calc_num_samples_no_limit")
+@patch.object(FreshnessSamplingStrategy, "_calc_num_samples_limit")
+def test__get_first_trigger_data_partitions(
+    test__calc_num_samples_limit: MagicMock,
+    test__calc_num_samples_no_limit: MagicMock,
+    test__get_all_unused_data: MagicMock,
+):
+    test__get_all_unused_data.return_value = [["a", "b"], ["c", "d"]]
+    test__calc_num_samples_no_limit.return_value = (4, 4)
+    test__calc_num_samples_limit.return_value = (2, 2)
+    config = get_freshness_config()
+
+    strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat._is_first_trigger = True
+
+    result = list(strat._get_first_trigger_data())
+    assert len(result) == 2
+    result = flatten(result)
+
+    test__get_all_unused_data.assert_called_once()
+
+    assert not strat._is_first_trigger
+    assert result == ["a", "b", "c", "d"]
+
+    with pytest.raises(AssertionError):
+        list(strat._get_first_trigger_data())
+
+    # TODO(#179): We do not support a limit larger than or equal to the partition size right now
+    # Write test as soon as this is supported again.
+
+
+@patch.object(FreshnessSamplingStrategy, "_get_data_sample")
+@patch.object(FreshnessSamplingStrategy, "_get_count_of_data")
 @patch.object(FreshnessSamplingStrategy, "_calc_num_samples_no_limit")
 @patch.object(FreshnessSamplingStrategy, "_calc_num_samples_limit")
 def test__get_trigger_data_limit(
     test__calc_num_samples_limit: MagicMock,
     test__calc_num_samples_no_limit: MagicMock,
-    test__get_all_used_data: MagicMock,
-    test__get_all_unused_data: MagicMock,
+    test__get_count_of_data: MagicMock,
+    test__get_data_sample: MagicMock,
 ):
-    test__get_all_unused_data.return_value = ["a", "b", "c", "d"]
-    test__get_all_used_data.return_value = ["e", "f", "g", "h"]
+    test__get_count_of_data.return_value = 4
     test__calc_num_samples_no_limit.return_value = (4, 4)
     test__calc_num_samples_limit.return_value = (2, 2)
+
+    def sampler(size, used):
+        if used:
+            return iter([random.sample(["e", "f", "g", "h"], size)])
+
+        return iter([random.sample(["a", "b", "c", "d"], size)])
+
+    test__get_data_sample.side_effect = sampler
+
     config = get_freshness_config()
     config["limit"] = 4
 
-    strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
     strat._is_first_trigger = False
-    result = strat._get_trigger_data()
+    result = list(strat._get_trigger_data())
+    assert len(result) == 1
+    result = result[0]
+
     assert len(result) == 4
     assert set(result) < set(["a", "b", "c", "d", "e", "f", "g", "h"])
 
 
-@patch.object(FreshnessSamplingStrategy, "_get_all_unused_data")
-@patch.object(FreshnessSamplingStrategy, "_get_all_used_data")
+@patch.object(FreshnessSamplingStrategy, "_get_data_sample")
+@patch.object(FreshnessSamplingStrategy, "_get_count_of_data")
 @patch.object(FreshnessSamplingStrategy, "_calc_num_samples_no_limit")
 @patch.object(FreshnessSamplingStrategy, "_calc_num_samples_limit")
 def test__get_trigger_data_no_limit(
     test__calc_num_samples_limit: MagicMock,
     test__calc_num_samples_no_limit: MagicMock,
-    test__get_all_used_data: MagicMock,
-    test__get_all_unused_data: MagicMock,
+    test__get_count_of_data: MagicMock,
+    test__get_data_sample: MagicMock,
 ):
-    test__get_all_unused_data.return_value = ["a", "b", "c", "d"]
-    test__get_all_used_data.return_value = ["e", "f", "g", "h"]
+    test__get_count_of_data.return_value = 4
     test__calc_num_samples_no_limit.return_value = (4, 4)
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat._is_first_trigger = False
 
-    assert set(strat._get_trigger_data()) == set(["a", "b", "c", "d", "e", "f", "g", "h"])
-    test__get_all_unused_data.assert_called_once()
-    test__get_all_used_data.assert_called_once()
+    def sampler(size, used):
+        if used:
+            return iter([random.sample(["e", "f", "g", "h"], size)])
+
+        return iter([random.sample(["a", "b", "c", "d"], size)])
+
+    test__get_data_sample.side_effect = sampler
+
+    result = list(strat._get_trigger_data())
+    assert len(result) == 1
+    result = result[0]
+
+    assert set(result) == set(["a", "b", "c", "d", "e", "f", "g", "h"])
     test__calc_num_samples_no_limit.assert_called_once_with(4, 4)
     test__calc_num_samples_limit.assert_not_called()
 
     test__calc_num_samples_no_limit.return_value = (2, 2)
-    result = strat._get_trigger_data()
+    result = list(strat._get_trigger_data())
+    assert len(result) == 1
+    result = result[0]
 
     assert len(result) == 4
     assert set(result) < set(["a", "b", "c", "d", "e", "f", "g", "h"])
 
     with pytest.raises(AssertionError):
         strat._is_first_trigger = True
-        strat._get_trigger_data()
+        list(strat._get_trigger_data())
 
 
 def test__calc_num_samples_no_limit():
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat.unused_data_ratio = 50
 
     assert strat._calc_num_samples_no_limit(100, 100) == (100, 100)
@@ -254,7 +318,7 @@ def test__calc_num_samples_limit():
     config = get_freshness_config()
     config["limit"] = 100
 
-    strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
     strat.unused_data_ratio = 50
 
     assert strat.has_limit
@@ -268,28 +332,112 @@ def test__calc_num_samples_limit():
     assert strat._calc_num_samples_limit(100, 100) == (90, 10)
 
 
-def test__get_all_used_data():
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
-    strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
-    strat._mark_used(["a"])
-
-    assert set(strat._get_all_used_data()) == set(["a"])
-    strat._mark_used(["a", "b", "c"])
-    assert set(strat._get_all_used_data()) == set(["a", "b", "c"])
-
-
 def test__get_all_unused_data():
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
     strat._mark_used(["a"])
 
-    assert set(strat._get_all_unused_data()) == set(["b", "c"])
+    assert set(list(strat._get_all_unused_data())[0]) == set(["b", "c"])
     strat._mark_used(["a", "b", "c"])
-    assert set(strat._get_all_unused_data()) == set([])
+    assert len(list(strat._get_all_unused_data())) == 0
+
+
+def test__get_all_unused_data_partitioning():
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
+    strat._maximum_keys_in_memory = 1
+    strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
+    strat._mark_used(["a"])
+
+    result = list(strat._get_all_unused_data())
+    assert len(result) == 2
+    result = flatten(result)
+
+    assert set(result) == set(["b", "c"])
+    strat._mark_used(["a", "b", "c"])
+    assert len(list(strat._get_all_unused_data())) == 0
+
+
+def test__get_data_sample_no_partitions():
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
+    strat.inform_data(["a", "b", "c", "d", "e", "f"], [0, 1, 2, 3, 4, 5], [0, 0, 0, 0, 0, 0])
+    used = ["a", "b", "c"]
+    unused = ["d", "e", "f"]
+
+    strat._mark_used(used)
+
+    # Confirm that mark used worked
+    result = flatten(list(strat._get_all_unused_data()))
+    assert set(result) == set(["d", "e", "f"])
+
+    # Test full sample (not actually random)
+    used_sample = list(strat._get_data_sample(3, True))
+    assert len(used_sample) == 1
+    used_sample = used_sample[0]
+    assert len(used_sample) == 3
+    assert set(used_sample) == set(used)
+
+    unused_sample = list(strat._get_data_sample(3, False))
+    assert len(unused_sample) == 1
+    unused_sample = unused_sample[0]
+    assert len(unused_sample) == 3
+    assert set(unused_sample) == set(unused)
+
+    # Test sample of size 2
+    used_sample = list(strat._get_data_sample(2, True))
+    assert len(used_sample) == 1
+    used_sample = used_sample[0]
+    assert len(used_sample) == 2
+    assert set(used_sample) < set(used)
+
+    unused_sample = list(strat._get_data_sample(2, False))
+    assert len(unused_sample) == 1
+    unused_sample = unused_sample[0]
+    assert len(unused_sample) == 2
+    assert set(unused_sample) < set(unused)
+
+
+def test__get_data_sample_partitions():
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
+    strat._maximum_keys_in_memory = 1
+    strat.inform_data(["a", "b", "c", "d", "e", "f"], [0, 1, 2, 3, 4, 5], [0, 0, 0, 0, 0, 0])
+    used = ["a", "b", "c"]
+    unused = ["d", "e", "f"]
+
+    strat._mark_used(used)
+
+    # Confirm that mark used worked
+    result = flatten(list(strat._get_all_unused_data()))
+    assert set(result) == set(["d", "e", "f"])
+
+    # Test full sample (not actually random)
+    used_sample = list(strat._get_data_sample(3, True))
+    assert len(used_sample) == 3
+    used_sample = flatten(used_sample)
+    assert len(used_sample) == 3
+    assert set(used_sample) == set(used)
+
+    unused_sample = list(strat._get_data_sample(3, False))
+    assert len(unused_sample) == 3
+    unused_sample = flatten(unused_sample)
+    assert len(unused_sample) == 3
+    assert set(unused_sample) == set(unused)
+
+    # Test sample of size 2
+    used_sample = list(strat._get_data_sample(2, True))
+    assert len(used_sample) == 2
+    used_sample = flatten(used_sample)
+    assert len(used_sample) == 2
+    assert set(used_sample) < set(used)
+
+    unused_sample = list(strat._get_data_sample(2, False))
+    assert len(unused_sample) == 2
+    unused_sample = flatten(unused_sample)
+    assert len(unused_sample) == 2
+    assert set(unused_sample) < set(unused)
 
 
 def test__mark_used():
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
@@ -327,6 +475,6 @@ def test__mark_used():
 
 
 def test__reset_state():
-    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0)
+    strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     with pytest.raises(Exception):
         strat._reset_state()
