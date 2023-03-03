@@ -42,6 +42,7 @@ training:
     path: "results"
   selection_strategy:
     name: NewDataStrategy
+    maximum_keys_in_memory: 500000
     config:
       limit: -1
       reset_after_trigger: True

@@ -15,7 +15,9 @@ class SelectorServer:
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
         self.selector_manager = SelectorManager(modyn_config)
-        self.grpc_servicer = SelectorGRPCServicer(self.selector_manager)
+        self.grpc_servicer = SelectorGRPCServicer(
+            self.selector_manager, self.modyn_config["selector"]["sample_batch_size"]
+        )
         self._add_servicer_to_server_func = add_SelectorServicer_to_server
 
     def prepare_server(self) -> grpc.server:

@@ -2,7 +2,7 @@
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from modyn.backend.metadata_database.models import Pipeline
-from sqlalchemy import Column, ForeignKey, Integer
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer
 
 
 class Trigger(MetadataBase):
@@ -15,3 +15,5 @@ class Trigger(MetadataBase):
     }
     trigger_id = Column("trigger_id", Integer, primary_key=True)
     pipeline_id = Column(Integer, ForeignKey(Pipeline.pipeline_id), nullable=False, primary_key=True)
+    num_keys = Column("num_keys", BigInteger, nullable=True)
+    num_partitions = Column("num_partitions", Integer, nullable=True)

@@ -4,10 +4,11 @@ package selector;
 
 service Selector {
     rpc register_pipeline(RegisterPipelineRequest) returns (PipelineResponse) {}
-    rpc get_sample_keys_and_weights(GetSamplesRequest) returns (SamplesResponse) {}
+    rpc get_sample_keys_and_weights(GetSamplesRequest) returns (stream SamplesResponse) {}
     rpc inform_data(DataInformRequest) returns (Empty) {}
     rpc inform_data_and_trigger(DataInformRequest) returns (TriggerResponse) {}
     rpc get_number_of_samples(GetNumberOfSamplesRequest) returns (NumberOfSamplesResponse) {}
+    rpc get_number_of_partitions(GetNumberOfPartitionsRequest) returns (NumberOfPartitionsResponse) {}
 }
 
 message Empty {
@@ -41,7 +42,8 @@ message PipelineResponse {
 message GetSamplesRequest {
     int32 pipeline_id = 1;
     int32 trigger_id = 2;
-    int32 worker_id = 3;
+    int32 partition_id = 3;
+    int32 worker_id = 4;
 }
 
 message SamplesResponse {
@@ -56,5 +58,14 @@ message GetNumberOfSamplesRequest {
 
 message NumberOfSamplesResponse {
     int32 num_samples = 1;
+}
+
+message GetNumberOfPartitionsRequest {
+    int32 pipeline_id = 1;
+    int32 trigger_id = 2;
+}
+
+message NumberOfPartitionsResponse {
+    int32 num_partitions = 1;
 }
 

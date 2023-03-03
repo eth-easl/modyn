@@ -124,18 +124,21 @@ class GetSamplesRequest(google.protobuf.message.Message):
 
     PIPELINE_ID_FIELD_NUMBER: builtins.int
     TRIGGER_ID_FIELD_NUMBER: builtins.int
+    PARTITION_ID_FIELD_NUMBER: builtins.int
     WORKER_ID_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
+    partition_id: builtins.int
     worker_id: builtins.int
     def __init__(
         self,
         *,
         pipeline_id: builtins.int = ...,
         trigger_id: builtins.int = ...,
+        partition_id: builtins.int = ...,
         worker_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id", "worker_id", b"worker_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["partition_id", b"partition_id", "pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id", "worker_id", b"worker_id"]) -> None: ...
 
 global___GetSamplesRequest = GetSamplesRequest
 
@@ -191,3 +194,36 @@ class NumberOfSamplesResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["num_samples", b"num_samples"]) -> None: ...
 
 global___NumberOfSamplesResponse = NumberOfSamplesResponse
+
+@typing_extensions.final
+class GetNumberOfPartitionsRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    TRIGGER_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    trigger_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+        trigger_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]) -> None: ...
+
+global___GetNumberOfPartitionsRequest = GetNumberOfPartitionsRequest
+
+@typing_extensions.final
+class NumberOfPartitionsResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    NUM_PARTITIONS_FIELD_NUMBER: builtins.int
+    num_partitions: builtins.int
+    def __init__(
+        self,
+        *,
+        num_partitions: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["num_partitions", b"num_partitions"]) -> None: ...
+
+global___NumberOfPartitionsResponse = NumberOfPartitionsResponse
