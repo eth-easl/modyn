@@ -1,3 +1,4 @@
+import gc
 import logging
 from inspect import isfunction
 from typing import Any, Callable, Generator, Optional
@@ -5,7 +6,7 @@ from typing import Any, Callable, Generator, Optional
 import grpc
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest, SamplesResponse
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
@@ -17,6 +18,24 @@ logger = logging.getLogger(__name__)
 
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
+
+
+# TODO(#169): remove this when partitions are supported at the selector
+class GetNumberOfPartitionsRequest:
+    def __init__(self, pipeline_id: int, trigger_id: int) -> None:
+        pass
+
+
+# TODO(#169): remove this when partitions are supported at the selector
+class GetNumberOfPartitionsResponse:
+    def __init__(self) -> None:
+        self.num_partitions = 10
+
+
+# TODO(#169): remove this when partitions are supported at the selector
+# pylint: disable=unused-argument
+def get_num_partitions(request: GetNumberOfPartitionsRequest) -> GetNumberOfPartitionsResponse:
+    return GetNumberOfPartitionsResponse()
 
 
 class OnlineDataset(IterableDataset):
@@ -50,15 +69,20 @@ class OnlineDataset(IterableDataset):
         self._storagestub: StorageStub = None
         self._selectorstub: SelectorStub = None
         self._bytes_parser_function: Optional[Callable] = None
+        self._num_partitions = 0
 
         logger.debug("Initialized OnlineDataset.")
 
-    def _get_keys_from_selector(self, worker_id: int) -> list[str]:
+    # pylint: disable=unused-argument
+    def _get_keys_from_selector(self, worker_id: int, partition_nr: int) -> list[str]:
         assert self._selectorstub is not None
 
+        # TODO(#169): provide partition_nr in the request, when enabled at the selector
         req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
-        samples_response: SamplesResponse = self._selectorstub.get_sample_keys_and_weights(req)
-        return samples_response.training_samples_subset  # TODO(#138): take into account sample weights when needed
+        keys = []
+        for response in self._selectorstub.get_sample_keys_and_weights(req):
+            keys += list(response.training_samples_subset)  # TODO(#138): take into account sample weights when needed
+        return keys
 
     def _get_data_from_storage(self, selector_keys: list[str]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -120,6 +144,25 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
+    def _get_data(self, worker_id: int, partition_nr: int) -> tuple[list[str], list[bytes], list[int]]:
+        self._info("Getting keys from selector", worker_id)
+        keys = self._get_keys_from_selector(worker_id, partition_nr)
+        self._info("Getting data from storage", worker_id)
+        data, labels = self._get_data_from_storage(keys)
+        return keys, data, labels
+
+    def _get_num_data_partitions(self) -> int:
+        assert self._selectorstub is not None
+
+        # TODO(#169): replace these with actual calls to the selector
+        num_partitions_request = GetNumberOfPartitionsRequest(
+            pipeline_id=self._pipeline_id,
+            trigger_id=self._trigger_id,
+        )
+        response = get_num_partitions(num_partitions_request)
+        return response.num_partitions
+
+    # pylint: disable=too-many-locals
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -139,19 +182,31 @@ class OnlineDataset(IterableDataset):
 
         assert self._transform is not None
         self._trainining_set_number += 1
+        self._num_partitions = self._get_num_data_partitions()
+        self._info(f"Total number of partitions will be {self._num_partitions}", worker_id)
 
-        self._info("Getting keys from selector", worker_id)
-        keys = self._get_keys_from_selector(worker_id)
-        self._info("Getting data from storage", worker_id)
-        # TODO(#149): Optimize this
-        data, labels = self._get_data_from_storage(keys)
+        keys, data, labels = self._get_data(worker_id=worker_id, partition_nr=0)
 
-        self._dataset_len = len(data)
-        self._info(f"Data obtained (len = {self._dataset_len})", worker_id)
+        for partition in range(self._num_partitions):
+            num_samples_on_this_partition = len(keys)
+            # set arbitrarily to when we have seen 80% of the current partition
+            fetch_next_partition_idx = int(num_samples_on_this_partition * 0.8)
+            self._info(f"Train on partition {partition}, on {num_samples_on_this_partition} batches", worker_id)
 
-        for key, sample, label in zip(keys, data, labels):
-            # mypy complains here because _transform has unknown type, which is ok
-            yield key, self._transform(sample), label  # type: ignore
+            for idx, (key, sample, label) in enumerate(zip(keys, data, labels)):
+                if partition < self._num_partitions - 1 and idx == fetch_next_partition_idx:
+                    # TODO(#175) in case this blocks training
+                    new_keys, new_data, new_labels = self._get_data(worker_id=worker_id, partition_nr=partition + 1)
+                # mypy complains here because _transform has unknown type, which is ok
+                yield key, self._transform(sample), label  # type: ignore
 
-    def __len__(self) -> int:
-        return self._dataset_len
+            # this should mean we keep only two partitions in mem
+            if partition < self._num_partitions - 1:
+                del keys
+                del data
+                del labels
+                keys, data, labels = new_keys, new_data, new_labels
+                del new_keys
+                del new_data
+                del new_labels
+                gc.collect()
