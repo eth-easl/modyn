@@ -208,8 +208,10 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return (
                 database.session.query(SelectorStateMetadata.sample_key)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used)
-                .count()
+                # TODO(#182): Index on used?
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used
+                ).count()
             )
 
     def _mark_used(self, keys: list[str]) -> None:
