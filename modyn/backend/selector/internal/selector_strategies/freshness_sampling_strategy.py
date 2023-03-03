@@ -82,7 +82,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         self._is_first_trigger = False
 
         for samples in self._get_all_unused_data():
-            # TODO(create issue): this assumes limit < len(samples)
+            # TODO(#179): this assumes limit < len(samples)
             if self.has_limit and self.training_set_size_limit < len(samples):
                 samples = random.sample(samples, self.training_set_size_limit)
 

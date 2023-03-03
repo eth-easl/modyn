@@ -61,11 +61,14 @@ def test_get_sample_keys_and_weight_cached(test_get_training_set_partition: Magi
     assert result == [("a", 1.0), ("b", 1.0)]
     test_get_training_set_partition.assert_called_once_with([("a", 1.0), ("b", 1.0)], 2)
 
+    result = selector.get_sample_keys_and_weights(42, 2, 1)
+    assert result == [("c", 1.0), ("d", 1.0)]
+
     with pytest.raises(ValueError):
         selector.get_sample_keys_and_weights(42, 1337, 0)
 
-    result = selector.get_sample_keys_and_weights(42, 2, 1)
-    assert result == [("c", 1.0), ("d", 1.0)]
+    with pytest.raises(ValueError):
+        selector.get_sample_keys_and_weights(42, 2, 1337)
 
 
 @patch.object(Selector, "_get_training_set_partition")
@@ -152,3 +155,13 @@ def test_get_number_of_samples():
 
     with pytest.raises(ValueError):
         selector.get_number_of_samples(21)
+
+
+def test_get_number_of_partitions():
+    selector = Selector(MockStrategy(), 42, 3)
+    selector._trigger_partition_cache[42] = 2
+
+    assert selector.get_number_of_partitions(42) == 2
+
+    with pytest.raises(ValueError):
+        selector.get_number_of_partitions(21)

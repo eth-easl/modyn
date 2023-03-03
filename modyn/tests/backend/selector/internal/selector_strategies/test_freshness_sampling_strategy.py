@@ -214,7 +214,8 @@ def test__get_first_trigger_data_partitions(
     with pytest.raises(AssertionError):
         list(strat._get_first_trigger_data())
 
-    # TODO(create issue): We do not support a limit larger than or equal to the partition size right now
+    # TODO(#179): We do not support a limit larger than or equal to the partition size right now
+    # Write test as soon as this is supported again.
 
 
 @patch.object(FreshnessSamplingStrategy, "_get_data_sample")

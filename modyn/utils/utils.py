@@ -12,6 +12,7 @@ import grpc
 import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
+from sqlalchemy.engine.row import Row
 from sqlalchemy.orm import Query
 
 logger = logging.getLogger(__name__)
@@ -121,10 +122,7 @@ def package_available_and_can_be_imported(package: str) -> bool:
         return False
 
 
-# TODO(MaxiBoether): return type?
-
-
-def window_query(query: Query, column: str, windowsize: int, ordering_required: bool) -> Iterable[Any]:
+def window_query(query: Query, column: str, windowsize: int, ordering_required: bool) -> Iterable[Row]:
     """ "Break a Query into chunks on a given column.
     Returns Iterator over chunks."""
 

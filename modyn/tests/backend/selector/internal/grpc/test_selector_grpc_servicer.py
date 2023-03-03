@@ -84,6 +84,23 @@ def test_get_sample_keys_and_weights_batching(test_get_sample_keys_and_weights: 
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+@patch.object(SelectorManager, "get_sample_keys_and_weights")
+def test_get_sample_keys_and_weights_empty(test_get_sample_keys_and_weights: MagicMock):
+    mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
+    servicer = SelectorGRPCServicer(mgr, 8096)
+    request = GetSamplesRequest(pipeline_id=0, trigger_id=1, worker_id=2, partition_id=3)
+    test_get_sample_keys_and_weights.return_value = []
+
+    responses: Iterable[SamplesResponse] = list(servicer.get_sample_keys_and_weights(request, None))
+    assert len(responses) == 1
+    response1 = responses[0]
+    assert response1.training_samples_subset == []
+    assert response1.training_samples_weights == []
+
+    test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "inform_data")
 def test_inform_data(test_inform_data: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})

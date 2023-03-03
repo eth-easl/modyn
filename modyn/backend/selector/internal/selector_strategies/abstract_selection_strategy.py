@@ -63,12 +63,11 @@ class AbstractSelectionStrategy(ABC):
                 self._next_trigger_id = last_trigger_id + 1
 
         if self.has_limit and self.training_set_size_limit > self._maximum_keys_in_memory:
-            # Otherwise, we need to somehow sample over multiple not-in-memory partitions, which is a problem
+            # TODO(#179) Otherwise, we need to somehow sample over multiple not-in-memory partitions, which is a problem
             # Right now, we interpret the limit as a limit per partition
             # (this means a limit of 2 with 4 partitions with lead to 8 data points!)
             # This is also problematic since the limit now depends on the chunking. However, we need to think about
             # how to do this carefully
-            # TODO(MB): create an issue to back to a limit per trigger
             raise ValueError(
                 "We currently do not support a limit that is "
                 "larger than the maximum amount of keys we may hold in memory."
@@ -81,10 +80,10 @@ class AbstractSelectionStrategy(ABC):
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
         keys.
 
-        TODO(MaxiBoether): update below
-
         Returns:
-            list(tuple(str, float)): Each entry is a training sample, where the first element of the tuple
+            Iterable[list[tuple[str, float]]]:
+                Iterable over partitions. Each partition consists of a list of training samples.
+                In each list, each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
         raise NotImplementedError

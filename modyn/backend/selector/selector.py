@@ -95,7 +95,7 @@ class Selector:
         assert trigger_id not in self._trigger_size_cache, "Trigger ID already exists, something went wrong."
 
         if self._current_keys_in_cache + total_keys_in_trigger <= self._maximum_keys_in_cache:
-            # TODO(create issue): offer function to delete old triggers from cache, e.g., after a training is done.
+            # TODO(#178): offer function to delete old triggers from cache, e.g., after a training is done.
             self._trigger_cache[trigger_id] = [
                 self._strategy.get_trigger_partition_keys(trigger_id, partition_id)
                 for partition_id in range(partitions_in_trigger)

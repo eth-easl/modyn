@@ -58,14 +58,14 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
     def _on_trigger(self) -> Iterable[list[tuple[str, float]]]:
         """
-        Internal function. Calculates the next set of data to
+        Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
         keys.
 
-        TODO(MaxiBoether): update docstring
-
         Returns:
-            list(tuple(str, float)): Each entry is a training sample, where the first element of the tuple
+            Iterable[list[tuple[str, float]]]:
+                Iterable over partitions. Each partition consists of a list of training samples.
+                In each list, each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
         if self.reset_after_trigger:
@@ -81,7 +81,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         assert self.reset_after_trigger
 
         for samples in self._get_current_trigger_data():
-            # TODO(create issue): this assumes limit < len(samples)
+            # TODO(#179): this assumes limit < len(samples)
             if self.has_limit:
                 samples = random.sample(samples, min(len(samples), self.training_set_size_limit))
 
@@ -90,7 +90,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
     def _get_data_no_reset(self) -> Iterable[list[str]]:
         assert not self.reset_after_trigger
         for samples in self._get_all_data():
-            # TODO(create issue): this assumes limit < len(samples)
+            # TODO(#179): this assumes limit < len(samples)
             if self.has_limit:
                 samples = self._handle_limit_no_reset(samples)
 
