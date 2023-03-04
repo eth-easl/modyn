@@ -7,8 +7,7 @@ from typing import Iterable
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.utils import window_query
-from sqlalchemy import asc
+from sqlalchemy import asc, select
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +125,10 @@ class NewDataStrategy(AbstractSelectionStrategy):
             list[str]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            query = (
-                database.session.query(SelectorStateMetadata.sample_key)
+            stmt = (
+                select(SelectorStateMetadata.sample_key)
+                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id,
@@ -135,7 +136,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
-            for chunk in window_query(query, SelectorStateMetadata.timestamp, self._maximum_keys_in_memory, False):
+            for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
                 else:
@@ -148,13 +149,15 @@ class NewDataStrategy(AbstractSelectionStrategy):
             list[str]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            query = (
-                database.session.query(SelectorStateMetadata.sample_key)
+            stmt = (
+                select(SelectorStateMetadata.sample_key)
+                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
-            for chunk in window_query(query, SelectorStateMetadata.timestamp, self._maximum_keys_in_memory, False):
+            for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
                 else:

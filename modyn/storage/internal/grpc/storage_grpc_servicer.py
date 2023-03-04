@@ -24,8 +24,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     RegisterNewDatasetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
-from modyn.utils.utils import current_time_millis, window_query
-from sqlalchemy import func
+from modyn.utils.utils import current_time_millis
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -134,14 +134,17 @@ class StorageGRPCServicer(StorageServicer):
 
             timestamp = request.timestamp
 
-            query = (
-                session.query(Sample.external_key, File.updated_at, Sample.label)
+            stmt = (
+                select(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)
+                # Enables batching of results in chunks.
+                # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._sample_batch_size)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
             )
 
-            for batch in query.yield_per(self._sample_batch_size):
+            for batch in database.session.execute(stmt).partitions():
                 if len(batch) > 0:
                     yield GetNewDataSinceResponse(
                         keys=[value[0] for value in batch],
@@ -167,15 +170,18 @@ class StorageGRPCServicer(StorageServicer):
                 yield GetDataInIntervalResponse()
                 return
 
-            query = (
-                session.query(Sample.external_key, File.updated_at, Sample.label)
+            stmt = (
+                select(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)
+                # Enables batching of results in chunks.
+                # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._sample_batch_size)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
                 .filter(File.updated_at <= request.end_timestamp)
             )
 
-            for batch in query.yield_per(self._sample_batch_size):
+            for batch in database.session.execute(stmt).partitions():
                 if len(batch) > 0:
                     yield GetDataInIntervalResponse(
                         keys=[value[0] for value in batch],
