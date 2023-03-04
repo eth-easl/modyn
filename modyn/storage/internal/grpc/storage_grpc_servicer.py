@@ -134,28 +134,14 @@ class StorageGRPCServicer(StorageServicer):
 
             timestamp = request.timestamp
 
-            num_items = (
-                session.query(func.count(Sample.sample_id))  # pylint: disable=not-callable
-                .join(File)
-                .filter(File.dataset_id == dataset.dataset_id)
-                .filter(File.updated_at >= timestamp)
-                .scalar()
-            )
-
-            if num_items == 0:
-                logger.info(f"No new data since {timestamp}")
-                yield GetNewDataSinceResponse()
-                return
-
             query = (
                 session.query(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
-                .order_by(Sample.sample_id)
             )
 
-            for batch in window_query(query, Sample.sample_id, self._sample_batch_size, False):
+            for batch in query.yield_per(self._sample_batch_size):
                 if len(batch) > 0:
                     yield GetNewDataSinceResponse(
                         keys=[value[0] for value in batch],
@@ -181,30 +167,15 @@ class StorageGRPCServicer(StorageServicer):
                 yield GetDataInIntervalResponse()
                 return
 
-            num_items = (
-                session.query(func.count(Sample.sample_id))  # pylint: disable=not-callable
-                .join(File)
-                .filter(File.dataset_id == dataset.dataset_id)
-                .filter(File.updated_at >= request.start_timestamp)
-                .filter(File.updated_at <= request.end_timestamp)
-                .scalar()
-            )
-
-            if num_items == 0:
-                logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
-                yield GetDataInIntervalResponse()
-                return
-
             query = (
                 session.query(Sample.external_key, File.updated_at, Sample.label)
                 .join(File)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
                 .filter(File.updated_at <= request.end_timestamp)
-                .order_by(Sample.sample_id)
             )
 
-            for batch in window_query(query, Sample.sample_id, self._sample_batch_size, False):
+            for batch in query.yield_per(self._sample_batch_size):
                 if len(batch) > 0:
                     yield GetDataInIntervalResponse(
                         keys=[value[0] for value in batch],
