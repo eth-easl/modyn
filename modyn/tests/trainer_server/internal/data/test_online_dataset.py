@@ -482,9 +482,7 @@ def test_iter_multi_partition_cross(
         ([x.to_bytes(2, "big") for x in range(4)], [1] * 4),
     ],
 )
-@patch.object(
-    OnlineDataset, "_get_keys_from_selector", side_effect=[list(range(4)), list(range(4))]
-)
+@patch.object(OnlineDataset, "_get_keys_from_selector", side_effect=[list(range(4)), list(range(4))])
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=2)
 def test_iter_multi_partition_multi_workers(
     test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
