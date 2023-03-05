@@ -230,6 +230,7 @@ class NewFileWatcher:
                 )
                 proc.start()
                 processes.append(proc)
+                time.sleep(0.01)
 
         for proc in processes:
             proc.join()
