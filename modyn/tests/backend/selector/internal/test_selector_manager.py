@@ -101,9 +101,9 @@ def test_get_sample_keys_and_weights(
         # Too many workers
         selec.get_sample_keys_and_weights(pipe_id, 0, 2, 0)
 
-    selector_get_sample_keys_and_weight.return_value = [("a", 1.0), ("b", 1.0)]
+    selector_get_sample_keys_and_weight.return_value = [(10, 1.0), (11, 1.0)]
 
-    assert selec.get_sample_keys_and_weights(0, 0, 0, 0) == [("a", 1.0), ("b", 1.0)]
+    assert selec.get_sample_keys_and_weights(0, 0, 0, 0) == [(10, 1.0), (11, 1.0)]
 
     selector_get_sample_keys_and_weight.assert_called_once_with(0, 0, 0)
 
@@ -117,14 +117,14 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
     test__instantiate_strategy.return_value = MockStrategy()
 
     with pytest.raises(ValueError):
-        selec.inform_data(0, ["a"], [0], [0])
+        selec.inform_data(0, [10], [0], [0])
 
     pipe_id = selec.register_pipeline(2, "{}")
     selector_inform_data.return_value = None
 
-    selec.inform_data(pipe_id, ["a"], [0], [0])
+    selec.inform_data(pipe_id, [10], [0], [0])
 
-    selector_inform_data.assert_called_once_with(["a"], [0], [0])
+    selector_inform_data.assert_called_once_with([10], [0], [0])
 
 
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
@@ -136,14 +136,14 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
     test__instantiate_strategy.return_value = MockStrategy()
 
     with pytest.raises(ValueError):
-        selec.inform_data_and_trigger(0, ["a"], [0], [0])
+        selec.inform_data_and_trigger(0, [10], [0], [0])
 
     pipe_id = selec.register_pipeline(2, "{}")
     selector_inform_data_and_trigger.return_value = None
 
-    selec.inform_data_and_trigger(pipe_id, ["a"], [0], [0])
+    selec.inform_data_and_trigger(pipe_id, [10], [0], [0])
 
-    selector_inform_data_and_trigger.assert_called_once_with(["a"], [0], [0])
+    selector_inform_data_and_trigger.assert_called_once_with([10], [0], [0])
 
 
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)

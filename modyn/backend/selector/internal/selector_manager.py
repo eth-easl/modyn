@@ -49,7 +49,7 @@ class SelectorManager:
 
     def get_sample_keys_and_weights(
         self, pipeline_id: int, trigger_id: int, worker_id: int, partition_id: int
-    ) -> list[tuple[str, float]]:
+    ) -> list[tuple[int, float]]:
         """
         For a given pipeline, trigger, partition of that trigger, and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.
@@ -70,7 +70,7 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id, partition_id)
 
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
 
@@ -78,7 +78,7 @@ class SelectorManager:
             self._selectors[pipeline_id].inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(
-        self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]
+        self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]
     ) -> int:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")

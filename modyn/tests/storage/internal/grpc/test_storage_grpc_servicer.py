@@ -101,19 +101,23 @@ def setup():
 
         session.commit()
 
-        sample = Sample(file=file, index=0, external_key="test", label=1)
+        sample = Sample(file=file, index=0, label=1)
 
         session.add(sample)
 
-        sample3 = Sample(file=file2, index=0, external_key="test3", label=3)
+        sample3 = Sample(file=file2, index=0, label=3)
 
         session.add(sample3)
 
-        sample5 = Sample(file=file3, index=0, external_key="test5", label=5)
+        sample5 = Sample(file=file3, index=0, label=5)
 
         session.add(sample5)
 
         session.commit()
+
+        assert (
+            sample.sample_id == 1 and sample3.sample_id == 2 and sample5.sample_id == 3
+        ), "Inherent assumptions of primary key generation not met"
 
 
 def teardown():
@@ -131,21 +135,21 @@ def test_init() -> None:
 def test_get():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetRequest(dataset_id="test", keys=["test", "test3", "test5"])
+    request = GetRequest(dataset_id="test", keys=[0, 1, 2])
 
-    expetect_responses = [([b"test"], ["test"], [1]), ([b"test2"], ["test3"], [3])]
+    expected_responses = [([b"test"], [1], [1]), ([b"test2"], [2], [3]), ([b"test3"], [3], [5])]
 
-    for response, expetect_response in zip(server.Get(request, None), expetect_responses):
+    for response, expected_response in zip(server.Get(request, None), expected_responses):
         assert response is not None
-        assert response.samples == expetect_response[0]
-        assert response.keys == expetect_response[1]
-        assert response.labels == expetect_response[2]
+        assert response.samples == expected_response[0]
+        assert response.keys == expected_response[1]
+        assert response.labels == expected_response[2]
 
 
 def test_get_invalid_dataset():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetRequest(dataset_id="test2", keys=["test", "test3", "test4"])
+    request = GetRequest(dataset_id="test2", keys=[1, 2, 3])
 
     for response in server.Get(request, None):
         assert response is not None
@@ -157,19 +161,21 @@ def test_get_invalid_dataset():
 def test_get_invalid_key():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetRequest(dataset_id="test", keys=["test5"])
+    request = GetRequest(dataset_id="test", keys=[42])
+    responses = list(server.Get(request, None))
+    assert len(responses) == 1
+    response = responses[0]
 
-    for response in server.Get(request, None):
-        assert response is not None
-        assert response.samples == [b"test3"]
-        assert response.keys == ["test5"]
-        assert response.labels == [5]
+    assert response is not None
+    assert response.samples == []
+    assert response.keys == []
+    assert response.labels == []
 
 
 def test_get_not_all_keys_found():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 
-    request = GetRequest(dataset_id="test", keys=["test", "test6"])
+    request = GetRequest(dataset_id="test", keys=[1, 42])
 
     for response in server.Get(request, None):
         assert response is not None
@@ -192,11 +198,11 @@ def test_get_new_data_since():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 1
+    assert 1 == len(responses)
     response = responses[0]
 
     assert response is not None
-    assert response.keys == ["test", "test3", "test5"]
+    assert response.keys == [1, 2, 3]
     assert response.timestamps == [NOW, NOW, NOW - 1]
     assert response.labels == [1, 3, 5]
 
@@ -208,23 +214,24 @@ def test_get_new_data_since_batched():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 3
+
+    assert 3 == len(responses)
     response1 = responses[0]
     response2 = responses[1]
     response3 = responses[2]
 
     assert response1 is not None
-    assert response1.keys == ["test"]
+    assert response1.keys == [1]
     assert response1.timestamps == [NOW]
     assert response1.labels == [1]
 
     assert response2 is not None
-    assert response2.keys == ["test3"]
+    assert response2.keys == [2]
     assert response2.timestamps == [NOW]
     assert response2.labels == [3]
 
     assert response3 is not None
-    assert response3.keys == ["test5"]
+    assert response3.keys == [3]
     assert response3.timestamps == [NOW - 1]
     assert response3.labels == [5]
 
@@ -249,13 +256,7 @@ def test_get_new_data_since_no_new_data():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=NOW + 100000)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 1
-    response = responses[0]
-
-    assert response is not None
-    assert response.keys == []
-    assert response.timestamps == []
-    assert response.labels == []
+    assert len(responses) == 0
 
 
 def test_get_data_in_interval():
@@ -269,7 +270,7 @@ def test_get_data_in_interval():
     response = responses[0]
 
     assert response is not None
-    assert response.keys == ["test", "test3", "test5"]
+    assert response.keys == [1, 2, 3]
     assert response.timestamps == [NOW, NOW, NOW - 1]
     assert response.labels == [1, 3, 5]
 
@@ -281,7 +282,7 @@ def test_get_data_in_interval():
     response = responses[0]
 
     assert response is not None
-    assert response.keys == ["test5"]
+    assert response.keys == [3]
     assert response.timestamps == [NOW - 1]
     assert response.labels == [5]
 
@@ -289,13 +290,7 @@ def test_get_data_in_interval():
 
     responses = list(server.GetDataInInterval(request, None))
 
-    assert len(responses) == 1
-    response = responses[0]
-
-    assert response is not None
-    assert response.keys == []
-    assert response.timestamps == []
-    assert response.labels == []
+    assert len(responses) == 0
 
 
 def test_get_data_in_interval_invalid_dataset():

@@ -2,7 +2,7 @@
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from modyn.backend.metadata_database.models.triggers import Trigger
-from sqlalchemy import BigInteger, Column, Double, Index, Integer, String
+from sqlalchemy import BigInteger, Column, Double, Index, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.schema import ForeignKeyConstraint
 
@@ -24,7 +24,7 @@ class SampleTrainingMetadata(MetadataBase):
     sample_training_metadata_id = Column("sample_training_metadata_id", BIGINT, autoincrement=True, primary_key=True)
     pipeline_id = Column("pipeline_id", Integer, nullable=False)
     trigger_id = Column("trigger_id", Integer, nullable=False)
-    sample_key = Column("sample_key", String(120), nullable=False)
+    sample_key = Column("sample_key", BIGINT, nullable=False)
     loss = Column("loss", Double)
     gradient = Column("gradient", Double)
     __table_args__ = (

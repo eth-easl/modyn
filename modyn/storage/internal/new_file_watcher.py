@@ -5,7 +5,6 @@ import logging
 import multiprocessing
 import pathlib
 import time
-import uuid
 from typing import Any, Optional, Type
 
 from modyn.storage.internal.database.models import Dataset, File, Sample
@@ -168,7 +167,7 @@ class NewFileWatcher:
 
                     try:
                         samples = [
-                            Sample(file=file, file_id=file_id, external_key=str(uuid.uuid4()), index=i, label=labels[i])
+                            Sample(file=file, file_id=file_id, index=i, label=labels[i])
                             for i in range(number_of_samples)
                         ]
                         logger.debug("Samples generated, inserting.")
@@ -206,7 +205,7 @@ class NewFileWatcher:
 
         file_paths = filesystem_wrapper.list(path, recursive=True)
 
-        num_procs = 100  # TODO(MaxiBoether): add config
+        num_procs = 16  # TODO(MaxiBoether): add config
         files_per_proc = int(len(file_paths) / num_procs)
         processes: list[multiprocessing.Process] = []
 

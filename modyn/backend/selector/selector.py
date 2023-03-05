@@ -18,7 +18,7 @@ class Selector:
         self._pipeline_id = pipeline_id
         self._num_workers = num_workers
 
-        self._trigger_cache: Dict[int, list[list[tuple[str, float]]]] = {}
+        self._trigger_cache: Dict[int, list[list[tuple[int, float]]]] = {}
         self._maximum_keys_in_cache = cache_size
         self._current_keys_in_cache = 0
 
@@ -26,8 +26,8 @@ class Selector:
         self._trigger_partition_cache: Dict[int, int] = {}
 
     def _get_training_set_partition(
-        self, training_samples: list[tuple[str, float]], worker_id: int
-    ) -> list[tuple[str, float]]:
+        self, training_samples: list[tuple[int, float]], worker_id: int
+    ) -> list[tuple[int, float]]:
         """
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id.
@@ -38,7 +38,7 @@ class Selector:
         3 each and the last one takes 2.
 
         Returns:
-            list(tuple(str, float)): the training sample keys for the newly selected training_set
+            list(tuple(int, float)): the training sample keys for the newly selected training_set
                 along with the weight of that sample.
         """
         if worker_id < 0 or worker_id >= self._num_workers:
@@ -57,7 +57,7 @@ class Selector:
 
     def get_sample_keys_and_weights(
         self, trigger_id: int, worker_id: int, partition_id: int
-    ) -> list[tuple[str, float]]:
+    ) -> list[tuple[int, float]]:
         """
         For a given trigger and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.
@@ -81,10 +81,10 @@ class Selector:
 
         return self._get_training_set_partition(partition_data, worker_id)
 
-    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         self._strategy.inform_data(keys, timestamps, labels)
 
-    def inform_data_and_trigger(self, keys: list[str], timestamps: list[int], labels: list[int]) -> int:
+    def inform_data_and_trigger(self, keys: list[int], timestamps: list[int], labels: list[int]) -> int:
         assert len(keys) == len(timestamps) and len(keys) == len(labels), "Inconsistent list lengths"
 
         if len(keys) > 0:

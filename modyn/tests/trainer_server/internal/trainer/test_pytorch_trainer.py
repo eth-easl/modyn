@@ -142,7 +142,6 @@ def get_training_info(
     transform_label: bool,
     model_dynamic_module_patch: MagicMock,
 ):
-    print(num_optimizers)
     if num_optimizers == 1:
         torch_optimizers_configuration = {
             "default": {
@@ -721,7 +720,6 @@ def test_train(
                 ],
             },
         }
-        print(status_state)
         assert status_state == checkpointed_state
         assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
         final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
