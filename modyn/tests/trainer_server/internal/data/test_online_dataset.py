@@ -483,7 +483,7 @@ def test_iter_multi_partition_cross(
     ],
 )
 @patch.object(
-    OnlineDataset, "_get_keys_from_selector", side_effect=[[str(i) for i in range(4)], [str(i) for i in range(4)]]
+    OnlineDataset, "_get_keys_from_selector", side_effect=[list(range(4)), list(range(4))]
 )
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=2)
 def test_iter_multi_partition_multi_workers(
