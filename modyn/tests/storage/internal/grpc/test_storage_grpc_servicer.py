@@ -192,7 +192,7 @@ def test_get_new_data_since():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 1
+    assert 1 == len(responses)
     response = responses[0]
 
     assert response is not None
@@ -208,7 +208,8 @@ def test_get_new_data_since_batched():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=0)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 3
+
+    assert 3 == len(responses)
     response1 = responses[0]
     response2 = responses[1]
     response3 = responses[2]
@@ -249,13 +250,7 @@ def test_get_new_data_since_no_new_data():
     request = GetNewDataSinceRequest(dataset_id="test", timestamp=NOW + 100000)
 
     responses = list(server.GetNewDataSince(request, None))
-    assert len(responses) == 1
-    response = responses[0]
-
-    assert response is not None
-    assert response.keys == []
-    assert response.timestamps == []
-    assert response.labels == []
+    assert len(responses) == 0
 
 
 def test_get_data_in_interval():
@@ -289,13 +284,7 @@ def test_get_data_in_interval():
 
     responses = list(server.GetDataInInterval(request, None))
 
-    assert len(responses) == 1
-    response = responses[0]
-
-    assert response is not None
-    assert response.keys == []
-    assert response.timestamps == []
-    assert response.labels == []
+    assert len(responses) == 0
 
 
 def test_get_data_in_interval_invalid_dataset():

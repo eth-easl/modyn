@@ -658,3 +658,29 @@ def test__get_all_data_partitions():
 def test__reset_state():
     strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     strat._reset_state()
+
+
+def test__get_all_data_partitions_with_same_timestamp():
+    conf = get_config()
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1)
+
+    data1 = [str(x) for x in list(range(10))]
+    timestamps1 = [42 for _ in range(10)]
+    labels = [0] * 10
+
+    strat.inform_data(data1, timestamps1, labels)
+    all_data = list(strat._get_all_data())
+    assert len(all_data) == 10
+    assert flatten(all_data) == data1
+
+    strat.trigger()
+
+    data2 = [str(x) for x in list(range(10, 20))]
+    timestamps2 = [21 for _ in range(10)]
+
+    strat.inform_data(data2, timestamps2, labels)
+    all_data = list(strat._get_all_data())
+    print(flatten(all_data))
+    print(data1 + data2)
+    assert len(all_data) == 20
+    assert set(flatten(all_data)) == set(data1 + data2)
