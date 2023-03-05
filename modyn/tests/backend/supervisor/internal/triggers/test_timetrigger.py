@@ -22,24 +22,24 @@ def test_inform() -> None:
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert trigger.inform([]) == []
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    assert trigger.inform([("a", 0, LABEL)]) == []
+    assert trigger.inform([(10, 0, LABEL)]) == []
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    assert trigger.inform([("a", 500, LABEL)]) == []
+    assert trigger.inform([(10, 500, LABEL)]) == []
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    assert trigger.inform([("a", 999, LABEL)]) == []
-    assert trigger.inform([("a", 1000, LABEL)]) == [-1]  # Trigger includes 0, 500, 900, but not 1000
-    assert trigger.inform([("a", 1500, LABEL), ("a", 1600, LABEL), ("a", 2000, LABEL)]) == [
+    assert trigger.inform([(10, 999, LABEL)]) == []
+    assert trigger.inform([(10, 1000, LABEL)]) == [-1]  # Trigger includes 0, 500, 900, but not 1000
+    assert trigger.inform([(10, 1500, LABEL), (10, 1600, LABEL), (10, 2000, LABEL)]) == [
         1
     ]  # 2000 enables us to know that 1600 should trigger!
-    assert trigger.inform([("a", 3000, LABEL), ("a", 4000, LABEL)]) == [-1, 0]
+    assert trigger.inform([(10, 3000, LABEL), (10, 4000, LABEL)]) == [-1, 0]
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    assert trigger.inform([("a", 4100, LABEL), ("a", 4200, LABEL)]) == []
-    assert trigger.inform([("a", 5000, LABEL)]) == [-1]
-    assert trigger.inform([("a", 6000, LABEL), ("a", 7000, LABEL), ("a", 8000, LABEL), ("a", 9000, LABEL)]) == [
+    assert trigger.inform([(10, 4100, LABEL), (10, 4200, LABEL)]) == []
+    assert trigger.inform([(10, 5000, LABEL)]) == [-1]
+    assert trigger.inform([(10, 6000, LABEL), (10, 7000, LABEL), (10, 8000, LABEL), (10, 9000, LABEL)]) == [
         -1,
         0,
         1,
         2,
     ]
-    assert trigger.inform([("a", 15000, LABEL)]) == [-1, -1, -1, -1, -1, -1]
-    assert trigger.inform([("a", 17000, LABEL), ("a", 18000, LABEL)]) == [-1, -1, 0]
+    assert trigger.inform([(10, 15000, LABEL)]) == [-1, -1, -1, -1, -1, -1]
+    assert trigger.inform([(10, 17000, LABEL), (10, 18000, LABEL)]) == [-1, -1, 0]

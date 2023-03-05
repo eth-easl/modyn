@@ -51,12 +51,12 @@ def test_get_sample_keys_and_weights(test_get_sample_keys_and_weights: MagicMock
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
     servicer = SelectorGRPCServicer(mgr, 8096)
     request = GetSamplesRequest(pipeline_id=0, trigger_id=1, worker_id=2, partition_id=3)
-    test_get_sample_keys_and_weights.return_value = [("a", 1.0), ("b", 1.0)]
+    test_get_sample_keys_and_weights.return_value = [(10, 1.0), (11, 1.0)]
 
     responses: Iterable[SamplesResponse] = list(servicer.get_sample_keys_and_weights(request, None))
     assert len(responses) == 1
     response = responses[0]
-    assert response.training_samples_subset == ["a", "b"]
+    assert response.training_samples_subset == [10, 11]
     assert response.training_samples_weights == [1.0, 1.0]
 
     test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
@@ -68,16 +68,16 @@ def test_get_sample_keys_and_weights_batching(test_get_sample_keys_and_weights: 
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
     servicer = SelectorGRPCServicer(mgr, 1)
     request = GetSamplesRequest(pipeline_id=0, trigger_id=1, worker_id=2, partition_id=3)
-    test_get_sample_keys_and_weights.return_value = [("a", 1.0), ("b", 1.0)]
+    test_get_sample_keys_and_weights.return_value = [(10, 1.0), (11, 1.0)]
 
     responses: Iterable[SamplesResponse] = list(servicer.get_sample_keys_and_weights(request, None))
     assert len(responses) == 2
     response1 = responses[0]
-    assert response1.training_samples_subset == ["a"]
+    assert response1.training_samples_subset == [10]
     assert response1.training_samples_weights == [1.0]
 
     response2 = responses[1]
-    assert response2.training_samples_subset == ["b"]
+    assert response2.training_samples_subset == [11]
     assert response2.training_samples_weights == [1.0]
 
     test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
@@ -105,11 +105,11 @@ def test_get_sample_keys_and_weights_empty(test_get_sample_keys_and_weights: Mag
 def test_inform_data(test_inform_data: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
     servicer = SelectorGRPCServicer(mgr, 8096)
-    request = DataInformRequest(pipeline_id=0, keys=["a", "b"], timestamps=[1, 2], labels=[0, 1])
+    request = DataInformRequest(pipeline_id=0, keys=[10, 11], timestamps=[1, 2], labels=[0, 1])
     test_inform_data.return_value = None
 
     servicer.inform_data(request, None)
-    test_inform_data.assert_called_once_with(0, ["a", "b"], [1, 2], [0, 1])
+    test_inform_data.assert_called_once_with(0, [10, 11], [1, 2], [0, 1])
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
@@ -117,13 +117,13 @@ def test_inform_data(test_inform_data: MagicMock):
 def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
     mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
     servicer = SelectorGRPCServicer(mgr, 8096)
-    request = DataInformRequest(pipeline_id=0, keys=["a", "b"], timestamps=[1, 2], labels=[0, 1])
+    request = DataInformRequest(pipeline_id=0, keys=[10, 11], timestamps=[1, 2], labels=[0, 1])
     test_inform_data_and_trigger.return_value = 42
 
     response: TriggerResponse = servicer.inform_data_and_trigger(request, None)
     assert response.trigger_id == 42
 
-    test_inform_data_and_trigger.assert_called_once_with(0, ["a", "b"], [1, 2], [0, 1])
+    test_inform_data_and_trigger.assert_called_once_with(0, [10, 11], [1, 2], [0, 1])
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)

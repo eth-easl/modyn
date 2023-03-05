@@ -12,7 +12,10 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfPartitionsResponse,
 )
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
+from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
+    GetRequest,
+    GetResponse,
+)
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils.utils import flatten, grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
@@ -60,7 +63,7 @@ class OnlineDataset(IterableDataset):
         logger.debug("Initialized OnlineDataset.")
 
     # pylint: disable=unused-argument
-    def _get_keys_from_selector(self, worker_id: int, partition_id: int) -> list[str]:
+    def _get_keys_from_selector(self, worker_id: int, partition_id: int) -> list[int]:
         assert self._selectorstub is not None
 
         req = GetSamplesRequest(
@@ -71,10 +74,11 @@ class OnlineDataset(IterableDataset):
             [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
         )
 
-    def _get_data_from_storage(self, selector_keys: list[str]) -> tuple[list[bytes], list[int]]:
+    def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
 
-        data_from_storage: dict[str, tuple[bytes, int]] = {}
+        data_from_storage: dict[int, tuple[bytes, int]] = {}
+        response: GetResponse
         for _, response in enumerate(self._storagestub.Get(req)):
             for key, sample, label in zip(response.keys, response.samples, response.labels):
                 data_from_storage[key] = (sample, label)
@@ -131,7 +135,7 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[str], list[bytes], list[int]]:
+    def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[int], list[bytes], list[int]]:
         self._info("Getting keys from selector", worker_id)
         keys = self._get_keys_from_selector(worker_id, partition_id)
         self._info("Getting data from storage", worker_id)

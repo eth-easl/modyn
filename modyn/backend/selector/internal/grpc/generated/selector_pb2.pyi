@@ -51,7 +51,7 @@ class DataInformRequest(google.protobuf.message.Message):
     LABELS_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     @property
-    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
     def timestamps(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
@@ -60,7 +60,7 @@ class DataInformRequest(google.protobuf.message.Message):
         self,
         *,
         pipeline_id: builtins.int = ...,
-        keys: collections.abc.Iterable[builtins.str] | None = ...,
+        keys: collections.abc.Iterable[builtins.int] | None = ...,
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
@@ -149,13 +149,13 @@ class SamplesResponse(google.protobuf.message.Message):
     TRAINING_SAMPLES_SUBSET_FIELD_NUMBER: builtins.int
     TRAINING_SAMPLES_WEIGHTS_FIELD_NUMBER: builtins.int
     @property
-    def training_samples_subset(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def training_samples_subset(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
     def training_samples_weights(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]: ...
     def __init__(
         self,
         *,
-        training_samples_subset: collections.abc.Iterable[builtins.str] | None = ...,
+        training_samples_subset: collections.abc.Iterable[builtins.int] | None = ...,
         training_samples_weights: collections.abc.Iterable[builtins.float] | None = ...,
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["training_samples_subset", b"training_samples_subset", "training_samples_weights", b"training_samples_weights"]) -> None: ...

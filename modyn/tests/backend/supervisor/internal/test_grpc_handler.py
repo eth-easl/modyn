@@ -217,11 +217,11 @@ def test_get_new_data_since(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
-        mock.return_value = [GetNewDataSinceResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])]
+        mock.return_value = [GetNewDataSinceResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
 
         result = list(handler.get_new_data_since("test_dataset", 21))
 
-        assert result == [[("test1", 41, 0), ("test2", 42, 1)]]
+        assert result == [[(0, 41, 0), (1, 42, 1)]]
         mock.assert_called_once_with(GetNewDataSinceRequest(dataset_id="test_dataset", timestamp=21))
 
 
@@ -236,13 +236,13 @@ def test_get_new_data_since_batched(test_grpc_connection_established):
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
         mock.return_value = [
-            GetNewDataSinceResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1]),
-            GetNewDataSinceResponse(keys=["test3", "test4"], timestamps=[42, 43], labels=[0, 1]),
+            GetNewDataSinceResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1]),
+            GetNewDataSinceResponse(keys=[2, 3], timestamps=[42, 43], labels=[0, 1]),
         ]
 
         result = list(handler.get_new_data_since("test_dataset", 21))
 
-        assert result == [[("test1", 41, 0), ("test2", 42, 1)], [("test3", 42, 0), ("test4", 43, 1)]]
+        assert result == [[(0, 41, 0), (1, 42, 1)], [(2, 42, 0), (3, 43, 1)]]
         mock.assert_called_once_with(GetNewDataSinceRequest(dataset_id="test_dataset", timestamp=21))
 
 
@@ -263,11 +263,11 @@ def test_get_data_in_interval(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
-        mock.return_value = [GetDataInIntervalResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1])]
+        mock.return_value = [GetDataInIntervalResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
 
         result = list(handler.get_data_in_interval("test_dataset", 21, 45))
 
-        assert result == [[("test1", 41, 0), ("test2", 42, 1)]]
+        assert result == [[(0, 41, 0), (1, 42, 1)]]
         mock.assert_called_once_with(
             GetDataInIntervalRequest(dataset_id="test_dataset", start_timestamp=21, end_timestamp=45)
         )
@@ -284,13 +284,13 @@ def test_get_data_in_interval_batched(test_grpc_connection_established):
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
         mock.return_value = [
-            GetDataInIntervalResponse(keys=["test1", "test2"], timestamps=[41, 42], labels=[0, 1]),
-            GetDataInIntervalResponse(keys=["test3", "test4"], timestamps=[42, 43], labels=[0, 1]),
+            GetDataInIntervalResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1]),
+            GetDataInIntervalResponse(keys=[2, 3], timestamps=[42, 43], labels=[0, 1]),
         ]
 
         result = list(handler.get_data_in_interval("test_dataset", 21, 45))
 
-        assert result == [[("test1", 41, 0), ("test2", 42, 1)], [("test3", 42, 0), ("test4", 43, 1)]]
+        assert result == [[(0, 41, 0), (1, 42, 1)], [(2, 42, 0), (3, 43, 1)]]
         mock.assert_called_once_with(
             GetDataInIntervalRequest(dataset_id="test_dataset", start_timestamp=21, end_timestamp=45)
         )
@@ -336,10 +336,10 @@ def test_inform_selector(test_grpc_connection_established):
     with patch.object(handler.selector, "inform_data") as mock:
         mock.return_value = None
 
-        handler.inform_selector(42, [("a", 42, 0), ("b", 43, 1)])
+        handler.inform_selector(42, [(10, 42, 0), (11, 43, 1)])
 
         mock.assert_called_once_with(
-            DataInformRequest(pipeline_id=42, keys=["a", "b"], timestamps=[42, 43], labels=[0, 1])
+            DataInformRequest(pipeline_id=42, keys=[10, 11], timestamps=[42, 43], labels=[0, 1])
         )
 
 
@@ -355,10 +355,10 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
     with patch.object(handler.selector, "inform_data_and_trigger") as mock:
         mock.return_value = TriggerResponse(trigger_id=12)
 
-        assert 12 == handler.inform_selector_and_trigger(42, [("a", 42, 0), ("b", 43, 1)])
+        assert 12 == handler.inform_selector_and_trigger(42, [(10, 42, 0), (11, 43, 1)])
 
         mock.assert_called_once_with(
-            DataInformRequest(pipeline_id=42, keys=["a", "b"], timestamps=[42, 43], labels=[0, 1])
+            DataInformRequest(pipeline_id=42, keys=[10, 11], timestamps=[42, 43], labels=[0, 1])
         )
 
     # Test empty trigger

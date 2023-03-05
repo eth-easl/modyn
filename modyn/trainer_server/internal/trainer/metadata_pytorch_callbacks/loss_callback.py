@@ -21,7 +21,7 @@ class LossCallback(BaseCallback):
         model: torch.nn.Module,
         optimizer: dict[str, torch.optim.Optimizer],
         batch_number: int,
-        sample_ids: list[str],
+        sample_ids: list[int],
         data: torch.Tensor,
         target: torch.Tensor,
         output: torch.Tensor,
@@ -31,7 +31,7 @@ class LossCallback(BaseCallback):
         loss_per_sample = self._loss_criterion(output, target)
         self._sum_train_loss += loss_per_sample.sum()
         self._metadata_collector.add_per_sample_metadata_for_batch(
-            MetricType.LOSS, list(sample_ids), loss_per_sample.tolist()
+            MetricType.LOSS, sample_ids, loss_per_sample.tolist()
         )
 
     def on_train_end(
