@@ -74,7 +74,7 @@ class AbstractSelectionStrategy(ABC):
             )
 
     @abstractmethod
-    def _on_trigger(self) -> Iterable[list[tuple[str, float]]]:
+    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         """
         Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
@@ -94,7 +94,7 @@ class AbstractSelectionStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         """Informs the strategy of new data.
 
         Args:
@@ -154,12 +154,12 @@ class AbstractSelectionStrategy(ABC):
         self._next_trigger_id += 1
         return trigger_id, total_keys_in_trigger, num_partitions
 
-    def get_trigger_partition_keys(self, trigger_id: int, partition_id: int) -> list[tuple[str, float]]:
+    def get_trigger_partition_keys(self, trigger_id: int, partition_id: int) -> list[tuple[int, float]]:
         """
         Given a trigger id and partition id, returns a list of all keys in this partition
 
         Returns:
-            list[tuple[str, float]]: list of training samples.
+            list[tuple[int, float]]: list of training samples.
                 Each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
@@ -178,7 +178,7 @@ class AbstractSelectionStrategy(ABC):
 
             return data
 
-    def _persist_samples(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         """Persists the data in the database.
 
         Args:

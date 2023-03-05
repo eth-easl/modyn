@@ -47,7 +47,7 @@ def test_newdata() -> None:
     selector.inform_data(
         DataInformRequest(
             pipeline_id=pipeline_id,
-            keys=["key_0", "key_1", "key_2"],
+            keys=[0, 1, 2],
             timestamps=[1, 2, 3],
             labels=[1, 0, 1],
         )
@@ -56,7 +56,7 @@ def test_newdata() -> None:
     trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
             pipeline_id=pipeline_id,
-            keys=["key_3", "key_4", "key_5"],
+            keys=[3, 4, 5],
             timestamps=[4, 5, 6],
             labels=[0, 0, 1],
         )
@@ -94,14 +94,14 @@ def test_newdata() -> None:
         total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
-        ["key_" + str(i) for i in range(6)]
+        range(6)
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(total_samples) == 6
 
     selector.inform_data(
         DataInformRequest(
             pipeline_id=pipeline_id,
-            keys=["key_6", "key_7", "key_8"],
+            keys=[6, 7, 8],
             timestamps=[7, 8, 9],
             labels=[1, 0, 1],
         )
@@ -110,7 +110,7 @@ def test_newdata() -> None:
     next_trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
             pipeline_id=pipeline_id,
-            keys=["key_9", "key_10", "key_11"],
+            keys=[9, 10, 11],
             timestamps=[10, 11, 12],
             labels=[0, 0, 1],
         )
@@ -154,7 +154,7 @@ def test_newdata() -> None:
         total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
-        ["key_" + str(i) for i in range(6, 12)]
+        range(6, 12)
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(total_samples) == 6
 
@@ -177,7 +177,7 @@ def test_empty_triggers() -> None:
     selector.inform_data(
         DataInformRequest(
             pipeline_id=pipeline_id,
-            keys=["key_0", "key_1", "key_2"],
+            keys=[0, 1, 2],
             timestamps=[1, 2, 3],
             labels=[1, 0, 1],
         )
@@ -224,7 +224,7 @@ def test_empty_triggers() -> None:
         total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
-        ["key_" + str(i) for i in range(3)]
+        range(3)
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(total_samples) == 3
 
@@ -271,14 +271,14 @@ def test_empty_triggers() -> None:
         total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
-        ["key_" + str(i) for i in range(3)]
+        range(3)
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(total_samples) == 3
 
     next_trigger_id2 = selector.inform_data_and_trigger(
         DataInformRequest(
             pipeline_id=pipeline_id,
-            keys=["key_3", "key_4", "key_5"],
+            keys=[3, 4, 5],
             timestamps=[10, 11, 12],
             labels=[0, 0, 1],
         )
@@ -322,7 +322,7 @@ def test_empty_triggers() -> None:
         total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert set(total_samples) == set(
-        ["key_" + str(i) for i in range(6)]
+        range(6)
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(total_samples) == 6
 

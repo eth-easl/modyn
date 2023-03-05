@@ -89,7 +89,7 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[("a", 1.0), ("b", 1.0), ("c", 1.0)]]
+    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)]]
 
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
 
@@ -101,7 +101,7 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
     test_reset_state.assert_not_called()
     test__on_trigger.assert_called_once()
 
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0)]
+    assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -112,7 +112,7 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[("a", 1.0), ("b", 1.0), ("c", 1.0)], [("d", 1.0), ("e", 1.0), ("f", 1.0)]]
+    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)], [(13, 1.0), (14, 1.0), (15, 1.0)]]
 
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
 
@@ -124,8 +124,8 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
     test_reset_state.assert_not_called()
     test__on_trigger.assert_called_once()
 
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0)]
-    assert strat.get_trigger_partition_keys(trigger_id, 1) == [("d", 1.0), ("e", 1.0), ("f", 1.0)]
+    assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
+    assert strat.get_trigger_partition_keys(trigger_id, 1) == [(13, 1.0), (14, 1.0), (15, 1.0)]
     assert strat.get_trigger_partition_keys(trigger_id, 2) == []
 
 
@@ -137,7 +137,7 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[("a", 1.0), ("b", 1.0), ("c", 1.0)]]
+    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)]]
 
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
 
@@ -149,7 +149,7 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
 
     test_reset_state.assert_called_once()
     test__on_trigger.assert_called_once()
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == [("a", 1.0), ("b", 1.0), ("c", 1.0)]
+    assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -160,7 +160,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[("a", 1.0), ("b", 1.0), ("c", 1.0)], [("d", 1.0)]]
+    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)], [(13, 1.0)]]
 
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
     assert trigger_id == 0
@@ -181,22 +181,22 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
 
         assert len(data) == 4
         assert data[0].trigger_id == 0
-        assert data[0].sample_key == "a"
+        assert data[0].sample_key == 10
         assert data[0].pipeline_id == 42
         assert data[0].partition_id == 0
 
         assert data[1].trigger_id == 0
-        assert data[1].sample_key == "b"
+        assert data[1].sample_key == 11
         assert data[1].pipeline_id == 42
         assert data[1].partition_id == 0
 
         assert data[2].trigger_id == 0
-        assert data[2].sample_key == "c"
+        assert data[2].sample_key == 12
         assert data[2].pipeline_id == 42
         assert data[2].partition_id == 0
 
         assert data[3].trigger_id == 0
-        assert data[3].sample_key == "d"
+        assert data[3].sample_key == 13
         assert data[3].pipeline_id == 42
         assert data[3].partition_id == 1
 
@@ -204,7 +204,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test__persist_data():
     strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42, 1000)
-    strat._persist_samples(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
+    strat._persist_samples([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(
@@ -223,7 +223,7 @@ def test__persist_data():
         for pip_id in pipeline_ids:
             assert pip_id == 42
 
-        assert keys[0] == "a" and keys[1] == "b" and keys[2] == "c"
+        assert keys[0] == 10 and keys[1] == 11 and keys[2] == 12
         assert timestamps[0] == 0 and timestamps[1] == 1 and timestamps[2] == 2
         assert labels[0] == "dog" and labels[1] == "dog" and labels[2] == "cat"
 

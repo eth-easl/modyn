@@ -45,13 +45,13 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 "FreshnessSamplingStrategy cannot reset state after trigger, because then no old data would be available to sample from."
             )
 
-    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
         self._persist_samples(keys, timestamps, labels)
 
-    def _on_trigger(self) -> Iterable[list[tuple[str, float]]]:
+    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         """
         Internal function. Calculates the next set of data to
         train on.
@@ -76,7 +76,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
             yield [(sample, 1.0) for sample in samples]
 
-    def _get_first_trigger_data(self) -> Iterable[list[str]]:
+    def _get_first_trigger_data(self) -> Iterable[list[int]]:
         assert self._is_first_trigger
         self._is_first_trigger = False
 
@@ -87,7 +87,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
             yield samples
 
-    def _get_trigger_data(self) -> Iterable[list[str]]:
+    def _get_trigger_data(self) -> Iterable[list[int]]:
         assert not self._is_first_trigger
         count_unused_samples = self._get_count_of_data(False)
         count_used_samples = self._get_count_of_data(True)
@@ -105,8 +105,8 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         unused_generator = self._get_data_sample(num_unused_samples, False)
         used_generator = self._get_data_sample(num_used_samples, True)
 
-        next_unused_sample: list[str] = next(unused_generator, [])
-        next_used_sample: list[str] = next(used_generator, [])
+        next_unused_sample: list[int] = next(unused_generator, [])
+        next_used_sample: list[int] = next(used_generator, [])
 
         while len(next_unused_sample) > 0 or len(next_used_sample) > 0:
             yield next_unused_sample + next_used_sample
@@ -147,7 +147,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
         return num_unused_samples, num_used_samples
 
-    def _get_data_sample(self, sample_size: int, used: bool) -> Iterator[list[str]]:
+    def _get_data_sample(self, sample_size: int, used: bool) -> Iterator[list[int]]:
         """Returns sample of data. Returns ins batches of  self._maximum_keys_in_memory / 2
 
         Returns:
@@ -176,7 +176,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
                 yield list(keys)
 
-    def _get_all_unused_data(self) -> Iterator[list[str]]:
+    def _get_all_unused_data(self) -> Iterator[list[int]]:
         """Returns all unused samples
 
         Returns:
@@ -215,7 +215,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 ).count()
             )
 
-    def _mark_used(self, keys: list[str]) -> None:
+    def _mark_used(self, keys: list[int]) -> None:
         """Sets samples to used"""
         if len(keys) == 0:
             return

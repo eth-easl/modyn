@@ -67,7 +67,7 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             samples: list[Sample] = (
-                session.query(Sample).filter(Sample.external_key.in_(request.keys)).order_by(Sample.file_id).all()
+                session.query(Sample).filter(Sample.sample_id.in_(request.keys)).order_by(Sample.file_id).all()
             )
 
             if len(samples) == 0:
@@ -77,11 +77,11 @@ class StorageGRPCServicer(StorageServicer):
 
             if len(samples) != len(request.keys):
                 logger.error("Not all keys were found in the database.")
-                not_found_keys = {s for s in request.keys if s not in [sample.external_key for sample in samples]}
+                not_found_keys = {s for s in request.keys if s not in [sample.sample_id for sample in samples]}
                 logger.error(f"Keys: {not_found_keys}")
 
             current_file = samples[0].file
-            samples_per_file: list[Tuple[int, str, int]] = []
+            samples_per_file: list[Tuple[int, int, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:
@@ -94,13 +94,13 @@ class StorageGRPCServicer(StorageServicer):
                     )
                     yield GetResponse(
                         samples=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
-                        keys=[external_key for _, external_key, _ in samples_per_file],
+                        keys=[sample_id for _, sample_id, _ in samples_per_file],
                         labels=[label for _, _, label in samples_per_file],
                     )
-                    samples_per_file = [(sample.index, sample.external_key, sample.label)]
+                    samples_per_file = [(sample.index, sample.sample_id, sample.label)]
                     current_file = sample.file
                 else:
-                    samples_per_file.append((sample.index, sample.external_key, sample.label))
+                    samples_per_file.append((sample.index, sample.sample_id, sample.label))
             file_wrapper = get_file_wrapper(
                 dataset.file_wrapper_type,
                 current_file.path,
@@ -109,7 +109,7 @@ class StorageGRPCServicer(StorageServicer):
             )
             yield GetResponse(
                 samples=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
-                keys=[external_key for _, external_key, _ in samples_per_file],
+                keys=[sample_id for _, sample_id, _ in samples_per_file],
                 labels=[label for _, _, label in samples_per_file],
             )
 
@@ -135,7 +135,7 @@ class StorageGRPCServicer(StorageServicer):
             timestamp = request.timestamp
 
             stmt = (
-                select(Sample.external_key, File.updated_at, Sample.label)
+                select(Sample.sample_id, File.updated_at, Sample.label)
                 .join(File)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
@@ -171,7 +171,7 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             stmt = (
-                select(Sample.external_key, File.updated_at, Sample.label)
+                select(Sample.sample_id, File.updated_at, Sample.label)
                 .join(File)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
