@@ -326,6 +326,7 @@ def test_empty_triggers() -> None:
     ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
     assert len(total_samples) == 6
 
+
 def test_many_samples():
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
