@@ -11,6 +11,9 @@ from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import L
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 logger = logging.getLogger(__name__)
 
 # Taken from https://github.com/NVIDIA/DeepLearningExamples/blob/678b470fd78e0fdb84b3173bc25164d766e7821f/PyTorch/Recommendation/DLRM/dlrm/scripts/utils.py#L289
@@ -93,19 +96,19 @@ def instantiate_model(model_path):
 
     dlrm.model.load_state_dict(checkpoint["model"])
     logger.info("model loaded")
+    
     return dlrm
 
 
-class EvaluationDataset(torch.utils.data.Dataset):
+class EvaluationDataset(torch.utils.data.IterableDataset):
     def __init__(self, evaluation_data):
         logger.info(evaluation_data)
 
-        evaluation_data = str(evaluation_data)
+        self.fs_wrapper = LocalFilesystemWrapper(str(evaluation_data))
+        files = self.fs_wrapper.list(str(evaluation_data))
 
-        self.fs_wrapper = LocalFilesystemWrapper(evaluation_data)
-        files = self.fs_wrapper.list(evaluation_data)
-
-        self.file_wrappers = [BinaryFileWrapper(evaluation_data + "/" + file, {"byteorder": "little", "record_size": 160, "label_size": 4, "file_extension": ".bin"}, self.fs_wrapper) for file in files]
+        self.file_wrappers = [BinaryFileWrapper(str(evaluation_data / file), {"byteorder": "little", "record_size": 160, "label_size": 4, "file_extension": ".bin"}, self.fs_wrapper) for file in files]
+        self.num_wrappers = len(self.file_wrappers)
         logger.info(f"Initialized {len(self.file_wrappers)} file wrappers for evaluation")
 
     def __len__(self):
@@ -122,25 +125,24 @@ class EvaluationDataset(torch.utils.data.Dataset):
             "categorical_input": torch.asarray(cat_features_array, copy=True, dtype=torch.long)
         }
 
-    def __getitem__(self, idx):
-        # Inefficiently obtain correct file of sample index, we should really build an evaluation component...
-        current_fw_idx = 0
-        curr_sample_idx = 0
-
-        while curr_sample_idx + (self.file_wrappers[current_fw_idx].get_number_of_samples() - 1) < idx: # if idx does not fall into range of curr_fw
-            curr_sample_idx += self.file_wrappers[current_fw_idx].get_number_of_samples()
-            current_fw_idx += 1
-
-            if current_fw_idx >= len(self.file_wrappers):
-                raise ValueError(f"Invalid idx: {idx}")
-
-        file_wrapper = self.file_wrappers[current_fw_idx]
-        idx_into_filewrapper = idx - curr_sample_idx
-
-        sample_bytes = file_wrapper.get_sample(idx_into_filewrapper)
-        sample_label = file_wrapper.get_label(idx_into_filewrapper)
-
-        return self.bytes_parser_function(sample_bytes), sample_label
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is None:
+            start_idx = 0
+            end_idx = self.num_wrappers
+        else:
+            num_per_worker = int(self.num_wrappers/worker_info.num_workers)
+            worker_id = worker_info.id
+            start_idx = worker_id*num_per_worker
+            end_idx = (worker_id+1)*num_per_worker if worker_id < worker_info.num_workers-1 else self.num_wrappers
+        
+        logger.info(f"Worker: {worker_id}, start_idx: {start_idx}, end_idx: {end_idx}")
+        for file_wrapper in self.file_wrappers[start_idx:end_idx]:
+            num_samples = file_wrapper.get_number_of_samples()
+            samples_bytes = file_wrapper.get_samples(0, num_samples)
+            samples_labels = file_wrapper.get_all_labels()
+            for sample, label in zip(samples_bytes, samples_labels):
+                yield self.bytes_parser_function(sample), label
 
 
 def evaluate_model(model_path: pathlib.Path, evaluation_data: pathlib.Path) -> dict:
@@ -157,7 +159,6 @@ def evaluate_model(model_path: pathlib.Path, evaluation_data: pathlib.Path) -> d
         y_true = []
         y_score = []
 
-        logger.info("start eval")
         for batch in tqdm(dataloader):
             data = {}
             for name, tensor in batch[0].items():
