@@ -258,6 +258,7 @@ def test_get_dataset_selector_batch_size_given():
     sup.get_dataset_selector_batch_size()
     assert sup._selector_batch_size == 2048
 
+
 def test_get_dataset_selector_batch_size_not_given():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
@@ -366,7 +367,7 @@ def test_wait_for_new_data_filtering_batched():
 
 
 def test__handle_new_data_with_batch():
-    sup = get_non_connecting_supervisor()
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup._selector_batch_size = 3
     new_data = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5), (15, 6), (16, 7), (17, 8)]
 
@@ -381,12 +382,22 @@ def test__handle_new_data_with_batch():
         assert batch_mock.call_args_list == expected_handle_new_data_batch_arg_list
 
 
+def test__handle_new_data_with_large_batch():
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    new_data = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5), (15, 6), (16, 7), (17, 8)]
+
+    batch_mock: MagicMock
+    with patch.object(sup, "_handle_new_data_batch") as batch_mock:
+        sup._handle_new_data(new_data)
+        expected_handle_new_data_batch_arg_list = [call(new_data)]
+        assert batch_mock.call_args_list == expected_handle_new_data_batch_arg_list
+
+
 def test__handle_new_data():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
     sup._selector_batch_size = 2
     batching_return_vals = [False, True, False]
-    batch_size = 2
     new_data = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5)]
 
     batch_mock: MagicMock

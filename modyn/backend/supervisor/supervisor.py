@@ -240,7 +240,7 @@ class Supervisor:
             self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
-    def _handle_new_data(self, new_data: list[tuple[str, int, int]]) -> bool:
+    def _handle_new_data(self, new_data: list[tuple[int, int, int]]) -> bool:
         """This function handles new data during experiments or actual pipeline execution.
         We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
         If a data point within a batch causes a trigger,
