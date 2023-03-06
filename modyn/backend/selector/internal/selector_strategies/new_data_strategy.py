@@ -7,8 +7,7 @@ from typing import Iterable
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.utils import window_query
-from sqlalchemy import asc
+from sqlalchemy import asc, select
 
 logger = logging.getLogger(__name__)
 
@@ -50,20 +49,20 @@ class NewDataStrategy(AbstractSelectionStrategy):
             if self.limit_reset_strategy not in self.supported_limit_reset_strategies:
                 raise ValueError(f"Unsupported limit reset strategy: {self.limit_reset_strategy}")
 
-    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
         self._persist_samples(keys, timestamps, labels)
 
-    def _on_trigger(self) -> Iterable[list[tuple[str, float]]]:
+    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         """
         Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
         keys.
 
         Returns:
-            Iterable[list[tuple[str, float]]]:
+            Iterable[list[tuple[int, float]]]:
                 Iterable over partitions. Each partition consists of a list of training samples.
                 In each list, each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
@@ -77,7 +76,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
             random.shuffle(samples)
             yield [(sample, 1.0) for sample in samples]
 
-    def _get_data_reset(self) -> Iterable[list[str]]:
+    def _get_data_reset(self) -> Iterable[list[int]]:
         assert self.reset_after_trigger
 
         for samples in self._get_current_trigger_data():
@@ -87,7 +86,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
             yield samples
 
-    def _get_data_no_reset(self) -> Iterable[list[str]]:
+    def _get_data_no_reset(self) -> Iterable[list[int]]:
         assert not self.reset_after_trigger
         for samples in self._get_all_data():
             # TODO(#179): this assumes limit < len(samples)
@@ -96,7 +95,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
             yield samples
 
-    def _handle_limit_no_reset(self, samples: list[str]) -> list[str]:
+    def _handle_limit_no_reset(self, samples: list[int]) -> list[int]:
         assert self.limit_reset_strategy is not None
 
         if self.limit_reset_strategy == "lastX":
@@ -107,27 +106,29 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
         raise NotImplementedError(f"Unsupport limit reset strategy: {self.limit_reset_strategy}")
 
-    def _last_x_limit(self, samples: list[str]) -> list[str]:
+    def _last_x_limit(self, samples: list[int]) -> list[int]:
         assert self.has_limit
         assert self.training_set_size_limit > 0
 
         return samples[-self.training_set_size_limit :]
 
-    def _sample_uar(self, samples: list[str]) -> list[str]:
+    def _sample_uar(self, samples: list[int]) -> list[int]:
         assert self.has_limit
         assert self.training_set_size_limit > 0
 
         return random.sample(samples, min(len(samples), self.training_set_size_limit))
 
-    def _get_current_trigger_data(self) -> Iterable[list[str]]:
+    def _get_current_trigger_data(self) -> Iterable[list[int]]:
         """Returns all sample for current trigger
 
         Returns:
-            list[str]: Keys of used samples
+            list[int]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            query = (
-                database.session.query(SelectorStateMetadata.sample_key)
+            stmt = (
+                select(SelectorStateMetadata.sample_key)
+                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id,
@@ -135,26 +136,28 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
-            for chunk in window_query(query, SelectorStateMetadata.timestamp, self._maximum_keys_in_memory, False):
+            for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
                 else:
                     yield []
 
-    def _get_all_data(self) -> Iterable[list[str]]:
+    def _get_all_data(self) -> Iterable[list[int]]:
         """Returns all sample
 
         Returns:
             list[str]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            query = (
-                database.session.query(SelectorStateMetadata.sample_key)
+            stmt = (
+                select(SelectorStateMetadata.sample_key)
+                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
-            for chunk in window_query(query, SelectorStateMetadata.timestamp, self._maximum_keys_in_memory, False):
+            for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
                 else:

@@ -21,7 +21,7 @@ def session():
 def test_add_selector_state_metadata(session):
     selector_state_metadata = SelectorStateMetadata(
         pipeline_id=1,
-        sample_key="sample_key",
+        sample_key=0,
         seen_in_trigger_id=1,
         used=False,
         timestamp=10000,
@@ -46,7 +46,7 @@ def test_add_selector_state_metadata(session):
         .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
         .first()
         .sample_key
-        == "sample_key"
+        == 0
     )
     assert (
         session.query(SelectorStateMetadata)
@@ -75,7 +75,7 @@ def test_add_selector_state_metadata(session):
 def test_update_selector_state_metadata(session):
     selector_state_metadata = SelectorStateMetadata(
         pipeline_id=1,
-        sample_key="sample_key",
+        sample_key=0,
         seen_in_trigger_id=1,
         used=False,
         timestamp=10000,
@@ -105,7 +105,7 @@ def test_update_selector_state_metadata(session):
         .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
         .first()
         .sample_key
-        == "sample_key"
+        == 0
     )
     assert (
         session.query(SelectorStateMetadata)
@@ -138,7 +138,7 @@ def test_update_selector_state_metadata(session):
 def test_delete_selector_state_metadata(session):
     selector_state_metadata = SelectorStateMetadata(
         pipeline_id=1,
-        sample_key="sample_key",
+        sample_key=0,
         seen_in_trigger_id=1,
         used=False,
         timestamp=10000,

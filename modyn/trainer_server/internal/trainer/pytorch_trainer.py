@@ -222,6 +222,13 @@ class PytorchTrainer:
                 pass
 
             sample_ids = batch[0]
+            if isinstance(sample_ids, torch.Tensor):
+                sample_ids = sample_ids.tolist()
+            elif isinstance(sample_ids, tuple):
+                sample_ids = list(sample_ids)
+
+            assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
+
             if self._label_tranformer_function is None:
                 target = batch[2].to(self._device)
             else:

@@ -21,7 +21,7 @@ message JsonString {
 
 message DataInformRequest {
     int32 pipeline_id = 1;
-    repeated string keys = 2;
+    repeated int64 keys = 2;
     repeated int64 timestamps = 3;
     repeated int64 labels = 4;
 }
@@ -47,7 +47,7 @@ message GetSamplesRequest {
 }
 
 message SamplesResponse {
-    repeated string training_samples_subset = 1;
+    repeated int64 training_samples_subset = 1;
     repeated float training_samples_weights = 2;
 }
 

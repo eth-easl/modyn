@@ -24,12 +24,12 @@ class GetRequest(google.protobuf.message.Message):
     KEYS_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     @property
-    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
-        keys: collections.abc.Iterable[builtins.str] | None = ...,
+        keys: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "keys", b"keys"]) -> None: ...
 
@@ -45,14 +45,14 @@ class GetResponse(google.protobuf.message.Message):
     @property
     def samples(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.bytes]: ...
     @property
-    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
     def labels(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
         samples: collections.abc.Iterable[builtins.bytes] | None = ...,
-        keys: collections.abc.Iterable[builtins.str] | None = ...,
+        keys: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples"]) -> None: ...
@@ -85,7 +85,7 @@ class GetNewDataSinceResponse(google.protobuf.message.Message):
     TIMESTAMPS_FIELD_NUMBER: builtins.int
     LABELS_FIELD_NUMBER: builtins.int
     @property
-    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
     def timestamps(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
@@ -93,7 +93,7 @@ class GetNewDataSinceResponse(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        keys: collections.abc.Iterable[builtins.str] | None = ...,
+        keys: collections.abc.Iterable[builtins.int] | None = ...,
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
@@ -130,7 +130,7 @@ class GetDataInIntervalResponse(google.protobuf.message.Message):
     TIMESTAMPS_FIELD_NUMBER: builtins.int
     LABELS_FIELD_NUMBER: builtins.int
     @property
-    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
     def timestamps(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
@@ -138,7 +138,7 @@ class GetDataInIntervalResponse(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        keys: collections.abc.Iterable[builtins.str] | None = ...,
+        keys: collections.abc.Iterable[builtins.int] | None = ...,
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...

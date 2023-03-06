@@ -86,4 +86,3 @@ The storage abstraction uses a database to store information about the datasets.
     - `sample_id`: The id of the sample (primary key)
     - `file_id`: The id of the file (foreign key to `files.file_id`)
     - `index`: The index of the sample in the file
-    - `external_key`: The external key of the sample (this is used to identify the sample in the storage system and is expected to be asked by the GPU nodes)

@@ -22,7 +22,9 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
+    GetDataInIntervalResponse,
     GetNewDataSinceRequest,
+    GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -106,18 +108,19 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[list[tuple[str, int, int]]]:
+    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[list[tuple[int, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
+        response: GetNewDataSinceResponse
         for response in self.storage.GetNewDataSince(request):
             data = list(zip(response.keys, response.timestamps, response.labels))
             yield data
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
-    ) -> Iterable[list[tuple[str, int, int]]]:
+    ) -> Iterable[list[tuple[int, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -126,6 +129,7 @@ class GRPCHandler:
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
         )
+        response: GetDataInIntervalResponse
         for response in self.storage.GetDataInInterval(request):
             data = list(zip(response.keys, response.timestamps, response.labels))
             yield data
@@ -161,13 +165,13 @@ class GRPCHandler:
         #  # TODO(#64,#124): Implement.
         pass
 
-    def inform_selector(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> None:
+    def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> None:
         keys, timestamps, labels = zip(*data)
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         self.selector.inform_data(request)
 
-    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
-        keys: list[str]
+    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> int:
+        keys: list[int]
         timestamps: list[int]
         labels: list[int]
         if len(data) == 0:

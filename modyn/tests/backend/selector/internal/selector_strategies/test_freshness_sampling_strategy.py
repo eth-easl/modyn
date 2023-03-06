@@ -60,7 +60,7 @@ def test_constructor_throws_on_invalid_config():
 
 def test_inform_data():
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
-    strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
+    strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(
@@ -79,7 +79,7 @@ def test_inform_data():
         for pip_id in pipeline_ids:
             assert pip_id == 0
 
-        assert keys[0] == "a" and keys[1] == "b" and keys[2] == "c"
+        assert keys[0] == 10 and keys[1] == 11 and keys[2] == 12
         assert timestamps[0] == 0 and timestamps[1] == 1 and timestamps[2] == 2
         assert labels[0] == "dog" and labels[1] == "dog" and labels[2] == "cat"
 
@@ -95,7 +95,7 @@ def test__on_trigger_first_trigger(
 
     test__mark_used.return_value = None
     test__get_trigger_data.return_value = []
-    test__get_first_trigger_data.return_value = [["a", "b", "c", "d"]]
+    test__get_first_trigger_data.return_value = [[10, 11, 12, 13]]
 
     result = list(strat._on_trigger())
     assert len(result) == 1
@@ -107,7 +107,7 @@ def test__on_trigger_first_trigger(
     result_keys = [key for (key, _) in result]
     result_weights = [weight for (_, weight) in result]
 
-    assert sorted(result_keys) == ["a", "b", "c", "d"]
+    assert sorted(result_keys) == [10, 11, 12, 13]
     for weight in result_weights:
         assert isclose(weight, 1.0)
 
@@ -122,7 +122,7 @@ def test__on_trigger_subsequent_trigger(
     strat._is_first_trigger = False
 
     test__mark_used.return_value = None
-    test__get_trigger_data.return_value = [["a", "b", "c", "d"]]
+    test__get_trigger_data.return_value = [[10, 11, 12, 13]]
     test__get_first_trigger_data.return_value = []
 
     result = list(strat._on_trigger())
@@ -135,7 +135,7 @@ def test__on_trigger_subsequent_trigger(
     result_keys = [key for (key, _) in result]
     result_weights = [weight for (_, weight) in result]
 
-    assert sorted(result_keys) == ["a", "b", "c", "d"]
+    assert sorted(result_keys) == [10, 11, 12, 13]
     for weight in result_weights:
         assert isclose(weight, 1.0)
 
@@ -148,7 +148,7 @@ def test__get_first_trigger_data(
     test__calc_num_samples_no_limit: MagicMock,
     test__get_all_unused_data: MagicMock,
 ):
-    test__get_all_unused_data.return_value = [["a", "b", "c", "d"]]
+    test__get_all_unused_data.return_value = [[10, 11, 12, 13]]
     test__calc_num_samples_no_limit.return_value = (4, 4)
     test__calc_num_samples_limit.return_value = (2, 2)
     config = get_freshness_config()
@@ -163,7 +163,7 @@ def test__get_first_trigger_data(
     test__get_all_unused_data.assert_called_once()
 
     assert not strat._is_first_trigger
-    assert result == ["a", "b", "c", "d"]
+    assert result == [10, 11, 12, 13]
 
     with pytest.raises(AssertionError):
         list(strat._get_first_trigger_data())
@@ -174,7 +174,7 @@ def test__get_first_trigger_data(
     result = list(strat._get_first_trigger_data())
     assert len(result) == 1
     result = result[0]
-    assert result == ["a", "b", "c", "d"]
+    assert result == [10, 11, 12, 13]
 
     strat.training_set_size_limit = 2
     strat._is_first_trigger = True
@@ -183,7 +183,7 @@ def test__get_first_trigger_data(
     result = result[0]
 
     assert len(result) == 2
-    assert set(result) < set(["a", "b", "c", "d"])
+    assert set(result) < set([10, 11, 12, 13])
 
 
 @patch.object(FreshnessSamplingStrategy, "_get_all_unused_data")
@@ -194,7 +194,7 @@ def test__get_first_trigger_data_partitions(
     test__calc_num_samples_no_limit: MagicMock,
     test__get_all_unused_data: MagicMock,
 ):
-    test__get_all_unused_data.return_value = [["a", "b"], ["c", "d"]]
+    test__get_all_unused_data.return_value = [[10, 11], [12, 13]]
     test__calc_num_samples_no_limit.return_value = (4, 4)
     test__calc_num_samples_limit.return_value = (2, 2)
     config = get_freshness_config()
@@ -209,7 +209,7 @@ def test__get_first_trigger_data_partitions(
     test__get_all_unused_data.assert_called_once()
 
     assert not strat._is_first_trigger
-    assert result == ["a", "b", "c", "d"]
+    assert result == [10, 11, 12, 13]
 
     with pytest.raises(AssertionError):
         list(strat._get_first_trigger_data())
@@ -234,9 +234,9 @@ def test__get_trigger_data_limit(
 
     def sampler(size, used):
         if used:
-            return iter([random.sample(["e", "f", "g", "h"], size)])
+            return iter([random.sample([14, 15, 16, 17], size)])
 
-        return iter([random.sample(["a", "b", "c", "d"], size)])
+        return iter([random.sample([10, 11, 12, 13], size)])
 
     test__get_data_sample.side_effect = sampler
 
@@ -250,7 +250,7 @@ def test__get_trigger_data_limit(
     result = result[0]
 
     assert len(result) == 4
-    assert set(result) < set(["a", "b", "c", "d", "e", "f", "g", "h"])
+    assert set(result) < set([10, 11, 12, 13, 14, 15, 16, 17])
 
 
 @patch.object(FreshnessSamplingStrategy, "_get_data_sample")
@@ -270,9 +270,9 @@ def test__get_trigger_data_no_limit(
 
     def sampler(size, used):
         if used:
-            return iter([random.sample(["e", "f", "g", "h"], size)])
+            return iter([random.sample([14, 15, 16, 17], size)])
 
-        return iter([random.sample(["a", "b", "c", "d"], size)])
+        return iter([random.sample([10, 11, 12, 13], size)])
 
     test__get_data_sample.side_effect = sampler
 
@@ -280,7 +280,7 @@ def test__get_trigger_data_no_limit(
     assert len(result) == 1
     result = result[0]
 
-    assert set(result) == set(["a", "b", "c", "d", "e", "f", "g", "h"])
+    assert set(result) == set([10, 11, 12, 13, 14, 15, 16, 17])
     test__calc_num_samples_no_limit.assert_called_once_with(4, 4)
     test__calc_num_samples_limit.assert_not_called()
 
@@ -290,7 +290,7 @@ def test__get_trigger_data_no_limit(
     result = result[0]
 
     assert len(result) == 4
-    assert set(result) < set(["a", "b", "c", "d", "e", "f", "g", "h"])
+    assert set(result) < set([10, 11, 12, 13, 14, 15, 16, 17])
 
     with pytest.raises(AssertionError):
         strat._is_first_trigger = True
@@ -334,40 +334,40 @@ def test__calc_num_samples_limit():
 
 def test__get_all_unused_data():
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
-    strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
-    strat._mark_used(["a"])
+    strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
+    strat._mark_used([10])
 
-    assert set(list(strat._get_all_unused_data())[0]) == set(["b", "c"])
-    strat._mark_used(["a", "b", "c"])
+    assert set(list(strat._get_all_unused_data())[0]) == set([11, 12])
+    strat._mark_used([10, 11, 12])
     assert len(list(strat._get_all_unused_data())) == 0
 
 
 def test__get_all_unused_data_partitioning():
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat._maximum_keys_in_memory = 1
-    strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
-    strat._mark_used(["a"])
+    strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
+    strat._mark_used([10])
 
     result = list(strat._get_all_unused_data())
     assert len(result) == 2
     result = flatten(result)
 
-    assert set(result) == set(["b", "c"])
-    strat._mark_used(["a", "b", "c"])
+    assert set(result) == set([11, 12])
+    strat._mark_used([10, 11, 12])
     assert len(list(strat._get_all_unused_data())) == 0
 
 
 def test__get_data_sample_no_partitions():
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
-    strat.inform_data(["a", "b", "c", "d", "e", "f"], [0, 1, 2, 3, 4, 5], [0, 0, 0, 0, 0, 0])
-    used = ["a", "b", "c"]
-    unused = ["d", "e", "f"]
+    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], [0, 0, 0, 0, 0, 0])
+    used = [10, 11, 12]
+    unused = [13, 14, 15]
 
     strat._mark_used(used)
 
     # Confirm that mark used worked
     result = flatten(list(strat._get_all_unused_data()))
-    assert set(result) == set(["d", "e", "f"])
+    assert set(result) == set([13, 14, 15])
 
     # Test full sample (not actually random)
     used_sample = list(strat._get_data_sample(3, True))
@@ -399,15 +399,15 @@ def test__get_data_sample_no_partitions():
 def test__get_data_sample_partitions():
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat._maximum_keys_in_memory = 1
-    strat.inform_data(["a", "b", "c", "d", "e", "f"], [0, 1, 2, 3, 4, 5], [0, 0, 0, 0, 0, 0])
-    used = ["a", "b", "c"]
-    unused = ["d", "e", "f"]
+    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], [0, 0, 0, 0, 0, 0])
+    used = [10, 11, 12]
+    unused = [13, 14, 15]
 
     strat._mark_used(used)
 
     # Confirm that mark used worked
     result = flatten(list(strat._get_all_unused_data()))
-    assert set(result) == set(["d", "e", "f"])
+    assert set(result) == set([13, 14, 15])
 
     # Test full sample (not actually random)
     used_sample = list(strat._get_data_sample(3, True))
@@ -438,7 +438,7 @@ def test__get_data_sample_partitions():
 
 def test__mark_used():
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
-    strat.inform_data(["a", "b", "c"], [0, 1, 2], ["dog", "dog", "cat"])
+    strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = database.session.query(SelectorStateMetadata.used).all()
@@ -447,7 +447,7 @@ def test__mark_used():
         useds = [used[0] for used in data]
         assert not any(useds)
 
-    strat._mark_used(["a", "c"])
+    strat._mark_used([10, 12])
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         data = (
             database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
@@ -459,7 +459,7 @@ def test__mark_used():
         keys, useds = zip(*data)
 
         assert all(useds)
-        assert set(["a", "c"]) == set(keys)
+        assert set([10, 12]) == set(keys)
 
         data = (
             database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
@@ -471,7 +471,7 @@ def test__mark_used():
         keys, useds = zip(*data)
 
         assert not any(useds)
-        assert set(["b"]) == set(keys)
+        assert set([11]) == set(keys)
 
 
 def test__reset_state():

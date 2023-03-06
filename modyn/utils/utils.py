@@ -6,14 +6,12 @@ import pathlib
 import sys
 import time
 from types import ModuleType
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 
 import grpc
 import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
-from sqlalchemy.engine.row import Row
-from sqlalchemy.orm import Query
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_PKGS = []
@@ -120,26 +118,6 @@ def package_available_and_can_be_imported(package: str) -> bool:
         logger.warning(f"Importing module {package} throws exception {exception}")
         UNAVAILABLE_PKGS.append(package)
         return False
-
-
-def window_query(query: Query, column: str, windowsize: int, ordering_required: bool) -> Iterable[Row]:
-    """ "Break a Query into chunks on a given column.
-    Returns Iterator over chunks."""
-
-    query = query.add_columns(column)
-    if ordering_required:
-        query = query.order_by(column)
-    last_id = None
-
-    while True:
-        subq = query
-        if last_id is not None:
-            subq = subq.filter(column > last_id)
-        chunk = subq.limit(windowsize).all()
-        if not chunk:
-            break
-        last_id = chunk[-1][-1]
-        yield chunk
 
 
 def flatten(non_flat_list: list[list[Any]]) -> list[Any]:

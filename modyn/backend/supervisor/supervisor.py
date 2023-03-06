@@ -270,7 +270,7 @@ class Supervisor:
 
         return any_training_triggered
 
-    def _handle_new_data_batch(self, batch: list[tuple[str, int, int]]) -> bool:
+    def _handle_new_data_batch(self, batch: list[tuple[int, int, int]]) -> bool:
         triggering_indices = self.trigger.inform(batch)
 
         if len(triggering_indices) > 0:
@@ -282,7 +282,7 @@ class Supervisor:
         self.grpc.inform_selector(self.pipeline_id, batch)
         return False
 
-    def _handle_triggers_within_batch(self, batch: list[tuple[str, int, int]], triggering_indices: list[int]) -> None:
+    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         for i, triggering_idx in enumerate(triggering_indices):
