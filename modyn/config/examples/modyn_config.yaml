@@ -24,6 +24,7 @@ storage:
             label_file_extension: ".label"
           },
         ignore_last_timestamp: false,
+        selector_batch_size: 128,
       },
       {
         name: "criteo",
@@ -40,6 +41,7 @@ storage:
             file_extension: ".bin"
           },
         ignore_last_timestamp: false,
+        selector_batch_size: 65536,
       }
     ]
   database:
