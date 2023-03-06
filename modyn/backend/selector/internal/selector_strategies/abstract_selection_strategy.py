@@ -198,10 +198,10 @@ class AbstractSelectionStrategy(ABC):
 
             for i in range(self._insertion_threads):
                 start_idx = i * samples_per_proc
-                end_idx = start_idx + samples_per_proc if i < samples_per_proc - 1 else len(training_samples)
+                end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
                 proc_samples = training_samples[start_idx:end_idx]
                 if len(proc_samples) > 0:
-                    logger.error(f"Starting insertion process for {len(proc_samples)} samples.")
+                    logger.error(f"Starting trigger saving process for {len(proc_samples)} samples.")
                     proc = mp.Process(
                         target=AbstractSelectionStrategy._store_triggersamples_impl,
                         args=(partition, trigger_id, self._pipeline_id, proc_samples, self._modyn_config, None),
@@ -311,12 +311,12 @@ class AbstractSelectionStrategy(ABC):
 
         for i in range(self._insertion_threads):
             start_idx = i * samples_per_proc
-            end_idx = start_idx + samples_per_proc if i < samples_per_proc - 1 else len(keys)
+            end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(keys)
             proc_keys = keys[start_idx:end_idx]
             proc_timestamps = timestamps[start_idx:end_idx]
             proc_labels = labels[start_idx:end_idx]
             if len(proc_keys) > 0:
-                logger.error(f"Starting insertion process for {len(keys)} samples.")
+                logger.error(f"Starting persisting process for {len(keys)} samples.")
                 proc = mp.Process(
                     target=AbstractSelectionStrategy._persist_samples_impl,
                     args=(
