@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 PIPELINES = {"finetune_noreset": "Finetune",
             } # TODO(MaxiBoether): Add our pipelines after defining them
-NUM_DAYS = 22
+NUM_DAYS = 1
 
 def setup_argparser() -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description="Criteo Model Evaluation Script")
@@ -46,7 +46,7 @@ def validate_model_directory(dir: pathlib.Path) -> dict:
             logger.warning(f"Did not find pipeline {pipeline}, ignoring.")
             continue
 
-        runs = list(filter(os.path.isdir, os.listdir(pipeline_dir)))
+        runs = [run.name for run in pipeline_dir.iterdir() if os.path.isdir(run)]
         if len(runs) == 0:
             logger.warning(f"Pipeline {pipeline}: No runs found, ignoring.")
             continue
@@ -76,7 +76,7 @@ def evaluate_pipeline(dir: pathlib.Path, evaluation_data: pathlib.Path) -> dict:
 
 def evaluate(pipelines_to_evaluate: dict, evaluation_data: pathlib.Path) -> dict:
     results = {}
-    for pipeline, path in pipelines_to_evaluate:
+    for pipeline, path in pipelines_to_evaluate.items():
         pipeline_data = evaluate_pipeline(path, evaluation_data)
         results[pipeline] = pipeline_data
 
