@@ -11,6 +11,7 @@ from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import L
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+# https://github.com/pytorch/pytorch/issues/11201
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
