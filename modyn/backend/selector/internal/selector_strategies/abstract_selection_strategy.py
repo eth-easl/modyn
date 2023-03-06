@@ -1,4 +1,7 @@
 import logging
+import multiprocessing as mp
+import os
+import platform
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
 
@@ -43,6 +46,11 @@ class AbstractSelectionStrategy(ABC):
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
         self._maximum_keys_in_memory = maximum_keys_in_memory
+        self._insertion_threads = modyn_config["selector"]["insertion_threads"]
+
+        self._is_test = "PYTEST_CURRENT_TEST" in os.environ
+        self._is_mac = platform.system() == "Darwin"
+        self._disable_mt = self._insertion_threads <= 0
 
         if self._maximum_keys_in_memory < 1:
             raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")
@@ -103,6 +111,46 @@ class AbstractSelectionStrategy(ABC):
         """
         raise NotImplementedError
 
+    @staticmethod
+    def _store_triggersamples_impl(
+        partition_id: int,
+        trigger_id: int,
+        pipeline_id: int,
+        training_samples: list[tuple[int, float]],
+        modyn_config: dict,
+        db_connection: Optional[MetadataDatabaseConnection],
+    ) -> None:
+        # In case we get passed a db_connection, we use that one (single-threaded execution)
+        # and do not commit
+        # Otherwise, we create a connection and commit and the end (MT-execution)
+        # As our database connection only supports a context manager interface right now, we have to use these calls
+
+        connection = (
+            db_connection
+            if db_connection is not None
+            # pylint: disable-next=unnecessary-dunder-call
+            else MetadataDatabaseConnection(modyn_config).__enter__()
+        )
+
+        connection.session.bulk_insert_mappings(
+            TriggerSample,
+            [
+                {
+                    "partition_id": partition_id,
+                    "trigger_id": trigger_id,
+                    "pipeline_id": pipeline_id,
+                    "sample_key": key,
+                    "sample_weight": weight,
+                }
+                for key, weight in training_samples
+            ],
+        )
+
+        if db_connection is None:
+            connection.session.commit()
+            connection.__exit__(None, None, None)
+
+    # pylint: disable=too-many-locals
     def trigger(self) -> tuple[int, int, int]:
         """
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
@@ -117,34 +165,67 @@ class AbstractSelectionStrategy(ABC):
             trigger = Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id)
             database.session.add(trigger)
             database.session.commit()
-            partition = None
 
-            for partition, training_samples in enumerate(self._on_trigger()):
-                logger.info(
-                    f"Strategy for pipeline {self._pipeline_id} returned batch of"
-                    + f" {len(training_samples)} samples for new trigger {trigger_id}."
+        # If we run a test or disable MT, we cannot do multithreaded inserts
+        # This is because sqlite does not allow us to insert while another connection is open
+        # As iterating over on_trigger keeps an open connection, we have to commit after closing that connection
+        # Hence we share a connection in that case and commit at the end.
+        shared_conn = (
+            # pylint: disable-next=unnecessary-dunder-call
+            MetadataDatabaseConnection(self._modyn_config).__enter__()
+            if self._is_test or self._disable_mt
+            else None
+        )
+
+        partition: Optional[int] = None
+        for partition, training_samples in enumerate(self._on_trigger()):
+            logger.info(
+                f"Strategy for pipeline {self._pipeline_id} returned batch of"
+                + f" {len(training_samples)} samples for new trigger {trigger_id}."
+            )
+
+            total_keys_in_trigger += len(training_samples)
+
+            if shared_conn is not None:
+                AbstractSelectionStrategy._store_triggersamples_impl(
+                    partition, trigger_id, self._pipeline_id, training_samples, self._modyn_config, shared_conn
                 )
 
-                total_keys_in_trigger += len(training_samples)
+                continue
 
-                database.session.bulk_save_objects(
-                    [
-                        TriggerSample(
-                            partition_id=partition,
-                            trigger_id=trigger_id,
-                            pipeline_id=self._pipeline_id,
-                            sample_key=key,
-                            sample_weight=weight,
-                        )
-                        for key, weight in training_samples
-                    ]
-                )
+            samples_per_proc = int(len(training_samples) / self._insertion_threads)
+            processes: list[mp.Process] = []
 
-            database.session.commit()
+            for i in range(self._insertion_threads):
+                start_idx = i * samples_per_proc
+                end_idx = start_idx + samples_per_proc if i < samples_per_proc - 1 else len(training_samples)
+                proc_samples = training_samples[start_idx:end_idx]
+                if len(proc_samples) > 0:
+                    logger.error(f"Starting insertion process for {len(proc_samples)} samples.")
+                    proc = mp.Process(
+                        target=AbstractSelectionStrategy._store_triggersamples_impl,
+                        args=(partition, trigger_id, self._pipeline_id, proc_samples, self._modyn_config, None),
+                    )
+                    proc.start()
+                    processes.append(proc)
 
-            # Update Trigger about number of partitions and keys
+            for proc in processes:
+                proc.join()
+
+        if shared_conn is not None:
+            shared_conn.session.commit()
+            shared_conn.__exit__(None, None, None)
+
+        num_partitions = partition + 1 if partition is not None else 0
+
+        # Update Trigger about number of partitions and keys
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            trigger = (
+                database.session.query(Trigger)
+                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
+                .first()
+            )
             trigger.num_keys = total_keys_in_trigger
-            num_partitions = partition + 1 if partition is not None else 0
             trigger.num_partitions = num_partitions
             database.session.commit()
 
@@ -178,6 +259,32 @@ class AbstractSelectionStrategy(ABC):
 
             return data
 
+    @staticmethod
+    def _persist_samples_impl(
+        keys: list[int],
+        timestamps: list[int],
+        labels: list[int],
+        pipeline_id: int,
+        modyn_config: dict,
+        seen_in_trigger_id: int,
+    ) -> None:
+        with MetadataDatabaseConnection(modyn_config) as database:
+            database.session.bulk_insert_mappings(
+                SelectorStateMetadata,
+                [
+                    {
+                        "pipeline_id": pipeline_id,
+                        "sample_key": key,
+                        "timestamp": timestamp,
+                        "label": label,
+                        "seen_in_trigger_id": seen_in_trigger_id,
+                    }
+                    for key, timestamp, label in zip(keys, timestamps, labels)
+                ],
+            )
+
+            database.session.commit()
+
     def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         """Persists the data in the database.
 
@@ -191,16 +298,38 @@ class AbstractSelectionStrategy(ABC):
         # keep this partly in memory for performance.
         # Even if each sample is 64 byte and we see 2 million samples, it's just 128 MB of data in memory.
         # This also means that we have to clear this list on reset accordingly etc.
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            new_selector_state_metadata = [
-                SelectorStateMetadata(
-                    pipeline_id=self._pipeline_id,
-                    sample_key=key,
-                    timestamp=timestamp,
-                    label=label,
-                    seen_in_trigger_id=self._next_trigger_id,
+        assert len(keys) == len(timestamps) and len(keys) == len(labels)
+
+        if self._disable_mt or (self._is_test and self._is_mac):
+            AbstractSelectionStrategy._persist_samples_impl(
+                keys, timestamps, labels, self._pipeline_id, self._modyn_config, self._next_trigger_id
+            )
+            return
+
+        samples_per_proc = int(len(keys) / self._insertion_threads)
+        processes: list[mp.Process] = []
+
+        for i in range(self._insertion_threads):
+            start_idx = i * samples_per_proc
+            end_idx = start_idx + samples_per_proc if i < samples_per_proc - 1 else len(keys)
+            proc_keys = keys[start_idx:end_idx]
+            proc_timestamps = timestamps[start_idx:end_idx]
+            proc_labels = labels[start_idx:end_idx]
+            if len(proc_keys) > 0:
+                logger.error(f"Starting insertion process for {len(keys)} samples.")
+                proc = mp.Process(
+                    target=AbstractSelectionStrategy._persist_samples_impl,
+                    args=(
+                        proc_keys,
+                        proc_timestamps,
+                        proc_labels,
+                        self._pipeline_id,
+                        self._modyn_config,
+                        self._next_trigger_id,
+                    ),
                 )
-                for key, timestamp, label in zip(keys, timestamps, labels)
-            ]
-            database.session.add_all(new_selector_state_metadata)
-            database.session.commit()
+                proc.start()
+                processes.append(proc)
+
+        for proc in processes:
+            proc.join()
