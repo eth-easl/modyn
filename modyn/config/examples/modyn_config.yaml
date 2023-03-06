@@ -68,6 +68,7 @@ selector:
   port: "50056"
   keys_in_selector_cache: 500000
   sample_batch_size: 65536
+  insertion_threads: 8
 
 trainer_server:
   hostname: "trainer_server"
