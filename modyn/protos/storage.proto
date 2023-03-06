@@ -6,8 +6,8 @@ package modyn.storage;
 
 service Storage {
   rpc Get (GetRequest) returns (stream GetResponse) {}
-  rpc GetNewDataSince (GetNewDataSinceRequest) returns (GetNewDataSinceResponse) {}
-  rpc GetDataInInterval (GetDataInIntervalRequest) returns (GetDataInIntervalResponse) {}
+  rpc GetNewDataSince (GetNewDataSinceRequest) returns (stream GetNewDataSinceResponse) {}
+  rpc GetDataInInterval (GetDataInIntervalRequest) returns (stream GetDataInIntervalResponse) {}
   rpc CheckAvailability (DatasetAvailableRequest) returns (DatasetAvailableResponse) {}
   rpc RegisterNewDataset (RegisterNewDatasetRequest) returns (RegisterNewDatasetResponse) {}
   rpc GetCurrentTimestamp (google.protobuf.Empty) returns (GetCurrentTimestampResponse) {}
@@ -16,12 +16,12 @@ service Storage {
 
 message GetRequest {
   string dataset_id = 1;
-  repeated string keys = 2;
+  repeated int64 keys = 2;
 }
 
 message GetResponse {
   repeated bytes samples = 1;
-  repeated string keys = 2;
+  repeated int64 keys = 2;
   repeated int64 labels = 3;
 }
 
@@ -31,7 +31,7 @@ message GetNewDataSinceRequest {
 }
 
 message GetNewDataSinceResponse {
-  repeated string keys = 1;
+  repeated int64 keys = 1;
   repeated int64 timestamps = 2;
   repeated int64 labels = 3;
 }
@@ -43,7 +43,7 @@ message GetDataInIntervalRequest {
 }
 
 message GetDataInIntervalResponse {
-  repeated string keys = 1;
+  repeated int64 keys = 1;
   repeated int64 timestamps = 2;
   repeated int64 labels = 3;
 }
@@ -64,6 +64,7 @@ message RegisterNewDatasetRequest {
   string base_path = 5;
   string version = 6;
   string file_wrapper_config = 7;
+  bool ignore_last_timestamp = 8;
 }
 
 message RegisterNewDatasetResponse {

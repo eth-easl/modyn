@@ -25,6 +25,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 from modyn.utils.utils import current_time_millis
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class StorageGRPCServicer(StorageServicer):
             config (dict): Configuration of the storage module.
         """
         self.modyn_config = config
+        self._sample_batch_size = self.modyn_config["storage"]["sample_batch_size"]
         super().__init__()
 
     # pylint: disable-next=unused-argument,invalid-name
@@ -65,7 +67,7 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             samples: list[Sample] = (
-                session.query(Sample).filter(Sample.external_key.in_(request.keys)).order_by(Sample.file_id).all()
+                session.query(Sample).filter(Sample.sample_id.in_(request.keys)).order_by(Sample.file_id).all()
             )
 
             if len(samples) == 0:
@@ -75,11 +77,11 @@ class StorageGRPCServicer(StorageServicer):
 
             if len(samples) != len(request.keys):
                 logger.error("Not all keys were found in the database.")
-                not_found_keys = {s for s in request.keys if s not in [sample.external_key for sample in samples]}
+                not_found_keys = {s for s in request.keys if s not in [sample.sample_id for sample in samples]}
                 logger.error(f"Keys: {not_found_keys}")
 
             current_file = samples[0].file
-            samples_per_file: list[Tuple[int, str, int]] = []
+            samples_per_file: list[Tuple[int, int, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
             for sample in samples:
@@ -92,13 +94,13 @@ class StorageGRPCServicer(StorageServicer):
                     )
                     yield GetResponse(
                         samples=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
-                        keys=[external_key for _, external_key, _ in samples_per_file],
+                        keys=[sample_id for _, sample_id, _ in samples_per_file],
                         labels=[label for _, _, label in samples_per_file],
                     )
-                    samples_per_file = [(sample.index, sample.external_key, sample.label)]
+                    samples_per_file = [(sample.index, sample.sample_id, sample.label)]
                     current_file = sample.file
                 else:
-                    samples_per_file.append((sample.index, sample.external_key, sample.label))
+                    samples_per_file.append((sample.index, sample.sample_id, sample.label))
             file_wrapper = get_file_wrapper(
                 dataset.file_wrapper_type,
                 current_file.path,
@@ -107,14 +109,14 @@ class StorageGRPCServicer(StorageServicer):
             )
             yield GetResponse(
                 samples=file_wrapper.get_samples_from_indices([index for index, _, _ in samples_per_file]),
-                keys=[external_key for _, external_key, _ in samples_per_file],
+                keys=[sample_id for _, sample_id, _ in samples_per_file],
                 labels=[label for _, _, label in samples_per_file],
             )
 
     # pylint: disable-next=unused-argument,invalid-name
     def GetNewDataSince(
         self, request: GetNewDataSinceRequest, context: grpc.ServicerContext
-    ) -> GetNewDataSinceResponse:
+    ) -> Iterable[GetNewDataSinceResponse]:
         """Get all new data since the given timestamp.
 
         Returns:
@@ -127,31 +129,32 @@ class StorageGRPCServicer(StorageServicer):
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
-                return GetNewDataSinceResponse()
+                yield GetNewDataSinceResponse()
+                return
 
             timestamp = request.timestamp
 
-            values = (
-                session.query(Sample.external_key, File.updated_at, Sample.label)
+            stmt = (
+                select(Sample.sample_id, File.updated_at, Sample.label)
                 .join(File)
+                # Enables batching of results in chunks.
+                # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._sample_batch_size)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
-                .all()
             )
 
-            if len(values) == 0:
-                logger.info(f"No new data since {timestamp}")
-                return GetNewDataSinceResponse()
-
-            return GetNewDataSinceResponse(
-                keys=[value[0] for value in values],
-                timestamps=[value[1] for value in values],
-                labels=[value[2] for value in values],
-            )
+            for batch in database.session.execute(stmt).partitions():
+                if len(batch) > 0:
+                    yield GetNewDataSinceResponse(
+                        keys=[value[0] for value in batch],
+                        timestamps=[value[1] for value in batch],
+                        labels=[value[2] for value in batch],
+                    )
 
     def GetDataInInterval(
         self, request: GetDataInIntervalRequest, context: grpc.ServicerContext
-    ) -> GetDataInIntervalResponse:
+    ) -> Iterable[GetDataInIntervalResponse]:
         """Get all data in the given interval.
 
         Returns:
@@ -164,26 +167,27 @@ class StorageGRPCServicer(StorageServicer):
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
-                return GetDataInIntervalResponse()
+                yield GetDataInIntervalResponse()
+                return
 
-            values = (
-                session.query(Sample.external_key, File.updated_at, Sample.label)
+            stmt = (
+                select(Sample.sample_id, File.updated_at, Sample.label)
                 .join(File)
+                # Enables batching of results in chunks.
+                # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._sample_batch_size)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
                 .filter(File.updated_at <= request.end_timestamp)
-                .all()
             )
 
-            if len(values) == 0:
-                logger.info(f"No data between timestamp {request.start_timestamp} and {request.end_timestamp}")
-                return GetDataInIntervalResponse()
-
-            return GetDataInIntervalResponse(
-                keys=[value[0] for value in values],
-                timestamps=[value[1] for value in values],
-                labels=[value[2] for value in values],
-            )
+            for batch in database.session.execute(stmt).partitions():
+                if len(batch) > 0:
+                    yield GetDataInIntervalResponse(
+                        keys=[value[0] for value in batch],
+                        timestamps=[value[1] for value in batch],
+                        labels=[value[2] for value in batch],
+                    )
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(
@@ -223,6 +227,7 @@ class StorageGRPCServicer(StorageServicer):
                 request.description,
                 request.version,
                 request.file_wrapper_config,
+                request.ignore_last_timestamp,
             )
             return RegisterNewDatasetResponse(success=success)
 

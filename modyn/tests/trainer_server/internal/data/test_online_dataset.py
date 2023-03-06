@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module
+import platform
 from unittest.mock import patch
 
 import grpc
@@ -23,7 +24,7 @@ class MockSelectorStub:
         pass
 
     def get_sample_keys_and_weights(self, request):
-        return SamplesResponse(training_samples_subset=["1", "2", "3"], training_samples_weights=[1.0, 1.0, 1.0])
+        return [SamplesResponse(training_samples_subset=[1, 2, 3], training_samples_weights=[1.0, 1.0, 1.0])]
 
 
 class MockStorageStub:
@@ -34,7 +35,7 @@ class MockStorageStub:
         for i in range(0, 10, 2):
             yield GetResponse(
                 samples=[bytes(f"sample{i}", "utf-8"), bytes(f"sample{i+1}", "utf-8")],
-                keys=[str(i), str(i + 1)],
+                keys=[i, i + 1],
                 labels=[i, i + 1],
             )
 
@@ -107,7 +108,7 @@ def test_get_keys_from_selector(test_insecure_channel, test_grpc_connection_esta
     )
 
     online_dataset._init_grpc()
-    assert online_dataset._get_keys_from_selector(0) == ["1", "2", "3"]
+    assert online_dataset._get_keys_from_selector(0, 0) == [1, 2, 3]
 
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
@@ -126,12 +127,12 @@ def test_get_data_from_storage(test_insecure_channel, test_grpc_connection_estab
         training_id=42,
     )
     online_dataset._init_grpc()
-    assert online_dataset._get_data_from_storage([str(x) for x in range(10)]) == (
+    assert online_dataset._get_data_from_storage(list(range(10))) == (
         [bytes(f"sample{x}", "utf-8") for x in range(10)],
         list(range(10)),
     )
 
-    permuted_list = ["0", "9", "6", "5", "4", "3"]
+    permuted_list = [0, 9, 6, 5, 4, 3]
     assert online_dataset._get_data_from_storage(permuted_list) == (
         [b"sample0", b"sample9", b"sample6", b"sample5", b"sample4", b"sample3"],
         [0, 9, 6, 5, 4, 3],
@@ -189,8 +190,11 @@ def test_deserialize_torchvision_transforms(
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[str(i) for i in range(10)])
-def test_dataset_iter(test_get_keys, test_get_data, test_insecure_channel, test_grpc_connection_established):
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(10)))
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
+def test_dataset_iter(
+    test_get_num_data_partitions, test_get_keys, test_get_data, test_insecure_channel, test_grpc_connection_established
+):
     online_dataset = OnlineDataset(
         pipeline_id=1,
         trigger_id=1,
@@ -203,7 +207,7 @@ def test_dataset_iter(test_get_keys, test_get_data, test_insecure_channel, test_
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
-    assert [x[0] for x in all_data] == [str(i) for i in range(10)]
+    assert [x[0] for x in all_data] == list(range(10))
     assert [x[1] for x in all_data] == [bytes(f"sample{x}", "utf-8") for x in range(10)]
     assert [x[2] for x in all_data] == [1] * 10
 
@@ -215,9 +219,10 @@ def test_dataset_iter(test_get_keys, test_get_data, test_insecure_channel, test_
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[str(i) for i in range(10)])
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(10)))
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
 def test_dataset_iter_with_parsing(
-    test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -231,7 +236,7 @@ def test_dataset_iter_with_parsing(
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
-    assert [x[0] for x in all_data] == [str(i) for i in range(10)]
+    assert [x[0] for x in all_data] == list(range(10))
     assert [x[1] for x in all_data] == [f"sample{i}" for i in range(10)]
     assert [x[2] for x in all_data] == [1] * 10
 
@@ -243,8 +248,11 @@ def test_dataset_iter_with_parsing(
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(16)], [1] * 16)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=[str(i) for i in range(16)])
-def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established):
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(16)))
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
+def test_dataloader_dataset(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
     online_dataset = OnlineDataset(
         pipeline_id=1,
         trigger_id=1,
@@ -258,8 +266,41 @@ def test_dataloader_dataset(test_get_data, test_get_keys, test_insecure_channel,
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
         assert len(batch) == 3
-        assert batch[0] == (str(4 * i), str(4 * i + 1), str(4 * i + 2), str(4 * i + 3))
+        assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
         assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
+        assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(4)], [1] * 4))
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(4)))
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
+def test_dataloader_dataset_multi_worker(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    if platform.system() == "Darwin":
+        # On macOS, spawn is the default, which loses the mocks
+        # Hence the test does not work on macOS, only on Linux.
+        return
+
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
+    for batch in dataloader:
+        assert len(batch) == 3
+        assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
+        assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
 
 
@@ -315,3 +356,157 @@ def test_init_transforms(test_insecure_channel, test_grpc_connection_established
         assert online_dataset._transform is not None
 
         tv_ds.assert_called_once()
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset,
+    "_get_data_from_storage",
+    side_effect=[
+        ([x.to_bytes(2, "big") for x in range(16)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(16, 32)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(32, 48)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(48, 64)], [1] * 16),
+    ],
+)
+@patch.object(
+    OnlineDataset,
+    "_get_keys_from_selector",
+    side_effect=[
+        [str(i) for i in range(16)],
+        [str(i) for i in range(16, 32)],
+        [str(i) for i in range(32, 48)],
+        [str(i) for i in range(48, 64)],
+    ],
+)
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=4)
+def test_iter_multi_partition(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
+
+    idx = 0
+    for idx, batch in enumerate(dataloader):
+        assert len(batch) == 3
+        assert batch[0] == (str(4 * idx), str(4 * idx + 1), str(4 * idx + 2), str(4 * idx + 3))
+        assert torch.equal(batch[1], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
+        assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+    assert idx == 15
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset,
+    "_get_data_from_storage",
+    side_effect=[
+        ([x.to_bytes(2, "big") for x in range(16)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(16, 32)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(32, 48)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(48, 64)], [1] * 16),
+    ],
+)
+@patch.object(
+    OnlineDataset,
+    "_get_keys_from_selector",
+    side_effect=[
+        [str(i) for i in range(16)],
+        [str(i) for i in range(16, 32)],
+        [str(i) for i in range(32, 48)],
+        [str(i) for i in range(48, 64)],
+    ],
+)
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=4)
+def test_iter_multi_partition_cross(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=6)
+
+    idx = 0
+    for idx, batch in enumerate(dataloader):
+        assert len(batch) == 3
+        if idx < 10:
+            assert batch[0] == (
+                str(6 * idx),
+                str(6 * idx + 1),
+                str(6 * idx + 2),
+                str(6 * idx + 3),
+                str(6 * idx + 4),
+                str(6 * idx + 5),
+            )
+            assert torch.equal(
+                batch[1], torch.Tensor([6 * idx, 6 * idx + 1, 6 * idx + 2, 6 * idx + 3, 6 * idx + 4, 6 * idx + 5])
+            )
+            assert torch.equal(batch[2], torch.ones(6, dtype=torch.float64))
+        else:
+            assert batch[0] == ("60", "61", "62", "63")
+            assert torch.equal(batch[1], torch.Tensor([60, 61, 62, 63]))
+            assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+    assert idx == 10
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset,
+    "_get_data_from_storage",
+    side_effect=[
+        ([x.to_bytes(2, "big") for x in range(4)], [1] * 4),
+        ([x.to_bytes(2, "big") for x in range(4)], [1] * 4),
+    ],
+)
+@patch.object(OnlineDataset, "_get_keys_from_selector", side_effect=[list(range(4)), list(range(4))])
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=2)
+def test_iter_multi_partition_multi_workers(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    if platform.system() == "Darwin":
+        # On macOS, spawn is the default, which loses the mocks
+        # Hence the test does not work on macOS, only on Linux.
+        return
+
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
+    idx = 0
+    for idx, batch in enumerate(dataloader):
+        assert len(batch) == 3
+        assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
+        assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
+        assert torch.equal(batch[2], torch.ones(4, dtype=int))
+    assert idx == 7

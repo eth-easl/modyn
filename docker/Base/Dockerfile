@@ -10,6 +10,7 @@ RUN apt-get update -yq \
     build-essential \
     gcc \
     g++ \
+    git \
     inetutils-ping \
     wget \
     nano \

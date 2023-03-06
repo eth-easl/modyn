@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Iterable, Optional
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
@@ -20,7 +20,12 @@ class AbstractSelectionStrategy(ABC):
     """
 
     def __init__(
-        self, config: dict, modyn_config: dict, pipeline_id: int, required_configs: Optional[list[str]] = None
+        self,
+        config: dict,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
+        required_configs: Optional[list[str]] = None,
     ):
         self._config = config
 
@@ -37,6 +42,10 @@ class AbstractSelectionStrategy(ABC):
         self.reset_after_trigger: bool = config["reset_after_trigger"]
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
+        self._maximum_keys_in_memory = maximum_keys_in_memory
+
+        if self._maximum_keys_in_memory < 1:
+            raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")
 
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
@@ -53,14 +62,28 @@ class AbstractSelectionStrategy(ABC):
                 logger.info(f"Last trigger in DB for pipeline {pipeline_id} was {last_trigger_id}.")
                 self._next_trigger_id = last_trigger_id + 1
 
+        if self.has_limit and self.training_set_size_limit > self._maximum_keys_in_memory:
+            # TODO(#179) Otherwise, we need to somehow sample over multiple not-in-memory partitions, which is a problem
+            # Right now, we interpret the limit as a limit per partition
+            # (this means a limit of 2 with 4 partitions with lead to 8 data points!)
+            # This is also problematic since the limit now depends on the chunking. However, we need to think about
+            # how to do this carefully
+            raise ValueError(
+                "We currently do not support a limit that is "
+                "larger than the maximum amount of keys we may hold in memory."
+            )
+
     @abstractmethod
-    def _on_trigger(self) -> list[tuple[str, float]]:
+    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         """
         Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
-        train on.
+        train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
+        keys.
 
         Returns:
-            list(tuple(str, float)): Each entry is a training sample, where the first element of the tuple
+            Iterable[list[tuple[str, float]]]:
+                Iterable over partitions. Each partition consists of a list of training samples.
+                In each list, each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
         raise NotImplementedError
@@ -71,7 +94,7 @@ class AbstractSelectionStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         """Informs the strategy of new data.
 
         Args:
@@ -80,43 +103,82 @@ class AbstractSelectionStrategy(ABC):
         """
         raise NotImplementedError
 
-    def trigger(self) -> tuple[int, list[tuple[str, float]]]:
+    def trigger(self) -> tuple[int, int, int]:
         """
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
 
         Returns:
-            tuple[int, list[tuple[str, float]]]: Trigger ID and a list of the training data.
-              In this list, each entry is a training sample,
-              where the first element of the tuple is the key, and the second element is the associated weight.
+            tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
         trigger_id = self._next_trigger_id
-        training_samples = self._on_trigger()
-
-        logger.info(
-            "Strategy for pipeline {} got {} samples for new trigger {}.",
-            self._pipeline_id,
-            len(training_samples),
-            trigger_id,
-        )
+        total_keys_in_trigger = 0
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            database.session.add(Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id))
+            trigger = Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id)
+            database.session.add(trigger)
             database.session.commit()
-            database.session.add_all(
-                [
-                    TriggerSample(trigger_id=trigger_id, pipeline_id=self._pipeline_id, sample_key=key)
-                    for key, _ in training_samples
-                ]
-            )
+            partition = None
+
+            for partition, training_samples in enumerate(self._on_trigger()):
+                logger.info(
+                    f"Strategy for pipeline {self._pipeline_id} returned batch of"
+                    + f" {len(training_samples)} samples for new trigger {trigger_id}."
+                )
+
+                total_keys_in_trigger += len(training_samples)
+
+                database.session.bulk_save_objects(
+                    [
+                        TriggerSample(
+                            partition_id=partition,
+                            trigger_id=trigger_id,
+                            pipeline_id=self._pipeline_id,
+                            sample_key=key,
+                            sample_weight=weight,
+                        )
+                        for key, weight in training_samples
+                    ]
+                )
+
+            database.session.commit()
+
+            # Update Trigger about number of partitions and keys
+            trigger.num_keys = total_keys_in_trigger
+            num_partitions = partition + 1 if partition is not None else 0
+            trigger.num_partitions = num_partitions
             database.session.commit()
 
         if self.reset_after_trigger:
             self._reset_state()
 
         self._next_trigger_id += 1
-        return trigger_id, training_samples
+        return trigger_id, total_keys_in_trigger, num_partitions
 
-    def _persist_samples(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def get_trigger_partition_keys(self, trigger_id: int, partition_id: int) -> list[tuple[int, float]]:
+        """
+        Given a trigger id and partition id, returns a list of all keys in this partition
+
+        Returns:
+            list[tuple[int, float]]: list of training samples.
+                Each entry is a training sample, where the first element of the tuple
+                is the key, and the second element is the associated weight.
+        """
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            data = (
+                database.session.query(TriggerSample.sample_key, TriggerSample.sample_weight)
+                .filter(
+                    TriggerSample.pipeline_id == self._pipeline_id,
+                    TriggerSample.trigger_id == trigger_id,
+                    TriggerSample.partition_id == partition_id,
+                )
+                .all()
+            )
+
+            assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"
+
+            return data
+
+    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         """Persists the data in the database.
 
         Args:

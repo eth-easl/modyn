@@ -6,6 +6,7 @@ project:
 storage:
   port: "50051"
   hostname: "storage"
+  sample_batch_size: 65536
   new_file_watcher:
     interval: 5
   datasets:
@@ -21,7 +22,24 @@ storage:
           {
             file_extension: ".png",
             label_file_extension: ".label"
-          }
+          },
+        ignore_last_timestamp: false,
+      },
+      {
+        name: "criteo",
+        description: "Criteo Dataset",
+        version: "0.0.1",
+        base_path: "/datasets/criteo",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "little",
+            record_size: 160,
+            label_size: 4,
+            file_extension: ".bin"
+          },
+        ignore_last_timestamp: false,
       }
     ]
   database:
@@ -48,7 +66,10 @@ ptmp:
 selector:
   hostname: "selector"
   port: "50056"
+  keys_in_selector_cache: 500000
+  sample_batch_size: 65536
 
 trainer_server:
   hostname: "trainer_server"
   port: "50057"
+  ftp_port: "50058"

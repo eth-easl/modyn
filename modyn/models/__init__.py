@@ -3,6 +3,7 @@
 """
 import os
 
+from .dlrm.dlrm import DLRM  # noqa: F401
 from .resnet18.resnet18 import ResNet18  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))

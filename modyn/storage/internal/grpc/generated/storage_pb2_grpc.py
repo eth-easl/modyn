@@ -19,12 +19,12 @@ class StorageStub(object):
                 request_serializer=storage__pb2.GetRequest.SerializeToString,
                 response_deserializer=storage__pb2.GetResponse.FromString,
                 )
-        self.GetNewDataSince = channel.unary_unary(
+        self.GetNewDataSince = channel.unary_stream(
                 '/modyn.storage.Storage/GetNewDataSince',
                 request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
                 response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
                 )
-        self.GetDataInInterval = channel.unary_unary(
+        self.GetDataInInterval = channel.unary_stream(
                 '/modyn.storage.Storage/GetDataInInterval',
                 request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
                 response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
@@ -104,12 +104,12 @@ def add_StorageServicer_to_server(servicer, server):
                     request_deserializer=storage__pb2.GetRequest.FromString,
                     response_serializer=storage__pb2.GetResponse.SerializeToString,
             ),
-            'GetNewDataSince': grpc.unary_unary_rpc_method_handler(
+            'GetNewDataSince': grpc.unary_stream_rpc_method_handler(
                     servicer.GetNewDataSince,
                     request_deserializer=storage__pb2.GetNewDataSinceRequest.FromString,
                     response_serializer=storage__pb2.GetNewDataSinceResponse.SerializeToString,
             ),
-            'GetDataInInterval': grpc.unary_unary_rpc_method_handler(
+            'GetDataInInterval': grpc.unary_stream_rpc_method_handler(
                     servicer.GetDataInInterval,
                     request_deserializer=storage__pb2.GetDataInIntervalRequest.FromString,
                     response_serializer=storage__pb2.GetDataInIntervalResponse.SerializeToString,
@@ -172,7 +172,7 @@ class Storage(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/GetNewDataSince',
+        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetNewDataSince',
             storage__pb2.GetNewDataSinceRequest.SerializeToString,
             storage__pb2.GetNewDataSinceResponse.FromString,
             options, channel_credentials,
@@ -189,7 +189,7 @@ class Storage(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/GetDataInInterval',
+        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetDataInInterval',
             storage__pb2.GetDataInIntervalRequest.SerializeToString,
             storage__pb2.GetDataInIntervalResponse.FromString,
             options, channel_credentials,

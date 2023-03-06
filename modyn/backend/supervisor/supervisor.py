@@ -98,6 +98,7 @@ class Supervisor:
 
         return True
 
+    # pylint: disable=too-many-branches
     def _validate_training_options(self) -> bool:
         is_valid = True
         batch_size = self.pipeline_config["training"]["batch_size"]
@@ -121,6 +122,13 @@ class Supervisor:
             is_valid = False
 
         if initial_model == "pretrained":
+            if not self.pipeline_config["training"]["use_previous_model"]:
+                logger.error(
+                    "Cannot have use_previous_model == False and use a pretrained initial model."
+                    "Initial model would get lost after first trigger."
+                )
+                is_valid = False
+
             if "initial_model_path" not in self.pipeline_config["training"]:
                 logger.error("Initial model set to pretrained, but no initial_model_path given")
                 is_valid = False
@@ -183,25 +191,36 @@ class Supervisor:
         last_timestamp = start_timestamp
         dataset_id = self.pipeline_config["data"]["dataset_id"]
 
-        last_keys = set()
+        previous_largest_keys = set()
 
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
         try:
             while True:
                 self.status_bar.update(demo="Fetching new data")
-                new_data = self.grpc.get_new_data_since(dataset_id, last_timestamp)
-                # Since get_new_data_since is inclusive, we need to filter out the keys we have already processed
-                new_data = [(key, timestamp, label) for (key, timestamp, label) in new_data if key not in last_keys]
-                last_timestamp = (
-                    max((timestamp for (_, timestamp, _) in new_data)) if len(new_data) > 0 else last_timestamp
-                )
+                trigger_occured = False
+                largest_keys = set()
+                for new_data in self.grpc.get_new_data_since(dataset_id, last_timestamp):
+                    # Since get_new_data_since is inclusive, we need to filter out the keys
+                    # we have already processed in the previous get_new_data_since request
+                    new_data = [
+                        (key, timestamp, label)
+                        for (key, timestamp, label) in new_data
+                        if key not in previous_largest_keys
+                    ]
+                    last_timestamp = (
+                        max((timestamp for (_, timestamp, _) in new_data)) if len(new_data) > 0 else last_timestamp
+                    )
 
-                # Remember all data points with last_timestamp so we do not process them again in the next iteration
-                # We use a set to have a O(1) check in the line above.
-                last_keys = {key for (key, timestamp, label) in new_data if timestamp == last_timestamp}
+                    # Remember all data points with last_timestamp so we do not process them again in the next iteration
+                    # We use a set to have a O(1) check in the line above.
+                    largest_keys.update({key for (key, timestamp, _) in new_data if timestamp == last_timestamp})
 
-                if not self._handle_new_data(new_data):
+                    if self._handle_new_data(new_data):
+                        trigger_occured = True
+
+                previous_largest_keys = largest_keys
+                if not trigger_occured:
                     self.status_bar.update(demo="Waiting for new data...")
                     sleep(2)
 
@@ -210,7 +229,7 @@ class Supervisor:
             self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
-    def _handle_new_data(self, new_data: list[tuple[str, int, int]], selector_batch_size: int = 128) -> bool:
+    def _handle_new_data(self, new_data: list[tuple[int, int, int]], selector_batch_size: int = 128) -> bool:
         """This function handles new data during experiments or actual pipeline execution.
         We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
         If a data point within a batch causes a trigger,
@@ -240,7 +259,7 @@ class Supervisor:
 
         return any_training_triggered
 
-    def _handle_new_data_batch(self, batch: list[tuple[str, int, int]]) -> bool:
+    def _handle_new_data_batch(self, batch: list[tuple[int, int, int]]) -> bool:
         triggering_indices = self.trigger.inform(batch)
 
         if len(triggering_indices) > 0:
@@ -252,7 +271,7 @@ class Supervisor:
         self.grpc.inform_selector(self.pipeline_id, batch)
         return False
 
-    def _handle_triggers_within_batch(self, batch: list[tuple[str, int, int]], triggering_indices: list[int]) -> None:
+    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         for i, triggering_idx in enumerate(triggering_indices):
@@ -290,7 +309,12 @@ class Supervisor:
         )
         self.grpc.wait_for_training_completion(self.current_training_id, self.pipeline_id, trigger_id)
 
-        self.previous_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
+        # We download the trained model for evaluation in any case.
+        trained_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
+
+        # Only if the pipeline actually wants to continue the training on it, we set previous model.
+        if self.pipeline_config["training"]["use_previous_model"]:
+            self.previous_model = trained_model
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.
@@ -306,11 +330,13 @@ class Supervisor:
         logger.info("Starting data replay.")
 
         if self.stop_replay_at is None:
-            replay_data = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
+            generator = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
         else:
-            replay_data = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
+            generator = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
 
-        self._handle_new_data(replay_data)
+        for replay_data in generator:
+            self._handle_new_data(replay_data)
+
         self.status_bar.update(demo="Replay done")
 
     def pipeline(self) -> None:

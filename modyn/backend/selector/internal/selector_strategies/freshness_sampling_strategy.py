@@ -3,11 +3,12 @@
 import logging
 import random
 from math import isclose
+from typing import Iterable, Iterator
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import asc, exc, update
+from sqlalchemy import asc, exc, func, select, update
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,10 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int):
-        super().__init__(config, modyn_config, pipeline_id, required_configs=["unused_data_ratio"])
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+        super().__init__(
+            config, modyn_config, pipeline_id, maximum_keys_in_memory, required_configs=["unused_data_ratio"]
+        )
         self.unused_data_ratio = self._config["unused_data_ratio"]
         self._is_first_trigger = True
 
@@ -42,13 +45,13 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 "FreshnessSamplingStrategy cannot reset state after trigger, because then no old data would be available to sample from."
             )
 
-    def inform_data(self, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
         self._persist_samples(keys, timestamps, labels)
 
-    def _on_trigger(self) -> list[tuple[str, float]]:
+    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         """
         Internal function. Calculates the next set of data to
         train on.
@@ -63,40 +66,52 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         # we hold in memory.
 
         if self._is_first_trigger:
-            samples = self._get_first_trigger_data()
+            get_data_func = self._get_first_trigger_data
         else:
-            samples = self._get_trigger_data()
+            get_data_func = self._get_trigger_data
 
-        self._mark_used(samples)
-        random.shuffle(samples)
+        for samples in get_data_func():
+            self._mark_used(samples)
+            random.shuffle(samples)
 
-        return [(sample, 1.0) for sample in samples]
+            yield [(sample, 1.0) for sample in samples]
 
-    def _get_first_trigger_data(self) -> list[str]:
+    def _get_first_trigger_data(self) -> Iterable[list[int]]:
         assert self._is_first_trigger
-
-        samples = self._get_all_unused_data()
-
-        if self.has_limit and self.training_set_size_limit < len(samples):
-            samples = random.sample(samples, self.training_set_size_limit)
-
         self._is_first_trigger = False
 
-        return samples
+        for samples in self._get_all_unused_data():
+            # TODO(#179): this assumes limit < len(samples)
+            if self.has_limit and self.training_set_size_limit < len(samples):
+                samples = random.sample(samples, self.training_set_size_limit)
 
-    def _get_trigger_data(self) -> list[str]:
+            yield samples
+
+    def _get_trigger_data(self) -> Iterable[list[int]]:
         assert not self._is_first_trigger
-        unused_samples = self._get_all_unused_data()
-        used_samples = self._get_all_used_data()
-        # TODO(#116): At this point, we hold everything in memory anyways, so the database does not really even make sense except for very high usage scnearios
-        # For this use case, it is enough to query only the length from the DB, but then again to call `random.sample` we need the entire list.
+        count_unused_samples = self._get_count_of_data(False)
+        count_used_samples = self._get_count_of_data(True)
 
-        num_unused_samples, num_used_samples = self._calc_num_samples_no_limit(len(unused_samples), len(used_samples))
+        num_unused_samples, num_used_samples = self._calc_num_samples_no_limit(count_unused_samples, count_used_samples)
 
         if self.has_limit and (num_unused_samples + num_used_samples) > self.training_set_size_limit:
-            num_unused_samples, num_used_samples = self._calc_num_samples_limit(len(unused_samples), len(used_samples))
+            num_unused_samples, num_used_samples = self._calc_num_samples_limit(
+                count_unused_samples, count_used_samples
+            )
 
-        return random.sample(unused_samples, num_unused_samples) + random.sample(used_samples, num_used_samples)
+        # Idea: We issue a windowed query for unused and used samples with _maximum_keys_in_memory / 2 as the window size each.
+        # We then always concatenate the two windows of the subsample to create a window of _maximum_keys_in_memory which we yield
+
+        unused_generator = self._get_data_sample(num_unused_samples, False)
+        used_generator = self._get_data_sample(num_used_samples, True)
+
+        next_unused_sample: list[int] = next(unused_generator, [])
+        next_used_sample: list[int] = next(used_generator, [])
+
+        while len(next_unused_sample) > 0 or len(next_used_sample) > 0:
+            yield next_unused_sample + next_used_sample
+            next_unused_sample = next(unused_generator, [])
+            next_used_sample = next(used_generator, [])
 
     def _calc_num_samples_no_limit(self, total_unused_samples: int, total_used_samples: int) -> tuple[int, int]:
         # For both the used and unused samples, we calculate how many samples we could have at maximum where the used/unused samples make up the required fraction
@@ -132,50 +147,75 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
         return num_unused_samples, num_used_samples
 
-    def _get_all_used_data(self) -> list[str]:
-        """Returns all used samples
+    def _get_data_sample(self, sample_size: int, used: bool) -> Iterator[list[int]]:
+        """Returns sample of data. Returns ins batches of  self._maximum_keys_in_memory / 2
 
         Returns:
             list[str]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == True)
-                .all()
+            stmt = (
+                select(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
+                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=max(int(self._maximum_keys_in_memory / 2), 1))
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used)
+                .order_by(func.random())  # pylint: disable=not-callable
+                .limit(sample_size)
             )
 
-        if len(data) > 0:
-            keys, used = zip(*data)
-            assert all(used), "Queried used data, but got unused data."
-        else:
-            keys, used = [], []
+            for chunk in database.session.execute(stmt).partitions():
+                if len(chunk) > 0:
+                    keys, used_data = zip(*chunk)
+                    if used:
+                        assert all(used_data), "Queried used data, but got unused data."
+                    else:
+                        assert not any(used_data), "Queried unused data, but got used data."
 
-        return list(keys)
+                else:
+                    keys = []
 
-    def _get_all_unused_data(self) -> list[str]:
+                yield list(keys)
+
+    def _get_all_unused_data(self) -> Iterator[list[int]]:
         """Returns all unused samples
 
         Returns:
             list[str]: Keys of unused samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
+            stmt = (
+                select(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
+                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == False)
                 .order_by(asc(SelectorStateMetadata.timestamp))
-                .all()
             )
 
-        if len(data) > 0:
-            keys, used = zip(*data)
-            assert not any(used), "Queried unused data, but got used data."
-        else:
-            keys, used = [], []
+            for chunk in database.session.execute(stmt).partitions():
+                if len(chunk) > 0:
+                    keys, used = zip(*chunk)
+                    assert not any(used), "Queried unused data, but got used data."
+                else:
+                    keys, used = [], []
 
-        return list(keys)
+                yield list(keys)
 
-    def _mark_used(self, keys: list[str]) -> None:
+    def _get_count_of_data(self, used: bool) -> int:
+        """Returns all unused samples
+
+        Returns:
+            list[str]: Keys of unused samples
+        """
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            return (
+                database.session.query(SelectorStateMetadata.sample_key)
+                # TODO(#182): Index on used?
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used
+                ).count()
+            )
+
+    def _mark_used(self, keys: list[int]) -> None:
         """Sets samples to used"""
         if len(keys) == 0:
             return

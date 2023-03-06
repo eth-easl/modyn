@@ -52,6 +52,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         description: str,
         version: str,
         file_wrapper_config: str,
+        ignore_last_timestamp: bool = False,
     ) -> bool:
         """
         Add dataset to database.
@@ -69,6 +70,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
                         "description": description,
                         "version": version,
                         "file_wrapper_config": file_wrapper_config,
+                        "ignore_last_timestamp": ignore_last_timestamp,
                     }
                 )
             else:
@@ -81,6 +83,8 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
                     description=description,
                     version=version,
                     file_wrapper_config=file_wrapper_config,
+                    last_timestamp=-1,  # Set to -1 as this is a new dataset
+                    ignore_last_timestamp=ignore_last_timestamp,
                 )
                 self.session.add(dataset)
             self.session.commit()

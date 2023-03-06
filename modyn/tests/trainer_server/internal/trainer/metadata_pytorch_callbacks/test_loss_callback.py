@@ -17,7 +17,7 @@ class MockModel(torch.nn.Module):
 
 def get_mocks():
     model = MockModel()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    optimizer = {"model": torch.optim.SGD(model.parameters(), lr=0.1)}
     return model, optimizer
 
 
@@ -38,7 +38,7 @@ def test_on_batch_before_update(test_add_per_sample_metadata_for_batch):
     loss_callback = get_loss_callback()
     model, optimizer = get_mocks()
 
-    sample_ids = ("0", "1", "2", "3")
+    sample_ids = [0, 1, 2, 3]
     data = torch.Tensor([0.5, 0.1, 0.2, 0.3])
     target = torch.Tensor([1, 2, 0, 1])
     output = torch.Tensor([1, 0, 1, 2])
@@ -46,11 +46,9 @@ def test_on_batch_before_update(test_add_per_sample_metadata_for_batch):
 
     loss_callback.on_batch_before_update(model, optimizer, 0, sample_ids, data, target, output, reduced_loss)
     assert loss_callback._sum_train_loss == 6.0
-    test_add_per_sample_metadata_for_batch.assert_called_with(
-        MetricType.LOSS, ["0", "1", "2", "3"], [0.0, 4.0, 1.0, 1.0]
-    )
+    test_add_per_sample_metadata_for_batch.assert_called_with(MetricType.LOSS, [0, 1, 2, 3], [0.0, 4.0, 1.0, 1.0])
 
-    sample_ids_new = ("4", "5", "6", "7")
+    sample_ids_new = [4, 5, 6, 7]
     data_new = torch.Tensor([1.0, 0.1, 0.5, 0.3])
     target_new = torch.Tensor([2, 4, 0, 2])
     output_new = torch.Tensor([1, 3, 1, 2])
@@ -60,9 +58,7 @@ def test_on_batch_before_update(test_add_per_sample_metadata_for_batch):
         model, optimizer, 0, sample_ids_new, data_new, target_new, output_new, reduced_loss_new
     )
     assert loss_callback._sum_train_loss == 9.0
-    test_add_per_sample_metadata_for_batch.assert_called_with(
-        MetricType.LOSS, ["4", "5", "6", "7"], [1.0, 1.0, 1.0, 0.0]
-    )
+    test_add_per_sample_metadata_for_batch.assert_called_with(MetricType.LOSS, [4, 5, 6, 7], [1.0, 1.0, 1.0, 0.0])
 
 
 @patch.object(MetadataCollector, "add_per_trigger_metadata", return_value=None)

@@ -9,26 +9,40 @@ model:
 training:
   gpus: 1
   device: "cpu"
+  amp: False
   dataloader_workers: 2
+  use_previous_model: True
   initial_model: random
   initial_pass:
     activated: True
     reference: amount
     amount: 0.5
   batch_size: 64
-  optimizer:
-    name: "SGD"
-    config:
-      lr: 0.1
-      momentum: 0.001
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.1
+            momentum: 0.001
   optimization_criterion:
     name: "CrossEntropyLoss"
+  lr_scheduler:
+    name: "StepLR"
+    custom: True
+    optimizers: ["default"]
+    config:
+      step_size: 10
+      gamma: 0.1
   checkpointing:
     activated: True
     interval: 10
     path: "results"
-  selection_strategy: 
+  selection_strategy:
     name: NewDataStrategy
+    maximum_keys_in_memory: 500000
     config:
       limit: -1
       reset_after_trigger: True
@@ -41,7 +55,7 @@ data:
     import io
     def bytes_parser_function(data: bytes) -> Image:
       return Image.open(io.BytesIO(data))
-                  
+
 trigger:
   id: DataAmountTrigger
   trigger_config:

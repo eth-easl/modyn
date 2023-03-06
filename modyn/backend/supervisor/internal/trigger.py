@@ -6,7 +6,7 @@ class Trigger(ABC):
         assert trigger_config is not None, "trigger_config cannot be None."
 
     @abstractmethod
-    def inform(self, new_data: list[tuple[str, int, int]]) -> list[int]:
+    def inform(self, new_data: list[tuple[int, int, int]]) -> list[int]:
         """The supervisor informs the trigger about new data.
         In case the concrete trigger implementation decides to trigger, we return a list of _indices into new_data_.
         This list contains the indices of all data points that cause a trigger.
