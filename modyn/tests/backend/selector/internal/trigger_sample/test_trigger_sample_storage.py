@@ -30,55 +30,68 @@ def test_save_trigger_sample():
 def test_get_file_size():
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0)], 4)
 
-    TriggerSampleStorage(TMP_DIR)._get_file_size(TMP_DIR + "/1_2_3_4")
+    file_path = Path(TMP_DIR) / "1_2_3_4"
+    TriggerSampleStorage(TMP_DIR)._get_file_size(file_path)
 
 
 def test_parse_file_subset():
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0)], 4)
 
-    samples = TriggerSampleStorage(TMP_DIR)._parse_file_subset(TMP_DIR + "/1_2_3_4", 1)
+    file_path = Path(TMP_DIR) / "1_2_3_4"
+    samples = TriggerSampleStorage(TMP_DIR)._parse_file_subset(file_path, 0, 1)
 
     assert len(samples) == 1
     assert samples[0] == (1, 1.0)
 
-    samples = TriggerSampleStorage(TMP_DIR)._parse_file_subset(TMP_DIR + "/1_2_3_4", 2)
-    assert len(samples) == 2
-    assert samples[0] == (1, 1.0)
-    assert samples[1] == (2, 2.0)
-
-    TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0)], 5)
-
-    samples = TriggerSampleStorage(TMP_DIR)._parse_file_subset(TMP_DIR + "/1_2_3_5", 3)
-    assert len(samples) == 3
-    assert samples[0] == (1, 1.0)
-    assert samples[1] == (2, 2.0)
-    assert samples[2] == (3, 3.0)
-
-
-def test_parse_file():
-    TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0)], 4)
-
-    samples = TriggerSampleStorage(TMP_DIR)._parse_file(TMP_DIR + "/1_2_3_4")
+    samples = TriggerSampleStorage(TMP_DIR)._parse_file_subset(file_path, 0, 2)
     assert len(samples) == 2
     assert samples[0] == (1, 1.0)
     assert samples[1] == (2, 2.0)
 
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], 5)
+    file_path = Path(TMP_DIR) / "1_2_3_5"
 
-    samples = TriggerSampleStorage(TMP_DIR)._parse_file(TMP_DIR + "/1_2_3_5")
+    samples = TriggerSampleStorage(TMP_DIR)._parse_file_subset(file_path, 0, 3)
+    assert len(samples) == 3
+    assert samples[0] == (1, 1.0)
+    assert samples[1] == (2, 2.0)
+    assert samples[2] == (3, 3.0)
+
+    samples = TriggerSampleStorage(TMP_DIR)._parse_file_subset(file_path, 1, 3)
+    assert len(samples) == 2
+    assert samples[0] == (2, 2.0)
+    assert samples[1] == (3, 3.0)
+
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0)], 5)
+    with pytest.raises(ValueError):
+        _ = TriggerSampleStorage(TMP_DIR)._parse_file_subset(file_path, 0, 3)
+
+
+def test_parse_file():
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0)], 4)
+    file_path = Path(TMP_DIR) / "1_2_3_4"
+
+    samples = TriggerSampleStorage(TMP_DIR)._parse_file(file_path)
+    assert len(samples) == 2
+    assert samples[0] == (1, 1.0)
+    assert samples[1] == (2, 2.0)
+
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], 5)
+    file_path = Path(TMP_DIR) / "1_2_3_5"
+
+    samples = TriggerSampleStorage(TMP_DIR)._parse_file(file_path)
     assert len(samples) == 4
     assert samples[0] == (1, 1.0)
     assert samples[1] == (2, 2.0)
     assert samples[2] == (3, 3.0)
     assert samples[3] == (4, 4.0)
 
-def test_get_trigger_samples():
-    with open(f"{TMP_DIR}/1_2_3_4.txt", "w", encoding="utf-8") as file:
-        file.write("1:1.0\n2:2.0\n3:3.0\n4:4.0")
-    with open(f"{TMP_DIR}/1_2_3_5.txt", "w", encoding="utf-8") as file:
-        file.write("3:3.0\n4:4.0\n5:5.0\n6:6.0")
 
-    assert set(TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3)) == {
+def test_get_trigger_samples():
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], 4)
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(3, 3.0), (4, 4.0), (5, 5.0), (6, 6.0)], 5)
+
+    expected_order = [
         (1, 1.0),
         (2, 2.0),
         (3, 3.0),
@@ -87,13 +100,21 @@ def test_get_trigger_samples():
         (4, 4.0),
         (5, 5.0),
         (6, 6.0),
-    }
+    ]
 
-    expected_order = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3)
+    assert TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3) == expected_order
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 4, 8)
     assert len(result) == 2
     assert result == [expected_order[0], expected_order[1]]
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 4, 8)
+    assert len(result) == 2
+    assert result == [expected_order[2], expected_order[3]]
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 4, 8)
+    assert len(result) == 2
+    assert result == [expected_order[4], expected_order[5]]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 3, 4, 8)
     assert len(result) == 2
@@ -102,6 +123,18 @@ def test_get_trigger_samples():
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 3, 8)
     assert len(result) == 3
     assert result == [expected_order[3], expected_order[4], expected_order[5]]
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 3, 8)
+    assert len(result) == 2
+    assert result == [expected_order[6], expected_order[7]]
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 1, 8)
+    assert len(result) == 8
+    assert result == expected_order
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 9, 10, 8)
+    assert len(result) == 0
+    assert result == []
 
 
 def test_get_trigger_samples_no_file():

@@ -121,7 +121,9 @@ class AbstractSelectionStrategy(ABC):
         modyn_config: dict,
         insertion_id: int,
     ) -> None:
-        TriggerSampleStorage(trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"]).save_trigger_sample(
+        TriggerSampleStorage(
+            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"]
+        ).save_trigger_sample(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
