@@ -84,8 +84,6 @@ class TriggerSampleStorage:
             retrieval_worker_id, total_retrieval_workers, num_samples_trigger
         )
 
-        print(f"start_index: {start_index}, worker_subset_size: {worker_subset_size}")
-
         current_index = 0
         for file in os.listdir(self.trigger_sample_directory):
             if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"):
