@@ -7,7 +7,7 @@ from typing import Iterable, Optional
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
-from modyn.backend.selector.internal.trigger_sample.trigger_sample_storage import TriggerSample
+from modyn.backend.selector.internal.trigger_sample import get_trigger_samples, save_trigger_sample
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -121,7 +121,7 @@ class AbstractSelectionStrategy(ABC):
         modyn_config: dict,
         insertion_id: int,
     ) -> None:
-        TriggerSample.save_trigger_sample(
+        save_trigger_sample(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
@@ -218,7 +218,7 @@ class AbstractSelectionStrategy(ABC):
                 .first()[0]
             )
 
-            data = TriggerSample.get_trigger_samples(
+            data = get_trigger_samples(
                 pipeline_id=self._pipeline_id,
                 trigger_id=trigger_id,
                 partition_id=partition_id,
