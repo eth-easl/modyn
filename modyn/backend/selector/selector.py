@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict
 
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.backend.selector.internal.trigger_sample.trigger_sample_storage import TriggerSample
 from modyn.utils.utils import flatten
 
 
@@ -25,36 +26,6 @@ class Selector:
         self._trigger_size_cache: Dict[int, int] = {}
         self._trigger_partition_cache: Dict[int, int] = {}
 
-    def _get_training_set_partition(
-        self, training_samples: list[tuple[int, float]], worker_id: int
-    ) -> list[tuple[int, float]]:
-        """
-        Return the required subset of training samples for the particular worker id
-        The subset is calculated by taking an offset from the start based on the given worker id.
-
-        If there is excess data (say there are 14 data points and 5 workers), there are at most
-        num_workers extra samples. As such, we make each worker take on one extra, and the final
-        worker takes on (probably less) the rest of the data. So we would have the first 4 take
-        3 each and the last one takes 2.
-
-        Returns:
-            list(tuple(int, float)): the training sample keys for the newly selected training_set
-                along with the weight of that sample.
-        """
-        if worker_id < 0 or worker_id >= self._num_workers:
-            raise ValueError(f"Asked for worker id {worker_id}, but only have {self._num_workers} workers!")
-
-        training_set_size = len(training_samples)
-        worker_subset_size = int(training_set_size / self._num_workers)
-
-        if training_set_size % self._num_workers > 0:
-            worker_subset_size += 1
-
-        start_index = worker_id * worker_subset_size
-        training_samples_subset = training_samples[start_index : start_index + worker_subset_size]
-
-        return training_samples_subset
-
     def get_sample_keys_and_weights(
         self, trigger_id: int, worker_id: int, partition_id: int
     ) -> list[tuple[int, float]]:
@@ -75,11 +46,18 @@ class Selector:
             raise ValueError(f"Asked for worker id {worker_id}, but only have {self._num_workers} workers!")
 
         if trigger_id in self._trigger_cache:
-            partition_data = self._trigger_cache[trigger_id][partition_id]
+            start_index, worker_subset_size = TriggerSample.get_training_set_partition(
+                worker_id, self._num_workers, len(self._trigger_cache[trigger_id][partition_id])
+            )
+            training_samples_subset = self._trigger_cache[trigger_id][partition_id][
+                start_index : start_index + worker_subset_size
+            ]
         else:
-            partition_data = self._strategy.get_trigger_partition_keys(trigger_id, partition_id)
+            training_samples_subset = self._strategy.get_trigger_partition_keys(
+                trigger_id, partition_id, worker_id, self._num_workers
+            )
 
-        return self._get_training_set_partition(partition_data, worker_id)
+        return training_samples_subset
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         self._strategy.inform_data(keys, timestamps, labels)

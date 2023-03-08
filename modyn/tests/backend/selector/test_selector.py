@@ -26,43 +26,16 @@ def test_init():
     assert selec._num_workers == 2
 
 
-def test_get_training_set_partition():
-    selector = Selector(MockStrategy(), 42, 3)
-
-    training_samples = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-    assert selector._get_training_set_partition(training_samples, 0) == [
-        10,
-        11,
-        12,
-        13,
-    ]
-    assert selector._get_training_set_partition(training_samples, 1) == [
-        14,
-        15,
-        16,
-        17,
-    ]
-    assert selector._get_training_set_partition(training_samples, 2) == [18, 19]
-
-    with pytest.raises(ValueError):
-        selector._get_training_set_partition(training_samples, 3)
-    with pytest.raises(ValueError):
-        selector._get_training_set_partition(training_samples, -1)
-
-
-@patch.object(Selector, "_get_training_set_partition")
-def test_get_sample_keys_and_weight_cached(test_get_training_set_partition: MagicMock):
+def test_get_sample_keys_and_weight_cached():
     selector = Selector(MockStrategy(), 42, 3)
     selector._trigger_cache[42] = [[(10, 1.0), (11, 1.0)], [(12, 1.0), (13, 1.0)]]
     selector._trigger_partition_cache[42] = 2
-    test_get_training_set_partition.side_effect = lambda x, y: x
 
-    result = selector.get_sample_keys_and_weights(42, 2, 0)
-    assert result == [(10, 1.0), (11, 1.0)]
-    test_get_training_set_partition.assert_called_once_with([(10, 1.0), (11, 1.0)], 2)
+    result = selector.get_sample_keys_and_weights(42, 0, 0)
+    assert result == [(10, 1.0)]
 
-    result = selector.get_sample_keys_and_weights(42, 2, 1)
-    assert result == [(12, 1.0), (13, 1.0)]
+    result = selector.get_sample_keys_and_weights(42, 0, 1)
+    assert result == [(12, 1.0)]
 
     with pytest.raises(ValueError):
         selector.get_sample_keys_and_weights(42, 1337, 0)
@@ -71,19 +44,14 @@ def test_get_sample_keys_and_weight_cached(test_get_training_set_partition: Magi
         selector.get_sample_keys_and_weights(42, 2, 1337)
 
 
-@patch.object(Selector, "_get_training_set_partition")
 @patch.object(MockStrategy, "get_trigger_partition_keys")
-def test_get_sample_keys_and_weight_no_cache(
-    test_get_trigger_partition_keys: MagicMock, test_get_training_set_partition: MagicMock
-):
+def test_get_sample_keys_and_weight_no_cache(test_get_trigger_partition_keys: MagicMock):
     selector = Selector(MockStrategy(), 42, 3)
     selector._trigger_partition_cache[42] = 2
-    test_get_training_set_partition.side_effect = lambda x, y: x
     test_get_trigger_partition_keys.return_value = [(10, 1.0), (11, 1.0)]
 
     result = selector.get_sample_keys_and_weights(42, 2, 0)
     assert result == [(10, 1.0), (11, 1.0)]
-    test_get_training_set_partition.assert_called_once_with([(10, 1.0), (11, 1.0)], 2)
 
     with pytest.raises(ValueError):
         selector.get_sample_keys_and_weights(42, 1337, 0)

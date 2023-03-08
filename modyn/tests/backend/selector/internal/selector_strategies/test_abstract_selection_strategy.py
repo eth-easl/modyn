@@ -1,14 +1,19 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name,abstract-class-instantiated
 import os
 import pathlib
+import shutil
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.backend.selector.internal.trigger_sample.trigger_sample_storage import TriggerSample
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
+TMP_DIR = tempfile.mkdtemp()
 
 
 def get_minimal_modyn_config():
@@ -21,17 +26,20 @@ def get_minimal_modyn_config():
             "port": "0",
             "database": f"{database_path}",
         },
-        "selector": {"insertion_threads": 8},
+        "selector": {"insertion_threads": 8, "trigger_sample_directory": TMP_DIR},
     }
 
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
+    Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
+
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
     yield
 
     os.remove(database_path)
+    shutil.rmtree(TMP_DIR)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -127,7 +135,7 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
 
     assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
     assert strat.get_trigger_partition_keys(trigger_id, 1) == [(13, 1.0), (14, 1.0), (15, 1.0)]
-    assert strat.get_trigger_partition_keys(trigger_id, 2) == []
+    assert not strat.get_trigger_partition_keys(trigger_id, 2)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -178,28 +186,31 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert data[0].num_keys == 4
         assert data[0].num_partitions == 2
 
-        data = database.session.query(TriggerSample).all()
+        data = TriggerSample.get_trigger_samples(
+            42,
+            0,
+            0,
+            TMP_DIR,
+        )
 
-        assert len(data) == 4
-        assert data[0].trigger_id == 0
-        assert data[0].sample_key == 10
-        assert data[0].pipeline_id == 42
-        assert data[0].partition_id == 0
+        assert len(data) == 3
+        assert data[0][0] == 10
+        assert data[0][1] == 1.0
+        assert data[1][0] == 11
+        assert data[1][1] == 1.0
+        assert data[2][0] == 12
+        assert data[2][1] == 1.0
 
-        assert data[1].trigger_id == 0
-        assert data[1].sample_key == 11
-        assert data[1].pipeline_id == 42
-        assert data[1].partition_id == 0
+        data = TriggerSample.get_trigger_samples(
+            42,
+            0,
+            1,
+            TMP_DIR,
+        )
 
-        assert data[2].trigger_id == 0
-        assert data[2].sample_key == 12
-        assert data[2].pipeline_id == 42
-        assert data[2].partition_id == 0
-
-        assert data[3].trigger_id == 0
-        assert data[3].sample_key == 13
-        assert data[3].pipeline_id == 42
-        assert data[3].partition_id == 1
+        assert len(data) == 1
+        assert data[0][0] == 13
+        assert data[0][1] == 1.0
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
