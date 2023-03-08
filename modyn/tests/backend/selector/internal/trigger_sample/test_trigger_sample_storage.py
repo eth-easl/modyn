@@ -46,6 +46,20 @@ def test_get_trigger_samples():
         (6, 6.0),
     }
 
+    expected_order = get_trigger_samples(1, 2, 3, TMP_DIR)
+
+    result = get_trigger_samples(1, 2, 3, TMP_DIR, 0, 4, 8)
+    assert len(result) == 2
+    assert result == [expected_order[0], expected_order[1]]
+
+    result = get_trigger_samples(1, 2, 3, TMP_DIR, 3, 4, 8)
+    assert len(result) == 2
+    assert result == [expected_order[6], expected_order[7]]
+
+    result = get_trigger_samples(1, 2, 3, TMP_DIR, 1, 3, 8)
+    assert len(result) == 3
+    assert result == [expected_order[3], expected_order[4], expected_order[5]]
+
 
 def test_get_trigger_samples_no_file():
     assert not get_trigger_samples(1, 2, 3, TMP_DIR)
@@ -62,3 +76,5 @@ def test_get_training_set_partition():
         get_training_set_partition(3, 3, len(training_samples))
     with pytest.raises(ValueError):
         get_training_set_partition(-1, 3, len(training_samples))
+
+    assert get_training_set_partition(0, 2, len(training_samples)) == (0, 5)

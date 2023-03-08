@@ -44,29 +44,30 @@ def get_trigger_samples(
     :return: the trigger samples
     """
     Path(trigger_sample_directory).mkdir(parents=True, exist_ok=True)
+    samples: List[Tuple[int, float]] = []
 
     if retrieval_worker_id < 0 and total_retrieval_workers < 0:
         #  If the retrieval worker id and the total retrieval workers are negative, then we are not using
         #  the parallel retrieval of samples. In this case, we just return all the samples.
-        samples = []
         for file in os.listdir(trigger_sample_directory):
             if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}") and file.endswith(".txt"):
-                with open(os.path.join(trigger_sample_directory, file), "r", encoding="utf-8") as file:
-                    samples.extend(tuple(map(float, line.split(":"))) for line in file.readlines())
+                with open(os.path.join(trigger_sample_directory, file), "r", encoding="utf-8") as file_handle:
+                    samples.extend(
+                        (int(line.split(":")[0]), float(line.split(":")[1])) for line in file_handle.readlines()
+                    )
         return samples
 
     start_index, worker_subset_size = get_training_set_partition(
         retrieval_worker_id, total_retrieval_workers, num_samples_trigger
     )
 
-    samples = []
     current_index = 0
     for file in os.listdir(trigger_sample_directory):
         if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}") and file.endswith(".txt"):
-            with open(os.path.join(trigger_sample_directory, file), "r", encoding="utf-8") as file:
-                for line in file.readlines():
+            with open(os.path.join(trigger_sample_directory, file), "r", encoding="utf-8") as file_handle:
+                for line in file_handle.readlines():
                     if start_index <= current_index < start_index + worker_subset_size:
-                        samples.append(tuple(map(float, line.split(":"))))
+                        samples.append((int(line.split(":")[0]), float(line.split(":")[1])))
                     current_index += 1
                     if current_index >= start_index + worker_subset_size:
                         break
