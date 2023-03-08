@@ -3,13 +3,14 @@ import multiprocessing as mp
 import os
 import platform
 from abc import ABC, abstractmethod
+from multiprocessing import shared_memory
 from typing import Iterable, Optional
 
+import numpy as np
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
 from modyn.backend.selector.internal.trigger_sample import TriggerSampleStorage
 from sqlalchemy import func
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -171,8 +172,13 @@ class AbstractSelectionStrategy(ABC):
                 end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
                 proc_samples = training_samples[start_idx:end_idx]
                 shape = (len(proc_samples),)
-                shm = mp.SharedMemory(create=True, size=len(proc_samples) * np.dtype([('int_val', np.int), ('float_val', np.float64)]).itemsize)
-                shared_proc_samples = np.ndarray(shape, dtype=[('int_val', np.int), ('float_val', np.float64)], buffer=shm.buf)
+                shm = shared_memory.SharedMemory(
+                    create=True,
+                    size=len(proc_samples) * np.dtype([("int_val", np.int64), ("float_val", np.float64)]).itemsize,
+                )
+                shared_proc_samples: np.ndarray = np.ndarray(
+                    shape, dtype=[("int_val", np.int64), ("float_val", np.float64)], buffer=shm.buf
+                )
                 shared_proc_samples[:] = proc_samples
                 if len(proc_samples) > 0:
                     logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
