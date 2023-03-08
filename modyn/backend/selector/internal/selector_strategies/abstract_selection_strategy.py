@@ -7,7 +7,7 @@ from typing import Iterable, Optional
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
-from modyn.backend.selector.internal.trigger_sample import get_trigger_samples, save_trigger_sample
+from modyn.backend.selector.internal.trigger_sample import TriggerSampleStorage
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -121,13 +121,12 @@ class AbstractSelectionStrategy(ABC):
         modyn_config: dict,
         insertion_id: int,
     ) -> None:
-        save_trigger_sample(
+        TriggerSampleStorage(trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"]).save_trigger_sample(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
             trigger_samples=training_samples,
             insertion_id=insertion_id,
-            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"],
         )
 
     # pylint: disable=too-many-locals
@@ -218,19 +217,18 @@ class AbstractSelectionStrategy(ABC):
                 .first()[0]
             )
 
-            data = get_trigger_samples(
-                pipeline_id=self._pipeline_id,
-                trigger_id=trigger_id,
-                partition_id=partition_id,
-                trigger_sample_directory=self._modyn_config["selector"]["trigger_sample_directory"],
-                retrieval_worker_id=worker_id,
-                total_retrieval_workers=num_workers,
-                num_samples_trigger=num_samples_trigger,
-            )
+        data = TriggerSampleStorage(self._modyn_config["selector"]["trigger_sample_directory"]).get_trigger_samples(
+            pipeline_id=self._pipeline_id,
+            trigger_id=trigger_id,
+            partition_id=partition_id,
+            retrieval_worker_id=worker_id,
+            total_retrieval_workers=num_workers,
+            num_samples_trigger=num_samples_trigger,
+        )
 
-            assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"
+        assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"
 
-            return data
+        return data
 
     @staticmethod
     def _persist_samples_impl(

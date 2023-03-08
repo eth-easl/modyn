@@ -10,7 +10,7 @@ import pytest
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.backend.selector.internal.trigger_sample import get_trigger_samples
+from modyn.backend.selector.internal.trigger_sample import TriggerSampleStorage
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()
@@ -186,11 +186,10 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert data[0].num_keys == 4
         assert data[0].num_partitions == 2
 
-        data = get_trigger_samples(
+        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(
             42,
             0,
             0,
-            TMP_DIR,
         )
 
         assert len(data) == 3
@@ -201,11 +200,10 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert data[2][0] == 12
         assert data[2][1] == 1.0
 
-        data = get_trigger_samples(
+        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(
             42,
             0,
             1,
-            TMP_DIR,
         )
 
         assert len(data) == 1
