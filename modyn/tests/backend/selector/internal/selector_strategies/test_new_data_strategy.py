@@ -673,6 +673,7 @@ def test__get_all_data_partitions_with_same_timestamp():
     all_data = list(strat._get_all_data())
     assert len(all_data) == 10
     assert set(flatten(all_data)) == set(data1)
+    assert len(flatten(all_data)) == len(data1)
 
     strat.trigger()
 
@@ -685,3 +686,4 @@ def test__get_all_data_partitions_with_same_timestamp():
     print(data1 + data2)
     assert len(all_data) == 20
     assert set(flatten(all_data)) == set(data1 + data2)
+    assert len(flatten(all_data)) == len(data1 + data2)
