@@ -81,7 +81,6 @@ class NewFileWatcher:
                     synchronize_session="fetch"
                 )
                 session.commit()
-                logger.warning(session.query(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).all())
                 self.__should_stop.value = True
         else:
             logger.warning(
