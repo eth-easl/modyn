@@ -13,7 +13,7 @@ from multiprocessing import Process, Value
 from typing import Tuple
 
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
-from modyn.storage.internal.file_watcher.new_file_watcher_server import run_watcher_server
+from modyn.storage.internal.file_watcher.new_file_watcher_watch_dog import run_watcher_watch_dog
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
 from modyn.utils import validate_yaml
 
@@ -73,7 +73,7 @@ class Storage:
 
         #  Start the dataset watcher process in a different thread.
         should_stop = Value(c_bool, False)
-        watcher_server = Process(target=run_watcher_server, args=(self.modyn_config, should_stop))
+        watcher_server = Process(target=run_watcher_watch_dog, args=(self.modyn_config, should_stop))
         watcher_server.start()
 
         #  Start the storage grpc server.

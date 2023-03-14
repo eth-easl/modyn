@@ -13,7 +13,6 @@ from modyn.storage.internal.database.storage_database_utils import get_file_wrap
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as orm_exc
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
@@ -39,53 +38,44 @@ class NewFileWatcher:
         self.__should_stop = should_stop
         self.__dataset_id = dataset_id
 
-    def _seek(self, session: sessionmaker) -> None:
+    def _seek(self, storageDatabaseConnection: StorageDatabaseConnection, dataset: Dataset) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
 
         If last timestamp is not ignored, the last timestamp of the dataset will be used to only
         seek for files that have a timestamp that is equal or greater than the last timestamp.
         """
-        dataset = session.query(Dataset).filter(Dataset.dataset_id == self.__dataset_id).first()
-
-        if dataset is not None:
-            try:
-                logger.debug(
-                    f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
-                    is equal or greater than {dataset.last_timestamp}"
-                )
-                self._seek_dataset(session, dataset)
-                last_timestamp = (
-                    session.query(File.updated_at)
-                    .filter(File.dataset_id == dataset.dataset_id)
-                    .order_by(File.updated_at.desc())
-                    .first()
-                )
-                if last_timestamp is not None:
-                    session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
-                        {"last_timestamp": last_timestamp[0]}
-                    )
-                    session.commit()
-                time.sleep(dataset.file_watcher_interval)
-            except orm_exc.ObjectDeletedError as error:
-                # If the dataset was deleted, we should stop the file watcher and delete all the
-                # orphaned files and samples
-                logger.warning(
-                    f"Dataset {self.__dataset_id} was deleted. Shutting down "
-                    + f"file watcher for dataset {self.__dataset_id}. Error: {error}"
-                )
-                session.rollback()
-                session.query(Sample).join(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).delete(
-                    synchronize_session="fetch"
-                )
-                session.query(File).join(Dataset).filter(Dataset.dataset_id == self.__dataset_id).delete(
-                    synchronize_session="fetch"
-                )
-                session.commit()
-                self.__should_stop.value = True
-        else:
+        if dataset is None:
             logger.warning(
                 f"Dataset {self.__dataset_id} not found. Shutting down file watcher for dataset {self.__dataset_id}."
             )
+            self.__should_stop.value = True
+        session = storageDatabaseConnection.session
+        try:
+            logger.debug(
+                f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
+                is equal or greater than {dataset.last_timestamp}"
+            )
+            self._seek_dataset(session, dataset)
+            last_timestamp = (
+                session.query(File.updated_at)
+                .filter(File.dataset_id == dataset.dataset_id)
+                .order_by(File.updated_at.desc())
+                .first()
+            )
+            if last_timestamp is not None:
+                session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
+                    {"last_timestamp": last_timestamp[0]}
+                )
+                session.commit()
+        except orm_exc.ObjectDeletedError as error:
+            # If the dataset was deleted, we should stop the file watcher and delete all the
+            # orphaned files and samples
+            logger.warning(
+                f"Dataset {self.__dataset_id} was deleted. Shutting down "
+                + f"file watcher for dataset {self.__dataset_id}. Error: {error}"
+            )
+            session.rollback()
+            storageDatabaseConnection.delete_dataset(dataset.name)
             self.__should_stop.value = True
 
     def _seek_dataset(self, session: Session, dataset: Dataset) -> None:
@@ -141,7 +131,7 @@ class NewFileWatcher:
         file_wrapper_type: str,
         path: str,
         timestamp: int,
-        session: sessionmaker,
+        session: Session,
         dataset: Dataset,
     ) -> None:
         """Recursively get all files in a directory.
@@ -201,9 +191,10 @@ class NewFileWatcher:
         """Run the dataset watcher."""
         logger.info("Starting dataset watcher.")
         with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.session
             while not self.__should_stop.value:
-                self._seek(session)
+                dataset = database.session.query(Dataset).filter(Dataset.dataset_id == self.__dataset_id).first()
+                self._seek(database, dataset)
+                time.sleep(dataset.file_watcher_interval)
 
 
 def run_new_file_watcher(modyn_config: dict, dataset_id: int, should_stop: Any) -> None:

@@ -100,12 +100,10 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
     def delete_dataset(self, name: str) -> bool:
         """Delete dataset from database."""
         try:
-            samples_to_delete = self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).all()
-            self.session.query(Sample).filter(
-                Sample.sample_id.in_([sample.sample_id for sample in samples_to_delete])
-            ).delete(synchronize_session="fetch")
-            files_to_delete = self.session.query(File).join(Dataset).filter(Dataset.name == name).all()
-            self.session.query(File).filter(File.file_id.in_([file.file_id for file in files_to_delete])).delete(
+            self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).delete(
+                synchronize_session="fetch"
+            )
+            self.session.query(File).join(Dataset).filter(Dataset.name == name).delete(
                 synchronize_session="fetch"
             )
             self.session.query(Dataset).filter(Dataset.name == name).delete(synchronize_session="fetch")
