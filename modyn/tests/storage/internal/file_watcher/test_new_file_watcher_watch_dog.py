@@ -102,7 +102,7 @@ def test_stop_file_watcher_process(session):
 
     should_stop = Value(c_bool, False)
 
-    new_file_watcher_watch_dog._file_watcher_processes[1] = (mock_process, should_stop)
+    new_file_watcher_watch_dog._file_watcher_processes[1] = (mock_process, should_stop, 0)
 
     new_file_watcher_watch_dog._stop_file_watcher_process(1)
 
@@ -118,7 +118,7 @@ def test_manage_file_watcher_processes_dataset_not_in_database(session):
 
     should_stop = Value(c_bool, False)
 
-    new_file_watcher_watch_dog._file_watcher_processes[1] = (mock_process, should_stop)
+    new_file_watcher_watch_dog._file_watcher_processes[1] = (mock_process, should_stop, 0)
 
     new_file_watcher_watch_dog._manage_file_watcher_processes()
 
@@ -172,7 +172,7 @@ def test_manage_file_watcher_processes_dataset_in_dataset_ids_in_file_watcher_pr
 
     new_file_watcher_watch_dog = NewFileWatcherWatchDog(get_minimal_modyn_config(), should_stop)
 
-    new_file_watcher_watch_dog._file_watcher_processes[dataset.dataset_id] = (mock_process, should_stop)
+    new_file_watcher_watch_dog._file_watcher_processes[dataset.dataset_id] = (mock_process, should_stop, 0)
 
     mock_process.is_alive.return_value = False
 

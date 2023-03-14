@@ -39,16 +39,16 @@ class NewFileWatcherWatchDog:
                     self._stop_file_watcher_process(dataset_id)
 
             for dataset_id in dataset_ids:
-                if self._file_watcher_processes[dataset_id][2] > 3:
-                    logger.debug(f"Stopping file watcher for dataset {dataset_id} because it was restarted too often.")
-                    self._stop_file_watcher_process(dataset_id)
                 if dataset_id not in self._file_watcher_processes:
                     logger.debug(f"Starting file watcher for dataset {dataset_id}")
                     self._start_file_watcher_process(dataset_id)
+                if self._file_watcher_processes[dataset_id][2] > 3:
+                    logger.debug(f"Stopping file watcher for dataset {dataset_id} because it was restarted too often.")
+                    self._stop_file_watcher_process(dataset_id)
                 elif not self._file_watcher_processes[dataset_id][0].is_alive():
                     logger.debug(f"File watcher for dataset {dataset_id} is not alive. Restarting it.")
                     self._start_file_watcher_process(dataset_id)
-                    self._file_watcher_processes[dataset_id][2] += 1
+                    self._file_watcher_processes[dataset_id] = (self._file_watcher_processes[dataset_id][0], self._file_watcher_processes[dataset_id][1], self._file_watcher_processes[dataset_id][2] + 1)
 
     def _start_file_watcher_process(self, dataset_id: int) -> None:
         """Start a file watcher.

@@ -67,7 +67,7 @@ def teardown():
 
 
 @pytest.fixture(autouse=True)
-def storageDatabaseConnection():
+def storage_database_connection():
     with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
         yield database
@@ -155,8 +155,8 @@ class MockQuery:
 
 
 @patch.object(NewFileWatcher, "_seek_dataset", return_value=None)
-def test_seek(test__seek_dataset, storageDatabaseConnection) -> None:  # noqa: E501
-    session = storageDatabaseConnection.session
+def test_seek(test__seek_dataset, storage_database_connection) -> None:  # noqa: E501
+    session = storage_database_connection.session
     dataset = Dataset(
         name="test1",
         description="test description",
@@ -177,16 +177,16 @@ def test_seek(test__seek_dataset, storageDatabaseConnection) -> None:  # noqa: E
     )
     session.commit()
 
-    new_file_watcher._seek(session)
+    new_file_watcher._seek(storage_database_connection, dataset)
     assert test__seek_dataset.called
     assert session.query(Dataset).first().last_timestamp == FILE_TIMESTAMP + 10
 
 
 @patch.object(NewFileWatcher, "_update_files_in_directory", return_value=None)
-def test_seek_dataset(test__update_files_in_directory, storageDatabaseConnection) -> None:  # noqa: E501
+def test_seek_dataset(test__update_files_in_directory, storage_database_connection) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
 
-    session = storageDatabaseConnection.session
+    session = storage_database_connection.session
 
     session.add(
         Dataset(
@@ -208,10 +208,10 @@ def test_seek_dataset(test__update_files_in_directory, storageDatabaseConnection
     assert test__update_files_in_directory.called
 
 
-def test_seek_dataset_deleted(storageDatabaseConnection) -> None:  # noqa: E501
+def test_seek_dataset_deleted(storage_database_connection) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
 
-    session = storageDatabaseConnection.session
+    session = storage_database_connection.session
 
     session.add(
         Dataset(
@@ -256,9 +256,9 @@ def test_seek_dataset_deleted(storageDatabaseConnection) -> None:  # noqa: E501
     "modyn.storage.internal.file_watcher.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper()
 )
 def test_seek_path_not_exists(
-    test_get_filesystem_wrapper, test__update_files_in_directory, storageDatabaseConnection
+    test_get_filesystem_wrapper, test__update_files_in_directory, storage_database_connection
 ) -> None:  # noqa: E501
-    session = storageDatabaseConnection.session
+    session = storage_database_connection.session
     dataset = Dataset(
         name="test1",
         description="test description",
@@ -277,7 +277,7 @@ def test_seek_path_not_exists(
     )
     session.commit()
 
-    new_file_watcher._seek(session)
+    new_file_watcher._seek(storage_database_connection, dataset)
     assert not test__update_files_in_directory.called
     assert session.query(Dataset).first().last_timestamp == FILE_TIMESTAMP + 10
 
@@ -287,9 +287,9 @@ def test_seek_path_not_exists(
     "modyn.storage.internal.file_watcher.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper()
 )
 def test_seek_path_not_directory(
-    test_get_filesystem_wrapper, test__update_files_in_directory, storageDatabaseConnection
+    test_get_filesystem_wrapper, test__update_files_in_directory, storage_database_connection
 ) -> None:  # noqa: E501
-    session = storageDatabaseConnection.session
+    session = storage_database_connection.session
     dataset = Dataset(
         name="test1",
         description="test description",
@@ -308,7 +308,7 @@ def test_seek_path_not_directory(
     )
     session.commit()
 
-    new_file_watcher._seek(storageDatabaseConnection, dataset)
+    new_file_watcher._seek(storage_database_connection, dataset)
     assert not test__update_files_in_directory.called
     assert session.query(Dataset).first().last_timestamp == FILE_TIMESTAMP + 10
 
@@ -318,12 +318,12 @@ def test_seek_path_not_directory(
     "modyn.storage.internal.file_watcher.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper()
 )
 def test_seek_no_datasets(
-    test_get_filesystem_wrapper, test__update_files_in_directory, storageDatabaseConnection
+    test_get_filesystem_wrapper, test__update_files_in_directory, storage_database_connection
 ) -> None:  # noqa: E501
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), 1, should_stop)
 
-    new_file_watcher._seek(storageDatabaseConnection, None)
+    new_file_watcher._seek(storage_database_connection, None)
     assert not test__update_files_in_directory.called
 
 
@@ -332,9 +332,9 @@ def test_seek_no_datasets(
     "modyn.storage.internal.file_watcher.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper()
 )
 def test_update_files_in_directory(
-    test_get_file_wrapper, test_get_filesystem_wrapper, storageDatabaseConnection
+    test_get_file_wrapper, test_get_filesystem_wrapper, storage_database_connection
 ) -> None:  # noqa: E501
-    session = storageDatabaseConnection.session
+    session = storage_database_connection.session
     dataset = Dataset(
         name="test5",
         description="test description",
@@ -401,9 +401,9 @@ def test_update_files_in_directory(
     "modyn.storage.internal.file_watcher.new_file_watcher.get_filesystem_wrapper", return_value=MockFileSystemWrapper()
 )
 def test_update_files_in_directory_ignore_last_timestamp(
-    test_get_file_wrapper, test_get_filesystem_wrapper, storageDatabaseConnection
+    test_get_file_wrapper, test_get_filesystem_wrapper, storage_database_connection
 ) -> None:  # noqa: E501
-    session = storageDatabaseConnection.session
+    session = storage_database_connection.session
     dataset = Dataset(
         name="test6",
         description="test description",
@@ -444,8 +444,8 @@ def test_update_files_in_directory_ignore_last_timestamp(
     assert result[0].file_id == 1
 
 
-def test_update_files_in_directory_not_exists(storageDatabaseConnection) -> None:
-    session = storageDatabaseConnection.session
+def test_update_files_in_directory_not_exists(storage_database_connection) -> None:
+    session = storage_database_connection.session
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), 1, should_stop)
     mock_file_system_wrapper = MockFileSystemWrapper()
@@ -461,8 +461,8 @@ def test_update_files_in_directory_not_exists(storageDatabaseConnection) -> None
 
 
 @patch.object(NewFileWatcher, "_seek", return_value=None)
-def test_run(mock_seek, storageDatabaseConnection) -> None:
-    session = storageDatabaseConnection.session
+def test_run(mock_seek, storage_database_connection) -> None:
+    session = storage_database_connection.session
     dataset = Dataset(
         name="test7",
         description="test description",
@@ -484,16 +484,16 @@ def test_run(mock_seek, storageDatabaseConnection) -> None:
     #  If we get here, the process has stopped
 
 
-def test_get_datasets(storageDatabaseConnection):
-    session = storageDatabaseConnection.session
+def test_get_datasets(storage_database_connection):
+    session = storage_database_connection.session
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), 1, should_stop)
     datasets = new_file_watcher._get_datasets(session)
     assert len(datasets) == 0
 
 
-def test_run_new_file_watcher(storageDatabaseConnection):
-    session = storageDatabaseConnection.session
+def test_run_new_file_watcher(storage_database_connection):
+    session = storage_database_connection.session
     should_stop = Value(c_bool, False)
 
     dataset = Dataset(

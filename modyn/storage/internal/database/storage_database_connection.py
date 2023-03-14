@@ -103,9 +103,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
             self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).delete(
                 synchronize_session="fetch"
             )
-            self.session.query(File).join(Dataset).filter(Dataset.name == name).delete(
-                synchronize_session="fetch"
-            )
+            self.session.query(File).join(Dataset).filter(Dataset.name == name).delete(synchronize_session="fetch")
             self.session.query(Dataset).filter(Dataset.name == name).delete(synchronize_session="fetch")
             self.session.commit()
         except exc.SQLAlchemyError as exception:

@@ -37,7 +37,7 @@ class NewFileWatcher:
         self.__should_stop = should_stop
         self.__dataset_id = dataset_id
 
-    def _seek(self, storageDatabaseConnection: StorageDatabaseConnection, dataset: Dataset) -> None:
+    def _seek(self, storage_database_connection: StorageDatabaseConnection, dataset: Dataset) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
 
         If last timestamp is not ignored, the last timestamp of the dataset will be used to only
@@ -48,7 +48,8 @@ class NewFileWatcher:
                 f"Dataset {self.__dataset_id} not found. Shutting down file watcher for dataset {self.__dataset_id}."
             )
             self.__should_stop.value = True
-        session = storageDatabaseConnection.session
+            return
+        session = storage_database_connection.session
         try:
             logger.debug(
                 f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
@@ -74,7 +75,7 @@ class NewFileWatcher:
                 + f"file watcher for dataset {self.__dataset_id}. Error: {error}"
             )
             session.rollback()
-            storageDatabaseConnection.delete_dataset(dataset.name)
+            storage_database_connection.delete_dataset(dataset.name)
             self.__should_stop.value = True
 
     def _seek_dataset(self, session: Session, dataset: Dataset) -> None:
