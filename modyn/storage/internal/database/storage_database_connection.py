@@ -100,10 +100,12 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
     def delete_dataset(self, name: str) -> bool:
         """Delete dataset from database."""
         try:
-            self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).delete(
-                synchronize_session="fetch"
-            )
-            self.session.query(File).join(Dataset).filter(Dataset.name == name).delete(synchronize_session="fetch")
+            self.session.query(Sample).filter(
+                Sample.file_id.in_(self.session.query(File.file_id).join(Dataset).filter(Dataset.name == name))
+            ).delete(synchronize_session="fetch")
+            self.session.query(File).filter(
+                File.dataset_id.in_(self.session.query(Dataset.dataset_id).filter(Dataset.name == name))
+            ).delete(synchronize_session="fetch")
             self.session.query(Dataset).filter(Dataset.name == name).delete(synchronize_session="fetch")
             self.session.commit()
         except exc.SQLAlchemyError as exception:
