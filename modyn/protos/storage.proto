@@ -16,12 +16,12 @@ service Storage {
 
 message GetRequest {
   string dataset_id = 1;
-  repeated string keys = 2;
+  repeated int64 keys = 2;
 }
 
 message GetResponse {
   repeated bytes samples = 1;
-  repeated string keys = 2;
+  repeated int64 keys = 2;
   repeated int64 labels = 3;
 }
 
@@ -31,7 +31,7 @@ message GetNewDataSinceRequest {
 }
 
 message GetNewDataSinceResponse {
-  repeated string keys = 1;
+  repeated int64 keys = 1;
   repeated int64 timestamps = 2;
   repeated int64 labels = 3;
 }
@@ -43,7 +43,7 @@ message GetDataInIntervalRequest {
 }
 
 message GetDataInIntervalResponse {
-  repeated string keys = 1;
+  repeated int64 keys = 1;
   repeated int64 timestamps = 2;
   repeated int64 labels = 3;
 }

@@ -1,7 +1,7 @@
 """TriggerSampleTrainingMetadata model."""
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from modyn.backend.metadata_database.models.triggers import Trigger
-from sqlalchemy import BigInteger, Column, Float, Index, Integer, String
+from sqlalchemy import BigInteger, Column, Float, Index, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.schema import ForeignKeyConstraint
 
@@ -22,7 +22,7 @@ class TriggerSample(MetadataBase):
     pipeline_id = Column("pipeline_id", Integer, nullable=False)
     trigger_id = Column("trigger_id", Integer, nullable=False)
     partition_id = Column("partition_id", Integer, nullable=False)
-    sample_key = Column("sample_key", String(120), nullable=False)
+    sample_key = Column("sample_key", BIGINT, nullable=False)
     sample_weight = Column("sample_weight", Float, nullable=False)
     __table_args__ = (
         ForeignKeyConstraint([pipeline_id, trigger_id], [Trigger.pipeline_id, Trigger.trigger_id]),

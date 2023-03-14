@@ -41,14 +41,16 @@ def test_add_sample(session):
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key="test", index=0, label=b"test")
+    sample = Sample(file=file, index=0, label=b"test")
     session.add(sample)
     session.commit()
 
-    assert session.query(Sample).filter(Sample.external_key == "test").first() is not None
-    assert session.query(Sample).filter(Sample.external_key == "test").first().file == file
-    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 0
-    assert session.query(Sample).filter(Sample.external_key == "test").first().label == b"test"
+    sample_id = sample.sample_id
+
+    assert session.query(Sample).filter(Sample.sample_id == sample_id).first() is not None
+    assert session.query(Sample).filter(Sample.sample_id == sample_id).first().file == file
+    assert session.query(Sample).filter(Sample.sample_id == sample_id).first().index == 0
+    assert session.query(Sample).filter(Sample.sample_id == sample_id).first().label == b"test"
 
 
 def test_update_sample(session):
@@ -69,13 +71,15 @@ def test_update_sample(session):
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key="test", index=0, label=b"test")
+    sample = Sample(file=file, index=0, label=b"test")
     session.add(sample)
     session.commit()
 
-    session.query(Sample).filter(Sample.external_key == "test").update({"index": 1})
+    sample_id = sample.sample_id
 
-    assert session.query(Sample).filter(Sample.external_key == "test").first().index == 1
+    session.query(Sample).filter(Sample.sample_id == sample_id).update({"index": 1})
+
+    assert session.query(Sample).filter(Sample.sample_id == sample_id).first().index == 1
 
 
 def test_delete_sample(session):
@@ -96,13 +100,15 @@ def test_delete_sample(session):
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key="test", index=0, label=b"test")
+    sample = Sample(file=file, index=0, label=b"test")
     session.add(sample)
     session.commit()
 
-    session.query(Sample).filter(Sample.external_key == "test").delete()
+    sample_id = sample.sample_id
 
-    assert session.query(Sample).filter(Sample.external_key == "test").first() is None
+    session.query(Sample).filter(Sample.sample_id == sample_id).delete()
+
+    assert session.query(Sample).filter(Sample.sample_id == sample_id).first() is None
 
 
 def test_repr(session):
@@ -123,7 +129,7 @@ def test_repr(session):
     session.add(file)
     session.commit()
 
-    sample = Sample(file=file, external_key="test", index=0, label=b"test")
+    sample = Sample(file=file, index=0, label=b"test")
     session.add(sample)
     session.commit()
 

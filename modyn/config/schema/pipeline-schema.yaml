@@ -101,6 +101,7 @@ properties:
                  [NewDataStrategy] Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true. Either "lastX" or "sampleUAR" are supported. See class description for further info.
         required:
           - name
+          - maximum_keys_in_memory
       initial_model:
         type: string
         description: |

@@ -4,7 +4,6 @@ import json
 import logging
 import pathlib
 import time
-import uuid
 from typing import Any, Optional
 
 from modyn.storage.internal.database.models import Dataset, File, Sample
@@ -174,8 +173,7 @@ class NewFileWatcher:
 
                 try:
                     samples = [
-                        Sample(file=file, file_id=file_id, external_key=str(uuid.uuid4()), index=i, label=labels[i])
-                        for i in range(number_of_samples)
+                        Sample(file=file, file_id=file_id, index=i, label=labels[i]) for i in range(number_of_samples)
                     ]
                     logger.debug("Samples generated, inserting.")
                     session.bulk_save_objects(samples)

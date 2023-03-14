@@ -55,6 +55,7 @@ services:
       dockerfile: docker/Trainer_Server/Dockerfile
 #    volumes:
 #      - .:/modyn_host
+#    shm_size: 4gb
 #    runtime: nvidia
 #    deploy:
 #      resources:
@@ -65,7 +66,7 @@ services:
 #              capabilities: [gpu, utility, compute]
   selector:
     restart: on-failure
-    depends_on: 
+    depends_on:
       - metadata-db
     build:
       context: .
