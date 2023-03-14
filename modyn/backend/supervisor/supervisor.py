@@ -64,6 +64,8 @@ class Supervisor:
         self._setup_trigger()
         self._setup_model_directory()
 
+        self._selector_batch_size = 128
+
     def _setup_model_directory(self) -> None:
         self.model_storage_directory = (
             pathlib.Path(os.getcwd())
@@ -180,6 +182,15 @@ class Supervisor:
 
         return available
 
+    def get_dataset_selector_batch_size(self) -> None:
+        # system configuration already validated, so the dataset_id will be present in the configuration file
+        dataset_id = self.pipeline_config["data"]["dataset_id"]
+        for dataset in self.modyn_config["storage"]["datasets"]:
+            if dataset["name"] == dataset_id:
+                if "selector_batch_size" in dataset:
+                    self._selector_batch_size = dataset["selector_batch_size"]
+                break
+
     def validate_system(self) -> bool:
         return self.dataset_available() and self.grpc.trainer_server_available()
 
@@ -229,7 +240,7 @@ class Supervisor:
             self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
-    def _handle_new_data(self, new_data: list[tuple[int, int, int]], selector_batch_size: int = 128) -> bool:
+    def _handle_new_data(self, new_data: list[tuple[int, int, int]]) -> bool:
         """This function handles new data during experiments or actual pipeline execution.
         We partition `new_data` into batches of `selector_batch_size` to reduce selector latency in case of a trigger.
         If a data point within a batch causes a trigger,
@@ -246,12 +257,12 @@ class Supervisor:
             total=new_data_len, desc=f"[Pipeline {self.pipeline_id}] Processing New Samples", unit="samples"
         )
 
-        for i in range(0, new_data_len, selector_batch_size):
-            batch = new_data[i : i + selector_batch_size]
+        for i in range(0, new_data_len, self._selector_batch_size):
+            batch = new_data[i : i + self._selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
-            pbar.update(selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
+            pbar.update(self._selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
 
         self.status_bar.update(demo="New data handled")
         pbar.clear(flush=True)
@@ -347,6 +358,7 @@ class Supervisor:
         self.initial_pass()
         logger.info("Initial pass completed.")
 
+        self.get_dataset_selector_batch_size()
         if self.experiment_mode:
             self.replay_data()
         else:

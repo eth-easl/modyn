@@ -21,6 +21,7 @@ def get_minimal_modyn_config():
             "port": "0",
             "database": f"{database_path}",
         },
+        "selector": {"insertion_threads": 8},
     }
 
 

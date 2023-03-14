@@ -24,6 +24,7 @@ storage:
             label_file_extension: ".label"
           },
         ignore_last_timestamp: false,
+        selector_batch_size: 128,
       },
       {
         name: "criteo",
@@ -40,6 +41,7 @@ storage:
             file_extension: ".bin"
           },
         ignore_last_timestamp: false,
+        selector_batch_size: 65536,
       }
     ]
   database:
@@ -68,6 +70,7 @@ selector:
   port: "50056"
   keys_in_selector_cache: 500000
   sample_batch_size: 65536
+  insertion_threads: 8
 
 trainer_server:
   hostname: "trainer_server"
