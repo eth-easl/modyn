@@ -101,7 +101,6 @@ properties:
               type: number
               description: |
                 The interval in seconds for the file watcher to wait between checking for new files.
-              default: 5
           required:
             - name
             - description
