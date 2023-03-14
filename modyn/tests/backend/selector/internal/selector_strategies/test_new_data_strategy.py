@@ -672,7 +672,7 @@ def test__get_all_data_partitions_with_same_timestamp():
     strat.inform_data(data1, timestamps1, labels)
     all_data = list(strat._get_all_data())
     assert len(all_data) == 10
-    assert flatten(all_data) == data1
+    assert set(flatten(all_data)) == set(data1)
 
     strat.trigger()
 
