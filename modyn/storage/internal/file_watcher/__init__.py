@@ -1,6 +1,6 @@
 """Storage module.
 
-The storage module contains all classes and functions related to the storage and retrieval of data.
+The storage module contains all classes and functions related to the storage's NewFileWatcher
 """
 
 import os
