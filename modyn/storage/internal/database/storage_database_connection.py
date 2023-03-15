@@ -53,6 +53,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         version: str,
         file_wrapper_config: str,
         ignore_last_timestamp: bool = False,
+        file_watcher_interval: int = 5,
     ) -> bool:
         """
         Add dataset to database.
@@ -71,6 +72,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
                         "version": version,
                         "file_wrapper_config": file_wrapper_config,
                         "ignore_last_timestamp": ignore_last_timestamp,
+                        "file_watcher_interval": file_watcher_interval,
                     }
                 )
             else:
@@ -85,6 +87,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
                     file_wrapper_config=file_wrapper_config,
                     last_timestamp=-1,  # Set to -1 as this is a new dataset
                     ignore_last_timestamp=ignore_last_timestamp,
+                    file_watcher_interval=file_watcher_interval,
                 )
                 self.session.add(dataset)
             self.session.commit()
@@ -97,13 +100,13 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
     def delete_dataset(self, name: str) -> bool:
         """Delete dataset from database."""
         try:
-            samples = self.session.query(Sample).join(File).join(Dataset).filter(Dataset.name == name).all()
-            for sample in samples:
-                self.session.delete(sample)
-            files = self.session.query(File).join(Dataset).filter(Dataset.name == name).all()
-            for file in files:
-                self.session.delete(file)
-            self.session.query(Dataset).filter(Dataset.name == name).delete()
+            self.session.query(Sample).filter(
+                Sample.file_id.in_(self.session.query(File.file_id).join(Dataset).filter(Dataset.name == name))
+            ).delete(synchronize_session="fetch")
+            self.session.query(File).filter(
+                File.dataset_id.in_(self.session.query(Dataset.dataset_id).filter(Dataset.name == name))
+            ).delete(synchronize_session="fetch")
+            self.session.query(Dataset).filter(Dataset.name == name).delete(synchronize_session="fetch")
             self.session.commit()
         except exc.SQLAlchemyError as exception:
             logger.error(f"Error deleting dataset: {exception}")

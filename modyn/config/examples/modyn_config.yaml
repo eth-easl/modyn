@@ -7,8 +7,6 @@ storage:
   port: "50051"
   hostname: "storage"
   sample_batch_size: 65536
-  new_file_watcher:
-    interval: 5
   datasets:
     [
       {
@@ -24,6 +22,7 @@ storage:
             label_file_extension: ".label"
           },
         ignore_last_timestamp: false,
+        file_watcher_interval: 5,
         selector_batch_size: 128,
       },
       {
@@ -41,6 +40,7 @@ storage:
             file_extension: ".bin"
           },
         ignore_last_timestamp: false,
+        file_watcher_interval: 5,
         selector_batch_size: 65536,
       }
     ]
