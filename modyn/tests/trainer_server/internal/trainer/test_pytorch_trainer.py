@@ -364,7 +364,7 @@ def test_save_state_to_file():
             "state": {},
             "param_groups": [
                 {
-                    "lr": 0.1,
+                    "lr": pytest.approx(0.1),
                     "momentum": 0,
                     "dampening": 0,
                     "weight_decay": 0,
@@ -380,9 +380,9 @@ def test_save_state_to_file():
             "state": {},
             "param_groups": [
                 {
-                    "lr": 0.5,
-                    "betas": (0.9, 0.999),
-                    "eps": 1e-08,
+                    "lr": pytest.approx(0.5),
+                    "betas": (pytest.approx(0.9), pytest.approx(0.999)),
+                    "eps": pytest.approx(1e-08),
                     "weight_decay": 0,
                     "amsgrad": False,
                     "maximize": False,
@@ -393,9 +393,9 @@ def test_save_state_to_file():
                     "params": [0],
                 },
                 {
-                    "lr": 0.8,
-                    "betas": (0.9, 0.999),
-                    "eps": 1e-08,
+                    "lr": pytest.approx(0.8),
+                    "betas": (pytest.approx(0.9), pytest.approx(0.999)),
+                    "eps": pytest.approx(1e-08),
                     "weight_decay": 0,
                     "amsgrad": False,
                     "maximize": False,
