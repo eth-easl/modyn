@@ -33,7 +33,7 @@ from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
 class NoneOrFalse:
     def __eq__(self, other):
-        if other is None or other == False:
+        if other is None or not other:
             return True
 
         return False
