@@ -174,7 +174,7 @@ class AbstractSelectionStrategy(ABC):
                 end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
                 proc_samples = training_samples[start_idx:end_idx]
                 if len(proc_samples) > 0:
-                    shape = (len(proc_samples),)
+                    shape = np.shape(proc_samples)
                     shm = shared_memory.SharedMemory(
                         create=True,
                         size=len(proc_samples) * np.dtype([("int_val", np.int64), ("float_val", np.float64)]).itemsize,
