@@ -83,7 +83,7 @@ class NewFileWatcherWatchDog:
         del self._file_watcher_processes[dataset_id]
 
     def run(self) -> None:
-        """Run the new file watcher.
+        """Run the new file watcher watchdog.
 
         Args:
             modyn_config (dict): Configuration of the modyn module.
