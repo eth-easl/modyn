@@ -35,6 +35,7 @@ def get_minimal_modyn_config() -> dict:
                 "port": 0,
                 "database": TEST_DATABASE,
             },
+            "insertion_threads": 8,
         }
     }
 
