@@ -145,6 +145,8 @@ class NewFileWatcher:
         dataset_name: str,
         session: Optional[Session],
     ) -> None:
+        db_connection: Optional[StorageDatabaseConnection] = None
+
         if session is None:
             db_connection = StorageDatabaseConnection(modyn_config)
             db_connection.setup_connection()
@@ -206,6 +208,9 @@ class NewFileWatcher:
                 session.rollback()
                 session.delete(file)
                 continue
+
+        if db_connection is not None:
+            db_connection.terminate_connection()
 
     def _update_files_in_directory(
         self,
