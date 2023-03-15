@@ -158,7 +158,7 @@ class AbstractSelectionStrategy(ABC):
 
             total_keys_in_trigger += len(training_samples)
 
-            trainig_samples_np = np.array(training_samples, dtype=[("int_val", np.int64), ("float_val", np.float64)])
+            trainig_samples_np = np.array(training_samples)
 
             if self._is_test or self._disable_mt:
                 AbstractSelectionStrategy._store_triggersamples_impl(
@@ -179,9 +179,7 @@ class AbstractSelectionStrategy(ABC):
                         create=True,
                         size=len(proc_samples) * np.dtype([("int_val", np.int64), ("float_val", np.float64)]).itemsize,
                     )
-                    shared_proc_samples: np.ndarray = np.ndarray(
-                        shape, dtype=[("int_val", np.int64), ("float_val", np.float64)], buffer=shm.buf
-                    )
+                    shared_proc_samples: np.ndarray = np.ndarray(shape, buffer=shm.buf)
                     shared_proc_samples[:] = proc_samples
                     logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
                     proc = mp.Process(

@@ -2,6 +2,7 @@ import logging
 import os
 import struct
 from pathlib import Path
+
 import numpy as np
 from modyn.utils import flatten
 
@@ -56,7 +57,9 @@ class TriggerSampleStorage:
         """
         if not Path(self.trigger_sample_directory).exists():
             raise FileNotFoundError(f"The trigger sample directory {self.trigger_sample_directory} does not exist.")
-        assert (retrieval_worker_id >= 0 and total_retrieval_workers >= 0) or (retrieval_worker_id < 0 and total_retrieval_workers < 0), "Either both or none of the retrieval worker id and the total retrieval workers must be negative."
+        assert (retrieval_worker_id >= 0 and total_retrieval_workers >= 0) or (
+            retrieval_worker_id < 0 and total_retrieval_workers < 0
+        ), "Either both or none of the retrieval worker id and the total retrieval workers must be negative."
         if retrieval_worker_id < 0 and total_retrieval_workers < 0:
             return self._get_all_samples(pipeline_id, trigger_id, partition_id)
         return self._get_worker_samples(
@@ -91,29 +94,54 @@ class TriggerSampleStorage:
         )
 
         current_index = 0
-        for file in os.listdir(self.trigger_sample_directory):
+
+        triple_list: list[tuple[Path, int, int]] = []
+        for file in sorted(os.listdir(self.trigger_sample_directory)):
             if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"):
+                file_path = Path(self.trigger_sample_directory) / file
                 if current_index >= start_index + worker_subset_size:
+                    #  We have already retrieved all the samples for the worker
                     break
-                num_samples = self._get_num_samples_in_file(Path(self.trigger_sample_directory) / file)
-                if current_index + num_samples <= start_index:
-                    current_index += num_samples
+                num_samples_in_file = self._get_num_samples_in_file(file_path)
+                if current_index + num_samples_in_file <= start_index:
+                    # The samples in the file are before the samples for the worker
+                    current_index += num_samples_in_file
                     continue
-                if current_index + num_samples < start_index + worker_subset_size:
-                    samples.extend(
-                        self._parse_file_subset(
-                            Path(self.trigger_sample_directory) / file), start_index - current_index, num_samples
-                    )
-                    current_index += num_samples
+                if current_index + num_samples_in_file < start_index + worker_subset_size:
+                    # The head of samples for the worker are in the file, either partially from
+                    # start_index - current_index to the end of the file if start_incex > current_index
+                    # or completely from 0 to the end of the file.
+                    # Because the end index is exclusive, we compare < instead of <= otherwise we would retrieve
+                    # one more sample than we should
+                    triple_list.append((file_path, start_index - current_index, num_samples_in_file))
+                    current_index += num_samples_in_file
                     continue
-                samples.extend(
-                    self._parse_file_subset(
-                        Path(self.trigger_sample_directory) / file,
+                # We are at the tail of the file and the samples for the worker are in the file, either from
+                #  the beginning if start_index - current_index < 0 or from start_index - current_index if the
+                #  tail is in the same file as the head
+                triple_list.append(
+                    (
+                        file_path,
                         start_index - current_index if start_index - current_index >= 0 else 0,
                         start_index + worker_subset_size - current_index,
                     )
                 )
                 break
+
+        # We need to flatten the list of lists of np arrays and then reshape it to get the list of tuples
+        samples = list(
+            map(
+                tuple,  # type: ignore
+                np.array(
+                    flatten(
+                        [
+                            self._parse_file_subset(file_path, start_index, end_index)
+                            for file_path, start_index, end_index in triple_list
+                        ]
+                    )
+                ).reshape(-1, 2),
+            )
+        )
         return samples
 
     def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> list[tuple[int, float]]:
@@ -125,9 +153,18 @@ class TriggerSampleStorage:
         :param partition_id: the id of the partition
         :return: the trigger samples
         """
-        return flatten(self._parse_file(Path(self.trigger_sample_directory) / file)
-                for file in os.listdir(self.trigger_sample_directory)
-                if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"))
+        return list(
+            map(
+                tuple,  # type: ignore
+                np.array(
+                    [
+                        self._parse_file(Path(self.trigger_sample_directory) / file)
+                        for file in sorted(os.listdir(self.trigger_sample_directory))
+                        if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}")
+                    ]
+                ).reshape(-1, 2),
+            )
+        )
 
     @staticmethod
     def get_training_set_partition(worker_id: int, total_workers: int, number_training_samples: int) -> tuple[int, int]:
@@ -186,8 +223,7 @@ class TriggerSampleStorage:
         samples_file = Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{insertion_id}"
 
         assert not Path(samples_file).exists(), (
-            f"Trigger samples file {samples_file} already exists. "
-            f"Please delete it if you want to overwrite it."
+            f"Trigger samples file {samples_file} already exists. " f"Please delete it if you want to overwrite it."
         )
 
         self._write_file(samples_file, trigger_samples)
@@ -199,11 +235,7 @@ class TriggerSampleStorage:
             file_path (str): File path to write to.
             trigger_samples (list[tuple[int, float]]): List of trigger samples.
         """
-        header = struct.pack("i", len(trigger_samples))
-
-        with open(file_path, "wb") as file:
-            file.write(header)
-            file.write(trigger_samples.tobytes())
+        np.save(file_path, trigger_samples)
 
     def _parse_file(self, file_path: Path) -> np.ndarray:
         """Parse the given file and return the samples.
@@ -214,13 +246,11 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
-        with open(file_path, "rb") as file:
-            header = struct.unpack("i", file.read(self.int_size))[0]
-            samples = np.fromfile(file, dtype=[("index", "i4"), ("value", "f4")], count=header)
-            return samples
+        return np.load(file_path)
 
     def _parse_file_subset(self, file_path: Path, start_index: int, end_index: int) -> np.ndarray:
-        """Parse the given file and return the samples. Only return samples between start_index and end_index.
+        """Parse the given file and return the samples. Only return samples between start_index
+           inclusive and end_index exclusive.
 
         Args:
             file_path (str): File path to parse.
@@ -229,16 +259,9 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
-        with open(file_path, "rb") as file:
-            header = struct.unpack("i", file.read(self.int_size))[0]
-            if header < end_index:
-                raise ValueError(
-                    f"Error parsing file {file_path}. Header is {header} and end_index is {end_index} incompatible."
-                )
-            samples = np.fromfile(
-                file, dtype=[("index", "i4"), ("value", "f4")], count=end_index - start_index
-            )
-            return samples
+        samples = np.load(file_path)
+        tmp = samples.take(range(start_index, end_index), axis=0)
+        return tmp
 
     def _get_num_samples_in_file(self, file_path: Path) -> int:
         """Get the number of samples in the given file.
@@ -246,6 +269,4 @@ class TriggerSampleStorage:
         Args:
             file_path (str): File path to parse.
         """
-        with open(file_path, "rb") as file:
-            header = struct.unpack("i", file.read(self.int_size))[0]
-            return header
+        return np.load(file_path).shape[0]
