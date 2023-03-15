@@ -31,6 +31,14 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
 
+class NoneOrFalse:
+    def __eq__(self, other):
+        if other is None or other == False:
+            return True
+
+        return False
+
+
 class MockModule:
     def __init__(self, num_optimizers) -> None:
         if num_optimizers == 1:
@@ -389,7 +397,7 @@ def test_save_state_to_file():
                     "foreach": None,
                     "capturable": False,
                     "differentiable": False,
-                    "fused": None or False,
+                    "fused": NoneOrFalse(),
                     "params": [0],
                 },
                 {
@@ -402,7 +410,7 @@ def test_save_state_to_file():
                     "foreach": None,
                     "capturable": False,
                     "differentiable": False,
-                    "fused": None or False,
+                    "fused": NoneOrFalse(),
                     "params": [1],
                 },
             ],
