@@ -31,7 +31,7 @@ def test_get_file_size():
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(1, 2, 3, [(1, 1.0), (2, 2.0)], 4)
 
     file_path = Path(TMP_DIR) / "1_2_3_4"
-    TriggerSampleStorage(TMP_DIR)._get_file_size(file_path)
+    TriggerSampleStorage(TMP_DIR)._get_num_samples_in_file(file_path)
 
 
 def test_parse_file_subset():

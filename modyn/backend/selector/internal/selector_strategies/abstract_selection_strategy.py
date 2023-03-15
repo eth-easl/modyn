@@ -119,7 +119,7 @@ class AbstractSelectionStrategy(ABC):
         partition_id: int,
         trigger_id: int,
         pipeline_id: int,
-        training_samples: list[tuple[int, float]],
+        training_samples: np.ndarray,
         modyn_config: dict,
         insertion_id: int,
     ) -> None:
@@ -158,9 +158,11 @@ class AbstractSelectionStrategy(ABC):
 
             total_keys_in_trigger += len(training_samples)
 
+            trainig_samples_np = np.array(training_samples, dtype=[("int_val", np.int64), ("float_val", np.float64)])
+
             if self._is_test or self._disable_mt:
                 AbstractSelectionStrategy._store_triggersamples_impl(
-                    partition, trigger_id, self._pipeline_id, training_samples, self._modyn_config, 0
+                    partition, trigger_id, self._pipeline_id, trainig_samples_np, self._modyn_config, 0
                 )
                 continue
 
@@ -216,6 +218,12 @@ class AbstractSelectionStrategy(ABC):
     ) -> list[tuple[int, float]]:
         """
         Given a trigger id and partition id, returns a list of all keys in this partition
+
+        Args:
+            trigger_id (int): The trigger id
+            partition_id (int): The partition id
+            worker_id (int, optional): The worker id. Defaults to -1 meaning single threaded.
+            num_workers (int, optional): The number of workers. Defaults to -1 meaning single threaded.
 
         Returns:
             list[tuple[int, float]]: list of training samples.

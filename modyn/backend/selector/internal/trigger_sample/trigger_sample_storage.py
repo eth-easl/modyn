@@ -2,7 +2,8 @@ import logging
 import os
 import struct
 from pathlib import Path
-from typing import List, Tuple
+import numpy as np
+from modyn.utils import flatten
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,9 @@ class TriggerSampleStorage:
 
     def __init__(self, trigger_sample_directory: str):
         self.trigger_sample_directory = trigger_sample_directory
+        if not Path(self.trigger_sample_directory).exists():
+            Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created the trigger sample directory {self.trigger_sample_directory}.")
         self.int_size = struct.calcsize("i")
         self.float_size = struct.calcsize("f")
 
@@ -32,7 +36,7 @@ class TriggerSampleStorage:
         retrieval_worker_id: int = -1,
         total_retrieval_workers: int = -1,
         num_samples_trigger: int = -1,
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         """
         Return the trigger samples for the given pipeline id, trigger id and partition id.
 
@@ -50,7 +54,9 @@ class TriggerSampleStorage:
         :param total_samples: the total number of samples
         :return: the trigger samples
         """
-        Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
+        if not Path(self.trigger_sample_directory).exists():
+            raise FileNotFoundError(f"The trigger sample directory {self.trigger_sample_directory} does not exist.")
+        assert (retrieval_worker_id >= 0 and total_retrieval_workers >= 0) or (retrieval_worker_id < 0 and total_retrieval_workers < 0), "Either both or none of the retrieval worker id and the total retrieval workers must be negative."
         if retrieval_worker_id < 0 and total_retrieval_workers < 0:
             return self._get_all_samples(pipeline_id, trigger_id, partition_id)
         return self._get_worker_samples(
@@ -65,7 +71,7 @@ class TriggerSampleStorage:
         retrieval_worker_id: int,
         total_retrieval_workers: int,
         num_samples_trigger: int,
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         """
         Return the trigger samples for the given pipeline id, trigger id and partition id that are assigned to the
         retrieval worker.
@@ -78,7 +84,7 @@ class TriggerSampleStorage:
         :param total_samples: the total number of samples
         :return: the trigger samples
         """
-        samples: List[Tuple[int, float]] = []
+        samples: list[tuple[int, float]] = []
 
         start_index, worker_subset_size = self.get_training_set_partition(
             retrieval_worker_id, total_retrieval_workers, num_samples_trigger
@@ -89,21 +95,20 @@ class TriggerSampleStorage:
             if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"):
                 if current_index >= start_index + worker_subset_size:
                     break
-                file_size = self._get_file_size(str(Path(self.trigger_sample_directory) / file))
-                if current_index + file_size <= start_index:
-                    current_index += file_size
+                num_samples = self._get_num_samples_in_file(Path(self.trigger_sample_directory) / file)
+                if current_index + num_samples <= start_index:
+                    current_index += num_samples
                     continue
-                if current_index + file_size < start_index + worker_subset_size:
+                if current_index + num_samples < start_index + worker_subset_size:
                     samples.extend(
                         self._parse_file_subset(
-                            str(Path(self.trigger_sample_directory) / file), start_index - current_index, file_size
-                        )
+                            Path(self.trigger_sample_directory) / file), start_index - current_index, num_samples
                     )
-                    current_index += file_size
+                    current_index += num_samples
                     continue
                 samples.extend(
                     self._parse_file_subset(
-                        str(Path(self.trigger_sample_directory) / file),
+                        Path(self.trigger_sample_directory) / file,
                         start_index - current_index if start_index - current_index >= 0 else 0,
                         start_index + worker_subset_size - current_index,
                     )
@@ -111,7 +116,7 @@ class TriggerSampleStorage:
                 break
         return samples
 
-    def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> List[Tuple[int, float]]:
+    def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> list[tuple[int, float]]:
         """
         Return all the samples for the given pipeline id, trigger id and partition id.
 
@@ -120,18 +125,12 @@ class TriggerSampleStorage:
         :param partition_id: the id of the partition
         :return: the trigger samples
         """
-        return [
-            item
-            for sublist in (
-                self._parse_file(str(Path(self.trigger_sample_directory) / file))
+        return flatten(self._parse_file(Path(self.trigger_sample_directory) / file)
                 for file in os.listdir(self.trigger_sample_directory)
-                if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}")
-            )
-            for item in sublist
-        ]
+                if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"))
 
     @staticmethod
-    def get_training_set_partition(worker_id: int, total_workers: int, number_training_samples: int) -> Tuple[int, int]:
+    def get_training_set_partition(worker_id: int, total_workers: int, number_training_samples: int) -> tuple[int, int]:
         """
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id.
@@ -170,7 +169,7 @@ class TriggerSampleStorage:
         pipeline_id: int,
         trigger_id: int,
         partition_id: int,
-        trigger_samples: List[Tuple[int, float]],
+        trigger_samples: np.ndarray,
         insertion_id: int,
     ) -> None:
         """
@@ -184,50 +183,51 @@ class TriggerSampleStorage:
         """
         Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
 
-        samples_file = str(
-            Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{insertion_id}"
+        samples_file = Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{insertion_id}"
+
+        assert not Path(samples_file).exists(), (
+            f"Trigger samples file {samples_file} already exists. "
+            f"Please delete it if you want to overwrite it."
         )
+
         self._write_file(samples_file, trigger_samples)
 
-    def _write_file(self, file_path: str, trigger_samples: List[Tuple[int, float]]) -> None:
+    def _write_file(self, file_path: Path, trigger_samples: np.ndarray) -> None:
         """Write the trigger samples to the given file.
 
         Args:
             file_path (str): File path to write to.
-            trigger_samples (List[Tuple[int, float]]): List of trigger samples.
+            trigger_samples (list[tuple[int, float]]): List of trigger samples.
         """
         header = struct.pack("i", len(trigger_samples))
 
         with open(file_path, "wb") as file:
             file.write(header)
-            _ = [file.write(struct.pack("i", x[0]) + struct.pack("f", x[1])) for x in trigger_samples]
+            file.write(trigger_samples.tobytes())
 
-    def _parse_file(self, file_path: str) -> List[Tuple[int, float]]:
+    def _parse_file(self, file_path: Path) -> np.ndarray:
         """Parse the given file and return the samples.
 
         Args:
             file_path (str): File path to parse.
 
         Returns:
-            List[Tuple[int, float]]: List of trigger samples.
+            list[tuple[int, float]]: List of trigger samples.
         """
         with open(file_path, "rb") as file:
             header = struct.unpack("i", file.read(self.int_size))[0]
-            samples = [
-                (struct.unpack("i", file.read(self.int_size))[0], struct.unpack("f", file.read(self.float_size))[0])
-                for _ in range(header)
-            ]
+            samples = np.fromfile(file, dtype=[("index", "i4"), ("value", "f4")], count=header)
             return samples
 
-    def _parse_file_subset(self, file_path: str, start_index: int, end_index: int) -> List[Tuple[int, float]]:
-        """Parse the given file and return the samples. We only return the first end_index samples.
+    def _parse_file_subset(self, file_path: Path, start_index: int, end_index: int) -> np.ndarray:
+        """Parse the given file and return the samples. Only return samples between start_index and end_index.
 
         Args:
             file_path (str): File path to parse.
             end_index (int): The index of the last sample to return.
 
         Returns:
-            List[Tuple[int, float]]: List of trigger samples.
+            list[tuple[int, float]]: List of trigger samples.
         """
         with open(file_path, "rb") as file:
             header = struct.unpack("i", file.read(self.int_size))[0]
@@ -235,14 +235,12 @@ class TriggerSampleStorage:
                 raise ValueError(
                     f"Error parsing file {file_path}. Header is {header} and end_index is {end_index} incompatible."
                 )
-            file.seek(self.int_size + (start_index * (self.int_size + self.float_size)))
-            samples = [
-                (struct.unpack("i", file.read(self.int_size))[0], struct.unpack("f", file.read(self.float_size))[0])
-                for _ in range(end_index - start_index)
-            ]
+            samples = np.fromfile(
+                file, dtype=[("index", "i4"), ("value", "f4")], count=end_index - start_index
+            )
             return samples
 
-    def _get_file_size(self, file_path: str) -> int:
+    def _get_num_samples_in_file(self, file_path: Path) -> int:
         """Get the number of samples in the given file.
 
         Args:
