@@ -11,7 +11,7 @@ from modyn.storage.internal.database.storage_database_connection import StorageD
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
 from sqlalchemy import exc
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import exc as orm_exc
 from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,9 @@ class NewFileWatcher:
     will be added to the database.
     """
 
-    def __init__(self, modyn_config: dict, should_stop: Any):  # See https://github.com/python/typeshed/issues/8799
+    def __init__(
+        self, modyn_config: dict, dataset_id: int, should_stop: Any
+    ):  # See https://github.com/python/typeshed/issues/8799
         """Initialize the new file watcher.
 
         Args:
@@ -33,35 +35,48 @@ class NewFileWatcher:
         """
         self.modyn_config = modyn_config
         self.__should_stop = should_stop
+        self.__dataset_id = dataset_id
 
-    def _seek(self) -> None:
+    def _seek(self, storage_database_connection: StorageDatabaseConnection, dataset: Dataset) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
 
         If last timestamp is not ignored, the last timestamp of the dataset will be used to only
         seek for files that have a timestamp that is equal or greater than the last timestamp.
         """
-        with StorageDatabaseConnection(self.modyn_config) as database:
-            session = database.session
-
-            datasets = self._get_datasets(session)
-
-            for dataset in datasets:
-                logger.debug(
-                    f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
-                    is equal or greater than {dataset.last_timestamp}"
+        if dataset is None:
+            logger.warning(
+                f"Dataset {self.__dataset_id} not found. Shutting down file watcher for dataset {self.__dataset_id}."
+            )
+            self.__should_stop.value = True
+            return
+        session = storage_database_connection.session
+        try:
+            logger.debug(
+                f"Seeking for files in dataset {dataset.dataset_id} with a timestamp that \
+                is equal or greater than {dataset.last_timestamp}"
+            )
+            self._seek_dataset(session, dataset)
+            last_timestamp = (
+                session.query(File.updated_at)
+                .filter(File.dataset_id == dataset.dataset_id)
+                .order_by(File.updated_at.desc())
+                .first()
+            )
+            if last_timestamp is not None:
+                session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
+                    {"last_timestamp": last_timestamp[0]}
                 )
-                self._seek_dataset(session, dataset)
-                last_timestamp = (
-                    session.query(File.updated_at)
-                    .filter(File.dataset_id == dataset.dataset_id)
-                    .order_by(File.updated_at.desc())
-                    .first()
-                )
-                if last_timestamp is not None:
-                    session.query(Dataset).filter(Dataset.dataset_id == dataset.dataset_id).update(
-                        {"last_timestamp": last_timestamp[0]}
-                    )
-                    session.commit()
+                session.commit()
+        except orm_exc.ObjectDeletedError as error:
+            # If the dataset was deleted, we should stop the file watcher and delete all the
+            # orphaned files and samples
+            logger.warning(
+                f"Dataset {self.__dataset_id} was deleted. Shutting down "
+                + f"file watcher for dataset {self.__dataset_id}. Error: {error}"
+            )
+            session.rollback()
+            storage_database_connection.delete_dataset(dataset.name)
+            self.__should_stop.value = True
 
     def _seek_dataset(self, session: Session, dataset: Dataset) -> None:
         """Seek the filesystem for a dataset for new files and add them to the database.
@@ -116,7 +131,7 @@ class NewFileWatcher:
         file_wrapper_type: str,
         path: str,
         timestamp: int,
-        session: sessionmaker,
+        session: Session,
         dataset: Dataset,
     ) -> None:
         """Recursively get all files in a directory.
@@ -174,17 +189,19 @@ class NewFileWatcher:
     def run(self) -> None:
         """Run the dataset watcher."""
         logger.info("Starting dataset watcher.")
-        while not self.__should_stop.value:  # type: ignore  # See https://github.com/python/typeshed/issues/8799  # noqa: E501
-            time.sleep(self.modyn_config["storage"]["new_file_watcher"]["interval"])
-            self._seek()
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            while not self.__should_stop.value:
+                dataset = database.session.query(Dataset).filter(Dataset.dataset_id == self.__dataset_id).first()
+                self._seek(database, dataset)
+                time.sleep(dataset.file_watcher_interval)
 
 
-def run_watcher(modyn_config: dict, should_stop: Any) -> None:  # See https://github.com/python/typeshed/issues/8799
-    """Run the new file watcher.
+def run_new_file_watcher(modyn_config: dict, dataset_id: int, should_stop: Any) -> None:
+    """Run the file watcher for a dataset.
 
     Args:
-        modyn_config (dict): Configuration of the modyn module.
-        should_stop (Value): Value that indicates if the watcher should stop.
+        dataset_id (int): Dataset id.
+        should_stop (Value): Value to check if the file watcher should stop.
     """
-    watcher = NewFileWatcher(modyn_config, should_stop)
-    watcher.run()
+    file_watcher = NewFileWatcher(modyn_config, dataset_id, should_stop)
+    file_watcher.run()

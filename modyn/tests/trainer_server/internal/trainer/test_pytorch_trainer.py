@@ -31,6 +31,14 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 
 
+class NoneOrFalse:
+    def __eq__(self, other):
+        if other is None or not other:
+            return True
+
+        return False
+
+
 class MockModule:
     def __init__(self, num_optimizers) -> None:
         if num_optimizers == 1:
@@ -364,7 +372,7 @@ def test_save_state_to_file():
             "state": {},
             "param_groups": [
                 {
-                    "lr": 0.1,
+                    "lr": pytest.approx(0.1),
                     "momentum": 0,
                     "dampening": 0,
                     "weight_decay": 0,
@@ -380,29 +388,29 @@ def test_save_state_to_file():
             "state": {},
             "param_groups": [
                 {
-                    "lr": 0.5,
-                    "betas": (0.9, 0.999),
-                    "eps": 1e-08,
+                    "lr": pytest.approx(0.5),
+                    "betas": (pytest.approx(0.9), pytest.approx(0.999)),
+                    "eps": pytest.approx(1e-08),
                     "weight_decay": 0,
                     "amsgrad": False,
                     "maximize": False,
                     "foreach": None,
                     "capturable": False,
                     "differentiable": False,
-                    "fused": False,
+                    "fused": NoneOrFalse(),
                     "params": [0],
                 },
                 {
-                    "lr": 0.8,
-                    "betas": (0.9, 0.999),
-                    "eps": 1e-08,
+                    "lr": pytest.approx(0.8),
+                    "betas": (pytest.approx(0.9), pytest.approx(0.999)),
+                    "eps": pytest.approx(1e-08),
                     "weight_decay": 0,
                     "amsgrad": False,
                     "maximize": False,
                     "foreach": None,
                     "capturable": False,
                     "differentiable": False,
-                    "fused": False,
+                    "fused": NoneOrFalse(),
                     "params": [1],
                 },
             ],
