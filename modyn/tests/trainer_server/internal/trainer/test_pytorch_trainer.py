@@ -389,7 +389,7 @@ def test_save_state_to_file():
                     "foreach": None,
                     "capturable": False,
                     "differentiable": False,
-                    "fused": False,
+                    "fused": None or False,
                     "params": [0],
                 },
                 {
@@ -402,7 +402,7 @@ def test_save_state_to_file():
                     "foreach": None,
                     "capturable": False,
                     "differentiable": False,
-                    "fused": False,
+                    "fused": None or False,
                     "params": [1],
                 },
             ],
