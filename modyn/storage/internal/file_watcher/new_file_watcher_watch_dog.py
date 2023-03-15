@@ -23,7 +23,7 @@ class NewFileWatcherWatchDog:
         self.__should_stop = should_stop
         self._file_watcher_processes: dict[int, tuple[Process, Any, int]] = {}
 
-    def _manage_file_watcher_processes(self) -> None:
+    def _watch_file_watcher_processes(self) -> None:
         """Manage the file watchers.
 
         This method will check if there are file watchers that are not watching a dataset anymore. If that is the case,
@@ -90,7 +90,7 @@ class NewFileWatcherWatchDog:
             should_stop (Value): Value that indicates if the watcher should stop.
         """
         while not self.__should_stop.value:
-            self._manage_file_watcher_processes()
+            self._watch_file_watcher_processes()
             time.sleep(3)
 
         for dataset_id in self._file_watcher_processes:

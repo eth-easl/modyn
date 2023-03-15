@@ -73,12 +73,12 @@ class Storage:
 
         #  Start the dataset watcher process in a different thread.
         should_stop = Value(c_bool, False)
-        watcher_server = Process(target=run_watcher_watch_dog, args=(self.modyn_config, should_stop))
-        watcher_server.start()
+        watchdog = Process(target=run_watcher_watch_dog, args=(self.modyn_config, should_stop))
+        watchdog.start()
 
         #  Start the storage grpc server.
         with GRPCServer(self.modyn_config) as server:
             server.wait_for_termination()
 
         should_stop.value = True  # type: ignore  # See https://github.com/python/typeshed/issues/8799
-        watcher_server.join()
+        watchdog.join()

@@ -110,7 +110,7 @@ def test_stop_file_watcher_process(session):
     assert should_stop.value
 
 
-def test_manage_file_watcher_processes_dataset_not_in_database(session):
+def test_watch_file_watcher_processes_dataset_not_in_database(session):
     should_stop = Value(c_bool, False)
     new_file_watcher_watch_dog = NewFileWatcherWatchDog(get_minimal_modyn_config(), should_stop)
 
@@ -120,14 +120,14 @@ def test_manage_file_watcher_processes_dataset_not_in_database(session):
 
     new_file_watcher_watch_dog._file_watcher_processes[1] = (mock_process, should_stop, 0)
 
-    new_file_watcher_watch_dog._manage_file_watcher_processes()
+    new_file_watcher_watch_dog._watch_file_watcher_processes()
 
     assert not mock_process.is_alive()
     assert should_stop.value
 
 
 @patch("modyn.storage.internal.file_watcher.new_file_watcher_watch_dog.Process", return_value=MockProcess())
-def test_manage_file_watcher_processes_dataset_not_in_dataset_ids_in_file_watcher_processes(mock_process, session):
+def test_watch_file_watcher_processes_dataset_not_in_dataset_ids_in_file_watcher_processes(mock_process, session):
     dataset = Dataset(
         name="test1",
         description="test description",
@@ -144,7 +144,7 @@ def test_manage_file_watcher_processes_dataset_not_in_dataset_ids_in_file_watche
 
     new_file_watcher_watch_dog = NewFileWatcherWatchDog(get_minimal_modyn_config(), should_stop)
 
-    new_file_watcher_watch_dog._manage_file_watcher_processes()
+    new_file_watcher_watch_dog._watch_file_watcher_processes()
 
     assert dataset.dataset_id in new_file_watcher_watch_dog._file_watcher_processes
     assert new_file_watcher_watch_dog._file_watcher_processes[dataset.dataset_id][0] is not None
@@ -153,9 +153,7 @@ def test_manage_file_watcher_processes_dataset_not_in_dataset_ids_in_file_watche
 
 
 @patch("modyn.storage.internal.file_watcher.new_file_watcher_watch_dog.Process", return_value=MockProcess())
-def test_manage_file_watcher_processes_dataset_in_dataset_ids_in_file_watcher_processes_not_alive(
-    mock_process, session
-):
+def test_watch_file_watcher_processes_dataset_in_dataset_ids_in_file_watcher_processes_not_alive(mock_process, session):
     dataset = Dataset(
         name="test1",
         description="test description",
@@ -176,7 +174,7 @@ def test_manage_file_watcher_processes_dataset_in_dataset_ids_in_file_watcher_pr
 
     mock_process.is_alive.return_value = False
 
-    new_file_watcher_watch_dog._manage_file_watcher_processes()
+    new_file_watcher_watch_dog._watch_file_watcher_processes()
 
     assert dataset.dataset_id in new_file_watcher_watch_dog._file_watcher_processes
     assert new_file_watcher_watch_dog._file_watcher_processes[dataset.dataset_id][0] is not None
