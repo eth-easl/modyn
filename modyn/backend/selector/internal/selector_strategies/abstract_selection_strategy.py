@@ -170,7 +170,7 @@ class AbstractSelectionStrategy(ABC):
             for i in range(self._insertion_threads):
                 start_idx = i * samples_per_proc
                 end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
-                proc_samples = np.array(training_samples[start_idx:end_idx])
+                proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
                 if len(proc_samples) > 0:
                     shm = shared_memory.SharedMemory(
                         create=True,
