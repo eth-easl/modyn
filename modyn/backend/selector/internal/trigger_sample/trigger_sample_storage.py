@@ -151,6 +151,11 @@ class TriggerSampleStorage:
         :param partition_id: the id of the partition
         :return: the trigger samples
         """
+
+        for file in sorted(os.listdir(self.trigger_sample_directory)):
+            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"):
+                logger.error(self._parse_file(Path(self.trigger_sample_directory) / file))
+
         return [
             (int(key), float(weight))  # type: ignore
             for (key, weight) in map(
