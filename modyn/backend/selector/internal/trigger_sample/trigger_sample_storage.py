@@ -138,7 +138,7 @@ class TriggerSampleStorage:
                             for file_path, start_index, end_index in triple_list
                         ]
                     )
-                ).reshape(-1, 2),
+                ),
             )
         ]
 
@@ -152,10 +152,6 @@ class TriggerSampleStorage:
         :return: the trigger samples
         """
 
-        for file in sorted(os.listdir(self.trigger_sample_directory)):
-            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"):
-                logger.error(self._parse_file(Path(self.trigger_sample_directory) / file))
-
         return [
             (int(key), float(weight))  # type: ignore
             for (key, weight) in map(
@@ -168,7 +164,7 @@ class TriggerSampleStorage:
                             if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}")
                         ]
                     )
-                ).reshape(-1, 2),
+                ),
             )
         ]
 
@@ -224,6 +220,9 @@ class TriggerSampleStorage:
         :param trigger_samples: the trigger samples
         :param insertion_id: the id of the insertion
         """
+        if trigger_samples.dtype != np.dtype("i8,f8"):
+            raise ValueError(f"Unexpected dtype: {trigger_samples.dtype}\nExpected: {np.dtype('i8,f8')}")
+
         Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
 
         samples_file = Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{insertion_id}"

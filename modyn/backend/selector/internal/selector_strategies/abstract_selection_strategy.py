@@ -160,7 +160,12 @@ class AbstractSelectionStrategy(ABC):
 
             if (self._is_mac and self._is_test) or self._disable_mt:
                 AbstractSelectionStrategy._store_triggersamples_impl(
-                    partition, trigger_id, self._pipeline_id, np.array(training_samples), self._modyn_config, 0
+                    partition,
+                    trigger_id,
+                    self._pipeline_id,
+                    np.array(training_samples, dtype=np.dtype("i8,f8")),
+                    self._modyn_config,
+                    0,
                 )
                 continue
 
@@ -181,6 +186,8 @@ class AbstractSelectionStrategy(ABC):
                         proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
                     )
                     shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
+                    assert proc_samples.shape == shared_proc_samples.shape
+
                     logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
                     proc = mp.Process(
                         target=AbstractSelectionStrategy._store_triggersamples_impl,
