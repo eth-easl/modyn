@@ -174,9 +174,11 @@ class AbstractSelectionStrategy(ABC):
                 if len(proc_samples) > 0:
                     shm = shared_memory.SharedMemory(
                         create=True,
-                        size=len(proc_samples) * proc_samples.dtype.itemsize,
+                        size=proc_samples.size * proc_samples.itemsize,
                     )
-                    shared_proc_samples: np.ndarray = np.ndarray(proc_samples.shape, buffer=shm.buf)
+                    shared_proc_samples: np.ndarray = np.ndarray(
+                        proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
+                    )
                     shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
                     logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
                     proc = mp.Process(
