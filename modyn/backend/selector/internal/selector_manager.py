@@ -116,3 +116,7 @@ class SelectorManager:
         strategy_handler = getattr(strategy_module, strategy_name)
 
         return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)
+
+    def cleanup_trigger_samples(self) -> None:
+        for selector in self._selectors.values():
+            selector.cleanup_trigger_samples()

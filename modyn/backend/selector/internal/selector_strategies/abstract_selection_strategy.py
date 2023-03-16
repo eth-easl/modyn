@@ -4,6 +4,7 @@ import os
 import platform
 from abc import ABC, abstractmethod
 from multiprocessing import shared_memory
+from pathlib import Path
 from typing import Iterable, Optional
 
 import numpy as np
@@ -84,6 +85,22 @@ class AbstractSelectionStrategy(ABC):
                 "larger than the maximum amount of keys we may hold in memory."
             )
 
+        ignore_existing_trigger_samples = (
+            modyn_config["selector"]["ignore_existing_trigger_samples"]
+            if "ignore_existing_trigger_samples" in modyn_config["selector"]
+            else False
+        )
+        self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+        if (
+            Path(self._trigger_sample_directory).exists()
+            and any(Path(self._trigger_sample_directory).iterdir())
+            and not ignore_existing_trigger_samples
+        ):
+            raise ValueError(
+                f"The trigger sample directory {self._trigger_sample_directory} is not empty. \
+                  Please delete the directory or set the ignore_existing_trigger_samples flag to True."
+            )
+
     @abstractmethod
     def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         """
@@ -124,7 +141,7 @@ class AbstractSelectionStrategy(ABC):
         insertion_id: int,
     ) -> None:
         TriggerSampleStorage(
-            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"]
+            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"],
         ).save_trigger_sample(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
@@ -177,7 +194,6 @@ class AbstractSelectionStrategy(ABC):
                 end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
                 proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
                 if len(proc_samples) > 0:
-                    # Validate types
                     shm = shared_memory.SharedMemory(
                         create=True,
                         size=proc_samples.nbytes,
@@ -243,7 +259,9 @@ class AbstractSelectionStrategy(ABC):
                 .first()[0]
             )
 
-        data = TriggerSampleStorage(self._modyn_config["selector"]["trigger_sample_directory"]).get_trigger_samples(
+        data = TriggerSampleStorage(
+            self._trigger_sample_directory,
+        ).get_trigger_samples(
             pipeline_id=self._pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
@@ -330,3 +348,6 @@ class AbstractSelectionStrategy(ABC):
 
         for proc in processes:
             proc.join()
+
+    def cleanup_trigger_samples(self) -> None:
+        TriggerSampleStorage(self._trigger_sample_directory).cleanup_trigger_samples()

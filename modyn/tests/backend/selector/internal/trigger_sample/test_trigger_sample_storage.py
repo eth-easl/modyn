@@ -1,3 +1,4 @@
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -265,3 +266,21 @@ def test_get_training_set_partition():
     assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(5, 8, len(training_samples)) == (0, 0)
     assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(6, 8, len(training_samples)) == (0, 0)
     assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(7, 8, len(training_samples)) == (0, 0)
+
+
+def test_init_directory():
+    os.rmdir(TMP_DIR)
+    _ = TriggerSampleStorage(TMP_DIR)
+
+    assert os.path.exists(TMP_DIR)
+
+
+def test_delete_and_cleanup_no_cleanup():
+    with open(os.path.join(TMP_DIR, "test"), "w", encoding="utf-8") as file:
+        file.write("test")
+
+    trigger_sample_storage = TriggerSampleStorage(TMP_DIR)
+
+    trigger_sample_storage.cleanup_trigger_samples()
+
+    assert os.path.exists(TMP_DIR)

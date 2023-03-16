@@ -99,3 +99,6 @@ class Selector:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
         return self._trigger_partition_cache[trigger_id]
+
+    def cleanup_trigger_samples(self) -> None:
+        self._strategy.cleanup_trigger_samples()

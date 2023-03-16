@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -21,13 +22,24 @@ class TriggerSampleStorage:
     sample weight separated by a comma.
     """
 
-    def __init__(self, trigger_sample_directory: str):
+    def __init__(
+        self,
+        trigger_sample_directory: str,
+    ):
         self.trigger_sample_directory = trigger_sample_directory
         if not Path(self.trigger_sample_directory).exists():
             Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
             logger.info(f"Created the trigger sample directory {self.trigger_sample_directory}.")
         if sys.maxsize < 2**63 - 1:
             raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
+
+    def cleanup_trigger_samples(self) -> None:
+        """
+        Delete all the trigger samples.
+        """
+        shutil.rmtree(self.trigger_sample_directory)
+        Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
+        logger.error(f"Deleted the trigger sample directory {self.trigger_sample_directory}.")
 
     def get_trigger_samples(
         self,

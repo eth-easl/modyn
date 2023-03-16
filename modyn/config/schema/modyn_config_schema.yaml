@@ -233,6 +233,14 @@ properties:
           type: string
           description: |
             The directory where the trigger samples are stored.
+        cleanup_trigger_samples_after_shutdown:
+          type: boolean
+          description: |
+            Whether to cleanup the trigger samples by deleting the directory after the selector has been shut down.
+        ignore_existing_trigger_samples:
+          type: boolean
+          description: |
+            Whether to ignore existing trigger samples when starting the selector. If set to false, the trigger sample directory has to be empty upon startup. May lead to unexpected behaviour if set to true and the trigger sample directory is not empty (e.g. duplicate trigger sample files)
       required:
         - port
         - hostname

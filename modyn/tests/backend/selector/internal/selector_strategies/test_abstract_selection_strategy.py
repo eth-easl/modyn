@@ -240,6 +240,20 @@ def test__persist_data():
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
+def test_trigger_sample_directory_exists(test__on_trigger: MagicMock):
+    test__on_trigger.return_value = []
+
+    assert os.path.exists(TMP_DIR)
+
+    with open(os.path.join(TMP_DIR, "test.txt"), "w", encoding="utf-8") as file:
+        file.write("test")
+
+    with pytest.raises(ValueError):
+        _ = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+
+
+@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_on_trigger")
 def test_two_strategies_increase_next_trigger_separately(test__on_trigger: MagicMock):
     test__on_trigger.return_value = []
 
