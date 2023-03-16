@@ -246,7 +246,7 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
-        return np.load(file_path)
+        return np.load(file_path, allow_pickle = False, fix_imports = False)
 
     def _parse_file_subset(self, file_path: Path, start_index: int, end_index: int) -> np.ndarray:
         """Parse the given file and return the samples. Only return samples between start_index
