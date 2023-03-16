@@ -235,7 +235,7 @@ class TriggerSampleStorage:
             file_path (str): File path to write to.
             trigger_samples (list[tuple[int, float]]): List of trigger samples.
         """
-        np.save(file_path, trigger_samples)
+        np.save(file_path, trigger_samples, allow_pickle=False, fix_imports=False)
 
     def _parse_file(self, file_path: Path) -> np.ndarray:
         """Parse the given file and return the samples.
