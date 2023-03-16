@@ -143,11 +143,14 @@ class NewFileWatcher:
         file_wrapper_type: str,
         timestamp: int,
         dataset_name: str,
-        session: Optional[Session],
+        session: Optional[Session],  # When using multithreading, we cannot pass the session, hence it is Optional
     ) -> None:
+        """Given a list of paths (in terms of a Modyn FileSystem) to files,
+        check whether there are any new files and if so, add all samples from these files into the DB."""
+
         db_connection: Optional[StorageDatabaseConnection] = None
 
-        if session is None:
+        if session is None:  # Multithreaded
             db_connection = StorageDatabaseConnection(modyn_config)
             db_connection.setup_connection()
             session = db_connection.session
