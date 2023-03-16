@@ -177,7 +177,7 @@ class AbstractSelectionStrategy(ABC):
                     shape = np.shape(proc_samples)
                     shm = shared_memory.SharedMemory(
                         create=True,
-                        size=len(proc_samples) * np.dtype([("int_val", np.int64), ("float_val", np.float64)]).itemsize,
+                        size=len(proc_samples) * np.dtype([(np.int64), (np.float64)]).itemsize,
                     )
                     shared_proc_samples: np.ndarray = np.ndarray(shape, buffer=shm.buf)
                     shared_proc_samples[:] = proc_samples  # This copies the python list into the prepared numpy array
