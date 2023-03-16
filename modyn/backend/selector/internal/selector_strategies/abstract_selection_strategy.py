@@ -172,6 +172,12 @@ class AbstractSelectionStrategy(ABC):
                 end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
                 proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
                 if len(proc_samples) > 0:
+                    # Validate types
+                    assert type(proc_samples) == list
+                    assert type(proc_samples[0]) == tuple
+                    assert type(proc_samples[0][0]) == int
+                    assert type(proc_samples[0][]) == float
+
                     shm = shared_memory.SharedMemory(
                         create=True,
                         size=proc_samples.nbytes,
