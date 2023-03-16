@@ -174,7 +174,7 @@ class AbstractSelectionStrategy(ABC):
                 if len(proc_samples) > 0:
                     shm = shared_memory.SharedMemory(
                         create=True,
-                        size=proc_samples.size * proc_samples.itemsize,
+                        size=proc_samples.nbytes,
                     )
                     shared_proc_samples: np.ndarray = np.ndarray(
                         proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
