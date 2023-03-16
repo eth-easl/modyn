@@ -173,10 +173,10 @@ class AbstractSelectionStrategy(ABC):
                 proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
                 if len(proc_samples) > 0:
                     # Validate types
-                    assert type(proc_samples) == list
-                    assert type(proc_samples[0]) == tuple
-                    assert type(proc_samples[0][0]) == int
-                    assert type(proc_samples[0][]) == float
+                    assert type(training_samples[start_idx:end_idx]) == list
+                    assert type(training_samples[start_idx:end_idx][0]) == tuple
+                    assert type(training_samples[start_idx:end_idx][0][0]) == int
+                    assert type(training_samples[start_idx:end_idx][0][]) == float
 
                     shm = shared_memory.SharedMemory(
                         create=True,
