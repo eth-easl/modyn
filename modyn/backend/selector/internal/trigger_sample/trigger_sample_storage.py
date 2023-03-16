@@ -109,7 +109,7 @@ class TriggerSampleStorage:
                     continue
                 if current_index + num_samples_in_file < start_index + worker_subset_size:
                     # The head of samples for the worker are in the file, either partially from
-                    # start_index - current_index to the end of the file if start_incex > current_index
+                    # start_index - current_index to the end of the file if start_index > current_index
                     # or completely from 0 to the end of the file.
                     # Because the end index is exclusive, we compare < instead of <= otherwise we would retrieve
                     # one more sample than we should
