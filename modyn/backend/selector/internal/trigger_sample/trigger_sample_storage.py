@@ -1,6 +1,6 @@
 import logging
 import os
-import struct
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -26,8 +26,8 @@ class TriggerSampleStorage:
         if not Path(self.trigger_sample_directory).exists():
             Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
             logger.info(f"Created the trigger sample directory {self.trigger_sample_directory}.")
-        self.int_size = struct.calcsize("i")
-        self.float_size = struct.calcsize("f")
+        if sys.maxsize < 2**63 - 1:
+            raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
 
     def get_trigger_samples(
         self,
@@ -87,8 +87,6 @@ class TriggerSampleStorage:
         :param total_samples: the total number of samples
         :return: the trigger samples
         """
-        samples: list[tuple[int, float]] = []
-
         start_index, worker_subset_size = self.get_training_set_partition(
             retrieval_worker_id, total_retrieval_workers, num_samples_trigger
         )
@@ -129,8 +127,9 @@ class TriggerSampleStorage:
                 break
 
         # We need to flatten the list of lists of np arrays and then reshape it to get the list of tuples
-        samples = list(
-            map(
+        return [
+            (int(key), float(weight))
+            for (key, weight) in map(
                 tuple,  # type: ignore
                 np.array(
                     flatten(
@@ -141,8 +140,7 @@ class TriggerSampleStorage:
                     )
                 ).reshape(-1, 2),
             )
-        )
-        return samples
+        ]
 
     def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> list[tuple[int, float]]:
         """
@@ -153,8 +151,9 @@ class TriggerSampleStorage:
         :param partition_id: the id of the partition
         :return: the trigger samples
         """
-        return list(
-            map(
+        return [
+            (int(key), float(weight))
+            for (key, weight) in map(
                 tuple,  # type: ignore
                 np.array(
                     [
@@ -164,7 +163,7 @@ class TriggerSampleStorage:
                     ]
                 ).reshape(-1, 2),
             )
-        )
+        ]
 
     @staticmethod
     def get_training_set_partition(worker_id: int, total_workers: int, number_training_samples: int) -> tuple[int, int]:
@@ -246,9 +245,9 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
-        return np.load(file_path, allow_pickle = False, fix_imports = False)
+        return np.load(file_path, allow_pickle=False, fix_imports=False)
 
-    def _parse_file_subset(self, file_path: Path, start_index: int, end_index: int) -> np.ndarray:
+    def _parse_file_subset(self, file_path: Path, start_index: int, end_index: int) -> np.memmap:
         """Parse the given file and return the samples. Only return samples between start_index
            inclusive and end_index exclusive.
 
@@ -259,8 +258,9 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
-       return np.load(file_path, allow_pickle = False, fix_imports = False, mmap_mode = 'r').take(range(start_index, end_index), axis=0)
-        return tmp
+        return np.load(file_path, allow_pickle=False, fix_imports=False, mmap_mode="r").take(
+            range(start_index, end_index), axis=0
+        )
 
     def _get_num_samples_in_file(self, file_path: Path) -> int:
         """Get the number of samples in the given file.
@@ -268,4 +268,4 @@ class TriggerSampleStorage:
         Args:
             file_path (str): File path to parse.
         """
-        return np.load(file_path, allow_pickle = False, fix_imports = False, mmap_mode = 'r').shape[0]
+        return np.load(file_path, allow_pickle=False, fix_imports=False, mmap_mode="r").shape[0]

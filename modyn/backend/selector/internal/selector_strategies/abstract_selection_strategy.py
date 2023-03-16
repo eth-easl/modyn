@@ -158,11 +158,9 @@ class AbstractSelectionStrategy(ABC):
 
             total_keys_in_trigger += len(training_samples)
 
-            trainig_samples_np = np.array(training_samples)
-
-            if self._is_test or self._disable_mt:
+            if (self._is_mac and self._is_test) or self._disable_mt:
                 AbstractSelectionStrategy._store_triggersamples_impl(
-                    partition, trigger_id, self._pipeline_id, trainig_samples_np, self._modyn_config, 0
+                    partition, trigger_id, self._pipeline_id, np.array(training_samples), self._modyn_config, 0
                 )
                 continue
 
