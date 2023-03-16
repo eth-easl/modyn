@@ -128,7 +128,7 @@ class TriggerSampleStorage:
 
         # We need to flatten the list of lists of np arrays and then reshape it to get the list of tuples
         return [
-            (int(key), float(weight))
+            (int(key), float(weight))  # type: ignore
             for (key, weight) in map(
                 tuple,  # type: ignore
                 np.array(
@@ -152,7 +152,7 @@ class TriggerSampleStorage:
         :return: the trigger samples
         """
         return [
-            (int(key), float(weight))
+            (int(key), float(weight))  # type: ignore
             for (key, weight) in map(
                 tuple,  # type: ignore
                 np.array(
