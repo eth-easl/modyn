@@ -268,4 +268,4 @@ class TriggerSampleStorage:
         Args:
             file_path (str): File path to parse.
         """
-        return np.load(file_path).shape[0]
+        return np.load(file_path, allow_pickle = False, fix_imports = False, mmap_mode = 'r').shape[0]
