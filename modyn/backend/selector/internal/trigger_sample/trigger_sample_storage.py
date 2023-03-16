@@ -259,8 +259,7 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
-        samples = np.load(file_path)
-        tmp = samples.take(range(start_index, end_index), axis=0)
+       return np.load(file_path, allow_pickle = False, fix_imports = False, mmap_mode = 'r').take(range(start_index, end_index), axis=0)
         return tmp
 
     def _get_num_samples_in_file(self, file_path: Path) -> int:
