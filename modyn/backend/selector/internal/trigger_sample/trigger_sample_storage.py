@@ -156,11 +156,13 @@ class TriggerSampleStorage:
             for (key, weight) in map(
                 tuple,  # type: ignore
                 np.array(
-                    [
-                        self._parse_file(Path(self.trigger_sample_directory) / file)
-                        for file in sorted(os.listdir(self.trigger_sample_directory))
-                        if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}")
-                    ]
+                    flatten(
+                        [
+                            self._parse_file(Path(self.trigger_sample_directory) / file)
+                            for file in sorted(os.listdir(self.trigger_sample_directory))
+                            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}")
+                        ]
+                    )
                 ).reshape(-1, 2),
             )
         ]
