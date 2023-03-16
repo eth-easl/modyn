@@ -177,9 +177,7 @@ class AbstractSelectionStrategy(ABC):
                         create=True,
                         size=len(proc_samples) * np.dtype([("int_val", np.int64), ("float_val", np.float64)]).itemsize,
                     )
-                    shared_proc_samples: np.ndarray = np.ndarray(
-                        shape, dtype=[("int_val", np.int64), ("float_val", np.float64)], buffer=shm.buf
-                    )
+                    shared_proc_samples: np.ndarray = np.ndarray(shape, buffer=shm.buf)
                     shared_proc_samples[:] = proc_samples  # This copies the python list into the prepared numpy array
                     logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
                     proc = mp.Process(
