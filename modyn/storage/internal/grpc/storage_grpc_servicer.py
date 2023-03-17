@@ -142,7 +142,7 @@ class StorageGRPCServicer(StorageServicer):
                 .execution_options(yield_per=self._sample_batch_size)
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= timestamp)
-                .order_by(asc(File.updated_at))
+                .order_by(asc(File.updated_at), asc(Sample.sample_id))
             )
 
             for batch in database.session.execute(stmt).partitions():
@@ -180,7 +180,7 @@ class StorageGRPCServicer(StorageServicer):
                 .filter(File.dataset_id == dataset.dataset_id)
                 .filter(File.updated_at >= request.start_timestamp)
                 .filter(File.updated_at <= request.end_timestamp)
-                .order_by(asc(File.updated_at))
+                .order_by(asc(File.updated_at), asc(Sample.sample_id))
             )
 
             for batch in database.session.execute(stmt).partitions():

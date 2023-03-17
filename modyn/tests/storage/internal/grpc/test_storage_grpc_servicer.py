@@ -202,9 +202,9 @@ def test_get_new_data_since():
     response = responses[0]
 
     assert response is not None
-    assert response.keys == [1, 2, 3]
-    assert response.timestamps == [NOW, NOW, NOW - 1]
-    assert response.labels == [1, 3, 5]
+    assert response.keys == [3, 1, 2]
+    assert response.timestamps == [NOW - 1, NOW, NOW]
+    assert response.labels == [5, 1, 3]
 
 
 def test_get_new_data_since_batched():
@@ -221,19 +221,19 @@ def test_get_new_data_since_batched():
     response3 = responses[2]
 
     assert response1 is not None
-    assert response1.keys == [1]
-    assert response1.timestamps == [NOW]
-    assert response1.labels == [1]
+    assert response1.keys == [3]
+    assert response1.timestamps == [NOW - 1]
+    assert response1.labels == [5]
 
     assert response2 is not None
-    assert response2.keys == [2]
+    assert response2.keys == [1]
     assert response2.timestamps == [NOW]
-    assert response2.labels == [3]
+    assert response2.labels == [1]
 
     assert response3 is not None
-    assert response3.keys == [3]
-    assert response3.timestamps == [NOW - 1]
-    assert response3.labels == [5]
+    assert response3.keys == [2]
+    assert response3.timestamps == [NOW]
+    assert response3.labels == [3]
 
 
 def test_get_new_data_since_invalid_dataset():
@@ -270,9 +270,9 @@ def test_get_data_in_interval():
     response = responses[0]
 
     assert response is not None
-    assert response.keys == [1, 2, 3]
-    assert response.timestamps == [NOW, NOW, NOW - 1]
-    assert response.labels == [1, 3, 5]
+    assert response.keys == [3, 1, 2]
+    assert response.timestamps == [NOW - 1, NOW, NOW]
+    assert response.labels == [5, 1, 3]
 
     request = GetDataInIntervalRequest(dataset_id="test", start_timestamp=0, end_timestamp=NOW - 1)
 
