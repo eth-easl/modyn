@@ -7,6 +7,7 @@ from concurrent import futures
 import grpc
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
 from modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer import TrainerServerGRPCServicer
+from modyn.utils import MAX_MESSAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,15 @@ class GRPCServer:
         """
         self.config = config
         self.tempdir = tempdir
-        self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        self.server = grpc.server(
+            futures.ThreadPoolExecutor(
+                max_workers=10,
+            ),
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
 
     def __enter__(self) -> grpc.Server:
         """Enter the context manager.
