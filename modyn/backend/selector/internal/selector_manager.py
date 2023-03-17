@@ -29,7 +29,7 @@ class SelectorManager:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.create_tables()
 
-    def _init_trigger_sample_directory(self):
+    def _init_trigger_sample_directory(self) -> None:
         ignore_existing_trigger_samples = (
             self._modyn_config["selector"]["ignore_existing_trigger_samples"]
             if "ignore_existing_trigger_samples" in self._modyn_config["selector"]
@@ -138,7 +138,10 @@ class SelectorManager:
         return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)
 
     def cleanup_trigger_samples(self) -> None:
-        if "cleanup_trigger_samples_after_shutdown" in self._modyn_config["selector"]:
+        if (
+            "cleanup_trigger_samples_after_shutdown" in self._modyn_config["selector"]
+            and "trigger_sample_directory" in self._modyn_config["selector"]
+        ):
             shutil.rmtree(self._modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"])
-            Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
-            logger.error(f"Deleted the trigger sample directory {self.trigger_sample_directory}.")
+            Path(self._modyn_config["selector"]["trigger_sample_directory"]).mkdir(parents=True, exist_ok=True)
+            logger.error("Deleted the trigger sample directory.")
