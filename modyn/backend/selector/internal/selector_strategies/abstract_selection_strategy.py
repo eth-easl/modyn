@@ -4,7 +4,6 @@ import os
 import platform
 from abc import ABC, abstractmethod
 from multiprocessing import shared_memory
-from pathlib import Path
 from typing import Iterable, Optional
 
 import numpy as np
@@ -85,21 +84,7 @@ class AbstractSelectionStrategy(ABC):
                 "larger than the maximum amount of keys we may hold in memory."
             )
 
-        ignore_existing_trigger_samples = (
-            modyn_config["selector"]["ignore_existing_trigger_samples"]
-            if "ignore_existing_trigger_samples" in modyn_config["selector"]
-            else False
-        )
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
-        if (
-            Path(self._trigger_sample_directory).exists()
-            and any(Path(self._trigger_sample_directory).iterdir())
-            and not ignore_existing_trigger_samples
-        ):
-            raise ValueError(
-                f"The trigger sample directory {self._trigger_sample_directory} is not empty. \
-                  Please delete the directory or set the ignore_existing_trigger_samples flag to True."
-            )
 
     @abstractmethod
     def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
@@ -348,6 +333,3 @@ class AbstractSelectionStrategy(ABC):
 
         for proc in processes:
             proc.join()
-
-    def cleanup_trigger_samples(self) -> None:
-        TriggerSampleStorage(self._trigger_sample_directory).cleanup_trigger_samples()

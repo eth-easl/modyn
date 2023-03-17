@@ -273,14 +273,3 @@ def test_init_directory():
     _ = TriggerSampleStorage(TMP_DIR)
 
     assert os.path.exists(TMP_DIR)
-
-
-def test_delete_and_cleanup_no_cleanup():
-    with open(os.path.join(TMP_DIR, "test"), "w", encoding="utf-8") as file:
-        file.write("test")
-
-    trigger_sample_storage = TriggerSampleStorage(TMP_DIR)
-
-    trigger_sample_storage.cleanup_trigger_samples()
-
-    assert os.path.exists(TMP_DIR)
