@@ -316,7 +316,7 @@ class AbstractSelectionStrategy(ABC):
             proc_timestamps = timestamps[start_idx:end_idx]
             proc_labels = labels[start_idx:end_idx]
             if len(proc_keys) > 0:
-                logger.debug(f"Starting persisting process for {len(keys)} samples.")
+                logger.debug(f"Starting persisting process for {len(proc_keys)} samples.")
                 proc = mp.Process(
                     target=AbstractSelectionStrategy._persist_samples_impl,
                     args=(
