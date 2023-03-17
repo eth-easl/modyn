@@ -7,6 +7,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import (  
 )
 from modyn.backend.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
 from modyn.backend.selector.internal.selector_manager import SelectorManager
+from modyn.utils import MAX_MESSAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,13 @@ class SelectorServer:
         self._add_servicer_to_server_func = add_SelectorServicer_to_server
 
     def prepare_server(self) -> grpc.server:
-        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        server = grpc.server(
+            futures.ThreadPoolExecutor(max_workers=10),
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
         self._add_servicer_to_server_func(self.grpc_servicer, server)
         return server
 
