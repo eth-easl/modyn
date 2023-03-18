@@ -26,8 +26,8 @@ from modyn.models.dlrm.nn.interactions import CatInteraction, CudaDotInteraction
 from modyn.models.dlrm.nn.mlps import AbstractMlp, CppMlp, TorchMlp
 
 
-def create_mlp(input_dim: int, sizes: Sequence[int], use_cpp_mlp: bool) -> AbstractMlp:
-    return CppMlp(input_dim, sizes) if use_cpp_mlp else TorchMlp(input_dim, sizes)
+def create_mlp(input_dim: int, sizes: Sequence[int], use_cpp_mlp: bool, device: str) -> AbstractMlp:
+    return CppMlp(input_dim, sizes, device) if use_cpp_mlp else TorchMlp(input_dim, sizes)
 
 
 def create_embeddings(
@@ -52,11 +52,11 @@ def create_embeddings(
         raise NotImplementedError(f"unknown embedding type: {embedding_type}")
 
 
-def create_interaction(interaction_op: str, embedding_num: int, embedding_dim: int) -> Interaction:
+def create_interaction(interaction_op: str, embedding_num: int, embedding_dim: int, device: str) -> Interaction:
     if interaction_op == "dot":
-        return DotInteraction(embedding_num, embedding_dim)
+        return DotInteraction(embedding_num, embedding_dim, device)
     elif interaction_op == "cuda_dot":
-        return CudaDotInteraction(DotInteraction(embedding_num, embedding_dim))
+        return CudaDotInteraction(DotInteraction(embedding_num, embedding_dim, device), device)
     elif interaction_op == "cat":
         return CatInteraction(embedding_num, embedding_dim)
     else:

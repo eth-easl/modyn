@@ -59,7 +59,7 @@ class DlrmModel(nn.Module):
         self._interaction_op = model_configuration["interaction_op"]
         self._hash_indices = model_configuration["hash_indices"]
 
-        interaction = create_interaction(self._interaction_op, len(categorical_feature_sizes), self._embedding_dim)
+        interaction = create_interaction(self._interaction_op, len(categorical_feature_sizes), self._embedding_dim, self._device)
 
         # ignore device here since it is handled by the trainer
         self.bottom_model = DlrmBottom(
@@ -75,7 +75,7 @@ class DlrmModel(nn.Module):
         )
 
         self.top_model = DlrmTop(
-            model_configuration["top_mlp_sizes"], interaction, use_cpp_mlp=model_configuration["use_cpp_mlp"]
+            model_configuration["top_mlp_sizes"], interaction, self._device, use_cpp_mlp=model_configuration["use_cpp_mlp"]
         )
 
     def validate_config(self, model_configuration: dict[str, Any], device: str) -> None:
