@@ -97,7 +97,6 @@ class CudaDotInteraction(Interaction):
         :param bottom_mlp_output
         :return:
         """
-        
         with torch.cuda.device(self._device):
             return dotBasedInteract(bottom_output, bottom_mlp_output)
 
