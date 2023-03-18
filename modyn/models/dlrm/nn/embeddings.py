@@ -146,7 +146,7 @@ class JointEmbedding(Embeddings):
     @property
     def weights(self):
         return [
-            self.embedding.weight.data[self.offsets[cat] : self.offsets[cat + 1]]
+            self.embedding.weight.data[self.offsets[cat]: self.offsets[cat + 1]]
             for cat in range(len(self._categorical_feature_sizes))
         ]
 
@@ -155,7 +155,7 @@ class JointEmbedding(Embeddings):
         offsets = self.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat] : offsets[cat + 1]] = weight
+            data[offsets[cat]: offsets[cat + 1]] = weight
 
 
 # If you want ot use a fused joint embedding for a different number of variables, firstly change
@@ -214,7 +214,9 @@ class FusedJointEmbedding(Embeddings):
                 categorical_inputs[:, cat] %= size
 
         with torch.cuda.device(self._device):
-            return [BuckleEmbeddingFusedGatherFunction.apply(self.weight, categorical_inputs, self.offsets, self.amp_train)]
+            return [
+                BuckleEmbeddingFusedGatherFunction.apply(self.weight, categorical_inputs, self.offsets, self.amp_train)
+            ]
 
     def extra_repr(self):
         return "embedding_dim={}, categorical_feature_sizes={}, offsets={}".format(
@@ -224,7 +226,7 @@ class FusedJointEmbedding(Embeddings):
     @property
     def weights(self) -> List[torch.Tensor]:
         return [
-            self.weight.data[self.offsets[cat] : self.offsets[cat + 1]]
+            self.weight.data[self.offsets[cat]: self.offsets[cat + 1]]
             for cat in range(len(self._categorical_feature_sizes))
         ]
 
@@ -233,7 +235,7 @@ class FusedJointEmbedding(Embeddings):
         offsets = self.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat] : offsets[cat + 1]] = weight
+            data[offsets[cat]: offsets[cat + 1]] = weight
 
 
 class JointSparseEmbedding(Embeddings):
@@ -242,6 +244,7 @@ class JointSparseEmbedding(Embeddings):
     ):
         super().__init__()
         self._categorical_feature_sizes = categorical_feature_sizes
+        self._device = device
         self.embedding = CudaExtJointSparseEmbedding(categorical_feature_sizes, embedding_dim, device)
         self.hash_indices = hash_indices
 
@@ -250,17 +253,18 @@ class JointSparseEmbedding(Embeddings):
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
 
-        return [self.embedding(categorical_inputs)]
+        with torch.cuda.device(self._device):
+            return [self.embedding(categorical_inputs)]
 
     @property
     def weights(self):
         data = self.embedding.weights.data
         offsets = self.embedding.offsets
-        return [data[offsets[cat] : offsets[cat + 1]] for cat in range(len(self._categorical_feature_sizes))]
+        return [data[offsets[cat]: offsets[cat + 1]] for cat in range(len(self._categorical_feature_sizes))]
 
     def load_weights(self, weights: Iterable[torch.Tensor]):
         data = self.embedding.weights.data
         offsets = self.embedding.offsets
 
         for cat, weight in zip(range(len(self._categorical_feature_sizes)), weights):
-            data[offsets[cat] : offsets[cat + 1]] = weight
+            data[offsets[cat]: offsets[cat + 1]] = weight
