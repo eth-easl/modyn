@@ -144,4 +144,4 @@ class SelectorManager:
         ):
             shutil.rmtree(self._modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"])
             Path(self._modyn_config["selector"]["trigger_sample_directory"]).mkdir(parents=True, exist_ok=True)
-            logger.error("Deleted the trigger sample directory.")
+            logger.info("Deleted the trigger sample directory.")
