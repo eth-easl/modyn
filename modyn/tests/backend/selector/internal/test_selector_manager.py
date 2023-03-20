@@ -1,4 +1,6 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name
+import os
+import tempfile
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
@@ -18,7 +20,7 @@ def get_modyn_config():
             "host": "derhorst",
             "port": "1337",
         },
-        "selector": {"keys_in_selector_cache": 1000},
+        "selector": {"keys_in_selector_cache": 1000, "trigger_sample_directory": "/does/not/exist"},
     }
 
 
@@ -144,6 +146,20 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
     selec.inform_data_and_trigger(pipe_id, [10], [0], [0])
 
     selector_inform_data_and_trigger.assert_called_once_with([10], [0], [0])
+
+
+@patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+def test_init_selector_manager_with_existing_trigger_dir():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with open(os.path.join(tmp_dir, "test"), "w", encoding="utf-8") as file:
+            file.write("test")
+
+        config = get_modyn_config()
+        config["selector"]["trigger_sample_directory"] = tmp_dir
+
+        with pytest.raises(ValueError):
+            SelectorManager(config)
 
 
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)

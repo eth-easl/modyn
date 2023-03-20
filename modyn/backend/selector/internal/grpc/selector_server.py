@@ -38,3 +38,8 @@ class SelectorServer:
         server.add_insecure_port("[::]:" + self.modyn_config["selector"]["port"])
         server.start()
         server.wait_for_termination()
+        if (
+            "cleanup_trigger_samples_after_shutdown" in self.modyn_config["selector"]
+            and self.modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"]
+        ):
+            self.selector_manager.cleanup_trigger_samples()
