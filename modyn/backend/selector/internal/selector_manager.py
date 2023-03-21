@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
+from pathlib import Path
 from threading import Lock
 from typing import Tuple
 
@@ -22,10 +24,28 @@ class SelectorManager:
         self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
         self.init_metadata_db()
+        self._init_trigger_sample_directory()
 
     def init_metadata_db(self) -> None:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.create_tables()
+
+    def _init_trigger_sample_directory(self) -> None:
+        ignore_existing_trigger_samples = (
+            self._modyn_config["selector"]["ignore_existing_trigger_samples"]
+            if "ignore_existing_trigger_samples" in self._modyn_config["selector"]
+            else False
+        )
+        trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+        if (
+            Path(trigger_sample_directory).exists()
+            and any(Path(trigger_sample_directory).iterdir())
+            and not ignore_existing_trigger_samples
+        ):
+            raise ValueError(
+                f"The trigger sample directory {trigger_sample_directory} is not empty. \
+                  Please delete the directory or set the ignore_existing_trigger_samples flag to True."
+            )
 
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """
@@ -118,8 +138,18 @@ class SelectorManager:
 
         return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)
 
+
     def get_selection_strategy_remote(self, pipeline_id: int) -> Tuple[bool, str]:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested selection strategy for pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_selection_strategy_remote()
+        
+    def cleanup_trigger_samples(self) -> None:
+        if (
+            "cleanup_trigger_samples_after_shutdown" in self._modyn_config["selector"]
+            and "trigger_sample_directory" in self._modyn_config["selector"]
+        ):
+            shutil.rmtree(self._modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"])
+            Path(self._modyn_config["selector"]["trigger_sample_directory"]).mkdir(parents=True, exist_ok=True)
+            logger.info("Deleted the trigger sample directory.")
