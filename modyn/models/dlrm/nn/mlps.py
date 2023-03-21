@@ -127,9 +127,10 @@ class TorchMlp(AbstractMlp):
 
 
 class CppMlp(AbstractMlp):
-    def __init__(self, input_dim: int, sizes: Sequence[int]):
+    def __init__(self, input_dim: int, sizes: Sequence[int], device: str):
         super().__init__()
 
+        self._device = device
         self.mlp = AmpMlp([input_dim] + list(sizes))
 
     @property
@@ -148,4 +149,6 @@ class CppMlp(AbstractMlp):
         Returns:
             Tensor: Mlp output in shape [batch_size, num_output_features]
         """
-        return self.mlp(mlp_input)
+
+        with torch.cuda.device(self._device):
+            return self.mlp(mlp_input)
