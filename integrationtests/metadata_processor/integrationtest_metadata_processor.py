@@ -47,9 +47,7 @@ def get_grpc_channel(config: dict, component: str) -> grpc.Channel:
     return channel
 
 
-def send_metadata_and_check_database(
-    processor_client: MetadataProcessorClient, config: dict
-) -> None:
+def send_metadata_and_check_database(processor_client: MetadataProcessorClient, config: dict) -> int:
     with MetadataDatabaseConnection(config) as database:
         pipeline_id = database.register_pipeline(2)
 
@@ -57,10 +55,7 @@ def send_metadata_and_check_database(
         pipeline_id=pipeline_id,
         trigger_id=1,
         trigger_metadata=PerTriggerMetadata(loss=0.5),
-        sample_metadata=[
-            PerSampleMetadata(sample_id="s1", loss=0.1),
-            PerSampleMetadata(sample_id="s2", loss=0.2)
-        ]
+        sample_metadata=[PerSampleMetadata(sample_id="s1", loss=0.1), PerSampleMetadata(sample_id="s2", loss=0.2)],
     )
 
     resp = processor_client.send_metadata(req)
@@ -72,13 +67,14 @@ def send_metadata_and_check_database(
                 TriggerTrainingMetadata.trigger_id,
                 TriggerTrainingMetadata.pipeline_id,
                 TriggerTrainingMetadata.overall_loss,
-            ).all()
+            )
+            .filter(TriggerTrainingMetadata.pipeline_id == pipeline_id)
+            .all()
         )
 
         tids, pids, overall_loss = zip(*trigger_metadata)
 
-        assert len(trigger_metadata) == 1, (
-            f"Expected 1 entry for trigger metadata in db, found {len(trigger_metadata)}")
+        assert len(trigger_metadata) == 1, f"Expected 1 entry for trigger metadata in db, found {len(trigger_metadata)}"
         assert tids[0] == 1, f"Expected trigger ID 1 in db, found {tids[0]}"
         assert pids[0] == pipeline_id, f"Expected pipeline ID 1 in db, found {pids[0]}"
         assert isclose(overall_loss[0], 0.5), f"Expected overall loss 0.5 in db, found {overall_loss[0]}"
@@ -88,27 +84,33 @@ def send_metadata_and_check_database(
                 SampleTrainingMetadata.pipeline_id,
                 SampleTrainingMetadata.trigger_id,
                 SampleTrainingMetadata.sample_key,
-                SampleTrainingMetadata.loss
-            ).all()
+                SampleTrainingMetadata.loss,
+            )
+            .filter(SampleTrainingMetadata.pipeline_id == pipeline_id)
+            .all()
         )
 
         pids, tids, keys, loss = zip(*sample_metadata)
 
-        assert len(sample_metadata) == 2, (
-            f"Expected 2 entries for sample metadata in db, found {len(sample_metadata)}")
-        assert pids[0] == pipeline_id and pids[1] == pipeline_id, (
-            f"Expected all sample metadata in db to be for pipeline ID 1, found {pids}")
-        assert tids[0] == 1 and tids[1] == 1, (
-            f"Expected all sample metadata in db to be for trigger ID 1, found {tids}")
+        assert len(sample_metadata) == 2, f"Expected 2 entries for sample metadata in db, found {len(sample_metadata)}"
+        assert (
+            pids[0] == pipeline_id and pids[1] == pipeline_id
+        ), f"Expected all sample metadata in db to be for pipeline ID 1, found {pids}"
+        assert tids[0] == 1 and tids[1] == 1, f"Expected all sample metadata in db to be for trigger ID 1, found {tids}"
         assert keys == ("s1", "s2"), f"Expected sample keys (s1, s2) in db, found {keys}"
         assert isclose(loss[0], 0.1, rel_tol=1e-5), f"Expected sample loss 0.1, found {loss[0]}"
         assert isclose(loss[1], 0.2, rel_tol=1e-5), f"Expected sample loss 0.2, found {loss[1]}"
+        return pipeline_id
 
 
 def clear_database(config: dict, pipeline_id: int):
     with MetadataDatabaseConnection(config) as database:
-        database.session.query(TriggerTrainingMetadata).delete()
-        database.session.query(SampleTrainingMetadata).delete()
+        database.session.query(TriggerTrainingMetadata).filter(
+            TriggerTrainingMetadata.pipeline_id == pipeline_id
+        ).delete()
+        database.session.query(SampleTrainingMetadata).filter(
+            SampleTrainingMetadata.pipeline_id == pipeline_id
+        ).delete()
         database.session.commit()
 
 

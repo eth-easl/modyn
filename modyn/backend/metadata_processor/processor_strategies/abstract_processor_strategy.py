@@ -18,9 +18,8 @@ class AbstractProcessorStrategy(ABC):
     and process_sample_metadata
     """
 
-    processor_strategy_type: ProcessorStrategyType = None
-
     def __init__(self, modyn_config: dict, pipeline_id: int):
+        self.processor_strategy_type: ProcessorStrategyType = None
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
 
@@ -52,17 +51,18 @@ class AbstractProcessorStrategy(ABC):
                 )
                 database.session.commit()
             if processed_sample_metadata is not None:
-                database.session.add_all(
+                database.session.bulk_insert_mappings(
+                    SampleTrainingMetadata,
                     [
-                        SampleTrainingMetadata(
-                            pipeline_id=self.pipeline_id,
-                            trigger_id=trigger_id,
-                            sample_key=metadata["sample_id"],
-                            loss=metadata.get("loss", None),
-                            gradient=metadata.get("gradient", None),
-                        )
+                        {
+                            "pipeline_id": self.pipeline_id,
+                            "trigger_id": trigger_id,
+                            "sample_key": metadata["sample_id"],
+                            "loss": metadata.get("loss", None),
+                            "gradient": metadata.get("gradient", None),
+                        }
                         for metadata in processed_sample_metadata
-                    ]
+                    ],
                 )
                 database.session.commit()
 

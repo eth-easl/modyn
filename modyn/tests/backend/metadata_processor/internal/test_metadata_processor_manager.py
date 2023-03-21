@@ -12,6 +12,7 @@ from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor
 from modyn.backend.metadata_processor.internal.metadata_processor_manager import MetadataProcessorManager
 from modyn.backend.metadata_processor.metadata_processor import MetadataProcessor
 from modyn.backend.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
+from modyn.backend.metadata_processor.processor_strategies.processor_strategy_type import ProcessorStrategyType
 
 TRIGGER_METATDATA = PerTriggerMetadata(loss=0.05)
 SAMPLE_METADATA = [PerSampleMetadata(sample_id="s1", loss=0.1)]
@@ -57,7 +58,7 @@ def test_register_pipeline(test__instantiate_strategy: MagicMock):
 
     assert len(manager.processors) == 0
 
-    manager.register_pipeline(56, "..")
+    manager.register_pipeline(56, ProcessorStrategyType.BasicProcessorStrategy.value)
     assert len(manager.processors) == 1
 
     assert 56 in manager.processors
@@ -72,7 +73,7 @@ def test_processor_training_metadata(
     manager = MetadataProcessorManager(get_modyn_config())
     test__instantiate_strategy.return_value = MockStrategy()
 
-    manager.register_pipeline(56, "..")
+    manager.register_pipeline(56, ProcessorStrategyType.BasicProcessorStrategy.value)
 
     with pytest.raises(ValueError):
         manager.process_training_metadata(60, 0, TRIGGER_METATDATA, SAMPLE_METADATA)

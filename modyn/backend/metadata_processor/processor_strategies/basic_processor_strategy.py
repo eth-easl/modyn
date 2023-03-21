@@ -26,7 +26,9 @@ class BasicProcessorStrategy(AbstractProcessorStrategy):
     def process_sample_metadata(self, sample_metadata: Iterable[PerSampleMetadata]) -> Optional[list[dict]]:
         if sample_metadata:
             processed_metadata = [
-                {"sample_id": metadata.sample_id, "loss": metadata.loss} for metadata in sample_metadata
+                {"sample_id": metadata.sample_id, "loss": metadata.loss}
+                for metadata in sample_metadata
+                if metadata.loss is not None
             ]
             return processed_metadata
         return None
