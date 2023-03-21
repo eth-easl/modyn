@@ -13,10 +13,11 @@ from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.utils.metric_type import MetricType
+from modyn.trainer_server.internal.utils.selection_strategy import get_selection_strategy
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import dynamic_module_import, package_available_and_can_be_imported
-
+from modyn.backend.selector.internal.selector_strategies.remote_loss_downsample import RemoteLossDownsampler
 
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
@@ -96,6 +97,21 @@ class PytorchTrainer:
         self._num_samples = 0
 
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
+
+        # investigate Torch RPC to make it smoother
+        if training_info.selector_address != "":
+            self._downsampling_enabled, exec_str = get_selection_strategy(
+                training_info.selector_address, training_info.pipeline_id
+            )
+        else:
+            self._downsampling_enabled = False
+
+        if self._downsampling_enabled:
+            exec(f"tmp = {exec_str}")  # pylint: disable=exec-used
+        else:
+            tmp = None
+
+        self._downsampler = tmp
 
         # create callbacks - For now, assume LossCallback by default
         # TODO(#140): should be defined by the pipeline and passed with training request
@@ -241,6 +257,11 @@ class PytorchTrainer:
                 data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
                 for name, tensor in batch[1].items():
                     data[name] = tensor.to(self._device)
+
+            if self._downsampling_enabled:
+                # need to refactor to allow weights
+                assert self._downsampler is not None
+                data, _, target = self._downsampler.sample(data, target)
 
             for _, optimizer in self._optimizers.items():
                 optimizer.zero_grad()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from threading import Lock
+from typing import Tuple
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
@@ -116,3 +117,9 @@ class SelectorManager:
         strategy_handler = getattr(strategy_module, strategy_name)
 
         return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)
+
+    def get_selection_strategy_remote(self, pipeline_id: int) -> Tuple[bool, str]:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested selection strategy for pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_selection_strategy_remote()

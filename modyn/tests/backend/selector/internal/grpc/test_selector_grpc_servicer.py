@@ -8,6 +8,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
     GetNumberOfPartitionsRequest,
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
+    GetSelectionStrategyRequest,
     JsonString,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
@@ -152,3 +153,18 @@ def test__get_number_of_partitions(test_get_number_of_partitions: MagicMock):
     assert response.num_partitions == 12
 
     test_get_number_of_partitions.assert_called_once_with(42, 21)
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+@patch.object(SelectorManager, "get_selection_strategy_remote")
+def test_get_selection_strategy(test_get_selection_strategy_remote: MagicMock):
+    mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
+    servicer = SelectorGRPCServicer(mgr, 8096)
+    request = GetSelectionStrategyRequest(pipeline_id=42)
+    test_get_selection_strategy_remote.return_value = False, ""
+
+    response: NumberOfPartitionsResponse = servicer.get_selection_strategy(request, None)
+    assert not response.downsampling_enabled
+    assert response.exec_string == ""
+
+    test_get_selection_strategy_remote.assert_called_once_with(42)

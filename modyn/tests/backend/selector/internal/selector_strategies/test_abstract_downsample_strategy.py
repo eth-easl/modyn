@@ -132,9 +132,8 @@ def test_on_trigger_multi_chunks():
 
     generator = strat._on_trigger()
     indexes = list(generator)
-    assert len(indexes) == 2
-    assert len(indexes[0]) == 1
-    assert len(indexes[1]) == 1
+    assert len(indexes) == 1
+    assert len(indexes[0]) == 2
 
 
 def test_on_trigger_multi_chunks_unbalanced():
@@ -146,9 +145,8 @@ def test_on_trigger_multi_chunks_unbalanced():
 
     generator = strat._on_trigger()
     indexes = list(generator)
-    assert len(indexes) == 2
-    assert len(indexes[0]) == 2
-    assert len(indexes[1]) == 1
+    assert len(indexes) == 1
+    assert len(indexes[0]) == 3
 
 
 def test_on_trigger_multi_chunks_unbalanced_tail():
@@ -161,11 +159,9 @@ def test_on_trigger_multi_chunks_unbalanced_tail():
 
     generator = strat._on_trigger()
     indexes = list(generator)
-    assert len(indexes) == 2
-    assert len(indexes[0]) == 3
-    assert len(indexes[1]) == 1
-    assert set(key for key, _ in indexes[0]) < set([10, 11, 12, 13, 14])
-    assert indexes[1][0] == (15, 1.0)
+    assert len(indexes) == 1
+    assert len(indexes[0]) == 4
+    assert set(key for key, _ in indexes[0]) < set([10, 11, 12, 13, 14, 15])
 
 
 def test_no_presampling():

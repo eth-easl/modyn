@@ -10,11 +10,13 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
     GetNumberOfPartitionsRequest,
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
+    GetSelectionStrategyRequest,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
     RegisterPipelineRequest,
     SamplesResponse,
+    SelectionStrategyResponse,
     TriggerResponse,
 )
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer  # noqa: E402, E501
@@ -101,3 +103,13 @@ class SelectorGRPCServicer(SelectorServicer):
         num_partitions = self.selector_manager.get_number_of_partitions(pipeline_id, trigger_id)
 
         return NumberOfPartitionsResponse(num_partitions=num_partitions)
+
+    def get_selection_strategy(  # pylint: disable-next=unused-argument
+        self, request: GetSelectionStrategyRequest, context: grpc.ServicerContext
+    ) -> SelectionStrategyResponse:
+        pipeline_id = request.pipeline_id
+        logger.info(f"[Pipeline {pipeline_id}]: Received selection strategy request")
+
+        downsampling_enabled, exec_string = self.selector_manager.get_selection_strategy_remote(pipeline_id)
+
+        return SelectionStrategyResponse(downsampling_enabled=downsampling_enabled, exec_string=exec_string)

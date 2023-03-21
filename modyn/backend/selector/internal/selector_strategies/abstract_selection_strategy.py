@@ -47,6 +47,7 @@ class AbstractSelectionStrategy(ABC):
         self._pipeline_id = pipeline_id
         self._maximum_keys_in_memory = maximum_keys_in_memory
         self._insertion_threads = modyn_config["selector"]["insertion_threads"]
+        self._requires_remote_computation = False
 
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"

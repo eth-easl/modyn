@@ -2,12 +2,12 @@
 # flake8: noqa: E712
 import logging
 import random
-from typing import Any, Iterable
+from typing import Iterable
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.metadata_database.models import SelectorStateMetadata
 from modyn.backend.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import asc, select
+from sqlalchemy import asc, func, select
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
 
         self.presampling_ratio = config["presampling_ratio"]
         self.dataset_size = 0
+        self._requires_remote_computation = True
 
         assert 0 < self.presampling_ratio <= 100
 
@@ -51,6 +52,8 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
         keys.
 
+        Sampling is done within the db before chunking. Returned chunks have already been sampled
+
         Returns:
             Iterable[list[tuple[int, float]]]:
                 Iterable over partitions. Each partition consists of a list of training samples.
@@ -62,47 +65,20 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         assert isinstance(self.dataset_size, int)
         assert self.dataset_size > 0
 
-        if not self.ignore_presampling:
-            target_size = (self.dataset_size * self.presampling_ratio) // 100
+        target_size = self.get_target_size()
 
-            num_chunks = self.dataset_size // self._maximum_keys_in_memory
-            num_chunks = num_chunks if self.dataset_size % self._maximum_keys_in_memory == 0 else num_chunks + 1
+        for samples in self._get_data_no_reset_presampled(target_size):
+            random.shuffle(samples)
+            yield [(sample, 1.0) for sample in samples]
 
-            per_chunk_samples = self.get_per_chunk_samples(target_size, num_chunks)
-            for samples in self._get_data_no_reset_presampled(per_chunk_samples):
-                random.shuffle(samples)
-                yield [(sample, 1.0) for sample in samples]
+    def get_target_size(self) -> int:
+        return (self.dataset_size * self.presampling_ratio) // 100
 
-        else:
-            for samples in self._get_data_no_reset():
-                random.shuffle(samples)
-                yield [(sample, 1.0) for sample in samples]
-
-    def get_per_chunk_samples(self, target_size: int, num_chunks: int) -> list[int]:
-        last_chunk_size = self.dataset_size % self._maximum_keys_in_memory
-
-        base_size = target_size // num_chunks
-        per_chunk_samples = [base_size] * num_chunks
-        per_chunk_samples[-1] = min(last_chunk_size, base_size)
-
-        # handle remaining samples
-        remaining = target_size - sum(per_chunk_samples)
-        for i in range(num_chunks - 2, num_chunks - 2 - remaining, -1):
-            per_chunk_samples[i] += 1
-
-        assert sum(per_chunk_samples) == target_size
-
-        return per_chunk_samples
-
-    def _get_data_no_reset_presampled(self, per_chunk_samples: list[int]) -> Iterable[list[int]]:
+    def _get_data_no_reset_presampled(self, target_size: int) -> Iterable[list[int]]:
         assert not self.reset_after_trigger
-        assert sum(per_chunk_samples) > 0
+        assert target_size > 0
 
-        chunk_number = 0
-        for samples in self._get_all_data():
-            samples = random.sample(samples, min(len(samples), per_chunk_samples[chunk_number]))
-            chunk_number += 1
-
+        for samples in self._get_sampled_data(target_size):
             yield samples
 
     def _get_data_no_reset(self) -> Iterable[list[int]]:
@@ -132,6 +108,36 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 else:
                     yield []
 
+    def _get_sampled_data(self, target_size: int) -> Iterable[list[int]]:
+        # TODO(179) add efficient function for Postgresql
+        """Returns a subset of samples uniformly sampled from the DB
+
+        Returns:
+            list[str]: Keys of used samples
+        """
+
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            subq = (
+                select(SelectorStateMetadata.sample_key)
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
+                .order_by(func.random())  # pylint: disable=E1102
+                .limit(target_size)
+                .alias()
+            )
+
+            stmt = (
+                select(SelectorStateMetadata.sample_key)
+                .execution_options(yield_per=self._maximum_keys_in_memory)
+                .join(subq, SelectorStateMetadata.sample_key == subq.c.sample_key)
+                .order_by(SelectorStateMetadata.timestamp)
+            )
+
+            for chunk in database.session.execute(stmt).partitions():
+                if len(chunk) > 0:
+                    yield [res[0] for res in chunk]
+                else:
+                    yield []
+
     def _reset_state(self) -> None:
         pass  # As we currently hold everything in database (#116), this currently is a noop.
 
@@ -143,8 +149,8 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 .count()
             )
 
-    def get_downsampling_strategy(self) -> Any:
+    def get_downsampling_strategy(self) -> str:
         """
-        Abstract method to get the downsampling strategy that is transfered from the selector to the pytorch trainer
+        Abstract method to get the downsampling strategy that is transfered from the selector to the pytorch trainer.
         """
         raise NotImplementedError()
