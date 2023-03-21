@@ -9,6 +9,9 @@ from inspect import isfunction
 from typing import Any, Callable, Optional, Union
 
 import torch
+from modyn.backend.selector.internal.selector_strategies.remote_loss_downsample import (  # noqa # pylint: disable=unused-import
+    RemoteLossDownsampler,
+)
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
@@ -17,7 +20,7 @@ from modyn.trainer_server.internal.utils.selection_strategy import get_selection
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import dynamic_module_import, package_available_and_can_be_imported
-from modyn.backend.selector.internal.selector_strategies.remote_loss_downsample import RemoteLossDownsampler
+
 
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
