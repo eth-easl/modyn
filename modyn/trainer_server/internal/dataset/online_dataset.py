@@ -17,14 +17,11 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disab
     GetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils.utils import flatten, grpc_connection_established
+from modyn.utils.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
 logger = logging.getLogger(__name__)
-
-
-MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 
 
 class OnlineDataset(IterableDataset):
@@ -107,7 +104,13 @@ class OnlineDataset(IterableDataset):
         self._deserialize_torchvision_transforms()
 
     def _init_grpc(self) -> None:
-        selector_channel = grpc.insecure_channel(self._selector_address)
+        selector_channel = grpc.insecure_channel(
+            self._selector_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
         if not grpc_connection_established(selector_channel):
             raise ConnectionError(
                 f"Could not establish gRPC connection to selector at address {self._selector_address}."
@@ -117,8 +120,8 @@ class OnlineDataset(IterableDataset):
         storage_channel = grpc.insecure_channel(
             self._storage_address,
             options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
             ],
         )
         if not grpc_connection_established(storage_channel):

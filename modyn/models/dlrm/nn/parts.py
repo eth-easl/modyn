@@ -50,7 +50,7 @@ class DlrmBottom(nn.Module):
             embedding_type, categorical_feature_sizes, embedding_dim, device, hash_indices, fp16
         )
         self.mlp = (
-            create_mlp(num_numerical_features, bottom_mlp_sizes, use_cpp_mlp).to(device)
+            create_mlp(num_numerical_features, bottom_mlp_sizes, use_cpp_mlp, device).to(device)
             if bottom_mlp_sizes
             else torch.nn.ModuleList()
         )
@@ -105,11 +105,11 @@ class DlrmBottom(nn.Module):
 
 
 class DlrmTop(nn.Module):
-    def __init__(self, top_mlp_sizes: Sequence[int], interaction: Interaction, use_cpp_mlp: bool = False):
+    def __init__(self, top_mlp_sizes: Sequence[int], interaction: Interaction, device: str, use_cpp_mlp: bool = False):
         super().__init__()
 
         self.interaction = interaction
-        self.mlp = create_mlp(interaction.num_interactions, top_mlp_sizes[:-1], use_cpp_mlp)
+        self.mlp = create_mlp(interaction.num_interactions, top_mlp_sizes[:-1], use_cpp_mlp, device).to(device)
         self.out = nn.Linear(top_mlp_sizes[-2], top_mlp_sizes[-1])
 
         self._initialize_weights()
