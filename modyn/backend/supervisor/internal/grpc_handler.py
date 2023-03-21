@@ -44,7 +44,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.utils import current_time_millis, grpc_connection_established
+from modyn.utils import MAX_MESSAGE_SIZE, current_time_millis, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,13 @@ class GRPCHandler:
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
-        self.storage_channel = grpc.insecure_channel(storage_address)
+        self.storage_channel = grpc.insecure_channel(
+            storage_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
 
         if not grpc_connection_established(self.storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
@@ -79,7 +85,13 @@ class GRPCHandler:
     def init_selector(self) -> None:
         assert self.config is not None
         selector_address = f"{self.config['selector']['hostname']}:{self.config['selector']['port']}"
-        self.selector_channel = grpc.insecure_channel(selector_address)
+        self.selector_channel = grpc.insecure_channel(
+            selector_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
 
         if not grpc_connection_established(self.selector_channel):
             raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
@@ -399,8 +411,9 @@ class GRPCHandler:
                     ), f"Inconsistent server response:\n{res}"
 
                     new_samples = res.samples_seen - last_samples
-                    sample_pbar.update(new_samples)
-                    last_samples = new_samples
+                    if new_samples > 0:
+                        sample_pbar.update(new_samples)
+                        last_samples = res.samples_seen
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")

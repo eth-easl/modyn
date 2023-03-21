@@ -38,7 +38,7 @@ class Interaction:
 
 
 class DotInteraction(Interaction):
-    def __init__(self, embedding_num: int, embedding_dim: int):
+    def __init__(self, embedding_num: int, embedding_dim: int, device: str):
         """
         Interactions are among outputs of all the embedding tables and bottom MLP, total number of
         (num_embedding_tables + 1) vectors with size embedding_dim. ``dot`` product interaction computes dot product
@@ -51,9 +51,7 @@ class DotInteraction(Interaction):
                 [i for i in range(self._num_interaction_inputs) for _ in range(i)],
                 [j for i in range(self._num_interaction_inputs) for j in range(i)],
             ]
-        )
-        if torch.cuda.is_available():
-            self._tril_indices = self._tril_indices.cuda()
+        ).to(device)
         # THIS IS NOT A REGULAR TRIANGULAR LOWER MATRIX! THE MAIN DIAGONAL IS NOT INCLUDED
 
     @property
@@ -85,8 +83,9 @@ class DotInteraction(Interaction):
 
 
 class CudaDotInteraction(Interaction):
-    def __init__(self, dot_interaction: DotInteraction):
+    def __init__(self, dot_interaction: DotInteraction, device: str):
         self._dot_interaction = dot_interaction
+        self._device = device
 
     @property
     def num_interactions(self):
@@ -98,8 +97,8 @@ class CudaDotInteraction(Interaction):
         :param bottom_mlp_output
         :return:
         """
-
-        return dotBasedInteract(bottom_output, bottom_mlp_output)
+        with torch.cuda.device(self._device):
+            return dotBasedInteract(bottom_output, bottom_mlp_output)
 
 
 class CatInteraction(Interaction):

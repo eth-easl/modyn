@@ -2,7 +2,10 @@
 
 import json
 import logging
+import multiprocessing as mp
+import os
 import pathlib
+import platform
 import time
 from typing import Any, Optional
 
@@ -36,6 +39,11 @@ class NewFileWatcher:
         self.modyn_config = modyn_config
         self.__should_stop = should_stop
         self.__dataset_id = dataset_id
+
+        self._insertion_threads = modyn_config["storage"]["insertion_threads"]
+        self._is_test = "PYTEST_CURRENT_TEST" in os.environ
+        self._is_mac = platform.system() == "Darwin"
+        self._disable_mt = self._insertion_threads <= 0
 
     def _seek(self, storage_database_connection: StorageDatabaseConnection, dataset: Dataset) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
@@ -115,7 +123,8 @@ class NewFileWatcher:
 
         return datasets
 
-    def _file_unknown(self, session: Session, file_path: str) -> bool:
+    @staticmethod
+    def _file_unknown(session: Session, file_path: str) -> bool:
         """Check if a file is unknown.
 
         TODO (#147): This is a very inefficient way to check if a file is unknown. It should be replaced
@@ -124,6 +133,87 @@ class NewFileWatcher:
         return session.query(File).filter(File.path == file_path).first() is None
 
     # pylint: disable=too-many-locals
+
+    @staticmethod
+    def _handle_file_paths(
+        file_paths: list[str],
+        modyn_config: dict,
+        data_file_extension: str,
+        filesystem_wrapper: AbstractFileSystemWrapper,
+        file_wrapper_type: str,
+        timestamp: int,
+        dataset_name: str,
+        session: Optional[Session],  # When using multithreading, we cannot pass the session, hence it is Optional
+    ) -> None:
+        """Given a list of paths (in terms of a Modyn FileSystem) to files,
+        check whether there are any new files and if so, add all samples from these files into the DB."""
+
+        db_connection: Optional[StorageDatabaseConnection] = None
+
+        if session is None:  # Multithreaded
+            db_connection = StorageDatabaseConnection(modyn_config)
+            db_connection.setup_connection()
+            session = db_connection.session
+
+        dataset: Dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
+
+        def check_valid_file(file_path: str) -> bool:
+            path_obj = pathlib.Path(file_path)
+            if path_obj.suffix != data_file_extension:
+                return False
+            if (
+                dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
+            ) and NewFileWatcher._file_unknown(session, file_path):
+                return True
+
+            return False
+
+        valid_files = list(filter(check_valid_file, file_paths))
+
+        for file_path in valid_files:
+            file_wrapper = get_file_wrapper(
+                file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
+            )
+            number_of_samples = file_wrapper.get_number_of_samples()
+            logger.debug(f"Found new, unknown file: {file_path} with {number_of_samples} samples.")
+
+            try:
+                file: File = File(
+                    dataset=dataset,
+                    path=file_path,
+                    created_at=filesystem_wrapper.get_created(file_path),
+                    updated_at=filesystem_wrapper.get_modified(file_path),
+                    number_of_samples=number_of_samples,
+                )
+                session.add(file)
+                session.commit()
+            except exc.SQLAlchemyError as exception:
+                logger.critical(f"Could not create file {file_path} in database: {exception}")
+                session.rollback()
+                continue
+            file_id = file.file_id
+            logger.info(f"Extracting and inserting samples for file {file_path} (id = {file_id})")
+            labels = file_wrapper.get_all_labels()
+            logger.debug("Labels extracted.")
+
+            try:
+                session.bulk_insert_mappings(
+                    Sample,
+                    [
+                        {"file": file, "file_id": file_id, "index": i, "label": labels[i]}
+                        for i in range(number_of_samples)
+                    ],
+                )
+                session.commit()
+                logger.debug(f"Inserted {number_of_samples} samples.")
+            except exc.SQLAlchemyError as exception:
+                logger.critical(f"Could not create samples for file {file_path} in database: {exception}")
+                session.rollback()
+                session.delete(file)
+                continue
+
+        if db_connection is not None:
+            db_connection.terminate_connection()
 
     def _update_files_in_directory(
         self,
@@ -140,51 +230,49 @@ class NewFileWatcher:
         if not filesystem_wrapper.isdir(path):
             logger.critical(f"Path {path} is not a directory.")
             return
+
         data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
-        for file_path in filesystem_wrapper.list(path, recursive=True):
-            if pathlib.Path(file_path).suffix != data_file_extension:
-                continue
-            if (
-                dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
-            ) and self._file_unknown(session, file_path):
-                file_wrapper = get_file_wrapper(
-                    file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
+        file_paths = filesystem_wrapper.list(path, recursive=True)
+
+        if self._disable_mt or (self._is_test and self._is_mac):
+            NewFileWatcher._handle_file_paths(
+                file_paths,
+                self.modyn_config,
+                data_file_extension,
+                filesystem_wrapper,
+                file_wrapper_type,
+                timestamp,
+                dataset.name,
+                session,
+            )
+            return
+
+        files_per_proc = int(len(file_paths) / self._insertion_threads)
+        processes: list[mp.Process] = []
+        for i in range(self._insertion_threads):
+            start_idx = i * files_per_proc
+            end_idx = start_idx + files_per_proc if i < self._insertion_threads - 1 else len(file_paths)
+            paths = file_paths[start_idx:end_idx]
+
+            if len(paths) > 0:
+                proc = mp.Process(
+                    target=NewFileWatcher._handle_file_paths,
+                    args=(
+                        paths,
+                        self.modyn_config,
+                        data_file_extension,
+                        filesystem_wrapper,
+                        file_wrapper_type,
+                        timestamp,
+                        dataset.name,
+                        None,
+                    ),
                 )
+                proc.start()
+                processes.append(proc)
 
-                try:
-                    number_of_samples = file_wrapper.get_number_of_samples()
-                    file: File = File(
-                        dataset=dataset,
-                        path=file_path,
-                        created_at=filesystem_wrapper.get_created(file_path),
-                        updated_at=filesystem_wrapper.get_modified(file_path),
-                        number_of_samples=number_of_samples,
-                    )
-                    session.add(file)
-                    session.commit()
-                except exc.SQLAlchemyError as exception:
-                    logger.warning(f"Could not create file {file_path} in database: {exception}")
-                    session.rollback()
-                    continue
-
-                file_id = file.file_id
-                logger.debug(f"Encountered new file and inserted with file id = {file_id}: {file_path}")
-                logger.info(f"Extracting and inserting samples for file {file_path}")
-                labels = file_wrapper.get_all_labels()
-
-                try:
-                    samples = [
-                        Sample(file=file, file_id=file_id, index=i, label=labels[i]) for i in range(number_of_samples)
-                    ]
-                    logger.debug("Samples generated, inserting.")
-                    session.bulk_save_objects(samples)
-                    session.commit()
-                    logger.debug(f"Inserted {number_of_samples} samples.")
-                except exc.SQLAlchemyError as exception:
-                    logger.warning(f"Could not create samples for file {file_path} in database: {exception}")
-                    session.rollback()
-                    session.delete(file)
-                    continue
+        for proc in processes:
+            proc.join()
 
     def run(self) -> None:
         """Run the dataset watcher."""
