@@ -3,10 +3,13 @@ import multiprocessing as mp
 import os
 import platform
 from abc import ABC, abstractmethod
+from multiprocessing import shared_memory
 from typing import Iterable, Optional
 
+import numpy as np
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger, TriggerSample
+from modyn.backend.metadata_database.models import SelectorStateMetadata, Trigger
+from modyn.backend.selector.internal.trigger_sample import TriggerSampleStorage
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -82,6 +85,8 @@ class AbstractSelectionStrategy(ABC):
                 "larger than the maximum amount of keys we may hold in memory."
             )
 
+        self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+
     @abstractmethod
     def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         """
@@ -117,39 +122,19 @@ class AbstractSelectionStrategy(ABC):
         partition_id: int,
         trigger_id: int,
         pipeline_id: int,
-        training_samples: list[tuple[int, float]],
+        training_samples: np.ndarray,
         modyn_config: dict,
-        db_connection: Optional[MetadataDatabaseConnection],
+        insertion_id: int,
     ) -> None:
-        # In case we get passed a db_connection, we use that one (single-threaded execution)
-        # and do not commit
-        # Otherwise, we create a connection and commit and the end (MT-execution)
-        # As our database connection only supports a context manager interface right now, we have to use these calls
-
-        connection = (
-            db_connection
-            if db_connection is not None
-            # pylint: disable-next=unnecessary-dunder-call
-            else MetadataDatabaseConnection(modyn_config).__enter__()
+        TriggerSampleStorage(
+            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"],
+        ).save_trigger_sample(
+            pipeline_id=pipeline_id,
+            trigger_id=trigger_id,
+            partition_id=partition_id,
+            trigger_samples=training_samples,
+            insertion_id=insertion_id,
         )
-
-        connection.session.bulk_insert_mappings(
-            TriggerSample,
-            [
-                {
-                    "partition_id": partition_id,
-                    "trigger_id": trigger_id,
-                    "pipeline_id": pipeline_id,
-                    "sample_key": key,
-                    "sample_weight": weight,
-                }
-                for key, weight in training_samples
-            ],
-        )
-
-        if db_connection is None:
-            connection.session.commit()
-            connection.__exit__(None, None, None)
 
     # pylint: disable=too-many-locals
     def trigger(self) -> tuple[int, int, int]:
@@ -167,17 +152,6 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger)
             database.session.commit()
 
-        # If we run a test or disable MT, we cannot do multithreaded inserts
-        # This is because sqlite does not allow us to insert while another connection is open
-        # As iterating over on_trigger keeps an open connection, we have to commit after closing that connection
-        # Hence we share a connection in that case and commit at the end.
-        shared_conn = (
-            # pylint: disable-next=unnecessary-dunder-call
-            MetadataDatabaseConnection(self._modyn_config).__enter__()
-            if self._is_test or self._disable_mt
-            else None
-        )
-
         partition: Optional[int] = None
         for partition, training_samples in enumerate(self._on_trigger()):
             logger.info(
@@ -187,11 +161,15 @@ class AbstractSelectionStrategy(ABC):
 
             total_keys_in_trigger += len(training_samples)
 
-            if shared_conn is not None:
+            if (self._is_mac and self._is_test) or self._disable_mt:
                 AbstractSelectionStrategy._store_triggersamples_impl(
-                    partition, trigger_id, self._pipeline_id, training_samples, self._modyn_config, shared_conn
+                    partition,
+                    trigger_id,
+                    self._pipeline_id,
+                    np.array(training_samples, dtype=np.dtype("i8,f8")),
+                    self._modyn_config,
+                    0,
                 )
-
                 continue
 
             samples_per_proc = int(len(training_samples) / self._insertion_threads)
@@ -200,22 +178,28 @@ class AbstractSelectionStrategy(ABC):
             for i in range(self._insertion_threads):
                 start_idx = i * samples_per_proc
                 end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
-                proc_samples = training_samples[start_idx:end_idx]
+                proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
                 if len(proc_samples) > 0:
+                    shm = shared_memory.SharedMemory(
+                        create=True,
+                        size=proc_samples.nbytes,
+                    )
+                    shared_proc_samples: np.ndarray = np.ndarray(
+                        proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
+                    )
+                    shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
+                    assert proc_samples.shape == shared_proc_samples.shape
+
                     logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
                     proc = mp.Process(
                         target=AbstractSelectionStrategy._store_triggersamples_impl,
-                        args=(partition, trigger_id, self._pipeline_id, proc_samples, self._modyn_config, None),
+                        args=(partition, trigger_id, self._pipeline_id, shared_proc_samples, self._modyn_config, i),
                     )
                     proc.start()
                     processes.append(proc)
 
             for proc in processes:
                 proc.join()
-
-        if shared_conn is not None:
-            shared_conn.session.commit()
-            shared_conn.__exit__(None, None, None)
 
         num_partitions = partition + 1 if partition is not None else 0
 
@@ -236,29 +220,45 @@ class AbstractSelectionStrategy(ABC):
         self._next_trigger_id += 1
         return trigger_id, total_keys_in_trigger, num_partitions
 
-    def get_trigger_partition_keys(self, trigger_id: int, partition_id: int) -> list[tuple[int, float]]:
+    def get_trigger_partition_keys(
+        self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
+    ) -> list[tuple[int, float]]:
         """
         Given a trigger id and partition id, returns a list of all keys in this partition
+
+        Args:
+            trigger_id (int): The trigger id
+            partition_id (int): The partition id
+            worker_id (int, optional): The worker id. Defaults to -1 meaning single threaded.
+            num_workers (int, optional): The number of workers. Defaults to -1 meaning single threaded.
 
         Returns:
             list[tuple[int, float]]: list of training samples.
                 Each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
+
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            data = (
-                database.session.query(TriggerSample.sample_key, TriggerSample.sample_weight)
-                .filter(
-                    TriggerSample.pipeline_id == self._pipeline_id,
-                    TriggerSample.trigger_id == trigger_id,
-                    TriggerSample.partition_id == partition_id,
-                )
-                .all()
+            num_samples_trigger = (
+                database.session.query(Trigger.num_keys)
+                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
+                .first()[0]
             )
 
-            assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"
+        data = TriggerSampleStorage(
+            self._trigger_sample_directory,
+        ).get_trigger_samples(
+            pipeline_id=self._pipeline_id,
+            trigger_id=trigger_id,
+            partition_id=partition_id,
+            retrieval_worker_id=worker_id,
+            total_retrieval_workers=num_workers,
+            num_samples_trigger=num_samples_trigger,
+        )
 
-            return data
+        assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"
+
+        return data
 
     @staticmethod
     def _persist_samples_impl(
@@ -317,7 +317,7 @@ class AbstractSelectionStrategy(ABC):
             proc_timestamps = timestamps[start_idx:end_idx]
             proc_labels = labels[start_idx:end_idx]
             if len(proc_keys) > 0:
-                logger.debug(f"Starting persisting process for {len(keys)} samples.")
+                logger.debug(f"Starting persisting process for {len(proc_keys)} samples.")
                 proc = mp.Process(
                     target=AbstractSelectionStrategy._persist_samples_impl,
                     args=(

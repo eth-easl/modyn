@@ -1,7 +1,10 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name,singleton-comparison
 import os
 import pathlib
+import shutil
+import tempfile
 from math import isclose
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +14,7 @@ from modyn.backend.selector.internal.selector_strategies.new_data_strategy impor
 from modyn.utils import flatten
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
+TMP_DIR = tempfile.mkdtemp()
 
 
 def get_minimal_modyn_config():
@@ -23,7 +27,10 @@ def get_minimal_modyn_config():
             "port": "0",
             "database": f"{database_path}",
         },
-        "selector": {"insertion_threads": 8},
+        "selector": {
+            "insertion_threads": 8,
+            "trigger_sample_directory": TMP_DIR,
+        },
     }
 
 
@@ -35,9 +42,12 @@ def get_config():
 def setup_and_teardown():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
+    Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
+
     yield
 
     os.remove(database_path)
+    shutil.rmtree(TMP_DIR)
 
 
 def test_constructor():
@@ -682,8 +692,6 @@ def test__get_all_data_partitions_with_same_timestamp():
 
     strat.inform_data(data2, timestamps2, labels)
     all_data = list(strat._get_all_data())
-    print(flatten(all_data))
-    print(data1 + data2)
     assert len(all_data) == 20
     assert set(flatten(all_data)) == set(data1 + data2)
     assert len(flatten(all_data)) == len(data1 + data2)

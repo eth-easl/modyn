@@ -184,6 +184,7 @@ class FusedJointEmbedding(Embeddings):
     ):
         super().__init__()
         self._categorical_feature_sizes = copy.copy(categorical_feature_sizes)
+        self._device = device
 
         self.embedding_dim = embedding_dim
         self.amp_train = amp_train
@@ -212,7 +213,10 @@ class FusedJointEmbedding(Embeddings):
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
 
-        return [BuckleEmbeddingFusedGatherFunction.apply(self.weight, categorical_inputs, self.offsets, self.amp_train)]
+        with torch.cuda.device(self._device):
+            return [
+                BuckleEmbeddingFusedGatherFunction.apply(self.weight, categorical_inputs, self.offsets, self.amp_train)
+            ]
 
     def extra_repr(self):
         return "embedding_dim={}, categorical_feature_sizes={}, offsets={}".format(
@@ -240,6 +244,7 @@ class JointSparseEmbedding(Embeddings):
     ):
         super().__init__()
         self._categorical_feature_sizes = categorical_feature_sizes
+        self._device = device
         self.embedding = CudaExtJointSparseEmbedding(categorical_feature_sizes, embedding_dim, device)
         self.hash_indices = hash_indices
 
@@ -248,7 +253,8 @@ class JointSparseEmbedding(Embeddings):
             for cat, size in enumerate(self._categorical_feature_sizes):
                 categorical_inputs[:, cat] %= size
 
-        return [self.embedding(categorical_inputs)]
+        with torch.cuda.device(self._device):
+            return [self.embedding(categorical_inputs)]
 
     @property
     def weights(self):
