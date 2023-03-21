@@ -13,6 +13,7 @@ database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.d
 
 TMP_DIR = tempfile.mkdtemp()
 
+
 def get_minimal_modyn_config():
     return {
         "metadata_database": {
@@ -36,6 +37,7 @@ def setup_and_teardown():
 
     os.remove(database_path)
     shutil.rmtree(TMP_DIR)
+
 
 def get_config():
     return {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1}

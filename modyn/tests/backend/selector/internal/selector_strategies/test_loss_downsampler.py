@@ -12,6 +12,7 @@ from modyn.backend.selector.internal.selector_strategies.remote_loss_downsample 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()
 
+
 def get_minimal_modyn_config():
     return {
         "metadata_database": {
@@ -95,26 +96,23 @@ def test_sample_weights_sum_to_one():
 # Create a model that always predicts the same class
 class AlwaysZeroModel(torch.nn.Module):
     def forward(self, data):
-        return torch.zeros(data.shape[0], 2)
+        return torch.zeros(data.shape[0])
 
 
 def test_sample_loss_dependent_sampling():
     model = AlwaysZeroModel()
     downsampled_batch_size = 5
-    per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+    per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
     sampler = RemoteLossDownsampler(model, downsampled_batch_size, per_sample_loss_fct)
 
     # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
-    target = torch.cat([torch.zeros(4), torch.ones(4)]).long()
+    target = torch.cat([torch.zeros(4), torch.ones(4)])
 
     # Create a data tensor with four points that have a loss of zero and four points that have a non-zero loss
     data = torch.cat([torch.randn(4, 10), torch.randn(4, 10)], dim=0)
-    output = torch.zeros(8, 2)
-    output[:4, 0] = 1  # Set the scores for the first four points to zero
-    output[4:, 1] = 1  # Set the scores for the last four points to one
 
     _, _, sampled_target = sampler.sample(data, target)
 
     # Assert that no points with a loss of zero were selected
-    assert (sampled_target == 0).sum() > 0
+    assert (sampled_target == 0).sum() == 0
     assert (sampled_target > 0).sum() > 0

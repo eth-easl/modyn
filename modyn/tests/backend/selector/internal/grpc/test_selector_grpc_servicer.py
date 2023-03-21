@@ -162,7 +162,7 @@ def test__get_number_of_partitions(test_get_number_of_partitions: MagicMock):
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "get_selection_strategy_remote")
 def test_get_selection_strategy(test_get_selection_strategy_remote: MagicMock):
-    mgr = SelectorManager({"selector": {"keys_in_selector_cache": 1000}})
+    mgr = SelectorManager(get_minimal_modyn_config())
     servicer = SelectorGRPCServicer(mgr, 8096)
     request = GetSelectionStrategyRequest(pipeline_id=42)
     test_get_selection_strategy_remote.return_value = False, ""
