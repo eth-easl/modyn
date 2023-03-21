@@ -43,7 +43,12 @@ runs:
 
       - name: Set custom conda path for either existing or new conda installation, both reside in CONDA
         if: steps.check_files.outputs.files_exists == 'false'
-        run: echo "CONDAPATH=${CONDA}" >> $GITHUB_ENV 
+        run: |
+         if [[ $CONDA == /* ]]; then
+          echo "CONDAPATH=${CONDA}" >> $GITHUB_ENV
+         else
+          echo "CONDAPATH=/${CONDA}" >> $GITHUB_ENV # manual fix for currently broken variable
+         fi
         shell: bash
 
       - name: Add conda to path 
