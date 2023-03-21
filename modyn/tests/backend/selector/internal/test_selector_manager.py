@@ -1,4 +1,6 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name
+import os
+import tempfile
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
@@ -17,7 +19,8 @@ def get_modyn_config():
             "database": "db",
             "host": "derhorst",
             "port": "1337",
-        }
+        },
+        "selector": {"keys_in_selector_cache": 1000, "trigger_sample_directory": "/does/not/exist"},
     }
 
 
@@ -93,16 +96,18 @@ def test_get_sample_keys_and_weights(
     pipe_id = selec.register_pipeline(2, "{}")
 
     with pytest.raises(ValueError):
-        selec.get_sample_keys_and_weights(pipe_id + 1, 0, 0)
+        # Non existing pipeline
+        selec.get_sample_keys_and_weights(pipe_id + 1, 0, 0, 0)
 
     with pytest.raises(ValueError):
-        selec.get_sample_keys_and_weights(pipe_id, 0, 2)
+        # Too many workers
+        selec.get_sample_keys_and_weights(pipe_id, 0, 2, 0)
 
-    selector_get_sample_keys_and_weight.return_value = [("a", 1.0), ("b", 1.0)]
+    selector_get_sample_keys_and_weight.return_value = [(10, 1.0), (11, 1.0)]
 
-    assert selec.get_sample_keys_and_weights(0, 0, 0) == [("a", 1.0), ("b", 1.0)]
+    assert selec.get_sample_keys_and_weights(0, 0, 0, 0) == [(10, 1.0), (11, 1.0)]
 
-    selector_get_sample_keys_and_weight.assert_called_once_with(0, 0)
+    selector_get_sample_keys_and_weight.assert_called_once_with(0, 0, 0)
 
 
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
@@ -114,14 +119,14 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
     test__instantiate_strategy.return_value = MockStrategy()
 
     with pytest.raises(ValueError):
-        selec.inform_data(0, ["a"], [0], [0])
+        selec.inform_data(0, [10], [0], [0])
 
     pipe_id = selec.register_pipeline(2, "{}")
     selector_inform_data.return_value = None
 
-    selec.inform_data(pipe_id, ["a"], [0], [0])
+    selec.inform_data(pipe_id, [10], [0], [0])
 
-    selector_inform_data.assert_called_once_with(["a"], [0], [0])
+    selector_inform_data.assert_called_once_with([10], [0], [0])
 
 
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
@@ -133,14 +138,28 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
     test__instantiate_strategy.return_value = MockStrategy()
 
     with pytest.raises(ValueError):
-        selec.inform_data_and_trigger(0, ["a"], [0], [0])
+        selec.inform_data_and_trigger(0, [10], [0], [0])
 
     pipe_id = selec.register_pipeline(2, "{}")
     selector_inform_data_and_trigger.return_value = None
 
-    selec.inform_data_and_trigger(pipe_id, ["a"], [0], [0])
+    selec.inform_data_and_trigger(pipe_id, [10], [0], [0])
 
-    selector_inform_data_and_trigger.assert_called_once_with(["a"], [0], [0])
+    selector_inform_data_and_trigger.assert_called_once_with([10], [0], [0])
+
+
+@patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+def test_init_selector_manager_with_existing_trigger_dir():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with open(os.path.join(tmp_dir, "test"), "w", encoding="utf-8") as file:
+            file.write("test")
+
+        config = get_modyn_config()
+        config["selector"]["trigger_sample_directory"] = tmp_dir
+
+        with pytest.raises(ValueError):
+            SelectorManager(config)
 
 
 @patch("modyn.backend.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)

@@ -5,6 +5,7 @@ import pathlib
 import random
 import shutil
 import time
+from typing import Iterable
 
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
@@ -150,7 +151,7 @@ def add_images_to_dataset(start_number: int, end_number: int, images_added: list
             label_file.write(f"{i}")
 
 
-def get_new_data_since(timestamp: int) -> GetNewDataSinceResponse:
+def get_new_data_since(timestamp: int) -> Iterable[GetNewDataSinceResponse]:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -160,12 +161,12 @@ def get_new_data_since(timestamp: int) -> GetNewDataSinceResponse:
         timestamp=timestamp,
     )
 
-    response = storage.GetNewDataSince(request)
+    responses = storage.GetNewDataSince(request)
 
-    return response
+    return responses
 
 
-def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> GetDataInIntervalResponse:
+def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> Iterable[GetDataInIntervalResponse]:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -176,9 +177,9 @@ def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> GetDataInI
         end_timestamp=end_timestamp,
     )
 
-    response = storage.GetDataInInterval(request)
+    responses = storage.GetDataInInterval(request)
 
-    return response
+    return responses
 
 
 def check_data(keys: list[str], expected_images: list[bytes]) -> None:
@@ -210,12 +211,17 @@ def test_storage() -> None:
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
 
+    response = None
     for i in range(20):
-        response = get_new_data_since(0)
-        if len(response.keys) == 10:
-            break
+        responses = list(get_new_data_since(0))
+        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
+        if len(responses) == 1:
+            response = responses[0]
+            if len(response.keys) == 10:
+                break
         time.sleep(1)
 
+    assert response is not None, "Did not get any response from Storage"
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
@@ -223,16 +229,22 @@ def test_storage() -> None:
     add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
 
     for i in range(20):
-        response = get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1)
-        if len(response.keys) == 10:
-            break
+        responses = list(get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1))
+        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
+        if len(responses) == 1:
+            response = responses[0]
+            if len(response.keys) == 10:
+                break
         time.sleep(1)
 
+    assert response is not None, "Did not get any response from Storage"
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, SECOND_ADDED_IMAGES)
 
-    response = get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9])
+    responses = list(get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9]))
+    assert len(responses) == 1, f"Received batched/no response, shouldn't happen: {responses}"
+    response = responses[0]
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
 

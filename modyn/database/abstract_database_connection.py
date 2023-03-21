@@ -31,12 +31,7 @@ class AbstractDatabaseConnection(ABC):
         self.port: Optional[int] = None
         self.database: Optional[str] = None
 
-    def __enter__(self) -> AbstractDatabaseConnection:
-        """Create the engine and session.
-
-        Returns:
-            DatabaseConnection: DatabaseConnection.
-        """
+    def setup_connection(self) -> None:
         self.url = URL.create(
             drivername=self.drivername,
             username=self.username,
@@ -47,6 +42,18 @@ class AbstractDatabaseConnection(ABC):
         )
         self.engine = create_engine(self.url, echo=self.print_queries)
         self.session = sessionmaker(bind=self.engine)()
+
+    def terminate_connection(self) -> None:
+        self.session.close()
+        self.engine.dispose()
+
+    def __enter__(self) -> AbstractDatabaseConnection:
+        """Create the engine and session.
+
+        Returns:
+            DatabaseConnection: DatabaseConnection.
+        """
+        self.setup_connection()
         return self
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
@@ -57,8 +64,7 @@ class AbstractDatabaseConnection(ABC):
             exc_val (Exception): exception value
             exc_tb (Exception): exception traceback
         """
-        self.session.close()
-        self.engine.dispose()
+        self.terminate_connection()
 
     @abstractmethod
     def create_tables(self) -> None:

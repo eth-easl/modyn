@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
+from pathlib import Path
 from threading import Lock
 
 from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -18,12 +20,31 @@ class SelectorManager:
         self._selectors: dict[int, Selector] = {}
         self._selector_locks: dict[int, Lock] = {}
         self._next_pipeline_lock = Lock()
+        self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
         self.init_metadata_db()
+        self._init_trigger_sample_directory()
 
     def init_metadata_db(self) -> None:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.create_tables()
+
+    def _init_trigger_sample_directory(self) -> None:
+        ignore_existing_trigger_samples = (
+            self._modyn_config["selector"]["ignore_existing_trigger_samples"]
+            if "ignore_existing_trigger_samples" in self._modyn_config["selector"]
+            else False
+        )
+        trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+        if (
+            Path(trigger_sample_directory).exists()
+            and any(Path(trigger_sample_directory).iterdir())
+            and not ignore_existing_trigger_samples
+        ):
+            raise ValueError(
+                f"The trigger sample directory {trigger_sample_directory} is not empty. \
+                  Please delete the directory or set the ignore_existing_trigger_samples flag to True."
+            )
 
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """
@@ -41,14 +62,16 @@ class SelectorManager:
                 pipeline_id = database.register_pipeline(num_workers)
 
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
-        selector = Selector(selection_strategy, pipeline_id, num_workers)
+        selector = Selector(selection_strategy, pipeline_id, num_workers, self._selector_cache_size)
         self._selectors[pipeline_id] = selector
         self._selector_locks[pipeline_id] = Lock()
         return pipeline_id
 
-    def get_sample_keys_and_weights(self, pipeline_id: int, trigger_id: int, worker_id: int) -> list[tuple[str, float]]:
+    def get_sample_keys_and_weights(
+        self, pipeline_id: int, trigger_id: int, worker_id: int, partition_id: int
+    ) -> list[tuple[int, float]]:
         """
-        For a given pipeline, trigger and worker, this function returns the subset of sample
+        For a given pipeline, trigger, partition of that trigger, and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.
         This weight can be used during training to support advanced strategies that want to weight the
         gradient descent step for different samples differently. Explicitly, instead of changing parameters
@@ -65,9 +88,9 @@ class SelectorManager:
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {pipeline_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id)
+        return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id, partition_id)
 
-    def inform_data(self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
 
@@ -75,7 +98,7 @@ class SelectorManager:
             self._selectors[pipeline_id].inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(
-        self, pipeline_id: int, keys: list[str], timestamps: list[int], labels: list[int]
+        self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]
     ) -> int:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")
@@ -89,8 +112,15 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_number_of_samples(trigger_id)
 
+    def get_number_of_partitions(self, pipeline_id: int, trigger_id: int) -> int:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested number of partitions from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_number_of_partitions(trigger_id)
+
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
+        maximum_keys_in_memory = selection_strategy["maximum_keys_in_memory"]
         config = selection_strategy["config"] if "config" in selection_strategy else {}
         default_configs = {"limit": -1, "reset_after_trigger": False}
 
@@ -105,4 +135,13 @@ class SelectorManager:
 
         strategy_handler = getattr(strategy_module, strategy_name)
 
-        return strategy_handler(config, self._modyn_config, pipeline_id)
+        return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)
+
+    def cleanup_trigger_samples(self) -> None:
+        if (
+            "cleanup_trigger_samples_after_shutdown" in self._modyn_config["selector"]
+            and "trigger_sample_directory" in self._modyn_config["selector"]
+        ):
+            shutil.rmtree(self._modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"])
+            Path(self._modyn_config["selector"]["trigger_sample_directory"]).mkdir(parents=True, exist_ok=True)
+            logger.info("Deleted the trigger sample directory.")

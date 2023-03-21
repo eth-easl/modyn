@@ -1,3 +1,4 @@
+import gc
 import logging
 from inspect import isfunction
 from typing import Any, Callable, Generator, Optional
@@ -5,11 +6,18 @@ from typing import Any, Callable, Generator, Optional
 import grpc
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import GetSamplesRequest, SamplesResponse
+from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
+    GetNumberOfPartitionsRequest,
+    GetSamplesRequest,
+    NumberOfPartitionsResponse,
+)
 from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
+from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
+    GetRequest,
+    GetResponse,
+)
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils.utils import grpc_connection_established
+from modyn.utils.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -47,20 +55,27 @@ class OnlineDataset(IterableDataset):
         self._storagestub: StorageStub = None
         self._selectorstub: SelectorStub = None
         self._bytes_parser_function: Optional[Callable] = None
+        self._num_partitions = 0
 
         logger.debug("Initialized OnlineDataset.")
 
-    def _get_keys_from_selector(self, worker_id: int) -> list[str]:
+    # pylint: disable=unused-argument
+    def _get_keys_from_selector(self, worker_id: int, partition_id: int) -> list[int]:
         assert self._selectorstub is not None
 
-        req = GetSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id)
-        samples_response: SamplesResponse = self._selectorstub.get_sample_keys_and_weights(req)
-        return samples_response.training_samples_subset  # TODO(#138): take into account sample weights when needed
+        req = GetSamplesRequest(
+            pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id, partition_id=partition_id
+        )
+        # TODO(#138): take into account sample weights when needed
+        return flatten(
+            [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
+        )
 
-    def _get_data_from_storage(self, selector_keys: list[str]) -> tuple[list[bytes], list[int]]:
+    def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
 
-        data_from_storage: dict[str, tuple[bytes, int]] = {}
+        data_from_storage: dict[int, tuple[bytes, int]] = {}
+        response: GetResponse
         for _, response in enumerate(self._storagestub.Get(req)):
             for key, sample, label in zip(response.keys, response.samples, response.labels):
                 data_from_storage[key] = (sample, label)
@@ -89,14 +104,26 @@ class OnlineDataset(IterableDataset):
         self._deserialize_torchvision_transforms()
 
     def _init_grpc(self) -> None:
-        selector_channel = grpc.insecure_channel(self._selector_address)
+        selector_channel = grpc.insecure_channel(
+            self._selector_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
         if not grpc_connection_established(selector_channel):
             raise ConnectionError(
                 f"Could not establish gRPC connection to selector at address {self._selector_address}."
             )
         self._selectorstub = SelectorStub(selector_channel)
 
-        storage_channel = grpc.insecure_channel(self._storage_address)
+        storage_channel = grpc.insecure_channel(
+            self._storage_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
         if not grpc_connection_established(storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(storage_channel)
@@ -111,6 +138,25 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
+    def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[int], list[bytes], list[int]]:
+        self._info("Getting keys from selector", worker_id)
+        keys = self._get_keys_from_selector(worker_id, partition_id)
+        self._info("Getting data from storage", worker_id)
+        data, labels = self._get_data_from_storage(keys)
+        return keys, data, labels
+
+    def _get_num_data_partitions(self) -> int:
+        assert self._selectorstub is not None
+
+        num_partitions_request = GetNumberOfPartitionsRequest(
+            pipeline_id=self._pipeline_id,
+            trigger_id=self._trigger_id,
+        )
+
+        response: NumberOfPartitionsResponse = self._selectorstub.get_number_of_partitions(num_partitions_request)
+        return response.num_partitions
+
+    # pylint: disable=too-many-locals
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -130,19 +176,31 @@ class OnlineDataset(IterableDataset):
 
         assert self._transform is not None
         self._trainining_set_number += 1
+        self._num_partitions = self._get_num_data_partitions()
+        self._info(f"Total number of partitions will be {self._num_partitions}", worker_id)
 
-        self._info("Getting keys from selector", worker_id)
-        keys = self._get_keys_from_selector(worker_id)
-        self._info("Getting data from storage", worker_id)
-        # TODO(#149): Optimize this
-        data, labels = self._get_data_from_storage(keys)
+        keys, data, labels = self._get_data(worker_id=worker_id, partition_id=0)
 
-        self._dataset_len = len(data)
-        self._info("Data obtained (len = {self._dataset_len})", worker_id)
+        for partition in range(self._num_partitions):
+            num_samples_on_this_partition = len(keys)
+            # We (arbitrarily) fetch the next partition when we have seen 80% of the current partition
+            fetch_next_partition_idx = int(num_samples_on_this_partition * 0.8)
+            self._info(f"Train on partition {partition}, on {num_samples_on_this_partition} batches", worker_id)
 
-        for key, sample, label in zip(keys, data, labels):
-            # mypy complains here because _transform has unknown type, which is ok
-            yield key, self._transform(sample), label  # type: ignore
+            for idx, (key, sample, label) in enumerate(zip(keys, data, labels)):
+                if partition < self._num_partitions - 1 and idx == fetch_next_partition_idx:
+                    # TODO(#175) in case this blocks training
+                    new_keys, new_data, new_labels = self._get_data(worker_id=worker_id, partition_id=partition + 1)
+                # mypy complains here because _transform has unknown type, which is ok
+                yield key, self._transform(sample), label  # type: ignore
 
-    def __len__(self) -> int:
-        return self._dataset_len
+            # this should mean we keep only two partitions in mem
+            if partition < self._num_partitions - 1:
+                del keys
+                del data
+                del labels
+                keys, data, labels = new_keys, new_data, new_labels
+                del new_keys
+                del new_data
+                del new_labels
+                gc.collect()

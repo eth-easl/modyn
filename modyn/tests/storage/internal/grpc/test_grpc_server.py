@@ -5,7 +5,7 @@ from modyn.storage.internal.grpc.grpc_server import GRPCServer
 
 
 def get_modyn_config():
-    return {"storage": {"port": "50051", "type": "grpc"}}
+    return {"storage": {"port": "50051", "type": "grpc", "sample_batch_size": 1024}}
 
 
 def test_init():

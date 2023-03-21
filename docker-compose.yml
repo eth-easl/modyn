@@ -21,6 +21,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
+#    shm_size: 4gb
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
   storage-db:
@@ -31,6 +32,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
+#    shm_size: 4gb
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
   storage:
@@ -63,6 +65,7 @@ services:
       dockerfile: docker/Trainer_Server/Dockerfile
 #    volumes:
 #      - .:/modyn_host
+#    shm_size: 4gb
 #    runtime: nvidia
 #    deploy:
 #      resources:
@@ -73,7 +76,7 @@ services:
 #              capabilities: [gpu, utility, compute]
   selector:
     restart: on-failure
-    depends_on: 
+    depends_on:
       - metadata-db
     build:
       context: .

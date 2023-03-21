@@ -13,8 +13,8 @@ from multiprocessing import Process, Value
 from typing import Tuple
 
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
+from modyn.storage.internal.file_watcher.new_file_watcher_watch_dog import run_watcher_watch_dog
 from modyn.storage.internal.grpc.grpc_server import GRPCServer
-from modyn.storage.internal.new_file_watcher import run_watcher
 from modyn.utils import validate_yaml
 
 logger = logging.getLogger(__name__)
@@ -66,17 +66,19 @@ class Storage:
                     dataset["description"],
                     dataset["version"],
                     json.dumps(dataset["file_wrapper_config"]),
+                    dataset["ignore_last_timestamp"] if "ignore_last_timestamp" in dataset else False,
+                    dataset["file_watcher_interval"] if "file_watcher_interval" in dataset else 5,
                 ):
                     raise ValueError(f"Failed to add dataset {dataset['name']}")
 
         #  Start the dataset watcher process in a different thread.
         should_stop = Value(c_bool, False)
-        watcher_process = Process(target=run_watcher, args=(self.modyn_config, should_stop))
-        watcher_process.start()
+        watchdog = Process(target=run_watcher_watch_dog, args=(self.modyn_config, should_stop))
+        watchdog.start()
 
         #  Start the storage grpc server.
         with GRPCServer(self.modyn_config) as server:
             server.wait_for_termination()
 
         should_stop.value = True  # type: ignore  # See https://github.com/python/typeshed/issues/8799
-        watcher_process.join()
+        watchdog.join()

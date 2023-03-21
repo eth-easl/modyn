@@ -18,7 +18,7 @@ class SelectorStub(object):
                 request_serializer=selector__pb2.RegisterPipelineRequest.SerializeToString,
                 response_deserializer=selector__pb2.PipelineResponse.FromString,
                 )
-        self.get_sample_keys_and_weights = channel.unary_unary(
+        self.get_sample_keys_and_weights = channel.unary_stream(
                 '/selector.Selector/get_sample_keys_and_weights',
                 request_serializer=selector__pb2.GetSamplesRequest.SerializeToString,
                 response_deserializer=selector__pb2.SamplesResponse.FromString,
@@ -37,6 +37,11 @@ class SelectorStub(object):
                 '/selector.Selector/get_number_of_samples',
                 request_serializer=selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
                 response_deserializer=selector__pb2.NumberOfSamplesResponse.FromString,
+                )
+        self.get_number_of_partitions = channel.unary_unary(
+                '/selector.Selector/get_number_of_partitions',
+                request_serializer=selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
+                response_deserializer=selector__pb2.NumberOfPartitionsResponse.FromString,
                 )
 
 
@@ -73,6 +78,12 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_number_of_partitions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SelectorServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -81,7 +92,7 @@ def add_SelectorServicer_to_server(servicer, server):
                     request_deserializer=selector__pb2.RegisterPipelineRequest.FromString,
                     response_serializer=selector__pb2.PipelineResponse.SerializeToString,
             ),
-            'get_sample_keys_and_weights': grpc.unary_unary_rpc_method_handler(
+            'get_sample_keys_and_weights': grpc.unary_stream_rpc_method_handler(
                     servicer.get_sample_keys_and_weights,
                     request_deserializer=selector__pb2.GetSamplesRequest.FromString,
                     response_serializer=selector__pb2.SamplesResponse.SerializeToString,
@@ -100,6 +111,11 @@ def add_SelectorServicer_to_server(servicer, server):
                     servicer.get_number_of_samples,
                     request_deserializer=selector__pb2.GetNumberOfSamplesRequest.FromString,
                     response_serializer=selector__pb2.NumberOfSamplesResponse.SerializeToString,
+            ),
+            'get_number_of_partitions': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_number_of_partitions,
+                    request_deserializer=selector__pb2.GetNumberOfPartitionsRequest.FromString,
+                    response_serializer=selector__pb2.NumberOfPartitionsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -139,7 +155,7 @@ class Selector(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_sample_keys_and_weights',
+        return grpc.experimental.unary_stream(request, target, '/selector.Selector/get_sample_keys_and_weights',
             selector__pb2.GetSamplesRequest.SerializeToString,
             selector__pb2.SamplesResponse.FromString,
             options, channel_credentials,
@@ -193,5 +209,22 @@ class Selector(object):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_samples',
             selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
             selector__pb2.NumberOfSamplesResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_number_of_partitions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_partitions',
+            selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
+            selector__pb2.NumberOfPartitionsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

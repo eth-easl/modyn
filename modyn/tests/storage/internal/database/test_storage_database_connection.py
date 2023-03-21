@@ -6,7 +6,6 @@ from modyn.storage.internal.database.storage_database_connection import StorageD
 def get_minimal_modyn_config() -> dict:
     return {
         "storage": {
-            "filesystem": {"type": "LocalFilesystemWrapper", "base_path": "/tmp/modyn"},
             "database": {
                 "drivername": "sqlite",
                 "username": "",
@@ -22,7 +21,6 @@ def get_minimal_modyn_config() -> dict:
 def get_invalid_modyn_config() -> dict:
     return {
         "storage": {
-            "filesystem": {"type": "local", "base_path": "/tmp/modyn"},
             "database": {
                 "drivername": "postgres",
                 "username": "",
@@ -117,11 +115,13 @@ def test_delete_dataset():
         database.session.add(file)
         database.session.commit()
         file = database.session.query(File).filter(File.path == "/tmp/modyn/test").first()
-        sample = Sample(file=file, external_key=0, index=0, label=1)
+        sample = Sample(file=file, index=0, label=1)
         database.session.add(sample)
         database.session.commit()
         assert database.delete_dataset("test") is True
         assert database.session.query(Dataset).filter(Dataset.name == "test").first() is None
+        assert database.session.query(File).all() == []
+        assert database.session.query(Sample).all() == []
 
 
 def test_delete_dataset_failure():

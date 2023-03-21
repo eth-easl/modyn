@@ -1,9 +1,11 @@
 # pylint: disable=no-name-in-module
 import json
 import logging
+import os
 import pathlib
+from ftplib import FTP
 from time import sleep
-from typing import Optional
+from typing import Any, Iterable, Optional
 
 import enlighten
 import grpc
@@ -42,11 +44,9 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.utils import grpc_connection_established
+from modyn.utils import MAX_MESSAGE_SIZE, current_time_millis, grpc_connection_established
 
 logger = logging.getLogger(__name__)
-
-MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # TODO(#148): Change model transfer protocol
 
 
 class GRPCHandler:
@@ -67,7 +67,13 @@ class GRPCHandler:
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
-        self.storage_channel = grpc.insecure_channel(storage_address)
+        self.storage_channel = grpc.insecure_channel(
+            storage_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
 
         if not grpc_connection_established(self.storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
@@ -79,7 +85,13 @@ class GRPCHandler:
     def init_selector(self) -> None:
         assert self.config is not None
         selector_address = f"{self.config['selector']['hostname']}:{self.config['selector']['port']}"
-        self.selector_channel = grpc.insecure_channel(selector_address)
+        self.selector_channel = grpc.insecure_channel(
+            selector_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
 
         if not grpc_connection_established(self.selector_channel):
             raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
@@ -91,13 +103,7 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(
-            trainer_server_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
-                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
-            ],
-        )
+        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
@@ -114,18 +120,19 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(self, dataset_id: str, timestamp: int) -> list[tuple[str, int, int]]:
+    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[list[tuple[int, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
-        response: GetNewDataSinceResponse = self.storage.GetNewDataSince(request)
-
-        return list(zip(response.keys, response.timestamps, response.labels))
+        response: GetNewDataSinceResponse
+        for response in self.storage.GetNewDataSince(request):
+            data = list(zip(response.keys, response.timestamps, response.labels))
+            yield data
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
-    ) -> list[tuple[str, int, int]]:
+    ) -> Iterable[list[tuple[int, int, int]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -134,9 +141,10 @@ class GRPCHandler:
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
         )
-        response: GetDataInIntervalResponse = self.storage.GetDataInInterval(request)
-
-        return list(zip(response.keys, response.timestamps, response.labels))
+        response: GetDataInIntervalResponse
+        for response in self.storage.GetDataInInterval(request):
+            data = list(zip(response.keys, response.timestamps, response.labels))
+            yield data
 
     def get_time_at_storage(self) -> int:
         if not self.connected_to_storage:
@@ -169,13 +177,21 @@ class GRPCHandler:
         #  # TODO(#64,#124): Implement.
         pass
 
-    def inform_selector(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> None:
+    def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> None:
         keys, timestamps, labels = zip(*data)
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         self.selector.inform_data(request)
 
-    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[str, int, int]]) -> int:
-        keys, timestamps, labels = zip(*data)
+    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> int:
+        keys: list[int]
+        timestamps: list[int]
+        labels: list[int]
+        if len(data) == 0:
+            keys, timestamps, labels = [], [], []
+        else:
+            # mypy fails to recognize that this is correct
+            keys, timestamps, labels = zip(*data)  # type: ignore
+
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         response: TriggerResponse = self.selector.inform_data_and_trigger(request)
 
@@ -202,7 +218,42 @@ class GRPCHandler:
         # TODO(#130): Implement this at trainer server.
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
 
-    # pylint: disable=too-many-branches,too-many-locals
+    def upload_model(self, pipeline_id: int, trigger_id: int, model: pathlib.Path) -> str:
+        assert model.exists(), "Cannot upload non-existing model"
+        # TODO(#167): This function can be removed again when we have a model storage component.
+        remote_path = f"{pipeline_id}-{trigger_id}-{current_time_millis()}.modyn"
+        ftp = FTP()
+        ftp.connect(
+            self.config["trainer_server"]["hostname"], int(self.config["trainer_server"]["ftp_port"]), timeout=3
+        )
+        ftp.login("modyn", "modyn")
+        ftp.sendcmd("TYPE i")  # Switch to binary mode
+
+        size = os.stat(model).st_size
+
+        self.status_bar.update(demo="Uploading model")
+        pbar = self.progress_mgr.counter(
+            total=size, desc=f"[Pipeline {pipeline_id}][Trigger {trigger_id}] Uploading Previous Model", unit="bytes"
+        )
+
+        logger.info(f"Uploading previous model to trainer server. Total size = {size} bytes.")
+
+        with open(model, "rb") as local_file:
+
+            def upload_callback(data: Any) -> None:
+                pbar.update(min(len(data), pbar.total - pbar.count))
+
+            ftp.storbinary(f"STOR {remote_path}", local_file, callback=upload_callback)
+
+        logger.info("Model uploaded.")
+        ftp.close()
+        pbar.update(pbar.total - pbar.count)
+        pbar.clear(flush=True)
+        pbar.close(clear=True)
+
+        return remote_path
+
+    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
     def start_training(
         self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model: Optional[pathlib.Path]
     ) -> int:
@@ -216,16 +267,27 @@ class GRPCHandler:
 
         if previous_model is not None:
             use_pretrained_model = True
-            with open(previous_model, "rb") as file:
-                pretrained_model = file.read()
+            pretrained_model_path = self.upload_model(pipeline_id, trigger_id, previous_model)
         else:
             use_pretrained_model = False
-            pretrained_model = b""
+            pretrained_model_path = ""
 
-        if "config" in pipeline_config["training"]["optimizer"]:
-            optimizer_config = json.dumps(pipeline_config["training"]["optimizer"]["config"])
-        else:
-            optimizer_config = "{}"
+        optimizers_config = {}
+        for optimizer in pipeline_config["training"]["optimizers"]:
+            optimizer_config = {}
+            optimizer_config["algorithm"] = optimizer["algorithm"]
+            optimizer_config["source"] = optimizer["source"]
+            optimizer_config["param_groups"] = []
+            for param_group in optimizer["param_groups"]:
+                config_dict = param_group["config"] if "config" in param_group else {}
+                optimizer_config["param_groups"].append({"module": param_group["module"], "config": config_dict})
+            optimizers_config[optimizer["name"]] = optimizer_config
+
+        lr_scheduler_configs = {}
+        if "lr_scheduler" in pipeline_config["training"]:
+            lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
+            if "config" not in lr_scheduler_configs:
+                lr_scheduler_configs["config"] = {}
 
         if "config" in pipeline_config["training"]["optimization_criterion"]:
             criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"]["config"])
@@ -236,6 +298,11 @@ class GRPCHandler:
             transform_list = pipeline_config["data"]["transformations"]
         else:
             transform_list = []
+
+        if "label_transformer_function" in pipeline_config["data"]:
+            label_transformer = pipeline_config["data"]["label_transformer_function"]
+        else:
+            label_transformer = ""
 
         if pipeline_config["training"]["checkpointing"]["activated"]:
             if (
@@ -251,18 +318,25 @@ class GRPCHandler:
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
+        amp = pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False
+
+        if "grad_scaler_config" in pipeline_config["training"]:
+            grad_scaler_config = pipeline_config["training"]["grad_scaler_config"]
+        else:
+            grad_scaler_config = {}
+
         req = StartTrainingRequest(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             device=pipeline_config["training"]["device"],
+            amp=amp,
             model_id=pipeline_config["model"]["id"],
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=use_pretrained_model,
-            pretrained_model=pretrained_model,
+            pretrained_model_path=pretrained_model_path,
             load_optimizer_state=False,  # TODO(#137): Think about this.
             batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizer=pipeline_config["training"]["optimizer"]["name"],
-            optimizer_parameters=TrainerServerJsonString(value=optimizer_config),
+            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
             torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
             criterion_parameters=TrainerServerJsonString(value=criterion_config),
             data_info=Data(
@@ -272,6 +346,9 @@ class GRPCHandler:
             checkpoint_info=checkpoint_info,
             transform_list=transform_list,
             bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
+            label_transformer=PythonString(value=label_transformer),
+            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
         )
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)
@@ -334,8 +411,9 @@ class GRPCHandler:
                     ), f"Inconsistent server response:\n{res}"
 
                     new_samples = res.samples_seen - last_samples
-                    sample_pbar.update(new_samples)
-                    last_samples = new_samples
+                    if new_samples > 0:
+                        sample_pbar.update(new_samples)
+                        last_samples = res.samples_seen
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -363,14 +441,39 @@ class GRPCHandler:
                 + " since training is invalid or training still running"
             )
 
-        model = res.state
+        remote_model_path = f"/{res.model_path}"
+        local_model_path = storage_dir / f"{training_id}.modyn"
 
-        model_path = storage_dir / f"{training_id}.modyn"
-        logger.info(f"Fetched model, storing at {model_path}")
+        ftp = FTP()
+        ftp.connect(
+            self.config["trainer_server"]["hostname"], int(self.config["trainer_server"]["ftp_port"]), timeout=3
+        )
 
-        with open(model_path, "wb") as file:
-            file.write(model)
+        ftp.login("modyn", "modyn")
+        ftp.sendcmd("TYPE i")  # Switch to binary mode
+        size = ftp.size(remote_model_path)
+
+        self.status_bar.update(demo="Downloading model")
+        pbar = self.progress_mgr.counter(total=size, desc=f"[Training {training_id}] Downloading Model", unit="bytes")
+
+        logger.info(
+            f"Remote model path is {remote_model_path}, storing at {local_model_path}."
+            + f"Fetching via FTP! Total size = {size} bytes."
+        )
+
+        with open(local_model_path, "wb") as local_file:
+
+            def write_callback(data: Any) -> None:
+                local_file.write(data)
+                pbar.update(min(len(data), pbar.total - pbar.count))
+
+            ftp.retrbinary(f"RETR {remote_model_path}", write_callback)
+
+        ftp.close()
+        pbar.update(pbar.total - pbar.count)
+        pbar.clear(flush=True)
+        pbar.close(clear=True)
 
         logger.info("Wrote model to disk.")
 
-        return model_path
+        return local_model_path
