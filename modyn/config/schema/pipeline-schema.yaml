@@ -99,6 +99,10 @@ properties:
                 type: string
                 description: |
                  [NewDataStrategy] Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true. Either "lastX" or "sampleUAR" are supported. See class description for further info.
+          processor_type:
+            type: string
+            description: |
+              The name of the Metadata Processor strategy that should be used.
         required:
           - name
           - maximum_keys_in_memory

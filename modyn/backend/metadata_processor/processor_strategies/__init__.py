@@ -1,11 +1,8 @@
 """
-TODO: Describe what is in this directory/submodule.
+This module containes extensions of the MetadataProcessorStrategy class that
+implement custom processing strategies.
 """
-
 import os
-
-# flake8: noqa
-from .processor import base
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

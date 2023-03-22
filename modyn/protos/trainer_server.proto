@@ -3,95 +3,84 @@ syntax = "proto3";
 package trainer;
 
 service TrainerServer {
-    rpc trainer_available(TrainerAvailableRequest) returns (TrainerAvailableResponse) {}
-    rpc start_training(StartTrainingRequest) returns (StartTrainingResponse) {}
-    rpc get_training_status(TrainingStatusRequest) returns (TrainingStatusResponse) {}
-    rpc get_final_model(GetFinalModelRequest) returns (GetFinalModelResponse) {}
-    rpc get_latest_model(GetLatestModelRequest) returns (GetLatestModelResponse) {}
+  rpc trainer_available(TrainerAvailableRequest)
+      returns (TrainerAvailableResponse) {}
+  rpc start_training(StartTrainingRequest) returns (StartTrainingResponse) {}
+  rpc get_training_status(TrainingStatusRequest)
+      returns (TrainingStatusResponse) {}
+  rpc get_final_model(GetFinalModelRequest) returns (GetFinalModelResponse) {}
+  rpc get_latest_model(GetLatestModelRequest) returns (GetLatestModelResponse) {
+  }
 }
 
-message JsonString {
-    string value = 1;
-}
+message JsonString { string value = 1; }
 
-message PythonString {
-    string value = 1;
-}
+message PythonString { string value = 1; }
 
 message Data {
-    string dataset_id = 1;
-    int32 num_dataloaders = 2;
+  string dataset_id = 1;
+  int32 num_dataloaders = 2;
 }
 
-message TrainerAvailableRequest {
+message TrainerAvailableRequest {}
 
-}
-
-message TrainerAvailableResponse {
-    bool available = 1;
-}
+message TrainerAvailableResponse { bool available = 1; }
 
 message CheckpointInfo {
-    int32 checkpoint_interval = 1;
-    string checkpoint_path = 2;
+  int32 checkpoint_interval = 1;
+  string checkpoint_path = 2;
 }
 
 message StartTrainingRequest {
-    int32 pipeline_id = 1;
-    int32 trigger_id = 2;
-    string device = 3;
-    bool amp = 4;
-    string model_id = 5;
-    JsonString model_configuration = 6;
-    bool use_pretrained_model = 7;
-    bool load_optimizer_state = 8;
-    string pretrained_model_path = 9;
-    int32 batch_size = 10;
-    JsonString torch_optimizers_configuration = 11;
-    string torch_criterion = 12;
-    JsonString criterion_parameters = 13;
-    Data data_info = 14;
-    CheckpointInfo checkpoint_info = 15;
-    PythonString bytes_parser = 16;
-    repeated string transform_list = 17;
-    JsonString lr_scheduler = 18;
-    PythonString label_transformer = 19;
-    JsonString grad_scaler_configuration = 20;
+  int32 pipeline_id = 1;
+  int32 trigger_id = 2;
+  string device = 3;
+  bool amp = 4;
+  string model_id = 5;
+  JsonString model_configuration = 6;
+  bool use_pretrained_model = 7;
+  bool load_optimizer_state = 8;
+  string pretrained_model_path = 9;
+  int32 batch_size = 10;
+  JsonString torch_optimizers_configuration = 11;
+  string torch_criterion = 12;
+  JsonString criterion_parameters = 13;
+  Data data_info = 14;
+  CheckpointInfo checkpoint_info = 15;
+  PythonString bytes_parser = 16;
+  repeated string transform_list = 17;
+  JsonString lr_scheduler = 18;
+  PythonString label_transformer = 19;
+  JsonString grad_scaler_configuration = 20;
 }
 
 message StartTrainingResponse {
-    bool training_started = 1;
-    int32 training_id = 2;
+  bool training_started = 1;
+  int32 training_id = 2;
 }
 
-message TrainingStatusRequest {
-    int32 training_id = 1;
-}
+message TrainingStatusRequest { int32 training_id = 1; }
 
 message TrainingStatusResponse {
-    bool valid = 1;
-    bool is_running = 2;
-    bool state_available = 3;
-    bool blocked = 4;
-    optional string exception = 5;
-    optional int32 batches_seen = 6;
-    optional int32 samples_seen = 7;
+  bool valid = 1;
+  bool is_running = 2;
+  bool state_available = 3;
+  bool blocked = 4;
+  optional string exception = 5;
+  optional int32 batches_seen = 6;
+  optional int32 samples_seen = 7;
 }
 
-message GetFinalModelRequest {
-    int32 training_id = 1;
-}
+message GetFinalModelRequest { int32 training_id = 1; }
 
 message GetFinalModelResponse {
-    bool valid_state = 1;
-    string model_path = 2;
+  bool valid_state = 1;
+  string model_path = 2;
 }
 
-message GetLatestModelRequest {
-    int32 training_id = 1;
-}
+message GetLatestModelRequest { int32 training_id = 1; }
 
 message GetLatestModelResponse {
-    bool valid_state = 1;
-    string model_path = 2;
+  bool valid_state = 1;
+  string model_path = 2;
 }
