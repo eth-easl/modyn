@@ -6,12 +6,12 @@ from typing import Any, Callable, Generator, Optional
 import grpc
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     NumberOfPartitionsResponse,
 )
-from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
     GetRequest,
     GetResponse,

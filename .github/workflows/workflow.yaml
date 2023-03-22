@@ -114,7 +114,7 @@ jobs:
         uses: ./.github/actions/conda
 
       - name: Pytest
-        run: conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/backend/supervisor --cov=modyn/storage --cov=modyn/backend/selector --cov=modyn/trainer_server --cov=modyn/backend/metadata_database --cov-fail-under=90
+        run: conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/supervisor --cov=modyn/storage --cov=modyn/selector --cov=modyn/trainer_server --cov=modyn/metadata_database --cov-fail-under=90
 
 
 ### Integration Tests ###
