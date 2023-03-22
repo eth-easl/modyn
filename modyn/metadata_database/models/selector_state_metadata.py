@@ -55,8 +55,6 @@ class SelectorStateMetadata(
             subpartition_by="seen_in_trigger_id",
             subpartition_type="LIST",
         )
-        print(f"Created partition {result.__tablename__} for pipeline {pipeline_id}")
-        print(f"Type: {type(result)}")
         return result
 
     @staticmethod
@@ -79,3 +77,4 @@ class SelectorStateMetadata(
             partition_suffix = f"_part{i}"
             partition_stmt = f"FOR VALUES WITH (modulus {modulus}, remainder {i})"
             trigger_partition.create_partition(partition_suffix, partition_stmt=partition_stmt)
+        print(f"Created {modulus} hash partitions for trigger {trigger_id} in pipeline {pipeline_id}")

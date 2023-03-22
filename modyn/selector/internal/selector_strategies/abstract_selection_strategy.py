@@ -269,6 +269,7 @@ class AbstractSelectionStrategy(ABC):
         seen_in_trigger_id: int,
     ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
+            database.add_trigger(pipeline_id, seen_in_trigger_id)
             database.session.bulk_insert_mappings(
                 SelectorStateMetadata,
                 [

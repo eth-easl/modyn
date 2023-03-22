@@ -10,7 +10,7 @@ import traceback
 # Kudos: https://stackoverflow.com/questions/61545680/postgresql-partition-and-sqlalchemy
 
 
-class PartitionByMeta(DeclarativeAttributeIntercept, DeclarativeMeta):
+class PartitionByMeta(DeclarativeAttributeIntercept):
     def __new__(cls, clsname, bases, attrs, *, partition_by, partition_type):
         @classmethod
         def get_partition_name(cls_, suffix):
@@ -50,12 +50,16 @@ class PartitionByMeta(DeclarativeAttributeIntercept, DeclarativeMeta):
                 cls_.partitions[suffix] = partition
 
             return cls_.partitions[suffix]
-
+    
         if partition_by is not None:
+            table_args = attrs.get("__table_args__", ())
+            if type(table_args) is dict:
+                table_args["postgresql_partition_by"] = f'{partition_type.upper()}({partition_by})'
+            else:
+                table_args += ({"postgresql_partition_by": f'{partition_type.upper()}({partition_by})'},)
             attrs.update(
                 {
-                    "__table_args__": attrs.get("__table_args__", ())
-                    + ({"postgresql_partition_by":f'{partition_type.upper()}({partition_by})', "prefixes": ["UNLOGGED"]},),
+                    "__table_args__": table_args,
                     "partitions": {},
                     "partitioned_by": partition_by,
                     "get_partition_name": get_partition_name,
