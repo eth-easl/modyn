@@ -5,7 +5,7 @@ from unittest.mock import patch
 import grpc
 import pytest
 import torch
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import SamplesResponse
+from modyn.selector.internal.grpc.generated.selector_pb2 import SamplesResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetResponse
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 from torchvision import transforms
