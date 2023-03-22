@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from modyn.backend.metadata_database.metadata_base import MetadataBase, PartitionByMeta
-from sqlalchemy import BigInteger, Boolean, Column, Integer, Index
+from modyn.backend.metadata_database.metadata_base import PartitionByMeta, MetadataBase
+from sqlalchemy import BigInteger, Boolean, Column, Index, Integer
 from sqlalchemy.dialects import sqlite
 
 BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
@@ -42,29 +42,29 @@ class SelectorStateMetadata(
     # ssm_pipeline_seen_idx: Optimizes new data strategy
     # (Index("ssm_pipeline_seen_idx", "pipeline_id", "seen_in_trigger_id")
     # TODO: integrate index again on the fly
-    # Create index non-blocking
-    __table_args__ = (
-            *[Index(index[0], *index[1]) for index in indexes.items()],
-            {"prefixes": ["UNLOGGED"]}
-        )
+    #  Create index non-blocking
+    __table_args__ = (*[Index(index[0], *index[1]) for index in indexes.items()],)
 
     @staticmethod
     def add_pipeline(pipeline_id: int) -> Any:  # TODO investigate type
         partition_stmt = f"FOR VALUES IN ({pipeline_id})"
         partition_suffix = f"_pid{pipeline_id}"
-        return SelectorStateMetadata.create_partition(
+        result = SelectorStateMetadata.create_partition(
             partition_suffix,
             partition_stmt=partition_stmt,
             subpartition_by="seen_in_trigger_id",
             subpartition_type="LIST",
         )
+        print(f"Created partition {result.__tablename__} for pipeline {pipeline_id}")
+        print(f"Type: {type(result)}")
+        return result
 
     @staticmethod
     def add_trigger(pipeline_id: int, trigger_id: int) -> None:
         # TODO: this is not the best/correct way to obtain the partition.
         # We should somehow implement a "get partition"
         # (and populate all partitions on boot and let add_pipeline fail if partition already exists!)
-        # Where are the partitions and are they loaded upon restart?
+        #  Where are the partitions and are they loaded upon restart?
         pipeline_partition = SelectorStateMetadata.add_pipeline(pipeline_id)
         partition_suffix = f"_tid{trigger_id}"
         partition_stmt = f"FOR VALUES IN ({trigger_id})"

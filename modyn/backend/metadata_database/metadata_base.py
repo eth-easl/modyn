@@ -4,11 +4,13 @@ from sqlalchemy import event
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql.ddl import DDL
+from sqlalchemy.orm.decl_api import DeclarativeAttributeIntercept
+import traceback
 
 # Kudos: https://stackoverflow.com/questions/61545680/postgresql-partition-and-sqlalchemy
 
 
-class PartitionByMeta(DeclarativeMeta):
+class PartitionByMeta(DeclarativeAttributeIntercept, DeclarativeMeta):
     def __new__(cls, clsname, bases, attrs, *, partition_by, partition_type):
         @classmethod
         def get_partition_name(cls_, suffix):
@@ -16,6 +18,8 @@ class PartitionByMeta(DeclarativeMeta):
 
         @classmethod
         def create_partition(cls_, suffix, partition_stmt, subpartition_by=None, subpartition_type=None, unlogged=True):
+            print(f"Creating partition {suffix} for {cls_.__tablename__} with statement {partition_stmt}")
+            print(f"Currently known partitions: {cls_.partitions}")
             if suffix not in cls_.partitions:  # TODO: what happens on restart? how do we handle existing partitions?
                 attrs = {"__tablename__": cls_.get_partition_name(suffix)}
                 if unlogged:
@@ -51,7 +55,7 @@ class PartitionByMeta(DeclarativeMeta):
             attrs.update(
                 {
                     "__table_args__": attrs.get("__table_args__", ())
-                    + (dict(postgresql_partition_by=f"{partition_type.upper()}({partition_by})"),),
+                    + ({"postgresql_partition_by":f'{partition_type.upper()}({partition_by})', "prefixes": ["UNLOGGED"]},),
                     "partitions": {},
                     "partitioned_by": partition_by,
                     "get_partition_name": get_partition_name,

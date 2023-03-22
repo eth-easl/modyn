@@ -6,6 +6,7 @@ import logging
 
 from modyn.backend.metadata_database.metadata_base import MetadataBase
 from modyn.backend.metadata_database.models import Pipeline
+from modyn.backend.metadata_database.models.selector_state_metadata import SelectorStateMetadata
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 
 logger = logging.getLogger(__name__)
@@ -54,3 +55,16 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         self.session.commit()
         pipeline_id = pipeline.pipeline_id
         return pipeline_id
+    
+    def add_trigger(self, pipeline_id: int, trigger_id: int) -> None:
+        """Add a trigger to the database.
+
+        Args:
+            pipeline_id (int): Id of the pipeline to which the trigger belongs.
+            trigger_id (int): Id of the trigger.
+        """
+        self.session.commit()
+
+        Partition = SelectorStateMetadata.add_trigger(pipeline_id, trigger_id)
+        if not self.engine.dialect.has_table(Partition.__table__.name):
+            Partition.__table__.create(bind=self.engine)

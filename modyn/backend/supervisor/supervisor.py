@@ -5,6 +5,7 @@ from time import sleep
 from typing import Optional
 
 import enlighten
+from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.backend.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
@@ -82,6 +83,9 @@ class Supervisor:
 
         trigger_module = dynamic_module_import("modyn.backend.supervisor.internal.triggers")
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
+
+        with MetadataDatabaseConnection(self.modyn_config) as db:
+            db.add_trigger(self.pipeline_id, trigger_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
 
