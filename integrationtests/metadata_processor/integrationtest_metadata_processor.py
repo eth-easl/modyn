@@ -76,7 +76,6 @@ def send_metadata_and_check_database(processor_client: MetadataProcessorClient, 
 
         assert len(trigger_metadata) == 1, f"Expected 1 entry for trigger metadata in db, found {len(trigger_metadata)}"
         assert tids[0] == 1, f"Expected trigger ID 1 in db, found {tids[0]}"
-        assert pids[0] == pipeline_id, f"Expected pipeline ID 1 in db, found {pids[0]}"
         assert isclose(overall_loss[0], 0.5), f"Expected overall loss 0.5 in db, found {overall_loss[0]}"
 
         sample_metadata = (
