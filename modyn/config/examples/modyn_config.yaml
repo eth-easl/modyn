@@ -63,7 +63,7 @@ metadata_database:
 
 metadata_processor:
   port: "50055"
-  hostname: "backend"
+  hostname: "metadata_processor"
   processor: "SimpleProcessor"
 
 selector:

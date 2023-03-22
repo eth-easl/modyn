@@ -2,7 +2,7 @@ import json
 
 import grpc
 from integrationtests.utils import get_modyn_config
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
@@ -10,7 +10,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
     RegisterPipelineRequest,
     SamplesResponse,
 )
-from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
 
 # TODO(54): Write more integration tests for different strategies.

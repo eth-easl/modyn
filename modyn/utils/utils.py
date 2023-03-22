@@ -42,7 +42,7 @@ def model_available(model_type: str) -> bool:
 
 
 def trigger_available(trigger_type: str) -> bool:
-    trigger_module = dynamic_module_import("modyn.backend.supervisor.internal.triggers")
+    trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
     available_triggers = list(x[0] for x in inspect.getmembers(trigger_module, inspect.isclass))
     return trigger_type in available_triggers
 

@@ -46,13 +46,12 @@ ignore=CVS
 
 # Add files or directories matching the regex patterns to the ignore-list. The
 # regex matches against paths and can be in Posix or Windows format.
-ignore-paths=^modyn/frontend/.*$,
-             ^modyn/trainer_server/internal/grpc/generated/.*$,
+ignore-paths=^modyn/trainer_server/internal/grpc/generated/.*$,
              ^modyn/trainer_server/internal/mocks/.*$,
              ^modyn/trainer_server/internal/local_testing/.*$,
-             ^modyn/backend/selector/internal/grpc/generated.*$,
-             ^modyn/backend/metadata_processor/internal/grpc/generated/.*$,
-             ^modyn/backend/metadata_database/internal/grpc/generated.*$,
+             ^modyn/selector/internal/grpc/generated.*$,
+             ^modyn/metadata_processor/internal/grpc/generated/.*$,
+             ^modyn/metadata_database/internal/grpc/generated.*$,
              ^modyn/storage/internal/grpc/generated/.*$,
              ^modyn/models/dlrm/cuda_ext/.*$,
              ^modyn/models/dlrm/cuda_src/.*$,

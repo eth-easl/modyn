@@ -4,17 +4,17 @@ from math import isclose
 
 import grpc
 import yaml
-from modyn.backend.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.backend.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
+from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
     PerSampleMetadata,
     PerTriggerMetadata,
     TrainingMetadataRequest,
     TrainingMetadataResponse,
 )
-from modyn.backend.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import MetadataProcessorStub
+from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import MetadataProcessorStub
 from modyn.utils import grpc_connection_established
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
