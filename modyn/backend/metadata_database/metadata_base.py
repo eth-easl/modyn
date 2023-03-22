@@ -1,33 +1,31 @@
 """Base class for metadata database backends."""
 
-from sqlalchemy.orm import DeclarativeBase
-
-from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy.sql.ddl import DDL
 from sqlalchemy import event
+from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.sql.ddl import DDL
 
 # Kudos: https://stackoverflow.com/questions/61545680/postgresql-partition-and-sqlalchemy
 
+
 class PartitionByMeta(DeclarativeMeta):
     def __new__(cls, clsname, bases, attrs, *, partition_by, partition_type):
-
         @classmethod
         def get_partition_name(cls_, suffix):
-            return f'{cls_.__tablename__}_{suffix}'
+            return f"{cls_.__tablename__}_{suffix}"
 
         @classmethod
         def create_partition(cls_, suffix, partition_stmt, subpartition_by=None, subpartition_type=None, unlogged=True):
-            if suffix not in cls_.partitions: # TODO: what happens on restart? how do we handle existing partitions?
-
-                attrs = {'__tablename__': cls_.get_partition_name(suffix)}
+            if suffix not in cls_.partitions:  # TODO: what happens on restart? how do we handle existing partitions?
+                attrs = {"__tablename__": cls_.get_partition_name(suffix)}
                 if unlogged:
-                    attrs['__table_args__'] = ({"prefixes": ["UNLOGGED"]})
-                
+                    attrs["__table_args__"] = {"prefixes": ["UNLOGGED"]}
+
                 partition = PartitionByMeta(
-                    f'{clsname}{suffix}',
+                    f"{clsname}{suffix}",
                     bases,
                     attrs,
-                    partition_type = subpartition_type,
+                    partition_type=subpartition_type,
                     partition_by=subpartition_by,
                 )
 
@@ -35,34 +33,34 @@ class PartitionByMeta(DeclarativeMeta):
 
                 event.listen(
                     partition.__table__,
-                    'after_create',
+                    "after_create",
                     DDL(
                         f"""
                         ALTER TABLE {cls_.__tablename__}
                         ATTACH PARTITION {partition.__tablename__}
                         {partition_stmt};
                         """
-                    )
+                    ),
                 )
-                
+
                 cls_.partitions[suffix] = partition
-            
+
             return cls_.partitions[suffix]
-        
+
         if partition_by is not None:
             attrs.update(
                 {
-                    '__table_args__': attrs.get('__table_args__', ())
-                    + (dict(postgresql_partition_by=f'{partition_type.upper()}({partition_by})'),),
-                    'partitions': {},
-                    'partitioned_by': partition_by,
-                    'get_partition_name': get_partition_name,
-                    'create_partition': create_partition
+                    "__table_args__": attrs.get("__table_args__", ())
+                    + (dict(postgresql_partition_by=f"{partition_type.upper()}({partition_by})"),),
+                    "partitions": {},
+                    "partitioned_by": partition_by,
+                    "get_partition_name": get_partition_name,
+                    "create_partition": create_partition,
                 }
             )
-        
+
         return super().__new__(cls, clsname, bases, attrs)
-    
+
 
 class MetadataBase(DeclarativeBase):
     pass
