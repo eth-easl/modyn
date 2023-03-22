@@ -20,7 +20,7 @@ message TrainingMetadataRequest {
   int32 trigger_id = 2;
 
   PerTriggerMetadata trigger_metadata = 3;
-  repeated PerSampleMetadata sample_metadata = 4;
+  repeated PerSampleMetadata sample_metadata = 4; // TODO(#210): we will need to support large number of samples in the future. We should use a streaming RPC to support that.
 }
 
 message PerTriggerMetadata { float loss = 1; }

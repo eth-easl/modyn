@@ -34,6 +34,7 @@ class MetadataProcessorGRPCServicer(MetadataProcessorServicer):
     def process_training_metadata(
         self, request: TrainingMetadataRequest, context: grpc.ServicerContext
     ) -> TrainingMetadataResponse:
+        # TODO(#210): This needs to be done in a streaming fashion to avoid scalability issues
         logger.info(
             f"Processing training metadata for pipeline ID {request.pipeline_id}"
             f" and trigger ID {request.trigger_id}"

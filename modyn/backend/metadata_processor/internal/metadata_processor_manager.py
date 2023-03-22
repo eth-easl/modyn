@@ -28,6 +28,7 @@ class MetadataProcessorManager:
         trigger_metadata: PerTriggerMetadata,
         sample_metadata: Iterable[PerSampleMetadata],
     ) -> None:
+        # TODO(#210): Switch to streaming to avoid scalability issues
         if pipeline_id not in self.processors:
             raise ValueError(f"Metadata sent for processing from pipeline {pipeline_id} which does not exist!")
 
