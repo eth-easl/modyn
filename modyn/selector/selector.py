@@ -105,4 +105,3 @@ class Selector:
         if self._strategy._requires_remote_computation and isinstance(self._strategy, AbstractDownsampleStrategy):
             return True, self._strategy.get_downsampling_strategy()
         return False, ""
-
