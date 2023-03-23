@@ -138,7 +138,7 @@ class SelectorManager:
 
         return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)
 
-    def get_selection_strategy_remote(self, pipeline_id: int) -> Tuple[bool, str]:
+    def get_selection_strategy_remote(self, pipeline_id: int) -> Tuple[bool, str, dict]:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested selection strategy for pipeline {pipeline_id} which does not exist!")
 

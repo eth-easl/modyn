@@ -1,9 +1,10 @@
+import json
 import logging
 from typing import Iterable
 
 import grpc
 
-# pylint: disable-next=no-name-in-module
+# pylint: disable=no-name-in-module
 from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501
     DataInformRequest,
     Empty,
@@ -11,6 +12,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (  # noq
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
     GetSelectionStrategyRequest,
+    JsonString as SelectorJsonString,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
@@ -110,6 +112,10 @@ class SelectorGRPCServicer(SelectorServicer):
         pipeline_id = request.pipeline_id
         logger.info(f"[Pipeline {pipeline_id}]: Received selection strategy request")
 
-        downsampling_enabled, exec_string = self.selector_manager.get_selection_strategy_remote(pipeline_id)
+        downsampling_enabled, name, params = self.selector_manager.get_selection_strategy_remote(pipeline_id)
 
-        return SelectionStrategyResponse(downsampling_enabled=downsampling_enabled, exec_string=exec_string)
+        params = json.dumps(params)
+
+        return SelectionStrategyResponse(
+            downsampling_enabled=downsampling_enabled, strategy_name=name, params=SelectorJsonString(value=params)
+        )

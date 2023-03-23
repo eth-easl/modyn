@@ -32,13 +32,19 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         if self.has_limit or self.reset_after_trigger:
             raise ValueError("The current implementation only supports downsampling on the entire dataset.")
 
+        assert "presampling_ratio" in config
         self.presampling_ratio = config["presampling_ratio"]
+
+        assert "downsampled_batch_size" in self._config
+        self.downsampled_batch_size = self._config["downsampled_batch_size"]
+        assert self.downsampled_batch_size > 0
+
         self.dataset_size = 0
         self._requires_remote_computation = True
 
         assert 0 < self.presampling_ratio <= 100
 
-        self.ignore_presampling = self.presampling_ratio == 100
+        self.avoid_presampling = self.presampling_ratio == 100
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         assert len(keys) == len(timestamps)
@@ -60,16 +66,19 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 In each list, each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
-        # instead of sampling B (target_size) points from the whole dataset, we sample B/num_chunks for every chunk
         self.dataset_size = self._get_dataset_size()
-        assert isinstance(self.dataset_size, int)
         assert self.dataset_size > 0
 
         target_size = self.get_target_size()
 
-        for samples in self._get_data_no_reset_presampled(target_size):
-            random.shuffle(samples)
-            yield [(sample, 1.0) for sample in samples]
+        if self.avoid_presampling:
+            for samples in self._get_data_no_reset():
+                random.shuffle(samples)
+                yield [(sample, 1.0) for sample in samples]
+        else:
+            for samples in self._get_data_no_reset_presampled(target_size):
+                random.shuffle(samples)
+                yield [(sample, 1.0) for sample in samples]
 
     def get_target_size(self) -> int:
         return (self.dataset_size * self.presampling_ratio) // 100
@@ -128,8 +137,9 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             stmt = (
                 select(SelectorStateMetadata.sample_key)
                 .execution_options(yield_per=self._maximum_keys_in_memory)
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
                 .join(subq, SelectorStateMetadata.sample_key == subq.c.sample_key)
-                .order_by(SelectorStateMetadata.timestamp)
+                .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
             for chunk in database.session.execute(stmt).partitions():
@@ -152,5 +162,11 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
     def get_downsampling_strategy(self) -> str:
         """
         Abstract method to get the downsampling strategy that is transfered from the selector to the pytorch trainer.
+        """
+        raise NotImplementedError()
+
+    def get_downsampling_params(self) -> dict:
+        """
+        Abstract method to get the downsampling parameters that are transfered from the selector to the pytorch trainer.
         """
         raise NotImplementedError()

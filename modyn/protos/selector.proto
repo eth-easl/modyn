@@ -77,5 +77,6 @@ message GetSelectionStrategyRequest {
 
 message SelectionStrategyResponse {
     bool downsampling_enabled = 1;
-    string exec_string = 2;
+    string strategy_name = 2;
+    JsonString params = 3;
 }

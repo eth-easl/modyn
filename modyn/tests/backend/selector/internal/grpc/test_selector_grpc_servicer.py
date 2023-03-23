@@ -1,5 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module, redefined-outer-name
-
+import json
 from typing import Iterable
 from unittest.mock import MagicMock, patch
 
@@ -165,10 +165,11 @@ def test_get_selection_strategy(test_get_selection_strategy_remote: MagicMock):
     mgr = SelectorManager(get_minimal_modyn_config())
     servicer = SelectorGRPCServicer(mgr, 8096)
     request = GetSelectionStrategyRequest(pipeline_id=42)
-    test_get_selection_strategy_remote.return_value = False, ""
+    test_get_selection_strategy_remote.return_value = False, "", {}
 
     response: NumberOfPartitionsResponse = servicer.get_selection_strategy(request, None)
     assert not response.downsampling_enabled
-    assert response.exec_string == ""
+    assert response.strategy_name == ""
+    assert json.loads(response.params.value) == {}
 
     test_get_selection_strategy_remote.assert_called_once_with(42)

@@ -1,3 +1,4 @@
+import json
 from typing import Tuple
 
 import grpc
@@ -11,7 +12,7 @@ from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import Sel
 from modyn.utils import grpc_connection_established
 
 
-def get_selection_strategy(selector_address: str, pipeline_id: int) -> Tuple[bool, str]:
+def get_selection_strategy(selector_address: str, pipeline_id: int) -> Tuple[bool, str, dict]:
     assert selector_address is not None
     selector_stub = _init_grpc(selector_address)
 
@@ -19,7 +20,9 @@ def get_selection_strategy(selector_address: str, pipeline_id: int) -> Tuple[boo
 
     response: SelectionStrategyResponse = selector_stub.get_selection_strategy(req)
 
-    return response.downsampling_enabled, response.exec_string
+    params = json.loads(response.params.value)
+
+    return response.downsampling_enabled, response.strategy_name, params
 
 
 def _init_grpc(selector_address: str) -> SelectorStub:

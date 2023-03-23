@@ -9,9 +9,6 @@ from inspect import isfunction
 from typing import Any, Callable, Optional, Union
 
 import torch
-from modyn.backend.selector.internal.selector_strategies.remote_loss_downsample import (  # noqa # pylint: disable=unused-import
-    RemoteLossDownsampler,
-)
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
@@ -103,18 +100,22 @@ class PytorchTrainer:
 
         # investigate Torch RPC to make it smoother
         if training_info.selector_address != "":
-            self._downsampling_enabled, exec_str = get_selection_strategy(
+            self._downsampling_enabled, strategy_name, params_from_selector = get_selection_strategy(
                 training_info.selector_address, training_info.pipeline_id
             )
         else:
             self._downsampling_enabled = False
 
         if self._downsampling_enabled:
-            exec(f"tmp = {exec_str}")  # pylint: disable=exec-used
-        else:
-            tmp = None
-
-        self._downsampler = tmp
+            remote_downsampling_module = dynamic_module_import(
+                "modyn.trainer_server.internal.trainer.remote_downsamplers"
+            )
+            downsampler_class = getattr(remote_downsampling_module, strategy_name)
+            params_from_trainer = {
+                "model": self._model.model,
+                "per_sample_loss_fct": criterion_func(**training_info.criterion_dict, reduction="none"),
+            }
+            self._downsampler = downsampler_class(params_from_selector, params_from_trainer)
 
         # create callbacks - For now, assume LossCallback by default
         # TODO(#140): should be defined by the pipeline and passed with training request
@@ -264,7 +265,8 @@ class PytorchTrainer:
             if self._downsampling_enabled:
                 # need to refactor to allow weights
                 assert self._downsampler is not None
-                data, _, target = self._downsampler.sample(data, target)
+                pre_downsampling_size = target.shape[0]
+                data, _, target, sample_ids = self._downsampler.sample(data, target, sample_ids)
 
             for _, optimizer in self._optimizers.items():
                 optimizer.zero_grad()
@@ -293,7 +295,7 @@ class PytorchTrainer:
                 checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
                 self.save_state(checkpoint_file_name, batch_number)
 
-            self._num_samples += target.shape[0]
+            self._num_samples += target.shape[0] if not self._downsampling_enabled else pre_downsampling_size
 
             for _, callback in self._callbacks.items():
                 callback.on_batch_end(

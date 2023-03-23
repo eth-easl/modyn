@@ -40,7 +40,7 @@ def setup_and_teardown():
 
 
 def get_config():
-    return {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1}
+    return {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "downsampled_batch_size": 10}
 
 
 def test_constructor():
@@ -149,26 +149,27 @@ def test_on_trigger_multi_chunks_unbalanced():
     strat = AbstractDownsampleStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._maximum_keys_in_memory = 4
+    strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
-    assert len(indexes) == 1
-    assert len(indexes[0]) == 3
+    assert len(indexes) == 2
+    assert len(indexes[0]) == 2
+    assert len(indexes[1]) == 1
 
 
-def test_on_trigger_multi_chunks_unbalanced_tail():
+def test_on_trigger_multi_chunks_bis():
     config = get_config()
     config["presampling_ratio"] = 70
     strat = AbstractDownsampleStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._maximum_keys_in_memory = 5
+    strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
-    assert len(indexes) == 1
-    assert len(indexes[0]) == 4
+    assert len(indexes) == 2
+    assert len(indexes[0]) == 2
     assert set(key for key, _ in indexes[0]) < set([10, 11, 12, 13, 14, 15])
 
 
@@ -187,3 +188,20 @@ def test_no_presampling():
     assert len(indexes[1]) == 1
     assert set(key for key, _ in indexes[0]) == set([10, 11, 12, 13, 14])
     assert indexes[1][0] == (15, 1.0)
+
+
+def test_chunking():
+    config = get_config()
+    config["presampling_ratio"] = 90
+    strat = AbstractDownsampleStrategy(config, get_minimal_modyn_config(), 0, 1000)
+
+    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat._maximum_keys_in_memory = 2
+
+    generator = strat._on_trigger()
+    indexes = list(generator)
+    assert len(indexes) == 3
+    assert len(indexes[0]) == 2
+    assert len(indexes[1]) == 2
+    assert len(indexes[2]) == 1
+    assert set(key for key, _ in indexes[0]) <= set([10, 11, 12])
