@@ -107,6 +107,10 @@ properties:
                 type: number
                 description: |
                   [AbstractDownsampleStrategy] How many points are sampled after computing the metric
+          processor_type:
+            type: string
+            description: |
+              The name of the Metadata Processor strategy that should be used.
         required:
           - name
           - maximum_keys_in_memory

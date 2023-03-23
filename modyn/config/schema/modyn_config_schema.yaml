@@ -191,21 +191,17 @@ properties:
       - host
       - port
       - database
-  ptmp:
+  metadata_processor:
     type: object
     properties:
       port:
         type: string
         description: |
-          The port to use for the ptmp server.
+          The port to use for the metadata processor server.
       hostname:
         type: string
         description: |
-          The hostname to use for the ptmp server.
-      processor:
-        type: string
-        description: |
-          The processor to use for the ptmp server.
+          The hostname to use for the metadata processor server.
     selector:
       type: object
       properties:

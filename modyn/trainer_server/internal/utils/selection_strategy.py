@@ -4,11 +4,8 @@ from typing import Tuple
 import grpc
 
 # pylint: disable-next=no-name-in-module
-from modyn.backend.selector.internal.grpc.generated.selector_pb2 import (
-    GetSelectionStrategyRequest,
-    SelectionStrategyResponse,
-)
-from modyn.backend.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
+from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
 
 

@@ -47,6 +47,14 @@ services:
       - storage-data:/app/storage
 #      - /mnt/datasets:/datasets
 #      - .:/modyn_host
+  metadata_processor:
+    restart: on-failure
+    depends_on:
+      - modynbase
+      - metadata-db
+    build:
+      context: .
+      dockerfile: docker/MetadataProcessor/Dockerfile
   trainer_server:
     restart: on-failure
     depends_on:

@@ -2,7 +2,7 @@
 from unittest.mock import patch
 
 import grpc
-from modyn.backend.supervisor.internal.grpc_handler import GRPCHandler
+from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.utils import grpc_connection_established
 
 
