@@ -98,7 +98,7 @@ class TriggerSampleStorage:
 
         triple_list: list[tuple[Path, int, int]] = []
         for file in sorted(os.listdir(self.trigger_sample_directory)):
-            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"):
+            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}_"):
                 file_path = Path(self.trigger_sample_directory) / file
                 if current_index >= start_index + worker_subset_size:
                     #  We have already retrieved all the samples for the worker
@@ -164,7 +164,7 @@ class TriggerSampleStorage:
                         [
                             self._parse_file(Path(self.trigger_sample_directory) / file)
                             for file in sorted(os.listdir(self.trigger_sample_directory))
-                            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}")
+                            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}_")
                         ]
                     )
                 ),
