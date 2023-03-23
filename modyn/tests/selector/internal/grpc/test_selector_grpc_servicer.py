@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module, redefined-outer-name
+
 from typing import Iterable
 from unittest.mock import MagicMock, patch
 
@@ -157,7 +158,6 @@ def test__get_number_of_partitions(test_get_number_of_partitions: MagicMock):
     assert response.num_partitions == 12
 
     test_get_number_of_partitions.assert_called_once_with(42, 21)
-
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorGRPCServicer, "get_selection_strategy")

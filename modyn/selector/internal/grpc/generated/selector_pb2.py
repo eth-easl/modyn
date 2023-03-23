@@ -51,4 +51,6 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _SELECTIONSTRATEGYRESPONSE._serialized_end=940
   _SELECTOR._serialized_start=943
   _SELECTOR._serialized_end=1589
+  _SELECTOR._serialized_start=771
+  _SELECTOR._serialized_end=1313
 # @@protoc_insertion_point(module_scope)

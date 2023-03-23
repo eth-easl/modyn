@@ -19,6 +19,7 @@ class Supervisor:
 
     # TODO(#63): Get these from Selector
     supported_strategies: list[str] = ["NewDataStrategy", "FreshnessSamplingStrategy", "LossDownsamplingStrategy"]
+    supported_strategies: list[str] = ["NewDataStrategy", "FreshnessSamplingStrategy"]
 
     def __init__(
         self,
