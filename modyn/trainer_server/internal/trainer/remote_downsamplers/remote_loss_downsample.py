@@ -15,17 +15,21 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
 
     def sample(
         self, data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
-    ) -> Tuple[Union[torch.Tensor, dict], torch.Tensor, torch.Tensor, list]:
+    ) -> Tuple[Union[torch.Tensor, dict], torch.Tensor, torch.Tensor, list, torch.Tensor]:
         output = self.model(data)
         scores = self.per_sample_loss_fct(output, target).detach()
 
         # sample according the score distribution
         probabilities = scores / scores.sum()
-
         downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=True)
 
-        weights = 1.0 / (len(target) * probabilities[downsampled_idxs])
+        weights = 1.0 / (len(sample_ids) * probabilities[downsampled_idxs])
 
         selected_sample_ids = [sample_ids[i] for i in downsampled_idxs]
 
-        return data[downsampled_idxs], weights, target[downsampled_idxs], selected_sample_ids
+        if isinstance(data, torch.Tensor):
+            data = data[downsampled_idxs]
+        elif isinstance(data, dict):
+            data = {key: tensor[downsampled_idxs] for key, tensor in data.items()}
+
+        return data, weights, target[downsampled_idxs], selected_sample_ids, output[downsampled_idxs]

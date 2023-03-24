@@ -266,7 +266,7 @@ class PytorchTrainer:
                 # need to refactor to allow weights
                 assert self._downsampler is not None
                 pre_downsampling_size = target.shape[0]
-                data, _, target, sample_ids = self._downsampler.sample(data, target, sample_ids)
+                data, _, target, sample_ids, output = self._downsampler.sample(data, target, sample_ids)
 
             for _, optimizer in self._optimizers.items():
                 optimizer.zero_grad()
@@ -276,7 +276,8 @@ class PytorchTrainer:
                 self._lr_scheduler.step()
 
             with torch.autocast(self._device_type, enabled=self._amp):
-                output = self._model.model(data)
+                if not self._downsampling_enabled:
+                    output = self._model.model(data)
                 loss = self._criterion(output, target)
 
             self._scaler.scale(loss).backward()

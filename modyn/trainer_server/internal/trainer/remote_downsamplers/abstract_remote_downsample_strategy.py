@@ -13,5 +13,5 @@ class AbstractRemoteDownsamplingStrategy:
 
     def sample(
         self, data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
-    ) -> Tuple[Union[torch.Tensor, dict], torch.Tensor, torch.Tensor, list]:
+    ) -> Tuple[Union[torch.Tensor, dict], torch.Tensor, torch.Tensor, list, torch.Tensor]:
         raise NotImplementedError()
