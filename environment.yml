@@ -10,6 +10,7 @@ channels:
   - conda-forge
   - anaconda
   - nvidia
+  - pytorch
 
 dependencies:
   - python>=3.9
