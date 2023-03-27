@@ -7,6 +7,7 @@ defaults:
 
 jobs:
   flake8:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +23,7 @@ jobs:
           conda run -n modyn flake8 modyn --statistics
 
   mypy-typechecking:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +39,7 @@ jobs:
           conda run -n modyn mypy modyn
 
   pylint:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
 
     steps:
@@ -52,6 +55,7 @@ jobs:
           conda run -n modyn pylint modyn
 
   isort:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
 
     steps:
@@ -69,6 +73,7 @@ jobs:
           conda run -n modyn isort benchmark --check --diff
 
   black:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
 
     steps:
@@ -84,6 +89,7 @@ jobs:
           conda run -n modyn black --check modyn --verbose --config black.toml
 
   unittests:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
 
     steps:
@@ -95,57 +101,18 @@ jobs:
 
       - name: Pytest
         run: |
-          conda run -n modyn pytest
+          conda run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=90
           conda run -n modyn pytest > pytest-coverage.txt
 
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
-
-# TODO(#51): For every new module we want to fail below 90% coverage. Because I restrict this PR to supervisor, I do a custom
-# Pytest call here. When everything has high coverage, we want to merge this action with the regular pytest action.
-  coverage-newarchitecture:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup Conda
-        uses: ./.github/actions/conda
-
-      - name: Pytest
-        run: conda run -n modyn pytest modyn --cov-reset --cache-clear --cov=modyn/supervisor --cov=modyn/storage --cov=modyn/selector --cov=modyn/trainer_server --cov=modyn/metadata_database --cov-fail-under=90
-
 
 ### Integration Tests ###
 # We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
 
 # Checks whether the base container works correctly.
   dockerized-unittests:
-      runs-on: ubuntu-latest
-      needs:
-        - flake8
-        - mypy-typechecking
-        - pylint
-        - unittests
-        - isort
-        - black
-        - coverage-newarchitecture
-
-      steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup base container
-        uses: ./.github/actions/base
-
-      - name: Setup dev-requirements and run pytest within container
-        run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
-
-
-# Tests whether docker-compose up starts all components successfully and integration tests run through
-# Only one job to reduce Github CI usage
-  integrationtests:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     needs:
       - flake8
@@ -154,7 +121,30 @@ jobs:
       - unittests
       - isort
       - black
-      - coverage-newarchitecture
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Setup base container
+      uses: ./.github/actions/base
+
+    - name: Setup dev-requirements and run pytest within container
+      run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
+
+
+# Tests whether docker-compose up starts all components successfully and integration tests run through
+# Only one job to reduce Github CI usage
+  integrationtests:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    needs:
+      - flake8
+      - mypy-typechecking
+      - pylint
+      - unittests
+      - isort
+      - black
       - dockerized-unittests
 
     steps:
