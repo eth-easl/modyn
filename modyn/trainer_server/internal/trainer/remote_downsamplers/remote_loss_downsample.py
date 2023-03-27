@@ -21,7 +21,7 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
 
         # sample according the score distribution
         probabilities = scores / scores.sum()
-        downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=True)
+        downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=self.replacement)
 
         weights = 1.0 / (len(sample_ids) * probabilities[downsampled_idxs])
 

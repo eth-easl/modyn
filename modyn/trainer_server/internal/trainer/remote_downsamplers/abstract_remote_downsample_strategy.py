@@ -11,6 +11,8 @@ class AbstractRemoteDownsamplingStrategy:
         assert "downsampled_batch_size" in params_from_selector
         self.downsampled_batch_size = params_from_selector["downsampled_batch_size"]
 
+        self.replacement = params_from_selector.get("replacement", True)
+
     def sample(
         self, data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
     ) -> Tuple[Union[torch.Tensor, dict], torch.Tensor, torch.Tensor, list, torch.Tensor]:

@@ -126,21 +126,32 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         """
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            subq = (
-                select(SelectorStateMetadata.sample_key)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
-                .order_by(func.random())  # pylint: disable=E1102
-                .limit(target_size)
-                .alias()
-            )
+            if database.drivername == "postgresql":
+                selectable = SelectorStateMetadata.__table__.tablesample(
+                    func.bernoulli(self.presampling_ratio), name="alias", seed=func.random()  # pylint: disable=E1102
+                )
+                stmt = (
+                    select(selectable.c.sample_key)
+                    .execution_options(yield_per=self._maximum_keys_in_memory)
+                    .filter(selectable.c.pipeline_id == self._pipeline_id)
+                    .order_by(asc(selectable.c.timestamp))
+                )
+            else:
+                subq = (
+                    select(SelectorStateMetadata.sample_key)
+                    .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
+                    .order_by(func.random())  # pylint: disable=E1102
+                    .limit(target_size)
+                    .alias()
+                )
 
-            stmt = (
-                select(SelectorStateMetadata.sample_key)
-                .execution_options(yield_per=self._maximum_keys_in_memory)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
-                .join(subq, SelectorStateMetadata.sample_key == subq.c.sample_key)
-                .order_by(asc(SelectorStateMetadata.timestamp))
-            )
+                stmt = (
+                    select(SelectorStateMetadata.sample_key)
+                    .execution_options(yield_per=self._maximum_keys_in_memory)
+                    .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
+                    .join(subq, SelectorStateMetadata.sample_key == subq.c.sample_key)
+                    .order_by(asc(SelectorStateMetadata.timestamp))
+                )
 
             for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
