@@ -31,43 +31,43 @@ def test_add_selector_state_metadata(session):
     session.commit()
 
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first()
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first()
         is not None
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .pipeline_id
         == 1
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .sample_key
         == 0
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .seen_in_trigger_id
         == 1
     )
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().used
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first().used
         is False
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .timestamp
         == 10000
     )
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().label
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first().label
         == 10
     )
 
@@ -90,47 +90,47 @@ def test_update_selector_state_metadata(session):
     session.commit()
 
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first()
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first()
         is not None
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .pipeline_id
         == 1
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .sample_key
         == 0
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .seen_in_trigger_id
         == 1
     )
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().used
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first().used
         is False
     )
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().score
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first().score
         == 2.0
     )
     assert (
         session.query(SelectorStateMetadata)
-        .filter(SelectorStateMetadata.selector_state_metadata_id == 1)
+        .filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1)
         .first()
         .timestamp
         == 20000
     )
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first().label
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first().label
         == 20
     )
 
@@ -151,6 +151,6 @@ def test_delete_selector_state_metadata(session):
     session.commit()
 
     assert (
-        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.selector_state_metadata_id == 1).first()
+        session.query(SelectorStateMetadata).filter(SelectorStateMetadata.pipeline_id == 1, SelectorStateMetadata.sample_key == 0, SelectorStateMetadata.seen_in_trigger_id == 1).first()
         is None
     )

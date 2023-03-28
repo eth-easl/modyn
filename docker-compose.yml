@@ -10,8 +10,8 @@ services:
     build:
       context: .
       dockerfile: docker/Base/Dockerfile
-    volumes:
-      - .:/modyn_host
+#    volumes:
+#      - .:/modyn_host
     container_name: modynbase
   metadata-db:
     image: postgres:14.1-alpine
@@ -46,7 +46,7 @@ services:
     volumes:
       - storage-data:/app/storage
 #      - /mnt/datasets:/datasets
-      - .:/modyn_host
+#      - .:/modyn_host
   metadata_processor:
     restart: on-failure
     depends_on:
@@ -63,8 +63,8 @@ services:
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
-    volumes:
-      - .:/modyn_host
+#    volumes:
+#      - .:/modyn_host
 #    shm_size: 4gb
 #    runtime: nvidia
 #    deploy:
@@ -81,8 +81,8 @@ services:
     build:
       context: .
       dockerfile: docker/Selector/Dockerfile
-    volumes:
-      - .:/modyn_host
+#    volumes:
+#      - .:/modyn_host
   tests:
     depends_on:
       - modynbase

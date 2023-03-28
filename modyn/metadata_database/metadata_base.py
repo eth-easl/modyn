@@ -1,12 +1,13 @@
 """Base class for metadata database."""
 
+import logging
 from sqlalchemy import event
-from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql.ddl import DDL
 from sqlalchemy.orm.decl_api import DeclarativeAttributeIntercept
-import traceback
+from sqlalchemy.engine import Engine
 
+logger = logging.getLogger(__name__)
 # Kudos: https://stackoverflow.com/questions/61545680/postgresql-partition-and-sqlalchemy
 
 
@@ -18,9 +19,7 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
 
         @classmethod
         def create_partition(cls_, suffix, partition_stmt, subpartition_by=None, subpartition_type=None, unlogged=True):
-            print(f"Creating partition {suffix} for {cls_.__tablename__} with statement {partition_stmt}")
-            print(f"Currently known partitions: {cls_.partitions}")
-            if suffix not in cls_.partitions:  # TODO: what happens on restart? how do we handle existing partitions?
+            if suffix not in cls_.partitions:
                 attrs = {"__tablename__": cls_.get_partition_name(suffix)}
                 if unlogged:
                     attrs["__table_args__"] = {"prefixes": ["UNLOGGED"]}

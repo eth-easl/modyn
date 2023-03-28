@@ -270,21 +270,24 @@ class AbstractSelectionStrategy(ABC):
     ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
             database.add_trigger(pipeline_id, seen_in_trigger_id)
-            database.session.bulk_insert_mappings(
-                SelectorStateMetadata,
-                [
-                    {
-                        "pipeline_id": pipeline_id,
-                        "sample_key": key,
-                        "timestamp": timestamp,
-                        "label": label,
-                        "seen_in_trigger_id": seen_in_trigger_id,
-                    }
-                    for key, timestamp, label in zip(keys, timestamps, labels)
-                ],
-            )
-
-            database.session.commit()
+            SelectorStateMetadata.disable_indexes(database.engine)
+            try:
+                database.session.bulk_insert_mappings(
+                    SelectorStateMetadata,
+                    [
+                        {
+                            "pipeline_id": pipeline_id,
+                            "sample_key": key,
+                            "timestamp": timestamp,
+                            "label": label,
+                            "seen_in_trigger_id": seen_in_trigger_id,
+                        }
+                        for key, timestamp, label in zip(keys, timestamps, labels)
+                    ],
+                )
+                database.session.commit()
+            finally:
+                SelectorStateMetadata.enable_indexes(database.engine)
 
     def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         """Persists the data in the database.

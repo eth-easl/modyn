@@ -28,6 +28,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         self.host: str = self.modyn_config["metadata_database"]["host"]
         self.port: int = self.modyn_config["metadata_database"]["port"]
         self.database: str = self.modyn_config["metadata_database"]["database"]
+        self.hash_partition_modulus: int = self.modyn_config["metadata_database"]["hash_partition_modulus"] if "hash_partition_modulus" in self.modyn_config["metadata_database"] else 16
 
     def create_tables(self) -> None:
         """
@@ -63,8 +64,4 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             pipeline_id (int): Id of the pipeline to which the trigger belongs.
             trigger_id (int): Id of the trigger.
         """
-        self.session.commit()
-
-        Partition = SelectorStateMetadata.add_trigger(pipeline_id, trigger_id)
-        if not self.engine.dialect.has_table(Partition.__table__.name):
-            Partition.__table__.create(bind=self.engine)
+        SelectorStateMetadata.add_trigger(pipeline_id, trigger_id, self.session, self.engine, self.hash_partition_modulus)

@@ -84,10 +84,6 @@ class Supervisor:
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
 
-        logger.info("Adding trigger to database.")
-        with MetadataDatabaseConnection(self.modyn_config) as db:
-            db.add_trigger(self.pipeline_id, trigger_id)
-
         assert self.trigger is not None, "Error during trigger initialization"
 
     def validate_pipeline_config_schema(self) -> bool:
