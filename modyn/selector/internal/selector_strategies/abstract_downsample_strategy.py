@@ -7,7 +7,7 @@ from typing import Iterable
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import asc, func, select
+from sqlalchemy import and_, asc, func, select
 
 logger = logging.getLogger(__name__)
 
@@ -27,19 +27,20 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
-        assert "presampling_ratio" in config, "Please specify the ratio of presampled data"
+        if "presampling_ratio" not in config:
+            self.presampling_ratio = 100
+        else:
+            self.presampling_ratio = config["presampling_ratio"]
 
-        if self.has_limit or self.reset_after_trigger:
-            raise ValueError("The current implementation only supports downsampling on the entire dataset.")
+        if not (0 < self.presampling_ratio <= 100) or not isinstance(self.presampling_ratio, int):
+            raise ValueError("Presampling ratio must be an integer in range (0,100]")
 
-        assert "presampling_ratio" in config
-        self.presampling_ratio = config["presampling_ratio"]
-
-        assert "downsampled_batch_size" in self._config
+        if "downsampled_batch_size" not in self._config:
+            raise ValueError("To use downsampling strategies, you have to specify the downsampled_batch_size")
         self.downsampled_batch_size = self._config["downsampled_batch_size"]
-        assert self.downsampled_batch_size > 0
+        if self.downsampled_batch_size <= 0 or not isinstance(self.downsampled_batch_size, int):
+            raise ValueError("The downsampled batch size must be a positive integer")
 
-        self.dataset_size = 0
         self._requires_remote_computation = True
 
         assert 0 < self.presampling_ratio <= 100
@@ -66,33 +67,32 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 In each list, each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight.
         """
-        self.dataset_size = self._get_dataset_size()
-        assert self.dataset_size > 0
 
-        target_size = self.get_target_size()
-
-        if self.avoid_presampling:
-            for samples in self._get_data_no_reset():
+        if self.avoid_presampling and not self.has_limit:
+            for samples in self._get_data_without_limit():
                 random.shuffle(samples)
                 yield [(sample, 1.0) for sample in samples]
         else:
-            for samples in self._get_data_no_reset_presampled(target_size):
+            target_size = self.get_target_size() if not self.avoid_presampling else self.training_set_size_limit
+            for samples in self._get_data_presampled(target_size):
                 random.shuffle(samples)
                 yield [(sample, 1.0) for sample in samples]
 
     def get_target_size(self) -> int:
-        return (self.dataset_size * self.presampling_ratio) // 100
+        dataset_size = self._get_dataset_size()
+        target_presampling = (dataset_size * self.presampling_ratio) // 100
 
-    def _get_data_no_reset_presampled(self, target_size: int) -> Iterable[list[int]]:
-        assert not self.reset_after_trigger
+        if self.has_limit:
+            return min(self.training_set_size_limit, target_presampling)
+        return target_presampling
+
+    def _get_data_presampled(self, target_size: int) -> Iterable[list[int]]:
         assert target_size > 0
 
         for samples in self._get_sampled_data(target_size):
             yield samples
 
-    def _get_data_no_reset(self) -> Iterable[list[int]]:
-        assert not self.reset_after_trigger
-
+    def _get_data_without_limit(self) -> Iterable[list[int]]:
         for samples in self._get_all_data():
             yield samples
 
@@ -107,7 +107,12 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 select(SelectorStateMetadata.sample_key)
                 # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=self._maximum_keys_in_memory)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                    SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id
+                    if self.reset_after_trigger
+                    else True,
+                )
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
@@ -118,7 +123,6 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                     yield []
 
     def _get_sampled_data(self, target_size: int) -> Iterable[list[int]]:
-        # TODO(179) add efficient function for Postgresql
         """Returns a subset of samples uniformly sampled from the DB
 
         Returns:
@@ -133,26 +137,36 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 stmt = (
                     select(selectable.c.sample_key)
                     .execution_options(yield_per=self._maximum_keys_in_memory)
-                    .filter(selectable.c.pipeline_id == self._pipeline_id)
+                    .filter(
+                        selectable.c.pipeline_id == self._pipeline_id,
+                        selectable.c.seen_in_trigger_id == self._next_trigger_id if self.reset else True,
+                    )
                     .order_by(asc(selectable.c.timestamp))
                 )
             else:
                 subq = (
                     select(SelectorStateMetadata.sample_key)
-                    .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
+                    .filter(
+                        SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                        SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id
+                        if self.reset_after_trigger
+                        else True,
+                    )
                     .order_by(func.random())  # pylint: disable=E1102
                     .limit(target_size)
-                    .alias()
                 )
 
                 stmt = (
                     select(SelectorStateMetadata.sample_key)
                     .execution_options(yield_per=self._maximum_keys_in_memory)
-                    .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
-                    .join(subq, SelectorStateMetadata.sample_key == subq.c.sample_key)
+                    .filter(
+                        and_(
+                            SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                            SelectorStateMetadata.sample_key.in_(subq),
+                        )
+                    )
                     .order_by(asc(SelectorStateMetadata.timestamp))
                 )
-
             for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
@@ -166,7 +180,12 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return (
                 database.session.query(SelectorStateMetadata.sample_key)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                    SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id
+                    if self.reset_after_trigger
+                    else True,
+                )
                 .count()
             )
 

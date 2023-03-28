@@ -9,8 +9,8 @@ def test_sample_shape():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    params_from_trainer = {"model": model, "per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(params_from_selector, params_from_trainer)
+    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
+    sampler = RemoteLossDownsampling(model, params_from_selector, params_from_trainer)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
@@ -31,8 +31,8 @@ def test_sample_weights():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    params_from_trainer = {"model": model, "per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(params_from_selector, params_from_trainer)
+    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
+    sampler = RemoteLossDownsampling(model, params_from_selector, params_from_trainer)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
@@ -55,8 +55,8 @@ def test_sample_loss_dependent_sampling():
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    params_from_trainer = {"model": model, "per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(params_from_selector, params_from_trainer)
+    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
+    sampler = RemoteLossDownsampling(model, params_from_selector, params_from_trainer)
 
     # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
     target = torch.cat([torch.zeros(4), torch.ones(4)])
@@ -98,8 +98,8 @@ def test_sample_dict_input():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": 3}
-    params_from_trainer = {"model": mymodel, "per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(params_from_selector, params_from_trainer)
+    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
+    sampler = RemoteLossDownsampling(mymodel, params_from_selector, params_from_trainer)
 
     selected_data, selected_weights, selected_target, selected_sample_ids, selected_output = sampler.sample(
         data, target, sample_ids

@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Union
 
 import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
@@ -7,29 +7,16 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 
 
 class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
-    def __init__(self, params_from_selector: dict, params_from_trainer: dict) -> None:
-        super().__init__(params_from_selector, params_from_trainer)
+    def __init__(self, model: torch.nn, params_from_selector: dict, params_from_trainer: dict) -> None:
+        super().__init__(model, params_from_selector)
 
         assert "per_sample_loss_fct" in params_from_trainer
         self.per_sample_loss_fct = params_from_trainer["per_sample_loss_fct"]
 
-    def sample(
-        self, data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
-    ) -> Tuple[Union[torch.Tensor, dict], torch.Tensor, torch.Tensor, list, torch.Tensor]:
+    def get_probabilities_and_forward_outputs(
+        self, data: Union[torch.Tensor, dict], target: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         output = self.model(data)
         scores = self.per_sample_loss_fct(output, target).detach()
-
-        # sample according the score distribution
         probabilities = scores / scores.sum()
-        downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=self.replacement)
-
-        weights = 1.0 / (len(sample_ids) * probabilities[downsampled_idxs])
-
-        selected_sample_ids = [sample_ids[i] for i in downsampled_idxs]
-
-        if isinstance(data, torch.Tensor):
-            data = data[downsampled_idxs]
-        elif isinstance(data, dict):
-            data = {key: tensor[downsampled_idxs] for key, tensor in data.items()}
-
-        return data, weights, target[downsampled_idxs], selected_sample_ids, output[downsampled_idxs]
+        return probabilities, output

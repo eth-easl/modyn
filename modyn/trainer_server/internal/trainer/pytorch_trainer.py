@@ -1,4 +1,6 @@
+# pylint: disable=no-name-in-module
 import io
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -8,15 +10,20 @@ import traceback
 from inspect import isfunction
 from typing import Any, Callable, Optional, Union
 
+import grpc
 import torch
+from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
+from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
+    AbstractRemoteDownsamplingStrategy,
+)
 from modyn.trainer_server.internal.utils.metric_type import MetricType
-from modyn.trainer_server.internal.utils.selection_strategy import get_selection_strategy
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
-from modyn.utils import dynamic_module_import, package_available_and_can_be_imported
+from modyn.utils import dynamic_module_import, grpc_connection_established, package_available_and_can_be_imported
 
 
 class PytorchTrainer:
@@ -98,24 +105,13 @@ class PytorchTrainer:
 
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
 
-        # investigate Torch RPC to make it smoother
-        if training_info.selector_address != "":
-            self._downsampling_enabled, strategy_name, params_from_selector = get_selection_strategy(
-                training_info.selector_address, training_info.pipeline_id
-            )
-        else:
-            self._downsampling_enabled = False
+        self._downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy(
+            training_info.selector_address
+        )
 
         if self._downsampling_enabled:
-            remote_downsampling_module = dynamic_module_import(
-                "modyn.trainer_server.internal.trainer.remote_downsamplers"
-            )
-            downsampler_class = getattr(remote_downsampling_module, strategy_name)
-            params_from_trainer = {
-                "model": self._model.model,
-                "per_sample_loss_fct": criterion_func(**training_info.criterion_dict, reduction="none"),
-            }
-            self._downsampler = downsampler_class(params_from_selector, params_from_trainer)
+            per_sample_loss = criterion_func(**training_info.criterion_dict, reduction="none")
+            self._downsampler = self.instantiate_downsampler(strategy_name, params_from_selector, per_sample_loss)
 
         # create callbacks - For now, assume LossCallback by default
         # TODO(#140): should be defined by the pipeline and passed with training request
@@ -212,6 +208,33 @@ class PytorchTrainer:
     def send_status_to_server(self, batch_number: int) -> None:
         self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
+    def get_selection_strategy(self, selector_address: str) -> tuple[bool, str, dict]:
+        assert selector_address is not None
+        selector_stub = self._init_grpc(selector_address)
+
+        req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
+
+        response: SelectionStrategyResponse = selector_stub.get_selection_strategy(req)
+        params = json.loads(response.params.value)
+        return response.downsampling_enabled, response.strategy_name, params
+
+    def _init_grpc(self, selector_address: str) -> SelectorStub:
+        selector_channel = grpc.insecure_channel(selector_address)
+        assert selector_channel is not None
+        if not grpc_connection_established(selector_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to selector at address {selector_address}.")
+        return SelectorStub(selector_channel)
+
+    def instantiate_downsampler(
+        self, strategy_name: str, params_from_selector: dict, per_sample_loss: Any
+    ) -> AbstractRemoteDownsamplingStrategy:
+        remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
+        downsampler_class = getattr(remote_downsampling_module, strategy_name)
+        params_from_trainer = {
+            "per_sample_loss_fct": per_sample_loss,
+        }
+        return downsampler_class(self._model.model, params_from_selector, params_from_trainer)
+
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
 
@@ -262,12 +285,6 @@ class PytorchTrainer:
                 for name, tensor in batch[1].items():
                     data[name] = tensor.to(self._device)
 
-            if self._downsampling_enabled:
-                # need to refactor to allow weights
-                assert self._downsampler is not None
-                pre_downsampling_size = target.shape[0]
-                data, _, target, sample_ids, output = self._downsampler.sample(data, target, sample_ids)
-
             for _, optimizer in self._optimizers.items():
                 optimizer.zero_grad()
 
@@ -275,9 +292,17 @@ class PytorchTrainer:
             if self._lr_scheduler is not None:
                 self._lr_scheduler.step()
 
+            pre_downsampling_size = target.shape[0]
+
+            if self._downsampling_enabled:
+                # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed #218
+                assert self._downsampler is not None
+                with torch.autocast(self._device_type, enabled=self._amp):
+                    # TODO(#217) need to refactor to allow weights
+                    data, _, target, sample_ids, _ = self._downsampler.sample(data, target, sample_ids)
+
             with torch.autocast(self._device_type, enabled=self._amp):
-                if not self._downsampling_enabled:
-                    output = self._model.model(data)
+                output = self._model.model(data)
                 loss = self._criterion(output, target)
 
             self._scaler.scale(loss).backward()
@@ -296,7 +321,7 @@ class PytorchTrainer:
                 checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
                 self.save_state(checkpoint_file_name, batch_number)
 
-            self._num_samples += target.shape[0] if not self._downsampling_enabled else pre_downsampling_size
+            self._num_samples += pre_downsampling_size
 
             for _, callback in self._callbacks.items():
                 callback.on_batch_end(

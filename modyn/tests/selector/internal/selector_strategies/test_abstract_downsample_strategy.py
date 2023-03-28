@@ -10,7 +10,6 @@ from modyn.selector.internal.selector_strategies.abstract_downsample_strategy im
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
-
 TMP_DIR = tempfile.mkdtemp()
 
 
@@ -50,20 +49,16 @@ def test_constructor():
 
 def test_constructor_throws_on_invalid_config():
     conf = get_config()
-    conf["reset_after_trigger"] = True
-
-    with pytest.raises(ValueError):
-        AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
     conf = get_config()
     conf["presampling_ratio"] = 0
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
     conf["presampling_ratio"] = 101
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
 
@@ -102,6 +97,53 @@ def test_dataset_size():
     strat.inform_data([110, 111, 112], [0, 1, 2], ["dog", "dog", "cat"])
 
     assert strat._get_dataset_size() == 6
+
+
+def test_dataset_size_various_scenarios():
+    data1 = list(range(10))
+    timestamps1 = list(range(10))
+    labels1 = [0] * 10
+
+    data2 = list(range(10, 40))
+    timestamps2 = list(range(10, 40))
+    labels2 = [0] * 30
+
+    conf = get_config()
+    conf["limit"] = -1
+    conf["reset_after_trigger"] = True
+
+    # first trigger
+    strat = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    strat.inform_data(data1, timestamps1, labels1)
+    assert strat.get_target_size() == 5  # 50% of presampling
+    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    assert trigger_num_keys == 5
+    assert trigger_num_partitions == 1
+
+    # second trigger
+    strat.inform_data(data2, timestamps2, labels2)
+    assert strat.get_target_size() == 15  # 50% of presampling
+
+    # limited capacity
+    strat.has_limit = True
+    strat.training_set_size_limit = 10
+    assert strat.get_target_size() == 10
+
+    # only trigger data
+    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    assert all(int(key) >= 10 for (key, _) in strat.get_trigger_partition_keys(trigger_id, 0))
+
+    # remove the trigger
+    strat.reset_after_trigger = False
+    assert strat.get_target_size() == 10
+
+    # remove the limit
+    strat.has_limit = False
+    assert strat.get_target_size() == 20
+
+    # adjust the presampling
+    strat.presampling_ratio = 75
+    assert strat.get_target_size() == 30
 
 
 def test_get_all_data():
@@ -205,3 +247,49 @@ def test_chunking():
     assert len(indexes[1]) == 2
     assert len(indexes[2]) == 1
     assert set(key for key, _ in indexes[0]) <= set([10, 11, 12])
+
+
+def test_chunking_with_stricter_limit():
+    config = get_config()
+    config["presampling_ratio"] = 90  # presampling should produce 5 points
+    config["limit"] = 3  # but the limit is stricter so we get only 3
+    strat = AbstractDownsampleStrategy(config, get_minimal_modyn_config(), 0, 1000)
+
+    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat._maximum_keys_in_memory = 2
+
+    generator = strat._on_trigger()
+    indexes = list(generator)
+    assert len(indexes) == 2
+    assert len(indexes[0]) == 2
+    assert len(indexes[1]) == 1
+
+
+def test_chunking_with_stricter_presampling():
+    config = get_config()
+    config["presampling_ratio"] = 50
+    config["limit"] = 4
+    strat = AbstractDownsampleStrategy(config, get_minimal_modyn_config(), 0, 1000)
+
+    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat._maximum_keys_in_memory = 5
+
+    generator = strat._on_trigger()
+    indexes = list(generator)
+    assert len(indexes) == 1
+    assert len(indexes[0]) == 3
+
+
+def test_no_presampling_with_limit():
+    config = get_config()
+    config["presampling_ratio"] = 100
+    config["limit"] = 3
+    strat = AbstractDownsampleStrategy(config, get_minimal_modyn_config(), 0, 1000)
+
+    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat._maximum_keys_in_memory = 5
+
+    generator = strat._on_trigger()
+    indexes = list(generator)
+    assert len(indexes) == 1
+    assert len(indexes[0]) == 3

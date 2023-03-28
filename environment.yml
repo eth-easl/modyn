@@ -28,9 +28,9 @@ dependencies:
   - types-protobuf
   - types-psycopg2
   - types-PyYAML
-  - pytorch:pytorch
-  - pytorch:torchvision
-  - pytorch:cpuonly # comment out if commenting in lines below for CUDA
+  - pytorch::pytorch
+  - pytorch::torchvision
+  - pytorch::cpuonly # comment out if commenting in lines below for CUDA
 #  - nvidia::cudatoolkit=11.7
 #  - nvidia::cuda-nvprof=11.7
 #  - pytorch::pytorch-cuda=11.7
