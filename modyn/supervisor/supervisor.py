@@ -5,7 +5,6 @@ from time import sleep
 from typing import Optional
 
 import enlighten
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml

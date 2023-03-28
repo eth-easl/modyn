@@ -1,18 +1,18 @@
 """SelectorStateMetadata model."""
 
-from typing import Any
 import logging
 
-from modyn.metadata_database.metadata_base import PartitionByMeta, MetadataBase
+from modyn.metadata_database.metadata_base import MetadataBase, PartitionByMeta
 from sqlalchemy import BigInteger, Boolean, Column, Index, Integer, inspect
 from sqlalchemy.dialects import sqlite
-from sqlalchemy.orm.session import Session
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm.session import Session
 from sqlalchemy.sql import text
 
 BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 logger = logging.getLogger(__name__)
+
 
 class SelectorStateMetadataMixin:
     pipeline_id = Column("pipeline_id", Integer, primary_key=True)
@@ -30,8 +30,8 @@ class SelectorStateMetadata(
     SelectorStateMetadataMixin,
     MetadataBase,
     metaclass=PartitionByMeta,
-    partition_by="pipeline_id",
-    partition_type="LIST",
+    partition_by="pipeline_id",  # type: ignore
+    partition_type="LIST",  # type: ignore
 ):
     """SelectorStateMetadata model.
 
@@ -46,7 +46,7 @@ class SelectorStateMetadata(
     __table_args__ = (*[Index(index[0], *index[1]) for index in indexes.items()],)
 
     @staticmethod
-    def add_pipeline(pipeline_id: int, engine: Engine) -> PartitionByMeta:
+    def add_pipeline(pipeline_id: int) -> PartitionByMeta:
         partition_stmt = f"FOR VALUES IN ({pipeline_id})"
         partition_suffix = f"_pid{pipeline_id}"
         result = SelectorStateMetadata.create_partition(
@@ -58,13 +58,15 @@ class SelectorStateMetadata(
         return result
 
     @staticmethod
-    def add_trigger(pipeline_id: int, trigger_id: int, session: Session, engine: Engine, hash_partition_modulus: int=16) -> None:
-        # If sqlite, do not partition
+    def add_trigger(
+        pipeline_id: int, trigger_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 16
+    ) -> None:
+        #  If sqlite, do not partition
         if session.bind.dialect.name == "sqlite":
             return
         logger.debug(f"Creating partition for trigger {trigger_id} in pipeline {pipeline_id}")
-        # Create partition for pipeline
-        pipeline_partition = SelectorStateMetadata.add_pipeline(pipeline_id, engine)
+        #  Create partition for pipeline
+        pipeline_partition = SelectorStateMetadata.add_pipeline(pipeline_id)
         SelectorStateMetadata.create_partition_table(pipeline_partition, engine)
         # Create partition for trigger
         partition_suffix = f"_tid{trigger_id}"
@@ -82,7 +84,9 @@ class SelectorStateMetadata(
                 partition_stmt = f"FOR VALUES WITH (modulus {hash_partition_modulus}, remainder {i})"
                 modulo_partition = trigger_partition.create_partition(partition_suffix, partition_stmt=partition_stmt)
                 SelectorStateMetadata.create_partition_table(modulo_partition, engine)
-            logger.debug(f"Created {hash_partition_modulus} hash partitions for trigger {trigger_id} in pipeline {pipeline_id}")
+            logger.debug(
+                f"Created {hash_partition_modulus} hash partitions for trigger {trigger_id} in pipeline {pipeline_id}"
+            )
         finally:
             session.execute(text("SET enable_parallel_hash=on;"))
 
@@ -99,7 +103,7 @@ class SelectorStateMetadata(
             return
         for index in SelectorStateMetadata.indexes:
             with engine.connect() as conn:
-                with conn.execution_options(isolation_level='AUTOCOMMIT'):
+                with conn.execution_options(isolation_level="AUTOCOMMIT"):
                     conn.execute(text(f"DROP INDEX IF EXISTS {index};"))
 
     @staticmethod
@@ -107,7 +111,12 @@ class SelectorStateMetadata(
         """Enable indexes after inserts."""
         if engine.dialect.name == "sqlite":
             return
-        for index in SelectorStateMetadata.indexes:
+        for index_name, index_items in SelectorStateMetadata.items():
             with engine.connect() as conn:
-                with conn.execution_options(isolation_level='AUTOCOMMIT'):
-                    conn.execute(text(f"CREATE INDEX {index} ON {SelectorStateMetadata.__tablename__} ({', '.join(SelectorStateMetadata.indexes[index])});"))
+                with conn.execution_options(isolation_level="AUTOCOMMIT"):
+                    conn.execute(
+                        text(
+                            f"CREATE INDEX {index_name} ON {SelectorStateMetadata.__tablename__} \
+                            ({', '.join(index_items)});"
+                        )
+                    )
