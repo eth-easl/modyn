@@ -2,12 +2,12 @@
 # flake8: noqa: E712
 import logging
 import random
-from typing import Iterable
+from typing import Any, Iterable, Union
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import and_, asc, func, select
+from sqlalchemy import Select, asc, func, select
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +28,10 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
         if "presampling_ratio" not in config:
-            self.presampling_ratio = 100
-        else:
-            self.presampling_ratio = config["presampling_ratio"]
+            raise ValueError(
+                "Please specify the presampling ratio. If you want to avoid presampling, set presampling_ratio to 100"
+            )
+        self.presampling_ratio = config["presampling_ratio"]
 
         if not (0 < self.presampling_ratio <= 100) or not isinstance(self.presampling_ratio, int):
             raise ValueError("Presampling ratio must be an integer in range (0,100]")
@@ -42,8 +43,6 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             raise ValueError("The downsampled batch size must be a positive integer")
 
         self._requires_remote_computation = True
-
-        assert 0 < self.presampling_ratio <= 100
 
         self.avoid_presampling = self.presampling_ratio == 100
 
@@ -69,12 +68,12 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         """
 
         if self.avoid_presampling and not self.has_limit:
-            for samples in self._get_data_without_limit():
+            for samples in self._get_all_data():
                 random.shuffle(samples)
                 yield [(sample, 1.0) for sample in samples]
         else:
             target_size = self.get_target_size() if not self.avoid_presampling else self.training_set_size_limit
-            for samples in self._get_data_presampled(target_size):
+            for samples in self._get_sampled_data(target_size):
                 random.shuffle(samples)
                 yield [(sample, 1.0) for sample in samples]
 
@@ -85,16 +84,6 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         if self.has_limit:
             return min(self.training_set_size_limit, target_presampling)
         return target_presampling
-
-    def _get_data_presampled(self, target_size: int) -> Iterable[list[int]]:
-        assert target_size > 0
-
-        for samples in self._get_sampled_data(target_size):
-            yield samples
-
-    def _get_data_without_limit(self) -> Iterable[list[int]]:
-        for samples in self._get_all_data():
-            yield samples
 
     def _get_all_data(self) -> Iterable[list[int]]:
         """Returns all sample
@@ -131,47 +120,53 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
             if database.drivername == "postgresql":
-                selectable = SelectorStateMetadata.__table__.tablesample(
-                    func.bernoulli(self.presampling_ratio), name="alias", seed=func.random()  # pylint: disable=E1102
-                )
-                stmt = (
-                    select(selectable.c.sample_key)
-                    .execution_options(yield_per=self._maximum_keys_in_memory)
-                    .filter(
-                        selectable.c.pipeline_id == self._pipeline_id,
-                        selectable.c.seen_in_trigger_id == self._next_trigger_id if self.reset else True,
-                    )
-                    .order_by(asc(selectable.c.timestamp))
-                )
+                stmt = self.get_postgres_stmt()
             else:
-                subq = (
-                    select(SelectorStateMetadata.sample_key)
-                    .filter(
-                        SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                        SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id
-                        if self.reset_after_trigger
-                        else True,
-                    )
-                    .order_by(func.random())  # pylint: disable=E1102
-                    .limit(target_size)
-                )
+                stmt = self.get_general_stmt(target_size)
 
-                stmt = (
-                    select(SelectorStateMetadata.sample_key)
-                    .execution_options(yield_per=self._maximum_keys_in_memory)
-                    .filter(
-                        and_(
-                            SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                            SelectorStateMetadata.sample_key.in_(subq),
-                        )
-                    )
-                    .order_by(asc(SelectorStateMetadata.timestamp))
-                )
             for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
                     yield [res[0] for res in chunk]
                 else:
                     yield []
+
+    def get_postgres_stmt(self) -> Union[Select[Any], Select[tuple[Any]]]:
+        selectable = SelectorStateMetadata.__table__.tablesample(
+            func.bernoulli(self.presampling_ratio), name="alias", seed=func.random()  # pylint: disable=E1102
+        )
+        stmt = (
+            select(selectable.c.sample_key)
+            .execution_options(yield_per=self._maximum_keys_in_memory)
+            .filter(
+                selectable.c.pipeline_id == self._pipeline_id,
+                selectable.c.seen_in_trigger_id == self._next_trigger_id if self.reset_after_trigger else True,
+            )
+            .order_by(asc(selectable.c.timestamp))
+        )
+        return stmt
+
+    def get_general_stmt(self, target_size: int) -> Union[Select[Any], Select[tuple[Any]]]:
+        subq = (
+            select(SelectorStateMetadata.sample_key)
+            .filter(
+                SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id if self.reset_after_trigger else True,
+            )
+            .order_by(func.random())  # pylint: disable=E1102
+            .limit(target_size)
+        )
+
+        stmt = (
+            select(SelectorStateMetadata.sample_key)
+            .execution_options(yield_per=self._maximum_keys_in_memory)
+            .filter(
+                SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                SelectorStateMetadata.sample_key.in_(subq),
+            )
+            .order_by(asc(SelectorStateMetadata.timestamp))
+        )
+
+        return stmt
 
     def _reset_state(self) -> None:
         pass  # As we currently hold everything in database (#116), this currently is a noop.

@@ -1,4 +1,7 @@
 import torch
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
+    get_tensors_subset,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_loss_downsample import RemoteLossDownsampling
 from torch import nn
 
@@ -9,20 +12,21 @@ def test_sample_shape():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(model, params_from_selector, params_from_trainer)
+    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
 
-    sampled_data, weights, sampled_target, ids, outputs = sampler.sample(data, target, ids)
+    forward_output = model(data)
+    indexes, weights = sampler.sample(forward_output, target)
+    sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, ids)
 
-    assert outputs.shape[0] == weights.shape[0] == sampled_target.shape[0]
     assert sampled_data.shape[0] == downsampled_batch_size
     assert sampled_data.shape[1] == data.shape[1]
     assert weights.shape[0] == downsampled_batch_size
     assert sampled_target.shape[0] == downsampled_batch_size
+    assert len(sampled_ids) == 5
 
 
 def test_sample_weights():
@@ -31,13 +35,14 @@ def test_sample_weights():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(model, params_from_selector, params_from_trainer)
+    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
-    _, weights, _, ids, _ = sampler.sample(data, target, ids)
+
+    forward_output = model(data)
+    _, weights = sampler.sample(forward_output, target)
 
     assert weights.sum() > 0
     assert set(ids) <= set(list(range(8)))
@@ -55,8 +60,7 @@ def test_sample_loss_dependent_sampling():
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(model, params_from_selector, params_from_trainer)
+    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
     # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
     target = torch.cat([torch.zeros(4), torch.ones(4)])
@@ -65,7 +69,10 @@ def test_sample_loss_dependent_sampling():
     data = torch.cat([torch.randn(4, 10), torch.randn(4, 10)], dim=0)
 
     ids = list(range(8))
-    _, _, sampled_target, _, _ = sampler.sample(data, target, ids)
+
+    forward_output = model(data)
+    indexes, _ = sampler.sample(forward_output, target)
+    _, sampled_target, _ = get_tensors_subset(indexes, data, target, ids)
 
     # Assert that no points with a loss of zero were selected
     assert (sampled_target == 0).sum() == 0
@@ -98,21 +105,18 @@ def test_sample_dict_input():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": 3}
-    params_from_trainer = {"per_sample_loss_fct": per_sample_loss_fct}
-    sampler = RemoteLossDownsampling(mymodel, params_from_selector, params_from_trainer)
+    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
-    selected_data, selected_weights, selected_target, selected_sample_ids, selected_output = sampler.sample(
-        data, target, sample_ids
-    )
+    forward_output = mymodel(data)
+    indexes, weights = sampler.sample(forward_output, target)
+    sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, sample_ids)
 
     # check that the output has the correct shape and type
-    assert isinstance(selected_data, dict)
+    assert isinstance(sampled_data, dict)
 
-    assert all(selected_data[key].shape == (3, 10) for key in selected_data)
+    assert all(sampled_data[key].shape == (3, 10) for key in sampled_data)
 
-    assert selected_weights.shape == (3,)
-    assert selected_target.shape == (3, 8)
-    assert len(selected_sample_ids) == 3
-    assert set(selected_sample_ids) <= set(sample_ids)
-
-    assert selected_output.shape == (3, 8)
+    assert weights.shape == (3,)
+    assert sampled_target.shape == (3, 8)
+    assert len(sampled_ids) == 3
+    assert set(sampled_ids) <= set(sample_ids)

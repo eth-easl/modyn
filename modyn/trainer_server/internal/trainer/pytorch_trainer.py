@@ -19,6 +19,7 @@ from modyn.trainer_server.internal.metadata_collector.metadata_collector import 
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
     AbstractRemoteDownsamplingStrategy,
+    get_tensors_subset,
 )
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
@@ -105,9 +106,8 @@ class PytorchTrainer:
 
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
 
-        self._downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy(
-            training_info.selector_address
-        )
+        self.selector_stub = self.connect_to_selector(training_info.selector_address)
+        self._downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy()
 
         if self._downsampling_enabled:
             per_sample_loss = criterion_func(**training_info.criterion_dict, reduction="none")
@@ -208,17 +208,14 @@ class PytorchTrainer:
     def send_status_to_server(self, batch_number: int) -> None:
         self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
-    def get_selection_strategy(self, selector_address: str) -> tuple[bool, str, dict]:
-        assert selector_address is not None
-        selector_stub = self._init_grpc(selector_address)
-
+    def get_selection_strategy(self) -> tuple[bool, str, dict]:
         req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
 
-        response: SelectionStrategyResponse = selector_stub.get_selection_strategy(req)
+        response: SelectionStrategyResponse = self.selector_stub.get_selection_strategy(req)
         params = json.loads(response.params.value)
         return response.downsampling_enabled, response.strategy_name, params
 
-    def _init_grpc(self, selector_address: str) -> SelectorStub:
+    def connect_to_selector(self, selector_address: str) -> SelectorStub:
         selector_channel = grpc.insecure_channel(selector_address)
         assert selector_channel is not None
         if not grpc_connection_established(selector_channel):
@@ -230,10 +227,8 @@ class PytorchTrainer:
     ) -> AbstractRemoteDownsamplingStrategy:
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)
-        params_from_trainer = {
-            "per_sample_loss_fct": per_sample_loss,
-        }
-        return downsampler_class(self._model.model, params_from_selector, params_from_trainer)
+
+        return downsampler_class(params_from_selector, per_sample_loss)
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -294,14 +289,14 @@ class PytorchTrainer:
 
             pre_downsampling_size = target.shape[0]
 
-            if self._downsampling_enabled:
-                # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed #218
-                assert self._downsampler is not None
-                with torch.autocast(self._device_type, enabled=self._amp):
-                    # TODO(#217) need to refactor to allow weights
-                    data, _, target, sample_ids, _ = self._downsampler.sample(data, target, sample_ids)
-
             with torch.autocast(self._device_type, enabled=self._amp):
+                if self._downsampling_enabled:
+                    # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed #218
+                    assert self._downsampler is not None
+                    big_batch_output = self._model.model(data)
+                    downsampled_indexes, _ = self._downsampler.sample(big_batch_output, target)
+                    data, target, sample_ids = get_tensors_subset(downsampled_indexes, data, target, sample_ids)
+                    # TODO(#219) Investigate if we can avoid 2 forward passes
                 output = self._model.model(data)
                 loss = self._criterion(output, target)
 
