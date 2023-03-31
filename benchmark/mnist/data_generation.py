@@ -6,8 +6,9 @@ import random
 import shutil
 import time
 
-import tensorflow as tf
+import torch
 from PIL import Image
+from torchvision.datasets import MNIST
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -65,9 +66,10 @@ def _store_data(data_dir: pathlib.Path, timestamp_option: str):
         os.mkdir(data_dir)
 
     # The following line forces a download of the mnist dataset.
-    mnist = tf.keras.datasets.mnist
+    mnist = MNIST(str(data_dir), train=True, download=True)
     # TODO(vGsteiger): Currently leaving out validation set, if #49 is implemented, this should be changed
-    (x_train, y_train), (_, _) = mnist.load_data()
+    x_train = mnist.data.numpy()
+    y_train = mnist.targets.numpy()
 
     # store mnist dataset in png format
     for i, data in enumerate(x_train):
@@ -96,3 +98,4 @@ def _remove_data(data_dir: pathlib.Path):
 
 if __name__ == "__main__":
     main()
+
