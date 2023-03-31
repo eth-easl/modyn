@@ -72,17 +72,14 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 random.shuffle(samples)
                 yield [(sample, 1.0) for sample in samples]
         else:
-            target_size = self.get_target_size() if not self.avoid_presampling else self.training_set_size_limit
-            for samples in self._get_sampled_data(target_size):
+            for samples in self._get_sampled_data():
                 random.shuffle(samples)
                 yield [(sample, 1.0) for sample in samples]
 
-    def get_target_size(self) -> int:
+    def get_presampling_target_size(self) -> int:
         dataset_size = self._get_dataset_size()
         target_presampling = (dataset_size * self.presampling_ratio) // 100
 
-        if self.has_limit:
-            return min(self.training_set_size_limit, target_presampling)
         return target_presampling
 
     def _get_all_data(self) -> Iterable[list[int]]:
@@ -111,7 +108,7 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 else:
                     yield []
 
-    def _get_sampled_data(self, target_size: int) -> Iterable[list[int]]:
+    def _get_sampled_data(self) -> Iterable[list[int]]:
         """Returns a subset of samples uniformly sampled from the DB
 
         Returns:
@@ -122,7 +119,7 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             if database.drivername == "postgresql":
                 stmt = self.get_postgres_stmt()
             else:
-                stmt = self.get_general_stmt(target_size)
+                stmt = self.get_general_stmt()
 
             for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:
@@ -132,7 +129,7 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
 
     def get_postgres_stmt(self) -> Union[Select[Any], Select[tuple[Any]]]:
         selectable = SelectorStateMetadata.__table__.tablesample(
-            func.bernoulli(self.presampling_ratio), name="alias", seed=func.random()  # pylint: disable=E1102
+            func.bernoulli(self.presampling_ratio)  # pylint: disable=E1102
         )
         stmt = (
             select(selectable.c.sample_key)
@@ -143,9 +140,20 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             )
             .order_by(asc(selectable.c.timestamp))
         )
+
+        if self.has_limit:
+            stmt = stmt.limit(self.training_set_size_limit)
+
         return stmt
 
-    def get_general_stmt(self, target_size: int) -> Union[Select[Any], Select[tuple[Any]]]:
+    def get_general_stmt(self) -> Union[Select[Any], Select[tuple[Any]]]:
+        presampling_target_size = self.get_presampling_target_size()
+
+        if self.has_limit:
+            target_size = min(self.training_set_size_limit, presampling_target_size)
+        else:
+            target_size = presampling_target_size
+
         subq = (
             select(SelectorStateMetadata.sample_key)
             .filter(

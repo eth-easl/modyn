@@ -115,19 +115,19 @@ def test_dataset_size_various_scenarios():
     # first trigger
     strat = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    assert strat.get_target_size() == 5  # 50% of presampling
+    assert strat.get_presampling_target_size() == 5  # 50% of presampling
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
     # second trigger
     strat.inform_data(data2, timestamps2, labels2)
-    assert strat.get_target_size() == 15  # 50% of presampling
+    assert strat.get_presampling_target_size() == 15  # 50% of presampling
 
     # limited capacity
     strat.has_limit = True
     strat.training_set_size_limit = 10
-    assert strat.get_target_size() == 10
+    assert strat.get_presampling_target_size() == 15
 
     # only trigger data
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
@@ -135,15 +135,30 @@ def test_dataset_size_various_scenarios():
 
     # remove the trigger
     strat.reset_after_trigger = False
-    assert strat.get_target_size() == 10
+    assert strat.get_presampling_target_size() == 20
 
     # remove the limit
     strat.has_limit = False
-    assert strat.get_target_size() == 20
+    assert strat.get_presampling_target_size() == 20
 
     # adjust the presampling
     strat.presampling_ratio = 75
-    assert strat.get_target_size() == 30
+    assert strat.get_presampling_target_size() == 30
+
+
+def test_stmt():
+    strat = AbstractDownsampleStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
+    strat.has_limit = True
+    strat.training_set_size_limit = 10
+
+    stmt = strat.get_postgres_stmt()
+    assert "LIMIT" in str(stmt)
+    assert "TABLESAMPLE" in str(stmt)
+
+    stmt = strat.get_general_stmt()
+    assert "LIMIT" in str(stmt)
+    assert "TABLESAMPLE" not in str(stmt)
 
 
 def test_get_all_data():
