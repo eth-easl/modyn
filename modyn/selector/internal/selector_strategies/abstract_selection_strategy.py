@@ -269,8 +269,7 @@ class AbstractSelectionStrategy(ABC):
         seen_in_trigger_id: int,
     ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
-            database.add_trigger(pipeline_id, seen_in_trigger_id)
-            SelectorStateMetadata.disable_indexes(database.engine)
+            database.disable_indexes(SelectorStateMetadata.indexes)
             try:
                 database.session.bulk_insert_mappings(
                     SelectorStateMetadata,
@@ -287,7 +286,7 @@ class AbstractSelectionStrategy(ABC):
                 )
                 database.session.commit()
             finally:
-                SelectorStateMetadata.enable_indexes(database.engine)
+                database.enable_indexes(SelectorStateMetadata.indexes, SelectorStateMetadata.__tablename__)
 
     def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         """Persists the data in the database.
@@ -303,6 +302,11 @@ class AbstractSelectionStrategy(ABC):
         # Even if each sample is 64 byte and we see 2 million samples, it's just 128 MB of data in memory.
         # This also means that we have to clear this list on reset accordingly etc.
         assert len(keys) == len(timestamps) and len(keys) == len(labels)
+
+        # First persist the trigger which also creates the partition tables
+        # This is done outside of subprocesses to avoid issues with duplicate table creation
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.add_selector_state_metadata_trigger(self._pipeline_id, self._next_trigger_id)
 
         if self._disable_mt or (self._is_test and self._is_mac):
             AbstractSelectionStrategy._persist_samples_impl(

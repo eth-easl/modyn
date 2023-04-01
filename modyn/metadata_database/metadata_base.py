@@ -18,7 +18,7 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
         clsname: str,
         bases: Any,
         attrs: dict[str, Any],
-        *,
+        *args: Any,
         partition_by: Optional[str],
         partition_type: Optional[str],
     ) -> DeclarativeAttributeIntercept:
@@ -36,10 +36,13 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
             unlogged: bool = True,
         ) -> PartitionByMeta:
             if suffix not in cls_.partitions:
+                #  attrs are the attributes of the class that is being created
+                #  We need to update the __tablename__ attribute to the name of the partition
                 attrs = {"__tablename__": cls_.get_partition_name(suffix)}
                 if unlogged:
                     attrs["__table_args__"] = {"prefixes": ["UNLOGGED"]}
 
+                #  We then pass the updated attributes to the PartitionByMeta class
                 partition = PartitionByMeta(
                     f"{clsname}{suffix}",
                     bases,
@@ -67,7 +70,12 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
             return cls_.partitions[suffix]
 
         if partition_by is not None and partition_type is not None:
+            #  The attrs are the attributes of the class that is being created
+            #  We need to update the __table_args__ attribute to include the partitioning information
             table_args = attrs.get("__table_args__", ())
+            #  We need the following check because __table_args__ can be a tuple or a dict
+            # See here for more details:
+            # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#orm-declarative-table-configuration
             if isinstance(table_args, dict):
                 table_args["postgresql_partition_by"] = f"{partition_type.upper()}({partition_by})"
             else:

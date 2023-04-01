@@ -61,8 +61,10 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         pipeline_id = pipeline.pipeline_id
         return pipeline_id
 
-    def add_trigger(self, pipeline_id: int, trigger_id: int) -> None:
-        """Add a trigger to the database.
+    def add_selector_state_metadata_trigger(self, pipeline_id: int, trigger_id: int) -> None:
+        """Add a new trigger to the selector state metadata table.
+
+        This method creates a new partitions for the trigger.
 
         Args:
             pipeline_id (int): Id of the pipeline to which the trigger belongs.
