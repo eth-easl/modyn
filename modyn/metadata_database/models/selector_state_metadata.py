@@ -40,7 +40,7 @@ class SelectorStateMetadata(
     """
 
     __tablename__ = "selector_state_metadata"
-    indexes: dict[str : list[str]] = {"ssm_pipeline_seen_idx": ["pipeline_id", "seen_in_trigger_id"]}
+    indexes: dict[str, list[str]] = {"ssm_pipeline_seen_idx": ["pipeline_id", "seen_in_trigger_id"]}
 
     __table_args__ = (*[Index(index[0], *index[1]) for index in indexes.items()],)
 

@@ -71,14 +71,14 @@ class AbstractDatabaseConnection(ABC):
     def create_tables(self) -> None:
         """Create all tables."""
 
-    def disable_indexes(self, indexes: dict[str : list[str]]) -> None:
+    def disable_indexes(self, indexes: dict[str, list[str]]) -> None:
         """Disable indexes for faster inserts."""
         if self.engine.dialect.name == "sqlite":
             return
         for index in indexes:
             self.session.execute(text(f"DROP INDEX IF EXISTS {index};"))
 
-    def enable_indexes(self, indexes: dict[str : list[str]], tablename: str) -> None:
+    def enable_indexes(self, indexes: dict[str, list[str]], tablename: str) -> None:
         """Enable indexes after inserts."""
         if self.engine.dialect.name == "sqlite":
             return

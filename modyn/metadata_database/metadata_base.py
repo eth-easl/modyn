@@ -18,7 +18,7 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
         clsname: str,
         bases: Any,
         attrs: dict[str, Any],
-        *args: Any,
+        *,  # This is to make this implementation of more compatible with the original, we don't use *args because pylint complains otherwise  # noqa: E501
         partition_by: Optional[str],
         partition_type: Optional[str],
     ) -> DeclarativeAttributeIntercept:

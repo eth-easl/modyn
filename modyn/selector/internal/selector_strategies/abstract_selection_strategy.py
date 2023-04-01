@@ -304,7 +304,7 @@ class AbstractSelectionStrategy(ABC):
         assert len(keys) == len(timestamps) and len(keys) == len(labels)
 
         # First persist the trigger which also creates the partition tables
-        # This is done outside of subprocesses to avoid issues with duplicate table creation
+        #  This is done outside of subprocesses to avoid issues with duplicate table creation
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.add_selector_state_metadata_trigger(self._pipeline_id, self._next_trigger_id)
 
