@@ -83,6 +83,7 @@ class AbstractDatabaseConnection(ABC):
         if self.engine.dialect.name == "sqlite":
             return
         for index_name, index_items in indexes.items():
+            #  TODO(#220): Create index concurrently
             self.session.execute(
                 text(
                     f"CREATE INDEX {index_name} ON {tablename} \

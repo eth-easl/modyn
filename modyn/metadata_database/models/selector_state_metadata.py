@@ -1,6 +1,7 @@
 """SelectorStateMetadata model."""
 
 import logging
+from typing import Optional, Any
 
 from modyn.metadata_database.metadata_base import MetadataBase, PartitionByMeta
 from sqlalchemy import BigInteger, Boolean, Column, Index, Integer
@@ -45,14 +46,17 @@ class SelectorStateMetadata(
     __table_args__ = (*[Index(index[0], *index[1]) for index in indexes.items()],)
 
     @staticmethod
-    def add_pipeline(pipeline_id: int) -> PartitionByMeta:
+    def add_pipeline(pipeline_id: int, session: Session, engine: Engine) -> PartitionByMeta:
         partition_stmt = f"FOR VALUES IN ({pipeline_id})"
         partition_suffix = f"_pid{pipeline_id}"
-        result = SelectorStateMetadata.create_partition(
+        result = SelectorStateMetadata._create_partition(
+            SelectorStateMetadata,
             partition_suffix,
             partition_stmt=partition_stmt,
             subpartition_by="seen_in_trigger_id",
             subpartition_type="LIST",
+            session=session,
+            engine=engine,
         )
         return result
 
@@ -60,26 +64,62 @@ class SelectorStateMetadata(
     def add_trigger(
         pipeline_id: int, trigger_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 16
     ) -> None:
-        #  If sqlite, do not partition
-        if session.bind.dialect.name == "sqlite":
-            return
         logger.debug(f"Creating partition for trigger {trigger_id} in pipeline {pipeline_id}")
-        partitions_to_be_created = []
         #  Create partition for pipeline
-        pipeline_partition = SelectorStateMetadata.add_pipeline(pipeline_id)
-        partitions_to_be_created.append(pipeline_partition.__table__)
+        pipeline_partition = SelectorStateMetadata.add_pipeline(pipeline_id, session, engine)
+        if pipeline_partition is None:
+            return
         # Create partition for trigger
         partition_suffix = f"_tid{trigger_id}"
         partition_stmt = f"FOR VALUES IN ({trigger_id})"
-        trigger_partition = pipeline_partition.create_partition(
-            partition_suffix, partition_stmt=partition_stmt, subpartition_by="sample_key", subpartition_type="HASH"
+        trigger_partition = SelectorStateMetadata._create_partition(
+            pipeline_partition,
+            partition_suffix,
+            partition_stmt=partition_stmt,
+            subpartition_by="sample_key",
+            subpartition_type="HASH",
+            session=session,
+            engine=engine,
         )
-        partitions_to_be_created.append(trigger_partition.__table__)
 
         # Create partitions for sample key hash
         for i in range(hash_partition_modulus):
             partition_suffix = f"_part{i}"
             partition_stmt = f"FOR VALUES WITH (modulus {hash_partition_modulus}, remainder {i})"
-            hash_partition = trigger_partition.create_partition(partition_suffix, partition_stmt=partition_stmt)
-            partitions_to_be_created.append(hash_partition.__table__)
-        SelectorStateMetadata.metadata.create_all(engine, partitions_to_be_created)
+            _ = SelectorStateMetadata._create_partition(
+                trigger_partition,
+                partition_suffix,
+                partition_stmt=partition_stmt,
+                subpartition_by=None,
+                subpartition_type=None,
+                session=session,
+                engine=engine,
+            )
+
+    @staticmethod
+    def _create_partition(
+        instance: Any,  # This is the class itself
+        partition_suffix: str,
+        partition_stmt: str,
+        subpartition_by: Optional[str],
+        subpartition_type: Optional[str],
+        session: Session,
+        engine: Engine,
+    ) -> Optional[PartitionByMeta]:
+        """Create a partition for the SelectorStateMetadata table."""
+        #  If sqlite, do not partition
+        if session.bind.dialect.name == "sqlite":
+            return None
+
+        #  Create partition
+        partition = instance.create_partition(
+            partition_suffix,
+            partition_stmt=partition_stmt,
+            subpartition_by=subpartition_by,
+            subpartition_type=subpartition_type,
+        )
+
+        #  Create table
+        SelectorStateMetadata.metadata.create_all(engine, partition.__table__)
+
+        return partition

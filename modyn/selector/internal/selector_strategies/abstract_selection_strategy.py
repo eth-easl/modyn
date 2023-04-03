@@ -286,6 +286,7 @@ class AbstractSelectionStrategy(ABC):
                 )
                 database.session.commit()
             finally:
+                # TODO(#220): Create concurrent version of this
                 database.enable_indexes(SelectorStateMetadata.indexes, SelectorStateMetadata.__tablename__)
 
     def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
