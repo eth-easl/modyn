@@ -120,6 +120,6 @@ class SelectorStateMetadata(
         )
 
         #  Create table
-        SelectorStateMetadata.metadata.create_all(engine, partition.__table__)
+        SelectorStateMetadata.metadata.create_all(engine, [partition.__table__])
 
         return partition
