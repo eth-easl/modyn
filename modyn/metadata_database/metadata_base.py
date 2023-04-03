@@ -70,12 +70,12 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
             return cls_.partitions[suffix]
 
         if partition_by is not None and partition_type is not None:
-            #  The attrs are the attributes of the class that is being created
-            #  We need to update the __table_args__ attribute to include the partitioning information
+            # The attrs are the attributes of the class that is being created
+            # We need to update the __table_args__ attribute to include the partitioning information
             if "__table_args__" not in attrs:
                 attrs["__table_args__"] = ()
             table_args = attrs["__table_args__"]
-            #  We need the following check because __table_args__ can be a tuple or a dict
+            # We need the following check because __table_args__ can be a tuple or a dict
             # See here for more details:
             # https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#orm-declarative-table-configuration
             if isinstance(table_args, dict):
