@@ -1,7 +1,7 @@
 """SelectorStateMetadata model."""
 
 import logging
-from typing import Optional, Any
+from typing import Any, Optional
 
 from modyn.metadata_database.metadata_base import MetadataBase, PartitionByMeta
 from sqlalchemy import BigInteger, Boolean, Column, Index, Integer
