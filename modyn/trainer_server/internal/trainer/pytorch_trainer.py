@@ -108,10 +108,12 @@ class PytorchTrainer:
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         self._downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy()
+        self._weighted_opt = False
 
         if self._downsampling_enabled:
-            per_sample_loss = criterion_func(**training_info.criterion_dict, reduction="none")
-            self._downsampler = self.instantiate_downsampler(strategy_name, params_from_selector, per_sample_loss)
+            self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
+            self._downsampler = self.instantiate_downsampler(strategy_name, params_from_selector, self._criterion_nored)
+            self._weighted_opt = True
 
         # create callbacks - For now, assume LossCallback by default
         # TODO(#140): should be defined by the pipeline and passed with training request
@@ -294,11 +296,17 @@ class PytorchTrainer:
                     # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed #218
                     assert self._downsampler is not None
                     big_batch_output = self._model.model(data)
-                    downsampled_indexes, _ = self._downsampler.sample(big_batch_output, target)
+                    downsampled_indexes, weights = self._downsampler.sample(big_batch_output, target)
                     data, target, sample_ids = get_tensors_subset(downsampled_indexes, data, target, sample_ids)
                     # TODO(#219) Investigate if we can avoid 2 forward passes
+
                 output = self._model.model(data)
-                loss = self._criterion(output, target)
+                if self._weighted_opt:
+                    # weighted gradient descent
+                    assert weights is not None
+                    loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                else:
+                    loss = self._criterion(output, target)
 
             self._scaler.scale(loss).backward()
 

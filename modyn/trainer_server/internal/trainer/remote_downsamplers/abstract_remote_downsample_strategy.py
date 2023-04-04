@@ -33,6 +33,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         probabilities = self.get_probabilities(forward_output, target)
         downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=self.replacement)
 
+        # lower probability, higher weight to reducce the variance
         weights = 1.0 / (forward_output.shape[0] * probabilities[downsampled_idxs])
 
         return downsampled_idxs, weights
