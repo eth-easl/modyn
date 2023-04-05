@@ -104,3 +104,15 @@ class AbstractFileWrapper(ABC):
             bytes: Samples
         """
         raise NotImplementedError  # pragma: no cover
+
+    @abstractmethod
+    def delete_samples(self, indices: list) -> None:
+        """Delete the samples at the given indices.
+
+        Args:
+            indices (list): List of indices
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+        """
+        raise NotImplementedError

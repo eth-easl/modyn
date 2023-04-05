@@ -163,3 +163,15 @@ class LocalFilesystemWrapper(AbstractFileSystemWrapper):
             str: Joined path
         """
         return os.path.join(*paths)
+
+    def delete(self, path: str) -> None:
+        """Delete file.
+
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            ValueError: If path is not valid
+            IsADirectoryError: If path is a directory
+        """
+        return os.remove(path)

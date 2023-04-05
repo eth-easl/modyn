@@ -12,6 +12,8 @@ from modyn.storage.internal.database.storage_database_utils import get_file_wrap
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     DatasetAvailableResponse,
+    DeleteDataRequest,
+    DeleteDataResponse,
     DeleteDatasetResponse,
     GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
@@ -253,3 +255,63 @@ class StorageGRPCServicer(StorageServicer):
         with StorageDatabaseConnection(self.modyn_config) as database:
             success = database.delete_dataset(request.dataset_id)
             return DeleteDatasetResponse(success=success)
+
+    def DeleteData(self, request: DeleteDataRequest, context: grpc.ServicerContext) -> DeleteDataResponse:
+        """Delete data from the database.
+
+        Returns:
+            DeleteDataResponse: True if the data was successfully deleted, False otherwise.
+        """
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
+            if dataset is None:
+                logger.error(f"Dataset with name {request.dataset_id} does not exist.")
+                return DeleteDataResponse(success=False)
+
+            file_ids: list[Sample] = (
+                session.query(Sample.file_id)
+                .filter(Sample.sample_id.in_(request.keys))
+                .order_by(Sample.file_id)
+                .group_by(Sample.file_id)
+                .all()
+            )
+
+            if len(file_ids) != len(request.keys):
+                logger.error(f"Could not find all samples for dataset {request.dataset_id}")
+                return DeleteDataResponse(success=False)
+
+            for file_id in file_ids:
+                file_id = file_id[0]
+                file: File = session.query(File).filter(File.file_id == file_id).first()
+                if file is None:
+                    logger.error(f"Could not find file for dataset {request.dataset_id}")
+                    return DeleteDataResponse(success=False)
+                file_wrapper = get_file_wrapper(
+                    dataset.file_wrapper_type,
+                    file.path,
+                    dataset.file_wrapper_config,
+                    get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
+                )
+                samples_to_delete = (
+                    session.query(Sample)
+                    .filter(Sample.file_id == file.file_id)
+                    .filter(Sample.sample_id.in_(request.keys))
+                    .all()
+                )
+                file_wrapper.delete_samples(samples_to_delete)
+
+            session.query(Sample).filter(Sample.sample_id.in_(request.keys)).delete()
+            session.commit()
+
+            files_to_delete = (
+                session.query(File)
+                .join(Sample, isouter=True)
+                .filter(Sample.file_id == None)  # noqa: E711  # pylint: disable=singleton-comparison
+                .all()
+            )
+            for file in files_to_delete:
+                session.query(File).filter(File.file_id == file.file_id).delete()
+            session.commit()
+
+            return DeleteDataResponse(success=True)

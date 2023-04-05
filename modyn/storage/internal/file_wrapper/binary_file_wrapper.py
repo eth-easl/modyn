@@ -166,3 +166,18 @@ class BinaryFileWrapper(AbstractFileWrapper):
 
         samples = [data[(idx * self.record_size) + self.label_size : (idx + 1) * self.record_size] for idx in indices]
         return samples
+
+    def delete_samples(self, indices: list) -> None:
+        """Delete the samples at the given index list.
+        The indices are zero based.
+
+        We do not support deleting samples from binary files.
+        We can only delete the entire file which is done when every sample is deleted.
+
+        Args:
+            indices (list): List of indices of the samples to delete
+
+        Raises:
+            NotImplementedError: Not implemented
+        """
+        return
