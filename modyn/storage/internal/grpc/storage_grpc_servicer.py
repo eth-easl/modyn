@@ -311,6 +311,14 @@ class StorageGRPCServicer(StorageServicer):
                 .all()
             )
             for file in files_to_delete:
+                file_system_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
+                try:
+                    file_system_wrapper.delete(file.path)
+                except FileNotFoundError:
+                    logger.debug(
+                        f"File {file.path} not found. Might have been deleted \
+                            already in the previous step of this method."
+                    )
                 session.query(File).filter(File.file_id == file.file_id).delete()
             session.commit()
 
