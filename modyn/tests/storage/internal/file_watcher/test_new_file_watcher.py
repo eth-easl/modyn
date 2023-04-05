@@ -20,7 +20,6 @@ FILE_TIMESTAMP = 1600000000
 TEST_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp")
 TEST_FILE1 = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test1.txt")
 TEST_FILE2 = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test2.txt")
-TEST_FILE_WRONG_SUFFIX = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test1.csv")
 TEST_DATABASE = str(pathlib.Path(os.path.abspath(__file__)).parent / "tmp" / "test.db")
 
 
@@ -81,7 +80,7 @@ def storage_database_connection():
 class MockFileSystemWrapper(AbstractFileSystemWrapper):
     def __init__(self):
         super().__init__(TEST_DIR)
-        self._list = [TEST_FILE1, TEST_FILE2, TEST_FILE_WRONG_SUFFIX]
+        self._list = [TEST_FILE1, TEST_FILE2]
         self._list_called = False
 
     def exists(self, path: str) -> bool:
@@ -90,14 +89,14 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
         return True
 
     def isdir(self, path: str) -> bool:
-        if path in (TEST_FILE1, TEST_FILE2, TEST_FILE_WRONG_SUFFIX):
+        if path in (TEST_FILE1, TEST_FILE2):
             return False
         if path == TEST_DIR:
             return True
         return False
 
     def isfile(self, path: str) -> bool:
-        if path in (TEST_FILE1, TEST_FILE2, TEST_FILE_WRONG_SUFFIX):
+        if path in (TEST_FILE1, TEST_FILE2):
             return True
         return False
 
@@ -496,7 +495,6 @@ def test_handle_file_paths_presupplied_config(
     new_file_watcher._handle_file_paths(
         file_paths,
         get_minimal_modyn_config(),
-        ".txt",
         MockFileSystemWrapper(),
         "fw",
         FILE_TIMESTAMP - 1,
@@ -520,7 +518,6 @@ def test_handle_file_paths_presupplied_config(
     new_file_watcher._handle_file_paths(
         file_paths,
         get_minimal_modyn_config(),
-        ".txt",
         MockFileSystemWrapper(),
         "fw",
         FILE_TIMESTAMP - 1,
@@ -571,7 +568,6 @@ def test_handle_file_paths_no_presupplied_config(
     new_file_watcher._handle_file_paths(
         file_paths,
         get_minimal_modyn_config(),
-        ".txt",
         MockFileSystemWrapper(),
         "fw",
         FILE_TIMESTAMP - 1,
@@ -595,7 +591,6 @@ def test_handle_file_paths_no_presupplied_config(
     new_file_watcher._handle_file_paths(
         file_paths,
         get_minimal_modyn_config(),
-        ".txt",
         MockFileSystemWrapper(),
         "fw",
         FILE_TIMESTAMP - 1,

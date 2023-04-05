@@ -1,10 +1,8 @@
 """New file watcher."""
 
-import json
 import logging
 import multiprocessing as mp
 import os
-import pathlib
 import platform
 import time
 from typing import Any, Optional
@@ -138,7 +136,6 @@ class NewFileWatcher:
     def _handle_file_paths(
         file_paths: list[str],
         modyn_config: dict,
-        data_file_extension: str,
         filesystem_wrapper: AbstractFileSystemWrapper,
         file_wrapper_type: str,
         timestamp: int,
@@ -158,9 +155,6 @@ class NewFileWatcher:
         dataset: Dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
 
         def check_valid_file(file_path: str) -> bool:
-            path_obj = pathlib.Path(file_path)
-            if path_obj.suffix != data_file_extension:
-                return False
             if (
                 dataset.ignore_last_timestamp or filesystem_wrapper.get_modified(file_path) >= timestamp
             ) and NewFileWatcher._file_unknown(session, file_path):
@@ -231,14 +225,12 @@ class NewFileWatcher:
             logger.critical(f"Path {path} is not a directory.")
             return
 
-        data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
         file_paths = filesystem_wrapper.list(path, recursive=True)
 
         if self._disable_mt or (self._is_test and self._is_mac):
             NewFileWatcher._handle_file_paths(
                 file_paths,
                 self.modyn_config,
-                data_file_extension,
                 filesystem_wrapper,
                 file_wrapper_type,
                 timestamp,
@@ -260,7 +252,6 @@ class NewFileWatcher:
                     args=(
                         paths,
                         self.modyn_config,
-                        data_file_extension,
                         filesystem_wrapper,
                         file_wrapper_type,
                         timestamp,
