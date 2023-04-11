@@ -293,7 +293,7 @@ class PytorchTrainer:
 
             with torch.autocast(self._device_type, enabled=self._amp):
                 if self._downsampling_enabled:
-                    # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed #218
+                    # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
                     assert self._downsampler is not None
                     big_batch_output = self._model.model(data)
                     downsampled_indexes, weights = self._downsampler.sample(big_batch_output, target)
