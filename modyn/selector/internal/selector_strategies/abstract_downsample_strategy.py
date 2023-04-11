@@ -128,23 +128,8 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                     yield []
 
     def get_postgres_stmt(self) -> Union[Select[Any], Select[tuple[Any]]]:
-        selectable = SelectorStateMetadata.__table__.tablesample(
-            func.bernoulli(self.presampling_ratio)  # pylint: disable=E1102
-        )
-        stmt = (
-            select(selectable.c.sample_key)
-            .execution_options(yield_per=self._maximum_keys_in_memory)
-            .filter(
-                selectable.c.pipeline_id == self._pipeline_id,
-                selectable.c.seen_in_trigger_id == self._next_trigger_id if self.reset_after_trigger else True,
-            )
-            .order_by(asc(selectable.c.timestamp))
-        )
-
-        if self.has_limit:
-            stmt = stmt.limit(self.training_set_size_limit)
-
-        return stmt
+        # TODO(#224) write an efficient query using TABLESAMPLE
+        return self.get_general_stmt()
 
     def get_general_stmt(self) -> Union[Select[Any], Select[tuple[Any]]]:
         presampling_target_size = self.get_presampling_target_size()

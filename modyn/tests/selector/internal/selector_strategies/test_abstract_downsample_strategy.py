@@ -154,7 +154,7 @@ def test_stmt():
 
     stmt = strat.get_postgres_stmt()
     assert "LIMIT" in str(stmt)
-    assert "TABLESAMPLE" in str(stmt)
+    assert "TABLESAMPLE" not in str(stmt)  # change this test when #224 is solved
 
     stmt = strat.get_general_stmt()
     assert "LIMIT" in str(stmt)
