@@ -175,12 +175,6 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         },
     }
 
-    warning = (
-        " Since sampling is a probabilistic operation, tests may occasionally fail. "
-        "Thresholds are set to be very unlikely to be violated, so if the test fails, you run it again, "
-        "and it fails again, it is virtually certain that there is a real error."
-    )
-
     pipeline_id = selector.register_pipeline(
         RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
     ).pipeline_id
@@ -229,12 +223,8 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         worker_1_samples = list(worker1_response.training_samples_subset)
         worker_2_samples = list(worker2_response.training_samples_subset)
 
-        assert 800 <= len(worker_1_samples) <= 1200, (
-            f"Received {len(worker_1_samples)}, instead of approximately 1000 (accepted [800,1200])." + warning
-        )
-        assert 800 <= len(worker_2_samples) <= 1200, (
-            f"Received {len(worker_2_samples)} instead of approximately 1000 (accepted [800,1200])." + warning
-        )
+        assert len(worker_1_samples) == 1000, f"Received {len(worker_1_samples)} samples instead of 1000."
+        assert len(worker_2_samples) == 1000, f"Received {len(worker_2_samples)} samples instead of 1000."
 
         worker_1_weights = list(worker1_response.training_samples_weights)
         worker_2_weights = list(worker2_response.training_samples_weights)
@@ -243,10 +233,11 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
 
         total_samples.extend(worker_1_samples + worker_2_samples)
 
-    assert set(total_samples) <= set(range(10000)), (
-        f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}" + warning
-    )
-    assert 1600 <= len(total_samples) <= 2400, f"expected more or less 2000 samples, got {len(total_samples)}" + warning
+    assert len(total_samples) == len(set(total_samples)), "Received duplicated samples"
+    assert set(total_samples) <= set(
+        range(10000)
+    ), f"Got samples with out of range keys: {set(total_samples) - set(range(10000))}"
+    assert len(total_samples) == 2000, f"expected 2000 samples, got {len(total_samples)}"
 
     next_trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
@@ -290,23 +281,13 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         worker_2_samples = list(worker2_response.training_samples_subset)
 
         if not reset_after_trigger:
-            # we should have 0.2*15000 = 3000 points (more or less). So around 1500 per worker
-            assert 1400 <= len(worker_1_samples) <= 1600, (
-                f"Received {len(worker_1_samples)}, {worker1_responses}, {worker2_responses} "
-                f"instead of approximately 1500 (accepted [1200,1800])." + warning
-            )
-            assert 1400 <= len(worker_2_samples) <= 1600, (
-                f"Received {len(worker_2_samples)} instead of approximately 1500 (accepted [1200,1800])." + warning
-            )
+            # we should have 0.2*15000 = 3000 points . So 1500 per worker
+            assert len(worker_1_samples) == 1500, f"Received {len(worker_1_samples)}," f"instead of 1500."
+            assert len(worker_2_samples) == 1500, f"Received {len(worker_2_samples)} instead of 1500."
         else:
             # we should have 0.2*5000 = 1000 points, so 500 per worker
-            assert 400 <= len(worker_1_samples) <= 600, (
-                f"Received {len(worker_1_samples)}, {worker1_responses}, {worker2_responses} "
-                f"instead of approximately 500 (accepted [800,1200])." + warning
-            )
-            assert 400 <= len(worker_2_samples) <= 600, (
-                f"Received {len(worker_2_samples)} instead of approximately 500 (accepted [800,1200])." + warning
-            )
+            assert len(worker_1_samples) == 500, f"Received {len(worker_1_samples)}" f"instead of 500."
+            assert len(worker_2_samples) == 500, f"Received {len(worker_2_samples)} instead of 500."
 
         worker_1_weights = list(worker1_response.training_samples_weights)
         worker_2_weights = list(worker2_response.training_samples_weights)
@@ -316,21 +297,20 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         total_samples.extend(worker_1_samples + worker_2_samples)
 
         if not reset_after_trigger:
-            # ids can belong to [0,15000)
+            # ids must belong to [0,15000)
             assert set(total_samples) <= set(range(15000)), (
-                f"Got {total_samples} but some samples do not belong to [0,15000)" + warning
+                f"Got {total_samples} but some samples do not belong to [0,15000). "
+                f"Extra samples: {set(total_samples) - set(range(15000))}"
             )
-            assert 2900 <= len(total_samples) <= 3100, (
-                f"Expected more or less 3000 samples, got {len(total_samples)}" + warning
-            )
+            assert len(total_samples) == 3000, f"Expected 3000 samples, got {len(total_samples)}"
+
         else:
             # ids belong only to the last trigger [10000, 15000)
             assert set(total_samples) <= set(range(10000, 15000)), (
-                f"Got {total_samples} but some samples do not belong to [10000,15000)" + warning
+                f"Got {total_samples} but some samples do not belong to [10000,15000). "
+                f"Extra samples: {set(total_samples) - set(range(10000, 15000))}"
             )
-            assert 900 <= len(total_samples) <= 1100, (
-                f"Expected more or less 1000 samples, got {len(total_samples)}" + warning
-            )
+            assert len(total_samples) == 1000, f"Expected 1000 samples, got {len(total_samples)}"
 
 
 def test_empty_triggers() -> None:
