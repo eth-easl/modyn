@@ -1,5 +1,4 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
-import glob
 import pathlib
 import platform
 import tempfile
