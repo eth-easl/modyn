@@ -33,17 +33,19 @@ RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; 
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda update -n base -c defaults conda && conda update --all && conda init bash
 
-# Mount modyn directory to container, make it working directory
+# Install dependencies
+COPY ./environment.yml /tmp/environment.yml
+RUN conda env create -f /tmp/environment.yml
+
+# Copy source code into container
 ADD . /src
+RUN conda run -n modyn pip install -e /src
 WORKDIR /src
 RUN chown -R appuser /src
 
-# Create modyn environment (delete old if exists)
-RUN conda env remove -n modyn && conda env create -f ./environment.yml
-ENV CONDA_DEFAULT_ENV modyn
-
-# Initialize again for user shell
+# Setup environment for user
 USER appuser
+ENV CONDA_DEFAULT_ENV modyn
 RUN /bin/bash -c "conda init"
 RUN echo "conda activate modyn" >> /home/appuser/.bashrc
 

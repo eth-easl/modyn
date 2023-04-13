@@ -9,9 +9,9 @@ How to [contribute](CONTRIBUTING.md).
 ## Development 
 
 ### Requirements:
-- [Docker](https://docs.docker.com/get-docker/) for the infrastructure, such as databases and storage
+- [Docker](https://docs.docker.com/get-docker/) for deployment and running integration tests
 - For development, you might want to install the local dev requirements using `pip install -r dev-requirements.txt` when in the project root
-- Furthermore, to install modyn as a development module, i.e., a module that can be imported but is synced to the current source code in the folder, run `pip install -e .` in the project root
+- Furthermore, to install modyn as a development module, run `pip install -e .` in the project root
 
 ### Running pytest and flake8 locally
 
@@ -52,27 +52,28 @@ Furthermore, you must have created a conda environment called `modyn` with the d
 ![Current architecture diagram](docs/images/Architecture.png)
 
 ### Conda and Docker Setup
-We manage dependency required to run Modyn using conda. All dependencies are listed in the `environment.yml` file in the project root.
+We manage dependency required to run Modyn using conda.
+All dependencies are listed in the `environment.yml` file in the project root.
 Development dependencies are managed in the `dev-requirements.txt` file in the project root.
-There are two ways to develop modyn.
-First, you can install all dependencies on your local machine via `conda env create -f ./environment.yml` and `pip install -r dev-requirements.txt`.
-Modyn itself should be installed via conda, but if you run into problems try `pip install -e .` in the project root.
+There are two ways to develop modyn locally.
+First, if not using Docker, you can install all dependencies and the Modyn module itself on your local machine via `conda env create -f ./environment.yml`, `pip install -e .`, and `pip install -r dev-requirements.txt`.
 
-Second, you can use a Docker container. We provide a Modyn base container where the conda setup is already done. You can find the Dockerfile in `docker/Base/Dockerfile` and build the image using `docker build -t modyn -f docker/Base/Dockerfile .`. Then, you can run a container for example using `docker run modyn /bin/bash`.
+Second, you can use a Docker container.
+We provide a Modyn base container where the conda setup is already done. 
+You can find the Dockerfile in `docker/Base/Dockerfile` and build the image using `docker build -t modyn -f docker/Base/Dockerfile .`.
+Then, you can run a container for example using `docker run modyn /bin/bash`.
 
 ### Docker-Compose Setup
 We use docker-compose to manage the system setup.
 The `docker-compose.yml` file describes our setup. 
-Use `docker compose up --build` to start all containers and `docker compose up --build --abort-on-container-exit --exit-code-from tests` to run the integration tests once and exit.
+The setup expects the base image to be built already; if you use the scripts, these take care of that for you.
 The `tests` service runs integration tests, if started (e.g., in the Github Workflow).
-Currently, we are required to set the `DOCKER_BUILDKIT` environment variable to 0 by running `export DOCKER_BUILDKIT=0` before starting docker-compose.
-This is because docker compose tries to fetch `modynbase` from Docker Hub in parallel while building it locally, which fails as this image only exists locally as an intermediate step.
-We need to investigate why this is the case and how to fix this.
+You can run `run_integrationtests.sh` to run the integration tests, and `run_modyn.sh` to run all containers required for end-to-end workflows.
 In case you encounter issues when running integration tests, you can try deleting the local postgres data folders.
 
 ### tmuxp Setup
 For local deployment, you can use tmuxp, which enables to load a tmux session from a file.
-After running `docker-compose up`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
+After running `./run_modyn.sh`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
 You will have access to a supervisor container in which you can submit pipelines, to panes for administrating the databases, and to all gRPC components.
 To end the session, run CTRL+B (or your tmux modifier), and enter `:kill-session`.
 
@@ -101,8 +102,8 @@ Optionally, you can uncomment the `.:/modyn_host` mount for all services to enab
 This is not required if you do not iterate.
 
 ### Starting the containers and the pipeline
-Next, run `export DOCKER_BUILDKIT=0 && docker compose up --build` to build the containers and start them. 
-This may take several minutes.
+Next, run `./run_modyn.sh` to build the containers and start them. 
+This may take several minutes for the first time.
 After building the containers, run `tmuxp load tmuxp.yaml` to have access to all container shells and logs.
 Switch to the supervisor pane (using regular tmux bindings).
 There, you can now submit a pipeline using the `modyn-supervisor` command.
