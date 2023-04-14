@@ -12,6 +12,7 @@ service Selector {
       returns (NumberOfSamplesResponse) {}
   rpc get_number_of_partitions(GetNumberOfPartitionsRequest)
       returns (NumberOfPartitionsResponse) {}
+  rpc get_selection_strategy(GetSelectionStrategyRequest) returns (SelectionStrategyResponse) {}
 }
 
 message Empty {}
@@ -59,3 +60,13 @@ message GetNumberOfPartitionsRequest {
 }
 
 message NumberOfPartitionsResponse { int32 num_partitions = 1; }
+
+message GetSelectionStrategyRequest {
+    int32 pipeline_id = 1;
+}
+
+message SelectionStrategyResponse {
+    bool downsampling_enabled = 1;
+    string strategy_name = 2;
+    JsonString params = 3;
+}

@@ -43,6 +43,11 @@ class SelectorStub(object):
                 request_serializer=selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
                 response_deserializer=selector__pb2.NumberOfPartitionsResponse.FromString,
                 )
+        self.get_selection_strategy = channel.unary_unary(
+                '/selector.Selector/get_selection_strategy',
+                request_serializer=selector__pb2.GetSelectionStrategyRequest.SerializeToString,
+                response_deserializer=selector__pb2.SelectionStrategyResponse.FromString,
+                )
 
 
 class SelectorServicer(object):
@@ -84,6 +89,12 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_selection_strategy(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SelectorServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -116,6 +127,11 @@ def add_SelectorServicer_to_server(servicer, server):
                     servicer.get_number_of_partitions,
                     request_deserializer=selector__pb2.GetNumberOfPartitionsRequest.FromString,
                     response_serializer=selector__pb2.NumberOfPartitionsResponse.SerializeToString,
+            ),
+            'get_selection_strategy': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_selection_strategy,
+                    request_deserializer=selector__pb2.GetSelectionStrategyRequest.FromString,
+                    response_serializer=selector__pb2.SelectionStrategyResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -226,5 +242,22 @@ class Selector(object):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_partitions',
             selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
             selector__pb2.NumberOfPartitionsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_selection_strategy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_selection_strategy',
+            selector__pb2.GetSelectionStrategyRequest.SerializeToString,
+            selector__pb2.SelectionStrategyResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
