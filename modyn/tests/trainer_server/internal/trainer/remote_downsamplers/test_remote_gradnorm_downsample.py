@@ -2,7 +2,9 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
     get_tensors_subset,
 )
-from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_gradnorm_downsample import RemoteGradNormDownsampling
+from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_gradnorm_downsample import (
+    RemoteGradNormDownsampling,
+)
 from torch import nn
 
 
