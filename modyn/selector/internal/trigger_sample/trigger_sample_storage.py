@@ -55,15 +55,16 @@ class TriggerSampleStorage:
         :param partition_id: the id of the partition
         :param retrieval_worker_id: the id of the retrieval worker
         :param total_retrieval_workers: the total number of retrieval workers
-        :param total_samples: the total number of samples
+        :param num_samples_trigger: the total number of samples
         :return: the trigger samples
         """
         if not Path(self.trigger_sample_directory).exists():
             raise FileNotFoundError(f"The trigger sample directory {self.trigger_sample_directory} does not exist.")
         assert (retrieval_worker_id >= 0 and total_retrieval_workers >= 0) or (
-            retrieval_worker_id < 0 and total_retrieval_workers < 0
-        ), "Either both or none of the retrieval worker id and the total retrieval workers must be negative."
-        if retrieval_worker_id < 0 and total_retrieval_workers < 0:
+            retrieval_worker_id < 0 and total_retrieval_workers < 2
+        ), "Either both or none of the retrieval worker id must be negative and \
+            the total retrieval workers must be smaller than 2."
+        if retrieval_worker_id < 0 and total_retrieval_workers < 2:
             return self._get_all_samples(pipeline_id, trigger_id, partition_id)
         return self._get_worker_samples(
             pipeline_id, trigger_id, partition_id, retrieval_worker_id, total_retrieval_workers, num_samples_trigger
@@ -98,7 +99,7 @@ class TriggerSampleStorage:
 
         triple_list: list[tuple[Path, int, int]] = []
         for file in sorted(os.listdir(self.trigger_sample_directory)):
-            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}"):
+            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}_"):
                 file_path = Path(self.trigger_sample_directory) / file
                 if current_index >= start_index + worker_subset_size:
                     #  We have already retrieved all the samples for the worker
@@ -164,7 +165,7 @@ class TriggerSampleStorage:
                         [
                             self._parse_file(Path(self.trigger_sample_directory) / file)
                             for file in sorted(os.listdir(self.trigger_sample_directory))
-                            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}")
+                            if file.startswith(f"{pipeline_id}_{trigger_id}_{partition_id}_")
                         ]
                     )
                 ),

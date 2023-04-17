@@ -191,13 +191,14 @@ def test_extended_get_trigger_samples():
     ]
 
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(7, 7.0), (8, 8.0), (9, 9.0), (10, 10.0)], dtype=np.dtype("i8,f8")), 6
+        1, 2, 3, np.array([(7, 7.0), (8, 8.0), (9, 9.0), (10, 10.0), (11, 11.0)], dtype=np.dtype("i8,f8")), 6
     )
     expected_order = expected_order + [
         (7, 7.0),
         (8, 8.0),
         (9, 9.0),
         (10, 10.0),
+        (11, 11.0),
     ]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 2, 12)
@@ -231,6 +232,22 @@ def test_extended_get_trigger_samples():
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 4, 5, 12)
     assert len(result) == 0
     assert not result
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, -1, -1, 13)
+    assert len(result) == 13
+    assert result == expected_order
+
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(
+        1, 2, 30, np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")), 6
+    )
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 2, 13)
+    assert len(result) == 7
+    assert result == expected_order[0:7]
+
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 30, -1, -1, 4)
+    assert len(result) == 4
+    assert result == expected_order[0:4]
 
 
 def test_get_trigger_samples_no_file():
