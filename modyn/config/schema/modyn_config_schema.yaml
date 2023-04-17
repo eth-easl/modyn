@@ -157,6 +157,18 @@ properties:
       - sample_batch_size
       - insertion_threads
 
+  model_storage:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the model_storage grpc service.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the model_storage grpc service.
+
   metadata_database:
     type: object
     properties:
