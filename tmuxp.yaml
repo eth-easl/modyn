@@ -4,7 +4,7 @@ windows:
     layout: tiled
     panes:
       - shell_command:
-        - docker exec -it $(docker compose ps -q modynbase) /bin/bash
+        - docker exec -it $(docker compose ps -q supervisor) /bin/bash
         - clear && conda activate modyn && echo "Welcome to the supervisor pane. You have access to the 'modyn-supervisor' command here to submit pipelines."
   - window_name: storage
     layout: tiled

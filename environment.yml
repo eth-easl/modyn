@@ -34,5 +34,3 @@ dependencies:
 #  - nvidia::cudatoolkit=11.7
 #  - nvidia::cuda-nvprof=11.7
 #  - pytorch::pytorch-cuda=11.7
-  - pip:
-      - "-e ."

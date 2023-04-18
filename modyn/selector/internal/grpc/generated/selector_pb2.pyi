@@ -227,3 +227,41 @@ class NumberOfPartitionsResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["num_partitions", b"num_partitions"]) -> None: ...
 
 global___NumberOfPartitionsResponse = NumberOfPartitionsResponse
+
+@typing_extensions.final
+class GetSelectionStrategyRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+
+global___GetSelectionStrategyRequest = GetSelectionStrategyRequest
+
+@typing_extensions.final
+class SelectionStrategyResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    DOWNSAMPLING_ENABLED_FIELD_NUMBER: builtins.int
+    STRATEGY_NAME_FIELD_NUMBER: builtins.int
+    PARAMS_FIELD_NUMBER: builtins.int
+    downsampling_enabled: builtins.bool
+    strategy_name: builtins.str
+    @property
+    def params(self) -> global___JsonString: ...
+    def __init__(
+        self,
+        *,
+        downsampling_enabled: builtins.bool = ...,
+        strategy_name: builtins.str = ...,
+        params: global___JsonString | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["params", b"params"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["downsampling_enabled", b"downsampling_enabled", "params", b"params", "strategy_name", b"strategy_name"]) -> None: ...
+
+global___SelectionStrategyResponse = SelectionStrategyResponse
