@@ -68,6 +68,7 @@ class SelectorStateMetadata(
         #  Create partition for pipeline
         pipeline_partition = SelectorStateMetadata.add_pipeline(pipeline_id, session, engine)
         if pipeline_partition is None:
+            # Happens when partitioning is disabled, e.g., in sqlite instead of postgres
             return
         # Create partition for trigger
         partition_suffix = f"_tid{trigger_id}"
