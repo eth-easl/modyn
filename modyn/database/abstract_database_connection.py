@@ -9,6 +9,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
+from sqlalchemy.sql import text
 
 
 class AbstractDatabaseConnection(ABC):
@@ -69,3 +70,23 @@ class AbstractDatabaseConnection(ABC):
     @abstractmethod
     def create_tables(self) -> None:
         """Create all tables."""
+
+    def disable_indexes(self, indexes: dict[str, list[str]]) -> None:
+        """Disable indexes for faster inserts."""
+        if self.engine.dialect.name == "sqlite":
+            return
+        for index in indexes:
+            self.session.execute(text(f"DROP INDEX IF EXISTS {index};"))
+
+    def enable_indexes(self, indexes: dict[str, list[str]], tablename: str) -> None:
+        """Enable indexes after inserts."""
+        if self.engine.dialect.name == "sqlite":
+            return
+        for index_name, index_items in indexes.items():
+            #  TODO(#220): Create index concurrently
+            self.session.execute(
+                text(
+                    f"CREATE INDEX {index_name} ON {tablename} \
+                    ({', '.join(index_items)});"
+                )
+            )
