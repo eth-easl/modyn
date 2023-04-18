@@ -168,6 +168,46 @@ properties:
         type: string
         description: |
           The hostname to use for the model_storage grpc service.
+      database:
+        type: object
+        description: |
+          Configuration of the database for the model storage component
+        properties:
+          drivername:
+            type: string
+            description: |
+              The drivername to use for the database.
+          username:
+            type: string
+            description: |
+              The username to use for the database.
+          password:
+            type: string
+            description: |
+              The password to use for the database.
+          host:
+            type: string
+            description: |
+              The host to use for the database.
+          port:
+            type: string
+            description: |
+              The port to use for the database.
+          database:
+            type: string
+            description: |
+              The database to use for the database.
+        required:
+          - drivername
+          - username
+          - password
+          - host
+          - port
+          - database
+    required:
+      - hostname
+      - port
+      - database
 
   metadata_database:
     type: object

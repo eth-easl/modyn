@@ -3,18 +3,21 @@ syntax = "proto3";
 package modyn.model_storage;
 
 service ModelStorage {
-  rpc DownloadModel(DownloadModelRequest) returns (DownloadModelRequest) {}
+  rpc RegisterModel(RegisterModelRequest) returns (RegisterModelResponse) {}
   rpc FetchLatestModel(FetchLatestModelRequest) returns (FetchModelResponse) {}
   rpc FetchModel(FetchModelRequest) returns (FetchModelResponse) {}
 }
 
-message DownloadModelRequest {
-  int32 training_id = 1;
+message RegisterModelRequest {
+  int32 pipeline_id = 1;
+  int32 trigger_id = 2;
+  string model_id = 3;
+  string model_path = 4;
 }
 
-message DownloadModelResponse {
-  bool valid = 1;
-  string model_path = 2;
+message RegisterModelResponse {
+  bool success = 1;
+  int32 model_id = 2;
 }
 
 message FetchLatestModelRequest {
@@ -23,9 +26,7 @@ message FetchLatestModelRequest {
 }
 
 message FetchModelRequest {
-  string model_id = 1;
-  int32 pipeline_id = 2;
-  int32 training_id = 3;
+  int32 model_id = 1;
 }
 
 message FetchModelResponse {

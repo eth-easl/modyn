@@ -84,3 +84,10 @@ trainer_server:
 model_storage:
   hostname: "model_storage"
   port: "50059"
+  database:
+    drivername: "postgresql"
+    username: "postgres"
+    password: "postgres"
+    host: "model_storage-db"
+    port: "5432"
+    database: "postgres"

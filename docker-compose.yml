@@ -45,6 +45,26 @@ services:
     build:
       context: .
       dockerfile: docker/MetadataProcessor/Dockerfile
+  model_storage-db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: md5
+    #    shm_size: 4gb
+    volumes:
+      - ./model_storage-postgres-data:/var/lib/postgresql/data
+  model_storage:
+    restart: on-failure
+    depends_on:
+      - model_storage-db
+    build:
+      context: .
+      dockerfile: docker/Model_Storage/Dockerfile
+    volumes:
+      - model_storage-data:/app/model_storage
   trainer_server:
     restart: on-failure
     depends_on:
@@ -100,3 +120,4 @@ services:
       - storage-data:/app/storage
 volumes:
   storage-data:
+  model_storage-data:

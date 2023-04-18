@@ -1,10 +1,8 @@
+"""Contains the ORM models for the model storage component
 """
-Model Storage module.
-
-The model storage module contains all classes and functions related to the storage and retrieval of models.
-"""
-
 import os
+
+from .trained_model import TrainedModel  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

@@ -5,7 +5,6 @@ import logging
 import pathlib
 
 import yaml
-
 from modyn.model_storage.model_storage import ModelStorage
 
 logging.basicConfig(

@@ -3,7 +3,6 @@ import pathlib
 from typing import Optional, Tuple
 
 from jsonschema import ValidationError
-
 from modyn.utils import validate_yaml
 
 
@@ -17,7 +16,7 @@ class ModelStorage:
 
     def _validate_config(self) -> Tuple[bool, Optional[ValidationError]]:
         schema_path = (
-                pathlib.Path(os.path.abspath(__file__)).parent.parent / "config" / "schema" / "modyn_config_schema.yaml"
+            pathlib.Path(os.path.abspath(__file__)).parent.parent / "config" / "schema" / "modyn_config_schema.yaml"
         )
         return validate_yaml(self.config, schema_path)
 
