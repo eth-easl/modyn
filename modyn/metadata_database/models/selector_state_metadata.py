@@ -4,7 +4,7 @@ import logging
 from typing import Any, Optional
 
 from modyn.metadata_database.metadata_base import MetadataBase, PartitionByMeta
-from sqlalchemy import BigInteger, Boolean, Column, Index, Integer
+from sqlalchemy import BigInteger, Boolean, Column, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm.session import Session
@@ -41,9 +41,6 @@ class SelectorStateMetadata(
     """
 
     __tablename__ = "selector_state_metadata"
-    indexes: dict[str, list[str]] = {"ssm_pipeline_seen_idx": ["pipeline_id", "seen_in_trigger_id"]}
-
-    __table_args__ = (*[Index(index[0], *index[1]) for index in indexes.items()],)
 
     @staticmethod
     def add_pipeline(pipeline_id: int, session: Session, engine: Engine) -> PartitionByMeta:
