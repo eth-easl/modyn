@@ -81,7 +81,7 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
             if isinstance(table_args, dict):
                 table_args["postgresql_partition_by"] = f"{partition_type.upper()}({partition_by})"
             else:
-                if table_args[-1] is None or not isinstance(table_args[-1], dict):
+                if len(table_args) == 0 or table_args[-1] is None or not isinstance(table_args[-1], dict):
                     table_args += ({"postgresql_partition_by": f"{partition_type.upper()}({partition_by})"},)
                 else:
                     table_args[-1]["postgresql_partition_by"] = f"{partition_type.upper()}({partition_by})"
