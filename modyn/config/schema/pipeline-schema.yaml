@@ -73,7 +73,7 @@ properties:
           name:
             type: string
             description: |
-              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy
+              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy, LossDownsamplingStrategy
           maximum_keys_in_memory:
             type: number
             description: |
@@ -99,6 +99,14 @@ properties:
                 type: string
                 description: |
                  [NewDataStrategy] Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true. Either "lastX" or "sampleUAR" are supported. See class description for further info.
+              presampling_ratio:
+                type: number
+                description: |
+                  [AbstractDownsampleStrategy] percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
+              downsampled_batch_size:
+                type: number
+                description: |
+                  [AbstractDownsampleStrategy] How many points are sampled after computing the metric
           processor_type:
             type: string
             description: |
