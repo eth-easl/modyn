@@ -191,7 +191,12 @@ class NewFileWatcher:
                 logger.critical(f"Could not create file {file_path} in database: {exception}")
                 session.rollback()
                 continue
+
             file_id = file.file_id
+
+            logger.info(f"Creating partitions for file {file_path}")
+            Sample.add_file_range(file_id, session, db_connection.engine)
+
             logger.info(f"Extracting and inserting samples for file {file_path} (id = {file_id})")
             labels = file_wrapper.get_all_labels()
             logger.debug("Labels extracted.")

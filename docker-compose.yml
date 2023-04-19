@@ -77,6 +77,7 @@ services:
       dockerfile: docker/Selector/Dockerfile
 #    volumes:
 #      - .:/modyn_host
+#      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
   supervisor:
     depends_on:
     - storage

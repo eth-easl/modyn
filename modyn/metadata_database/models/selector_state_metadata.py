@@ -3,7 +3,8 @@
 import logging
 from typing import Any, Optional
 
-from modyn.metadata_database.metadata_base import MetadataBase, PartitionByMeta
+from modyn.database import PartitionByMeta
+from modyn.metadata_database.metadata_base import MetadataBase
 from sqlalchemy import BigInteger, Boolean, Column, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.engine import Engine
