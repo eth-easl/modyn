@@ -15,9 +15,9 @@ BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 class SampleMixin:
     sample_id = Column("sample_id", BIGINT, autoincrement=True, primary_key=True)
-    dataset_id = Column(Integer, ForeignKey("datasets.dataset_id"), primary_key=True, nullable = False)
-    file_id = Column(Integer, ForeignKey("files.file_id"), nullable = False, index=True)
-    index = Column(BigInteger, nullable=False)
+    dataset_id = Column(Integer, primary_key=True, nullable = False)
+    file_id = Column(Integer, ForeignKey("files.file_id"), nullable = False)
+    index = Column(BigInteger, nullable=True) # nullable true for performance not really a constraint we want to have
     label = Column(BigInteger, nullable=True)
 
 
@@ -39,7 +39,7 @@ class Sample(
         return f"<Sample {self.sample_id}>"
 
     @staticmethod
-    def add_dataset(dataset_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 64) -> None:
+    def add_dataset(dataset_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 8) -> None:
         partition_stmt = f"FOR VALUES IN ({dataset_id})"
         partition_suffix = f"_did{dataset_id}"
         dataset_partition = Sample._create_partition(

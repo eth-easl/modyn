@@ -1,5 +1,6 @@
 """New file watcher."""
 
+import io
 import json
 import logging
 import multiprocessing as mp
@@ -8,6 +9,7 @@ import pathlib
 import platform
 import time
 from typing import Any, Optional
+import pandas as pd
 
 from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
@@ -175,7 +177,10 @@ class NewFileWatcher:
 
         valid_files = list(filter(check_valid_file, file_paths))
 
-        for file_path in valid_files:
+        insert_rows = 50000000
+        curr_df = pd.DataFrame(columns=["sample_id", "dataset_id", "file_id", "index", "label"])
+
+        for num_file, file_path in enumerate(valid_files):
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
@@ -203,21 +208,30 @@ class NewFileWatcher:
             labels = file_wrapper.get_all_labels()
             logger.debug("Labels extracted.")
 
-            try:
-                session.bulk_insert_mappings(
-                    Sample,
-                    [
-                        {"dataset_id": dataset_id, "file": file, "file_id": file_id, "index": i, "label": labels[i]}
-                        for i in range(number_of_samples)
-                    ],
-                )
-                session.commit()
-                logger.debug(f"Inserted {number_of_samples} samples.")
-            except exc.SQLAlchemyError as exception:
-                logger.critical(f"Could not create samples for file {file_path} in database: {exception}")
-                session.rollback()
-                session.delete(file)
-                continue
+            file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file": file, "file_id": file_id,  "label": labels })
+            file_df["index"] = range(len(file_df))
+            curr_df = pd.concat(curr_df, file_df)
+
+            if len(curr_df) >= insert_rows or num_file == len(valid_files) - 1:
+                # TODO only do this for postgres and fallback for sqllite
+                logger.debug(f"Inserting {len(curr_df)} samples.")
+                conn = session.connection().engine.raw_connection()
+                cursor = conn.cursor()
+
+                table_name = f"samples__did{dataset_id}"
+                table_columns = "(sample_id,dataset_id,file_id,index,label)"
+                cmd = f'COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)'
+
+                output = io.StringIO()
+                curr_df.to_csv(output, sep='\t', header=False, index=False)
+                output.seek(0)
+
+                cursor.copy_expert(cmd, output)
+                conn.commit()
+
+                logger.debug(f"Inserted {len(curr_df)} samples.")
+                curr_df = curr_df.iloc[0:0]
+                
 
         if db_connection is not None:
             db_connection.terminate_connection()
