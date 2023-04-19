@@ -7,6 +7,9 @@
 # Visual Studio Code
 .vscode
 
+# PyCharm and IntelliJ IDEA
+.idea
+
 # Storage
 *.tar
 

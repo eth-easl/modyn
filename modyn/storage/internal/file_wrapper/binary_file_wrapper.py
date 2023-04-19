@@ -96,8 +96,8 @@ class BinaryFileWrapper(AbstractFileWrapper):
         self._validate_request_indices(total_samples, [index])
 
         record_start = index * self.record_size
-        lable_bytes = data[record_start : record_start + self.label_size]
-        return int.from_bytes(lable_bytes, byteorder=self.byteorder)
+        label_bytes = data[record_start : record_start + self.label_size]
+        return int.from_bytes(label_bytes, byteorder=self.byteorder)
 
     def get_all_labels(self) -> list[int]:
         """Returns a list of all labels of all samples in the file.
