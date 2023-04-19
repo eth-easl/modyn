@@ -15,9 +15,9 @@ BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 class SampleMixin:
     sample_id = Column("sample_id", BIGINT, autoincrement=True, primary_key=True)
-    dataset_id = Column(Integer, primary_key=True, nullable = False)
-    file_id = Column(Integer, ForeignKey("files.file_id"), nullable = False)
-    index = Column(BigInteger, nullable=True) # nullable true for performance not really a constraint we want to have
+    dataset_id = Column(Integer, primary_key=True, nullable=False)
+    file_id = Column(Integer, nullable=True)
+    index = Column(BigInteger, nullable=True)  # nullable true for performance not really a constraint we want to have
     label = Column(BigInteger, nullable=True)
 
 
@@ -31,8 +31,6 @@ class Sample(
     """Sample model."""
 
     __tablename__ = "samples"
-
-    file = relationship("File")
 
     def __repr__(self) -> str:
         """Return string representation."""

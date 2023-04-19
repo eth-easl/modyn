@@ -9,8 +9,8 @@ import pathlib
 import platform
 import time
 from typing import Any, Optional
-import pandas as pd
 
+import pandas as pd
 from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
@@ -208,7 +208,7 @@ class NewFileWatcher:
             labels = file_wrapper.get_all_labels()
             logger.debug("Labels extracted.")
 
-            file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file": file, "file_id": file_id,  "label": labels })
+            file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file_id": file_id, "label": labels})
             file_df["index"] = range(len(file_df))
             curr_df = pd.concat([curr_df, file_df])
 
@@ -219,19 +219,22 @@ class NewFileWatcher:
                 cursor = conn.cursor()
 
                 table_name = f"samples__did{dataset_id}"
-                table_columns = "(sample_id,dataset_id,file_id,index,label)"
-                cmd = f'COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)'
+                table_columns = "(dataset_id,file_id,index,label)"
+                cmd = f"COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)"
 
+                logger.debug("Dumping CSV in buffer.")
                 output = io.StringIO()
-                curr_df.to_csv(output, sep='\t', header=False, index=False)
+                curr_df.to_csv(
+                    output, sep=",", header=False, index=False, columns=["dataset_id", "file_id", "index", "label"]
+                )
                 output.seek(0)
 
+                logger.debug("Copying to DB.")
                 cursor.copy_expert(cmd, output)
                 conn.commit()
 
                 logger.debug(f"Inserted {len(curr_df)} samples.")
                 curr_df = curr_df.iloc[0:0]
-                
 
         if db_connection is not None:
             db_connection.terminate_connection()

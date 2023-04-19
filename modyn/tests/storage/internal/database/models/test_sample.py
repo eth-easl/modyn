@@ -48,7 +48,7 @@ def test_add_sample(session):
     sample_id = sample.sample_id
 
     assert session.query(Sample).filter(Sample.sample_id == sample_id).first() is not None
-    assert session.query(Sample).filter(Sample.sample_id == sample_id).first().file == file
+    assert session.query(Sample).filter(Sample.sample_id == sample_id).first().file_id == file.file_id
     assert session.query(Sample).filter(Sample.sample_id == sample_id).first().index == 0
     assert session.query(Sample).filter(Sample.sample_id == sample_id).first().label == b"test"
 
