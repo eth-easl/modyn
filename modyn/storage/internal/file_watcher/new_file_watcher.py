@@ -45,6 +45,10 @@ class NewFileWatcher:
         self._is_mac = platform.system() == "Darwin"
         self._disable_mt = self._insertion_threads <= 0
 
+        # Initialize dataset partition on Sample table
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            Sample.add_dataset(self.__dataset_id, database.session, database.engine)
+
     def _seek(self, storage_database_connection: StorageDatabaseConnection, dataset: Dataset) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
 
@@ -144,6 +148,7 @@ class NewFileWatcher:
         timestamp: int,
         dataset_name: str,
         session: Optional[Session],  # When using multithreading, we cannot pass the session, hence it is Optional
+        barrier: Optional[mp.Barrier],
     ) -> None:
         """Given a list of paths (in terms of a Modyn FileSystem) to files,
         check whether there are any new files and if so, add all samples from these files into the DB."""
@@ -193,9 +198,6 @@ class NewFileWatcher:
                 continue
 
             file_id = file.file_id
-
-            logger.info(f"Creating partitions for file {file_path}")
-            Sample.add_file_range(file_id, session, db_connection.engine)
 
             logger.info(f"Extracting and inserting samples for file {file_path} (id = {file_id})")
             labels = file_wrapper.get_all_labels()

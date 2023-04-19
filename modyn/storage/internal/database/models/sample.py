@@ -14,7 +14,8 @@ BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 
 class SampleMixin:
-    file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey("dataset.dataset_id"), nullable=False, primary_key=True)
+    file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False, primary_key=False)
     sample_id = Column("sample_id", BIGINT, autoincrement=True, primary_key=True)
     index = Column(BigInteger, nullable=False)
     label = Column(BigInteger, nullable=True)
@@ -24,8 +25,8 @@ class Sample(
     SampleMixin,
     StorageBase,
     metaclass=PartitionByMeta,
-    partition_by="file_id",  # type: ignore
-    partition_type="RANGE",  # type: ignore
+    partition_by="dataset_id",  # type: ignore
+    partition_type="LIST",  # type: ignore
 ):
     """Sample model."""
 
@@ -40,35 +41,28 @@ class Sample(
         return f"<Sample {self.sample_id}>"
 
     @staticmethod
-    def add_file_range(
-        file_id: int, session: Session, engine: Engine, range_size: int = 100, hash_partition_modulus=8
-    ) -> PartitionByMeta:
-        start_idx = file_id - (file_id % range_size)
-        end_idx = start_idx + range_size
-        partition_id = start_idx // range_size
-
-        partition_stmt = f"FOR VALUES FROM ({start_idx}) TO ({end_idx})"
-        partition_suffix = f"_fid{partition_id}"
-
-        range_partition = Sample._create_partition(
+    def add_dataset(dataset_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 64):
+        partition_stmt = f"FOR VALUES IN ({dataset_id})"
+        partition_suffix = f"_did{dataset_id}"
+        dataset_partition = Sample._create_partition(
             Sample,
             partition_suffix,
             partition_stmt=partition_stmt,
-            subpartition_by="sample_id",
-            subpartition_type="HASH",
+            subpartition_by="file_id",
+            subpartition_type="RANGE",
             session=session,
             engine=engine,
         )
 
-        if range_partition is None:  # partitioning disabled
-            return
+        if dataset_partition is None:
+            return  # partitoning disabled
 
         # Create partitions for sample key hash
         for i in range(hash_partition_modulus):
             partition_suffix = f"_part{i}"
             partition_stmt = f"FOR VALUES WITH (modulus {hash_partition_modulus}, remainder {i})"
             _ = Sample._create_partition(
-                range_partition,
+                dataset_partition,
                 partition_suffix,
                 partition_stmt=partition_stmt,
                 subpartition_by=None,
