@@ -14,8 +14,8 @@ BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 
 class SampleMixin:
+    file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False, primary_key=True)
     sample_id = Column("sample_id", BIGINT, autoincrement=True, primary_key=True)
-    file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False, index=True)
     index = Column(BigInteger, nullable=False)
     label = Column(BigInteger, nullable=True)
 
