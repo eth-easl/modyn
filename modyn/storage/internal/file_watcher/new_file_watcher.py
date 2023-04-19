@@ -147,6 +147,7 @@ class NewFileWatcher:
         file_wrapper_type: str,
         timestamp: int,
         dataset_name: str,
+        dataset_id: int,
         session: Optional[Session],  # When using multithreading, we cannot pass the session, hence it is Optional
     ) -> None:
         """Given a list of paths (in terms of a Modyn FileSystem) to files,
@@ -206,7 +207,7 @@ class NewFileWatcher:
                 session.bulk_insert_mappings(
                     Sample,
                     [
-                        {"file": file, "file_id": file_id, "index": i, "label": labels[i]}
+                        {"dataset_id": dataset_id, "file": file, "file_id": file_id, "index": i, "label": labels[i]}
                         for i in range(number_of_samples)
                     ],
                 )
@@ -249,6 +250,7 @@ class NewFileWatcher:
                 file_wrapper_type,
                 timestamp,
                 dataset.name,
+                self.__dataset_id,
                 session,
             )
             return
@@ -271,6 +273,7 @@ class NewFileWatcher:
                         file_wrapper_type,
                         timestamp,
                         dataset.name,
+                        self.__dataset_id,
                         None,
                     ),
                 )

@@ -31,8 +31,6 @@ class Sample(
     """Sample model."""
 
     __tablename__ = "samples"
-    # See https://docs.sqlalchemy.org/en/13/core/metadata.html?highlight=extend_existing#sqlalchemy.schema.Table.params.extend_existing  # noqa: E501
-    __table_args__ = {"extend_existing": True}
 
     file = relationship("File")
 
