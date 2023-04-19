@@ -210,7 +210,7 @@ class NewFileWatcher:
 
             file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file": file, "file_id": file_id,  "label": labels })
             file_df["index"] = range(len(file_df))
-            curr_df = pd.concat(curr_df, file_df)
+            curr_df = pd.concat([curr_df, file_df])
 
             if len(curr_df) >= insert_rows or num_file == len(valid_files) - 1:
                 # TODO only do this for postgres and fallback for sqllite
