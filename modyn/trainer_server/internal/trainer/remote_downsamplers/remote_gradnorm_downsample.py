@@ -17,6 +17,8 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         if isinstance(self.per_sample_loss_fct, torch.nn.CrossEntropyLoss) and self.num_classes > 0:
             # no need to autograd if cross entropy loss is used since closed form solution exists
             with torch.inference_mode():
+                # Because CrossEntropyLoss includes the softmax, we need to apply the
+                # softmax to the forward output to obtain the probabilities
                 probs = torch.nn.functional.softmax(forward_output, dim=1)
                 one_hot_targets = torch.nn.functional.one_hot(target, num_classes=self.num_classes)
                 scores = torch.norm(probs - one_hot_targets, dim=-1)
