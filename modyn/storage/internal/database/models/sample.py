@@ -14,9 +14,9 @@ BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 
 class SampleMixin:
-    dataset_id = Column(Integer, ForeignKey("datasets.dataset_id"), nullable=False, primary_key=True)
-    file_id = Column(Integer, ForeignKey("files.file_id"), nullable=False, primary_key=False)
     sample_id = Column("sample_id", BIGINT, autoincrement=True, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey("datasets.dataset_id"))
+    file_id = Column(Integer, ForeignKey("files.file_id"), index=True)
     index = Column(BigInteger, nullable=False)
     label = Column(BigInteger, nullable=True)
 
@@ -41,15 +41,15 @@ class Sample(
         return f"<Sample {self.sample_id}>"
 
     @staticmethod
-    def add_dataset(dataset_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 64):
+    def add_dataset(dataset_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 64) -> None:
         partition_stmt = f"FOR VALUES IN ({dataset_id})"
         partition_suffix = f"_did{dataset_id}"
         dataset_partition = Sample._create_partition(
             Sample,
             partition_suffix,
             partition_stmt=partition_stmt,
-            subpartition_by="file_id",
-            subpartition_type="RANGE",
+            subpartition_by="sample_id",
+            subpartition_type="HASH",
             session=session,
             engine=engine,
         )
