@@ -7,6 +7,7 @@ import logging
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 from modyn.metadata_database.metadata_base import MetadataBase
 from modyn.metadata_database.models import Pipeline
+from modyn.metadata_database.models.selector_state_metadata import SelectorStateMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,11 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         self.host: str = self.modyn_config["metadata_database"]["host"]
         self.port: int = self.modyn_config["metadata_database"]["port"]
         self.database: str = self.modyn_config["metadata_database"]["database"]
+        self.hash_partition_modulus: int = (
+            self.modyn_config["metadata_database"]["hash_partition_modulus"]
+            if "hash_partition_modulus" in self.modyn_config["metadata_database"]
+            else 16
+        )
 
     def create_tables(self) -> None:
         """
@@ -54,3 +60,16 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         self.session.commit()
         pipeline_id = pipeline.pipeline_id
         return pipeline_id
+
+    def add_selector_state_metadata_trigger(self, pipeline_id: int, trigger_id: int) -> None:
+        """Add a new trigger to the selector state metadata table.
+
+        This method creates a new partitions for the trigger.
+
+        Args:
+            pipeline_id (int): Id of the pipeline to which the trigger belongs.
+            trigger_id (int): Id of the trigger.
+        """
+        SelectorStateMetadata.add_trigger(
+            pipeline_id, trigger_id, self.session, self.engine, self.hash_partition_modulus
+        )

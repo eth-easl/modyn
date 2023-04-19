@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict
 
+from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.trigger_sample import TriggerSampleStorage
 from modyn.utils.utils import flatten
@@ -99,3 +100,12 @@ class Selector:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
         return self._trigger_partition_cache[trigger_id]
+
+    def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
+        assert not (
+            self._strategy._requires_remote_computation and not isinstance(self._strategy, AbstractDownsampleStrategy)
+        )
+
+        if self._strategy._requires_remote_computation and isinstance(self._strategy, AbstractDownsampleStrategy):
+            return True, self._strategy.get_downsampling_strategy(), self._strategy.get_downsampling_params()
+        return False, "", {}
