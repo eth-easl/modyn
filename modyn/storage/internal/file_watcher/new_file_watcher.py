@@ -148,7 +148,6 @@ class NewFileWatcher:
         timestamp: int,
         dataset_name: str,
         session: Optional[Session],  # When using multithreading, we cannot pass the session, hence it is Optional
-        barrier: Optional[mp.Barrier],
     ) -> None:
         """Given a list of paths (in terms of a Modyn FileSystem) to files,
         check whether there are any new files and if so, add all samples from these files into the DB."""
