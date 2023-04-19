@@ -1,0 +1,114 @@
+Running microbenchmark with  1e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 225 msec per loop
+Running C++ microbenchmark
+num_samples: 1e+06
+C++ microbenchmark time: 10 loops, best of 1: 73 msec per loop
+Running microbenchmark with  1.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 335 msec per loop
+Running C++ microbenchmark
+num_samples: 1.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 102 msec per loop
+Running microbenchmark with  2e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 443 msec per loop
+Running C++ microbenchmark
+num_samples: 2e+06
+C++ microbenchmark time: 10 loops, best of 1: 135 msec per loop
+Running microbenchmark with  2.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 548 msec per loop
+Running C++ microbenchmark
+num_samples: 2.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 170 msec per loop
+Running microbenchmark with  3e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 664 msec per loop
+Running C++ microbenchmark
+num_samples: 3e+06
+C++ microbenchmark time: 10 loops, best of 1: 209 msec per loop
+Running microbenchmark with  3.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 773 msec per loop
+Running C++ microbenchmark
+num_samples: 3.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 234 msec per loop
+Running microbenchmark with  4e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 885 msec per loop
+Running C++ microbenchmark
+num_samples: 4e+06
+C++ microbenchmark time: 10 loops, best of 1: 284 msec per loop
+Running microbenchmark with  4.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 993 msec per loop
+Running C++ microbenchmark
+num_samples: 4.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 313 msec per loop
+Running microbenchmark with  5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.12e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 5e+06
+C++ microbenchmark time: 10 loops, best of 1: 333 msec per loop
+Running microbenchmark with  5.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.21e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 5.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 381 msec per loop
+Running microbenchmark with  6e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.35e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 6e+06
+C++ microbenchmark time: 10 loops, best of 1: 423 msec per loop
+Running microbenchmark with  6.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.44e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 6.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 450 msec per loop
+Running microbenchmark with  7e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.58e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 7e+06
+C++ microbenchmark time: 10 loops, best of 1: 479 msec per loop
+Running microbenchmark with  7.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.67e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 7.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 501 msec per loop
+Running microbenchmark with  8e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.78e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 8e+06
+C++ microbenchmark time: 10 loops, best of 1: 566 msec per loop
+Running microbenchmark with  8.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 1.94e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 8.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 596 msec per loop
+Running microbenchmark with  9e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 2.02e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 9e+06
+C++ microbenchmark time: 10 loops, best of 1: 596 msec per loop
+Running microbenchmark with  9.5e+06  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 2.16e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 9.5e+06
+C++ microbenchmark time: 10 loops, best of 1: 663 msec per loop
+Running microbenchmark with  1e+07  label-data pairs
+Running python microbenchmark
+Python microbenchmark time: 10 loops, best of 1: 2.23e+03 msec per loop
+Running C++ microbenchmark
+num_samples: 1e+07
+C++ microbenchmark time: 10 loops, best of 1: 702 msec per loop
