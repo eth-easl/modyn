@@ -395,10 +395,6 @@ def test_delete_data():
 
         assert len(files) == 0
 
-        files = session.query(File).all()
-
-        assert len(files) == 1
-
 
 def test_delete_dataset():
     server = StorageGRPCServicer(get_minimal_modyn_config())

@@ -173,11 +173,11 @@ class BinaryFileWrapper(AbstractFileWrapper):
 
         We do not support deleting samples from binary files.
         We can only delete the entire file which is done when every sample is deleted.
+        This is done to avoid the overhead of updating the file after every deletion.
+
+        See remove_empty_files in the storage grpc servicer for more details.
 
         Args:
             indices (list): List of indices of the samples to delete
-
-        Raises:
-            NotImplementedError: Not implemented
         """
         return

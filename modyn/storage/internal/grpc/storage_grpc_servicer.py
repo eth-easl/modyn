@@ -28,6 +28,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 from modyn.utils.utils import current_time_millis
 from sqlalchemy import asc, select
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -277,10 +278,6 @@ class StorageGRPCServicer(StorageServicer):
                 .all()
             )
 
-            if len(file_ids) != len(request.keys):
-                logger.error(f"Could not find all samples for dataset {request.dataset_id}")
-                return DeleteDataResponse(success=False)
-
             for file_id in file_ids:
                 file_id = file_id[0]
                 file: File = session.query(File).filter(File.file_id == file_id).first()
@@ -300,26 +297,29 @@ class StorageGRPCServicer(StorageServicer):
                     .all()
                 )
                 file_wrapper.delete_samples(samples_to_delete)
+                file.number_of_samples -= len(samples_to_delete)
+                session.commit()
 
             session.query(Sample).filter(Sample.sample_id.in_(request.keys)).delete()
             session.commit()
 
-            files_to_delete = (
-                session.query(File)
-                .join(Sample, isouter=True)
-                .filter(Sample.file_id == None)  # noqa: E711  # pylint: disable=singleton-comparison
-                .all()
-            )
-            for file in files_to_delete:
-                file_system_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
-                try:
-                    file_system_wrapper.delete(file.path)
-                except FileNotFoundError:
-                    logger.debug(
-                        f"File {file.path} not found. Might have been deleted \
-                            already in the previous step of this method."
-                    )
-                session.query(File).filter(File.file_id == file.file_id).delete()
-            session.commit()
+            self.remove_empty_files(session, dataset)
 
             return DeleteDataResponse(success=True)
+
+    def remove_empty_files(self, session: Session, dataset: Dataset) -> None:
+        """Delete files that have no samples left."""
+        files_to_delete = (
+            session.query(File).filter(File.dataset_id == dataset.dataset_id).filter(File.number_of_samples == 0).all()
+        )
+        for file in files_to_delete:
+            file_system_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
+            try:
+                file_system_wrapper.delete(file.path)
+            except FileNotFoundError:
+                logger.debug(
+                    f"File {file.path} not found. Might have been deleted \
+                        already in the previous step of this method."
+                )
+            session.query(File).filter(File.file_id == file.file_id).delete()
+        session.commit()
