@@ -4,10 +4,9 @@ from typing import Any, Optional
 
 from modyn.database import PartitionByMeta
 from modyn.storage.internal.database.storage_base import StorageBase
-from sqlalchemy import BigInteger, Column, ForeignKey, Integer
+from sqlalchemy import BigInteger, Column, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import relationship
 from sqlalchemy.orm.session import Session
 
 BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")

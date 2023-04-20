@@ -15,6 +15,7 @@ from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.utils import current_time_millis
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as orm_exc
 from sqlalchemy.orm.session import Session
@@ -138,10 +139,50 @@ class NewFileWatcher:
         """
         return session.query(File).filter(File.path == file_path).first() is None
 
+    @staticmethod
+    def _postgres_copy_insertion(
+        process_id: int, dataset_id: int, curr_df: pd.DataFrame, time_spent: dict, session: Session
+    ) -> None:
+        session_setup_start = current_time_millis()
+
+        conn = session.connection().engine.raw_connection()
+        cursor = conn.cursor()
+
+        table_name = f"samples__did{dataset_id}"
+        table_columns = "(dataset_id,file_id,index,label)"
+        cmd = f"COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)"
+
+        logger.debug("[Process {process_id}] Dumping CSV in buffer.")
+
+        time_spent["other"] += current_time_millis() - session_setup_start
+
+        csv_creation_start = current_time_millis()
+        output = io.StringIO()
+        curr_df.to_csv(output, sep=",", header=False, index=False, columns=["dataset_id", "file_id", "index", "label"])
+        output.seek(0)
+        time_spent["csv_creation"] += current_time_millis() - csv_creation_start
+
+        db_insertion_start = current_time_millis()
+        logger.debug(f"[Process {process_id}] Copying to DB.")
+        cursor.copy_expert(cmd, output)
+        conn.commit()
+
+        time_spent["db_insertion"] += current_time_millis() - db_insertion_start
+
+    @staticmethod
+    def _fallback_copy_insertion(
+        process_id: int, dataset_id: int, curr_df: pd.DataFrame, time_spent: dict, session: Session
+    ) -> None:
+        db_insertion_start = current_time_millis()
+        session.bulk_insert_mappings(Sample, curr_df.to_dict("records"))
+        session.commit()
+        time_spent["db_insertion"] += current_time_millis() - db_insertion_start
+
     # pylint: disable=too-many-locals
 
     @staticmethod
     def _handle_file_paths(
+        process_id: int,
         file_paths: list[str],
         modyn_config: dict,
         data_file_extension: str,
@@ -162,6 +203,10 @@ class NewFileWatcher:
             db_connection.setup_connection()
             session = db_connection.session
 
+        insertion_func = NewFileWatcher._fallback_copy_insertion
+        if session.bind.dialect.name == "postgres":
+            insertion_func = NewFileWatcher._postgres_copy_insertion
+
         dataset: Dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
 
         def check_valid_file(file_path: str) -> bool:
@@ -177,15 +222,33 @@ class NewFileWatcher:
 
         valid_files = list(filter(check_valid_file, file_paths))
 
-        insert_rows = 50000000
+        insert_rows = 1000000  # TODO make configurable
         curr_df = pd.DataFrame(columns=["sample_id", "dataset_id", "file_id", "index", "label"])
 
+        time_spent = {
+            "init": 0,
+            "file_creation": 0,
+            "label_extraction": 0,
+            "df_creation": 0,
+            "csv_creation": 0,
+            "db_insertion": 0,
+            "other": 0,
+        }
+
         for num_file, file_path in enumerate(valid_files):
+            init_start = current_time_millis()
+
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
             number_of_samples = file_wrapper.get_number_of_samples()
-            logger.debug(f"Found new, unknown file: {file_path} with {number_of_samples} samples.")
+            logger.debug(
+                f"[Process {process_id}] Found new, unknown file: {file_path} with {number_of_samples} samples."
+            )
+
+            time_spent["init"] += current_time_millis() - init_start
+
+            file_creation_start = current_time_millis()
 
             try:
                 file: File = File(
@@ -198,43 +261,50 @@ class NewFileWatcher:
                 session.add(file)
                 session.commit()
             except exc.SQLAlchemyError as exception:
-                logger.critical(f"Could not create file {file_path} in database: {exception}")
+                logger.critical(f"[Process {process_id}] Could not create file {file_path} in database: {exception}")
                 session.rollback()
                 continue
 
             file_id = file.file_id
+            logger.info(
+                f"[Process {process_id}] Extracting and inserting samples for file {file_path} (id = {file_id})"
+            )
 
-            logger.info(f"Extracting and inserting samples for file {file_path} (id = {file_id})")
+            time_spent["file_creation"] += current_time_millis() - file_creation_start
+            label_extraction_start = current_time_millis()
+
             labels = file_wrapper.get_all_labels()
-            logger.debug("Labels extracted.")
+            logger.debug(
+                f"[Process {process_id}] Labels extracted in"
+                + f" {round((current_time_millis() - label_extraction_start) / 1000, 2)}s."
+            )
+
+            time_spent["label_extraction"] += current_time_millis() - label_extraction_start
+            df_creation_start = current_time_millis()
 
             file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file_id": file_id, "label": labels})
             file_df["index"] = range(len(file_df))
             curr_df = pd.concat([curr_df, file_df])
 
+            time_spent["df_creation"] += current_time_millis() - df_creation_start
+
             if len(curr_df) >= insert_rows or num_file == len(valid_files) - 1:
-                # TODO only do this for postgres and fallback for sqllite
-                logger.debug(f"Inserting {len(curr_df)} samples.")
-                conn = session.connection().engine.raw_connection()
-                cursor = conn.cursor()
+                logger.debug(f"[Process {process_id}] Inserting {len(curr_df)} samples.")
+                insertion_func_start = current_time_millis()
+                insertion_func(process_id, dataset_id, curr_df, time_spent, session)
 
-                table_name = f"samples__did{dataset_id}"
-                table_columns = "(dataset_id,file_id,index,label)"
-                cmd = f"COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)"
-
-                logger.debug("Dumping CSV in buffer.")
-                output = io.StringIO()
-                curr_df.to_csv(
-                    output, sep=",", header=False, index=False, columns=["dataset_id", "file_id", "index", "label"]
+                logger.debug(
+                    f"[Process {process_id}] Inserted {len(curr_df)} samples in"
+                    + f" {round((current_time_millis() - insertion_func_start) / 1000, 2)}s."
                 )
-                output.seek(0)
 
-                logger.debug("Copying to DB.")
-                cursor.copy_expert(cmd, output)
-                conn.commit()
+                cleanup_start = current_time_millis()
 
-                logger.debug(f"Inserted {len(curr_df)} samples.")
                 curr_df = curr_df.iloc[0:0]
+                time_spent["other"] += current_time_millis() - cleanup_start
+
+        with open(f"/tmp/modyn_{current_time_millis()}_process{process_id}_stats.json", "w") as statsfile:
+            json.dump(time_spent, statsfile)
 
         if db_connection is not None:
             db_connection.terminate_connection()
@@ -260,6 +330,7 @@ class NewFileWatcher:
 
         if self._disable_mt or (self._is_test and self._is_mac):
             NewFileWatcher._handle_file_paths(
+                -1,
                 file_paths,
                 self.modyn_config,
                 data_file_extension,
@@ -283,6 +354,7 @@ class NewFileWatcher:
                 proc = mp.Process(
                     target=NewFileWatcher._handle_file_paths,
                     args=(
+                        i,
                         paths,
                         self.modyn_config,
                         data_file_extension,
