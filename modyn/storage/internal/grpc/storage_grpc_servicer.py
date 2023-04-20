@@ -81,7 +81,11 @@ class StorageGRPCServicer(StorageServicer):
                 logger.error(f"Keys: {not_found_keys}")
 
             current_file_id = samples[0].file_id
-            current_file = session.query(File).filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id).first()
+            current_file = (
+                session.query(File)
+                .filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id)
+                .first()
+            )
             samples_per_file: list[Tuple[int, int, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
@@ -100,7 +104,11 @@ class StorageGRPCServicer(StorageServicer):
                     )
                     samples_per_file = [(sample.index, sample.sample_id, sample.label)]
                     current_file_id = sample.file_id
-                    current_file = session.query(File).filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id).first()
+                    current_file = (
+                        session.query(File)
+                        .filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id)
+                        .first()
+                    )
                 else:
                     samples_per_file.append((sample.index, sample.sample_id, sample.label))
             file_wrapper = get_file_wrapper(

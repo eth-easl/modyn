@@ -32,8 +32,6 @@ class Sample(
 
     __tablename__ = "samples"
 
-    # __table_args__ = (PrimaryKeyConstraint("sample_id", name="pk_sample_id"),)
-
     def __repr__(self) -> str:
         """Return string representation."""
         return f"<Sample {self.sample_id}>"
@@ -70,7 +68,7 @@ class Sample(
         for i in range(hash_partition_modulus):
             partition_suffix = f"_part{i}"
             partition_stmt = f"FOR VALUES WITH (modulus {hash_partition_modulus}, remainder {i})"
-            _ = Sample._create_partition(
+            Sample._create_partition(
                 dataset_partition,
                 partition_suffix,
                 partition_stmt=partition_stmt,

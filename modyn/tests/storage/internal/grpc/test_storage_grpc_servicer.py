@@ -102,6 +102,8 @@ def setup():
 
         file3 = File(path=TMP_FILE3, dataset=dataset, created_at=before_now, updated_at=before_now, number_of_samples=2)
 
+        session.add(file3)
+
         session.commit()
 
         sample = Sample(dataset_id=dataset.dataset_id, file_id=file.file_id, index=0, label=1)

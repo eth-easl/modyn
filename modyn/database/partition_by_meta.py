@@ -33,21 +33,14 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
             subpartition_by: Optional[str] = None,
             subpartition_type: Optional[str] = None,
             unlogged: bool = True,
-            additional_table_args: Optional[tuple[Any]] = None,
         ) -> PartitionByMeta:
             if suffix not in cls_.partitions:
                 #  attrs are the attributes of the class that is being created
                 #  We need to update the __tablename__ attribute to the name of the partition
                 attrs = {"__tablename__": cls_.get_partition_name(suffix)}
 
-                if additional_table_args is not None and len(additional_table_args) > 0:
-                    attrs["__table_args__"] = additional_table_args
-
-                    if unlogged:
-                        attrs["__table_args__"] += ({"prefixes": ["UNLOGGED"]},)
-                else:
-                    if unlogged:
-                        attrs["__table_args__"] = {"prefixes": ["UNLOGGED"]}
+                if unlogged:
+                    attrs["__table_args__"] = {"prefixes": ["UNLOGGED"]}
 
                 #  We then pass the updated attributes to the PartitionByMeta class
                 partition = PartitionByMeta(
