@@ -1,6 +1,7 @@
 """New file watcher."""
 
 import io
+import itertools
 import json
 import logging
 import multiprocessing as mp
@@ -143,7 +144,7 @@ class NewFileWatcher:
 
     @staticmethod
     def _postgres_copy_insertion(
-        process_id: int, dataset_id: int, curr_df: pd.DataFrame, time_spent: dict, session: Session
+        process_id: int, dataset_id: int, file_dfs: list[pd.DataFrame], time_spent: dict, session: Session
     ) -> None:
         session_setup_start = current_time_millis()
 
@@ -154,13 +155,17 @@ class NewFileWatcher:
         table_columns = "(dataset_id,file_id,index,label)"
         cmd = f"COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)"
 
-        logger.debug("[Process {process_id}] Dumping CSV in buffer.")
+        logger.debug(f"[Process {process_id}] Dumping CSV in buffer.")
 
         time_spent["other"] += current_time_millis() - session_setup_start
 
         csv_creation_start = current_time_millis()
         output = io.StringIO()
-        curr_df.to_csv(output, sep=",", header=False, index=False, columns=["dataset_id", "file_id", "index", "label"])
+        for file_df in file_dfs:
+            file_df.to_csv(
+                output, sep=",", header=False, index=False, columns=["dataset_id", "file_id", "index", "label"]
+            )
+
         output.seek(0)
         time_spent["csv_creation"] += current_time_millis() - csv_creation_start
 
@@ -173,10 +178,19 @@ class NewFileWatcher:
 
     @staticmethod
     def _fallback_copy_insertion(
-        process_id: int, dataset_id: int, curr_df: pd.DataFrame, time_spent: dict, session: Session
+        process_id: int, dataset_id: int, file_dfs: list(pd.DataFrame), time_spent: dict, session: Session
     ) -> None:
+        dict_creation_start = current_time_millis()
+
+        for file_df in file_dfs:
+            file_df["sample_id"] = None
+
+        data = list(itertools.chain.from_iterable([file_df.to_dict("records") for file_df in file_dfs]))
+
+        time_spent["dict_creation"] += current_time_millis() - dict_creation_start
+
         db_insertion_start = current_time_millis()
-        session.bulk_insert_mappings(Sample, curr_df.to_dict("records"))
+        session.bulk_insert_mappings(Sample, data)
         session.commit()
         time_spent["db_insertion"] += current_time_millis() - db_insertion_start
 
@@ -209,7 +223,7 @@ class NewFileWatcher:
             session = db_connection.session
 
         insertion_func = NewFileWatcher._fallback_copy_insertion
-        if session.bind.dialect.name == "postgres":
+        if session.bind.dialect.name == "postgresql":
             insertion_func = NewFileWatcher._postgres_copy_insertion
 
         dataset: Dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
@@ -227,7 +241,8 @@ class NewFileWatcher:
 
         valid_files = list(filter(check_valid_file, file_paths))
 
-        curr_df = pd.DataFrame(columns=["sample_id", "dataset_id", "file_id", "index", "label"])
+        file_dfs = []
+        current_len = 0
 
         time_spent = {
             "init": 0,
@@ -235,6 +250,7 @@ class NewFileWatcher:
             "label_extraction": 0,
             "df_creation": 0,
             "csv_creation": 0,
+            "dict_creation": 0,
             "db_insertion": 0,
             "other": 0,
         }
@@ -288,23 +304,26 @@ class NewFileWatcher:
 
             file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file_id": file_id, "label": labels})
             file_df["index"] = range(len(file_df))
-            curr_df = pd.concat([curr_df, file_df])
+            file_dfs.append(file_df)
+            current_len += len(file_df)
 
             time_spent["df_creation"] += current_time_millis() - df_creation_start
 
-            if len(curr_df) >= sample_dbinsertion_batchsize or num_file == len(valid_files) - 1:
-                logger.debug(f"[Process {process_id}] Inserting {len(curr_df)} samples.")
+            if current_len >= sample_dbinsertion_batchsize or num_file == len(valid_files) - 1:
+                logger.debug(f"[Process {process_id}] Inserting {current_len} samples.")
                 insertion_func_start = current_time_millis()
-                insertion_func(process_id, dataset_id, curr_df, time_spent, session)
+                insertion_func(process_id, dataset_id, file_dfs, time_spent, session)
 
                 logger.debug(
-                    f"[Process {process_id}] Inserted {len(curr_df)} samples in"
+                    f"[Process {process_id}] Inserted {current_len} samples in"
                     + f" {round((current_time_millis() - insertion_func_start) / 1000, 2)}s."
                 )
 
                 cleanup_start = current_time_millis()
 
-                curr_df = curr_df.iloc[0:0]
+                current_len = 0
+                file_dfs.clear()
+
                 time_spent["other"] += current_time_millis() - cleanup_start
 
         with open(f"/tmp/modyn_{current_time_millis()}_process{process_id}_stats.json", "w") as statsfile:
@@ -380,11 +399,9 @@ class NewFileWatcher:
         for proc in processes:
             proc.join()
 
-        if len(processes) > 0:
-            logger.debug(
-                f"Processes finished running in in"
-                + f" {round((current_time_millis() - process_start_time) / 1000, 2)}s."
-            )
+        runtime = round((current_time_millis() - process_start_time) / 1000, 2)
+        if runtime > 5:
+            logger.debug(f"Processes finished running in in {runtime}s.")
 
     def run(self) -> None:
         """Run the dataset watcher."""
