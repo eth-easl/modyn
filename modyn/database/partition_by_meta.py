@@ -33,7 +33,7 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
             subpartition_by: Optional[str] = None,
             subpartition_type: Optional[str] = None,
             unlogged: bool = True,
-            additional_table_args: tuple[Any] = None,
+            additional_table_args: Optional[tuple[Any]] = None,
         ) -> PartitionByMeta:
             if suffix not in cls_.partitions:
                 #  attrs are the attributes of the class that is being created
