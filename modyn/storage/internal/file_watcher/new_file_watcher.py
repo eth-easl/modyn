@@ -44,7 +44,7 @@ class NewFileWatcher:
         self.__dataset_id = dataset_id
 
         self._insertion_threads = modyn_config["storage"]["insertion_threads"]
-        self._sample_dbinsertion_batchsize = modyn_config["storage"]["sample_dbinsertion_batchsize"] # todo add to schema
+        self._sample_dbinsertion_batchsize = modyn_config["storage"]["sample_dbinsertion_batchsize"]
 
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"
