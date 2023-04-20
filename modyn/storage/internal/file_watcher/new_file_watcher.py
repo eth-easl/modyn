@@ -44,6 +44,8 @@ class NewFileWatcher:
         self.__dataset_id = dataset_id
 
         self._insertion_threads = modyn_config["storage"]["insertion_threads"]
+        self._sample_dbinsertion_batchsize = modyn_config["storage"]["sample_dbinsertion_batchsize"] # todo add to schema
+
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"
         self._disable_mt = self._insertion_threads <= 0
@@ -183,6 +185,7 @@ class NewFileWatcher:
     @staticmethod
     def _handle_file_paths(
         process_id: int,
+        sample_dbinsertion_batchsize: int,
         file_paths: list[str],
         modyn_config: dict,
         data_file_extension: str,
@@ -195,6 +198,8 @@ class NewFileWatcher:
     ) -> None:
         """Given a list of paths (in terms of a Modyn FileSystem) to files,
         check whether there are any new files and if so, add all samples from these files into the DB."""
+
+        assert sample_dbinsertion_batchsize > 0, "Invalid sample_dbinsertion_batchsize"
 
         db_connection: Optional[StorageDatabaseConnection] = None
 
@@ -222,7 +227,6 @@ class NewFileWatcher:
 
         valid_files = list(filter(check_valid_file, file_paths))
 
-        insert_rows = 1000000  # TODO make configurable
         curr_df = pd.DataFrame(columns=["sample_id", "dataset_id", "file_id", "index", "label"])
 
         time_spent = {
@@ -288,7 +292,7 @@ class NewFileWatcher:
 
             time_spent["df_creation"] += current_time_millis() - df_creation_start
 
-            if len(curr_df) >= insert_rows or num_file == len(valid_files) - 1:
+            if len(curr_df) >= sample_dbinsertion_batchsize or num_file == len(valid_files) - 1:
                 logger.debug(f"[Process {process_id}] Inserting {len(curr_df)} samples.")
                 insertion_func_start = current_time_millis()
                 insertion_func(process_id, dataset_id, curr_df, time_spent, session)
@@ -331,6 +335,7 @@ class NewFileWatcher:
         if self._disable_mt or (self._is_test and self._is_mac):
             NewFileWatcher._handle_file_paths(
                 -1,
+                self._sample_dbinsertion_batchsize,
                 file_paths,
                 self.modyn_config,
                 data_file_extension,
@@ -342,6 +347,8 @@ class NewFileWatcher:
                 session,
             )
             return
+
+        process_start_time = current_time_millis()
 
         files_per_proc = int(len(file_paths) / self._insertion_threads)
         processes: list[mp.Process] = []
@@ -355,6 +362,7 @@ class NewFileWatcher:
                     target=NewFileWatcher._handle_file_paths,
                     args=(
                         i,
+                        self._sample_dbinsertion_batchsize,
                         paths,
                         self.modyn_config,
                         data_file_extension,
@@ -371,6 +379,12 @@ class NewFileWatcher:
 
         for proc in processes:
             proc.join()
+
+        if len(processes) > 0:
+            logger.debug(
+                f"Processes finished running in in"
+                + f" {round((current_time_millis() - process_start_time) / 1000, 2)}s."
+            )
 
     def run(self) -> None:
         """Run the dataset watcher."""
