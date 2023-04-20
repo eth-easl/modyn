@@ -178,7 +178,7 @@ class NewFileWatcher:
 
     @staticmethod
     def _fallback_copy_insertion(
-        process_id: int, dataset_id: int, file_dfs: list(pd.DataFrame), time_spent: dict, session: Session
+        process_id: int, dataset_id: int, file_dfs: list[pd.DataFrame], time_spent: dict, session: Session
     ) -> None:
         dict_creation_start = current_time_millis()
 
