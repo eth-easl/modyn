@@ -55,7 +55,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         The metadata is a collection of Table objects that inherit from Base and their associated
         schema constructs (such as Column objects, ForeignKey objects, and so on).
         """
-        Sample.ensure_dataset_id_is_pk(self.session)
+        Sample.ensure_pks_correct(self.session)
         StorageBase.metadata.create_all(self.engine)
 
     def add_dataset(

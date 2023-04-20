@@ -138,7 +138,7 @@ class StorageGRPCServicer(StorageServicer):
 
             stmt = (
                 select(Sample.sample_id, File.updated_at, Sample.label)
-                .join(File)
+                .join(File, Sample.file_id == File.file_id and Sample.dataset_id == File.dataset_id)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=self._sample_batch_size)
@@ -175,7 +175,7 @@ class StorageGRPCServicer(StorageServicer):
 
             stmt = (
                 select(Sample.sample_id, File.updated_at, Sample.label)
-                .join(File)
+                .join(File, Sample.file_id == File.file_id and Sample.dataset_id == File.dataset_id)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=self._sample_batch_size)

@@ -45,7 +45,23 @@ class NewFileWatcher:
         self.__dataset_id = dataset_id
 
         self._insertion_threads = modyn_config["storage"]["insertion_threads"]
-        self._sample_dbinsertion_batchsize = modyn_config["storage"]["sample_dbinsertion_batchsize"]
+        self._sample_dbinsertion_batchsize: int = (
+            self.modyn_config["storage"]["sample_dbinsertion_batchsize"]
+            if "sample_dbinsertion_batchsize" in self.modyn_config["storage"]
+            else 1000000
+        )
+
+        self._dump_measurements: bool = (
+            self.modyn_config["storage"]["dump_performance_measurements"]
+            if "dump_performance_measurements" in self.modyn_config["storage"]
+            else False
+        )
+
+        self._force_fallback_insert: bool = (
+            self.modyn_config["storage"]["force_fallback_insert"]
+            if "force_fallback_insert" in self.modyn_config["storage"]
+            else False
+        )
 
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"
@@ -53,7 +69,7 @@ class NewFileWatcher:
 
         # Initialize dataset partition on Sample table
         with StorageDatabaseConnection(self.modyn_config) as database:
-            Sample.add_dataset(self.__dataset_id, database.session, database.engine)
+            database.add_sample_dataset(self.__dataset_id)
 
     def _seek(self, storage_database_connection: StorageDatabaseConnection, dataset: Dataset) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
@@ -180,6 +196,9 @@ class NewFileWatcher:
     def _fallback_copy_insertion(
         process_id: int, dataset_id: int, file_dfs: list[pd.DataFrame], time_spent: dict, session: Session
     ) -> None:
+        del process_id
+        del dataset_id
+
         dict_creation_start = current_time_millis()
 
         for file_df in file_dfs:
@@ -194,12 +213,14 @@ class NewFileWatcher:
         session.commit()
         time_spent["db_insertion"] += current_time_millis() - db_insertion_start
 
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals,too-many-statements
 
     @staticmethod
     def _handle_file_paths(
         process_id: int,
         sample_dbinsertion_batchsize: int,
+        dump_measurements: bool,
+        force_fallback_inserts: bool,
         file_paths: list[str],
         modyn_config: dict,
         data_file_extension: str,
@@ -223,8 +244,12 @@ class NewFileWatcher:
             session = db_connection.session
 
         insertion_func = NewFileWatcher._fallback_copy_insertion
+
         if session.bind.dialect.name == "postgresql":
             insertion_func = NewFileWatcher._postgres_copy_insertion
+
+        if force_fallback_inserts:  # Needs to come last
+            insertion_func = NewFileWatcher._fallback_copy_insertion
 
         dataset: Dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
 
@@ -326,8 +351,11 @@ class NewFileWatcher:
 
                 time_spent["other"] += current_time_millis() - cleanup_start
 
-        with open(f"/tmp/modyn_{current_time_millis()}_process{process_id}_stats.json", "w") as statsfile:
-            json.dump(time_spent, statsfile)
+        if dump_measurements and len(valid_files) > 0:
+            with open(
+                f"/tmp/modyn_{current_time_millis()}_process{process_id}_stats.json", "w", encoding="utf-8"
+            ) as statsfile:
+                json.dump(time_spent, statsfile)
 
         if db_connection is not None:
             db_connection.terminate_connection()
@@ -351,10 +379,14 @@ class NewFileWatcher:
         data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
         file_paths = filesystem_wrapper.list(path, recursive=True)
 
+        assert self.__dataset_id == dataset.dataset_id
+
         if self._disable_mt or (self._is_test and self._is_mac):
             NewFileWatcher._handle_file_paths(
                 -1,
                 self._sample_dbinsertion_batchsize,
+                self._dump_measurements,
+                self._force_fallback_insert,
                 file_paths,
                 self.modyn_config,
                 data_file_extension,
@@ -382,6 +414,8 @@ class NewFileWatcher:
                     args=(
                         i,
                         self._sample_dbinsertion_batchsize,
+                        self._dump_measurements,
+                        self._force_fallback_insert,
                         paths,
                         self.modyn_config,
                         data_file_extension,
