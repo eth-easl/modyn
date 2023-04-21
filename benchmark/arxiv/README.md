@@ -8,6 +8,8 @@ This dataset is taken from wild-time and processed by adapting scripts from wild
 [here](https://github.com/huaxiuyao/Wild-Time)
 
 ## Data Generation
+To run the downloading script you need to install the `gdown` library.
+
 
 The script for downloading the data is adapted from `wild-time-data`. 
 You can use the `data_generation.py` script to download the dataset. 
