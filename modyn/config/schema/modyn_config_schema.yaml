@@ -46,10 +46,6 @@ properties:
         type: number
         description: |
           The number of threads used to insert samples into the storage DB. If set to <= 0, multithreaded inserts are disabled.
-      dump_performance_measurements:
-        type: boolean
-        description: |
-          When enabled, dumps files to /tmp for performance investigation.
       force_fallback_insert:
         type: boolean
         description: |

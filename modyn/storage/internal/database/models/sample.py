@@ -14,10 +14,14 @@ BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
 
 class SampleMixin:
+    # Note that we have a composite primary key in the general case because partitioning on the dataset
+    # requires the dataset_id to be part of the PK.
+    # Logically, sample_id is sufficient for the PK.
     sample_id = Column("sample_id", BIGINT, autoincrement=True, primary_key=True)
     dataset_id = Column(Integer, nullable=False, primary_key=True)
     file_id = Column(Integer, nullable=True)
-    index = Column(BigInteger, nullable=True)  # nullable true for performance not really a constraint we want to have
+    # This should not be null but we remove the integrity check in favor of insertion performance.
+    index = Column(BigInteger, nullable=True)
     label = Column(BigInteger, nullable=True)
 
 
@@ -39,9 +43,20 @@ class Sample(
     @staticmethod
     def ensure_pks_correct(session: Session) -> None:
         if session.bind.dialect.name == "sqlite":
-            # This is hacking the sqlalchemy internals and what exactly do change took me a while to figure out
-            # We first need to mark the column as non primary key and then update the constraint
-            # Last, we have to update the mapper.
+            # sqllite does not support AUTOINCREMENT on composite PKs
+            # As it also does not support partitioning, in case of sqlite, we need to update the model
+            # to only have sample_id as PK, which has no further implications. dataset_id is only part of the PK
+            # in the first case as that is required by postgres for partitioning.
+            # Updating the model at runtime requires hacking the sqlalchemy internals
+            # and what exactly do change took me a while to figure out.
+            # This is not officially supported by sqlalchemy.
+            # Basically, we need to change all the things where dataset_id is part of the PK
+            # Simply writing Sample.dataset_id.primary_key = False or
+            # Sample.dataset_id = Column(..., primary_key=False) does not work at runtime.
+            # We first need to mark the column as non primary key
+            # and then update the constraint (on the Table object, used to create SQL operations)
+            # Last, we have to update the mapper
+            # (used during query generation, needs to be synchronized to the Table, otherwise we get an error)
             if Sample.__table__.c.dataset_id.primary_key:
                 Sample.__table__.c.dataset_id.primary_key = False
                 Sample.__table__.primary_key = PrimaryKeyConstraint(Sample.sample_id)
@@ -89,7 +104,6 @@ class Sample(
         engine: Engine,
     ) -> Optional[PartitionByMeta]:
         """Create a partition for the Sample table."""
-        # If sqlite, do not partition
         if session.bind.dialect.name == "sqlite":
             return None
 
