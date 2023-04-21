@@ -1,3 +1,5 @@
+import argparse
+import logging
 import os
 import pickle
 
@@ -22,6 +24,32 @@ def maybe_download(drive_id, destination_dir, destination_file_name):
         output=str(destination),
         quiet=False,
     )
+
+logging.basicConfig(
+    level=logging.NOTSET,
+    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+def setup_argparser() -> argparse.ArgumentParser:
+    parser_ = argparse.ArgumentParser(description="FMoW Benchmark Storage Script")
+    parser_.add_argument(
+        "--dir", type=pathlib.Path, action="store", help="Path to data directory"
+    )
+
+    return parser_
+
+
+def main():
+    parser = setup_argparser()
+    args = parser.parse_args()
+
+    logger.info(f"Downloading data to {args.dir}")
+
+    downloader = YearbookDownloader(args.dir)
+    downloader.store_data()
+
 class YearbookDownloader(Dataset):
     time_steps = [i for i in range(1930, 2014)]
     input_dim = (1, 32, 32)
@@ -77,7 +105,6 @@ class YearbookDownloader(Dataset):
                 f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
                 f.write(features_bytes)
 
-
         timestamp = self._get_timestamp(year)
         os.utime(output_file_name, (timestamp, timestamp))
 
@@ -92,3 +119,6 @@ class YearbookDownloader(Dataset):
             self._create_binary_file(ds, os.path.join(self.data_dir, f"{year}.bin"), year)
 
         os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
+
+if __name__ == "__main__":
+    main()
