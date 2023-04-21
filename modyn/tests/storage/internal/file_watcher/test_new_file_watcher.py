@@ -122,6 +122,9 @@ class MockFileSystemWrapper(AbstractFileSystemWrapper):
     def get_list_called(self) -> bool:
         return self._list_called
 
+    def delete(self, path: str) -> None:
+        return
+
 
 class MockFileWrapper:
     def get_number_of_samples(self) -> int:
