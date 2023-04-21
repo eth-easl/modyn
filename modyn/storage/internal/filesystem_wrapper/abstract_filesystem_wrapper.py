@@ -163,3 +163,15 @@ class AbstractFileSystemWrapper(ABC):
             str: Joined path
         """
         raise NotImplementedError  # pragma: no cover
+
+    @abstractmethod
+    def delete(self, path: str) -> None:
+        """Delete file.
+
+        Args:
+            path (str): Absolute path to file
+
+        Raises:
+            NotImplementedError: If the method is not implemented
+        """
+        raise NotImplementedError

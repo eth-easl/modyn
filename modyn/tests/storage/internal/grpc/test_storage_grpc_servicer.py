@@ -10,6 +10,7 @@ from modyn.storage.internal.file_wrapper.single_sample_file_wrapper import Singl
 from modyn.storage.internal.filesystem_wrapper.local_filesystem_wrapper import LocalFilesystemWrapper
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
+    DeleteDataRequest,
     GetDataInIntervalRequest,
     GetNewDataSinceRequest,
     GetRequest,
@@ -127,9 +128,18 @@ def setup():
 
 def teardown():
     os.remove(DATABASE)
-    os.remove(TMP_FILE)
-    os.remove(TMP_FILE2)
-    os.remove(TMP_FILE3)
+    try:
+        os.remove(TMP_FILE)
+    except FileNotFoundError:
+        pass
+    try:
+        os.remove(TMP_FILE2)
+    except FileNotFoundError:
+        pass
+    try:
+        os.remove(TMP_FILE3)
+    except FileNotFoundError:
+        pass
 
 
 def test_init() -> None:
@@ -368,6 +378,27 @@ def test_get_current_timestamp(mock_current_time_millis):
     response = server.GetCurrentTimestamp(None, None)
     assert response is not None
     assert response.timestamp == NOW
+
+
+def test_delete_data():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+
+    request = DeleteDataRequest(dataset_id="test", keys=[1, 2])
+
+    response = server.DeleteData(request, None)
+    assert response is not None
+    assert response.success
+
+    assert not os.path.exists(TMP_FILE)
+    assert not os.path.exists(TMP_FILE2)
+    assert os.path.exists(TMP_FILE3)
+
+    with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
+        session = database.session
+
+        files = session.query(File).filter(File.dataset_id == "test").all()
+
+        assert len(files) == 0
 
 
 def test_delete_dataset():

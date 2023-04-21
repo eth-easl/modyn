@@ -17,6 +17,7 @@ service Storage {
   rpc GetCurrentTimestamp(google.protobuf.Empty)
       returns (GetCurrentTimestampResponse) {}
   rpc DeleteDataset(DatasetAvailableRequest) returns (DeleteDatasetResponse) {}
+  rpc DeleteData(DeleteDataRequest) returns (DeleteDataResponse) {}
 }
 
 message GetRequest {
@@ -74,3 +75,10 @@ message RegisterNewDatasetResponse { bool success = 1; }
 message GetCurrentTimestampResponse { int64 timestamp = 1; }
 
 message DeleteDatasetResponse { bool success = 1; }
+
+message DeleteDataRequest {
+  string dataset_id = 1;
+  repeated int64 keys = 2;
+}
+
+message DeleteDataResponse { bool success = 1; }
