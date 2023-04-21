@@ -49,7 +49,7 @@ properties:
       dump_performance_measurements:
         type: boolean
         description: |
-          When enabled, dumps files to /tmp for performance investigation.
+          When enabled, dumps files to /tmp for performance evaluation.
       force_fallback_insert:
         type: boolean
         description: |
