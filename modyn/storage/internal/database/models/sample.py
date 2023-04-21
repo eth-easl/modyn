@@ -41,7 +41,7 @@ class Sample(
         if session.bind.dialect.name == "sqlite":
             # This is hacking the sqlalchemy internals and what exactly do change took me a while to figure out
             # We first need to mark the column as non primary key and then update the constraint
-            # Last, we have to update the mapper.
+            # Lastly, we have to update the mapper.
             if Sample.__table__.c.dataset_id.primary_key:
                 Sample.__table__.c.dataset_id.primary_key = False
                 Sample.__table__.primary_key = PrimaryKeyConstraint(Sample.sample_id)
