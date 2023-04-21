@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="docs/assets/logo.png" height=100 alt="Modyn logo"/>
+<img src="docs/assets/logo.png" height=100 alt="Modyn logo"/>
 
 ---
 
@@ -7,6 +7,9 @@
 [![License](https://img.shields.io/github/license/eth-easl/modyn)](https://img.shields.io/github/license/eth-easl/modyn)
 
 Modyn is an open-source research platform for model training on dynamic datasets.
+
+</div>
+
 
 ## ⚡️ Quickstart
 
