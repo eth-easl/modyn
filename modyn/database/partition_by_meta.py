@@ -8,7 +8,7 @@ from sqlalchemy.orm.decl_api import DeclarativeAttributeIntercept
 from sqlalchemy.sql.ddl import DDL
 
 logger = logging.getLogger(__name__)
-# Kudos: https://stackoverflow.com/questions/61545680/postgresql-partition-and-sqlalchemy
+# This approach was inspired by: https://stackoverflow.com/questions/61545680/postgresql-partition-and-sqlalchemy
 
 
 class PartitionByMeta(DeclarativeAttributeIntercept):
