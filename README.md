@@ -36,12 +36,13 @@ For running all integration tests, run
 
 > **_macOS Installation:_**: If you develop/run on macOS, you need to modify the `environment.yml` file until we have conditional dependencies (#104). You need to remove the pytorch channel and all occurences of `pytorch::` from the file.
 
-> **GPU Installation:_**: If you want to use a GPU, you need to install `nvidia-docker` and adjust the `docker-compose.yml` file as explained in the file. Furthermore, you need to modify the `environment.yml` to use the CUDA version of Pytorch.
+> **_GPU Installation:_**: If you want to use a GPU, you need to install `nvidia-docker` and adjust the `docker-compose.yml` file as explained in the file. Furthermore, you need to modify the `environment.yml` to use the CUDA version of Pytorch.
 
 **Next Steps**.
 Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.
 Checkout our [Technical Guidelines](docs/TECHNICAL.md) for some hints on developing Modyn.
 Last, checkout our vision paper on Modyn for an introduction to our ideas.
+
 We are actively developing and designing Modyn, including more thorough documentation.
 Please reach out via Github, Twitter, E-Mail, or any other channel of communication if you are interested in collaborating, have any questions, or have any problems running Modyn.
 
