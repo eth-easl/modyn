@@ -6,7 +6,7 @@ FILE_PATH = "/tmp/modyn_test/data.bin"
 FILE_WRAPPER_CONFIG = {
     "record_size": 8,
     "label_size": 4,
-    "byteorder": "big",
+    "byteorder": "little",
 }
 
 

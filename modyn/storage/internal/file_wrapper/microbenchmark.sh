@@ -8,7 +8,7 @@ cd /tmp/modyn_test
 
 # Create a file with random data of the form [LABEL, DATA, LABEL, DATA, ...] where LABEL is a 4-byte integer and DATA is a 4-byte integer. The byte order is big-endian.
 function create_random_file {
-    python3 -c "import random; import struct; encoded_integers = b''.join(struct.pack('>I', random.randint(0, 2**32 - 1)) for _ in range(2*int($1))); padding = b'\x00' * ((2 * int($1) * 4) - len(encoded_integers)); encoded_data = encoded_integers + padding; open('data.bin', 'wb').write(encoded_data)"
+    python3 -c "import random; import struct; encoded_integers = b''.join(struct.pack('<I', random.randint(0, 2147483647)) for _ in range(2*int($1))); padding = b'\x00' * ((2 * int($1) * 4) - len(encoded_integers)); encoded_data = encoded_integers + padding; open('data.bin', 'wb').write(encoded_data)"
 }
 
 function run_python_microbenchmark {
@@ -23,7 +23,7 @@ function run_cpp_microbenchmark() {
     echo "Running C++ microbenchmark"
 
     g++ -std=c++17 -O3 -o /Users/viktorgsteiger/Documents/modyn/modyn/storage/internal/file_wrapper/binary_file_wrapper /Users/viktorgsteiger/Documents/modyn/modyn/storage/internal/file_wrapper/binary_file_wrapper.cpp
-    /Users/viktorgsteiger/Documents/modyn/modyn/storage/internal/file_wrapper/binary_file_wrapper 10 "${1}" big data.bin 
+    /Users/viktorgsteiger/Documents/modyn/modyn/storage/internal/file_wrapper/binary_file_wrapper 10 "${1}" data.bin 
     rm /Users/viktorgsteiger/Documents/modyn/modyn/storage/internal/file_wrapper/binary_file_wrapper
 }
 
@@ -37,7 +37,7 @@ function benchmark {
     done
 }
 
-benchmark
+benchmark > /Users/viktorgsteiger/Documents/modyn/modyn/storage/internal/file_wrapper/microbenchmark_results.txt
 
 # Clean up
 rm -rf /tmp/modyn_test

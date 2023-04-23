@@ -9,45 +9,41 @@
 using namespace std;
 
 void _validate_request_indices(int total_samples, std::vector<int> indices) {
-    bool invalid_indices = false;
     for (int idx : indices) {
         if (idx < 0 || idx > (total_samples - 1)) {
-            invalid_indices = true;
-            break;
+            throw std::out_of_range("Indices are out of range. Indices should be between 0 and " + std::to_string(total_samples));
         }
-    }
-    if (invalid_indices) {
-        throw std::out_of_range("Indices are out of range. Indices should be between 0 and " + std::to_string(total_samples));
     }
 }
 
-int int_from_bytes(std::vector<unsigned char> bytes, std::string byteorder) {
+int int_from_bytes(unsigned char* begin, unsigned char* end) {
     int value = 0;
-    if (byteorder == "big") {
-        value = std::accumulate(bytes.begin(), bytes.end(), 0, 
-                                [](int acc, unsigned char x) { return (acc << 8) | x; });
-    } else if (byteorder == "little") {
-        value = std::accumulate(bytes.rbegin(), bytes.rend(), 0, 
-                                [](int acc, unsigned char x) { return (acc << 8) | x; });
-    }
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    value = std::accumulate(begin, end, 0, 
+                            [](int acc, unsigned char x) { return (acc << 8) | x; });
+#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    value = *reinterpret_cast<int*>(begin);
+#else
+    #error "Unknown byte order"
+#endif
     return value;
 }
 
-int get_label(std::vector<unsigned char> data, int index, int record_size, int label_size, std::string byteorder) {
+int get_label(unsigned char* data, int index, int record_size, int label_size) {
     int record_start = index * record_size;
+    unsigned char* label_begin = data + record_start;
+    unsigned char* label_end = label_begin + label_size;
 
-    std::vector<unsigned char> label_bytes = std::vector<unsigned char>(data.begin() + record_start, data.begin() + record_start + label_size);
-
-    int label = int_from_bytes(label_bytes, byteorder);
+    int label = int_from_bytes(label_begin, label_end);
     return label;
 }
 
-std::vector<int> get_all_labels(std::vector<unsigned char> data, double num_samples, int record_size, int label_size, std::string byteorder) {
+std::vector<int> get_all_labels(unsigned char* data, double num_samples, int record_size, int label_size) {
     std::vector<int> labels(num_samples);
     for (int idx = 0; idx < num_samples; idx++) {
-        std::vector<unsigned char> label_bytes(data.begin() + (idx * record_size), 
-                                                data.begin() + (idx * record_size) + label_size);
-        labels[idx] = int_from_bytes(label_bytes, byteorder);
+        unsigned char* label_begin = data + (idx * record_size);
+        unsigned char* label_end = label_begin + label_size;
+        labels[idx] = int_from_bytes(label_begin, label_end);
     }
     return labels;
 }
@@ -72,8 +68,7 @@ int main(int argc, char* argv[]) {
     int num_iterations = std::stoi(arg);
     arg = argv[2];
     double num_samples = std::stod(arg);
-    std::string byteorder = argv[3];
-    std::string filename = argv[4];
+    std::string filename = argv[3];
 
     cout << "num_samples: " << num_samples << endl;
 
@@ -85,7 +80,7 @@ int main(int argc, char* argv[]) {
 
         // Start timer
         auto start = std::chrono::high_resolution_clock::now();
-        std::vector<int> labels = get_all_labels(data, num_samples, 8, 4, byteorder);
+        std::vector<int> labels = get_all_labels(data.data(), num_samples, 8, 4);
         // Stop timer
         auto stop = std::chrono::high_resolution_clock::now();
         if (labels.size() != num_samples) {

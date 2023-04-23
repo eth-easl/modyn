@@ -5,7 +5,9 @@ python_times = []
 cpp_times = []
 num_samples = []
 
-with open("output.txt", "r") as f:
+output_file = "/Users/viktorgsteiger/Documents/modyn/modyn/storage/internal/file_wrapper/microbenchmark_results.txt"
+
+with open(output_file, "r") as f:
     for line in f.readlines():
         if "Python microbenchmark time" in line:
             python_time = float(line.split(':')[-1].strip().split()[-4])
