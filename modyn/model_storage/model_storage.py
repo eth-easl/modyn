@@ -22,4 +22,4 @@ class ModelStorage:
 
     def run(self) -> None:
         print("Running Model Storage Component")
-        # run the model storage component
+        # start model storage grpc server
