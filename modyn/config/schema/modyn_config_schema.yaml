@@ -236,6 +236,10 @@ properties:
         type: string
         description: |
           The database to use for the database.
+      hash_partition_modulus:
+        type: number
+        description: |
+          The modulus to use for the hash partitioning of the metadata.
     required:
       - drivername
       - username

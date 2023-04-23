@@ -49,6 +49,11 @@ class StorageStub(object):
                 request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
                 response_deserializer=storage__pb2.DeleteDatasetResponse.FromString,
                 )
+        self.DeleteData = channel.unary_unary(
+                '/modyn.storage.Storage/DeleteData',
+                request_serializer=storage__pb2.DeleteDataRequest.SerializeToString,
+                response_deserializer=storage__pb2.DeleteDataResponse.FromString,
+                )
 
 
 class StorageServicer(object):
@@ -96,6 +101,12 @@ class StorageServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def DeleteData(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StorageServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -133,6 +144,11 @@ def add_StorageServicer_to_server(servicer, server):
                     servicer.DeleteDataset,
                     request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
                     response_serializer=storage__pb2.DeleteDatasetResponse.SerializeToString,
+            ),
+            'DeleteData': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteData,
+                    request_deserializer=storage__pb2.DeleteDataRequest.FromString,
+                    response_serializer=storage__pb2.DeleteDataResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -260,5 +276,22 @@ class Storage(object):
         return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/DeleteDataset',
             storage__pb2.DatasetAvailableRequest.SerializeToString,
             storage__pb2.DeleteDatasetResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def DeleteData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/DeleteData',
+            storage__pb2.DeleteDataRequest.SerializeToString,
+            storage__pb2.DeleteDataResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

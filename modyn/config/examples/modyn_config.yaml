@@ -60,6 +60,7 @@ metadata_database:
   host: "metadata-db"
   port: "5432"
   database: "postgres"
+  hash_partition_modulus: 32
 
 metadata_processor:
   port: "50055"

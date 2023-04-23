@@ -6,27 +6,31 @@ version: '3.8'
 
 services:
   metadata-db:
-    image: postgres:14.1-alpine
+    image: postgres:15.2-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
-#    shm_size: 4gb
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+#    shm_size: 24gb
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
+      - ./metadata_postgresql.conf:/etc/postgresql/postgresql.conf
   storage-db:
-    image: postgres:14.1-alpine
+    image: postgres:15.2-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
-#    shm_size: 4gb
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+#    shm_size: 8gb
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
+      - ./storage_postgresql.conf:/etc/postgresql/postgresql.conf
   storage:
     restart: on-failure
     depends_on:
@@ -100,6 +104,7 @@ services:
     - storage-db
     - selector
     - metadata_processor
+    - trainer_server
     build:
       context: .
       dockerfile: docker/Supervisor/Dockerfile

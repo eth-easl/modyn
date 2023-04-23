@@ -259,3 +259,37 @@ class DeleteDatasetResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___DeleteDatasetResponse = DeleteDatasetResponse
+
+@typing_extensions.final
+class DeleteDataRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    DATASET_ID_FIELD_NUMBER: builtins.int
+    KEYS_FIELD_NUMBER: builtins.int
+    dataset_id: builtins.str
+    @property
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def __init__(
+        self,
+        *,
+        dataset_id: builtins.str = ...,
+        keys: collections.abc.Iterable[builtins.int] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "keys", b"keys"]) -> None: ...
+
+global___DeleteDataRequest = DeleteDataRequest
+
+@typing_extensions.final
+class DeleteDataResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SUCCESS_FIELD_NUMBER: builtins.int
+    success: builtins.bool
+    def __init__(
+        self,
+        *,
+        success: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
+
+global___DeleteDataResponse = DeleteDataResponse
