@@ -1,5 +1,4 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
-import glob
 import pathlib
 import platform
 import tempfile
@@ -455,39 +454,6 @@ def test_wait_for_training_completion(test_connection_established):
         ) as avail_method:
             handler.wait_for_training_completion(42, 21, 22)
             avail_method.assert_called_once()
-
-
-@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def test_upload_model(test_connection_established):
-    if platform.system() == "Darwin":
-        # On macOS, the ftpserver works but throws a file descriptor error upon termination in tests
-        return
-
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
-
-    with tempfile.TemporaryDirectory() as ftp_root:
-        ftp_root_path = pathlib.Path(ftp_root)
-        created_path = ftp_root_path / "created.file"
-        with FTPServer({"trainer_server": {"ftp_port": 1337}}, ftp_root_path):
-            with open(created_path, "w", encoding="utf-8") as file:
-                file.write("test")
-
-            assert created_path.exists()
-
-            handler.upload_model(1, 1, created_path)
-
-        files = glob.glob(str(ftp_root_path / "*.modyn"))
-        assert len(files) == 1
-
-        file = files[0]
-
-        with open(file, "r", encoding="utf-8") as file:
-            assert file.read() == "test"
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
