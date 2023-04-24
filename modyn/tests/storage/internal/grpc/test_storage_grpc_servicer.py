@@ -59,6 +59,9 @@ def get_minimal_modyn_config() -> dict:
 
 
 def setup():
+    if os.path.exists(DATABASE):
+        os.remove(DATABASE)
+
     os.makedirs(os.path.dirname(TMP_FILE), exist_ok=True)
     with open(TMP_FILE, "wb") as file:
         file.write(b"test")
@@ -100,17 +103,19 @@ def setup():
 
         file3 = File(path=TMP_FILE3, dataset=dataset, created_at=before_now, updated_at=before_now, number_of_samples=2)
 
+        session.add(file3)
+
         session.commit()
 
-        sample = Sample(file=file, index=0, label=1)
+        sample = Sample(dataset_id=dataset.dataset_id, file_id=file.file_id, index=0, label=1)
 
         session.add(sample)
 
-        sample3 = Sample(file=file2, index=0, label=3)
+        sample3 = Sample(dataset_id=dataset.dataset_id, file_id=file2.file_id, index=0, label=3)
 
         session.add(sample3)
 
-        sample5 = Sample(file=file3, index=0, label=5)
+        sample5 = Sample(dataset_id=dataset.dataset_id, file_id=file3.file_id, index=0, label=5)
 
         session.add(sample5)
 
