@@ -9,7 +9,7 @@ from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper impor
 class CSVFileWrapper(AbstractFileWrapper):
     """CSV file wrapper.
 
-    CSV files store samples data in a row-oriented format. CSV file can have a header. The header line index should
+    CSV files store samples data in a row-oriented format. CSV file can have a header. The header line index can
     be specified in the file_wrapper_config while creating an instance. The file wrapper is able to read samples by
     index, and value by feature name / col index and row index.
     """
@@ -165,3 +165,18 @@ class CSVFileWrapper(AbstractFileWrapper):
         data_frame = pd.read_csv(self.file_path, sep=self.delim, header=self.header, encoding=self.encoding)
         samples = [bytes(data_frame.get_value(index, feature)) for feature, index in features_indices]
         return samples
+
+    def delete_samples(self, indices: list) -> None:
+        """Delete the samples at the given index list.
+        The indices are zero based.
+
+        We do not support deleting samples from CSV files.
+        We can only delete the entire file which is done when every sample is deleted.
+        This is done to avoid the overhead of updating the file after every deletion.
+
+        See remove_empty_files in the storage grpc servicer for more details.
+
+        Args:
+            indices (list): List of indices of the samples to delete
+        """
+        return

@@ -96,6 +96,22 @@ properties:
                   type: string
                   description: |
                     The byteorder when reading an integer from multibyte data in a binary file. Should either be "big" or "little".
+                number_cols:
+                  type: number
+                  description: |
+                    The number of columns in the csv file.
+                delimiter:
+                  type: string
+                  description: |
+                    The CSV file delimiter, it can be, for example, ",", ";" or any other string.
+                encoding:
+                  type: string
+                  description: |
+                    The file encoding. It can be "UTF-8", "UTF-16" etc.
+                header:
+                  type: number
+                  description: |
+                    The row index of the header if exists. Otherwise, it is not specified.
             ignore_last_timestamp:
               type: boolean
               description: |
