@@ -35,6 +35,11 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
             if "hash_partition_modulus" in self.modyn_config["storage"]["database"]
             else 8
         )
+        self.sample_table_unlogged: bool = (
+            self.modyn_config["storage"]["database"]["sample_table_unlogged"]
+            if "sample_table_unlogged" in self.modyn_config["storage"]["database"]
+            else True
+        )
 
     def __enter__(self) -> StorageDatabaseConnection:
         """Create the engine and session.
@@ -137,4 +142,6 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         Args:
             dataset_id (int): Id of the dataset
         """
-        Sample.add_dataset(dataset_id, self.session, self.engine, self.hash_partition_modulus)
+        Sample.add_dataset(
+            dataset_id, self.session, self.engine, self.hash_partition_modulus, self.sample_table_unlogged
+        )

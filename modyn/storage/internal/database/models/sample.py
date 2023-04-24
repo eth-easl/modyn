@@ -63,7 +63,9 @@ class Sample(
                 Sample.__mapper__.primary_key = Sample.__mapper__.primary_key[0:1]
 
     @staticmethod
-    def add_dataset(dataset_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 8) -> None:
+    def add_dataset(
+        dataset_id: int, session: Session, engine: Engine, hash_partition_modulus: int = 8, unlogged: bool = True
+    ) -> None:
         partition_stmt = f"FOR VALUES IN ({dataset_id})"
         partition_suffix = f"_did{dataset_id}"
         dataset_partition = Sample._create_partition(
@@ -74,6 +76,7 @@ class Sample(
             subpartition_type="HASH",
             session=session,
             engine=engine,
+            unlogged=unlogged,
         )
 
         if dataset_partition is None:
@@ -91,6 +94,7 @@ class Sample(
                 subpartition_type=None,
                 session=session,
                 engine=engine,
+                unlogged=unlogged,
             )
 
     @staticmethod
@@ -102,6 +106,7 @@ class Sample(
         subpartition_type: Optional[str],
         session: Session,
         engine: Engine,
+        unlogged: bool,
     ) -> Optional[PartitionByMeta]:
         """Create a partition for the Sample table."""
         if session.bind.dialect.name == "sqlite":
@@ -113,7 +118,7 @@ class Sample(
             partition_stmt=partition_stmt,
             subpartition_by=subpartition_by,
             subpartition_type=subpartition_type,
-            unlogged=True,  # We trade-off postgres crash resilience against performance (this gives a 2x speedup)
+            unlogged=unlogged,
         )
 
         #  Create table
