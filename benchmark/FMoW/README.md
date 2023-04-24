@@ -8,7 +8,7 @@ This dataset is taken from wild-time and processed by adapting scripts from wild
 [here](https://github.com/huaxiuyao/Wild-Time)
 
 ## Data Generation
-To run the downloading script you need to install the `gdown` library.
+To run the downloading script you need to install the `gdown` and `wilds` libraries.
 The script for downloading the data is adapted from `wild-time-data`. 
 You can use the `data_generation.py` script to download the dataset. 
 Use the `-h` flag to find out more.
