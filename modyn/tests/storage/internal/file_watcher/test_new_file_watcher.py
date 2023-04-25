@@ -349,12 +349,12 @@ def test_update_files_in_directory(
         last_timestamp=FILE_TIMESTAMP - 1,
         file_watcher_interval=0.1,
     )
+    session.add(dataset)
+    session.commit()
 
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), dataset.dataset_id, should_stop)
 
-    session.add(dataset)
-    session.commit()
     new_file_watcher._update_files_in_directory(
         filesystem_wrapper=MockFileSystemWrapper(),
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
@@ -418,13 +418,13 @@ def test_update_files_in_directory_mt_disabled(
         last_timestamp=FILE_TIMESTAMP - 1,
         file_watcher_interval=0.1,
     )
+    session.add(dataset)
+    session.commit()
 
     should_stop = Value(c_bool, False)
     new_file_watcher = NewFileWatcher(get_minimal_modyn_config(), dataset.dataset_id, should_stop)
     new_file_watcher._disable_mt = True
 
-    session.add(dataset)
-    session.commit()
     new_file_watcher._update_files_in_directory(
         filesystem_wrapper=MockFileSystemWrapper(),
         file_wrapper_type=FileWrapperType.SingleSampleFileWrapper,
@@ -497,6 +497,10 @@ def test_handle_file_paths_presupplied_config(
 
     file_paths = MockFileSystemWrapper().list(TEST_DIR, recursive=True)
     new_file_watcher._handle_file_paths(
+        -1,
+        1234,
+        False,
+        False,
         file_paths,
         get_minimal_modyn_config(),
         ".txt",
@@ -504,6 +508,7 @@ def test_handle_file_paths_presupplied_config(
         "fw",
         FILE_TIMESTAMP - 1,
         "test_handle_file_paths",
+        1,
         session,
     )
 
@@ -521,6 +526,10 @@ def test_handle_file_paths_presupplied_config(
     assert result[0].file_id == 1
 
     new_file_watcher._handle_file_paths(
+        -1,
+        1234,
+        False,
+        False,
         file_paths,
         get_minimal_modyn_config(),
         ".txt",
@@ -528,6 +537,7 @@ def test_handle_file_paths_presupplied_config(
         "fw",
         FILE_TIMESTAMP - 1,
         "test_handle_file_paths",
+        1,
         session,
     )
 
@@ -572,6 +582,10 @@ def test_handle_file_paths_no_presupplied_config(
 
     file_paths = MockFileSystemWrapper().list(TEST_DIR, recursive=True)
     new_file_watcher._handle_file_paths(
+        -1,
+        1234,
+        False,
+        False,
         file_paths,
         get_minimal_modyn_config(),
         ".txt",
@@ -579,6 +593,7 @@ def test_handle_file_paths_no_presupplied_config(
         "fw",
         FILE_TIMESTAMP - 1,
         "test_handle_file_paths",
+        1,
         None,
     )
 
@@ -596,6 +611,10 @@ def test_handle_file_paths_no_presupplied_config(
     assert result[0].file_id == 1
 
     new_file_watcher._handle_file_paths(
+        -1,
+        1234,
+        False,
+        False,
         file_paths,
         get_minimal_modyn_config(),
         ".txt",
@@ -603,6 +622,7 @@ def test_handle_file_paths_no_presupplied_config(
         "fw",
         FILE_TIMESTAMP - 1,
         "test_handle_file_paths",
+        1,
         None,
     )
 

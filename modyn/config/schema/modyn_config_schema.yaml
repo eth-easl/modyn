@@ -38,10 +38,22 @@ properties:
         type: number
         description: |
           The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce the size of a single answer the keys are batched in sizes of `sample_batch_size`.
+      sample_dbinsertion_batchsize:
+        type: number
+        description: |
+          How many samples are at least required when scanning new files to trigger an intermediate insertion request.
       insertion_threads:
         type: number
         description: |
           The number of threads used to insert samples into the storage DB. If set to <= 0, multithreaded inserts are disabled.
+      sample_table_unlogged:
+        type: boolean
+        description: |
+          This configures whether the table storing all samples is UNLOGGED (= high performance) or crash resilient. Defaults to True. For datasets with many samples (such as Criteo), this is recommended for highest insertion performance. In other scenarios, this might not be necessary.
+      force_fallback_insert:
+        type: boolean
+        description: |
+          When enabled, always use SQLAlchemy insert functionality instead of potentially optimized techniques.
       datasets:
         type: array
         items:
@@ -143,6 +155,10 @@ properties:
             type: string
             description: |
               The database to use for the database.
+          hash_partition_modulus:
+            type: number
+            description: |
+              The modulus to use for the hash partitioning of the samples.
         required:
           - drivername
           - username

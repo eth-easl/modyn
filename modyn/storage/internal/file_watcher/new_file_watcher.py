@@ -1,5 +1,7 @@
 """New file watcher."""
 
+import io
+import itertools
 import json
 import logging
 import multiprocessing as mp
@@ -9,10 +11,12 @@ import platform
 import time
 from typing import Any, Optional
 
+import pandas as pd
 from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
 from modyn.storage.internal.filesystem_wrapper.abstract_filesystem_wrapper import AbstractFileSystemWrapper
+from modyn.utils import current_time_millis
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as orm_exc
 from sqlalchemy.orm.session import Session
@@ -41,9 +45,31 @@ class NewFileWatcher:
         self.__dataset_id = dataset_id
 
         self._insertion_threads = modyn_config["storage"]["insertion_threads"]
+        self._sample_dbinsertion_batchsize: int = (
+            self.modyn_config["storage"]["sample_dbinsertion_batchsize"]
+            if "sample_dbinsertion_batchsize" in self.modyn_config["storage"]
+            else 1000000
+        )
+
+        self._dump_measurements: bool = (
+            self.modyn_config["storage"]["dump_performance_measurements"]
+            if "dump_performance_measurements" in self.modyn_config["storage"]
+            else False
+        )
+
+        self._force_fallback_insert: bool = (
+            self.modyn_config["storage"]["force_fallback_insert"]
+            if "force_fallback_insert" in self.modyn_config["storage"]
+            else False
+        )
+
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"
         self._disable_mt = self._insertion_threads <= 0
+
+        # Initialize dataset partition on Sample table
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            database.add_sample_dataset(self.__dataset_id)
 
     def _seek(self, storage_database_connection: StorageDatabaseConnection, dataset: Dataset) -> None:
         """Seek the filesystem for all the datasets for new files and add them to the database.
@@ -132,10 +158,69 @@ class NewFileWatcher:
         """
         return session.query(File).filter(File.path == file_path).first() is None
 
-    # pylint: disable=too-many-locals
+    @staticmethod
+    def _postgres_copy_insertion(
+        process_id: int, dataset_id: int, file_dfs: list[pd.DataFrame], time_spent: dict, session: Session
+    ) -> None:
+        session_setup_start = current_time_millis()
+
+        conn = session.connection().engine.raw_connection()
+        cursor = conn.cursor()
+
+        table_name = f"samples__did{dataset_id}"
+        table_columns = "(dataset_id,file_id,index,label)"
+        cmd = f"COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)"
+
+        logger.debug(f"[Process {process_id}] Dumping CSV in buffer.")
+
+        time_spent["other"] += current_time_millis() - session_setup_start
+
+        csv_creation_start = current_time_millis()
+        output = io.StringIO()
+        for file_df in file_dfs:
+            file_df.to_csv(
+                output, sep=",", header=False, index=False, columns=["dataset_id", "file_id", "index", "label"]
+            )
+
+        output.seek(0)
+        time_spent["csv_creation"] += current_time_millis() - csv_creation_start
+
+        db_insertion_start = current_time_millis()
+        logger.debug(f"[Process {process_id}] Copying to DB.")
+        cursor.copy_expert(cmd, output)
+        conn.commit()
+
+        time_spent["db_insertion"] += current_time_millis() - db_insertion_start
+
+    @staticmethod
+    def _fallback_copy_insertion(
+        process_id: int, dataset_id: int, file_dfs: list[pd.DataFrame], time_spent: dict, session: Session
+    ) -> None:
+        del process_id
+        del dataset_id
+
+        dict_creation_start = current_time_millis()
+
+        for file_df in file_dfs:
+            file_df["sample_id"] = None
+
+        data = list(itertools.chain.from_iterable([file_df.to_dict("records") for file_df in file_dfs]))
+
+        time_spent["dict_creation"] += current_time_millis() - dict_creation_start
+
+        db_insertion_start = current_time_millis()
+        session.bulk_insert_mappings(Sample, data)
+        session.commit()
+        time_spent["db_insertion"] += current_time_millis() - db_insertion_start
+
+    # pylint: disable=too-many-locals,too-many-statements
 
     @staticmethod
     def _handle_file_paths(
+        process_id: int,
+        sample_dbinsertion_batchsize: int,
+        dump_measurements: bool,
+        force_fallback_inserts: bool,
         file_paths: list[str],
         modyn_config: dict,
         data_file_extension: str,
@@ -143,10 +228,13 @@ class NewFileWatcher:
         file_wrapper_type: str,
         timestamp: int,
         dataset_name: str,
+        dataset_id: int,
         session: Optional[Session],  # When using multithreading, we cannot pass the session, hence it is Optional
     ) -> None:
         """Given a list of paths (in terms of a Modyn FileSystem) to files,
         check whether there are any new files and if so, add all samples from these files into the DB."""
+
+        assert sample_dbinsertion_batchsize > 0, "Invalid sample_dbinsertion_batchsize"
 
         db_connection: Optional[StorageDatabaseConnection] = None
 
@@ -154,6 +242,14 @@ class NewFileWatcher:
             db_connection = StorageDatabaseConnection(modyn_config)
             db_connection.setup_connection()
             session = db_connection.session
+
+        insertion_func = NewFileWatcher._fallback_copy_insertion
+
+        if session.bind.dialect.name == "postgresql":
+            insertion_func = NewFileWatcher._postgres_copy_insertion
+
+        if force_fallback_inserts:  # Needs to come last
+            insertion_func = NewFileWatcher._fallback_copy_insertion
 
         dataset: Dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
 
@@ -170,12 +266,34 @@ class NewFileWatcher:
 
         valid_files = list(filter(check_valid_file, file_paths))
 
-        for file_path in valid_files:
+        file_dfs = []
+        current_len = 0
+
+        time_spent = {
+            "init": 0,
+            "file_creation": 0,
+            "label_extraction": 0,
+            "df_creation": 0,
+            "csv_creation": 0,
+            "dict_creation": 0,
+            "db_insertion": 0,
+            "other": 0,
+        }
+
+        for num_file, file_path in enumerate(valid_files):
+            init_start = current_time_millis()
+
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
             )
             number_of_samples = file_wrapper.get_number_of_samples()
-            logger.debug(f"Found new, unknown file: {file_path} with {number_of_samples} samples.")
+            logger.debug(
+                f"[Process {process_id}] Found new, unknown file: {file_path} with {number_of_samples} samples."
+            )
+
+            time_spent["init"] += current_time_millis() - init_start
+
+            file_creation_start = current_time_millis()
 
             try:
                 file: File = File(
@@ -188,29 +306,56 @@ class NewFileWatcher:
                 session.add(file)
                 session.commit()
             except exc.SQLAlchemyError as exception:
-                logger.critical(f"Could not create file {file_path} in database: {exception}")
+                logger.critical(f"[Process {process_id}] Could not create file {file_path} in database: {exception}")
                 session.rollback()
                 continue
-            file_id = file.file_id
-            logger.info(f"Extracting and inserting samples for file {file_path} (id = {file_id})")
-            labels = file_wrapper.get_all_labels()
-            logger.debug("Labels extracted.")
 
-            try:
-                session.bulk_insert_mappings(
-                    Sample,
-                    [
-                        {"file": file, "file_id": file_id, "index": i, "label": labels[i]}
-                        for i in range(number_of_samples)
-                    ],
+            file_id = file.file_id
+            logger.info(
+                f"[Process {process_id}] Extracting and inserting samples for file {file_path} (id = {file_id})"
+            )
+
+            time_spent["file_creation"] += current_time_millis() - file_creation_start
+            label_extraction_start = current_time_millis()
+
+            labels = file_wrapper.get_all_labels()
+            logger.debug(
+                f"[Process {process_id}] Labels extracted in"
+                + f" {round((current_time_millis() - label_extraction_start) / 1000, 2)}s."
+            )
+
+            time_spent["label_extraction"] += current_time_millis() - label_extraction_start
+            df_creation_start = current_time_millis()
+
+            file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file_id": file_id, "label": labels})
+            file_df["index"] = range(len(file_df))
+            file_dfs.append(file_df)
+            current_len += len(file_df)
+
+            time_spent["df_creation"] += current_time_millis() - df_creation_start
+
+            if current_len >= sample_dbinsertion_batchsize or num_file == len(valid_files) - 1:
+                logger.debug(f"[Process {process_id}] Inserting {current_len} samples.")
+                insertion_func_start = current_time_millis()
+                insertion_func(process_id, dataset_id, file_dfs, time_spent, session)
+
+                logger.debug(
+                    f"[Process {process_id}] Inserted {current_len} samples in"
+                    + f" {round((current_time_millis() - insertion_func_start) / 1000, 2)}s."
                 )
-                session.commit()
-                logger.debug(f"Inserted {number_of_samples} samples.")
-            except exc.SQLAlchemyError as exception:
-                logger.critical(f"Could not create samples for file {file_path} in database: {exception}")
-                session.rollback()
-                session.delete(file)
-                continue
+
+                cleanup_start = current_time_millis()
+
+                current_len = 0
+                file_dfs.clear()
+
+                time_spent["other"] += current_time_millis() - cleanup_start
+
+        if dump_measurements and len(valid_files) > 0:
+            with open(
+                f"/tmp/modyn_{current_time_millis()}_process{process_id}_stats.json", "w", encoding="utf-8"
+            ) as statsfile:
+                json.dump(time_spent, statsfile)
 
         if db_connection is not None:
             db_connection.terminate_connection()
@@ -234,8 +379,14 @@ class NewFileWatcher:
         data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
         file_paths = filesystem_wrapper.list(path, recursive=True)
 
+        assert self.__dataset_id == dataset.dataset_id
+
         if self._disable_mt or (self._is_test and self._is_mac):
             NewFileWatcher._handle_file_paths(
+                -1,
+                self._sample_dbinsertion_batchsize,
+                self._dump_measurements,
+                self._force_fallback_insert,
                 file_paths,
                 self.modyn_config,
                 data_file_extension,
@@ -243,9 +394,12 @@ class NewFileWatcher:
                 file_wrapper_type,
                 timestamp,
                 dataset.name,
+                self.__dataset_id,
                 session,
             )
             return
+
+        process_start_time = current_time_millis()
 
         files_per_proc = int(len(file_paths) / self._insertion_threads)
         processes: list[mp.Process] = []
@@ -258,6 +412,10 @@ class NewFileWatcher:
                 proc = mp.Process(
                     target=NewFileWatcher._handle_file_paths,
                     args=(
+                        i,
+                        self._sample_dbinsertion_batchsize,
+                        self._dump_measurements,
+                        self._force_fallback_insert,
                         paths,
                         self.modyn_config,
                         data_file_extension,
@@ -265,6 +423,7 @@ class NewFileWatcher:
                         file_wrapper_type,
                         timestamp,
                         dataset.name,
+                        self.__dataset_id,
                         None,
                     ),
                 )
@@ -273,6 +432,10 @@ class NewFileWatcher:
 
         for proc in processes:
             proc.join()
+
+        runtime = round((current_time_millis() - process_start_time) / 1000, 2)
+        if runtime > 5:
+            logger.debug(f"Processes finished running in in {runtime}s.")
 
     def run(self) -> None:
         """Run the dataset watcher."""

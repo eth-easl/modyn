@@ -1,6 +1,6 @@
 # pylint: disable=redefined-outer-name
 import pytest
-from modyn.storage.internal.database.models import Dataset
+from modyn.storage.internal.database.models import Dataset, Sample
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
 from modyn.storage.internal.filesystem_wrapper.filesystem_wrapper_type import FilesystemWrapperType
 from sqlalchemy import create_engine
@@ -12,6 +12,7 @@ def session():
     engine = create_engine("sqlite:///:memory:", echo=True)
     sess = sessionmaker(bind=engine)()
 
+    Sample.ensure_pks_correct(sess)
     Dataset.metadata.create_all(engine)
 
     yield sess
