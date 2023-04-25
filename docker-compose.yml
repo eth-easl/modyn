@@ -63,6 +63,7 @@ services:
     depends_on:
       - storage
       - selector
+      - model_storage
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
@@ -108,6 +109,7 @@ services:
       - storage-db
       - selector
       - metadata_processor
+      - model_storage
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile

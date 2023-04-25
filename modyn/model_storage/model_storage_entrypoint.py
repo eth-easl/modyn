@@ -2,10 +2,11 @@
 
 import argparse
 import logging
+import multiprocessing as mp
+import os
 import pathlib
 
 import yaml
-from modyn.model_storage.model_storage import ModelStorage
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -13,6 +14,17 @@ logging.basicConfig(
     datefmt="%Y-%m-%d:%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+# We need to do this at the top because the FTP Server or other dependencies otherwise set fork.
+try:
+    mp.set_start_method("spawn")
+except RuntimeError as error:
+    if mp.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
+        logger.error("Start method is already set to {}", mp.get_start_method())
+        raise error
+
+from modyn.model_storage.model_storage import ModelStorage  # noqa # pylint: disable=wrong-import-position
 
 
 def setup_argparser() -> argparse.ArgumentParser:
