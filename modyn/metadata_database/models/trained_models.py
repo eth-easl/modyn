@@ -2,7 +2,7 @@
 from datetime import datetime
 
 from modyn.metadata_database.metadata_base import MetadataBase
-from modyn.metadata_database.models import Trigger
+from modyn.metadata_database.models.triggers import Trigger
 from sqlalchemy import TIMESTAMP, Column, ForeignKeyConstraint, Integer, String
 
 
