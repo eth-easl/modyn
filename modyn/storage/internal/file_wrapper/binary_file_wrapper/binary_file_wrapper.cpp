@@ -59,10 +59,8 @@ int get_label_native(const char *filename, int index, int record_size, int label
 
 IntVector *get_all_labels(unsigned char *data, double num_samples, int record_size, int label_size)
 {
-    cout << "num_samples: " << num_samples << endl;
     IntVector *labels = new IntVector;
     labels->size = num_samples;
-    cout << "labels->size: " << labels->size << endl;
     for (int idx = 0; idx < num_samples; idx++)
     {
         unsigned char *label_begin = data + (idx * record_size);

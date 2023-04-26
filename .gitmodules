@@ -1,0 +1,12 @@
+[submodule "modyn/NewStorage/lib/googletest"]
+	path = modyn/NewStorage/lib/googletest
+	url = https://github.com/google/googletest/
+[submodule "modyn/NewStorage/lib/argparse"]
+	path = modyn/NewStorage/lib/argparse
+	url = https://github.com/p-ranav/argparse.git
+[submodule "modyn/NewStorage/lib/yaml-cpp"]
+	path = modyn/NewStorage/lib/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "modyn/NewStorage/lib/spdlog"]
+	path = modyn/NewStorage/lib/spdlog
+	url = https://github.com/gabime/spdlog.git

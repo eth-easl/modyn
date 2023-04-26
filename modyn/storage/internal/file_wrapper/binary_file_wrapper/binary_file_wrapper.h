@@ -21,4 +21,9 @@ extern "C" IntVector* get_all_labels(unsigned char *data, double num_samples, in
 extern "C" CharVector* get_samples_from_indices_native(const char* filename, IntVector* indices, int record_size, int label_size);
 extern "C" CharVector* get_samples_from_indices(unsigned char *data, IntVector* indices, int record_size, int label_size);
 
+
+int int_from_bytes(unsigned char *begin, unsigned char *end);
+bool validate_request_indices(int total_samples, IntVector *indices);
+std::vector<unsigned char> get_data_from_file(const char *filename);
+
 #endif
