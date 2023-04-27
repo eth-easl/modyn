@@ -20,6 +20,11 @@ services:
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
       - ./metadata_postgresql.conf:/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   storage-db:
     image: postgres:15.2-alpine
     restart: always
@@ -33,6 +38,11 @@ services:
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
       - ./storage_postgresql.conf:/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   storage:
     restart: on-failure
     depends_on:
@@ -96,11 +106,16 @@ services:
     container_name: supervisor
   tests:
     depends_on:
-      - storage
-      - metadata-db
-      - storage-db
-      - selector
-      - metadata_processor
+      storage:
+        condition: service_started
+      selector:
+        condition: service_started
+      metadata_processor:
+        condition: service_started
+      metadata-db:
+        condition: service_healthy
+      storage-db:
+        condition: service_healthy
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
