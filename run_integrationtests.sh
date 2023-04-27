@@ -9,7 +9,7 @@ if [[ ! -z "$CI" ]]; then
 fi
 
 docker build -t modynbase -f docker/Base/Dockerfile .
-docker compose up --build test --abort-on-container-exit --exit-code-from test
+docker compose up --build tests --abort-on-container-exit --exit-code-from tests
 exitcode=$?
 
 # Cleanup
