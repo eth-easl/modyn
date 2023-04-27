@@ -9,11 +9,6 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import ThreadedFTPServer as pyFTPServer
 
-logging.basicConfig(
-    level=logging.NOTSET,
-    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d:%H:%M:%S",
-)
 logger = logging.getLogger(__name__)
 
 
@@ -24,8 +19,8 @@ class FTPServer:
         """Initialize the FTP server.
 
         Args:
-            ftp_port: port on which fdp server is running.
-            serving_directory: directory from which the fdp server is served.
+            ftp_port: port on which ftp server is running.
+            serving_directory: directory from which the ftp server is served.
         """
         self.ftp_port = ftp_port
         self.serving_directory = serving_directory
@@ -42,7 +37,7 @@ class FTPServer:
 
     def create_server_and_serve(self) -> None:
         self.server = pyFTPServer(self.address, self.handler)
-        logger.info(f"run ftp server on model storage server on {self.address}")
+        logger.debug(f"Run FTP server on port {self.ftp_port}.")
         self.server.serve_forever()
 
     def __enter__(self) -> pyFTPServer:
@@ -66,4 +61,4 @@ class FTPServer:
         assert self.server is not None
         self.server.close_all()  # Blocks until server stopped.
         self.thread.join()  # Wait for thread cleanup.
-        logger.debug(f"Closed FTP Server running on port {self.ftp_port}")
+        logger.debug("Closed FTP server.")

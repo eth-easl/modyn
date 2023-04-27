@@ -110,6 +110,7 @@ services:
       - selector
       - metadata_processor
       - model_storage
+      - trainer_server
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile

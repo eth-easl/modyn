@@ -10,7 +10,9 @@ service ModelStorage {
 message RegisterModelRequest {
   int32 pipeline_id = 1;
   int32 trigger_id = 2;
-  string model_path = 3;
+  string hostname = 3;
+  int32 port = 4;
+  string model_path = 5;
 }
 
 message RegisterModelResponse {
@@ -23,6 +25,6 @@ message FetchModelRequest {
 }
 
 message FetchModelResponse {
-  bool valid = 1;
+  bool success = 1;
   string model_path = 2;
 }

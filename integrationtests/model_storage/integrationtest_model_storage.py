@@ -1,13 +1,19 @@
+# end-to-end testing of the model storage component
 import json
 import pathlib
 import shutil
-from ftplib import FTP
-from typing import Any
 
 import grpc
 from integrationtests.utils import get_modyn_config
+from modyn.common import delete_file, download_file, upload_file
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
+from modyn.metadata_database.models import TrainedModel, Trigger
+from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
+    FetchModelRequest,
+    FetchModelResponse,
+    RegisterModelRequest,
+    RegisterModelResponse,
+)
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, JsonString, RegisterPipelineRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -40,60 +46,25 @@ def connect_to_component(config: dict, component_name: str) -> grpc.Channel:
     return component_channel
 
 
-def test_fetch_model(config: dict):
-    ftp = FTP()
-    ftp.connect(config["model_storage"]["hostname"], int(config["model_storage"]["ftp_port"]), timeout=3)
-    ftp.login("modyn", "modyn")
-    ftp.sendcmd("TYPE i")  # Switch to binary mode
-
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL, "rb") as local_file:
-        ftp.storbinary(f"STOR {TEST_FILE_NAME_REMOTE}", local_file)
-
-    pipeline_id, trigger_id = insert_trigger_into_database(config)
-
-    with MetadataDatabaseConnection(config) as database:
-        model_id = database.add_trained_model(pipeline_id, trigger_id, str(TEST_FILE_NAME_REMOTE))
-
-    model_storage_channel = connect_to_component(config, "model_storage")
-    model_storage = ModelStorageStub(model_storage_channel)
-
-    fetch_req = FetchModelRequest(model_id=model_id)
-    fetch_resp: FetchModelResponse = model_storage.FetchModel(fetch_req)
-
-    assert fetch_resp.model_path == str(TEST_FILE_NAME_REMOTE)
-
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "wb") as local_file:
-
-        def write_callback(data: Any) -> None:
-            local_file.write(data)
-
-        ftp.retrbinary(f"RETR {fetch_resp.model_path}", write_callback)
-
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "r") as resp_file:
-        assert resp_file.read() == "Test model storage component", "File contents do not match"
-
-    ftp.delete(TEST_FILE_NAME_REMOTE)
-    ftp.close()
+def upload_dummy_file_to_trainer(config: dict):
+    upload_file(
+        config["trainer_server"]["hostname"],
+        int(config["trainer_server"]["ftp_port"]),
+        "modyn",
+        "modyn",
+        local_file_path=TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL,
+        remote_file_path=pathlib.Path(TEST_FILE_NAME_REMOTE),
+    )
 
 
-def upload_test_model(config: dict):
-    ftp = FTP()
-    ftp.connect(config["trainer_server"]["hostname"], int(config["trainer_server"]["ftp_port"]), timeout=3)
-    ftp.login("modyn", "modyn")
-    ftp.sendcmd("TYPE i")  # Switch to binary mode
-
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL, "rb") as local_file:
-        ftp.storbinary(f"STOR {TEST_FILE_NAME_REMOTE}", local_file)
-
-    ftp.close()
-
-
-def delete_test_model(config: dict):
-    ftp = FTP()
-    ftp.connect(config["trainer_server"]["hostname"], int(config["trainer_server"]["ftp_port"]), timeout=3)
-    ftp.login("modyn", "modyn")
-    ftp.delete(TEST_FILE_NAME_REMOTE)
-    ftp.close()
+def delete_dummy_file_from_trainer(config: dict):
+    delete_file(
+        config["trainer_server"]["hostname"],
+        int(config["trainer_server"]["ftp_port"]),
+        "modyn",
+        "modyn",
+        pathlib.Path(TEST_FILE_NAME_REMOTE),
+    )
 
 
 def insert_trigger_into_database(config: dict) -> (int, int):
@@ -122,57 +93,76 @@ def insert_trigger_into_database(config: dict) -> (int, int):
     return pipeline_id, trigger_id
 
 
-# TODO(#167) test model storage end-to-end
-"""
-def test_model_download(config: dict):
+def delete_trigger_from_database(config: dict, pipeline_id: int, trigger_id: int, model_id: int):
+    with MetadataDatabaseConnection(config) as database:
+        database.session.query(TrainedModel).filter(TrainedModel.model_id == model_id).delete()
+        database.session.query(Trigger).filter(
+            Trigger.pipeline_id == pipeline_id and Trigger.trigger_id == trigger_id
+        ).delete()
+        database.session.commit()
+
+
+def test_model_storage(config: dict):
+    # register pipeline and trigger
     pipeline_id, trigger_id = insert_trigger_into_database(config)
-    upload_test_model(config)
 
     model_storage_channel = connect_to_component(config, "model_storage")
     model_storage = ModelStorageStub(model_storage_channel)
 
+    # try to register a new model in the model storage
     request_register = RegisterModelRequest(
-        pipeline_id=pipeline_id, trigger_id=trigger_id, model_path=str(TEST_FILE_NAME_REMOTE))
+        pipeline_id=pipeline_id,
+        trigger_id=trigger_id,
+        hostname=config["trainer_server"]["hostname"],
+        port=int(config["trainer_server"]["ftp_port"]),
+        model_path=str(TEST_FILE_NAME_REMOTE),
+    )
     response_register: RegisterModelResponse = model_storage.RegisterModel(request_register)
 
-    assert response_register.valid, "Could not register a new model"
+    assert response_register.success, "Could not register a new model"
     model_id = response_register.model_id
 
-    request_model = FetchModelRequest(model_id=model_id)
-    response_model: FetchModelResponse = model_storage.FetchModel(request_model)
+    # try to fetch the registered model
+    request_fetch = FetchModelRequest(model_id=model_id)
+    response_fetch: FetchModelResponse = model_storage.FetchModel(request_fetch)
+    model_path = pathlib.Path(response_fetch.model_path)
 
-    assert response_model.valid, "Could not find model with this id"
+    assert response_fetch.success, "Could not find model with this id"
 
-    ftp = FTP()
-    ftp.connect(
-        config["model_storage"]["hostname"], int(config["model_storage"]["ftp_port"]), timeout=3
+    # download the model (dummy file) from model storage
+    download_file(
+        config["model_storage"]["hostname"],
+        int(config["model_storage"]["ftp_port"]),
+        "modyn",
+        "modyn",
+        remote_file_path=model_path,
+        local_file_path=TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP,
     )
 
-    ftp.login("modyn", "modyn")
-    ftp.sendcmd("TYPE i")  # Switch to binary mode
-
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "wb") as local_file:
-        def write_callback(data: Any) -> None:
-            local_file.write(data)
-
-        ftp.retrbinary(f"RETR {response_model.model_path}", write_callback)
-
-
+    # compare if content matches initial dummy file
     with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "r") as resp_file:
         assert resp_file.read() == "Test model storage component", "File contents do not match"
 
-    ftp.delete(response_model.model_path)
-    ftp.close()
-    delete_test_model(config)
-"""
+    delete_file(
+        config["model_storage"]["hostname"],
+        int(config["model_storage"]["ftp_port"]),
+        "modyn",
+        "modyn",
+        remote_file_path=pathlib.Path(response_fetch.model_path),
+    )
+
+    # clean-up database
+    delete_trigger_from_database(config, pipeline_id, trigger_id, model_id)
 
 
 def main() -> None:
     modyn_config = get_modyn_config()
     try:
         create_dummy_file()
-        test_fetch_model(modyn_config)
+        upload_dummy_file_to_trainer(modyn_config)
+        test_model_storage(modyn_config)
     finally:
+        delete_dummy_file_from_trainer(modyn_config)
         cleanup_models_dir()
 
 

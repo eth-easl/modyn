@@ -3,7 +3,7 @@ import pathlib
 import shutil
 import tempfile
 
-from modyn.trainer_server.internal.ftp.ftp_server import FTPServer
+from modyn.common.ftp.ftp_server import FTPServer
 from modyn.trainer_server.internal.grpc.trainer_server_grpc_server import GRPCServer
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class TrainerServer:
 
     def run(self) -> None:
         with GRPCServer(self.config, self.temp_directory) as grpc_server:
-            with FTPServer(self.config, self.temp_directory):
+            with FTPServer(self.config["trainer_server"]["ftp_port"], self.temp_directory):
                 grpc_server.wait_for_termination()
 
         shutil.rmtree(self.temp_directory)

@@ -20,18 +20,24 @@ class RegisterModelRequest(google.protobuf.message.Message):
 
     PIPELINE_ID_FIELD_NUMBER: builtins.int
     TRIGGER_ID_FIELD_NUMBER: builtins.int
+    HOSTNAME_FIELD_NUMBER: builtins.int
+    PORT_FIELD_NUMBER: builtins.int
     MODEL_PATH_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
+    hostname: builtins.str
+    port: builtins.int
     model_path: builtins.str
     def __init__(
         self,
         *,
         pipeline_id: builtins.int = ...,
         trigger_id: builtins.int = ...,
+        hostname: builtins.str = ...,
+        port: builtins.int = ...,
         model_path: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["hostname", b"hostname", "model_path", b"model_path", "pipeline_id", b"pipeline_id", "port", b"port", "trigger_id", b"trigger_id"]) -> None: ...
 
 global___RegisterModelRequest = RegisterModelRequest
 
@@ -72,16 +78,16 @@ global___FetchModelRequest = FetchModelRequest
 class FetchModelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    VALID_FIELD_NUMBER: builtins.int
+    SUCCESS_FIELD_NUMBER: builtins.int
     MODEL_PATH_FIELD_NUMBER: builtins.int
-    valid: builtins.bool
+    success: builtins.bool
     model_path: builtins.str
     def __init__(
         self,
         *,
-        valid: builtins.bool = ...,
+        success: builtins.bool = ...,
         model_path: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "valid", b"valid"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "success", b"success"]) -> None: ...
 
 global___FetchModelResponse = FetchModelResponse

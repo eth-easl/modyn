@@ -15,7 +15,7 @@ class TrainedModel(MetadataBase):
     pipeline_id = Column("pipeline_id", Integer)
     trigger_id = Column("trigger_id", Integer)
     timestamp = Column("timestamp", TIMESTAMP(timezone=False), default=datetime.now())
-    model_path = Column("model_path", String(length=120), nullable=False)
+    model_path = Column("model_path", String(length=200), nullable=False)
     __table_args__ = (
         ForeignKeyConstraint([pipeline_id, trigger_id], [Trigger.pipeline_id, Trigger.trigger_id]),
         {"extend_existing": True},

@@ -7,6 +7,7 @@ echo "Running as user $USER"
 
 echo "Running basic availability tests"
 python $SCRIPT_DIR/test_docker_compose.py
+python $SCRIPT_DIR/test_ftp_connections.py
 echo "Running storage integration tests"
 python $SCRIPT_DIR/storage/integrationtest_storage.py
 echo "Running selector integration tests"
