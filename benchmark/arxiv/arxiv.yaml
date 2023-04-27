@@ -5,7 +5,7 @@ pipeline:
 model:
   id: DistilBertNet
   config:
-    num_classes: 55
+    num_classes: 172
 training:
   gpus: 1
   device: "cuda:0"
@@ -36,12 +36,11 @@ training:
       reset_after_trigger: True
 data:
   dataset_id: arxiv
-  transformations: []
   bytes_parser_function: |
     import numpy as np
     import io
     def bytes_parser_function(data: bytes) -> np.ndarray:
-      return np.load(io.BytesIO(bytes))
+      return np.load(io.BytesIO(data))
 
 trigger:
   id: TimeTrigger

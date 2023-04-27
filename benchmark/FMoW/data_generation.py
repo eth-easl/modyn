@@ -2,11 +2,12 @@ import argparse
 import csv
 import logging
 import os
+import pathlib
 import pickle
 import shutil
 from datetime import datetime
+
 import gdown
-import pathlib
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from wilds import get_dataset

@@ -275,6 +275,7 @@ class PytorchTrainer:
                 target = self._label_tranformer_function(batch[2]).to(self._device)
 
             data: Union[torch.Tensor, dict]
+
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(self._device)
             elif isinstance(batch[1], dict):

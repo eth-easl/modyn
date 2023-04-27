@@ -9,13 +9,13 @@ model:
     num_classes: 2
 training:
   gpus: 1
-  device: "cpu"
+  device: "cuda:0"
   dataloader_workers: 2
-  use_previous_model: True
+  use_previous_model: False
   initial_model: random
   initial_pass:
     activated: False
-  batch_size: 64
+  batch_size: 128
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -30,10 +30,12 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 1000
+    name: LossDownsamplingStrategy
+    maximum_keys_in_memory: 10000
     config:
       limit: -1
+      presampling_ratio: 50
+      downsampled_batch_size: 64
       reset_after_trigger: True
 data:
   dataset_id: yearbook

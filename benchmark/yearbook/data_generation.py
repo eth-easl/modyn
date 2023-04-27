@@ -1,13 +1,14 @@
 import argparse
 import logging
 import os
+import pathlib
 import pickle
 
+import gdown
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-import pathlib
-import gdown
+
 
 def maybe_download(drive_id, destination_dir, destination_file_name):
     """

@@ -7,7 +7,7 @@ We need an efficient FileWrapper to handle text based inputs.
 
 ## Description
 
-In this directory, you find files necessary to run experiments on the ArXiv. The goal is to predict paper category (55 classes)
+In this directory, you find files necessary to run experiments on the ArXiv dataset. The goal is to predict paper category (55 classes)
 given paper title. The dataset contains more than 2 million samples collected from 2002 to 2017. Every title is stored
 separately and the os timestamp is set accordingly.
 
