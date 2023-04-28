@@ -66,6 +66,7 @@ class TriggerSampleStorage:
             the total retrieval workers must be smaller than 2."
         if retrieval_worker_id < 0 and total_retrieval_workers < 2:
             return self._get_all_samples(pipeline_id, trigger_id, partition_id)
+        assert num_samples_trigger > 0, "The number of samples per trigger must be positive."
         return self._get_worker_samples(
             pipeline_id, trigger_id, partition_id, retrieval_worker_id, total_retrieval_workers, num_samples_trigger
         )
@@ -130,6 +131,13 @@ class TriggerSampleStorage:
                     )
                 )
                 break
+
+        # Check if any index in triple_list is negative
+        assert all(
+            start_index >= 0 and end_index >= 0 for (_, start_index, end_index) in triple_list
+        ), "The start index and end index must be positive. The error occurred in the following triple list: {}".format(
+            triple_list
+        )
 
         # We need to flatten the list of lists of np arrays and then reshape it to get the list of tuples
         return [
