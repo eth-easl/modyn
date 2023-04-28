@@ -91,13 +91,12 @@ class YearbookDownloader(Dataset):
         timestamp = ((year - 1930) * DAY_LENGTH_SECONDS) + 1
         return timestamp
 
-    def _create_binary_file(self, data: list[tuple[torch.Tensor, torch.Tensor]], output_file_name: str, year: int):
+    def _create_binary_file(self, data, output_file_name: str, year: int):
 
         with open(output_file_name, "wb") as f:
             for tensor1, tensor2 in data:
 
                 features_bytes = tensor1.numpy().tobytes()
-
                 label_integer = tensor2.item()
 
                 features_size = len(features_bytes)
