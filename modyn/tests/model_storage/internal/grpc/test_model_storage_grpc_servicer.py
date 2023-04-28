@@ -1,4 +1,5 @@
 import pathlib
+import platform
 import tempfile
 from datetime import datetime
 from unittest.mock import patch
@@ -58,6 +59,9 @@ class MockDatabaseConnection:
     "modyn.model_storage.internal.grpc.model_storage_grpc_servicer.MetadataDatabaseConnection", MockDatabaseConnection
 )
 def test_register_model(current_time_millis):  # pylint: disable=unused-argument
+    if platform.system() == "Darwin":
+        # On macOS, the ftpserver works but throws a file descriptor error upon termination in tests
+        return
     config = get_modyn_config()
     with tempfile.TemporaryDirectory() as storage_dir:
         storage_path = pathlib.Path(storage_dir)

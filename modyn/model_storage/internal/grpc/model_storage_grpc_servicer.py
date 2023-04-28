@@ -60,7 +60,7 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
 
         total_downloaded = 0
 
-        def callback(total_size: int, block_size: int):
+        def callback(total_size: int, block_size: int) -> None:
             nonlocal total_downloaded
             perc_before = float(total_downloaded) / total_size
             total_downloaded += block_size

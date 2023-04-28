@@ -1,7 +1,7 @@
 # Utils file containing functions in order to simplify FTP server interactions.
 import pathlib
 from ftplib import FTP
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 
 def download_file(
@@ -11,7 +11,7 @@ def download_file(
     password: str,
     remote_file_path: pathlib.Path,
     local_file_path: pathlib.Path,
-    callback: Callable[[int, int], None] = None,
+    callback: Optional[Callable[[int, int], None]] = None,
 ) -> None:
     """Downloads a file from a given host to the local filesystem. If the file already exists, it gets overwritten.
 
@@ -32,7 +32,11 @@ def download_file(
 
     ftp.login(user, password)
     ftp.sendcmd("TYPE i")  # Switch to binary mode
-    size = ftp.size(str(remote_file_path))
+    opt_size = ftp.size(str(remote_file_path))
+    if opt_size is None:
+        ftp.close()
+        raise FileNotFoundError(f"Could not read size of file with path {remote_file_path} from FTP server.")
+    size: int = opt_size
 
     with open(local_file_path, "wb") as local_file:
 
