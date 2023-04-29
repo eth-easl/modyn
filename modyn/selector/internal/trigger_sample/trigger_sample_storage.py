@@ -132,13 +132,6 @@ class TriggerSampleStorage:
                 )
                 break
 
-        # Check if any index in triple_list is negative
-        assert all(
-            start_index >= 0 and end_index >= 0 for (_, start_index, end_index) in triple_list
-        ), "The start index and end index must be positive. The error occurred in the following triple list: {}".format(
-            triple_list
-        )
-
         # We need to flatten the list of lists of np arrays and then reshape it to get the list of tuples
         return [
             (int(key), float(weight))  # type: ignore
