@@ -115,7 +115,8 @@ class TriggerSampleStorage:
                     # or completely from 0 to the end of the file.
                     # Because the end index is exclusive, we compare < instead of <= otherwise we would retrieve
                     # one more sample than we should
-                    triple_list.append((file_path, start_index - current_index, num_samples_in_file))
+                    triple_list.append((file_path, start_index - current_index if start_index - current_index >= 0 else 0
+                                        , num_samples_in_file))
                     current_index += num_samples_in_file
                     continue
                 # We are at the tail of the file and the samples for the worker are in the file, either from
