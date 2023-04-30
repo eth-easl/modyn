@@ -1,5 +1,5 @@
 #include "../../../src/internal/file_wrapper/SingleSampleFileWrapper.h"
-#include "MockFilesystemWrapper.cpp"
+#include "MockFilesystemWrapper.h"
 #include <gtest/gtest.h>
 #include "gmock/gmock.h"
 #include <fstream>
