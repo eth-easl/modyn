@@ -152,6 +152,24 @@ class AbstractSelectionStrategy(ABC):
         num_keys: int,
     ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
+            previous_trigger_partition = (
+                database.session.query(TriggerPartition)
+                .filter(
+                    TriggerPartition.pipeline_id == pipeline_id,
+                    TriggerPartition.trigger_id == trigger_id,
+                    TriggerPartition.partition_id == partition_id,
+                )
+                .first()
+            )
+
+            if previous_trigger_partition is not None:
+                logger.warning(
+                    f"Found previous trigger partition for pipeline {pipeline_id}, trigger {trigger_id}, "
+                    f"partition {partition_id}. Overwriting."
+                )
+                database.session.delete(previous_trigger_partition)
+                database.session.commit()
+
             trigger_partition = TriggerPartition(
                 pipeline_id=pipeline_id,
                 trigger_id=trigger_id,
