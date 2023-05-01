@@ -18,6 +18,6 @@ YAML::Node Utils::get_dummy_config()
     config["file_extension"] = ".txt";
     config["label_file_extension"] = ".json";
     config["label_size"] = 1;
-    config["sample_size"] = 2;
+    config["record_size"] = 2;
     return config;
 }

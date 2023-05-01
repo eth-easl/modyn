@@ -4,6 +4,18 @@
 #include <iostream>
 #include <filesystem>
 #include <vector>
+#include <sys/stat.h>
+
+#ifdef WIN32
+  #define stat _stat
+#endif
+
+const char kPathSeparator =
+#ifdef _WIN32
+                            '\\';
+#else
+                            '/';
+#endif
 
 using namespace storage;
 
@@ -146,7 +158,10 @@ int LocalFileSystemWrapper::get_created_time(std::string path)
     {
         throw std::runtime_error("Path " + path + " does not exist.");
     }
-    return std::filesystem::last_write_time(path).time_since_epoch().count();
+    struct stat file_info;
+    int result = stat(path.c_str(), &file_info);
+    time_t creation_time = file_info.st_ctime;
+    return creation_time;
 }
 
 bool LocalFileSystemWrapper::is_valid_path(std::string path)
@@ -162,7 +177,7 @@ std::string LocalFileSystemWrapper::join(std::vector<std::string> paths)
         joined_path += paths[i];
         if (i < paths.size() - 1)
         {
-            joined_path += "/";
+            joined_path += kPathSeparator;
         }
     }
     return joined_path;

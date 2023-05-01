@@ -11,7 +11,7 @@ namespace storage
     class MockFileSystemWrapper : public storage::AbstractFileSystemWrapper
     {
     public:
-        MockFileSystemWrapper(std::string path) : AbstractFileSystemWrapper(path) {}
+        MockFileSystemWrapper() : AbstractFileSystemWrapper("") {};
         MOCK_METHOD(std::vector<unsigned char> *, get, (std::string path), (override));
         MOCK_METHOD(bool, exists, (std::string path), (override));
         MOCK_METHOD(std::vector<std::string> *, list, (std::string path, bool recursive), (override));

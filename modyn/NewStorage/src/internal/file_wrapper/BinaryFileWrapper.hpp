@@ -3,6 +3,7 @@
 
 #include "AbstractFileWrapper.hpp"
 #include <cstddef>
+#include <iostream>
 
 namespace storage
 {
@@ -20,7 +21,15 @@ namespace storage
     public:
         BinaryFileWrapper(std::string path, YAML::Node file_wrapper_config, AbstractFileSystemWrapper *filesystem_wrapper) : AbstractFileWrapper(path, file_wrapper_config, filesystem_wrapper)
         {
+            if (!file_wrapper_config["record_size"])
+            {
+                throw std::runtime_error("record_size must be specified in the file wrapper config.");
+            }
             this->record_size = file_wrapper_config["record_size"].as<int>();
+            if (!file_wrapper_config["label_size"])
+            {
+                throw std::runtime_error("label_size must be specified in the file wrapper config.");
+            }
             this->label_size = file_wrapper_config["label_size"].as<int>();
             this->sample_size = this->record_size - this->label_size;
 

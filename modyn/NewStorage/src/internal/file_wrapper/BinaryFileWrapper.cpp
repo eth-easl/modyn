@@ -2,7 +2,6 @@
 #include <fstream>
 #include <numeric>
 #include <vector>
-#include <iostream>
 
 using namespace storage;
 
@@ -14,7 +13,9 @@ int BinaryFileWrapper::int_from_bytes(unsigned char *begin, unsigned char *end)
                             [](int acc, unsigned char x)
                             { return (acc << 8) | x; });
 #elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    value = *reinterpret_cast<int *>(begin);
+    value = std::accumulate(begin, end, 0,
+                            [](int acc, unsigned char x)
+                            { return (acc << 8) | x; });
 #else
 #error "Unknown byte order"
 #endif
@@ -49,7 +50,6 @@ void BinaryFileWrapper::validate_request_indices(int total_samples, std::vector<
 int BinaryFileWrapper::get_label(int index)
 {
     int record_start = index * this->record_size;
-    int record_end = record_start + this->record_size;
     unsigned char *data = this->filesystem_wrapper->get(this->path)->data();
     unsigned char *label_begin = data + record_start;
     unsigned char *label_end = label_begin + this->label_size;
@@ -61,9 +61,12 @@ std::vector<std::vector<int>> *BinaryFileWrapper::get_all_labels()
     int num_samples = this->get_number_of_samples();
     std::vector<std::vector<int>> *labels = new std::vector<std::vector<int>>;
     labels->reserve(num_samples);
+    unsigned char *data = this->filesystem_wrapper->get(this->path)->data();
     for (int i = 0; i < num_samples; i++)
     {
-        int label = this->get_label(i);
+        unsigned char *label_begin = data + (i * this->record_size);
+        unsigned char *label_end = label_begin + this->label_size;
+        int label = int_from_bytes(label_begin, label_end);
         std::vector<int> label_vector = {label};
         labels->push_back(label_vector);
     }
@@ -107,11 +110,12 @@ std::vector<std::vector<unsigned char>> *BinaryFileWrapper::get_samples_from_ind
     this->validate_request_indices(this->get_number_of_samples(), indices);
     std::vector<std::vector<unsigned char>> *samples = new std::vector<std::vector<unsigned char>>;
     samples->reserve(indices->size());
+    unsigned char *data = this->filesystem_wrapper->get(this->path)->data();
     for (int i = 0; i < indices->size(); i++)
     {
         int index = indices->at(i);
         int record_start = index * this->record_size;
-        unsigned char *sample_begin = this->filesystem_wrapper->get(this->path)->data() + record_start + this->label_size;
+        unsigned char *sample_begin = data + record_start + this->label_size;
         unsigned char *sample_end = sample_begin + this->sample_size;
         std::vector<unsigned char> sample(sample_begin, sample_end);
         samples->push_back(sample);
