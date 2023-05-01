@@ -40,7 +40,7 @@ mypy modyn
 
 Remember to make sure that the tests still work after running linting.
 
-For an automatic execution of automatic formatting and the linters, you can use the `compilance_check.sh` script in the project root. 
+For an automatic execution of automatic formatting and the linters, you can use the `compliance_check.sh` script in the project root. 
 The script assumes that `conda` is available and if not, tries to activate it on `zsh` and `bash`.
 Furthermore, you must have created a conda environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
 

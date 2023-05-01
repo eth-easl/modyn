@@ -488,7 +488,7 @@ def test_many_samples():
 
     strategy_config = {
         "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 50000,
+        "maximum_keys_in_memory": 5000,
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
