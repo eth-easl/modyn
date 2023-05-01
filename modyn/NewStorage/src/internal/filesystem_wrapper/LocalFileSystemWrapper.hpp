@@ -1,7 +1,7 @@
-#ifndef LOCAL_FILESYSTEM_WRAPPER_H_
-#define LOCAL_FILESYSTEM_WRAPPER_H_
+#ifndef LOCAL_FILESYSTEM_WRAPPER_HPP
+#define LOCAL_FILESYSTEM_WRAPPER_HPP
 
-#include "AbstractFileSystemWrapper.h"
+#include "AbstractFileSystemWrapper.hpp"
 
 namespace storage
 {

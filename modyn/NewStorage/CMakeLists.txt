@@ -12,7 +12,7 @@ include_directories(
 )
 
 add_subdirectory(src)
-add_subdirectory(tst)
+add_subdirectory(test)
 add_subdirectory(lib/yaml-cpp)
 add_subdirectory(lib/googletest)
 add_subdirectory(lib/argparse)

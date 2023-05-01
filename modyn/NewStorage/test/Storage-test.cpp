@@ -1,12 +1,14 @@
 #include <gtest/gtest.h>
-#include "../src/Storage.h"
-#include "Utils.h"
+#include "../src/Storage.hpp"
+#include "Utils.hpp"
+
+using namespace storage;
 
 TEST(StorageTest, TestStorage)
 {
-    create_dummy_yaml();
+    Utils::create_dummy_yaml();
     std::string config_file = "config.yaml";
     storage::Storage storage(config_file);
     storage.run();
-    delete_dummy_yaml();
+    Utils::delete_dummy_yaml();
 }

@@ -1,7 +1,7 @@
-#ifndef BINARY_FILE_WRAPPER_H
-#define BINARY_FILE_WRAPPER_H
+#ifndef BINARY_FILE_WRAPPER_HPP
+#define BINARY_FILE_WRAPPER_HPP
 
-#include "AbstractFileWrapper.h"
+#include "AbstractFileWrapper.hpp"
 #include <cstddef>
 
 namespace storage
@@ -9,7 +9,6 @@ namespace storage
     class BinaryFileWrapper : public AbstractFileWrapper
     {
     private:
-        std::string byteorder;
         int record_size;
         int label_size;
         int file_size;
@@ -21,7 +20,6 @@ namespace storage
     public:
         BinaryFileWrapper(std::string path, YAML::Node file_wrapper_config, AbstractFileSystemWrapper *filesystem_wrapper) : AbstractFileWrapper(path, file_wrapper_config, filesystem_wrapper)
         {
-            this->byteorder = file_wrapper_config["byteorder"].as<std::string>();
             this->record_size = file_wrapper_config["record_size"].as<int>();
             this->label_size = file_wrapper_config["label_size"].as<int>();
             this->sample_size = this->record_size - this->label_size;

@@ -1,4 +1,4 @@
-#include "BinaryFileWrapper.h"
+#include "BinaryFileWrapper.hpp"
 #include <fstream>
 #include <numeric>
 #include <vector>
@@ -31,7 +31,7 @@ void BinaryFileWrapper::validate_file_extension()
     std::string extension = this->path.substr(this->path.find_last_of(".") + 1);
     if (extension != "bin")
     {
-        throw std::runtime_error("Binary file wrapper only supports .bin files.");
+        throw std::invalid_argument("Binary file wrapper only supports .bin files.");
     }
 }
 

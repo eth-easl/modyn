@@ -1,7 +1,7 @@
-#ifndef SINGLE_SAMPLE_FILE_WRAPPER_H
-#define SINGLE_SAMPLE_FILE_WRAPPER_H
+#ifndef SINGLE_SAMPLE_FILE_WRAPPER_HPP
+#define SINGLE_SAMPLE_FILE_WRAPPER_HPP
 
-#include "AbstractFileWrapper.h"
+#include "AbstractFileWrapper.hpp"
 #include <cstddef>
 
 namespace storage 

@@ -1,3 +1,6 @@
+#ifndef STORAGE_HPP
+#define STORAGE_HPP
+
 #include <yaml-cpp/yaml.h>
 #include <string>
 
@@ -10,3 +13,5 @@ namespace storage {
             void run();
     };
 }
+
+#endif

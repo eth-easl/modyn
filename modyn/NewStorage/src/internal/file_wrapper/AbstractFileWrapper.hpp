@@ -1,9 +1,9 @@
-#ifndef ABSTRACT_FILE_WRAPPER_H
-#define ABSTRACT_FILE_WRAPPER_H
+#ifndef ABSTRACT_FILE_WRAPPER_HPP
+#define ABSTRACT_FILE_WRAPPER_HPP
 
 #include <string>
 #include <yaml-cpp/yaml.h>
-#include "../filesystem_wrapper/AbstractFileSystemWrapper.h"
+#include "../filesystem_wrapper/AbstractFileSystemWrapper.hpp"
 
 namespace storage
 {
