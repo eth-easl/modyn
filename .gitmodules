@@ -10,3 +10,9 @@
 [submodule "modyn/NewStorage/lib/spdlog"]
 	path = modyn/NewStorage/lib/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "modyn/NewStorage/lib/sqlpp11"]
+	path = modyn/NewStorage/lib/sqlpp11
+	url = https://github.com/rbock/sqlpp11.git
+[submodule "modyn/NewStorage/lib/grpc"]
+	path = modyn/NewStorage/lib/grpc
+	url = https://github.com/grpc/grpc
