@@ -126,13 +126,6 @@ class AbstractSelectionStrategy(ABC):
         modyn_config: dict,
         insertion_id: int,
     ) -> None:
-        AbstractSelectionStrategy._store_trigger_num_keys(
-            modyn_config=modyn_config,
-            pipeline_id=pipeline_id,
-            trigger_id=trigger_id,
-            partition_id=partition_id,
-            num_keys=len(training_samples),
-        )
         TriggerSampleStorage(
             trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"],
         ).save_trigger_sample(
@@ -152,24 +145,6 @@ class AbstractSelectionStrategy(ABC):
         num_keys: int,
     ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
-            previous_trigger_partition = (
-                database.session.query(TriggerPartition)
-                .filter(
-                    TriggerPartition.pipeline_id == pipeline_id,
-                    TriggerPartition.trigger_id == trigger_id,
-                    TriggerPartition.partition_id == partition_id,
-                )
-                .first()
-            )
-
-            if previous_trigger_partition is not None:
-                logger.warning(
-                    f"Found previous trigger partition for pipeline {pipeline_id}, trigger {trigger_id}, "
-                    f"partition {partition_id}. Overwriting."
-                )
-                database.session.delete(previous_trigger_partition)
-                database.session.commit()
-
             trigger_partition = TriggerPartition(
                 pipeline_id=pipeline_id,
                 trigger_id=trigger_id,
@@ -201,6 +176,14 @@ class AbstractSelectionStrategy(ABC):
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
                 + f" {len(training_samples)} samples for new trigger {trigger_id}."
             )
+
+            AbstractSelectionStrategy._store_trigger_num_keys(
+                    modyn_config=self._modyn_config,
+                    pipeline_id=self._pipeline_id,
+                    trigger_id=trigger_id,
+                    partition_id=partition,
+                    num_keys=len(training_samples),
+                )
 
             total_keys_in_trigger += len(training_samples)
 
