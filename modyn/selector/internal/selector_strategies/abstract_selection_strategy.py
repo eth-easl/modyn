@@ -178,12 +178,12 @@ class AbstractSelectionStrategy(ABC):
             )
 
             AbstractSelectionStrategy._store_trigger_num_keys(
-                    modyn_config=self._modyn_config,
-                    pipeline_id=self._pipeline_id,
-                    trigger_id=trigger_id,
-                    partition_id=partition,
-                    num_keys=len(training_samples),
-                )
+                modyn_config=self._modyn_config,
+                pipeline_id=self._pipeline_id,
+                trigger_id=trigger_id,
+                partition_id=partition,
+                num_keys=len(training_samples),
+            )
 
             total_keys_in_trigger += len(training_samples)
 
