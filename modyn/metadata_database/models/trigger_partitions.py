@@ -1,6 +1,6 @@
 from modyn.metadata_database.metadata_base import MetadataBase
 from modyn.metadata_database.models import Pipeline
-from sqlalchemy import BigInteger, Column, ForeignKey, ForeignKeyConstraint, Index, Integer
+from sqlalchemy import BigInteger, Column, ForeignKey, ForeignKeyConstraint, Integer
 
 
 class TriggerPartition(MetadataBase):
@@ -13,12 +13,6 @@ class TriggerPartition(MetadataBase):
     partition_id = Column("partition_id", Integer, nullable=False, primary_key=True)
     num_keys = Column("num_keys", BigInteger, nullable=True)
     __table_args__ = (
-        Index(
-            "t_trigger_partition_pipeline_idx",
-            "pipeline_id",
-            "trigger_id",
-            "partition_id",
-        ),
         ForeignKeyConstraint(
             ["trigger_id", "pipeline_id"],
             ["triggers.trigger_id", "triggers.pipeline_id"],

@@ -170,6 +170,7 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger)
             database.session.commit()
 
+        partition_num_keys = {}
         partition: Optional[int] = None
         for partition, training_samples in enumerate(self._on_trigger()):
             logger.info(
@@ -177,13 +178,7 @@ class AbstractSelectionStrategy(ABC):
                 + f" {len(training_samples)} samples for new trigger {trigger_id}."
             )
 
-            AbstractSelectionStrategy._store_trigger_num_keys(
-                modyn_config=self._modyn_config,
-                pipeline_id=self._pipeline_id,
-                trigger_id=trigger_id,
-                partition_id=partition,
-                num_keys=len(training_samples),
-            )
+            partition_num_keys[partition] = len(training_samples)
 
             total_keys_in_trigger += len(training_samples)
 
@@ -240,6 +235,16 @@ class AbstractSelectionStrategy(ABC):
             trigger.num_partitions = num_partitions
             database.session.commit()
 
+        # Insert all partition lengths into DB
+        for partition, partition_keys in partition_num_keys.items():
+            AbstractSelectionStrategy._store_trigger_num_keys(
+                modyn_config=self._modyn_config,
+                pipeline_id=self._pipeline_id,
+                trigger_id=trigger_id,
+                partition_id=partition,
+                num_keys=partition_keys,
+            )
+
         if self.reset_after_trigger:
             self._reset_state()
 
@@ -265,7 +270,7 @@ class AbstractSelectionStrategy(ABC):
         """
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            num_samples_trigger = (
+            num_samples_trigger_partition = (
                 database.session.query(TriggerPartition.num_keys)
                 .filter(
                     TriggerPartition.pipeline_id == self._pipeline_id,
@@ -274,7 +279,8 @@ class AbstractSelectionStrategy(ABC):
                 )
                 .first()
             )
-            num_samples_trigger = num_samples_trigger[0] if num_samples_trigger is not None else 0
+            assert num_samples_trigger_partition is not None, "Could not find TriggerPartition in DB"
+            num_samples_trigger_partition = num_samples_trigger_partition[0]
 
         data = TriggerSampleStorage(
             self._trigger_sample_directory,
@@ -284,7 +290,7 @@ class AbstractSelectionStrategy(ABC):
             partition_id=partition_id,
             retrieval_worker_id=worker_id,
             total_retrieval_workers=num_workers,
-            num_samples_trigger_partition=num_samples_trigger,
+            num_samples_trigger_partition=num_samples_trigger_partition,
         )
 
         assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"
