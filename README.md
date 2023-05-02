@@ -41,6 +41,7 @@ For running all integration tests, run
 **Next Steps**.
 Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.
 Checkout our [Technical Guidelines](docs/TECHNICAL.md) for some hints on developing Modyn and how to add new data selection and triggering policies.
+Checkout the [Architecture Documentation](docs/AARCHITECTURE.md) guide for an overview of Modyn's components.
 Last, checkout our [vision paper on Modyn](https://anakli.inf.ethz.ch/papers/MLonDynamicData_EuroMLSys23.pdf) for an introduction to model training on dynamic datasets.
 
 We are actively developing and designing Modyn, including more thorough documentation.
