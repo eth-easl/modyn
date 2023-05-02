@@ -1,7 +1,8 @@
 # Technical Nuts and Bolts
 
-Please follow the Quickstart Section in the [README](README.md) for a list of required software and how to install Modyn.
-This document will deal with some more details of development.
+Please follow the Quickstart Section in the [README](../README.md) for a list of required software and how to install Modyn.
+Please refer to the ­[Architecture Documentation](ARCHITECTURE.md) for an overview of Modyn's components.
+This document will deal with some more details of development and how to extend Modyn.
 
 ### Linting and Testing
 For an automatic execution of automatic formatting, linting, and testing, you can use the `compilance_check.sh` script in the project root. 

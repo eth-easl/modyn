@@ -18,6 +18,7 @@ The trained model, the output of \modyn, can then be used in further steps in th
 Note that we are actively developing this architecture - for example, a new model storage component is in the works to alleviate the Supervisor of managing the trained models.
 
 Information on pipeliens can be found in the [EXAMPLE.md](EXAMPLE.md).
+Information on how to extend Modyn with new policies and how to develop the codebase can be found in the [TECHNICAL.md](TECHNICAL.md).
 
 ## Production vs Experiment Mode
 We can execute pipelines in either _experiment mode_ or _production mode_.
