@@ -22,7 +22,7 @@ Until #104 is solved, all dependencies are managed in this single file.
 Next, we need to update the `docker-compose.yml` file to reflect the local setup.
 First, for the `trainer_server` service, you should enable the `runtime` and `deploy` options such that we have access to the GPU in the trainer server container.
 Next, for the `storage` service, you should uncomment the `volumes` option to mount `/mnt/datasets` to `/datasets` in the container.
-Optionally, you can uncomment and just all lines increasing the `shm_size` of the containers.
+Optionally, you can uncomment all lines increasing the `shm_size` of the containers.
 Optionally, you can uncomment the `.:/modyn_host` mount for all services to enable faster development cycles.
 This is not required if you do not iterate.
 
