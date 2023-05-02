@@ -60,4 +60,4 @@ We welcome input from both research and practice.
 
 ## ✉️ About
 Modyn is being developed at the [Efficient Architectures and Systems Lab (EASL)](https://anakli.inf.ethz.ch/#Group) at the [ETH Zurich Systems Group](https://systems.ethz.ch/).
-Please reach out to `mboether [at] inf [­dot] ethz [dot] ch` if you have any questions or inquiry related to Modyn and its usage.
+Please reach out to `mboether [at] inf [­dot] ethz [dot] ch` or open an issue on Github if you have any questions or inquiry related to Modyn and its usage.
