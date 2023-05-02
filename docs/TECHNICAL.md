@@ -5,7 +5,7 @@ Please refer to the ­[Architecture Documentation](ARCHITECTURE.md) for an overv
 This document will deal with some more details of development and how to extend Modyn.
 
 ### Linting and Testing
-For an automatic execution of automatic formatting, linting, and testing, you can use the `compilance_check.sh` script in the project root. 
+For an automatic execution of automatic formatting, linting, and testing, you can use the `compliance_check.sh` script in the project root. 
 This script runs isort, autopep8, black, mypy, pylint, and pytest.
 The script assumes that `conda` is available and if not, tries to activate it on `zsh` and `bash`.
 Furthermore, you must have created a conda environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
