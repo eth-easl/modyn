@@ -12,4 +12,4 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(Boost REQUIRED COMPONENTS)
 
-target_link_libraries(${BINARY}_run PUBLIC spdlog argparse ${BINARY}_lib yaml-cpp)
+target_link_libraries(${BINARY}_run PUBLIC ${Boost_LIBRARIES} spdlog argparse ${BINARY}_lib yaml-cpp sqlpp11)

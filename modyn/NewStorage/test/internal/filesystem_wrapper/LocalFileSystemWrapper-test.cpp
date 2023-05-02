@@ -1,4 +1,4 @@
-#include "../../../src/internal/filesystem_wrapper/LocalFileSystemWrapper.hpp"
+#include "../../../src/internal/filesystem_wrapper/LocalFilesystemWrapper.hpp"
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
 #include <fstream>

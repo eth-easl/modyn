@@ -5,13 +5,13 @@
 
 namespace storage
 {
-    class AbstractFileSystemWrapper
+    class AbstractFilesystemWrapper
     {
     protected:
         std::string base_path;
 
     public:
-        AbstractFileSystemWrapper(std::string base_path)
+        AbstractFilesystemWrapper(std::string base_path)
         {
             this->base_path = base_path;
         }

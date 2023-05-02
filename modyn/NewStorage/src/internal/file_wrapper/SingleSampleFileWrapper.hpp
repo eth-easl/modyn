@@ -9,7 +9,7 @@ namespace storage
     class SingleSampleFileWrapper : public AbstractFileWrapper 
     {
         public:
-            SingleSampleFileWrapper(std::string path, YAML::Node file_wrapper_config, AbstractFileSystemWrapper* filesystem_wrapper) : AbstractFileWrapper(path, file_wrapper_config, filesystem_wrapper) {}
+            SingleSampleFileWrapper(std::string path, YAML::Node file_wrapper_config, AbstractFilesystemWrapper* filesystem_wrapper) : AbstractFileWrapper(path, file_wrapper_config, filesystem_wrapper) {}
             int get_number_of_samples();
             int get_label(int index);
             std::vector<std::vector<int>>* get_all_labels();

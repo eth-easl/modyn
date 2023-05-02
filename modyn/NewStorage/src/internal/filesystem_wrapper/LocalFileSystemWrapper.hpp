@@ -1,14 +1,14 @@
 #ifndef LOCAL_FILESYSTEM_WRAPPER_HPP
 #define LOCAL_FILESYSTEM_WRAPPER_HPP
 
-#include "AbstractFileSystemWrapper.hpp"
+#include "AbstractFilesystemWrapper.hpp"
 
 namespace storage
 {
-    class LocalFileSystemWrapper : public AbstractFileSystemWrapper
+    class LocalFileSystemWrapper : public AbstractFilesystemWrapper
     {
     public:
-        LocalFileSystemWrapper(std::string base_path) : AbstractFileSystemWrapper(base_path) {}
+        LocalFileSystemWrapper(std::string base_path) : AbstractFilesystemWrapper(base_path) {}
         std::vector<unsigned char> *get(std::string path);
         bool exists(std::string path);
         std::vector<std::string> *list(std::string path, bool recursive = false);

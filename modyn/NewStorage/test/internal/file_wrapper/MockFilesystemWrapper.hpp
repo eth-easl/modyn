@@ -1,17 +1,17 @@
 #ifndef MOCK_FILESYSTEM_WRAPPER_HPP
 #define MOCK_FILESYSTEM_WRAPPER_HPP
 
-#include "../../../src/internal/filesystem_wrapper/AbstractFileSystemWrapper.hpp"
+#include "../../../src/internal/filesystem_wrapper/AbstractFilesystemWrapper.hpp"
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
 #include <fstream>
 
 namespace storage
 {
-    class MockFileSystemWrapper : public storage::AbstractFileSystemWrapper
+    class MockFilesystemWrapper : public storage::AbstractFilesystemWrapper
     {
     public:
-        MockFileSystemWrapper() : AbstractFileSystemWrapper("") {};
+        MockFilesystemWrapper() : AbstractFilesystemWrapper("") {};
         MOCK_METHOD(std::vector<unsigned char> *, get, (std::string path), (override));
         MOCK_METHOD(bool, exists, (std::string path), (override));
         MOCK_METHOD(std::vector<std::string> *, list, (std::string path, bool recursive), (override));
