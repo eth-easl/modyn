@@ -5,10 +5,10 @@
 
 namespace storage
 {
-    class LocalFileSystemWrapper : public AbstractFilesystemWrapper
+    class LocalFilesystemWrapper : public AbstractFilesystemWrapper
     {
     public:
-        LocalFileSystemWrapper(std::string base_path) : AbstractFilesystemWrapper(base_path) {}
+        LocalFilesystemWrapper(std::string base_path) : AbstractFilesystemWrapper(base_path) {}
         std::vector<unsigned char> *get(std::string path);
         bool exists(std::string path);
         std::vector<std::string> *list(std::string path, bool recursive = false);

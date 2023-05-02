@@ -19,7 +19,7 @@ const char kPathSeparator =
 
 using namespace storage;
 
-std::vector<unsigned char> *LocalFileSystemWrapper::get(std::string path)
+std::vector<unsigned char> *LocalFilesystemWrapper::get(std::string path)
 {
     if (not this->is_valid_path(path))
     {
@@ -40,7 +40,7 @@ std::vector<unsigned char> *LocalFileSystemWrapper::get(std::string path)
     return buffer;
 }
 
-bool LocalFileSystemWrapper::exists(std::string path)
+bool LocalFilesystemWrapper::exists(std::string path)
 {
     if (not this->is_valid_path(path))
     {
@@ -53,7 +53,7 @@ bool LocalFileSystemWrapper::exists(std::string path)
     return exists;
 }
 
-std::vector<std::string> *LocalFileSystemWrapper::list(std::string path, bool recursive)
+std::vector<std::string> *LocalFilesystemWrapper::list(std::string path, bool recursive)
 {
     if (not this->is_valid_path(path))
     {
@@ -99,7 +99,7 @@ std::vector<std::string> *LocalFileSystemWrapper::list(std::string path, bool re
     return files;
 }
 
-bool LocalFileSystemWrapper::is_directory(std::string path)
+bool LocalFilesystemWrapper::is_directory(std::string path)
 {
     if (not this->is_valid_path(path))
     {
@@ -108,7 +108,7 @@ bool LocalFileSystemWrapper::is_directory(std::string path)
     return std::filesystem::is_directory(path);
 }
 
-bool LocalFileSystemWrapper::is_file(std::string path)
+bool LocalFilesystemWrapper::is_file(std::string path)
 {
     if (not this->is_valid_path(path))
     {
@@ -117,7 +117,7 @@ bool LocalFileSystemWrapper::is_file(std::string path)
     return std::filesystem::is_regular_file(path);
 }
 
-int LocalFileSystemWrapper::get_file_size(std::string path)
+int LocalFilesystemWrapper::get_file_size(std::string path)
 {
     if (not this->is_valid_path(path))
     {
@@ -135,7 +135,7 @@ int LocalFileSystemWrapper::get_file_size(std::string path)
     return size;
 }
 
-int LocalFileSystemWrapper::get_modified_time(std::string path)
+int LocalFilesystemWrapper::get_modified_time(std::string path)
 {
     if (not this->is_valid_path(path))
     {
@@ -148,7 +148,7 @@ int LocalFileSystemWrapper::get_modified_time(std::string path)
     return std::filesystem::last_write_time(path).time_since_epoch().count();
 }
 
-int LocalFileSystemWrapper::get_created_time(std::string path)
+int LocalFilesystemWrapper::get_created_time(std::string path)
 {
     if (not this->is_valid_path(path))
     {
@@ -164,12 +164,12 @@ int LocalFileSystemWrapper::get_created_time(std::string path)
     return creation_time;
 }
 
-bool LocalFileSystemWrapper::is_valid_path(std::string path)
+bool LocalFilesystemWrapper::is_valid_path(std::string path)
 {
     return path.find("..") == std::string::npos;
 }
 
-std::string LocalFileSystemWrapper::join(std::vector<std::string> paths)
+std::string LocalFilesystemWrapper::join(std::vector<std::string> paths)
 {
     std::string joined_path = "";
     for (int i = 0; i < paths.size(); i++)
