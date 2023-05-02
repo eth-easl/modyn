@@ -54,6 +54,10 @@ Training must incorporate data changes for high model quality, however this is o
 With Modyn, we are actively developing an an open-source platform that manages dynamic datasets at scale and supports pluggable policies for when and what data to train on.
 Furthermore, we ship a representative open-source benchmarking suite for ML training on dynamic datasets.
 
+The unit of execution in Modyn is a _pipeline_,.
+At minimum, a pipeline consists of (1) the model specification, (2) the training dataset, and a corresponding byte parsing function that defines how to convert raw sample bytes to model input, (3) the trigger policy, (4) the data selection policy, (5) training hyperparameters such as optimization criterion, optimizer, learning rate, batch size, and (6) training configuration such as data processing workers, whether to use automatic mixed precision, etc.
+Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.
+
 Modyn allows researchers to explore training and data selection policies, while alleviating the burdens of managing large dynamic datasets and orchestrating recurring training jobs.
 However, we strive towards usage of Modyn in practical environments as well.
 We welcome input from both research and practice.
