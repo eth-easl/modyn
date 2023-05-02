@@ -50,7 +50,7 @@ Please reach out via Github, Twitter, E-Mail, or any other channel of communicat
 How to [contribute](docs/CONTRIBUTING.md).
 
 ## 🔁 What are dynamic datasets and what is Modyn used for?
-ML is is often applied in use cases where training data evolves and/or grows over time, i.e., datasets are _dynamic_ instead
+ML is is often applied in use cases where training data evolves and/or grows over time, i.e., datasets are _dynamic_ instead of static.
 Training must incorporate data changes for high model quality, however this is often challenging and expensive due to large datasets and models.
 With Modyn, we are actively developing an open-source platform that manages dynamic datasets at scale and supports pluggable policies for when and what data to train on.
 Furthermore, we are developing a representative open-source benchmarking suite for ML training on dynamic datasets.
