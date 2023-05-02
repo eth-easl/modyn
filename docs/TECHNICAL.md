@@ -39,3 +39,18 @@ For local deployment, you can use tmuxp, which enables to load a tmux session fr
 After running `./run_modyn.sh`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
 You will have access to a supervisor container in which you can submit pipelines, to panes for administrating the databases, and to all gRPC components.
 To end the session, run CTRL+B (or your tmux modifier), and enter `:kill-session`.
+
+## Adding new data selection and triggering policies
+
+Data selection policies are managed by the Selector.
+All policies are implemented in the `modyn/selector/internal/selector_strategies` directory.
+The `AbstractSelectionStrategy` class is the parent class all selection strategies inherit from.
+A new strategy needs to overwrite the `_on_trigger`, `_reset_state`, and `inform_data` functions according to the specification outlined in the `AbstractSelectionStrategy` class.
+When implementing a new strategy, make sure to respect the `limit`, `reset_after_trigger`, and `_maximum_keys_in_memory` parameters.
+Check out the `NewDataStrategy` for an example implementation.
+
+Triggering policies are managed by the Supervisor.
+All policies are implemented in the `modyn/supervisor/internal/triggers` directory.
+The `Trigger` class is the parent class all triggers inherit from.
+A new trigger needs to overwrite the `inform` function according to the specification outlined in the `Trigger` class.
+Checkout the `DataAmountTrigger` for an example implementation.
