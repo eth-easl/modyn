@@ -83,7 +83,12 @@ class StorageGRPCServicer(StorageServicer):
                 not_found_keys = {s for s in request.keys if s not in [sample.sample_id for sample in samples]}
                 logger.error(f"Keys: {not_found_keys}")
 
-            current_file = samples[0].file
+            current_file_id = samples[0].file_id
+            current_file = (
+                session.query(File)
+                .filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id)
+                .first()
+            )
             samples_per_file: list[Tuple[int, int, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
@@ -101,7 +106,12 @@ class StorageGRPCServicer(StorageServicer):
                         labels=[label for _, _, label in samples_per_file],
                     )
                     samples_per_file = [(sample.index, sample.sample_id, sample.label)]
-                    current_file = sample.file
+                    current_file_id = sample.file_id
+                    current_file = (
+                        session.query(File)
+                        .filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id)
+                        .first()
+                    )
                 else:
                     samples_per_file.append((sample.index, sample.sample_id, sample.label))
             file_wrapper = get_file_wrapper(
@@ -139,7 +149,7 @@ class StorageGRPCServicer(StorageServicer):
 
             stmt = (
                 select(Sample.sample_id, File.updated_at, Sample.label)
-                .join(File)
+                .join(File, Sample.file_id == File.file_id and Sample.dataset_id == File.dataset_id)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=self._sample_batch_size)
@@ -176,7 +186,7 @@ class StorageGRPCServicer(StorageServicer):
 
             stmt = (
                 select(Sample.sample_id, File.updated_at, Sample.label)
-                .join(File)
+                .join(File, Sample.file_id == File.file_id and Sample.dataset_id == File.dataset_id)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=self._sample_batch_size)

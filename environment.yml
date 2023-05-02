@@ -24,6 +24,7 @@ dependencies:
   - sqlalchemy>=2.0
   - pyaml
   - numpy
+  - pandas
   - pyftpdlib
   - types-protobuf
   - types-psycopg2
