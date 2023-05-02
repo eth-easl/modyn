@@ -279,7 +279,7 @@ class AbstractSelectionStrategy(ABC):
                 )
                 .first()
             )
-            assert num_samples_trigger_partition is not None, "Could not find TriggerPartition in DB"
+            assert num_samples_trigger_partition is not None, f"Could not find TriggerPartition {partition_id} in DB"
             num_samples_trigger_partition = num_samples_trigger_partition[0]
 
         data = TriggerSampleStorage(

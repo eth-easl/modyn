@@ -135,7 +135,9 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
 
     assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
     assert strat.get_trigger_partition_keys(trigger_id, 1) == [(13, 1.0), (14, 1.0), (15, 1.0)]
-    assert not strat.get_trigger_partition_keys(trigger_id, 2)
+
+    with pytest.raises(AssertionError):
+        strat.get_trigger_partition_keys(trigger_id, 2)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
