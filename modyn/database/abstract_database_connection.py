@@ -40,7 +40,7 @@ class AbstractDatabaseConnection(ABC):
             port=self.port,
             database=self.database,
         )
-        self.engine = create_engine(self.url, echo=self.print_queries)
+        self.engine = create_encgine(self.url, echo=self.print_queries)
         self.session = sessionmaker(bind=self.engine)()
 
     def terminate_connection(self) -> None:

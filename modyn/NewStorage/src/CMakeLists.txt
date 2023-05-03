@@ -12,6 +12,4 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(SOCI_SHARED ON)
 
-find_package(Boost REQUIRED COMPONENTS)
-
-target_link_libraries(${BINARY}_run PUBLIC ${Boost_LIBRARIES} spdlog argparse ${BINARY}_lib yaml-cpp)
+target_link_libraries(${BINARY}_run PUBLIC ${Boost_LIBRARIES} spdlog argparse ${BINARY}_lib yaml-cpp ${PostgreSQL_LIBRARIES} soci_core soci_postgresql soci_sqlite3)
