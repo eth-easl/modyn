@@ -2,6 +2,7 @@
 #define ABSTRACT_FILESYSTEM_WRAPPER_H
 
 #include <string>
+#include <vector>
 
 namespace storage
 {

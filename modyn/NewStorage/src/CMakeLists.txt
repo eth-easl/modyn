@@ -10,6 +10,8 @@ add_library(${BINARY}_lib STATIC ${SOURCES})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+set(SOCI_SHARED ON)
+
 find_package(Boost REQUIRED COMPONENTS)
 
-target_link_libraries(${BINARY}_run PUBLIC ${Boost_LIBRARIES} spdlog argparse ${BINARY}_lib yaml-cpp sqlpp11)
+target_link_libraries(${BINARY}_run PUBLIC ${Boost_LIBRARIES} spdlog argparse ${BINARY}_lib yaml-cpp)
