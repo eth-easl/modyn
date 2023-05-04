@@ -8,7 +8,7 @@ from typing import Iterable, Optional
 
 import numpy as np
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata, Trigger
+from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
 from modyn.selector.internal.trigger_sample import TriggerSampleStorage
 from sqlalchemy import func
 
@@ -136,6 +136,25 @@ class AbstractSelectionStrategy(ABC):
             insertion_id=insertion_id,
         )
 
+    @staticmethod
+    def _store_trigger_num_keys(
+        modyn_config: dict,
+        pipeline_id: int,
+        trigger_id: int,
+        partition_id: int,
+        num_keys: int,
+    ) -> None:
+        with MetadataDatabaseConnection(modyn_config) as database:
+            trigger_partition = TriggerPartition(
+                pipeline_id=pipeline_id,
+                trigger_id=trigger_id,
+                partition_id=partition_id,
+                num_keys=num_keys,
+            )
+            # TODO(#246): Maybe clean this up after some time.
+            database.session.add(trigger_partition)
+            database.session.commit()
+
     # pylint: disable=too-many-locals
     def trigger(self) -> tuple[int, int, int]:
         """
@@ -152,12 +171,15 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger)
             database.session.commit()
 
+        partition_num_keys = {}
         partition: Optional[int] = None
         for partition, training_samples in enumerate(self._on_trigger()):
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
                 + f" {len(training_samples)} samples for new trigger {trigger_id}."
             )
+
+            partition_num_keys[partition] = len(training_samples)
 
             total_keys_in_trigger += len(training_samples)
 
@@ -214,6 +236,16 @@ class AbstractSelectionStrategy(ABC):
             trigger.num_partitions = num_partitions
             database.session.commit()
 
+        # Insert all partition lengths into DB
+        for partition, partition_keys in partition_num_keys.items():
+            AbstractSelectionStrategy._store_trigger_num_keys(
+                modyn_config=self._modyn_config,
+                pipeline_id=self._pipeline_id,
+                trigger_id=trigger_id,
+                partition_id=partition,
+                num_keys=partition_keys,
+            )
+
         if self.reset_after_trigger:
             self._reset_state()
 
@@ -239,11 +271,17 @@ class AbstractSelectionStrategy(ABC):
         """
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            num_samples_trigger = (
-                database.session.query(Trigger.num_keys)
-                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
-                .first()[0]
+            num_samples_trigger_partition = (
+                database.session.query(TriggerPartition.num_keys)
+                .filter(
+                    TriggerPartition.pipeline_id == self._pipeline_id,
+                    TriggerPartition.trigger_id == trigger_id,
+                    TriggerPartition.partition_id == partition_id,
+                )
+                .first()
             )
+            assert num_samples_trigger_partition is not None, f"Could not find TriggerPartition {partition_id} in DB"
+            num_samples_trigger_partition = num_samples_trigger_partition[0]
 
         data = TriggerSampleStorage(
             self._trigger_sample_directory,
@@ -253,7 +291,7 @@ class AbstractSelectionStrategy(ABC):
             partition_id=partition_id,
             retrieval_worker_id=worker_id,
             total_retrieval_workers=num_workers,
-            num_samples_trigger=num_samples_trigger,
+            num_samples_trigger_partition=num_samples_trigger_partition,
         )
 
         assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"

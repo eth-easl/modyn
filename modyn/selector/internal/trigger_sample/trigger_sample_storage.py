@@ -39,7 +39,7 @@ class TriggerSampleStorage:
         partition_id: int,
         retrieval_worker_id: int = -1,
         total_retrieval_workers: int = -1,
-        num_samples_trigger: int = -1,
+        num_samples_trigger_partition: int = -1,
     ) -> list[tuple[int, float]]:
         """
         Return the trigger samples for the given pipeline id, trigger id and partition id.
@@ -55,7 +55,7 @@ class TriggerSampleStorage:
         :param partition_id: the id of the partition
         :param retrieval_worker_id: the id of the retrieval worker
         :param total_retrieval_workers: the total number of retrieval workers
-        :param num_samples_trigger: the total number of samples
+        :param num_samples_trigger_partition: the total number of samples per trigger and partition
         :return: the trigger samples
         """
         if not Path(self.trigger_sample_directory).exists():
@@ -66,8 +66,14 @@ class TriggerSampleStorage:
             the total retrieval workers must be smaller than 2."
         if retrieval_worker_id < 0 and total_retrieval_workers < 2:
             return self._get_all_samples(pipeline_id, trigger_id, partition_id)
+        assert num_samples_trigger_partition > 0, "The number of samples per trigger must be positive."
         return self._get_worker_samples(
-            pipeline_id, trigger_id, partition_id, retrieval_worker_id, total_retrieval_workers, num_samples_trigger
+            pipeline_id,
+            trigger_id,
+            partition_id,
+            retrieval_worker_id,
+            total_retrieval_workers,
+            num_samples_trigger_partition,
         )
 
     def _get_worker_samples(
@@ -77,7 +83,7 @@ class TriggerSampleStorage:
         partition_id: int,
         retrieval_worker_id: int,
         total_retrieval_workers: int,
-        num_samples_trigger: int,
+        num_samples_trigger_partition: int,
     ) -> list[tuple[int, float]]:
         """
         Return the trigger samples for the given pipeline id, trigger id and partition id that are assigned to the
@@ -88,11 +94,11 @@ class TriggerSampleStorage:
         :param partition_id: the id of the partition
         :param retrieval_worker_id: the id of the retrieval worker
         :param total_retrieval_workers: the total number of retrieval workers
-        :param total_samples: the total number of samples
+        :param num_samples_trigger_partition: the total number of samples per trigger and partition
         :return: the trigger samples
         """
         start_index, worker_subset_size = self.get_training_set_partition(
-            retrieval_worker_id, total_retrieval_workers, num_samples_trigger
+            retrieval_worker_id, total_retrieval_workers, num_samples_trigger_partition
         )
 
         current_index = 0
@@ -115,7 +121,13 @@ class TriggerSampleStorage:
                     # or completely from 0 to the end of the file.
                     # Because the end index is exclusive, we compare < instead of <= otherwise we would retrieve
                     # one more sample than we should
-                    triple_list.append((file_path, start_index - current_index, num_samples_in_file))
+                    triple_list.append(
+                        (
+                            file_path,
+                            start_index - current_index if start_index - current_index >= 0 else 0,
+                            num_samples_in_file,
+                        )
+                    )
                     current_index += num_samples_in_file
                     continue
                 # We are at the tail of the file and the samples for the worker are in the file, either from
@@ -173,7 +185,9 @@ class TriggerSampleStorage:
         ]
 
     @staticmethod
-    def get_training_set_partition(worker_id: int, total_workers: int, number_training_samples: int) -> tuple[int, int]:
+    def get_training_set_partition(
+        worker_id: int, total_workers: int, num_samples_trigger_partition: int
+    ) -> tuple[int, int]:
         """
         Return the required subset of training samples for the particular worker id
         The subset is calculated by taking an offset from the start based on the given worker id.
@@ -186,11 +200,12 @@ class TriggerSampleStorage:
         Returns:
             start_index: The index of the first sample to be used by the worker
             worker_subset_size: The number of samples to be used by the worker
+            num_samples_trigger_partition: The total number of samples for the trigger and partition
         """
         if worker_id < 0 or worker_id >= total_workers:
             raise ValueError(f"Asked for worker id {worker_id}, but only have {total_workers} workers!")
 
-        training_set_size = number_training_samples
+        training_set_size = num_samples_trigger_partition
         worker_subset_size = int(training_set_size / total_workers)
 
         if training_set_size % total_workers > 0:

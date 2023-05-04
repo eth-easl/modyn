@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata, Trigger
+from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.trigger_sample import TriggerSampleStorage
 
@@ -135,7 +135,9 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
 
     assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
     assert strat.get_trigger_partition_keys(trigger_id, 1) == [(13, 1.0), (14, 1.0), (15, 1.0)]
-    assert not strat.get_trigger_partition_keys(trigger_id, 2)
+
+    with pytest.raises(AssertionError):
+        strat.get_trigger_partition_keys(trigger_id, 2)
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -269,3 +271,20 @@ def test_two_strategies_increase_next_trigger_separately(test__on_trigger: Magic
     strat2.trigger()
     assert strat1._next_trigger_id == 3
     assert strat2._next_trigger_id == 2
+
+
+def test_store_trigger_num_keys():
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.session.add(Trigger(trigger_id=0, pipeline_id=42, num_keys=10, num_partitions=1))
+        database.session.commit()
+
+    AbstractSelectionStrategy._store_trigger_num_keys(get_minimal_modyn_config(), 42, 0, 12, 10)
+
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        data = database.session.query(TriggerPartition).all()
+
+        assert len(data) == 1
+        assert data[0].trigger_id == 0
+        assert data[0].pipeline_id == 42
+        assert data[0].partition_id == 12
+        assert data[0].num_keys == 10
