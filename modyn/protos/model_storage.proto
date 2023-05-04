@@ -5,6 +5,7 @@ package modyn.model_storage;
 service ModelStorage {
   rpc RegisterModel(RegisterModelRequest) returns (RegisterModelResponse) {}
   rpc FetchModel(FetchModelRequest) returns (FetchModelResponse) {}
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
 }
 
 message RegisterModelRequest {
@@ -27,4 +28,12 @@ message FetchModelRequest {
 message FetchModelResponse {
   bool success = 1;
   string model_path = 2;
+}
+
+message DeleteModelRequest {
+  int32 model_id = 1;
+}
+
+message DeleteModelResponse {
+  bool valid = 1;
 }

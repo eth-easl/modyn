@@ -11,7 +11,7 @@ def download_file(
     password: str,
     remote_file_path: pathlib.Path,
     local_file_path: pathlib.Path,
-    callback: Optional[Callable[[int, int], None]] = None,
+    callback: Optional[Callable[[float], None]] = None,
 ) -> None:
     """Downloads a file from a given host to the local filesystem. If the file already exists, it gets overwritten.
 
@@ -32,11 +32,9 @@ def download_file(
 
     ftp.login(user, password)
     ftp.sendcmd("TYPE i")  # Switch to binary mode
-    opt_size = ftp.size(str(remote_file_path))
-    if opt_size is None:
-        ftp.close()
-        raise FileNotFoundError(f"Could not read size of file with path {remote_file_path} from FTP server.")
-    size: int = opt_size
+    size = ftp.size(str(remote_file_path))
+
+    assert size, f"Could not read size of file with path {remote_file_path} from FTP server."
 
     with open(local_file_path, "wb") as local_file:
 
@@ -44,7 +42,7 @@ def download_file(
             local_file.write(data)
             if callback:
                 nonlocal size
-                callback(size, len(data))
+                callback(float(len(data)) / size)  # type: ignore
 
         ftp.retrbinary(f"RETR {remote_file_path}", write_callback)
 

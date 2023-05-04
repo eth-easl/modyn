@@ -1,14 +1,16 @@
+import os
 import pathlib
-import platform
 import tempfile
-from datetime import datetime
 from unittest.mock import patch
 
 from modyn.common.ftp.ftp_server import FTPServer
-from modyn.metadata_database.models import TrainedModel
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models import TrainedModel, Trigger
 
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
+    DeleteModelRequest,
+    DeleteModelResponse,
     FetchModelRequest,
     FetchModelResponse,
     RegisterModelRequest,
@@ -16,52 +18,51 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
 )
 from modyn.model_storage.internal.grpc.model_storage_grpc_servicer import ModelStorageGRPCServicer
 
+DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / "test_model_storage.database"
+
 
 def get_modyn_config():
     return {
         "model_storage": {"port": "50051", "ftp_port": "5223"},
         "trainer_server": {"hostname": "localhost", "ftp_port": "5222"},
+        "metadata_database": {
+            "drivername": "sqlite",
+            "username": "",
+            "password": "",
+            "host": "",
+            "port": 0,
+            "database": f"{DATABASE}",
+        },
     }
 
 
-class MockSession:
-    def get(self, entity, model_id) -> TrainedModel:  # pylint: disable=unused-argument
-        assert model_id == 20
-        return TrainedModel(
-            model_id=model_id,
-            pipeline_id=100,
-            trigger_id=10,
-            timestamp=datetime.fromtimestamp(1000),
-            model_path="test_model.modyn",
-        )
+def setup():
+    if os.path.exists(DATABASE):
+        os.remove(DATABASE)
+
+    with MetadataDatabaseConnection(get_modyn_config()) as database:
+        database.create_tables()
+
+        pipeline_id = database.register_pipeline(1)
+        trigger = Trigger(trigger_id=10, pipeline_id=pipeline_id)
+
+        database.session.add(trigger)
+        database.session.commit()
+
+        pipeline2 = database.register_pipeline(4)
+        trigger2 = Trigger(trigger_id=50, pipeline_id=pipeline2)
+
+        database.session.add(trigger2)
+        database.session.commit()
 
 
-class MockDatabaseConnection:
-    def __init__(self, modyn_config: dict):  # pylint: disable=super-init-not-called,unused-argument
-        self.current_model_id = 50
-        self.session = MockSession()
-
-    # pylint: disable=unused-argument
-    def add_trained_model(self, pipeline_id: int, trigger_id: int, model_path: str) -> int:
-        model_id = self.current_model_id
-        self.current_model_id += 1
-        return model_id
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception):
-        pass
+def teardown():
+    os.remove(DATABASE)
 
 
 @patch("modyn.model_storage.internal.grpc.model_storage_grpc_servicer.current_time_millis", return_value=100)
-@patch(
-    "modyn.model_storage.internal.grpc.model_storage_grpc_servicer.MetadataDatabaseConnection", MockDatabaseConnection
-)
 def test_register_model(current_time_millis):  # pylint: disable=unused-argument
-    if platform.system() == "Darwin":
-        # On macOS, the ftpserver works but throws a file descriptor error upon termination in tests
-        return
+    # On macOS, the FTP server works but throws a file descriptor warning upon termination in tests
     config = get_modyn_config()
     with tempfile.TemporaryDirectory() as storage_dir:
         storage_path = pathlib.Path(storage_dir)
@@ -74,25 +75,22 @@ def test_register_model(current_time_millis):  # pylint: disable=unused-argument
 
         with FTPServer(str(5222), storage_path):
             req = RegisterModelRequest(
-                pipeline_id=10,
-                trigger_id=42,
+                pipeline_id=1,
+                trigger_id=10,
                 hostname=config["trainer_server"]["hostname"],
                 port=int(config["trainer_server"]["ftp_port"]),
                 model_path="test.txt",
             )
+
             resp: RegisterModelResponse = servicer.RegisterModel(req, None)
 
             assert resp.success
-            assert resp.model_id == 50
 
         # download file under path {current_time_millis}_{pipeline_id}_{trigger_id}.modyn
-        with open(storage_path / "100_10_42.modyn", "rb") as file:
+        with open(storage_path / f"100_{resp.model_id}_10.modyn", "rb") as file:
             assert file.read().decode("utf-8") == "Our test model"
 
 
-@patch(
-    "modyn.model_storage.internal.grpc.model_storage_grpc_servicer.MetadataDatabaseConnection", MockDatabaseConnection
-)
 def test_fetch_model():
     config = get_modyn_config()
     with tempfile.TemporaryDirectory() as storage_dir:
@@ -101,8 +99,49 @@ def test_fetch_model():
         servicer = ModelStorageGRPCServicer(config, storage_path)
         assert servicer is not None
 
-        req = FetchModelRequest(model_id=20)
+        with MetadataDatabaseConnection(config) as database:
+            model_id = database.add_trained_model(2, 50, "test_model.modyn")
+
+        req = FetchModelRequest(model_id=model_id)
         resp: FetchModelResponse = servicer.FetchModel(req, None)
 
         assert resp.success
         assert resp.model_path == "test_model.modyn"
+
+        req_invalid = FetchModelRequest(model_id=142)
+        resp_invalid: FetchModelResponse = servicer.FetchModel(req_invalid, None)
+
+        assert not resp_invalid.success
+
+
+def test_delete_model():
+    config = get_modyn_config()
+    with tempfile.TemporaryDirectory() as storage_dir:
+        storage_path = pathlib.Path(storage_dir)
+
+        servicer = ModelStorageGRPCServicer(config, storage_path)
+        assert servicer is not None
+
+        with open(storage_path / "model_to_be_deleted.modyn", "wb") as file:
+            file.write(b"model that will be deleted")
+
+        assert os.path.isfile(storage_path / "model_to_be_deleted.modyn")
+
+        with MetadataDatabaseConnection(config) as database:
+            model_id = database.add_trained_model(2, 50, "model_to_be_deleted.modyn")
+
+        req = DeleteModelRequest(model_id=model_id)
+        resp: DeleteModelResponse = servicer.DeleteModel(req, None)
+
+        assert resp.valid
+        assert not os.path.isfile(storage_path / "model_to_be_deleted.modyn")
+
+        req_invalid = DeleteModelRequest(model_id=model_id)
+        resp_invalid: DeleteModelResponse = servicer.DeleteModel(req_invalid, None)
+
+        assert not resp_invalid.valid
+
+        with MetadataDatabaseConnection(config) as database:
+            model_id = database.session.get(TrainedModel, model_id)
+
+            assert not model_id

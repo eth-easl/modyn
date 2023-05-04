@@ -91,3 +91,33 @@ class FetchModelResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "success", b"success"]) -> None: ...
 
 global___FetchModelResponse = FetchModelResponse
+
+@typing_extensions.final
+class DeleteModelRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    MODEL_ID_FIELD_NUMBER: builtins.int
+    model_id: builtins.int
+    def __init__(
+        self,
+        *,
+        model_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_id", b"model_id"]) -> None: ...
+
+global___DeleteModelRequest = DeleteModelRequest
+
+@typing_extensions.final
+class DeleteModelResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    VALID_FIELD_NUMBER: builtins.int
+    valid: builtins.bool
+    def __init__(
+        self,
+        *,
+        valid: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["valid", b"valid"]) -> None: ...
+
+global___DeleteModelResponse = DeleteModelResponse

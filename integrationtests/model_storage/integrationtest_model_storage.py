@@ -1,22 +1,21 @@
 # end-to-end testing of the model storage component
-import json
 import pathlib
 import shutil
 
 import grpc
 from integrationtests.utils import get_modyn_config
-from modyn.common import delete_file, download_file, upload_file
+from modyn.common.ftp import delete_file, download_file, upload_file
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel, Trigger
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
+    DeleteModelRequest,
+    DeleteModelResponse,
     FetchModelRequest,
     FetchModelResponse,
     RegisterModelRequest,
     RegisterModelResponse,
 )
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
-from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, JsonString, RegisterPipelineRequest
-from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
 
 TEST_MODELS_PATH = pathlib.Path("/app") / "model_storage" / "test_models"
@@ -36,14 +35,14 @@ def cleanup_models_dir() -> None:
     shutil.rmtree(TEST_MODELS_PATH)
 
 
-def connect_to_component(config: dict, component_name: str) -> grpc.Channel:
-    component_address = f"{config[component_name]['hostname']}:{config[component_name]['port']}"
-    component_channel = grpc.insecure_channel(component_address)
+def connect_to_model_storage(config: dict) -> grpc.Channel:
+    model_storage_address = f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
+    model_storage_channel = grpc.insecure_channel(model_storage_address)
 
-    if not grpc_connection_established(component_channel) or component_channel is None:
-        raise ConnectionError(f"Could not establish gRPC connection to component at {component_address}.")
+    if not grpc_connection_established(model_storage_channel) or model_storage_channel is None:
+        raise ConnectionError(f"Could not establish gRPC connection to component at {model_storage_address}.")
 
-    return component_channel
+    return model_storage_channel
 
 
 def upload_dummy_file_to_trainer(config: dict):
@@ -68,32 +67,17 @@ def delete_dummy_file_from_trainer(config: dict):
 
 
 def insert_trigger_into_database(config: dict) -> (int, int):
-    selector_channel = connect_to_component(config, "selector")
-    selector = SelectorStub(selector_channel)
+    with MetadataDatabaseConnection(config) as database:
+        pipeline_id = database.register_pipeline(2)
 
-    strategy_config = {
-        "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 50000,
-        "config": {"limit": -1, "reset_after_trigger": False},
-    }
+        trigger = Trigger(trigger_id=10, pipeline_id=pipeline_id)
+        database.session.add(trigger)
+        database.session.commit()
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
-
-    trigger_id = selector.inform_data_and_trigger(
-        DataInformRequest(
-            pipeline_id=pipeline_id,
-            keys=[],
-            timestamps=[],
-            labels=[],
-        )
-    ).trigger_id
-
-    return pipeline_id, trigger_id
+        return trigger.pipeline_id, trigger.trigger_id
 
 
-def delete_trigger_from_database(config: dict, pipeline_id: int, trigger_id: int, model_id: int):
+def delete_data_from_database(config: dict, pipeline_id: int, trigger_id: int, model_id: int):
     with MetadataDatabaseConnection(config) as database:
         database.session.query(TrainedModel).filter(TrainedModel.model_id == model_id).delete()
         database.session.query(Trigger).filter(
@@ -106,7 +90,7 @@ def test_model_storage(config: dict):
     # register pipeline and trigger
     pipeline_id, trigger_id = insert_trigger_into_database(config)
 
-    model_storage_channel = connect_to_component(config, "model_storage")
+    model_storage_channel = connect_to_model_storage(config)
     model_storage = ModelStorageStub(model_storage_channel)
 
     # try to register a new model in the model storage
@@ -143,16 +127,26 @@ def test_model_storage(config: dict):
     with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "r") as resp_file:
         assert resp_file.read() == "Test model storage component", "File contents do not match"
 
-    delete_file(
-        config["model_storage"]["hostname"],
-        int(config["model_storage"]["ftp_port"]),
-        "modyn",
-        "modyn",
-        remote_file_path=pathlib.Path(response_fetch.model_path),
-    )
+    # delete model on model storage component
+    request_delete = DeleteModelRequest(model_id=model_id)
+    response_delete: DeleteModelResponse = model_storage.DeleteModel(request_delete)
+
+    assert response_delete.valid
+
+    # fetch a (now) invalid model
+    request_invalid_fetch = FetchModelRequest(model_id=model_id)
+    response_invalid_fetch: FetchModelResponse = model_storage.FetchModel(request_invalid_fetch)
+
+    assert not response_invalid_fetch.success
+
+    # delete a (now) invalid model
+    request_invalid_delete = DeleteModelRequest(model_id=model_id)
+    response_invalid_delete: DeleteModelResponse = model_storage.DeleteModel(request_invalid_delete)
+
+    assert not response_invalid_delete.valid
 
     # clean-up database
-    delete_trigger_from_database(config, pipeline_id, trigger_id, model_id)
+    delete_data_from_database(config, pipeline_id, trigger_id, model_id)
 
 
 def main() -> None:

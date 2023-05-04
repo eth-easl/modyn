@@ -23,6 +23,11 @@ class ModelStorageStub(object):
                 request_serializer=model__storage__pb2.FetchModelRequest.SerializeToString,
                 response_deserializer=model__storage__pb2.FetchModelResponse.FromString,
                 )
+        self.DeleteModel = channel.unary_unary(
+                '/modyn.model_storage.ModelStorage/DeleteModel',
+                request_serializer=model__storage__pb2.DeleteModelRequest.SerializeToString,
+                response_deserializer=model__storage__pb2.DeleteModelResponse.FromString,
+                )
 
 
 class ModelStorageServicer(object):
@@ -40,6 +45,12 @@ class ModelStorageServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def DeleteModel(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ModelStorageServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -52,6 +63,11 @@ def add_ModelStorageServicer_to_server(servicer, server):
                     servicer.FetchModel,
                     request_deserializer=model__storage__pb2.FetchModelRequest.FromString,
                     response_serializer=model__storage__pb2.FetchModelResponse.SerializeToString,
+            ),
+            'DeleteModel': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteModel,
+                    request_deserializer=model__storage__pb2.DeleteModelRequest.FromString,
+                    response_serializer=model__storage__pb2.DeleteModelResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -94,5 +110,22 @@ class ModelStorage(object):
         return grpc.experimental.unary_unary(request, target, '/modyn.model_storage.ModelStorage/FetchModel',
             model__storage__pb2.FetchModelRequest.SerializeToString,
             model__storage__pb2.FetchModelResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def DeleteModel(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.model_storage.ModelStorage/DeleteModel',
+            model__storage__pb2.DeleteModelRequest.SerializeToString,
+            model__storage__pb2.DeleteModelResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

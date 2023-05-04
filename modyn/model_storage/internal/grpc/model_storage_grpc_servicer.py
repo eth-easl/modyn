@@ -1,6 +1,7 @@
 """Model storage GRPC servicer."""
 
 import logging
+import os
 import pathlib
 
 import grpc
@@ -10,6 +11,8 @@ from modyn.metadata_database.models.trained_models import TrainedModel
 
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
+    DeleteModelRequest,
+    DeleteModelResponse,
     FetchModelRequest,
     FetchModelResponse,
     RegisterModelRequest,
@@ -58,16 +61,14 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
 
         logger.info(f"Remote model path is {remote_model_path}, storing at {local_model_path}.")
 
-        total_downloaded = 0
+        last_progress = 0.0
 
-        def callback(total_size: int, block_size: int) -> None:
-            nonlocal total_downloaded
-            perc_before = float(total_downloaded) / total_size
-            total_downloaded += block_size
-            perc_after = float(total_downloaded) / total_size
+        def callback(current_progress: float) -> None:
+            nonlocal last_progress
             for emit_perc in EMIT_MESSAGE_PERCENTAGES:
-                if perc_before <= emit_perc < perc_after:
+                if last_progress <= emit_perc < current_progress:
                     logger.info(f"Completed {emit_perc * 100}% of the download.")
+            last_progress = current_progress
 
         download_file(
             hostname,
@@ -106,9 +107,49 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         with MetadataDatabaseConnection(self._config) as database:
             model: TrainedModel = database.session.get(TrainedModel, request.model_id)
 
-            response.model_path = model.model_path
-            response.success = True
+            if model:
+                response.model_path = model.model_path
+                response.success = True
 
-            logger.info(f"Trained model {request.model_id} has local path {self.storage_dir / model.model_path}")
+                logger.info(f"Trained model {request.model_id} has local path {self.storage_dir / model.model_path}")
+            else:
+                response.success = False
+
+                logger.warning(f"Trained model {request.model_id} was not found.")
+
+        return response
+
+    def DeleteModel(self, request: DeleteModelRequest, context: grpc.ServicerContext) -> DeleteModelResponse:
+        """Delete model from the model storage component.
+
+        Args:
+            request: request for deleting the model.
+            context: the request context.
+
+        Returns:
+            DeleteModelResponse: the response containing information if the model was found in the database.
+        """
+
+        logger.info(f"Try to delete model having id {request.model_id}")
+
+        response = DeleteModelResponse()
+        with MetadataDatabaseConnection(self._config) as database:
+            model: TrainedModel = database.session.get(TrainedModel, request.model_id)
+
+            if model:
+                local_model_path = self.storage_dir / model.model_path
+                os.remove(local_model_path)
+
+                database.session.delete(model)
+                database.session.commit()
+
+                response.valid = True
+                logger.info(
+                    f"Trained model {request.model_id} with path {self.storage_dir / model.model_path} has been removed"
+                )
+            else:
+                response.valid = False
+
+                logger.warning(f"Trained model {request.model_id} was not found.")
 
         return response

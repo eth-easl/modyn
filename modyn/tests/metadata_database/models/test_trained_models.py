@@ -39,3 +39,32 @@ def test_get_trained_model(session):
     assert fetched_valid.model_id == 1
     assert fetched_valid.model_path == "test_path"
     assert fetched_invalid is None
+
+
+def test_delete_trained_model(session):
+    model = TrainedModel(pipeline_id=1, trigger_id=1, model_path="test_path")
+    session.add(model)
+    session.commit()
+
+    fetched = session.get(TrainedModel, 1)
+
+    assert fetched.model_id == 1
+    assert fetched.model_path == "test_path"
+
+    session.query(TrainedModel).filter(TrainedModel.model_id == 1).delete(synchronize_session="fetch")
+    session.commit()
+
+    fetched_after = session.get(TrainedModel, 1)
+
+    assert fetched_after is None
+
+
+def test_string_repr(session):
+    model = TrainedModel(pipeline_id=1, trigger_id=1, model_path="test_path")
+    session.add(model)
+    session.commit()
+
+    fetched = session.get(TrainedModel, 1)
+
+    assert fetched.model_id == 1
+    assert f"{fetched}" == "<Model 1>"
