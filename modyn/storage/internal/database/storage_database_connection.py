@@ -30,6 +30,25 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         self.host: str = self.modyn_config["storage"]["database"]["host"]
         self.port: int = self.modyn_config["storage"]["database"]["port"]
         self.database: str = self.modyn_config["storage"]["database"]["database"]
+        self.hash_partition_modulus: int = (
+            self.modyn_config["storage"]["database"]["hash_partition_modulus"]
+            if "hash_partition_modulus" in self.modyn_config["storage"]["database"]
+            else 8
+        )
+        self.sample_table_unlogged: bool = (
+            self.modyn_config["storage"]["database"]["sample_table_unlogged"]
+            if "sample_table_unlogged" in self.modyn_config["storage"]["database"]
+            else True
+        )
+
+    def __enter__(self) -> StorageDatabaseConnection:
+        """Create the engine and session.
+
+        Returns:
+            DatabaseConnection: DatabaseConnection.
+        """
+        super().__enter__()
+        return self
 
     def create_tables(self) -> None:
         """
@@ -41,6 +60,7 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
         The metadata is a collection of Table objects that inherit from Base and their associated
         schema constructs (such as Column objects, ForeignKey objects, and so on).
         """
+        Sample.ensure_pks_correct(self.session)
         StorageBase.metadata.create_all(self.engine)
 
     def add_dataset(
@@ -113,3 +133,15 @@ class StorageDatabaseConnection(AbstractDatabaseConnection):
             self.session.rollback()
             return False
         return True
+
+    def add_sample_dataset(self, dataset_id: int) -> None:
+        """Add a new dataset to the samples table.
+
+        This method creates a new partitions for the dataset.
+
+        Args:
+            dataset_id (int): Id of the dataset
+        """
+        Sample.add_dataset(
+            dataset_id, self.session, self.engine, self.hash_partition_modulus, self.sample_table_unlogged
+        )
