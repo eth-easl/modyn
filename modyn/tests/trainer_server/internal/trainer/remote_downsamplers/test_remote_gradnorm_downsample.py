@@ -14,7 +14,7 @@ def test_sample_shape_ce():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct, num_classes=3)
+    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
@@ -81,7 +81,7 @@ def test_sampling_crossentropy():
     _, autograd_weights = sampler.sample(forward_outputs, target)
 
     # Here we use the closed form shortcut
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct, num_classes=3)
+    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
 
     _, closed_form_weights = sampler.sample(forward_outputs, target)
 
@@ -118,7 +118,7 @@ def test_sample_dict_input():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": 3}
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct, num_classes=8)
+    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
 
     forward_outputs = model(data)
 
