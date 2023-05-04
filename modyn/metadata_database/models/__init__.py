@@ -9,6 +9,7 @@ from .pipelines import Pipeline  # noqa: F401
 from .sample_training_metadata import SampleTrainingMetadata  # noqa: F401
 from .selector_state_metadata import SelectorStateMetadata  # noqa: F401
 from .trained_models import TrainedModel  # noqa: F401
+from .trigger_partitions import TriggerPartition  # noqa: F401
 from .trigger_training_metadata import TriggerTrainingMetadata  # noqa: F401
 from .triggers import Trigger  # noqa: F401
 
