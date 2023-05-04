@@ -16,7 +16,6 @@ private:
   int insertion_threads;
   bool is_test;
   bool disable_multithreading;
-  std::atomic<bool> is_running;
   int sample_dbinsertion_batchsize = 1000000;
   bool file_unknown(std::string file_path);
   void handle_file_paths(std::vector<std::string> file_paths,
@@ -45,7 +44,6 @@ public:
     this->insertion_threads = config["storage"]["insertion_threads"].as<int>();
     this->is_test = is_test;
     this->disable_multithreading = insertion_threads <= 1;
-    this->is_running = is_running;
     if (config["storage"]["sample_dbinsertion_batchsize"]) {
       this->sample_dbinsertion_batchsize =
           config["storage"]["sample_dbinsertion_batchsize"].as<int>();

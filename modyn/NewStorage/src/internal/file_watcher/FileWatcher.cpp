@@ -1,6 +1,13 @@
 #include "FileWatcher.hpp"
+#include <csignal>
 
 using namespace storage;
+
+
+volatile sig_atomic_t file_watcher_sigflag = 0;
+void file_watcher_signal_handler(int signal) {
+    file_watcher_sigflag = 1;
+}
 
 bool FileWatcher::file_unknown(std::string file_path) {}
 
@@ -20,4 +27,15 @@ void FileWatcher::seek() {}
 
 void FileWatcher::get_datasets() {}
 
-void FileWatcher::run() {}
+void FileWatcher::run() {
+    std::signal(SIGTERM, file_watcher_signal_handler);
+
+    while (true) {
+        // Do some work
+        if (file_watcher_sigflag) {
+            // Perform any necessary cleanup
+            // before exiting
+            break;
+        }
+    }
+}

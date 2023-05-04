@@ -52,11 +52,12 @@ bool StorageDatabaseConnection::add_dataset(
     std::string name, std::string base_path,
     std::string filesystem_wrapper_type, std::string file_wrapper_type,
     std::string description, std::string version,
-    std::string file_wrapper_config, bool ignore_last_timestamp = false,
-    int file_watcher_interval = 5) {
+    std::string file_wrapper_config, bool ignore_last_timestamp,
+    int file_watcher_interval) {
   try {
     soci::session *session = this->get_session();
 
+    std::string boolean_string = ignore_last_timestamp ? "true" : "false";
     // Insert dataset
     *session
         << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
@@ -75,7 +76,7 @@ bool StorageDatabaseConnection::add_dataset(
         soci::use(name), soci::use(base_path),
         soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
         soci::use(description), soci::use(version),
-        soci::use(file_wrapper_config), soci::use(ignore_last_timestamp),
+        soci::use(file_wrapper_config), soci::use(boolean_string),
         soci::use(file_watcher_interval);
 
     // Create partition table for samples

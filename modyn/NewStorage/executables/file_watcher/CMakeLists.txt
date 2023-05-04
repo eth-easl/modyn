@@ -1,0 +1,9 @@
+set(BINARY FileWatcher)
+
+file(GLOB_RECURSE FILE_WATCHER_SOURCES LIST_DIRECTORIES true *.hpp *.cpp)
+
+set(SOURCES ${FILE_WATCHER_SOURCES})
+
+add_executable(${BINARY} ${FILE_WATCHER_SOURCES})
+
+target_link_libraries(${BINARY} PUBLIC ${CMAKE_PROJECT_NAME}_lib)
