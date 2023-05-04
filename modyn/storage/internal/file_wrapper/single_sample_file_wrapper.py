@@ -131,3 +131,6 @@ class SingleSampleFileWrapper(AbstractFileWrapper):
         if len(indices) != 1 or indices[0] != 0:
             raise IndexError("SingleSampleFileWrapper contains only one sample.")
         return [self.get_sample(0)]
+
+    def delete_samples(self, indices: list) -> None:
+        self.filesystem_wrapper.delete(self.file_path)

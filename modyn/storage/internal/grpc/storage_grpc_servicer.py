@@ -12,6 +12,8 @@ from modyn.storage.internal.database.storage_database_utils import get_file_wrap
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     DatasetAvailableResponse,
+    DeleteDataRequest,
+    DeleteDataResponse,
     DeleteDatasetResponse,
     GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
@@ -26,6 +28,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 from modyn.utils.utils import current_time_millis
 from sqlalchemy import asc, select
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +83,12 @@ class StorageGRPCServicer(StorageServicer):
                 not_found_keys = {s for s in request.keys if s not in [sample.sample_id for sample in samples]}
                 logger.error(f"Keys: {not_found_keys}")
 
-            current_file = samples[0].file
+            current_file_id = samples[0].file_id
+            current_file = (
+                session.query(File)
+                .filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id)
+                .first()
+            )
             samples_per_file: list[Tuple[int, int, int]] = []
 
             # Iterate over all samples and group them by file, the samples are sorted by file_id (see query above)
@@ -98,7 +106,12 @@ class StorageGRPCServicer(StorageServicer):
                         labels=[label for _, _, label in samples_per_file],
                     )
                     samples_per_file = [(sample.index, sample.sample_id, sample.label)]
-                    current_file = sample.file
+                    current_file_id = sample.file_id
+                    current_file = (
+                        session.query(File)
+                        .filter(File.file_id == current_file_id and File.dataset_id == dataset.dataset_id)
+                        .first()
+                    )
                 else:
                     samples_per_file.append((sample.index, sample.sample_id, sample.label))
             file_wrapper = get_file_wrapper(
@@ -136,7 +149,7 @@ class StorageGRPCServicer(StorageServicer):
 
             stmt = (
                 select(Sample.sample_id, File.updated_at, Sample.label)
-                .join(File)
+                .join(File, Sample.file_id == File.file_id and Sample.dataset_id == File.dataset_id)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=self._sample_batch_size)
@@ -173,7 +186,7 @@ class StorageGRPCServicer(StorageServicer):
 
             stmt = (
                 select(Sample.sample_id, File.updated_at, Sample.label)
-                .join(File)
+                .join(File, Sample.file_id == File.file_id and Sample.dataset_id == File.dataset_id)
                 # Enables batching of results in chunks.
                 # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
                 .execution_options(yield_per=self._sample_batch_size)
@@ -253,3 +266,70 @@ class StorageGRPCServicer(StorageServicer):
         with StorageDatabaseConnection(self.modyn_config) as database:
             success = database.delete_dataset(request.dataset_id)
             return DeleteDatasetResponse(success=success)
+
+    def DeleteData(self, request: DeleteDataRequest, context: grpc.ServicerContext) -> DeleteDataResponse:
+        """Delete data from the database.
+
+        Returns:
+            DeleteDataResponse: True if the data was successfully deleted, False otherwise.
+        """
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
+            if dataset is None:
+                logger.error(f"Dataset with name {request.dataset_id} does not exist.")
+                return DeleteDataResponse(success=False)
+
+            file_ids: list[Sample] = (
+                session.query(Sample.file_id)
+                .filter(Sample.sample_id.in_(request.keys))
+                .order_by(Sample.file_id)
+                .group_by(Sample.file_id)
+                .all()
+            )
+
+            for file_id in file_ids:
+                file_id = file_id[0]
+                file: File = session.query(File).filter(File.file_id == file_id).first()
+                if file is None:
+                    logger.error(f"Could not find file for dataset {request.dataset_id}")
+                    return DeleteDataResponse(success=False)
+                file_wrapper = get_file_wrapper(
+                    dataset.file_wrapper_type,
+                    file.path,
+                    dataset.file_wrapper_config,
+                    get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
+                )
+                samples_to_delete = (
+                    session.query(Sample)
+                    .filter(Sample.file_id == file.file_id)
+                    .filter(Sample.sample_id.in_(request.keys))
+                    .all()
+                )
+                file_wrapper.delete_samples(samples_to_delete)
+                file.number_of_samples -= len(samples_to_delete)
+                session.commit()
+
+            session.query(Sample).filter(Sample.sample_id.in_(request.keys)).delete()
+            session.commit()
+
+            self.remove_empty_files(session, dataset)
+
+            return DeleteDataResponse(success=True)
+
+    def remove_empty_files(self, session: Session, dataset: Dataset) -> None:
+        """Delete files that have no samples left."""
+        files_to_delete = (
+            session.query(File).filter(File.dataset_id == dataset.dataset_id).filter(File.number_of_samples == 0).all()
+        )
+        for file in files_to_delete:
+            file_system_wrapper = get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path)
+            try:
+                file_system_wrapper.delete(file.path)
+            except FileNotFoundError:
+                logger.debug(
+                    f"File {file.path} not found. Might have been deleted \
+                        already in the previous step of this method."
+                )
+            session.query(File).filter(File.file_id == file.file_id).delete()
+        session.commit()

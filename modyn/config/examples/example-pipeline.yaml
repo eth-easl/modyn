@@ -36,6 +36,7 @@ training:
     config:
       step_size: 10
       gamma: 0.1
+    source: "PyTorch"
   checkpointing:
     activated: True
     interval: 10

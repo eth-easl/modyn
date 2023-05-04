@@ -3,30 +3,46 @@ version: '3.8'
 # By default, we disable mountain the current directory under /modyn_host. However, this might be helpful for local development.
 # For the trainer server, you additionally might want to enable the runtime and deployment option to enable the GPU in the container.
 # For the storage, you probably want to mount some volume containing the datasets.
+# For the selector, you might want to mount a volume on a fast local storage device to store the trigger training sets.
+# For storage-db and metadata-db, you might want to increase the amount of available /dev/shm and store the postgres files on a fast local disk.
 
 services:
   metadata-db:
-    image: postgres:14.1-alpine
+    image: postgres:15.2-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
-#    shm_size: 4gb
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+#    shm_size: 24gb
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
+      - ./metadata_postgresql.conf:/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   storage-db:
-    image: postgres:14.1-alpine
+    image: postgres:15.2-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
-#    shm_size: 4gb
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+#    shm_size: 8gb
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
+      - ./storage_postgresql.conf:/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   storage:
     restart: on-failure
     depends_on:
@@ -73,6 +89,7 @@ services:
       dockerfile: docker/Selector/Dockerfile
 #    volumes:
 #      - .:/modyn_host
+#      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
   supervisor:
     depends_on:
     - storage
@@ -80,6 +97,7 @@ services:
     - storage-db
     - selector
     - metadata_processor
+    - trainer_server
     build:
       context: .
       dockerfile: docker/Supervisor/Dockerfile
@@ -88,11 +106,16 @@ services:
     container_name: supervisor
   tests:
     depends_on:
-      - storage
-      - metadata-db
-      - storage-db
-      - selector
-      - metadata_processor
+      storage:
+        condition: service_started
+      selector:
+        condition: service_started
+      metadata_processor:
+        condition: service_started
+      metadata-db:
+        condition: service_healthy
+      storage-db:
+        condition: service_healthy
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
