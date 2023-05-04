@@ -14,10 +14,11 @@ Modyn is an open-source platform for model training on dynamic datasets, i.e., d
 ## ⚡️ Quickstart
 
 For deploying and running integration tests, you will need [Docker](https://docs.docker.com/get-docker/).
-Furthermore, we use conda for local environments and tmuxp for easily managing components panes (optional).
+Furthermore, we use [conda](https://docs.conda.io/en/latest/) for local environments and [tmuxp](https://github.com/tmux-python/tmuxp) for easily managing components panes (optional).
 For local development, run
 ```bash
 conda env create -f ./environment.yml
+conda activate modyn
 pip install -e .
 pip install -r dev-requirements.txt
 ```
@@ -26,7 +27,7 @@ and then `./compliance_check.sh` to check that your local installation of Modyn 
 If you want to run all Modyn components, run
 ```bash
 ./run_modyn.sh
-tmuxp load tmuxp.yaml
+tmuxp load tmuxp.yaml # Assumes you have tmuxp, see above for link
 ```
 
 For running all integration tests, run
