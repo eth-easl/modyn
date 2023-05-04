@@ -9,8 +9,12 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 
 TMP_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn")
 FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.csv")
-FILE_DATA = "hero,description\nbatman,uses technology\nsuperman,flies through the air\nspiderman,uses a web "
+FILE_DATA = (
+    "hero,description,can_fly\nbatman,uses technology,0\nsuperman,flies through the air,1\nspiderman,"
+    "uses a web,0\nwonder women,truth lasso,0 "
+)
 INVALID_FILE_EXTENSION_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.txt")
+# Try 2 configs
 FILE_WRAPPER_CONFIG = {
     "number_cols": 2,
     "delimiter": ",",
@@ -18,6 +22,7 @@ FILE_WRAPPER_CONFIG = {
     "header": 0,
     "label_col_index": 0,
     "encoding": "utf-8",
+    "labels": "can_fly",
 }
 
 
@@ -64,13 +69,13 @@ def test_init_with_invalid_file_extension():
 
 def test_get_number_of_samples():
     file_wrapper = CSVFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
-    assert file_wrapper.get_number_of_samples() == 3
+    assert file_wrapper.get_number_of_samples() == 4
 
 
 def test_get_sample():
     file_wrapper = CSVFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
-    sample = file_wrapper.get_sample(0)
-    assert sample == [b"batman", b"uses technology"]
+    sample = file_wrapper.get_sample(1)
+    assert sample == b"hero,description\nsuperman,flies through the air\n"
 
 
 def test_get_sample_with_invalid_index():
@@ -82,12 +87,12 @@ def test_get_sample_with_invalid_index():
 def test_get_label():
     file_wrapper = CSVFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     label = file_wrapper.get_label(1)
-    assert label == b"description"
+    assert label == 1
 
 
 def test_get_all_labels():
     file_wrapper = CSVFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
-    assert file_wrapper.get_all_labels() == [b"hero", b"description"]
+    assert file_wrapper.get_all_labels() == [0, 1, 0, 0]
 
 
 def test_get_label_with_invalid_index():
@@ -98,9 +103,9 @@ def test_get_label_with_invalid_index():
 
 def test_get_samples():
     file_wrapper = CSVFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
-    samples = file_wrapper.get_samples(0, 1)
-    assert len(samples) == 1
-    assert samples == [[b"batman", b"uses technology"]]
+    samples = file_wrapper.get_samples(1, 3)
+    print(samples)
+    assert samples == b"hero,description\nsuperman,flies through the air\nspiderman,uses a web\n"
 
 
 def test_get_samples_with_invalid_index():
@@ -115,11 +120,8 @@ def test_get_samples_with_invalid_index():
 def test_get_samples_from_indices():
     file_wrapper = CSVFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     samples = file_wrapper.get_samples_from_indices([0, 1])
-    assert len(samples) == 2
-    assert samples == [
-        [b"batman", b"uses technology"],
-        [b"superman", b"flies through the air"],
-    ]
+    # assert len(samples) == 2
+    assert samples == b"hero,description\nbatman,uses technology\nsuperman,flies through the air\n"
 
 
 def test_get_samples_from_indices_with_invalid_indices():

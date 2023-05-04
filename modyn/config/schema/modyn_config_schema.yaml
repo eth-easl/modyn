@@ -96,10 +96,6 @@ properties:
                   type: string
                   description: |
                     The byteorder when reading an integer from multibyte data in a binary file. Should either be "big" or "little".
-                number_cols:
-                  type: number
-                  description: |
-                    The number of columns in the csv file.
                 delimiter:
                   type: string
                   description: |
@@ -112,6 +108,10 @@ properties:
                   type: number
                   description: |
                     The row index of the header if exists. Otherwise, it is not specified.
+                labels:
+                  type: object
+                  description: |
+                    The name if with header or index otherwise of the column with labels.
             ignore_last_timestamp:
               type: boolean
               description: |

@@ -11,4 +11,3 @@ isort
 black
 grpcio-tools
 mypy-protobuf
-pandas
