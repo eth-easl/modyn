@@ -151,6 +151,7 @@ class AbstractSelectionStrategy(ABC):
                 partition_id=partition_id,
                 num_keys=num_keys,
             )
+            # TODO(#246): Maybe clean this up after some time.
             database.session.add(trigger_partition)
             database.session.commit()
 
