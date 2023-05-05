@@ -109,6 +109,7 @@ class TrainerServerGRPCServicer:
                 exception_queue,
                 status_query_queue,
                 status_response_queue,
+                request.epochs_per_trigger,
             ),
         )
         process.start()

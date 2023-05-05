@@ -44,6 +44,10 @@ properties:
         type: number
         description: |
           The number of GPUs that should be used for training.
+      epochs_per_trigger:
+        type: number
+        description: |
+          The number of epochs per trigger.
       device:
         type: string
         description: |
