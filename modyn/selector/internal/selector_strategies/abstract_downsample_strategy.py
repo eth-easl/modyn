@@ -39,8 +39,8 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         if "downsampled_batch_size" not in self._config:
             raise ValueError("To use downsampling strategies, you have to specify the downsampled_batch_size")
         self.downsampled_batch_size = self._config["downsampled_batch_size"]
-        if self.downsampled_batch_size <= 0 or not isinstance(self.downsampled_batch_size, int):
-            raise ValueError("The downsampled batch size must be a positive integer")
+        if not isinstance(self.downsampled_batch_size, int):
+            raise ValueError("The downsampled batch size must be an integer")
 
         self._requires_remote_computation = True
 
