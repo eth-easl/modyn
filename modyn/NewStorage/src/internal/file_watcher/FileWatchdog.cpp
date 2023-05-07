@@ -11,25 +11,23 @@ namespace bp = boost::process;
 volatile sig_atomic_t file_watchdog_sigflag = 0;
 void file_watchdog_signal_handler(int signal) { file_watchdog_sigflag = 1; }
 
-void FileWatchdog::start_file_watcher_process(int dataset_id) {
+void FileWatchdog::start_file_watcher_process(long long dataset_id) {
   // Start a new child process of a FileWatcher
   bp::ipstream out;
-  std::atomic<bool> is_running = true;
 
-  // Path to FileWatcher executable
-  std::filesystem::path file_watcher_path =
-      std::filesystem::current_path() / "FileWatcher";
-
-  bp::child subprocess(bp::search_path(file_watcher_path),
+  bp::child subprocess(bp::search_path("FileWatcher"),
                        bp::args({std::to_string(dataset_id), "false"}),
                        bp::std_out > out);
 
   this->file_watcher_processes[dataset_id] = std::move(subprocess);
+  this->file_watcher_process_restart_attempts[dataset_id] = 0;
 }
 
-void FileWatchdog::stop_file_watcher_process(int dataset_id) {
+void FileWatchdog::stop_file_watcher_process(long long dataset_id) {
   if (this->file_watcher_processes[dataset_id]) {
     this->file_watcher_processes[dataset_id].terminate();
+    this->file_watcher_processes.erase(dataset_id);
+    this->file_watcher_process_restart_attempts.erase(dataset_id);
   } else {
     throw std::runtime_error("FileWatcher process not found");
   }
@@ -39,9 +37,39 @@ void FileWatchdog::watch_file_watcher_processes() {
   StorageDatabaseConnection storage_database_connection =
       StorageDatabaseConnection(this->config);
   soci::session *sql = storage_database_connection.get_session();
-  std::vector<int> dataset_ids;
-  *sql << "SELECT id FROM datasets", soci::into(dataset_ids);
-  // TODO: Check if dataset is already being watched or if it was deleted
+  std::vector<long long> dataset_ids;
+  *sql << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
+
+  long long dataset_id;
+  for (auto const &pair : this->file_watcher_processes) {
+    dataset_id = pair.first;
+    if (std::find(dataset_ids.begin(), dataset_ids.end(), dataset_id) ==
+        dataset_ids.end()) {
+      // There is a FileWatcher process running for a dataset that was deleted
+      // from the database. Stop the process.
+      this->stop_file_watcher_process(dataset_id);
+    }
+  }
+
+  for (auto const &dataset_id : dataset_ids) {
+    if (this->file_watcher_processes.find(dataset_id) ==
+        this->file_watcher_processes.end()) {
+      // There is no FileWatcher process running for this dataset. Start one.
+      this->start_file_watcher_process(dataset_id);
+    }
+
+    if (this->file_watcher_process_restart_attempts[dataset_id] > 3) {
+      // There have been more than 3 restart attempts for this process. Stop it.
+      this->stop_file_watcher_process(dataset_id);
+    } else if (!this->file_watcher_processes[dataset_id].running()) {
+      // The process is not running. Start it.
+      this->start_file_watcher_process(dataset_id);
+      this->file_watcher_process_restart_attempts[dataset_id]++;
+    } else {
+      // The process is running. Reset the restart attempts counter.
+      this->file_watcher_process_restart_attempts[dataset_id] = 0;
+    }
+  }
 }
 
 void FileWatchdog::run() {

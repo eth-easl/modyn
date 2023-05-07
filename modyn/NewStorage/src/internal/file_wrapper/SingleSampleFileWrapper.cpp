@@ -33,8 +33,10 @@ int SingleSampleFileWrapper::get_label(int index) {
   throw std::runtime_error("Label file not found.");
 }
 
-std::vector<std::vector<int>> *SingleSampleFileWrapper::get_all_labels() {
-  return new std::vector<std::vector<int>>{std::vector<int>{get_label(0)}};
+std::vector<int> *SingleSampleFileWrapper::get_all_labels() {
+  std::vector<int> *labels = new std::vector<int>();
+  labels->push_back(get_label(0));
+  return labels;
 }
 
 std::vector<unsigned char> *SingleSampleFileWrapper::get_sample(int index) {

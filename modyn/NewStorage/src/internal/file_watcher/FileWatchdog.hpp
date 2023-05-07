@@ -11,15 +11,17 @@ namespace storage {
 class FileWatchdog {
 private:
   YAML::Node config;
-  std::map<int, boost::process::child> file_watcher_processes;
+  std::map<long long, boost::process::child> file_watcher_processes;
+  std::map<long long, int> file_watcher_process_restart_attempts;
   void watch_file_watcher_processes();
-  void start_file_watcher_process(int dataset_id);
-  void stop_file_watcher_process(int dataset_id);
+  void start_file_watcher_process(long long dataset_id);
+  void stop_file_watcher_process(long long dataset_id);
+
 public:
   FileWatchdog(YAML::Node config) {
     this->config = config;
-    this->file_watcher_processes =
-        std::map<int, boost::process::child>();
+    this->file_watcher_processes = std::map<long long, boost::process::child>();
+    this->file_watcher_process_restart_attempts = std::map<long long, int>();
   }
   void run();
 };

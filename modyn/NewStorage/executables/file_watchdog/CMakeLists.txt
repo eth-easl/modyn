@@ -1,9 +1,0 @@
-set(BINARY FileWatchdog)
-
-file(GLOB_RECURSE FILE_WATCH_DOG_SOURCES LIST_DIRECTORIES true *.hpp *.cpp)
-
-set(SOURCES ${FILE_WATCH_DOG_SOURCES})
-
-add_executable(${BINARY} ${FILE_WATCH_DOG_SOURCES})
-
-target_link_libraries(${BINARY} PUBLIC ${CMAKE_PROJECT_NAME}_lib)

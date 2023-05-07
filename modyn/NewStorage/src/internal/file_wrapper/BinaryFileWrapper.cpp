@@ -49,17 +49,16 @@ int BinaryFileWrapper::get_label(int index) {
   return int_from_bytes(label_begin, label_end);
 }
 
-std::vector<std::vector<int>> *BinaryFileWrapper::get_all_labels() {
+std::vector<int> *BinaryFileWrapper::get_all_labels() {
   int num_samples = this->get_number_of_samples();
-  std::vector<std::vector<int>> *labels = new std::vector<std::vector<int>>;
+  std::vector<int> *labels = new std::vector<int>();
   labels->reserve(num_samples);
   unsigned char *data = this->filesystem_wrapper->get(this->path)->data();
   for (int i = 0; i < num_samples; i++) {
     unsigned char *label_begin = data + (i * this->record_size);
     unsigned char *label_end = label_begin + this->label_size;
     int label = int_from_bytes(label_begin, label_end);
-    std::vector<int> label_vector = {label};
-    labels->push_back(label_vector);
+    labels->push_back(label);
   }
   return labels;
 }

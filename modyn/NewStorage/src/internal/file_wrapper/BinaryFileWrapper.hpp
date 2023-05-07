@@ -47,7 +47,7 @@ public:
   }
   int get_number_of_samples();
   int get_label(int index);
-  std::vector<std::vector<int>> *get_all_labels();
+  std::vector<int> *get_all_labels();
   std::vector<std::vector<unsigned char>> *get_samples(int start, int end);
   std::vector<unsigned char> *get_sample(int index);
   std::vector<std::vector<unsigned char>> *

@@ -9,7 +9,6 @@
 namespace storage {
 class StorageDatabaseConnection {
 private:
-  std::string drivername;
   std::string username;
   std::string password;
   std::string host;
@@ -19,6 +18,7 @@ private:
   bool sample_table_unlogged = true;
 
 public:
+  std::string drivername;
   StorageDatabaseConnection(YAML::Node config) {
     this->drivername =
         config["storage"]["database"]["drivername"].as<std::string>();

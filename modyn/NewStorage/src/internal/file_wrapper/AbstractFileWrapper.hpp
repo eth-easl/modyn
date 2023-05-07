@@ -11,6 +11,8 @@ protected:
   std::string path;
   YAML::Node file_wrapper_config;
   AbstractFilesystemWrapper *filesystem_wrapper;
+
+public:
   AbstractFileWrapper(std::string path, YAML::Node file_wrapper_config,
                       AbstractFilesystemWrapper *filesystem_wrapper) {
     this->path = path;
@@ -21,7 +23,7 @@ protected:
   virtual std::vector<std::vector<unsigned char>> *get_samples(int start,
                                                                int end) = 0;
   virtual int get_label(int index) = 0;
-  virtual std::vector<std::vector<int>> *get_all_labels() = 0;
+  virtual std::vector<int> *get_all_labels() = 0;
   virtual std::vector<unsigned char> *get_sample(int index) = 0;
   virtual std::vector<std::vector<unsigned char>> *
   get_samples_from_indices(std::vector<int> *indices) = 0;

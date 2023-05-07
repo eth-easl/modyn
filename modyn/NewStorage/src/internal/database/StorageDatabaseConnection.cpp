@@ -135,7 +135,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(
       throw std::runtime_error("Dataset " + dataset_name + " not found");
     }
     std::string dataset_partition_table_name =
-        "samples_did" + std::to_string(dataset_id);
+        "samples__did" + std::to_string(dataset_id);
     *session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
                 "PARTITION OF samples "
                 "FOR VALUES IN (:dataset_id) "

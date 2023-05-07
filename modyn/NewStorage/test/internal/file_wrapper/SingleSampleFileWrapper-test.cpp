@@ -33,9 +33,9 @@ TEST(SingleSampleFileWrapperTest, TestGetAllLabels)
     std::vector<unsigned char> *bytes = new std::vector<unsigned char>{'1', '2', '3', '4', '5', '6', '7', '8'};
     EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
     storage::SingleSampleFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
-    std::vector<std::vector<int>> *labels = file_wrapper.get_all_labels();
+    std::vector<int> *labels = file_wrapper.get_all_labels();
     ASSERT_EQ(labels->size(), 1);
-    ASSERT_EQ((*labels)[0][0], 12345678);
+    ASSERT_EQ((*labels)[0], 12345678);
 }
 
 TEST(SingleSampleFileWrapperTest, TestGetSamples)
