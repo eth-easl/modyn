@@ -143,7 +143,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    self._next_trigger_id == SelectorStateMetadata.seen_in_trigger_id,
+                    SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id,
                 )
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
@@ -167,7 +167,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    self._next_trigger_id - SelectorStateMetadata.seen_in_trigger_id <= self.tail_triggers,
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers,
                 )
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )

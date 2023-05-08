@@ -38,6 +38,10 @@ def get_config():
     return {"reset_after_trigger": False, "limit": -1}
 
 
+def get_config_tail():
+    return {"reset_after_trigger": False, "limit": -1, "tail_triggers": 1}
+
+
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
@@ -620,6 +624,61 @@ def test__get_current_trigger_data_partitions():
     current_data = flatten(current_data)
 
     assert set(current_data) == set(data2)
+
+
+def test__get_tail_triggers_data():
+    conf = get_config_tail()
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1)
+
+    data1 = list(range(10))
+    timestamps1 = list(range(10))
+    labels = [0] * 10
+
+    strat.inform_data(data1, timestamps1, labels)
+
+    current_data = list(strat._get_tail_triggers_data())
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) == set(data1)
+
+    data2 = list(range(10, 20))
+    timestamps2 = list(range(10, 20))
+
+    strat.trigger()
+    strat.inform_data(data2, timestamps2, labels)
+
+    current_data = list(strat._get_tail_triggers_data())
+    assert len(current_data) == 20
+    current_data = flatten(current_data)
+
+    assert set(current_data) == set(data1 + data2)
+
+    data3 = list(range(20, 30))
+    timestamps3 = list(range(20, 30))
+
+    strat.trigger()
+    strat.inform_data(data3, timestamps3, labels)
+
+    # since tail_trigger = 1 we should not get any point belonging to the first trigger
+    current_data = list(strat._get_tail_triggers_data())
+    assert len(current_data) == 20
+    current_data = flatten(current_data)
+
+    assert set(current_data) == set(data2 + data3)
+
+    data4 = list(range(30, 40))
+    timestamps4 = list(range(30, 40))
+
+    strat.trigger()
+    strat.inform_data(data4, timestamps4, labels)
+
+    # since tail_trigger = 1 we should not get any point belonging to the first and second trigger
+    current_data = list(strat._get_tail_triggers_data())
+    assert len(current_data) == 20
+    current_data = flatten(current_data)
+
+    assert set(current_data) == set(data3 + data4)
 
 
 def test__get_all_data_no_partitions():
