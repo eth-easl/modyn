@@ -74,7 +74,7 @@ void FileWatcher::fallback_insertion(
     soci::session *sql) {
   // Prepare query
   std::string query =
-      "INSERT INTO samples (dataset_id, file_id, index, label) VALUES ";
+      "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
 
   for (auto const &frame : file_frame) {
     query += "(" + std::to_string(std::get<0>(frame)) + "," +
@@ -92,7 +92,7 @@ void FileWatcher::postgres_copy_insertion(
     std::vector<std::tuple<long long, long long, int, int>> file_frame,
     soci::session *sql) {
   std::string table_name = "samples__did" + std::to_string(this->dataset_id);
-  std::string table_columns = "(dataset_id,file_id,index,label)";
+  std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   std::string cmd =
       "COPY " + table_name + table_columns +
       " FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')";

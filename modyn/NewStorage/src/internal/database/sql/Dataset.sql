@@ -1,5 +1,5 @@
-CREATE TABLE datasets (
-    dataset_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS datasets (
+    dataset_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(80) NOT NULL,
     description VARCHAR(120),
     version VARCHAR(80),

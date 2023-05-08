@@ -20,6 +20,9 @@ private:
 public:
   std::string drivername;
   StorageDatabaseConnection(YAML::Node config) {
+    if (!config["storage"]["database"]) {
+      throw std::runtime_error("No database configuration found");
+    }
     this->drivername =
         config["storage"]["database"]["drivername"].as<std::string>();
     this->username =

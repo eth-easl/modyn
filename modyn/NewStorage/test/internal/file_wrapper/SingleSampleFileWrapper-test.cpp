@@ -8,7 +8,7 @@ using namespace storage;
 TEST(SingleSampleFileWrapperTest, TestGetNumberOfSamples)
 {
     std::string file_name = "test.txt";
-    YAML::Node config = Utils::get_dummy_config();
+    YAML::Node config = Utils::get_dummy_file_wrapper_config();
     MockFilesystemWrapper filesystem_wrapper;
     storage::SingleSampleFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
     ASSERT_EQ(file_wrapper.get_number_of_samples(), 1);
@@ -17,7 +17,7 @@ TEST(SingleSampleFileWrapperTest, TestGetNumberOfSamples)
 TEST(SingleSampleFileWrapperTest, TestGetLabel)
 {
     std::string file_name = "test.txt";
-    YAML::Node config = Utils::get_dummy_config();
+    YAML::Node config = Utils::get_dummy_file_wrapper_config();
     MockFilesystemWrapper filesystem_wrapper;
     std::vector<unsigned char> *bytes = new std::vector<unsigned char>{'1', '2', '3', '4', '5', '6', '7', '8'};
     EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -28,7 +28,7 @@ TEST(SingleSampleFileWrapperTest, TestGetLabel)
 TEST(SingleSampleFileWrapperTest, TestGetAllLabels)
 {
     std::string file_name = "test.txt";
-    YAML::Node config = Utils::get_dummy_config();
+    YAML::Node config = Utils::get_dummy_file_wrapper_config();
     MockFilesystemWrapper filesystem_wrapper;
     std::vector<unsigned char> *bytes = new std::vector<unsigned char>{'1', '2', '3', '4', '5', '6', '7', '8'};
     EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -41,7 +41,7 @@ TEST(SingleSampleFileWrapperTest, TestGetAllLabels)
 TEST(SingleSampleFileWrapperTest, TestGetSamples)
 {
     std::string file_name = "test.txt";
-    YAML::Node config = Utils::get_dummy_config();
+    YAML::Node config = Utils::get_dummy_file_wrapper_config();
     MockFilesystemWrapper filesystem_wrapper;
     std::vector<unsigned char> *bytes = new std::vector<unsigned char>{'1', '2', '3', '4', '5', '6', '7', '8'};
     EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -61,7 +61,7 @@ TEST(SingleSampleFileWrapperTest, TestGetSamples)
 TEST(SingleSampleFileWrapperTest, TestGetSample)
 {
     std::string file_name = "test.txt";
-    YAML::Node config = Utils::get_dummy_config();
+    YAML::Node config = Utils::get_dummy_file_wrapper_config();
     MockFilesystemWrapper filesystem_wrapper;
     std::vector<unsigned char> *bytes = new std::vector<unsigned char>{'1', '2', '3', '4', '5', '6', '7', '8'};
     EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -81,7 +81,7 @@ TEST(SingleSampleFileWrapperTest, TestGetSample)
 TEST(SingleSampleFileWrapperTest, TestGetSamplesFromIndices)
 {
     std::string file_name = "test.txt";
-    YAML::Node config = Utils::get_dummy_config();
+    YAML::Node config = Utils::get_dummy_file_wrapper_config();
     MockFilesystemWrapper filesystem_wrapper;
     std::vector<unsigned char> *bytes = new std::vector<unsigned char>{'1', '2', '3', '4', '5', '6', '7', '8'};
     EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));

@@ -1,18 +1,24 @@
 #include "StorageDatabaseConnection.hpp"
 #include <fstream>
+#include <soci/postgresql/soci-postgresql.h>
+#include <soci/sqlite3/soci-sqlite3.h>
 #include <spdlog/spdlog.h>
 
 using namespace storage;
 
 soci::session *StorageDatabaseConnection::get_session() {
-  std::string connection_string = "dbname=" + this->database +
-                                  " user=" + this->username +
-                                  " password=" + this->password +
-                                  " host=" + this->host + " port=" + this->port;
+  std::string connection_string = "dbname='" + this->database + "' user='" +
+                                  this->username + "' password='" +
+                                  this->password + "' host='" + this->host +
+                                  "' port=" + this->port;
   if (this->drivername == "postgresql") {
-    return new soci::session(*soci::factory_postgresql(), connection_string);
-  } else if (this->drivername == "sqlite") {
-    return new soci::session(*soci::factory_sqlite3(), connection_string);
+    soci::connection_parameters parameters(soci::postgresql, connection_string);
+    std::unique_ptr<soci::session> sql(new soci::session(parameters));
+    return sql.release();
+  } else if (this->drivername == "sqlite3") {
+    soci::connection_parameters parameters(soci::sqlite3, connection_string);
+    std::unique_ptr<soci::session> sql(new soci::session(parameters));
+    return sql.release();
   } else {
     throw std::runtime_error("Unsupported database driver: " +
                              this->drivername);
@@ -22,29 +28,55 @@ soci::session *StorageDatabaseConnection::get_session() {
 void StorageDatabaseConnection::create_tables() {
   soci::session *session = this->get_session();
 
-  std::ifstream ifs("sql/Dataset.sql");
-  std::string content((std::istreambuf_iterator<char>(ifs)),
-                      (std::istreambuf_iterator<char>()));
-  session->prepare << content;
+  std::string input_file_path =
+      std::filesystem::path(__FILE__).parent_path() / "sql/Dataset.sql";
+  std::ifstream dataset_input_file(input_file_path);
+  if (dataset_input_file.is_open()) {
+    std::string content((std::istreambuf_iterator<char>(dataset_input_file)),
+                        std::istreambuf_iterator<char>());
+    dataset_input_file.close();
+    *session << content;
+  } else {
+    SPDLOG_ERROR("Unable to open Dataset.sql file");
+  }
 
-  ifs = std::ifstream("sql/File.sql");
-  content = std::string((std::istreambuf_iterator<char>(ifs)),
-                        (std::istreambuf_iterator<char>()));
-  session->prepare << content;
-
+  std::string file_input_file_path;
+  std::string sample_input_file_path;
   if (this->drivername == "postgresql") {
-    ifs = std::ifstream("sql/SamplePartition.sql");
-  } else if (this->drivername == "sqlite") {
-    ifs = std::ifstream("sql/Sample.sql");
+    sample_input_file_path = std::filesystem::path(__FILE__).parent_path() /
+                      "sql/Sample.sql";
+    file_input_file_path =
+      std::filesystem::path(__FILE__).parent_path() / "sql/File.sql";
+  } else if (this->drivername == "sqlite3") {
+    sample_input_file_path =
+        std::filesystem::path(__FILE__).parent_path() / "sql/SQLiteSample.sql";
+    file_input_file_path =
+      std::filesystem::path(__FILE__).parent_path() / "sql/SQLiteFile.sql";
   } else {
     throw std::runtime_error("Unsupported database driver: " +
                              this->drivername);
   }
-  content = std::string((std::istreambuf_iterator<char>(ifs)),
-                        (std::istreambuf_iterator<char>()));
-  session->prepare << content;
 
-  session->commit();
+   std::ifstream file_input_file(file_input_file_path);
+  if (file_input_file.is_open()) {
+    std::string content((std::istreambuf_iterator<char>(file_input_file)),
+                        std::istreambuf_iterator<char>());
+    file_input_file.close();
+    *session << content;
+  } else {
+    SPDLOG_ERROR("Unable to open File.sql file");
+  }
+
+  std::ifstream sample_input_file(sample_input_file_path);
+  if (sample_input_file.is_open()) {
+    std::string content((std::istreambuf_iterator<char>(sample_input_file)),
+                        std::istreambuf_iterator<char>());
+    sample_input_file.close();
+    *session << content;
+  } else {
+    SPDLOG_ERROR("Unable to open Sample.sql file");
+  }
+
   delete session;
 }
 
@@ -58,33 +90,48 @@ bool StorageDatabaseConnection::add_dataset(
     soci::session *session = this->get_session();
 
     std::string boolean_string = ignore_last_timestamp ? "true" : "false";
-    // Insert dataset
+    if (this->drivername == "postgresql") {
     *session
         << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
            "file_wrapper_type, description, version, file_wrapper_config, "
-           "ignore_last_timestamp, file_watcher_interval) VALUES (:name, "
+           "ignore_last_timestamp, file_watcher_interval, last_timestamp) VALUES (:name, "
            ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
            ":description, :version, :file_wrapper_config, "
-           ":ignore_last_timestamp, :file_watcher_interval) "
+           ":ignore_last_timestamp, :file_watcher_interval, 0) "
            "ON DUPLICATE KEY UPDATE base_path = :base_path, "
            "filesystem_wrapper_type = :filesystem_wrapper_type, "
            "file_wrapper_type = :file_wrapper_type, description = "
            ":description, version = :version, file_wrapper_config = "
            ":file_wrapper_config, ignore_last_timestamp = "
            ":ignore_last_timestamp, file_watcher_interval = "
-           ":file_watcher_interval",
+           ":file_watcher_interval, last_timestamp=0",
         soci::use(name), soci::use(base_path),
         soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
         soci::use(description), soci::use(version),
         soci::use(file_wrapper_config), soci::use(boolean_string),
         soci::use(file_watcher_interval);
+    } else if (this->drivername == "sqlite3") {
+      *session
+        << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
+           "file_wrapper_type, description, version, file_wrapper_config, "
+           "ignore_last_timestamp, file_watcher_interval, last_timestamp) VALUES (:name, "
+           ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
+           ":description, :version, :file_wrapper_config, "
+           ":ignore_last_timestamp, :file_watcher_interval, 0)",
+        soci::use(name), soci::use(base_path),
+        soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
+        soci::use(description), soci::use(version),
+        soci::use(file_wrapper_config), soci::use(boolean_string),
+        soci::use(file_watcher_interval);
+    } else {
+      throw std::runtime_error("Unsupported database driver: " +
+                               this->drivername);
+    }
 
     // Create partition table for samples
     add_sample_dataset_partition(name, session);
 
-    session->commit();
     delete session;
-
   } catch (std::exception e) {
     SPDLOG_ERROR("Error adding dataset {}: {}", name, e.what());
     return false;
@@ -93,35 +140,32 @@ bool StorageDatabaseConnection::add_dataset(
 }
 
 bool StorageDatabaseConnection::delete_dataset(std::string name) {
-  try {
+  // try {
     soci::session *session = this->get_session();
 
-    int dataset_id;
-    *session << "SELECT id FROM dataset WHERE name = :name",
+    long long dataset_id;
+    *session << "SELECT dataset_id FROM datasets WHERE name = :name",
         soci::into(dataset_id), soci::use(name);
 
     // Delete all samples for this dataset
     *session
-        << "DELETE FROM samples s WHERE s.dataset_id IN (SELECT d.dataset_id "
-           "FROM dataset d WHERE d.name = :name)",
-        soci::use(name);
+        << "DELETE FROM samples WHERE dataset_id = :dataset_id",
+        soci::use(dataset_id);
 
     // Delete all files for this dataset
     *session
-        << "DELETE FROM files f WHERE f.dataset_id IN (SELECT d.dataset_id "
-           "FROM dataset d WHERE d.name = :name)",
-        soci::use(name);
+        << "DELETE FROM files WHERE dataset_id = :dataset_id",
+        soci::use(dataset_id);
 
     // Delete the dataset
     *session << "DELETE FROM datasets WHERE name = :name", soci::use(name);
 
-    session->commit();
     delete session;
 
-  } catch (std::exception e) {
-    SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
-    return false;
-  }
+  // } catch (std::exception e) {
+  //   SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
+  //   return false;
+  // }
   return true;
 }
 
@@ -142,7 +186,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(
                 "PARTITION BY HASH (sample_id)",
         soci::use(dataset_partition_table_name), soci::use(dataset_id);
 
-    for (int i = 0; i < this->hash_partition_modulus; i++) {
+    for (long long i = 0; i < this->hash_partition_modulus; i++) {
       std::string hash_partition_name =
           dataset_partition_table_name + "_part" + std::to_string(i);
       *session << "CREATE TABLE IF NOT EXISTS :hash_partition_name PARTITION "
