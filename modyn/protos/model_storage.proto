@@ -35,5 +35,5 @@ message DeleteModelRequest {
 }
 
 message DeleteModelResponse {
-  bool valid = 1;
+  bool success = 1;
 }

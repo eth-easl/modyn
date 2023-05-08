@@ -6,7 +6,7 @@ import grpc
 from integrationtests.utils import get_modyn_config
 from modyn.common.ftp import delete_file, download_file, upload_file
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import TrainedModel, Trigger
+from modyn.metadata_database.models import Trigger
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     DeleteModelRequest,
     DeleteModelResponse,
@@ -77,9 +77,8 @@ def insert_trigger_into_database(config: dict) -> (int, int):
         return trigger.pipeline_id, trigger.trigger_id
 
 
-def delete_data_from_database(config: dict, pipeline_id: int, trigger_id: int, model_id: int):
+def delete_data_from_database(config: dict, pipeline_id: int, trigger_id: int):
     with MetadataDatabaseConnection(config) as database:
-        database.session.query(TrainedModel).filter(TrainedModel.model_id == model_id).delete()
         database.session.query(Trigger).filter(
             Trigger.pipeline_id == pipeline_id and Trigger.trigger_id == trigger_id
         ).delete()
@@ -131,7 +130,7 @@ def test_model_storage(config: dict):
     request_delete = DeleteModelRequest(model_id=model_id)
     response_delete: DeleteModelResponse = model_storage.DeleteModel(request_delete)
 
-    assert response_delete.valid
+    assert response_delete.success
 
     # fetch a (now) invalid model
     request_invalid_fetch = FetchModelRequest(model_id=model_id)
@@ -143,10 +142,10 @@ def test_model_storage(config: dict):
     request_invalid_delete = DeleteModelRequest(model_id=model_id)
     response_invalid_delete: DeleteModelResponse = model_storage.DeleteModel(request_invalid_delete)
 
-    assert not response_invalid_delete.valid
+    assert not response_invalid_delete.success
 
     # clean-up database
-    delete_data_from_database(config, pipeline_id, trigger_id, model_id)
+    delete_data_from_database(config, pipeline_id, trigger_id)
 
 
 def main() -> None:

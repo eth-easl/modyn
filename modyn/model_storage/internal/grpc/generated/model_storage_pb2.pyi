@@ -111,13 +111,13 @@ global___DeleteModelRequest = DeleteModelRequest
 class DeleteModelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    VALID_FIELD_NUMBER: builtins.int
-    valid: builtins.bool
+    SUCCESS_FIELD_NUMBER: builtins.int
+    success: builtins.bool
     def __init__(
         self,
         *,
-        valid: builtins.bool = ...,
+        success: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["valid", b"valid"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___DeleteModelResponse = DeleteModelResponse

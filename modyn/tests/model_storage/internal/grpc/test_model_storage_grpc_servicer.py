@@ -133,13 +133,13 @@ def test_delete_model():
         req = DeleteModelRequest(model_id=model_id)
         resp: DeleteModelResponse = servicer.DeleteModel(req, None)
 
-        assert resp.valid
+        assert resp.success
         assert not os.path.isfile(storage_path / "model_to_be_deleted.modyn")
 
         req_invalid = DeleteModelRequest(model_id=model_id)
         resp_invalid: DeleteModelResponse = servicer.DeleteModel(req_invalid, None)
 
-        assert not resp_invalid.valid
+        assert not resp_invalid.success
 
         with MetadataDatabaseConnection(config) as database:
             model_id = database.session.get(TrainedModel, model_id)

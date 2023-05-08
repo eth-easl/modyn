@@ -143,12 +143,12 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
                 database.session.delete(model)
                 database.session.commit()
 
-                response.valid = True
+                response.success = True
                 logger.info(
                     f"Trained model {request.model_id} with path {self.storage_dir / model.model_path} has been removed"
                 )
             else:
-                response.valid = False
+                response.success = False
 
                 logger.warning(f"Trained model {request.model_id} was not found.")
 
