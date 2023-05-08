@@ -208,8 +208,8 @@ void FileWatcher::seek_dataset() {
       soci::into(dataset_path), soci::into(dataset_filesystem_wrapper_type),
       soci::into(last_timestamp), soci::use(this->dataset_id);
 
-  AbstractFilesystemWrapper *filesystem_wrapper =
-      Utils::get_filesystem_wrapper(dataset_path, dataset_filesystem_wrapper_type);
+  AbstractFilesystemWrapper *filesystem_wrapper = Utils::get_filesystem_wrapper(
+      dataset_path, dataset_filesystem_wrapper_type);
 
   if (filesystem_wrapper->exists(dataset_path) &&
       filesystem_wrapper->is_directory(dataset_path)) {

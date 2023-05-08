@@ -1,25 +1,23 @@
 #include "Storage.hpp"
-#include <spdlog/spdlog.h>
-#include <iostream>
 #include <filesystem>
+#include <iostream>
+#include <spdlog/spdlog.h>
 
 using namespace storage;
 
-Storage::Storage(std::string config_file)
-{
-    /* Initialize the storage service. */
-    YAML::Node config = YAML::LoadFile(config_file);
-    this->config = config;
+Storage::Storage(std::string config_file) {
+  /* Initialize the storage service. */
+  YAML::Node config = YAML::LoadFile(config_file);
+  this->config = config;
 }
 
-void Storage::run()
-{
-    /* Run the storage service. */
-    SPDLOG_INFO("Running storage service.");
-    
-    // Create the database tables
+void Storage::run() {
+  /* Run the storage service. */
+  SPDLOG_INFO("Running storage service.");
 
-    // Create the dataset watcher process in a new thread
+  // Create the database tables
 
-    // Start the storage grpc server
+  // Create the dataset watcher process in a new thread
+
+  // Start the storage grpc server
 }

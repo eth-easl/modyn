@@ -43,21 +43,21 @@ void StorageDatabaseConnection::create_tables() {
   std::string file_input_file_path;
   std::string sample_input_file_path;
   if (this->drivername == "postgresql") {
-    sample_input_file_path = std::filesystem::path(__FILE__).parent_path() /
-                      "sql/Sample.sql";
+    sample_input_file_path =
+        std::filesystem::path(__FILE__).parent_path() / "sql/Sample.sql";
     file_input_file_path =
-      std::filesystem::path(__FILE__).parent_path() / "sql/File.sql";
+        std::filesystem::path(__FILE__).parent_path() / "sql/File.sql";
   } else if (this->drivername == "sqlite3") {
     sample_input_file_path =
         std::filesystem::path(__FILE__).parent_path() / "sql/SQLiteSample.sql";
     file_input_file_path =
-      std::filesystem::path(__FILE__).parent_path() / "sql/SQLiteFile.sql";
+        std::filesystem::path(__FILE__).parent_path() / "sql/SQLiteFile.sql";
   } else {
     throw std::runtime_error("Unsupported database driver: " +
                              this->drivername);
   }
 
-   std::ifstream file_input_file(file_input_file_path);
+  std::ifstream file_input_file(file_input_file_path);
   if (file_input_file.is_open()) {
     std::string content((std::istreambuf_iterator<char>(file_input_file)),
                         std::istreambuf_iterator<char>());
@@ -91,38 +91,40 @@ bool StorageDatabaseConnection::add_dataset(
 
     std::string boolean_string = ignore_last_timestamp ? "true" : "false";
     if (this->drivername == "postgresql") {
-    *session
-        << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
-           "file_wrapper_type, description, version, file_wrapper_config, "
-           "ignore_last_timestamp, file_watcher_interval, last_timestamp) VALUES (:name, "
-           ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
-           ":description, :version, :file_wrapper_config, "
-           ":ignore_last_timestamp, :file_watcher_interval, 0) "
-           "ON DUPLICATE KEY UPDATE base_path = :base_path, "
-           "filesystem_wrapper_type = :filesystem_wrapper_type, "
-           "file_wrapper_type = :file_wrapper_type, description = "
-           ":description, version = :version, file_wrapper_config = "
-           ":file_wrapper_config, ignore_last_timestamp = "
-           ":ignore_last_timestamp, file_watcher_interval = "
-           ":file_watcher_interval, last_timestamp=0",
-        soci::use(name), soci::use(base_path),
-        soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
-        soci::use(description), soci::use(version),
-        soci::use(file_wrapper_config), soci::use(boolean_string),
-        soci::use(file_watcher_interval);
+      *session
+          << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
+             "file_wrapper_type, description, version, file_wrapper_config, "
+             "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
+             "VALUES (:name, "
+             ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
+             ":description, :version, :file_wrapper_config, "
+             ":ignore_last_timestamp, :file_watcher_interval, 0) "
+             "ON DUPLICATE KEY UPDATE base_path = :base_path, "
+             "filesystem_wrapper_type = :filesystem_wrapper_type, "
+             "file_wrapper_type = :file_wrapper_type, description = "
+             ":description, version = :version, file_wrapper_config = "
+             ":file_wrapper_config, ignore_last_timestamp = "
+             ":ignore_last_timestamp, file_watcher_interval = "
+             ":file_watcher_interval, last_timestamp=0",
+          soci::use(name), soci::use(base_path),
+          soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
+          soci::use(description), soci::use(version),
+          soci::use(file_wrapper_config), soci::use(boolean_string),
+          soci::use(file_watcher_interval);
     } else if (this->drivername == "sqlite3") {
       *session
-        << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
-           "file_wrapper_type, description, version, file_wrapper_config, "
-           "ignore_last_timestamp, file_watcher_interval, last_timestamp) VALUES (:name, "
-           ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
-           ":description, :version, :file_wrapper_config, "
-           ":ignore_last_timestamp, :file_watcher_interval, 0)",
-        soci::use(name), soci::use(base_path),
-        soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
-        soci::use(description), soci::use(version),
-        soci::use(file_wrapper_config), soci::use(boolean_string),
-        soci::use(file_watcher_interval);
+          << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
+             "file_wrapper_type, description, version, file_wrapper_config, "
+             "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
+             "VALUES (:name, "
+             ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
+             ":description, :version, :file_wrapper_config, "
+             ":ignore_last_timestamp, :file_watcher_interval, 0)",
+          soci::use(name), soci::use(base_path),
+          soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
+          soci::use(description), soci::use(version),
+          soci::use(file_wrapper_config), soci::use(boolean_string),
+          soci::use(file_watcher_interval);
     } else {
       throw std::runtime_error("Unsupported database driver: " +
                                this->drivername);
@@ -140,7 +142,7 @@ bool StorageDatabaseConnection::add_dataset(
 }
 
 bool StorageDatabaseConnection::delete_dataset(std::string name) {
-  // try {
+  try {
     soci::session *session = this->get_session();
 
     long long dataset_id;
@@ -148,13 +150,11 @@ bool StorageDatabaseConnection::delete_dataset(std::string name) {
         soci::into(dataset_id), soci::use(name);
 
     // Delete all samples for this dataset
-    *session
-        << "DELETE FROM samples WHERE dataset_id = :dataset_id",
+    *session << "DELETE FROM samples WHERE dataset_id = :dataset_id",
         soci::use(dataset_id);
 
     // Delete all files for this dataset
-    *session
-        << "DELETE FROM files WHERE dataset_id = :dataset_id",
+    *session << "DELETE FROM files WHERE dataset_id = :dataset_id",
         soci::use(dataset_id);
 
     // Delete the dataset
@@ -162,10 +162,10 @@ bool StorageDatabaseConnection::delete_dataset(std::string name) {
 
     delete session;
 
-  // } catch (std::exception e) {
-  //   SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
-  //   return false;
-  // }
+  } catch (std::exception e) {
+    SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
+    return false;
+  }
   return true;
 }
 
