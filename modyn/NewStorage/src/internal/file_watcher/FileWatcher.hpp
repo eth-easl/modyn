@@ -33,7 +33,7 @@ private:
   void fallback_insertion(
       std::vector<std::tuple<long long, long long, int, int>> file_frame,
       soci::session *sql);
-  std::string FileWatcher::extract_file_paths_per_thread_to_file(
+  std::string extract_file_paths_per_thread_to_file(
       int i, int files_per_thread, std::vector<std::string> file_paths);
 
 public:

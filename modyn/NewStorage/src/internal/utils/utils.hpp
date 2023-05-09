@@ -6,6 +6,7 @@
 #include "../file_wrapper/SingleSampleFileWrapper.hpp"
 #include "../filesystem_wrapper/AbstractFilesystemWrapper.hpp"
 #include "../filesystem_wrapper/LocalFilesystemWrapper.hpp"
+#include <filesystem>
 
 namespace storage {
 

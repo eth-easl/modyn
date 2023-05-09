@@ -1,5 +1,5 @@
 #include "../../src/internal/file_watcher/FileWatcher.hpp"
-#include "../../src/internal/utils/Utils.hpp"
+#include "../../src/internal/utils/utils.hpp"
 #include <argparse/argparse.hpp>
 #include <filesystem>
 #include <fstream>

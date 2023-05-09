@@ -212,6 +212,7 @@ std::string FileWatcher::extract_file_paths_per_thread_to_file(
   } else {
     SPDLOG_ERROR("Unable to open temporary file");
   }
+  return file_paths_thread_file;
 }
 
 void FileWatcher::seek_dataset() {

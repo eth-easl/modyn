@@ -22,6 +22,7 @@ namespace storage
         MOCK_METHOD(int, get_created_time, (std::string path), (override));
         MOCK_METHOD(std::string, join, (std::vector<std::string> paths), (override));
         MOCK_METHOD(bool, is_valid_path, (std::string path), (override));
+        MOCK_METHOD(std::string, get_name, (), (override));
     };
 }
 
