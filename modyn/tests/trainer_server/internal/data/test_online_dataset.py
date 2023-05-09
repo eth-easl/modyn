@@ -510,3 +510,35 @@ def test_iter_multi_partition_multi_workers(
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
     assert idx == 7
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(100)], [1] * 100)
+)
+@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(100)))
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
+def test_multi_epoch_dataloader_dataset(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
+    for epochs in range(5):
+        for i, batch in enumerate(dataloader):
+            assert len(batch) == 3
+            assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
+            assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
+            assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+
