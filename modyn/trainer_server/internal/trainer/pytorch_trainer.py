@@ -37,7 +37,6 @@ class PytorchTrainer:
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
         logger: logging.Logger,
-        epochs_per_trigger: int,
     ) -> None:
         self.logger = logger
         self.pipeline_id = training_info.pipeline_id
@@ -94,7 +93,7 @@ class PytorchTrainer:
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
-        self.epochs_per_trigger = epochs_per_trigger
+        self.epochs_per_trigger = training_info.epochs_per_trigger
 
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
@@ -356,7 +355,6 @@ def train(
     exception_queue: mp.Queue,
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue,
-    epochs_per_trigger: int,
 ) -> None:
     logging.basicConfig(
         level=logging.DEBUG,
@@ -368,9 +366,7 @@ def train(
     logger.addHandler(file_handler)
 
     try:
-        trainer = PytorchTrainer(
-            training_info, device, status_query_queue, status_response_queue, logger, epochs_per_trigger
-        )
+        trainer = PytorchTrainer(training_info, device, status_query_queue, status_response_queue, logger)
         trainer.train()
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()

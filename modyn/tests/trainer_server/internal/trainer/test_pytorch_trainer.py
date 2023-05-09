@@ -266,7 +266,7 @@ def get_mock_trainer(
         lr_scheduler,
         transform_label,
     )
-    trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue, logging.getLogger(__name__), 1)
+    trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue, logging.getLogger(__name__))
     return trainer
 
 
@@ -773,7 +773,7 @@ def test_create_trainer_with_exception(
             raise TimeoutError("Did not reach desired queue state within timelimit.")
 
     with tempfile.NamedTemporaryFile() as temp:
-        train(training_info, "cpu", temp.name, exception_queue, query_status_queue, status_queue, 1)
+        train(training_info, "cpu", temp.name, exception_queue, query_status_queue, status_queue)
         elapsed = 0
         while not (query_status_queue.empty() and status_queue.empty()):
             sleep(1)

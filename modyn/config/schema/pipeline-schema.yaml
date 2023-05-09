@@ -47,7 +47,7 @@ properties:
       epochs_per_trigger:
         type: number
         description: |
-          The number of epochs per trigger.
+          The number of epochs per trigger. Defaults to 1, if not given.
       device:
         type: string
         description: |

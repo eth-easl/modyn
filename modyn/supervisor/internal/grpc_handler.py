@@ -59,7 +59,6 @@ class GRPCHandler:
         self.connected_to_selector = False
         self.progress_mgr = progress_mgr
         self.status_bar = status_bar
-        self.epochs_per_trigger = 1
 
         self.init_storage()
         self.init_selector()
@@ -296,7 +295,9 @@ class GRPCHandler:
             criterion_config = "{}"
 
         if "epochs_per_trigger" in pipeline_config["training"]:
-            self.epochs_per_trigger = pipeline_config["training"]["epochs_per_trigger"]
+            epochs_per_trigger = pipeline_config["training"]["epochs_per_trigger"]
+        else:
+            epochs_per_trigger = 1
 
         if "transformations" in pipeline_config["data"]:
             transform_list = pipeline_config["data"]["transformations"]
@@ -353,7 +354,7 @@ class GRPCHandler:
             label_transformer=PythonString(value=label_transformer),
             lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
             grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            epochs_per_trigger=self.epochs_per_trigger,
+            epochs_per_trigger=epochs_per_trigger,
         )
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)

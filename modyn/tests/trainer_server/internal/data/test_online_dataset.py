@@ -535,10 +535,9 @@ def test_multi_epoch_dataloader_dataset(
         training_id=42,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
-    for epochs in range(5):
+    for _ in range(5):
         for i, batch in enumerate(dataloader):
             assert len(batch) == 3
             assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
             assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
             assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
-
