@@ -373,6 +373,7 @@ class GRPCHandler:
 
         return response.num_samples
 
+    # pylint: disable=too-many-nested-blocks
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> None:  # pragma: no cover
@@ -421,17 +422,49 @@ class GRPCHandler:
 
                     new_samples = res.samples_seen - last_samples
 
-                    if new_samples > 0:
+                    increment_epoch = 0
+
+                    # conclude/progress the current epoch
+                    if new_samples > 0 and res.samples_seen <= total_samples * (current_epoch + 1):
                         sample_pbar.update(new_samples)
                         last_samples = res.samples_seen
 
-                    if res.samples_seen == total_samples * (current_epoch + 1):
-                        current_epoch += 1
+                    # start a new epoch
+                    elif res.samples_seen == total_samples * (current_epoch + 1):
+                        increment_epoch = 1
                         sample_pbar = self.progress_mgr.counter(
                             total=total_samples,
-                            desc=f"[Training {training_id} Epoch {current_epoch}] Training on Samples",
+                            desc=f"[Training {training_id} Epoch {current_epoch + 1}] Training on Samples",
                             unit="samples",
                         )
+
+                    # handle corner cases
+                    elif res.samples_seen > total_samples * (current_epoch + 1):
+                        increment_epoch = 0
+
+                        # we have to distribute new_samples across several epochs
+                        this_epoch_samples = sample_pbar.total - sample_pbar.count
+                        sample_pbar.update(this_epoch_samples)
+                        remaining_samples = new_samples - this_epoch_samples
+
+                        while True:
+                            sample_pbar = self.progress_mgr.counter(
+                                total=total_samples,
+                                desc=f"[Training {training_id} Epoch {current_epoch + increment_epoch + 1}] "
+                                f"Training on Samples",
+                                unit="samples",
+                            )
+                            if remaining_samples > total_samples:
+                                # epoch started before the last update and already finished
+                                sample_pbar.update(total_samples)
+                                remaining_samples -= total_samples
+                                increment_epoch += 1
+                            else:
+                                # just one new epoch
+                                sample_pbar.update(remaining_samples)
+                                break
+
+                    current_epoch += increment_epoch
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
