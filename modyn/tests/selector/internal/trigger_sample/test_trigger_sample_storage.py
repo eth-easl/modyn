@@ -124,6 +124,12 @@ def test_get_trigger_samples():
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
         1, 2, 3, np.array([(3, 3.0), (4, 4.0), (5, 5.0), (6, 6.0)], dtype=np.dtype("i8,f8")), 5
     )
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(
+        1, 2, 3, np.array([(7, 7.0), (8, 8.0), (8, 8.0), (8, 8.0)], dtype=np.dtype("i8,f8")), 6
+    )
+    TriggerSampleStorage(TMP_DIR).save_trigger_sample(
+        1, 2, 3, np.array([(9, 9.0), (10, 10.0), (11, 11.0), (12, 12.0)], dtype=np.dtype("i8,f8")), 7
+    )
 
     expected_order = [
         (1, 1.0),
@@ -134,39 +140,54 @@ def test_get_trigger_samples():
         (4, 4.0),
         (5, 5.0),
         (6, 6.0),
+        (7, 7.0),
+        (8, 8.0),
+        (8, 8.0),
+        (8, 8.0),
+        (9, 9.0),
+        (10, 10.0),
+        (11, 11.0),
+        (12, 12.0),
     ]
 
     assert TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3) == expected_order
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 4, 8)
-    assert len(result) == 2
-    assert result == [expected_order[0], expected_order[1]]
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 4, 16)
+    assert len(result) == 4
+    assert result == [expected_order[0], expected_order[1], expected_order[2], expected_order[3]]
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 4, 8)
-    assert len(result) == 2
-    assert result == [expected_order[2], expected_order[3]]
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 4, 16)
+    assert len(result) == 4
+    assert result == [expected_order[4], expected_order[5], expected_order[6], expected_order[7]]
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 4, 8)
-    assert len(result) == 2
-    assert result == [expected_order[4], expected_order[5]]
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 4, 16)
+    assert len(result) == 4
+    assert result == [expected_order[8], expected_order[9], expected_order[10], expected_order[11]]
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 3, 4, 8)
-    assert len(result) == 2
-    assert result == [expected_order[6], expected_order[7]]
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 3, 4, 16)
+    assert len(result) == 4
+    assert result == [expected_order[12], expected_order[13], expected_order[14], expected_order[15]]
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 3, 8)
-    assert len(result) == 3
-    assert result == [expected_order[3], expected_order[4], expected_order[5]]
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 3, 16)
+    assert len(result) == 6
+    assert result == [
+        expected_order[6],
+        expected_order[7],
+        expected_order[8],
+        expected_order[9],
+        expected_order[10],
+        expected_order[11],
+    ]
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 3, 8)
-    assert len(result) == 2
-    assert result == [expected_order[6], expected_order[7]]
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 3, 16)
+    assert len(result) == 4
+    assert result == [expected_order[12], expected_order[13], expected_order[14], expected_order[15]]
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 1, 8)
-    assert len(result) == 8
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 1, 16)
+    assert len(result) == 16
     assert result == expected_order
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 9, 10, 8)
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 9, 10, 16)
     assert len(result) == 0
     assert not result
 

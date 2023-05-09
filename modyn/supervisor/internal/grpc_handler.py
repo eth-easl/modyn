@@ -441,6 +441,7 @@ class GRPCHandler:
                 + " since training is invalid or training still running"
             )
 
+        # TODO(robin-oester): We should not be required to use a slash here.
         remote_model_path = f"/{res.model_path}"
         local_model_path = storage_dir / f"{training_id}.modyn"
 

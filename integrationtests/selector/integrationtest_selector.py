@@ -481,14 +481,14 @@ def test_empty_triggers() -> None:
     assert len(total_samples) == 6
 
 
-def test_many_samples():
+def test_many_samples_evenly_distributed():
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
     # We test without reset, i.e., after an empty trigger we get the same data
 
     strategy_config = {
         "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 50000,
+        "maximum_keys_in_memory": 5000,
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
@@ -518,7 +518,7 @@ def test_many_samples():
         GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
     ).num_partitions
 
-    assert number_of_partitions == 1, f"Invalid number of partitions: {number_of_partitions}"
+    assert number_of_partitions == 2, f"Invalid number of partitions: {number_of_partitions}"
     total_samples = []
     for partition in range(number_of_partitions):
         worker1_responses: list[SamplesResponse] = list(
@@ -540,8 +540,8 @@ def test_many_samples():
 
         worker_1_samples = list(worker1_response.training_samples_subset)
         worker_2_samples = list(worker2_response.training_samples_subset)
-        assert len(worker_1_samples) == 5000
-        assert len(worker_2_samples) == 5000
+        assert len(worker_1_samples) == 2500
+        assert len(worker_2_samples) == 2500
 
         total_samples.extend(worker_1_samples + worker_2_samples)
 
@@ -551,9 +551,81 @@ def test_many_samples():
     assert len(total_samples) == 10000
 
 
+def test_many_samples_unevenly_distributed():
+    selector_channel = connect_to_selector_servicer()
+    selector = SelectorStub(selector_channel)
+    # We test without reset, i.e., after an empty trigger we get the same data
+
+    strategy_config = {
+        "name": "NewDataStrategy",
+        "maximum_keys_in_memory": 4999,
+        "config": {"limit": -1, "reset_after_trigger": False},
+    }
+
+    pipeline_id = selector.register_pipeline(
+        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+    ).pipeline_id
+
+    selector.inform_data(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=list(range(10001)),
+            timestamps=list(range(10001)),
+            labels=[0 for _ in range(10001)],
+        )
+    )
+
+    trigger_id = selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=[],
+            timestamps=[],
+            labels=[],
+        )
+    ).trigger_id
+
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
+    ).num_partitions
+
+    assert number_of_partitions == 3, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+    for partition in range(number_of_partitions):
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+            )
+        )
+
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+            )
+        )
+
+        assert len(worker1_responses) == 1
+        worker1_response = worker1_responses[0]
+        assert len(worker2_responses) == 1
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+        if partition < number_of_partitions - 1:
+            assert len(worker_1_samples) + len(worker_2_samples) == 4999
+        else:
+            assert len(worker_1_samples) + len(worker_2_samples) == 3
+
+        total_samples.extend(worker_1_samples + worker_2_samples)
+
+    assert set(total_samples) == set(
+        range(10001)
+    ), f"got worker1 samples= {worker_1_samples}, worker2 samples={worker_2_samples}"
+    assert len(total_samples) == 10001
+
 if __name__ == "__main__":
     test_newdata()
     test_empty_triggers()
-    test_many_samples()
+    test_many_samples_evenly_distributed()
+    test_many_samples_unevenly_distributed()
     test_abstract_downsampler(reset_after_trigger=False)
     test_abstract_downsampler(reset_after_trigger=True)
