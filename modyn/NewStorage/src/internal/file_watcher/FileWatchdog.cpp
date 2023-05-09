@@ -13,11 +13,9 @@ void file_watchdog_signal_handler(int signal) { file_watchdog_sigflag = 1; }
 
 void FileWatchdog::start_file_watcher_process(long long dataset_id) {
   // Start a new child process of a FileWatcher
-  bp::ipstream out;
-
-  bp::child subprocess(bp::search_path("FileWatcher"),
-                       bp::args({std::to_string(dataset_id), "false"}),
-                       bp::std_out > out);
+  bp::child subprocess(
+      bp::search_path("./executables/FileWatcher/FileWatcher"),
+      bp::args({this->config_file, std::to_string(dataset_id), "false"}));
 
   this->file_watcher_processes[dataset_id] = std::move(subprocess);
   this->file_watcher_process_restart_attempts[dataset_id] = 0;

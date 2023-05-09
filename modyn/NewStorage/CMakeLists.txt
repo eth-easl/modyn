@@ -20,6 +20,8 @@ include_directories(
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(executables/FileWatchdog)
+add_subdirectory(executables/FileWatcher)
 add_subdirectory(lib/yaml-cpp)
 add_subdirectory(lib/googletest)
 add_subdirectory(lib/argparse)

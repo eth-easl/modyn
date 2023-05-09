@@ -41,6 +41,19 @@ public:
     }
     return result;
   }
+  static std::string getTmpFileName(std::string base_name) {
+    std::string tmp_file_name = base_name + "_XXXXXX";
+    char *tmp_file_name_c = new char[tmp_file_name.length() + 1];
+    strcpy(tmp_file_name_c, tmp_file_name.c_str());
+    int fd = mkstemp(tmp_file_name_c);
+    if (fd == -1) {
+      throw std::runtime_error("Could not create tmporary file");
+    }
+    close(fd);
+    std::string result(tmp_file_name_c);
+    delete[] tmp_file_name_c;
+    return std::filesystem::path(__FILE__).parent_path() / "tmp" / result;
+  }
 };
 } // namespace storage
 

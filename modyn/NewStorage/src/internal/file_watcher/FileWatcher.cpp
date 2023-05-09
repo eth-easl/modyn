@@ -8,6 +8,7 @@
 #include <sstream>
 
 using namespace storage;
+namespace bp = boost::process;
 
 volatile sig_atomic_t file_watcher_sigflag = 0;
 void file_watcher_signal_handler(int signal) { file_watcher_sigflag = 1; }
@@ -170,29 +171,46 @@ void FileWatcher::update_files_in_directory(
                             filesystem_wrapper, timestamp);
   } else {
     int files_per_thread = file_paths.size() / this->insertion_threads;
-    std::vector<boost::process::child> children;
+    std::vector<bp::child> children;
     for (int i = 0; i < this->insertion_threads; i++) {
-      int start_index = i * files_per_thread;
-      int end_index = start_index + files_per_thread
-                          ? i < this->insertion_threads - 1
-                          : file_paths.size() - 1;
-      std::vector<std::string> file_paths_thread(
-          file_paths.begin() + start_index, file_paths.begin() + end_index);
-      std::string file_paths_thread_string =
-          Utils::joinStringList(file_paths_thread, ",");
-      children.push_back(boost::process::child(
-          boost::process::search_path("FileWatcher"),
+      std::string file_paths_thread_file =
+          this->extract_file_paths_per_thread_to_file(i, files_per_thread,
+                                                      file_paths);
+      children.push_back(bp::child(
+          bp::search_path("./executables/FileWatcher/FileWatcher"),
           std::vector<std::string>{
-              file_paths_thread_string, std::to_string(this->dataset_id),
-              file_wrapper_type, file_wrapper_config, std::to_string(timestamp),
-              this->config_path},
-          boost::process::std_out > boost::process::null,
-          boost::process::std_err > boost::process::null));
+              this->config_file, std::to_string(this->dataset_id), "false",
+              "--fptf", file_paths_thread_file, "--dfe", data_file_extension,
+              "--fwt", file_wrapper_type, "--t", std::to_string(timestamp),
+              "--fsw", filesystem_wrapper->get_name(), "--dp",
+              directory_path}));
     }
 
     for (int i = 0; i < children.size(); i++) {
       children[i].wait();
     }
+  }
+}
+
+std::string FileWatcher::extract_file_paths_per_thread_to_file(
+    int i, int files_per_thread, std::vector<std::string> file_paths) {
+  int start_index = i * files_per_thread;
+  int end_index = start_index + files_per_thread
+                      ? i < this->insertion_threads - 1
+                      : file_paths.size() - 1;
+  std::vector<std::string> file_paths_thread(file_paths.begin() + start_index,
+                                             file_paths.begin() + end_index);
+  std::string file_paths_thread_string =
+      Utils::joinStringList(file_paths_thread, ",");
+  // store to local temporary file with unique name:
+  std::string file_paths_thread_file =
+      Utils::getTmpFileName("file_paths_thread");
+  std::ofstream file(file_paths_thread_file);
+  if (file.is_open()) {
+    file << file_paths_thread_string;
+    file.close();
+  } else {
+    SPDLOG_ERROR("Unable to open temporary file");
   }
 }
 

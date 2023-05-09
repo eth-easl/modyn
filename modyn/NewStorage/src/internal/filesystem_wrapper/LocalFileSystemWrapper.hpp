@@ -18,6 +18,7 @@ public:
   int get_created_time(std::string path);
   std::string join(std::vector<std::string> paths);
   bool is_valid_path(std::string path);
+  std::string get_name() { return "LOCAL"; }
 };
 } // namespace storage
 
