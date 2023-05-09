@@ -6,6 +6,7 @@
 #include <map>
 #include <tuple>
 #include <yaml-cpp/yaml.h>
+#include "../database/StorageDatabaseConnection.hpp"
 
 namespace storage {
 class FileWatchdog {
@@ -14,7 +15,7 @@ private:
   std::string config_file;
   std::map<long long, boost::process::child> file_watcher_processes;
   std::map<long long, int> file_watcher_process_restart_attempts;
-  void watch_file_watcher_processes();
+  void watch_file_watcher_processes(StorageDatabaseConnection *storage_database_connection);
   void start_file_watcher_process(long long dataset_id);
   void stop_file_watcher_process(long long dataset_id);
 

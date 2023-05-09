@@ -4,7 +4,15 @@ using namespace storage;
 
 void TestUtils::create_dummy_yaml() {
   std::ofstream out("config.yaml");
-  out << "test: 1" << std::endl;
+  out << "storage:" << std::endl;
+  out << "  insertion_threads: 1" << std::endl;
+  out << "  database:" << std::endl;
+  out << "    drivername: sqlite3" << std::endl;
+  out << "    database: test.db" << std::endl;
+  out << "    username: ''" << std::endl;
+  out << "    password: ''" << std::endl;
+  out << "    host: ''" << std::endl;
+  out << "    port: ''" << std::endl;
   out.close();
 }
 

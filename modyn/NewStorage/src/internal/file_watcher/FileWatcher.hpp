@@ -39,7 +39,6 @@ private:
 public:
   FileWatcher(std::string config_file, long long dataset_id, bool is_test) {
     this->config = YAML::LoadFile(config_file);
-    ;
     this->config_file = config_file;
     this->dataset_id = dataset_id;
     this->insertion_threads = config["storage"]["insertion_threads"].as<int>();

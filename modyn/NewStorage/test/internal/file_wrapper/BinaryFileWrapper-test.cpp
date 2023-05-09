@@ -1,5 +1,5 @@
 #include "../../../src/internal/file_wrapper/BinaryFileWrapper.hpp"
-#include "MockFilesystemWrapper.hpp"
+#include "../filesystem_wrapper/MockFilesystemWrapper.hpp"
 #include <fstream>
 #include "../../TestUtils.hpp"
 #include <gtest/gtest.h>

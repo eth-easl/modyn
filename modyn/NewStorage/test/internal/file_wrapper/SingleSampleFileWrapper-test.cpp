@@ -1,5 +1,5 @@
 #include "../../../src/internal/file_wrapper/SingleSampleFileWrapper.hpp"
-#include "MockFilesystemWrapper.hpp"
+#include "../filesystem_wrapper/MockFilesystemWrapper.hpp"
 #include <fstream>
 #include "../../TestUtils.hpp"
 

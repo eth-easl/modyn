@@ -4,6 +4,7 @@
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
 #include <filesystem>
+#include <spdlog/spdlog.h>
 
 using namespace storage;
 namespace bp = boost::process;
@@ -31,11 +32,18 @@ void FileWatchdog::stop_file_watcher_process(long long dataset_id) {
   }
 }
 
-void FileWatchdog::watch_file_watcher_processes() {
-  StorageDatabaseConnection storage_database_connection =
-      StorageDatabaseConnection(this->config);
-  soci::session *sql = storage_database_connection.get_session();
-  std::vector<long long> dataset_ids;
+void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection *storage_database_connection) {
+  soci::session *sql = storage_database_connection->get_session();
+  int number_of_datasets = 0;
+  *sql << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
+  if (number_of_datasets == 0) {
+    // There are no datasets in the database. Stop all FileWatcher processes.
+    for (auto const &pair : this->file_watcher_processes) {
+      this->stop_file_watcher_process(pair.first);
+    }
+    return;
+  }
+  std::vector<long long> dataset_ids = std::vector<long long>(number_of_datasets);
   *sql << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
   long long dataset_id;
@@ -73,11 +81,17 @@ void FileWatchdog::watch_file_watcher_processes() {
 void FileWatchdog::run() {
   std::signal(SIGKILL, file_watchdog_signal_handler);
 
+  StorageDatabaseConnection storage_database_connection =
+      StorageDatabaseConnection(this->config);
+  storage_database_connection.create_tables();
+
+  SPDLOG_INFO("FileWatchdog running");
+
   while (true) {
     if (file_watchdog_sigflag) {
       break;
     }
-    this->watch_file_watcher_processes();
+    this->watch_file_watcher_processes(&storage_database_connection);
     // Wait for 3 seconds
     std::this_thread::sleep_for(std::chrono::seconds(3));
   }
