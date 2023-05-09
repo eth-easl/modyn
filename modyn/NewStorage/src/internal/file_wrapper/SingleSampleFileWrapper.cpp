@@ -67,3 +67,15 @@ SingleSampleFileWrapper::get_samples_from_indices(std::vector<int> *indices) {
         "SingleSampleFileWrapper contains only one sample.");
   return new std::vector<std::vector<unsigned char>>{*get_sample(0)};
 }
+
+void SingleSampleFileWrapper::validate_file_extension() {
+  if (!this->file_wrapper_config["file_extension"]) {
+    throw std::runtime_error(
+        "file_extension must be specified in the file wrapper config.");
+  }
+  std::string file_extension =
+      this->file_wrapper_config["file_extension"].as<std::string>();
+  if (this->path.find(file_extension) == std::string::npos) {
+    throw std::runtime_error("File has wrong file extension.");
+  }
+}

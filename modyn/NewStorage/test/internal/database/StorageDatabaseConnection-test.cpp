@@ -1,5 +1,5 @@
 #include "../../../src/internal/database/StorageDatabaseConnection.hpp"
-#include "../../Utils.hpp"
+#include "../../TestUtils.hpp"
 #include <gtest/gtest.h>
 #include <soci/soci.h>
 #include <spdlog/spdlog.h>
@@ -16,7 +16,7 @@ protected:
 };
 
 TEST_F(StorageDatabaseConnectionTest, TestGetSession) {
-  YAML::Node config = Utils::get_dummy_config();
+  YAML::Node config = TestUtils::get_dummy_config();
   storage::StorageDatabaseConnection connection =
       storage::StorageDatabaseConnection(config);
   ASSERT_NO_THROW(connection.get_session());
@@ -29,7 +29,7 @@ TEST_F(StorageDatabaseConnectionTest, TestGetSession) {
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
-  YAML::Node config = Utils::get_dummy_config();
+  YAML::Node config = TestUtils::get_dummy_config();
   storage::StorageDatabaseConnection connection =
       storage::StorageDatabaseConnection(config);
   ASSERT_NO_THROW(connection.create_tables());
@@ -51,7 +51,7 @@ TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
-  YAML::Node config = Utils::get_dummy_config();
+  YAML::Node config = TestUtils::get_dummy_config();
   storage::StorageDatabaseConnection connection =
       storage::StorageDatabaseConnection(config);
   ASSERT_NO_THROW(connection.create_tables());
@@ -80,7 +80,7 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
-  YAML::Node config = Utils::get_dummy_config();
+  YAML::Node config = TestUtils::get_dummy_config();
   storage::StorageDatabaseConnection connection =
       storage::StorageDatabaseConnection(config);
   ASSERT_NO_THROW(connection.create_tables());

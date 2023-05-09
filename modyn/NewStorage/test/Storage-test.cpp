@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "../src/Storage.hpp"
-#include "Utils.hpp"
+#include "TestUtils.hpp"
 
 using namespace storage;
 
@@ -9,12 +9,12 @@ class StorageTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        Utils::create_dummy_yaml();
+        TestUtils::create_dummy_yaml();
     }
 
     void TearDown() override
     {
-        Utils::delete_dummy_yaml();
+        TestUtils::delete_dummy_yaml();
     }
 };
 

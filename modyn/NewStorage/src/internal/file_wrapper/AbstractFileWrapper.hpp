@@ -27,6 +27,8 @@ public:
   virtual std::vector<unsigned char> *get_sample(int index) = 0;
   virtual std::vector<std::vector<unsigned char>> *
   get_samples_from_indices(std::vector<int> *indices) = 0;
+  virtual std::string get_name() = 0;
+  virtual void validate_file_extension() = 0;
 };
 } // namespace storage
 

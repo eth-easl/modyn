@@ -5,7 +5,7 @@
 #include <yaml-cpp/yaml.h>
 
 namespace storage {
-class Utils {
+class TestUtils {
 public:
   static void create_dummy_yaml();
   static void delete_dummy_yaml();

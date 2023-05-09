@@ -1,5 +1,5 @@
 #include "FileWatcher.hpp"
-#include "../utils/utils.hpp"
+#include "../utils/Utils.hpp"
 #include <boost/process.hpp>
 #include <csignal>
 #include <fstream>
@@ -202,10 +202,10 @@ std::string FileWatcher::extract_file_paths_per_thread_to_file(
   std::vector<std::string> file_paths_thread(file_paths.begin() + start_index,
                                              file_paths.begin() + end_index);
   std::string file_paths_thread_string =
-      Utils::joinStringList(file_paths_thread, ",");
+      Utils::join_string_list(file_paths_thread, ",");
   // store to local temporary file with unique name:
   std::string file_paths_thread_file =
-      Utils::getTmpFileName("file_paths_thread");
+      Utils::get_tmp_filename("file_paths_thread");
   std::ofstream file(file_paths_thread_file);
   if (file.is_open()) {
     file << file_paths_thread_string;

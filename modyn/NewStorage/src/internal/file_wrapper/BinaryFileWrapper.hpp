@@ -12,7 +12,6 @@ private:
   int label_size;
   int file_size;
   int sample_size;
-  void validate_file_extension();
   void validate_request_indices(int total_samples, std::vector<int> *indices);
   int int_from_bytes(unsigned char *begin, unsigned char *end);
 
@@ -52,6 +51,8 @@ public:
   std::vector<unsigned char> *get_sample(int index);
   std::vector<std::vector<unsigned char>> *
   get_samples_from_indices(std::vector<int> *indices);
+  std::string get_name() { return "BIN";};
+  void validate_file_extension();
 };
 } // namespace storage
 

@@ -7,6 +7,10 @@
 #include "../filesystem_wrapper/AbstractFilesystemWrapper.hpp"
 #include "../filesystem_wrapper/LocalFilesystemWrapper.hpp"
 #include <filesystem>
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <string>
 
 namespace storage {
 
@@ -21,17 +25,17 @@ public:
     }
   }
   static AbstractFileWrapper *
-  get_file_wrapper(std::string path, std::string type, YAML::Node config,
+  get_file_wrapper(std::string path, std::string type, YAML::Node file_wrapper_config,
                    AbstractFilesystemWrapper *filesystem_wrapper) {
     if (type == "BIN") {
-      return new BinaryFileWrapper(path, config, filesystem_wrapper);
+      return new BinaryFileWrapper(path, file_wrapper_config, filesystem_wrapper);
     } else if (type == "SINGLE_SAMPLE") {
-      return new SingleSampleFileWrapper(path, config, filesystem_wrapper);
+      return new SingleSampleFileWrapper(path, file_wrapper_config, filesystem_wrapper);
     } else {
       throw std::runtime_error("Unknown file wrapper type");
     }
   }
-  static std::string joinStringList(std::vector<std::string> list,
+  static std::string join_string_list(std::vector<std::string> list,
                                     std::string delimiter) {
     std::string result = "";
     for (int i = 0; i < list.size(); i++) {
@@ -42,18 +46,19 @@ public:
     }
     return result;
   }
-  static std::string getTmpFileName(std::string base_name) {
-    std::string tmp_file_name = base_name + "_XXXXXX";
-    char *tmp_file_name_c = new char[tmp_file_name.length() + 1];
-    strcpy(tmp_file_name_c, tmp_file_name.c_str());
-    int fd = mkstemp(tmp_file_name_c);
-    if (fd == -1) {
-      throw std::runtime_error("Could not create tmporary file");
+  static std::string get_tmp_filename(std::string base_name) {
+    std::srand(std::time(NULL));
+    const int MAX_NUM = 10000;
+    const int DIGITS = 8;
+    std::string filename;
+    int randomNumber = std::rand() % MAX_NUM;
+    std::string randomNumberString = std::to_string(randomNumber);
+    while (randomNumberString.length() < DIGITS)
+    {
+        randomNumberString = "0" + randomNumberString;
     }
-    close(fd);
-    std::string result(tmp_file_name_c);
-    delete[] tmp_file_name_c;
-    return std::filesystem::path(__FILE__).parent_path() / "tmp" / result;
+    filename = base_name + randomNumberString + ".tmp";
+    return filename;
   }
 };
 } // namespace storage
