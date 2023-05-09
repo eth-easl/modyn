@@ -17,6 +17,7 @@ void FileWatcher::handle_file_paths(
     std::vector<std::string> file_paths, std::string data_file_extension,
     std::string file_wrapper_type,
     AbstractFilesystemWrapper *filesystem_wrapper, int timestamp) {
+  std::signal(SIGKILL, file_watcher_signal_handler); // Terminate gracefully
   soci::session *sql = this->storage_database_connection->get_session();
 
   std::vector<std::string> valid_files;
@@ -270,7 +271,7 @@ void FileWatcher::seek() {
 }
 
 void FileWatcher::run() {
-  std::signal(SIGTERM, file_watcher_signal_handler);
+  std::signal(SIGKILL, file_watcher_signal_handler);
 
   soci::session *sql = this->storage_database_connection->get_session();
 

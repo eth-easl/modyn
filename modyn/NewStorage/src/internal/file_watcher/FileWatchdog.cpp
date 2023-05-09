@@ -71,7 +71,7 @@ void FileWatchdog::watch_file_watcher_processes() {
 }
 
 void FileWatchdog::run() {
-  std::signal(SIGTERM, file_watchdog_signal_handler);
+  std::signal(SIGKILL, file_watchdog_signal_handler);
 
   while (true) {
     if (file_watchdog_sigflag) {
