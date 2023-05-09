@@ -43,4 +43,4 @@ TEST_F(FileWatchdogTest, TestRun) {
   ASSERT_NE(output.find("FileWatchdog running"), std::string::npos);
 }
 
-// TODO: Figure out how to test the file watcher
+// TODO: Figure out how to test the file watcher (60)

@@ -52,7 +52,7 @@ TEST(UtilsTest, TestJoinStringList) {
 }
 
 TEST(UtilsTest, TestGetTmpFilename) {
-    std::string tmp_filename = Utils::get_tmp_filename("Testpath");
-    ASSERT_EQ(tmp_filename.substr(0, 8), "Testpath");
-    ASSERT_EQ(tmp_filename.substr(tmp_filename.size() - 4, 4), ".tmp");
+  std::string tmp_filename = Utils::get_tmp_filename("Testpath");
+  ASSERT_EQ(tmp_filename.substr(0, 8), "Testpath");
+  ASSERT_EQ(tmp_filename.substr(tmp_filename.size() - 4, 4), ".tmp");
 }

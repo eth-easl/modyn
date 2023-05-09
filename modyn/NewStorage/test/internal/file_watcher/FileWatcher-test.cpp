@@ -50,5 +50,33 @@ TEST_F(FileWatcherTest, TestSeek) {
   connection.add_dataset("test_dataset", "tmp", "LOCAL", "MOCK",
                          "test description", "0.0.0", test_config, true);
 
-  
+  // TODO: Add a file to the temporary directory and check if it is added to the
+  // database (5)
+}
+
+TEST_F(FileWatcherTest, TestSeekDataset) {
+  // TODO: Test if dataset is recognized and update_files_in_directory is called
+  // (10)
+}
+
+TEST_F(FileWatcherTest, TestExtractFilePathsPerThreadToFile) {
+  // TODO: Check if the correct number of files is written to the file and if
+  // the file is written correctly (10)
+}
+
+TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
+  // TODO: Check if file validation works (5)
+}
+
+TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
+  // TODO: Check if files are added to the database (15)
+}
+
+TEST_F(FileWatcherTest, TestFallbackInsertion) {
+  // TODO: Check if fallback insertion works (10)
+}
+
+TEST_F(FileWatcherTest, TestHandleFilePaths) {
+  // TODO: Check if handle file paths works and fallback_insertion is called
+  // (10)
 }
