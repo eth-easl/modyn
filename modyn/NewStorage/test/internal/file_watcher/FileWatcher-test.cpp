@@ -44,11 +44,10 @@ TEST_F(FileWatcherTest, TestSeek) {
 
   soci::session *sql = connection.get_session();
 
-  std::string test_config = "file_extension: .txt\nlabel_file_extension: .lbl";
-
   // Add a dataset to the database
-  connection.add_dataset("test_dataset", "tmp", "LOCAL", "MOCK",
-                         "test description", "0.0.0", test_config, true);
+  connection.add_dataset(
+      "test_dataset", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
+      TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   // TODO: Add a file to the temporary directory and check if it is added to the
   // database (5)

@@ -177,14 +177,15 @@ void FileWatcher::update_files_in_directory(
       std::string file_paths_thread_file =
           this->extract_file_paths_per_thread_to_file(i, files_per_thread,
                                                       file_paths);
+      std::string exec = std::filesystem::current_path() / "executables" /
+                         "FileWatcher" / "FileWatcher";
       children.push_back(bp::child(
-          bp::search_path("./executables/FileWatcher/FileWatcher"),
-          std::vector<std::string>{
-              this->config_file, std::to_string(this->dataset_id), "false",
-              "--fptf", file_paths_thread_file, "--dfe", data_file_extension,
-              "--fwt", file_wrapper_type, "--t", std::to_string(timestamp),
-              "--fsw", filesystem_wrapper->get_name(), "--dp",
-              directory_path}));
+          exec, std::vector<std::string>{
+                    this->config_file, std::to_string(this->dataset_id),
+                    "false", "--fptf", file_paths_thread_file, "--dfe",
+                    data_file_extension, "--fwt", file_wrapper_type, "--t",
+                    std::to_string(timestamp), "--fsw",
+                    filesystem_wrapper->get_name(), "--dp", directory_path}));
     }
 
     for (int i = 0; i < children.size(); i++) {

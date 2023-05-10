@@ -37,3 +37,8 @@ YAML::Node TestUtils::get_dummy_file_wrapper_config() {
   config["record_size"] = 2;
   return config;
 }
+
+std::string TestUtils::get_dummy_file_wrapper_config_inline() {
+  std::string test_config = "file_extension: .txt\nlabel_file_extension: .lbl";
+  return test_config;
+}

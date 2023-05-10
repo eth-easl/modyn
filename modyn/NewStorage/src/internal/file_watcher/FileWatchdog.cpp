@@ -14,28 +14,34 @@ void file_watchdog_signal_handler(int signal) { file_watchdog_sigflag = 1; }
 
 void FileWatchdog::start_file_watcher_process(long long dataset_id) {
   // Start a new child process of a FileWatcher
+  std::string exec = std::filesystem::current_path() / "executables" /
+                     "FileWatcher" / "FileWatcher";
   bp::child subprocess(
-      bp::search_path("./executables/FileWatcher/FileWatcher"),
-      bp::args({this->config_file, std::to_string(dataset_id), "false"}));
+      exec, bp::args({this->config_file, std::to_string(dataset_id), "false"}));
 
-  this->file_watcher_processes[dataset_id] = std::move(subprocess);
-  this->file_watcher_process_restart_attempts[dataset_id] = 0;
+  this->file_watcher_processes[dataset_id] =
+      std::tuple(std::move(subprocess), 0);
 }
 
 void FileWatchdog::stop_file_watcher_process(long long dataset_id) {
-  if (this->file_watcher_processes[dataset_id]) {
-    this->file_watcher_processes[dataset_id].terminate();
-    this->file_watcher_processes.erase(dataset_id);
-    this->file_watcher_process_restart_attempts.erase(dataset_id);
+  if (this->file_watcher_processes.count(dataset_id) == 1) {
+    std::get<0>(this->file_watcher_processes[dataset_id]).terminate();
+    SPDLOG_INFO("FileWatcher process for dataset {} stopped", dataset_id);
+    std::unordered_map<long long,
+                       std::tuple<boost::process::child, int>>::iterator it;
+    it = this->file_watcher_processes.find(dataset_id);
+    this->file_watcher_processes.erase(it);
   } else {
     throw std::runtime_error("FileWatcher process not found");
   }
 }
 
-void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection *storage_database_connection) {
+void FileWatchdog::watch_file_watcher_processes(
+    StorageDatabaseConnection *storage_database_connection) {
   soci::session *sql = storage_database_connection->get_session();
   int number_of_datasets = 0;
-  *sql << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
+  *sql << "SELECT COUNT(dataset_id) FROM datasets",
+      soci::into(number_of_datasets);
   if (number_of_datasets == 0) {
     // There are no datasets in the database. Stop all FileWatcher processes.
     for (auto const &pair : this->file_watcher_processes) {
@@ -43,7 +49,8 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection *stora
     }
     return;
   }
-  std::vector<long long> dataset_ids = std::vector<long long>(number_of_datasets);
+  std::vector<long long> dataset_ids =
+      std::vector<long long>(number_of_datasets);
   *sql << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
   long long dataset_id;
@@ -64,16 +71,16 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection *stora
       this->start_file_watcher_process(dataset_id);
     }
 
-    if (this->file_watcher_process_restart_attempts[dataset_id] > 3) {
+    if (std::get<1>(this->file_watcher_processes[dataset_id]) > 3) {
       // There have been more than 3 restart attempts for this process. Stop it.
       this->stop_file_watcher_process(dataset_id);
-    } else if (!this->file_watcher_processes[dataset_id].running()) {
+    } else if (!std::get<0>(this->file_watcher_processes[dataset_id]).running()) {
       // The process is not running. Start it.
       this->start_file_watcher_process(dataset_id);
-      this->file_watcher_process_restart_attempts[dataset_id]++;
+      std::get<1>(this->file_watcher_processes[dataset_id])++;
     } else {
       // The process is running. Reset the restart attempts counter.
-      this->file_watcher_process_restart_attempts[dataset_id] = 0;
+      std::get<1>(this->file_watcher_processes[dataset_id]) = 0;
     }
   }
 }
@@ -96,6 +103,17 @@ void FileWatchdog::run() {
     std::this_thread::sleep_for(std::chrono::seconds(3));
   }
   for (auto &file_watcher_process : this->file_watcher_processes) {
-    file_watcher_process.second.terminate();
+    std::get<0>(file_watcher_process.second).terminate();
   }
+}
+
+std::vector<long long> FileWatchdog::get_running_file_watcher_processes() {
+  std::vector<long long> running_file_watcher_processes;
+  for (auto const &pair : this->file_watcher_processes) {
+    if (std::get<0>(pair.second).exit_code() == 383) { // TODO: This is very Unix specific
+                                          // (as is most of the c++ code...)
+      running_file_watcher_processes.push_back(pair.first);
+    }
+  }
+  return running_file_watcher_processes;
 }
