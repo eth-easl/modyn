@@ -73,7 +73,7 @@ properties:
           name:
             type: string
             description: |
-              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy, LossDownsamplingStrategy
+              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy, LossDownsamplingStrategy, GradNormDownsamplingStrategy
           maximum_keys_in_memory:
             type: number
             description: |
