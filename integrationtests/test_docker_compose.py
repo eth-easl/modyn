@@ -1,18 +1,13 @@
 # After running docker-compose up, this script checks whether all services are reachable within a reasonable timeout
-import os
-import pathlib
 import time
 
 import grpc
 import psycopg2
-import yaml
+from integrationtests.utils import get_modyn_config
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub  # noqa: F401
 from modyn.utils import grpc_connection_established
 
-SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-
 TIMEOUT = 60  # seconds
-CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
 
 
 def terminate_on_timeout(start_time: int) -> None:
@@ -24,13 +19,6 @@ def terminate_on_timeout(start_time: int) -> None:
     raise TimeoutError("Reached timeout")
 
 
-def get_modyn_config() -> dict:
-    with open(CONFIG_FILE, "r", encoding="utf-8") as config_file:
-        config = yaml.safe_load(config_file)
-
-    return config
-
-
 def storage_running() -> bool:
     config = get_modyn_config()
 
@@ -39,6 +27,32 @@ def storage_running() -> bool:
 
     if not grpc_connection_established(storage_channel):
         print(f"Could not establish gRPC connection to storage at {storage_address}. Retrying.")
+        return False
+
+    return True
+
+
+def model_storage_running() -> bool:
+    config = get_modyn_config()
+
+    model_storage_address = f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
+    model_storage_channel = grpc.insecure_channel(model_storage_address)
+
+    if not grpc_connection_established(model_storage_channel):
+        print(f"Could not establish gRPC connection to model storage at {model_storage_address}. Retrying.")
+        return False
+
+    return True
+
+
+def trainer_server_running() -> bool:
+    config = get_modyn_config()
+
+    trainer_server_address = f"{config['trainer_server']['hostname']}:{config['trainer_server']['port']}"
+    trainer_server_channel = grpc.insecure_channel(trainer_server_address)
+
+    if not grpc_connection_established(trainer_server_channel):
+        print(f"Could not establish gRPC connection to trainer server at {trainer_server_address}. Retrying.")
         return False
 
     return True
@@ -94,7 +108,14 @@ def selector_running() -> bool:
 
 
 def system_running() -> bool:
-    return storage_db_running() and storage_running() and selector_running() and metadata_db_running()
+    return (
+        storage_db_running()
+        and storage_running()
+        and selector_running()
+        and metadata_db_running()
+        and model_storage_running()
+        and trainer_server_running()
+    )
 
 
 def main() -> None:

@@ -46,6 +46,21 @@ class AbstractSelectionStrategy(ABC):
         self.training_set_size_limit: int = config["limit"]
         self.has_limit = self.training_set_size_limit > 0
         self.reset_after_trigger: bool = config["reset_after_trigger"]
+
+        if "tail_triggers" in config:
+            self.tail_triggers = config["tail_triggers"]
+            if self.tail_triggers < 0 or not isinstance(config["tail_triggers"], int):
+                raise ValueError("Tail trigger must be an integer greater than 0")
+            if (self.reset_after_trigger and self.tail_triggers > 0) or (
+                (not self.reset_after_trigger) and self.tail_triggers == 0
+            ):
+                raise ValueError("Reset after trigger is equivalent to setting tail triggers to 0.")
+        else:
+            if self.reset_after_trigger:
+                self.tail_triggers = 0  # consider only the current trigger
+            else:
+                self.tail_triggers = None  # consider every datapoint
+
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
         self._maximum_keys_in_memory = maximum_keys_in_memory

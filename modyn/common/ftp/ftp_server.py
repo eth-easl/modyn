@@ -13,40 +13,42 @@ logger = logging.getLogger(__name__)
 
 
 class FTPServer:
-    """FTPServer for sending/receiving models."""
+    """FTPServer for sending/receiving files."""
 
-    def __init__(self, config: dict, temp_directory: pathlib.Path) -> None:
+    def __init__(self, ftp_port: str, serving_directory: pathlib.Path) -> None:
         """Initialize the FTP server.
 
         Args:
-            config (dict): Modyn configuration.
+            ftp_port: port on which ftp server is running.
+            serving_directory: directory from which the ftp server is served.
         """
-        self.config = config
-        self.serving_directory = temp_directory
+        self.ftp_port = ftp_port
+        self.serving_directory = serving_directory
         self.authorizer = DummyAuthorizer()
-        # TODO(#180): Only allow connections from supervisor as soon as it has a ip?
+        # TODO(#180): Only allow connections as soon as it has a ip?
         self.authorizer.add_user("modyn", "modyn", str(self.serving_directory), perm="elradfmwMT")
 
         self.handler = FTPHandler  # Intentionally a class reference
         self.handler.authorizer = self.authorizer
 
-        self.address = ("", self.config["trainer_server"]["ftp_port"])
+        self.address = ("", self.ftp_port)
         self.thread = threading.Thread(target=self.create_server_and_serve)
         self.server: Optional[pyFTPServer] = None
 
     def create_server_and_serve(self) -> None:
         self.server = pyFTPServer(self.address, self.handler)
+        logger.debug(f"Run FTP server on port {self.ftp_port}.")
         self.server.serve_forever()
 
     def __enter__(self) -> pyFTPServer:
         """Enter the context manager.
 
         Returns:
-            FTPServer: self
+            pyFTPServer: the ftp server.
         """
 
         self.thread.start()  # As serve_forever is blocking, we run it in another thread.
-        return self
+        return self.server
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
         """Exit the context manager.
@@ -59,4 +61,4 @@ class FTPServer:
         assert self.server is not None
         self.server.close_all()  # Blocks until server stopped.
         self.thread.join()  # Wait for thread cleanup.
-        logger.debug("Closed FTP Server.")
+        logger.debug("Closed FTP server.")

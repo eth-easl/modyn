@@ -32,6 +32,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         super().__init__(
             config, modyn_config, pipeline_id, maximum_keys_in_memory, required_configs=["unused_data_ratio"]
         )
+        assert self.tail_triggers is None or self.tail_triggers == 0, "Tail triggers not supported for this strategy."
         self.unused_data_ratio = self._config["unused_data_ratio"]
         self._is_first_trigger = True
 
