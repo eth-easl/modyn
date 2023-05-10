@@ -61,11 +61,19 @@ services:
     build:
       context: .
       dockerfile: docker/MetadataProcessor/Dockerfile
+  model_storage:
+    restart: on-failure
+    depends_on:
+      - metadata-db
+    build:
+      context: .
+      dockerfile: docker/Model_Storage/Dockerfile
   trainer_server:
     restart: on-failure
     depends_on:
       - storage
       - selector
+      - model_storage
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
@@ -111,6 +119,10 @@ services:
       selector:
         condition: service_started
       metadata_processor:
+        condition: service_started
+      model_storage:
+        condition: service_started
+      trainer_server:
         condition: service_started
       metadata-db:
         condition: service_healthy

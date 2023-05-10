@@ -71,13 +71,15 @@ setup(
                    "_modyn_storage=modyn.storage.storage_entrypoint:main",
                    "_modyn_trainer_server=modyn.trainer_server.trainer_server_entrypoint:main",
                    "_modyn_selector=modyn.selector.selector_entrypoint:main",
-                   "_modyn_metadata_processor=modyn.metadata_processor.metadata_processor_entrypoint:main"]},
+                   "_modyn_metadata_processor=modyn.metadata_processor.metadata_processor_entrypoint:main",
+                   "_modyn_model_storage=modyn.model_storage.model_storage_entrypoint:main"]},
     scripts=[
         'modyn/supervisor/modyn-supervisor',
         'modyn/storage/modyn-storage',
         'modyn/trainer_server/modyn-trainer-server',
         'modyn/selector/modyn-selector',
-        'modyn/metadata_processor/modyn-metadata-processor'
+        'modyn/metadata_processor/modyn-metadata-processor',
+        'modyn/model_storage/modyn-model-storage'
     ],
     install_requires=REQUIRED,
     extras_require=EXTRAS,

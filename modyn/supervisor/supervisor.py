@@ -18,7 +18,12 @@ class Supervisor:
     # This is a core class and we require the attributes.
 
     # TODO(#63): Get these from Selector
-    supported_strategies: list[str] = ["NewDataStrategy", "FreshnessSamplingStrategy", "LossDownsamplingStrategy"]
+    supported_strategies: list[str] = [
+        "NewDataStrategy",
+        "FreshnessSamplingStrategy",
+        "LossDownsamplingStrategy",
+        "GradNormDownsamplingStrategy",
+    ]
 
     def __init__(
         self,
