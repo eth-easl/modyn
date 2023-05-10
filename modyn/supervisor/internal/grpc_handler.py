@@ -302,7 +302,7 @@ class GRPCHandler:
         if "seed" in pipeline_config["training"]:
             seed = pipeline_config["training"]["seed"]
         else:
-            seed = None
+            seed = -1
 
         if "transformations" in pipeline_config["data"]:
             transform_list = pipeline_config["data"]["transformations"]

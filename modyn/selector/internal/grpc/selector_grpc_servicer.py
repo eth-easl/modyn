@@ -20,6 +20,8 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     PipelineResponse,
     RegisterPipelineRequest,
     SamplesResponse,
+    SeedSelectorRequest,
+    SeedSelectorResponse,
     SelectionStrategyResponse,
     TriggerResponse,
 )
@@ -121,3 +123,15 @@ class SelectorGRPCServicer(SelectorServicer):
         return SelectionStrategyResponse(
             downsampling_enabled=downsampling_enabled, strategy_name=name, params=SelectorJsonString(value=params)
         )
+
+    def seed_selector(  # pylint: disable-next=unused-argument
+        self, request: SeedSelectorRequest, context: grpc.ServicerContext
+    ) -> SeedSelectorResponse:
+        pipeline_id = request.pipeline_id
+        seed = request.seed
+
+        logger.info(f"[Pipeline {pipeline_id}]: Seeded DB with seed {seed}")
+
+        result = self.selector_manager.seed_selector(pipeline_id, seed)
+
+        return SeedSelectorResponse(success=result)

@@ -265,3 +265,36 @@ class SelectionStrategyResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["downsampling_enabled", b"downsampling_enabled", "params", b"params", "strategy_name", b"strategy_name"]) -> None: ...
 
 global___SelectionStrategyResponse = SelectionStrategyResponse
+
+@typing_extensions.final
+class SeedSelectorRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    SEED_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    seed: builtins.float
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+        seed: builtins.float = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id", "seed", b"seed"]) -> None: ...
+
+global___SeedSelectorRequest = SeedSelectorRequest
+
+@typing_extensions.final
+class SeedSelectorResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SUCCESS_FIELD_NUMBER: builtins.int
+    success: builtins.bool
+    def __init__(
+        self,
+        *,
+        success: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
+
+global___SeedSelectorResponse = SeedSelectorResponse

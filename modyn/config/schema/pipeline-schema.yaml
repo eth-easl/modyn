@@ -70,8 +70,9 @@ properties:
           If True, on trigger, we continue training on the model outputted by the previous trigger. If False, we start with random weights.
           If `initial_model` is "pretrained", cannot be False.
       seed:
-        type: integer
-        description: If provided, every random function is seeded with this number.
+        type: number
+        description: |
+          If provided, every random function is seeded with this number. Must be in the range [0,100].
       selection_strategy:
         type: object
         description: |

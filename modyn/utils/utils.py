@@ -129,7 +129,7 @@ def flatten(non_flat_list: list[list[Any]]) -> list[Any]:
     return [item for sublist in non_flat_list for item in sublist]
 
 
-def seed_everything(seed):
+def seed_everything(seed: int) -> None:
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
