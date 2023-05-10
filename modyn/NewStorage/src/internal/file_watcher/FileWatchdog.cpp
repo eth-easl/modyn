@@ -1,27 +1,30 @@
 #include "FileWatchdog.hpp"
 #include "../database/StorageDatabaseConnection.hpp"
-#include <soci/soci.h>
 #include <filesystem>
+#include <soci/soci.h>
 #include <spdlog/spdlog.h>
 
 using namespace storage;
 
 void FileWatchdog::start_file_watcher_process(long long dataset_id) {
   // Start a new child process of a FileWatcher
-  FileWatcher file_watcher(this->config_file, dataset_id, false);
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  FileWatcher file_watcher(this->config_file, dataset_id, false,
+                           stop_file_watcher);
   std::thread th(&FileWatcher::run, &file_watcher);
 
   this->file_watcher_processes[dataset_id] =
-      std::tuple(std::move(th), 0);
+      std::tuple(std::move(th), 0, stop_file_watcher);
 }
 
 void FileWatchdog::stop_file_watcher_process(long long dataset_id) {
   if (this->file_watcher_processes.count(dataset_id) == 1) {
-    // TODO: Figure out how to stop a thread
-    std::get<0>(this->file_watcher_processes[dataset_id]).terminate();
+    // Set the stop flag for the FileWatcher process
+    std::get<2>(this->file_watcher_processes[dataset_id]).get()->store(true);
     SPDLOG_INFO("FileWatcher process for dataset {} stopped", dataset_id);
-    std::unordered_map<long long,
-                       std::tuple<std::thread, int>>::iterator it;
+    std::unordered_map<
+        long long, std::tuple<std::thread, int,
+                              std::shared_ptr<std::atomic<bool>>>>::iterator it;
     it = this->file_watcher_processes.find(dataset_id);
     this->file_watcher_processes.erase(it);
   } else {
@@ -67,7 +70,8 @@ void FileWatchdog::watch_file_watcher_processes(
     if (std::get<1>(this->file_watcher_processes[dataset_id]) > 3) {
       // There have been more than 3 restart attempts for this process. Stop it.
       this->stop_file_watcher_process(dataset_id);
-    } else if (std::get<0>(this->file_watcher_processes[dataset_id]).joinable()) {
+    } else if (std::get<0>(this->file_watcher_processes[dataset_id])
+                   .joinable()) {
       // The process is not running. Start it.
       this->start_file_watcher_process(dataset_id);
       std::get<1>(this->file_watcher_processes[dataset_id])++;
@@ -86,7 +90,7 @@ void FileWatchdog::run() {
   SPDLOG_INFO("FileWatchdog running");
 
   while (true) {
-    if (this->stop_file_watchdog) {
+    if (this->stop_file_watchdog.get()->load()) {
       break;
     }
     this->watch_file_watcher_processes(&storage_database_connection);
@@ -94,8 +98,7 @@ void FileWatchdog::run() {
     std::this_thread::sleep_for(std::chrono::seconds(3));
   }
   for (auto &file_watcher_process : this->file_watcher_processes) {
-    // TODO: Figure out how to stop a thread
-    std::get<0>(file_watcher_process.second).terminate();
+    std::get<2>(file_watcher_process.second).get()->store(true);
   }
 }
 

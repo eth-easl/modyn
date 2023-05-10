@@ -9,4 +9,4 @@ add_executable(${BINARY} ${TEST_SOURCES})
 
 add_test(NAME ${BINARY} COMMAND ${BINARY})
 
-target_link_libraries(${BINARY} PUBLIC ${CMAKE_PROJECT_NAME}_lib gtest gmock yaml-cpp soci_core soci_postgresql soci_sqlite3)
+target_link_libraries(${BINARY} PUBLIC ${CMAKE_PROJECT_NAME}_lib gtest gmock yaml-cpp soci_core soci_postgresql soci_sqlite3 spdlog)

@@ -41,15 +41,16 @@ FetchContent_Declare(
   GIT_TAG v4.0.3
 )
 set(SOCI_TESTS OFF)
+set(SOCI_CXX11 ON)
 FetchContent_MakeAvailable(soci)
 
-################### yaml-soci ####################
+################### yaml-cpp ####################
 FetchContent_Declare(
-  yaml-soci
+  yaml-cpp
   GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
   GIT_TAG yaml-cpp-0.7.0
 )
-FetchContent_MakeAvailable(yaml-soci)
+FetchContent_MakeAvailable(yaml-cpp)
 
 ################### grpc ####################
 FetchContent_Declare(
@@ -63,6 +64,7 @@ include_directories(
     src
     cmake
     ${PostgreSQL_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}/_deps/soci-build/include  # soci is generating the soci-config.h file here
 )
 
 add_subdirectory(src)

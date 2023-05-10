@@ -9,15 +9,14 @@
 using namespace storage;
 
 void FileWatcher::handle_file_paths(
-    std::vector<std::string> file_paths, std::string data_file_extension,
+    std::vector<std::string> *file_paths, std::string data_file_extension,
     std::string file_wrapper_type,
     AbstractFilesystemWrapper *filesystem_wrapper, int timestamp) {
-  std::signal(SIGKILL, file_watcher_signal_handler); // Terminate gracefully
   soci::session *sql = this->storage_database_connection->get_session();
 
   std::vector<std::string> valid_files;
   for (auto const &file_path : file_paths) {
-    if (this->checkValidFile(file_path, data_file_extension, false, timestamp,
+    if (this->check_valid_file(file_path, data_file_extension, false, timestamp,
                              filesystem_wrapper)) {
       valid_files.push_back(file_path);
     }
@@ -114,23 +113,23 @@ void FileWatcher::postgres_copy_insertion(
   remove("temp.csv");
 }
 
-bool FileWatcher::checkValidFile(
+bool FileWatcher::check_valid_file(
     std::string file_path, std::string data_file_extension,
     bool ignore_last_timestamp, int timestamp,
     AbstractFilesystemWrapper *filesystem_wrapper) {
   std::string file_extension =
-      file_path.substr(file_path.find_last_of(".") + 1);
+      file_path.substr(file_path.find_last_of("."));
   if (file_extension != data_file_extension) {
     return false;
   }
   soci::session *sql = this->storage_database_connection->get_session();
 
-  long long file_id;
+  long long file_id = -1;
 
-  *sql << "SELECT id FROM files WHERE path = :file_path", soci::into(file_id),
+  *sql << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id),
       soci::use(file_path);
 
-  if (file_id) {
+  if (file_id == -1) {
     if (ignore_last_timestamp) {
       return true;
     }
@@ -156,20 +155,18 @@ void FileWatcher::update_files_in_directory(
   std::string data_file_extension =
       file_wrapper_config_node["extension"].as<std::string>();
 
-  std::vector<std::string> file_paths =
+  std::vector<std::string> *file_paths =
       *filesystem_wrapper->list(directory_path, true);
 
   if (this->disable_multithreading) {
     this->handle_file_paths(file_paths, data_file_extension, file_wrapper_type,
                             filesystem_wrapper, timestamp);
   } else {
-    int files_per_thread = file_paths.size() / this->insertion_threads;
+    int files_per_thread = file_paths->size() / this->insertion_threads;
     std::vector<std::thread> children;
     for (int i = 0; i < this->insertion_threads; i++) {
-      std::string file_paths_thread_file =
-          this->extract_file_paths_per_thread_to_file(i, files_per_thread,
-                                                      file_paths);
-      FileWatcher watcher(this->config_file, this->dataset_id, true);
+      std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+      FileWatcher watcher(this->config_file, this->dataset_id, true, stop_file_watcher);
       std::thread t(&FileWatcher::handle_file_paths, watcher, file_paths,
                     data_file_extension, file_wrapper_type,
                     filesystem_wrapper, timestamp);
@@ -179,29 +176,6 @@ void FileWatcher::update_files_in_directory(
       children[i].join();
     }
   }
-}
-
-std::string FileWatcher::extract_file_paths_per_thread_to_file(
-    int i, int files_per_thread, std::vector<std::string> file_paths) {
-  int start_index = i * files_per_thread;
-  int end_index = start_index + files_per_thread
-                      ? i < this->insertion_threads - 1
-                      : file_paths.size() - 1;
-  std::vector<std::string> file_paths_thread(file_paths.begin() + start_index,
-                                             file_paths.begin() + end_index);
-  std::string file_paths_thread_string =
-      Utils::join_string_list(file_paths_thread, ",");
-  // store to local temporary file with unique name:
-  std::string file_paths_thread_file =
-      Utils::get_tmp_filename("file_paths_thread");
-  std::ofstream file(file_paths_thread_file);
-  if (file.is_open()) {
-    file << file_paths_thread_string;
-    file.close();
-  } else {
-    SPDLOG_ERROR("Unable to open temporary file");
-  }
-  return file_paths_thread_file;
 }
 
 void FileWatcher::seek_dataset() {
@@ -272,7 +246,7 @@ void FileWatcher::run() {
 
   while (true) {
     this->seek();
-    if (this->stop_file_watcher) {
+    if (this->stop_file_watcher.get()->load()) {
       break;
     }
     std::this_thread::sleep_for(

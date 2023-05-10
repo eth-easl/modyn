@@ -23,49 +23,49 @@ protected:
 };
 
 TEST_F(FileWatchdogTest, TestConstructor) {
-  ASSERT_NO_THROW(FileWatchdog watchdog("config.yaml"));
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
+      std::make_shared<std::atomic<bool>>(false);
+  ASSERT_NO_THROW(FileWatchdog watchdog("config.yaml", stop_file_watcher));
 }
 
 TEST_F(FileWatchdogTest, TestRun) {
   // Collect the output of the watchdog
-  bp::ipstream is;
-  std::string exec = std::filesystem::current_path() / "executables" /
-                     "FileWatchdog" / "FileWatchdog";
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
+      std::make_shared<std::atomic<bool>>(false);
 
-  bp::child subprocess(exec, bp::args({"config.yaml"}), bp::std_out > is);
-  subprocess.wait_for(std::chrono::seconds(1));
-  subprocess.terminate();
+  FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
-  std::string line;
-  std::string output;
-  while (std::getline(is, line)) {
-    output += line;
-  }
+  std::stringstream ss;
+  std::streambuf *old_cout = std::cout.rdbuf(ss.rdbuf());
+
+  std::thread th(&FileWatchdog::run, &watchdog);
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  *stop_file_watcher = true;
+  th.join();
+
+  std::cout.rdbuf(old_cout);
+  std::string output = ss.str();
 
   // Assert that the watchdog has run
   ASSERT_NE(output.find("FileWatchdog running"), std::string::npos);
 }
 
 TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
-  FileWatchdog watchdog("config.yaml");
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
+      std::make_shared<std::atomic<bool>>(false);
+  FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection *connection = new StorageDatabaseConnection(config);
 
-  soci::session *sql = connection->get_session();
-
-  connection->add_dataset(
-      "test_dataset", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-      TestUtils::get_dummy_file_wrapper_config_inline(), true);
-
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.start_file_watcher_process(0);
 
   std::vector<long long> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.start_file_watcher_process(0);
 
   // Test if the file watcher process is not started again and still running
 
@@ -73,27 +73,43 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
-  connection->add_dataset(
-      "test_dataset2", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-      TestUtils::get_dummy_file_wrapper_config_inline(), true);
-  
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.start_file_watcher_process(1);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 2);
-
-  *sql << "DELETE FROM datasets WHERE name = 'test_dataset'";
-
-  watchdog.watch_file_watcher_processes(connection);
-
-  file_watcher_processes = watchdog.get_running_file_watcher_processes();
-
-  ASSERT_EQ(file_watcher_processes.size(), 1);
 }
 
 TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
-  FileWatchdog watchdog("config.yaml");
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
+      std::make_shared<std::atomic<bool>>(false);
+  FileWatchdog watchdog("config.yaml", stop_file_watcher);
+
+  YAML::Node config = YAML::LoadFile("config.yaml");
+  StorageDatabaseConnection *connection = new StorageDatabaseConnection(config);
+
+  connection->add_dataset(
+      "test_dataset", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
+      TestUtils::get_dummy_file_wrapper_config_inline(), true);
+
+  watchdog.start_file_watcher_process(0);
+
+  std::vector<long long> file_watcher_processes;
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  ASSERT_EQ(file_watcher_processes.size(), 1);
+
+  watchdog.stop_file_watcher_process(0);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  ASSERT_EQ(file_watcher_processes.size(), 0);
+}
+
+TEST_F(FileWatchdogTest, Test) {
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
+      std::make_shared<std::atomic<bool>>(false);
+  FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
   StorageDatabaseConnection *connection = new StorageDatabaseConnection(config);
@@ -101,7 +117,11 @@ TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
   soci::session *sql = connection->get_session();
 
   connection->add_dataset(
-      "test_dataset", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
+      "test_dataset1", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
+      TestUtils::get_dummy_file_wrapper_config_inline(), true);
+
+  connection->add_dataset(
+      "test_dataset2", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
       TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_processes(connection);
@@ -109,13 +129,51 @@ TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
   std::vector<long long> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
-  ASSERT_EQ(file_watcher_processes.size(), 1);
+  ASSERT_EQ(file_watcher_processes.size(), 2);
 
-  *sql << "DELETE FROM datasets WHERE name = 'test_dataset'";
+  *sql << "DELETE FROM datasets WHERE name = 'test_dataset1'";
 
   watchdog.watch_file_watcher_processes(connection);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
+  ASSERT_EQ(file_watcher_processes.size(), 1);
+  ASSERT_EQ(file_watcher_processes[0], 2);
+
+  watchdog.stop_file_watcher_process(2);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  ASSERT_EQ(file_watcher_processes.size(), 0);
+
+  watchdog.watch_file_watcher_processes(connection);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  ASSERT_EQ(file_watcher_processes.size(), 1);
+
+  watchdog.stop_file_watcher_process(2);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  ASSERT_EQ(file_watcher_processes.size(), 0);
+
+  watchdog.watch_file_watcher_processes(connection);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  ASSERT_EQ(file_watcher_processes.size(), 0);
+
+  watchdog.stop_file_watcher_process(2);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  ASSERT_EQ(file_watcher_processes.size(), 0);
+
+  watchdog.watch_file_watcher_processes(connection);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  // Restarted more than 3 times, should not be restarted again
   ASSERT_EQ(file_watcher_processes.size(), 0);
 }
