@@ -1,6 +1,5 @@
 #include "FileWatcher.hpp"
 #include "../utils/Utils.hpp"
-#include <boost/process.hpp>
 #include <csignal>
 #include <fstream>
 #include <iostream>
@@ -8,10 +7,6 @@
 #include <sstream>
 
 using namespace storage;
-namespace bp = boost::process;
-
-volatile sig_atomic_t file_watcher_sigflag = 0;
-void file_watcher_signal_handler(int signal) { file_watcher_sigflag = 1; }
 
 void FileWatcher::handle_file_paths(
     std::vector<std::string> file_paths, std::string data_file_extension,
@@ -48,9 +43,6 @@ void FileWatcher::handle_file_paths(
 
       long long file_id;
       sql->get_last_insert_id("files", file_id);
-
-      SPDLOG_DEBUG("[Process {}] Extracting samples from file {}",
-                   boost::this_process::get_id(), file_path);
 
       std::vector<int> labels = *file_wrapper->get_all_labels();
 
@@ -172,24 +164,19 @@ void FileWatcher::update_files_in_directory(
                             filesystem_wrapper, timestamp);
   } else {
     int files_per_thread = file_paths.size() / this->insertion_threads;
-    std::vector<bp::child> children;
+    std::vector<std::thread> children;
     for (int i = 0; i < this->insertion_threads; i++) {
       std::string file_paths_thread_file =
           this->extract_file_paths_per_thread_to_file(i, files_per_thread,
                                                       file_paths);
-      std::string exec = std::filesystem::current_path() / "executables" /
-                         "FileWatcher" / "FileWatcher";
-      children.push_back(bp::child(
-          exec, std::vector<std::string>{
-                    this->config_file, std::to_string(this->dataset_id),
-                    "false", "--fptf", file_paths_thread_file, "--dfe",
-                    data_file_extension, "--fwt", file_wrapper_type, "--t",
-                    std::to_string(timestamp), "--fsw",
-                    filesystem_wrapper->get_name(), "--dp", directory_path}));
+      FileWatcher watcher(this->config_file, this->dataset_id, true);
+      std::thread t(&FileWatcher::handle_file_paths, watcher, file_paths,
+                    data_file_extension, file_wrapper_type,
+                    filesystem_wrapper, timestamp);
     }
 
     for (int i = 0; i < children.size(); i++) {
-      children[i].wait();
+      children[i].join();
     }
   }
 }
@@ -272,8 +259,6 @@ void FileWatcher::seek() {
 }
 
 void FileWatcher::run() {
-  std::signal(SIGKILL, file_watcher_signal_handler);
-
   soci::session *sql = this->storage_database_connection->get_session();
 
   int file_watcher_interval;
@@ -287,7 +272,7 @@ void FileWatcher::run() {
 
   while (true) {
     this->seek();
-    if (file_watcher_sigflag) {
+    if (this->stop_file_watcher) {
       break;
     }
     std::this_thread::sleep_for(

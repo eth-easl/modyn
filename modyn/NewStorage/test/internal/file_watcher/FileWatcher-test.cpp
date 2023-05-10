@@ -1,7 +1,6 @@
 #include "../../../src/internal/database/StorageDatabaseConnection.hpp"
 #include "../../../src/internal/file_watcher/FileWatcher.hpp"
 #include "../../TestUtils.hpp"
-#include <boost/filesystem.hpp>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <soci/soci.h>

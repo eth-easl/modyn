@@ -35,15 +35,17 @@ private:
       soci::session *sql);
   std::string extract_file_paths_per_thread_to_file(
       int i, int files_per_thread, std::vector<std::string> file_paths);
+  std::atomic<bool> *stop_file_watchdog;
 
 public:
-  FileWatcher(std::string config_file, long long dataset_id, bool is_test) {
+  FileWatcher(std::string config_file, long long dataset_id, bool is_test, std::atomic<bool> *stop_file_watchdog) {
     this->config = YAML::LoadFile(config_file);
     this->config_file = config_file;
     this->dataset_id = dataset_id;
     this->insertion_threads = config["storage"]["insertion_threads"].as<int>();
     this->is_test = is_test;
     this->disable_multithreading = insertion_threads <= 1;
+    this->stop_file_watchdog = stop_file_watchdog;
     if (config["storage"]["sample_dbinsertion_batchsize"]) {
       this->sample_dbinsertion_batchsize =
           config["storage"]["sample_dbinsertion_batchsize"].as<int>();

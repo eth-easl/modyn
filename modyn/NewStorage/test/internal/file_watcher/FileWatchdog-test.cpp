@@ -1,11 +1,9 @@
 #include "../../../src/internal/file_watcher/FileWatchdog.hpp"
 #include "../../TestUtils.hpp"
-#include <boost/filesystem.hpp>
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
 
 using namespace storage;
-namespace bp = boost::process;
 
 class FileWatchdogTest : public ::testing::Test {
 protected:

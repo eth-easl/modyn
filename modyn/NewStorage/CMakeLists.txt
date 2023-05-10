@@ -3,7 +3,6 @@ project(NewStorage)
 
 set(CMAKE_CXX_STANDARD 23)
 
-find_package(Boost REQUIRED COMPONENTS system filesystem)
 find_package(PostgreSQL REQUIRED)
 
 include_directories(
@@ -12,7 +11,6 @@ include_directories(
     lib/googletest/googletest/include
     lib/argparse/include
     lib/spdlog/include
-    ${Boost_INCLUDE_DIRS}
     lib/soci/include
     ${CMAKE_CURRENT_BINARY_DIR}/lib/soci/include
     ${PostgreSQL_INCLUDE_DIRS}
@@ -20,8 +18,6 @@ include_directories(
 
 add_subdirectory(src)
 add_subdirectory(test)
-add_subdirectory(executables/FileWatchdog)
-add_subdirectory(executables/FileWatcher)
 add_subdirectory(lib/yaml-cpp)
 add_subdirectory(lib/googletest)
 add_subdirectory(lib/argparse)
