@@ -2,13 +2,17 @@ import importlib
 import importlib.util
 import inspect
 import logging
+import os
 import pathlib
+import random
 import sys
 import time
 from types import ModuleType
 from typing import Any, Optional
 
 import grpc
+import numpy as np
+import torch
 import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
@@ -123,3 +127,13 @@ def package_available_and_can_be_imported(package: str) -> bool:
 
 def flatten(non_flat_list: list[list[Any]]) -> list[Any]:
     return [item for sublist in non_flat_list for item in sublist]
+
+
+def seed_everything(seed):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False

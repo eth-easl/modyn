@@ -24,7 +24,12 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
-from modyn.utils import dynamic_module_import, grpc_connection_established, package_available_and_can_be_imported
+from modyn.utils import (
+    dynamic_module_import,
+    grpc_connection_established,
+    package_available_and_can_be_imported,
+    seed_everything,
+)
 
 
 class PytorchTrainer:
@@ -38,6 +43,8 @@ class PytorchTrainer:
         status_response_queue: mp.Queue,
         logger: logging.Logger,
     ) -> None:
+        if training_info.seed is not None:
+            seed_everything(training_info.seed)
         self.logger = logger
         self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id

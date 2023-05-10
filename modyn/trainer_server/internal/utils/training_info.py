@@ -63,3 +63,5 @@ class TrainingInfo:
         self.selector_address = selector_address
 
         self.final_checkpoint_path = final_checkpoint_path
+
+        self.seed = request.seed
