@@ -216,6 +216,7 @@ def get_training_info(
                 lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),
+                epochs_per_trigger=1,
             )
             training_info = TrainingInfo(
                 request,
@@ -772,14 +773,7 @@ def test_create_trainer_with_exception(
             raise TimeoutError("Did not reach desired queue state within timelimit.")
 
     with tempfile.NamedTemporaryFile() as temp:
-        train(
-            training_info,
-            "cpu",
-            temp.name,
-            exception_queue,
-            query_status_queue,
-            status_queue,
-        )
+        train(training_info, "cpu", temp.name, exception_queue, query_status_queue, status_queue)
         elapsed = 0
         while not (query_status_queue.empty() and status_queue.empty()):
             sleep(1)

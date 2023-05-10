@@ -93,6 +93,7 @@ class PytorchTrainer:
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
+        self.epochs_per_trigger = training_info.epochs_per_trigger
 
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
@@ -243,93 +244,94 @@ class PytorchTrainer:
         self._info("Handled OnBegin Callbacks.")
 
         batch_number = 0
-        for batch_number, batch in enumerate(self._train_dataloader):
-            for _, callback in self._callbacks.items():
-                callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
+        for _ in range(self.epochs_per_trigger):
+            for batch_number, batch in enumerate(self._train_dataloader):
+                for _, callback in self._callbacks.items():
+                    callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
 
-            # As empty() is unreliable
-            # we try to fetch an element within 10ms. If there is no
-            # element within that timeframe returned, we continue.
-            try:
-                req = self._status_query_queue.get(timeout=0.01)
-                if req == TrainerMessages.STATUS_QUERY_MESSAGE:
-                    self.send_status_to_server(batch_number)
-                elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
-                    self.send_model_state_to_server()
+                # As empty() is unreliable
+                # we try to fetch an element within 10ms. If there is no
+                # element within that timeframe returned, we continue.
+                try:
+                    req = self._status_query_queue.get(timeout=0.01)
+                    if req == TrainerMessages.STATUS_QUERY_MESSAGE:
+                        self.send_status_to_server(batch_number)
+                    elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
+                        self.send_model_state_to_server()
+                    else:
+                        raise ValueError("Unknown message in the status query queue")
+                except queue.Empty:
+                    pass
+
+                sample_ids = batch[0]
+                if isinstance(sample_ids, torch.Tensor):
+                    sample_ids = sample_ids.tolist()
+                elif isinstance(sample_ids, tuple):
+                    sample_ids = list(sample_ids)
+
+                assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
+
+                if self._label_tranformer_function is None:
+                    target = batch[2].to(self._device)
                 else:
-                    raise ValueError("Unknown message in the status query queue")
-            except queue.Empty:
-                pass
+                    target = self._label_tranformer_function(batch[2]).to(self._device)
 
-            sample_ids = batch[0]
-            if isinstance(sample_ids, torch.Tensor):
-                sample_ids = sample_ids.tolist()
-            elif isinstance(sample_ids, tuple):
-                sample_ids = list(sample_ids)
+                data: Union[torch.Tensor, dict]
+                if isinstance(batch[1], torch.Tensor):
+                    data = batch[1].to(self._device)
+                elif isinstance(batch[1], dict):
+                    data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
+                    for name, tensor in batch[1].items():
+                        data[name] = tensor.to(self._device)
 
-            assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
+                for _, optimizer in self._optimizers.items():
+                    optimizer.zero_grad()
 
-            if self._label_tranformer_function is None:
-                target = batch[2].to(self._device)
-            else:
-                target = self._label_tranformer_function(batch[2]).to(self._device)
+                # TODO(#163): where to perform lr_scheduler.step? make it configurable
+                if self._lr_scheduler is not None:
+                    self._lr_scheduler.step()
 
-            data: Union[torch.Tensor, dict]
-            if isinstance(batch[1], torch.Tensor):
-                data = batch[1].to(self._device)
-            elif isinstance(batch[1], dict):
-                data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
-                for name, tensor in batch[1].items():
-                    data[name] = tensor.to(self._device)
+                pre_downsampling_size = target.shape[0]
 
-            for _, optimizer in self._optimizers.items():
-                optimizer.zero_grad()
+                with torch.autocast(self._device_type, enabled=self._amp):
+                    if self._downsampling_enabled:
+                        # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
+                        assert self._downsampler is not None
+                        big_batch_output = self._model.model(data)
+                        downsampled_indexes, weights = self._downsampler.sample(big_batch_output, target)
+                        data, target, sample_ids = get_tensors_subset(downsampled_indexes, data, target, sample_ids)
+                        # TODO(#219) Investigate if we can avoid 2 forward passes
 
-            # TODO(#163): where to perform lr_scheduler.step? make it configurable
-            if self._lr_scheduler is not None:
-                self._lr_scheduler.step()
+                    output = self._model.model(data)
+                    if self._weighted_opt:
+                        # weighted gradient descent
+                        assert weights is not None
+                        loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                    else:
+                        loss = self._criterion(output, target)
 
-            pre_downsampling_size = target.shape[0]
+                self._scaler.scale(loss).backward()
 
-            with torch.autocast(self._device_type, enabled=self._amp):
-                if self._downsampling_enabled:
-                    # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
-                    assert self._downsampler is not None
-                    big_batch_output = self._model.model(data)
-                    downsampled_indexes, weights = self._downsampler.sample(big_batch_output, target)
-                    data, target, sample_ids = get_tensors_subset(downsampled_indexes, data, target, sample_ids)
-                    # TODO(#219) Investigate if we can avoid 2 forward passes
+                for _, callback in self._callbacks.items():
+                    callback.on_batch_before_update(
+                        self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
+                    )
 
-                output = self._model.model(data)
-                if self._weighted_opt:
-                    # weighted gradient descent
-                    assert weights is not None
-                    loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
-                else:
-                    loss = self._criterion(output, target)
+                for _, optimizer in self._optimizers.items():
+                    self._scaler.step(optimizer)
 
-            self._scaler.scale(loss).backward()
+                self._scaler.update()
 
-            for _, callback in self._callbacks.items():
-                callback.on_batch_before_update(
-                    self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
-                )
+                if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
+                    checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
+                    self.save_state(checkpoint_file_name, batch_number)
 
-            for _, optimizer in self._optimizers.items():
-                self._scaler.step(optimizer)
+                self._num_samples += pre_downsampling_size
 
-            self._scaler.update()
-
-            if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
-                checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
-                self.save_state(checkpoint_file_name, batch_number)
-
-            self._num_samples += pre_downsampling_size
-
-            for _, callback in self._callbacks.items():
-                callback.on_batch_end(
-                    self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
-                )
+                for _, callback in self._callbacks.items():
+                    callback.on_batch_end(
+                        self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
+                    )
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number} batches.")
         for _, callback in self._callbacks.items():
