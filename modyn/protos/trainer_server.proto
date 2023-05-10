@@ -52,6 +52,7 @@ message StartTrainingRequest {
   JsonString lr_scheduler = 18;
   PythonString label_transformer = 19;
   JsonString grad_scaler_configuration = 20;
+  int32 epochs_per_trigger = 21;
 }
 
 message StartTrainingResponse {
