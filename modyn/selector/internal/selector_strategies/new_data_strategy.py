@@ -68,8 +68,9 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 is the key, and the second element is the associated weight.
         """
         if self.reset_after_trigger:
+            assert self.tail_triggers == 0
             get_data_func = self._get_data_reset
-        elif self.tail_triggers > 0:
+        elif self.tail_triggers is not None and self.tail_triggers > 0:
             get_data_func = self._get_data_tail
         else:
             get_data_func = self._get_data_no_reset

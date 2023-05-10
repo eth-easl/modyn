@@ -59,7 +59,7 @@ class AbstractSelectionStrategy(ABC):
             if self.reset_after_trigger:
                 self.tail_triggers = 0  # consider only the current trigger
             else:
-                self.tail_triggers = -1  # consider every datapoint
+                self.tail_triggers = None  # consider every datapoint
 
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id

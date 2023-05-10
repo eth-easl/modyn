@@ -96,7 +96,7 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
-                    if self.tail_triggers >= 0
+                    if self.tail_triggers is not None
                     else True,
                 )
                 .order_by(asc(SelectorStateMetadata.timestamp))
@@ -144,7 +144,7 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             .filter(
                 SelectorStateMetadata.pipeline_id == self._pipeline_id,
                 SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
-                if self.tail_triggers >= 0
+                if self.tail_triggers is not None
                 else True,
             )
             .order_by(func.random())  # pylint: disable=E1102
@@ -173,7 +173,7 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
-                    if self.tail_triggers >= 0
+                    if self.tail_triggers is not None
                     else True,
                 )
                 .count()

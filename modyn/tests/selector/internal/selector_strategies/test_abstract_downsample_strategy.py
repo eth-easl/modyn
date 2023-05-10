@@ -168,7 +168,7 @@ def test_dataset_size_various_scenarios():
 
     # remove the trigger
     strat.reset_after_trigger = False
-    strat.tail_triggers = -1
+    strat.tail_triggers = None
     assert strat.get_presampling_target_size() == 20
 
     # remove the limit
