@@ -1,5 +1,5 @@
-#include "FileWatcher.hpp"
-#include "../utils/Utils.hpp"
+#include "../../../include/internal/file_watcher/FileWatcher.hpp"
+#include "../../../include/internal/utils/Utils.hpp"
 #include <csignal>
 #include <fstream>
 #include <iostream>

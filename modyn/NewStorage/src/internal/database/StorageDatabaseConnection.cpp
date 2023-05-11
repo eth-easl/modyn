@@ -1,4 +1,4 @@
-#include "StorageDatabaseConnection.hpp"
+#include "../../../include/internal/database/StorageDatabaseConnection.hpp"
 #include <fstream>
 #include <soci/postgresql/soci-postgresql.h>
 #include <soci/sqlite3/soci-sqlite3.h>

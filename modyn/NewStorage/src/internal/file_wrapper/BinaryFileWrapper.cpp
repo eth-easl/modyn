@@ -1,4 +1,4 @@
-#include "BinaryFileWrapper.hpp"
+#include "../../../include/internal/file_wrapper/BinaryFileWrapper.hpp"
 #include <fstream>
 #include <numeric>
 #include <vector>

@@ -1,4 +1,4 @@
-#include "SingleSampleFileWrapper.hpp"
+#include "../../../include/internal/file_wrapper/SingleSampleFileWrapper.hpp"
 #include <filesystem>
 #include <iostream>
 

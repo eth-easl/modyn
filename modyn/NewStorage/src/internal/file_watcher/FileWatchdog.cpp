@@ -1,5 +1,5 @@
-#include "FileWatchdog.hpp"
-#include "../database/StorageDatabaseConnection.hpp"
+#include "../../../include/internal/file_watcher/FileWatchdog.hpp"
+#include "../../../include/internal/database/StorageDatabaseConnection.hpp"
 #include <filesystem>
 #include <soci/soci.h>
 #include <spdlog/spdlog.h>
