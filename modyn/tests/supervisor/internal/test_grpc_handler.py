@@ -7,6 +7,7 @@ from unittest.mock import patch
 import enlighten
 import grpc
 import pytest
+from modyn.common.ftp.ftp_server import FTPServer
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetNumberOfSamplesRequest,
@@ -26,7 +27,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.trainer_server.internal.ftp.ftp_server import FTPServer
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     GetFinalModelRequest,
     GetFinalModelResponse,
@@ -472,7 +472,7 @@ def test_fetch_trained_model(test_connection_established):
 
     with tempfile.TemporaryDirectory() as ftp_root:
         ftp_root_path = pathlib.Path(ftp_root)
-        with FTPServer({"trainer_server": {"ftp_port": 1337}}, ftp_root_path):
+        with FTPServer(str(1337), ftp_root_path):
             payload = b"\xe7\xb7\x91\xe8\x8c\xb6\xe3\x81\x8c\xe5\xa5\xbd\xe3\x81\x8d"
             with open(ftp_root_path / "test.bin", "wb") as file:
                 file.write(payload)

@@ -22,6 +22,7 @@ class Supervisor:
         "NewDataStrategy",
         "FreshnessSamplingStrategy",
         "LossDownsamplingStrategy",
+        "GradNormDownsamplingStrategy",
         "RandomDownsamplingStrategy",
     ]
 

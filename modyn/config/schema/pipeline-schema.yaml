@@ -44,6 +44,10 @@ properties:
         type: number
         description: |
           The number of GPUs that should be used for training.
+      epochs_per_trigger:
+        type: number
+        description: |
+          The number of epochs per trigger. Defaults to 1, if not given.
       device:
         type: string
         description: |
@@ -73,7 +77,7 @@ properties:
           name:
             type: string
             description: |
-              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy, LossDownsamplingStrategy
+              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy, LossDownsamplingStrategy, GradNormDownsamplingStrategy
           maximum_keys_in_memory:
             type: number
             description: |
