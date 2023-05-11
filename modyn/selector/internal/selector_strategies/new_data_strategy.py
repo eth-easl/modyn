@@ -68,7 +68,10 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 is the key, and the second element is the associated weight.
         """
         if self.reset_after_trigger:
+            assert self.tail_triggers == 0
             get_data_func = self._get_data_reset
+        elif self.tail_triggers is not None and self.tail_triggers > 0:
+            get_data_func = self._get_data_tail
         else:
             get_data_func = self._get_data_no_reset
 
@@ -80,6 +83,16 @@ class NewDataStrategy(AbstractSelectionStrategy):
         assert self.reset_after_trigger
 
         for samples in self._get_current_trigger_data():
+            # TODO(#179): this assumes limit < len(samples)
+            if self.has_limit:
+                samples = random.sample(samples, min(len(samples), self.training_set_size_limit))
+
+            yield samples
+
+    def _get_data_tail(self) -> Iterable[list[int]]:
+        assert not self.reset_after_trigger and self.tail_triggers > 0
+
+        for samples in self._get_tail_triggers_data():
             # TODO(#179): this assumes limit < len(samples)
             if self.has_limit:
                 samples = random.sample(samples, min(len(samples), self.training_set_size_limit))
@@ -132,6 +145,30 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id,
+                )
+                .order_by(asc(SelectorStateMetadata.timestamp))
+            )
+
+            for chunk in database.session.execute(stmt).partitions():
+                if len(chunk) > 0:
+                    yield [res[0] for res in chunk]
+                else:
+                    yield []
+
+    def _get_tail_triggers_data(self) -> Iterable[list[int]]:
+        """Returns all sample for current trigger
+
+        Returns:
+            list[int]: Keys of used samples
+        """
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            stmt = (
+                select(SelectorStateMetadata.sample_key)
+                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._maximum_keys_in_memory)
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers,
                 )
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
