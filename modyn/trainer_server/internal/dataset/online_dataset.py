@@ -57,6 +57,8 @@ class OnlineDataset(IterableDataset):
         self._selectorstub: SelectorStub = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
+        self._data_thread: Optional[threading.Thread] = None
+        self._thread_data_container: dict[str, Any] = {}
 
         logger.debug("Initialized OnlineDataset.")
 
@@ -139,7 +141,7 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _get_data(self, data_container: dict, worker_id: int, partition_id: int):
+    def _get_data(self, data_container: dict, worker_id: int, partition_id: int) -> None:
         self._info("Getting keys from selector", worker_id)
         keys = self._get_keys_from_selector(worker_id, partition_id)
         self._info("Getting data from storage", worker_id)
@@ -149,9 +151,9 @@ class OnlineDataset(IterableDataset):
         data_container["labels"] = labels
         data_container["keys"] = keys
 
-    def _run_get_data_thread(self, worker_id: int, partition_id: int):
-        assert "_data_thread" not in self.__dict__.keys() or self._data_thread is None
-        self._thread_data_container = {}
+    def _run_get_data_thread(self, worker_id: int, partition_id: int) -> None:
+        assert self._data_thread is None
+
         self._data_thread = threading.Thread(
             target=self._get_data, args=(self._thread_data_container, worker_id, partition_id)
         )
@@ -172,7 +174,8 @@ class OnlineDataset(IterableDataset):
             self._thread_data_container["data"],
             self._thread_data_container["labels"],
         )
-        del self._thread_data_container
+        self._thread_data_container.clear()
+        gc.collect()
 
         return keys, data, labels
 
