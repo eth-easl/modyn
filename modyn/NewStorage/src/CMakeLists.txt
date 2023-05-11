@@ -1,18 +1,54 @@
-set(BINARY ${CMAKE_PROJECT_NAME})
+set(MODYNSTORAGE_SOURCES
 
-file(GLOB_RECURSE SOURCES LIST_DIRECTORIES true *.hpp *.cpp)
+    Storage.cpp
+    internal/database/StorageDatabaseConnection.cpp
+    internal/file_watcher/FileWatchdog.cpp
+    internal/file_watcher/FileWatcher.cpp
+    internal/file_wrapper/BinaryFileWrapper.cpp
+    internal/file_wrapper/SingleSampleFileWrapper.cpp
+    internal/filesystem_wrapper/LocalFileSystemWrapper.cpp
+)
 
-set(SOURCES ${SOURCES})
-set(SOCI_HAVE_BOOST OFF CACHE BOOL "SOCI_HAVE_BOOST" FORCE)
+# Explicitly set all header files so that IDEs will recognize them as part of the project
+# TODO Add include directory
+set(MODYNSTORAGE_HEADERS
 
-add_executable(${BINARY}_run ${SOURCES})
+    ../include/Storage.hpp
+    ../include/internal/database/StorageDatabaseConnection.hpp
+    ../include/internal/file_watcher/FileWatchdog.hpp
+    ../include/internal/file_watcher/FileWatcher.hpp
+    ../include/internal/file_wrapper/AbstractFileWrapper.hpp
+    ../include/internal/file_wrapper/BinaryFileWrapper.hpp
+    ../include/internal/file_wrapper/SingleSampleFileWrapper.hpp
+    ../include/internal/filesystem_wrapper/AbstractFileSystemWrapper.hpp
+    ../include/internal/filesystem_wrapper/LocalFileSystemWrapper.hpp
+    ../include/internal/utils/utils.hpp
+    )
 
-add_library(${BINARY}_lib STATIC ${SOURCES})
+target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
+target_include_directories(modynstorage PUBLIC ../include)
+target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+target_link_libraries(modynstorage PRIVATE spdlog argparse yaml-cpp soci_core soci_postgresql soci_sqlite3)
 
-set(SOCI_SHARED ON)
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+target_compile_definitions(modynstorage PRIVATE MODYNSTORAGE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\")
 
-target_link_libraries(${BINARY}_lib PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_core soci_postgresql soci_sqlite3)
+# AppleClang needs the SDKROOT setup in order to be used directly. This is not the case for clang++ or g++.
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
+  message(STATUS "Detected AppleClang compiler. Setting up AppleClang SDKROOT.")
+  message(STATUS "  SDKROOT: ${CMAKE_OSX_SYSROOT}")
+  set(MODYNSTORAGE_COMPILER_ENV "SDKROOT=${CMAKE_OSX_SYSROOT}")
+endif ()
 
-target_link_libraries(${BINARY}_run PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_core soci_postgresql soci_sqlite3 ${BINARY}_lib)
+target_compile_definitions(modynstorage PRIVATE "MODYNSTORAGE_CMAKE_COMPILER=\"${MODYNSTORAGE_COMPILER_ENV} ${CMAKE_CXX_COMPILER}\"")
+
+target_compile_definitions(modynstorage PUBLIC ${MODYNSTORAGE_COMPILE_DEFINITIONS})
+message(STATUS "System-specific compile definitions: ${MODYNSTORAGE_COMPILE_DEFINITIONS}")
+
+# This adds a `INCLUDE_DIRECTORIES` definition containing all include directories, separate by comma.
+# The definition is set to PRIVATE, so it will not be exposed if the target is itself a dependency.
+set(INCLUDE_EXPR "$<TARGET_PROPERTY:modynstorage,INCLUDE_DIRECTORIES>")
+set(INCLUDE_FILTER "$<FILTER:${INCLUDE_EXPR},INCLUDE,.*/.*>")
+set(INCLUDE_JOINED "$<JOIN:${INCLUDE_FILTER},,>")
+target_compile_definitions(modynstorage PRIVATE "INCLUDE_DIRECTORIES=\"${INCLUDE_JOINED}\"")

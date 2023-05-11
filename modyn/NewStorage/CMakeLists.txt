@@ -1,75 +1,108 @@
-cmake_minimum_required(VERSION 3.10)
-project(NewStorage)
+cmake_minimum_required(VERSION 3.20)
+project(modyn-storage)
 
 set(CMAKE_CXX_STANDARD 23)
+set(MODYNSTORAGE_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-find_package(PostgreSQL REQUIRED)
+##### BUILD TYPES #####
+set(ALLOWED_BUILD_TYPES Asan Tsan Debug Release RelWithDebInfo MinSizeRel)
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${ALLOWED_BUILD_TYPES}")
 
-# Install Dependencies:
-include(FetchContent)
+if(CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE IN_LIST ALLOWED_BUILD_TYPES)
+  message(FATAL_ERROR "Invalid build type: ${CMAKE_BUILD_TYPE}. Allowed types: ${ALLOWED_BUILD_TYPES}")
+endif()
 
-message(STATUS "Making dependencies available.")
+set(CMAKE_C_FLAGS_ASAN "-Og -g -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_ASAN "-Og -g -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined" CACHE STRING "" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_ASAN "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=address -fsanitize=undefined" CACHE STRING "" FORCE)
 
-################### spdlog ####################
-FetchContent_Declare(
-  spdlog
-  GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG v1.11.0
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3 -D_GLIBCXX_ASSERTIONS" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g3 -DNDEBUG" CACHE STRING "" FORCE)
+
+# Additional UBSan could be nice here, but causes false positives: https://github.com/google/sanitizers/issues/1106
+set(CMAKE_C_FLAGS_TSAN "${CMAKE_C_FLAGS_RELWITHDEBINFO} -fsanitize=thread" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_TSAN "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread" CACHE STRING "" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_TSAN "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread" CACHE STRING "" FORCE)
+
+##### PUBLIC OPTIONS #####
+option(DARWIN_BUILD_PLAYGROUND "Set ON to build playground" ON)
+option(MODYNSTORAGE_BUILD_TESTS "Set ON to build tests" ON)
+option(MODYNSTORAGE_TEST_COVERAGE "Set ON to add test coverage" OFF)
+
+#### INTERNAL OPTIONS ####
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(MODYNSTORAGE_COMPILE_DEFINITIONS "")
+set(MODYNSTORAGE_COMPILE_OPTIONS "-Wall" "-Wextra" "-Werror" "-Wpedantic" "-Wextra-semi" "-Wnon-virtual-dtor" "-Wunused"
+  "-Wzero-as-null-pointer-constant"
 )
-FetchContent_MakeAvailable(spdlog)
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # Additional checks not supported by GCC -- some are supported on GCC, but not ignorable / not filterable
+  list(APPEND MODYNSTORAGE_COMPILE_OPTIONS "-Wdocumentation" "-Wconditional-uninitialized" "-Wmissing-prototypes" "-Wundef"
+    "-Wunused-exception-parameter" "-Wunused-member-function")
+  list(APPEND MODYNSTORAGE_COMPILE_OPTIONS "-Wno-gnu-zero-variadic-macro-arguments") # legal in c++20
 
-################### argparse ####################
-FetchContent_Declare(
-  argparse
-  GIT_REPOSITORY https://github.com/p-ranav/argparse.git
-  GIT_TAG v2.9
-)
-FetchContent_MakeAvailable(argparse)
+  # We have a lot of shadowed ctor args with simple structs that should usually be aggregate-initialized, but clang
+  # doesn't support aggregate-initialization with emplace_back yet
+  list(APPEND MODYNSTORAGE_COMPILE_OPTIONS "-Wshadow-all" "-Wno-shadow-field-in-constructor")
+endif()
 
-################### googletest ####################
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG v1.13.0
-)
-FetchContent_MakeAvailable(googletest)
+if (${MODYNSTORAGE_TEST_COVERAGE})
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(STATUS "Running with coverage flags")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+  else ()
+    message(FATAL_ERROR "Test Coverage is enabled, but can't be performed with selected compiler. Please use Clang instead.")
+  endif ()
+endif ()
 
-################### soci ####################
-FetchContent_Declare(
-  soci
-  GIT_REPOSITORY https://github.com/SOCI/soci.git
-  GIT_TAG v4.0.3
-)
-set(SOCI_TESTS OFF)
-set(SOCI_CXX11 ON)
-set(SOCI_STATIC ON)
-set(SOCI_SHARED OFF)
-set(SOCI_EMPTY OFF)
-set(SOCI_)
-FetchContent_MakeAvailable(soci)
 
-################### yaml-cpp ####################
-FetchContent_Declare(
-  yaml-cpp
-  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-  GIT_TAG yaml-cpp-0.7.0
-)
-FetchContent_MakeAvailable(yaml-cpp)
+#### CUSTOM COMPILER ####
+# Unlike CXX/CC and so on, these variables are currently not checked by CMake, but needed to be checked manually
+# If using a compiler built from scratch (e.g., on exotic systems), we need this to use LTO and other features.
 
-################### grpc ####################
-FetchContent_Declare(
-  grpc
-  GIT_REPOSITORY https://github.com/grpc/grpc.git
-  GIT_TAG v1.54.1
-)
-FetchContent_MakeAvailable(grpc)
+if (DEFINED ENV{NM})
+    set(CMAKE_NM $ENV{NM})
+    message(STATUS "Found NM environment variable, set CMAKE_NM to ${CMAKE_NM}")
+endif()
 
-include_directories(
-    src
-    cmake
-    ${PostgreSQL_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_BINARY_DIR}/_deps/soci-build/include  # soci is generating the soci-config.h file here
-)
+if (DEFINED ENV{AR})
+    set(CMAKE_AR $ENV{AR})
+    message(STATUS "Found AR environment variable, set CMAKE_AR to ${CMAKE_AR}")
+endif()
 
-add_subdirectory(src)
-add_subdirectory(test)
+if (DEFINED ENV{RANLIB})
+    set(CMAKE_RANLIB $ENV{RANLIB})
+    message(STATUS "Found RANLIB environment variable, set CMAKE_RANLIB to ${CMAKE_RANLIB}")
+endif()
+
+### Make MODYNSTORAGE lib available as target in next steps ###
+add_library(modynstorage)
+
+##### DEPENDENCIES #####
+include(${MODYNSTORAGE_CMAKE_DIR}/dependencies.cmake)
+
+##### MODYNSTORAGE LIB #####
+add_subdirectory(src/)
+
+### Main binary ###
+add_executable(modyn-new-storage src/main.cpp)
+target_link_libraries(modyn-new-storage PRIVATE modynstorage)
+
+##### PLAYGROUND #####
+if (${MODYNSTORAGE_BUILD_PLAYGROUND})
+  message(STATUS "Playground is included in this build.")
+  add_executable(playground playground.cpp)
+  target_compile_options(playground PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
+  target_link_libraries(playground PRIVATE modynstorage)
+endif ()
+
+##### TESTING #####
+if (${MODYNSTORAGE_BUILD_TESTS})
+  message(STATUS "Tests are included in this build.")
+  enable_testing()
+  add_subdirectory(test)
+endif ()
