@@ -15,7 +15,7 @@ void FileWatcher::handle_file_paths(
   soci::session *sql = this->storage_database_connection->get_session();
 
   std::vector<std::string> valid_files;
-  for (auto const &file_path : file_paths) {
+  for (auto const &file_path : *file_paths) {
     if (this->check_valid_file(file_path, data_file_extension, false, timestamp,
                              filesystem_wrapper)) {
       valid_files.push_back(file_path);
@@ -156,7 +156,7 @@ void FileWatcher::update_files_in_directory(
       file_wrapper_config_node["extension"].as<std::string>();
 
   std::vector<std::string> *file_paths =
-      *filesystem_wrapper->list(directory_path, true);
+      filesystem_wrapper->list(directory_path, true);
 
   if (this->disable_multithreading) {
     this->handle_file_paths(file_paths, data_file_extension, file_wrapper_type,

@@ -42,6 +42,10 @@ FetchContent_Declare(
 )
 set(SOCI_TESTS OFF)
 set(SOCI_CXX11 ON)
+set(SOCI_STATIC ON)
+set(SOCI_SHARED OFF)
+set(SOCI_EMPTY OFF)
+set(SOCI_)
 FetchContent_MakeAvailable(soci)
 
 ################### yaml-cpp ####################
