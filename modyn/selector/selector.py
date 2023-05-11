@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Dict
 
+from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.selector.internal.trigger_sample import TriggerSampleStorage
 from modyn.utils.utils import flatten
 
 

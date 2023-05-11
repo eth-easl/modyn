@@ -7,9 +7,9 @@ from multiprocessing import shared_memory
 from typing import Iterable, Optional
 
 import numpy as np
+from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
-from modyn.selector.internal.trigger_sample import TriggerSampleStorage
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)

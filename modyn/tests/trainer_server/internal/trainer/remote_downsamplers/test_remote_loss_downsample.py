@@ -11,7 +11,7 @@ def test_sample_shape():
     downsampled_batch_size = 5
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
+    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
     sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -34,7 +34,7 @@ def test_sample_weights():
     downsampled_batch_size = 5
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
+    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
     sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -59,7 +59,7 @@ def test_sample_loss_dependent_sampling():
     downsampled_batch_size = 5
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
+    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
     sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
     # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
@@ -104,7 +104,7 @@ def test_sample_dict_input():
     mymodel = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": 3}
+    params_from_selector = {"downsampled_batch_size": 3, "sample_before_batch": False}
     sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
 
     forward_output = mymodel(data)

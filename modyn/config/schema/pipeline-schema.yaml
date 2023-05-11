@@ -112,10 +112,18 @@ properties:
                 type: number
                 description: |
                   [AbstractDownsampleStrategy] percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
+              sample_before_batch:
+                type: boolean
+                description: |
+                  [AbstractDownsampleStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
               downsampled_batch_size:
                 type: number
                 description: |
-                  [AbstractDownsampleStrategy] How many points are sampled after computing the metric
+                  [AbstractDownsampleStrategy] How many points are sampled after computing the metric. Requires sample_before_batch set to False
+              downsampled_batch_ratio:
+                type: number
+                description: |
+                  [AbstractDownsampleStrategy] Ratio post_sampling_batch_size/batch_size. For example, with 16 batches and a ratio of 0.5 we keep 8*batch_size samples. Requires sample_before_batch set to True
           processor_type:
             type: string
             description: |

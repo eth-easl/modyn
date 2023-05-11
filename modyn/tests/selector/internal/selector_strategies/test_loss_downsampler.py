@@ -39,7 +39,13 @@ def setup_and_teardown():
 def test_init():
     # Test init works
     strat = LossDownsamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
+        {
+            "limit": -1,
+            "reset_after_trigger": False,
+            "presampling_ratio": 80,
+            "downsampled_batch_size": 10,
+            "sample_before_batch": False,
+        },
         get_minimal_modyn_config(),
         42,
         1000,
@@ -53,7 +59,13 @@ def test_init():
 def test_command():
     # Test init works
     strat = LossDownsamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
+        {
+            "limit": -1,
+            "reset_after_trigger": False,
+            "presampling_ratio": 80,
+            "downsampled_batch_size": 10,
+            "sample_before_batch": False,
+        },
         get_minimal_modyn_config(),
         42,
         1000,

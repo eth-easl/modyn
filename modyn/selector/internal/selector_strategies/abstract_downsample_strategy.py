@@ -36,11 +36,28 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         if not (0 < self.presampling_ratio <= 100) or not isinstance(self.presampling_ratio, int):
             raise ValueError("Presampling ratio must be an integer in range (0,100]")
 
-        if "downsampled_batch_size" not in self._config:
-            raise ValueError("To use downsampling strategies, you have to specify the downsampled_batch_size")
-        self.downsampled_batch_size = self._config["downsampled_batch_size"]
-        if self.downsampled_batch_size <= 0 or not isinstance(self.downsampled_batch_size, int):
-            raise ValueError("The downsampled batch size must be a positive integer")
+        if "sample_before_batch" not in config:
+            raise ValueError(
+                "Please specify if you want to sample and then batch or vice versa. "
+                "Use the sample_before_batch parameter"
+            )
+        self.sample_before_batch = config["sample_before_batch"]
+
+        if self.sample_before_batch:
+            # sample-then-batch, downsampled_batch_ratio is needed
+            if "downsampled_batch_ratio" not in config:
+                raise ValueError("Please specify downsampled_batch_ratio to use sample-then-batch")
+            self.downsampled_batch_ratio = config["downsampled_batch_ratio"]
+            if not (0 < self.downsampled_batch_ratio < 1) or not isinstance(self.downsampled_batch_ratio, float):
+                raise ValueError("The downsampled batch ratio must be a float in (0,1)")
+
+        else:
+            # batch-then-sample
+            if "downsampled_batch_size" not in config:
+                raise ValueError("Please specify downsampled_batch_size to use batch-then-sample")
+            self.downsampled_batch_size = self._config["downsampled_batch_size"]
+            if self.downsampled_batch_size <= 0 or not isinstance(self.downsampled_batch_size, int):
+                raise ValueError("The downsampled batch size must be a positive integer")
 
         self._requires_remote_computation = True
 

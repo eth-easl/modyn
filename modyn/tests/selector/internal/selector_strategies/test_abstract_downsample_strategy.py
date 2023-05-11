@@ -40,7 +40,13 @@ def setup_and_teardown():
 
 
 def get_config():
-    return {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "downsampled_batch_size": 10}
+    return {
+        "reset_after_trigger": False,
+        "presampling_ratio": 50,
+        "limit": -1,
+        "downsampled_batch_size": 10,
+        "sample_before_batch": False,
+    }
 
 
 def get_config_tail():
@@ -50,6 +56,7 @@ def get_config_tail():
         "limit": -1,
         "downsampled_batch_size": 10,
         "tail_triggers": 1,
+        "sample_before_batch": False,
     }
 
 

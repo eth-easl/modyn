@@ -113,7 +113,9 @@ class PytorchTrainer:
 
         if self._downsampling_enabled:
             self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
-            self._downsampler = self.instantiate_downsampler(strategy_name, params_from_selector, self._criterion_nored)
+            self._downsampler, self._sample_before_batch = self.instantiate_downsampler(
+                strategy_name, params_from_selector, self._criterion_nored
+            )
             self._weighted_opt = True
 
         # create callbacks - For now, assume LossCallback by default
@@ -227,11 +229,12 @@ class PytorchTrainer:
 
     def instantiate_downsampler(
         self, strategy_name: str, params_from_selector: dict, per_sample_loss: Any
-    ) -> AbstractRemoteDownsamplingStrategy:
+    ) -> tuple[AbstractRemoteDownsamplingStrategy, bool]:
+        assert "sample_before_batch" in params_from_selector
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)
 
-        return downsampler_class(params_from_selector, per_sample_loss)
+        return downsampler_class(params_from_selector, per_sample_loss), params_from_selector["sample_before_batch"]
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -294,7 +297,7 @@ class PytorchTrainer:
                 pre_downsampling_size = target.shape[0]
 
                 with torch.autocast(self._device_type, enabled=self._amp):
-                    if self._downsampling_enabled:
+                    if self._downsampling_enabled and not self._sample_before_batch:
                         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
                         assert self._downsampler is not None
                         big_batch_output = self._model.model(data)
