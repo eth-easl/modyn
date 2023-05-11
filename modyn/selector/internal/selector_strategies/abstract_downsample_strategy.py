@@ -36,14 +36,6 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
         if not (0 < self.presampling_ratio <= 100) or not isinstance(self.presampling_ratio, int):
             raise ValueError("Presampling ratio must be an integer in range (0,100]")
 
-        if "downsampled_batch_size" not in self._config:
-            raise ValueError("To use downsampling strategies, you have to specify the downsampled_batch_size")
-        self.downsampled_batch_size = self._config["downsampled_batch_size"]
-        if not isinstance(self.downsampled_batch_size, int):
-            raise ValueError("The downsampled batch size must be an integer")
-
-        self._requires_remote_computation = True
-
         self.avoid_presampling = self.presampling_ratio == 100
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
