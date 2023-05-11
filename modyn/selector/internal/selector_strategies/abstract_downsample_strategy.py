@@ -87,8 +87,8 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id
-                    if self.reset_after_trigger
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
+                    if self.tail_triggers is not None
                     else True,
                 )
                 .order_by(asc(SelectorStateMetadata.timestamp))
@@ -135,7 +135,9 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             select(SelectorStateMetadata.sample_key)
             .filter(
                 SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id if self.reset_after_trigger else True,
+                SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
+                if self.tail_triggers is not None
+                else True,
             )
             .order_by(func.random())  # pylint: disable=E1102
             .limit(target_size)
@@ -162,8 +164,8 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
                 database.session.query(SelectorStateMetadata.sample_key)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id
-                    if self.reset_after_trigger
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
+                    if self.tail_triggers is not None
                     else True,
                 )
                 .count()

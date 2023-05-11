@@ -7,6 +7,7 @@ import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
+from modyn.utils import flatten
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -40,6 +41,16 @@ def setup_and_teardown():
 
 def get_config():
     return {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "downsampled_batch_size": 10}
+
+
+def get_config_tail():
+    return {
+        "reset_after_trigger": False,
+        "presampling_ratio": 50,
+        "limit": -1,
+        "downsampled_batch_size": 10,
+        "tail_triggers": 1,
+    }
 
 
 def test_constructor():
@@ -99,6 +110,28 @@ def test_dataset_size():
     assert strat._get_dataset_size() == 6
 
 
+def test_dataset_size_tail():
+    strat = AbstractDownsampleStrategy(get_config_tail(), get_minimal_modyn_config(), 0, 1000)
+    strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
+
+    assert strat._get_dataset_size() == 3
+
+    strat.trigger()
+    strat.inform_data([110, 111, 112], [0, 1, 2], ["dog", "dog", "cat"])
+
+    assert strat._get_dataset_size() == 6
+
+    strat.trigger()
+    strat.inform_data([210, 211, 212], [0, 1, 2], ["dog", "dog", "cat"])
+
+    assert strat._get_dataset_size() == 6
+
+    # no trigger
+    strat.inform_data([1210, 1211, 1212], [0, 1, 2], ["dog", "dog", "cat"])
+
+    assert strat._get_dataset_size() == 9
+
+
 def test_dataset_size_various_scenarios():
     data1 = list(range(10))
     timestamps1 = list(range(10))
@@ -135,6 +168,7 @@ def test_dataset_size_various_scenarios():
 
     # remove the trigger
     strat.reset_after_trigger = False
+    strat.tail_triggers = None
     assert strat.get_presampling_target_size() == 20
 
     # remove the limit
@@ -144,6 +178,11 @@ def test_dataset_size_various_scenarios():
     # adjust the presampling
     strat.presampling_ratio = 75
     assert strat.get_presampling_target_size() == 30
+
+    # set tail triggering
+    strat.presampling_ratio = 75
+    strat.tail_triggers = 1
+    assert strat.get_presampling_target_size() == 22
 
 
 def test_stmt():
@@ -308,3 +347,61 @@ def test_no_presampling_with_limit():
     indexes = list(generator)
     assert len(indexes) == 1
     assert len(indexes[0]) == 3
+
+
+def test__get_tail_triggers_data():
+    conf = get_config_tail()
+    strat = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1)
+
+    data1 = list(range(10))
+    timestamps1 = list(range(10))
+    labels = [0] * 10
+
+    strat.inform_data(data1, timestamps1, labels)
+
+    current_data = list(strat._get_sampled_data())
+    assert len(current_data) == 5  # 50% presampling
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data1)
+
+    data2 = list(range(10, 20))
+    timestamps2 = list(range(10, 20))
+
+    strat.trigger()
+    strat.inform_data(data2, timestamps2, labels)
+
+    current_data = list(strat._get_sampled_data())
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data1 + data2)
+
+    data3 = list(range(20, 30))
+    timestamps3 = list(range(20, 30))
+
+    strat.trigger()
+    strat.inform_data(data3, timestamps3, labels)
+
+    # since tail_trigger = 1 we should not get any point belonging to the first trigger
+    current_data = list(strat._get_sampled_data())
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data2 + data3)
+    assert set(current_data).intersection(set(data1)) == set()
+
+    data4 = list(range(30, 40))
+    timestamps4 = list(range(30, 40))
+
+    strat.trigger()
+    strat.inform_data(data4, timestamps4, labels)
+
+    # since tail_trigger = 1 we should not get any point belonging to the first and second trigger
+    current_data = list(strat._get_sampled_data())
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data3 + data4)
+    assert set(current_data).intersection(set(data1)) == set()
+    assert set(current_data).intersection(set(data2)) == set()

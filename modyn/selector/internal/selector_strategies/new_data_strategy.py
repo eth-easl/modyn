@@ -68,8 +68,9 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 is the key, and the second element is the associated weight.
         """
         if self.reset_after_trigger:
+            assert self.tail_triggers == 0
             get_data_func = self._get_data_reset
-        elif self.tail_triggers > 0:
+        elif self.tail_triggers is not None and self.tail_triggers > 0:
             get_data_func = self._get_data_tail
         else:
             get_data_func = self._get_data_no_reset
@@ -143,7 +144,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    self._next_trigger_id == SelectorStateMetadata.seen_in_trigger_id,
+                    SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id,
                 )
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
@@ -167,7 +168,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .execution_options(yield_per=self._maximum_keys_in_memory)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    self._next_trigger_id - SelectorStateMetadata.seen_in_trigger_id <= self.tail_triggers,
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers,
                 )
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )

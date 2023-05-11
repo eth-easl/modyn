@@ -99,7 +99,7 @@ properties:
                 type: number
                 description: |
                   For the training iteration, just use data from this trigger and the previous tail_triggers. 
-                  reset_after_trigger is equivalent to tail_triggers = 0
+                  reset_after_trigger is equivalent to tail_triggers = 0. Omit this parameter if you want to use every previous datapoint.
               unused_data_ratio:
                 type: number
                 description: |
