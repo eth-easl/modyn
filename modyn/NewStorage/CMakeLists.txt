@@ -34,7 +34,7 @@ option(MODYNSTORAGE_TEST_COVERAGE "Set ON to add test coverage" OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(MODYNSTORAGE_COMPILE_DEFINITIONS "")
-set(MODYNSTORAGE_COMPILE_OPTIONS "-Wall" "-Wextra" "-Werror" "-Wpedantic" "-Wextra-semi" "-Wnon-virtual-dtor" "-Wunused"
+set(MODYNSTORAGE_COMPILE_OPTIONS "-Wall" "-Wextra" "-Wpedantic" "-Wextra-semi" "-Wnon-virtual-dtor" "-Wunused"
   "-Wzero-as-null-pointer-constant"
 )
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

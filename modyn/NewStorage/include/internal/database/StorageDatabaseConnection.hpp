@@ -1,10 +1,10 @@
 #ifndef STORAGE_DATABASE_CONNECTION_H
 #define STORAGE_DATABASE_CONNECTION_H
 
-#include <soci/postgresql/soci-postgresql.h>
-#include <soci/soci.h>
-#include <soci/sqlite3/soci-sqlite3.h>
-#include <yaml-cpp/yaml.h>
+#include "yaml-cpp/yaml.h"
+#include "soci/soci.h"
+#include "soci/sqlite3/soci-sqlite3.h"
+#include "soci/postgresql/soci-postgresql.h"
 
 namespace storage {
 class StorageDatabaseConnection {

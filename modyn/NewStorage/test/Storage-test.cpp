@@ -1,4 +1,4 @@
-#include "../src/Storage.hpp"
+#include "Storage.hpp"
 #include "TestUtils.hpp"
 #include <gtest/gtest.h>
 

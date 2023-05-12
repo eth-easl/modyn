@@ -1,14 +1,35 @@
-set(BINARY ${CMAKE_PROJECT_NAME}_test)
+add_compile_options(${MODYNSTORAGE_COMPILE_OPTIONS})
 
-file(GLOB_RECURSE TEST_SOURCES LIST_DIRECTORIES false *.hpp *.cpp)
+# modyn has a custom FAIL macro. Use GTEST_FAIL to refer to the google macro
+add_definitions(-DGTEST_DONT_DEFINE_FAIL)
 
-set(SOURCES ${TEST_SOURCES})
-set(SOCI_HAVE_BOOST OFF CACHE BOOL "SOCI_HAVE_BOOST" FORCE)
+##################################################
+# TEST UTILITIES
+##################################################
+set(
+  MODYNSTORAGE_TEST_UTILS_SOURCES
 
-add_library(${BINARY}_lib ${SOURCES})
+  TestUtils.cpp
+  TestUtils.hpp
+)
 
-add_executable(${BINARY} ${TEST_SOURCES})
+add_library(modynstorage-test-utils-objs OBJECT ${MODYNSTORAGE_TEST_UTILS_SOURCES})
+target_include_directories(modynstorage-test-utils-objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(modynstorage-test-utils-objs PUBLIC gtest gmock spdlog modynstorage)
 
-add_test(NAME ${BINARY} COMMAND ${BINARY})
+#################################################t
+# UNIT TESTS
+##################################################
+set(
+  MODYNSTORAGE_TEST_SOURCES
 
-target_link_libraries(${BINARY} PUBLIC ${CMAKE_PROJECT_NAME}_lib gtest gmock yaml-cpp soci_core soci_postgresql soci_sqlite3 spdlog)
+  Storage-test.cpp # TODO populate
+)
+
+
+add_library(modynstorage-test-objs OBJECT ${MODYNSTORAGE_TEST_SOURCES})
+target_link_libraries(modynstorage-test-objs PRIVATE modynstorage-test-utils-objs)
+
+add_executable(modynstorage-test main.cpp)
+target_link_libraries(modynstorage-test PRIVATE modynstorage-test-objs modynstorage-test-utils-objs)
+add_test(modynstorage-test modynstorage-test)

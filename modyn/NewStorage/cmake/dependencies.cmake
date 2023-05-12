@@ -46,10 +46,16 @@ FetchContent_Declare(
 set(SOCI_TESTS OFF CACHE BOOL "soci configuration")
 set(SOCI_CXX11 ON CACHE BOOL "soci configuration")
 set(SOCI_STATIC ON CACHE BOOL "soci configuration")
-set(SOCI_SHARED OFF CACHE BOOL "soci configuration")
+set(SOCI_SHARED ON CACHE BOOL "soci configuration")
 set(SOCI_EMPTY OFF CACHE BOOL "soci configuration")
 set(SOCI_HAVE_BOOST OFF CACHE BOOL "configuration" FORCE)
-FetchContent_MakeAvailable(soci)
+
+FetchContent_GetProperties(soci)
+if(NOT soci_POPULATED)
+    FetchContent_Populate(soci)
+    add_subdirectory(${soci_SOURCE_DIR})
+endif()
+
 
 ################### yaml-cpp ####################
 message(STATUS "Making yaml-cpp available.")

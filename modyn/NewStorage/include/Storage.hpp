@@ -2,7 +2,7 @@
 #define STORAGE_HPP
 
 #include <string>
-#include <yaml-cpp/yaml.h>
+#include "yaml-cpp/yaml.h"
 
 namespace storage {
 class Storage {
