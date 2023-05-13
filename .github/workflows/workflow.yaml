@@ -5,6 +5,10 @@ defaults:
   run:
     shell: bash
 
+env:
+  CLANG_TIDY: clang-tidy-15
+  RUN_CLANG_TIDY: run-clang-tidy-15
+
 jobs:
   flake8:
     timeout-minutes: 20
@@ -107,6 +111,172 @@ jobs:
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
 
+  clang-format:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    - uses: actions/checkout@v2
+    - uses: DoozyX/clang-format-lint-action@v0.14
+      with:
+        source: 'modyn/NewStorage/src modyn/NewStorage/include modyn/NewStorage/test'
+        extensions: 'hpp,cpp'
+        clangFormatVersion: 14
+
+  clang-tidy:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    - uses: actions/checkout@v2
+
+    - name: Install clang-tidy
+       run: |
+         sudo apt update
+         sudo apt -y install clang-tidy-15
+
+    - name: Configure CMake
+      run: bash scripts/clang-tidy.sh build
+
+    - name: Run clang-tidy
+      run: bash scripts/clang-tidy.sh run_tidy
+
+  cpp_build_and_test:
+    name: Build + Test (C++)
+    runs-on: ubuntu-latest
+    outputs:
+      line-coverage: ${{steps.run_test_with_coverage.outputs.LINE_COVERAGE}}
+      branch-coverage: ${{steps.run_test_with_coverage.outputs.BRANCH_COVERAGE}}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [ Release, Debug ]
+        compiler:
+          - { c: gcc, cxx: g++, version: 11 }
+          - { c: clang, cxx: clang++, version: 12 }
+          - { c: clang, cxx: clang++, version: 14 }
+          - { c: clang, cxx: clang++, version: 15, coverage: true }
+        include:
+          - compiler: {c: clang, cxx: clang++, version: 15}
+            build-type: Tsan
+          - compiler: {c: clang, cxx: clang++, version: 15}
+            build-type: Asan
+    env:
+      CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
+      CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
+      CCACHE_BASEDIR: ${{github.workspace}}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
+        run: >
+          cmake ${{github.workspace}}
+          -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
+          -DMODYNSTORAGE_BUILD_PLAYGROUND=ON
+          -DMODYNSTORAGE_BUILD_TESTS=ON
+          -DMODYNSTORAGE_TEST_COVERAGE=${{matrix.compiler.coverage && 'ON' || 'OFF'}}
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --config ${{matrix.build-type}} -- -j8
+
+      - name: Run tests
+        timeout-minutes: 10
+        working-directory: ${{github.workspace}}/build/test
+        shell: bash
+        env: {"TSAN_OPTIONS": "halt_on_error=1", "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"}
+        run: ./modynstorage-test
+
+        # The next two steps are solely related to creating coverage reports and will only run coverage in the compiler matrix is set to true
+
+      - name: Create Coverage Report
+        if: ${{ matrix.compiler.coverage && matrix.build-type == 'Debug' }}
+        working-directory: ${{github.workspace}}/build/test
+        run: |
+          llvm-profdata-15 merge -sparse default.profraw -o tests.profdata
+          llvm-cov-15 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
+          llvm-cov-15 show -instr-profile tests.profdata -object modynstorage-test -format=html -output-dir=coverage -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false
+          echo ::set-output name=LINE_COVERAGE::"$(cat output.txt | cut -d ' ' -f 7)"
+          echo ::set-output name=BRANCH_COVERAGE::"$(cat output.txt | cut -d ' ' -f 10)"
+        id: run_test_with_coverage
+
+      - name: Upload HTML coverage report
+        if: ${{ matrix.compiler.coverage && matrix.build-type == 'Debug' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-results
+          path: ${{github.workspace}}/build/test/coverage
+
+  cpp-coverage-main:
+    name: C++ Test Coverage (main)
+    runs-on: ubuntu-latest
+    env:
+      CC: clang-15
+      CXX: clang++-15
+    outputs:
+      line-coverage: ${{steps.run_main_test_with_coverage.outputs.LINE_COVERAGE}}
+      branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: main
+
+      - name: Create Build Environment
+        run: |
+          cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: >
+          cmake ${{github.workspace}} -DCMAKE_BUILD_TYPE=Debug
+          -DMODYNSTORAGE_BUILD_PLAYGROUND=ON -DMODYNSTORAGE_BUILD_TESTS=ON -DMODYNSTORAGE_TEST_COVERAGE=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --config Debug -- -j
+
+      - name: Run tests
+        working-directory: ${{github.workspace}}/build/test
+        shell: bash
+        run: ./modynstorage-test
+
+      - name: Create Coverage Report for main branch
+        working-directory: ${{github.workspace}}/build/test
+        run: |
+          llvm-profdata-15 merge -sparse default.profraw -o tests.profdata
+          llvm-cov-15 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
+          echo ::set-output name=LINE_COVERAGE::"$(cat output.txt | cut -d ' ' -f 7)"
+          echo ::set-output name=BRANCH_COVERAGE::"$(cat output.txt | cut -d ' ' -f 10)"
+        id: run_main_test_with_coverage
+
+  cpp-comment-on-pr:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: self-hosted
+    name: Comment Coverage Results
+    needs: [ cpp_build_and_test, cpp-coverage-main ]
+    steps:
+      - name: Calculate changes
+        shell: bash
+        run: |
+          echo ::set-output name=line-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.build_test.outputs.line-coverage }}-${{ needs.coverage-main.outputs.line-coverage }}; exit}')"
+          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.build_test.outputs.branch-coverage }}-${{ needs.coverage-main.outputs.branch-coverage }}; exit}')"
+        id: calculation
+
+      - name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            ![Line Coverage: ${{ needs.build_test.outputs.line-coverage }}%](https://img.shields.io/badge/Line_Coverage-${{ needs.build_test.outputs.line-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.line-changes }} % to main)</sup>
+            ![Branch Coverage: ${{ needs.build_test.outputs.branch-coverage }}%](https://img.shields.io/badge/Branch_Coverage-${{ needs.build_test.outputs.branch-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.branch-changes }} % to main)</sup>
+
 ### Integration Tests ###
 # We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
 
@@ -121,6 +291,9 @@ jobs:
       - unittests
       - isort
       - black
+      - cpp_build_and_test
+      - clang-tidy
+      - clang-format
 
     steps:
     - name: Check out code

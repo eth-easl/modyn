@@ -1,0 +1,237 @@
+# Inspired by https://github.com/hpides/darwin/blob/master/.clang-tidy
+
+WarningsAsErrors: '*'
+
+Checks: >
+  *,
+  -abseil-*,
+  -altera-*,
+  -android-*,
+  -boost-*,
+  -darwin-*,
+  -fuchsia-*,
+  -google-objc-*,
+  -linuxkernel-*,
+  -llvm-*,
+  -llvmlibc-*,
+  -mpi-*,
+  -objc-*,
+  -openmp-*,
+  -zircon-*,
+
+  -hicpp-*,
+  hicpp-exception-baseclass,
+  hicpp-multiway-paths-covered,
+  hicpp-no-assembler,
+  hicpp-signed-bitwise,
+  -cert-*,
+  cert-dcl21-cpp,
+  cert-dcl50-cpp,
+  cert-dcl58-cpp,
+  cert-env33-c,
+  cert-err33-c,
+  cert-err34-c,
+  cert-err52-cpp,
+  cert-err58-cpp,
+  cert-err60-cpp,
+  cert-flp30-c,
+  cert-mem57-cpp,
+  cert-msc50-cpp,
+  cert-msc51-cpp,
+  cert-oop57-cpp,
+  cert-oop58-cpp,
+  -bugprone-narrowing-conversions,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-c-copy-assignment-signature,
+  -cppcoreguidelines-explicit-virtual-functions,
+  -cppcoreguidelines-macro-to-enum,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+  -bugprone-unchecked-optional-access,
+  -cert-dcl21-cpp,
+  -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -google-build-using-namespace,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -modernize-use-nodiscard,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers,
+  -readability-uppercase-literal-suffix,
+
+  -misc-confusable-identifiers,
+
+### Reasons for exclusions
+## Generally not applicable
+# abseil                                                we don't use the abseil library
+# altera                                                doesn't apply (OpenCL FPGA programming)
+# android                                               doesn't apply (Android)
+# boost                                                 doesn't apply (we don't use boost)
+# darwin                                                doesn't apply (we are darwin, but this is another darwin)
+# fuchsia                                               we don't follow the fuchsia coding conventions
+# google-objc                                           doesn't apply (no Objective-C code)
+# linuxkernel                                           doesn't apply (we're not the linux kernel)
+# llvm                                                  specific to LLVM codebase or aliases or don't apply to us
+# llvmlibc                                              doesn't apply (we're not the llvm libc)
+# mpi                                                   doesn't apply (we're not using MPI)
+# objc                                                  doesn't apply (no Objective-C code)
+# openMP                                                doesn't apply (we're not using OpenMP)
+# zircon                                                utility checks that would need configuration
+
+## Aliasses
+# Having check aliases enabled harms performance in clang-tidy and is annoying to ignore locally, so we disable some aliases
+# The hicpp-* checks are generally aliasses (25) and only have a few original checks (4), so we use whitelisting here.
+# The cert-* checks are 22 aliasses and 15 original checks, so we also use whitelisting here.
+# bugprone-narrowing-conversions                               alias to cppcoreguidelines-narrowing-conversions
+# cppcoreguidelines-avoid-c-arrays                             alias to modernize-avoid-c-arrays
+# cppcoreguidelines-avoid-magic-numbers                        alias to readability-magic-numbers
+# cppcoreguidelines-c-copy-assignment-signature                alias to misc-unconventional-assign-operator
+# cppcoreguidelines-explicit-virtual-functions                 alias to modernize-use-override
+# cppcoreguidelines-macro-to-enum                              alias to modernize-macro-to-enum
+# cppcoreguidelines-non-private-member-variables-in-classes    alias to misc-non-private-member-variables-in-classes
+
+## Specifically disabled for this project
+# bugprone-easily-swappable-parameters                This is just annoying
+# bugprone-exception-escape                           We allow terminating on exceptions
+# bugprone-unchecked-optional-access                  We often use .value(), that would throw and thus terminate if there is no value in it. That's fine for us.
+# cert-dcl21-cpp                                      Doing something non-const with a postfix-increment return value makes sense with c++11. See #308.
+# cppcoreguidelines-init-variables                    If a variable is only declared and initialized in two different branches, we do not want to initialize it first
+# cppcoreguidelines-macro-usage                       We have a few custom macros, such as FAIL / ASSERT
+# cppcoreguidelines-pro-bounds-constant-array-index   We allow using the subscript operator with run-time values
+# cppcoreguidelines-pro-bounds-pointer-arithmetic     Pointer arithmetic is fine and required for void* array access
+# cppcoreguidelines-pro-type-reinterpret-cast         We use reinterpret_cast
+# cppcoreguidelines-pro-type-static-cast-downcast     We do allow static downcasts for performance reasons
+# google-build-using-namespace                        While we discourage its use, in some cases, using namespace makes sense
+# misc-no-recursion                                   We allow recursion
+# misc-non-private-member-variables-in-classes        We allow this
+# modernize-use-nodiscard                             Don't want to tag everything [[nodiscard]]
+# modernize-use-trailing-return-type                  https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-return-type.html - no that is way too weird
+# readability-magic-numbers                           Too many false positives
+# readability-uppercase-literal-suffix                Don't really care if it's 1.0f or 1.0F
+
+## We would like to enable, but can't
+# misc-confusable-identifiers                         This check increases the runtime by approx. 10x. Upstream issue https://github.com/llvm/llvm-project/issues/57527
+
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: UPPER_CASE
+
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+
+  - key: readability-identifier-naming.GlobalFunctionCase
+    value: lower_case
+
+  - key: readability-identifier-naming.InlineNamespaceCase
+    value: lower_case
+
+  - key: readability-identifier-naming.LocalConstantCase
+    value: lower_case
+
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+
+  - key: readability-identifier-naming.ClassMemberCase
+    value: UPPER_CASE
+
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: '_'
+
+  - key: readability-identifier-naming.ProtectedMemberSuffix
+    value: '_'
+
+  - key: readability-identifier-naming.PublicMemberCase
+    value: lower_case
+
+  - key: readability-identifier-naming.MethodCase
+    value: lower_case
+
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+
+  - key: readability-identifier-naming.ConstantParameterCase
+    value: lower_case
+
+  - key: readability-identifier-naming.ParameterPackCase
+    value: lower_case
+
+  - key: readability-identifier-naming.StaticConstantCase
+    value: UPPER_CASE
+
+  - key: readability-identifier-naming.StaticVariableCase
+    value: UPPER_CASE
+
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+
+  # Disable all template-related naming checks, as there seems to be a bug in clang-tidy.
+  # Issue: https://github.com/hpides/darwin/issues/47
+  #  - key: readability-identifier-naming.TemplateParameterCase
+  #    value: CamelCase
+  #
+  #  - key: readability-identifier-naming.TemplateTemplateParameterCase
+  #    value: CamelCase
+  #
+  #  - key: readability-identifier-naming.TemplateUsingCase
+  #    value: lower_case
+  #
+  #  - key: readability-identifier-naming.TypeTemplateParameterCase
+  #    value: CamelCase
+  #
+  #  - key: readability-identifier-naming.ValueTemplateParameterCase
+  #    value: UPPER_CASE
+
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.UnionCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.UsingCase
+    value: lower_case
+
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+
+  - key: readability-identifier-length.MinimumVariableNameLength
+    value: 2
+
+  - key: readability-identifier-length.MinimumParameterNameLength
+    value: 2
+
+  - key: readability-identifier-length.MinimumLoopCounterNameLength
+    value: 1
+
+  # All boolean arguments should have the corresponding parameter name in the caller. But we ignore single value calls.
+  - key: bugprone-argument-comment.IgnoreSingleArgument
+    value: true
+
+  - key: bugprone-argument-comment.CommentBoolLiterals
+    value: true
+
+  # We can't use ranges yet, so this does not work.
+  - key: modernize-loop-convert.UseCxx20ReverseRanges
+    value: false

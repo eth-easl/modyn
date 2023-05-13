@@ -1,4 +1,4 @@
-#include "internal/file_watcher/FileWatchdog.hpp"
+#include "internal/file_watcher/file_watchdog.hpp"
 #include "test_utils.hpp"
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>

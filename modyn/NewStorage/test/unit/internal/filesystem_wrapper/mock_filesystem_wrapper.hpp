@@ -1,6 +1,6 @@
 #pragma once
 
-#include "internal/filesystem_wrapper/AbstractFilesystemWrapper.hpp"
+#include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
 #include "gmock/gmock.h"
 #include <fstream>
 #include <gtest/gtest.h>

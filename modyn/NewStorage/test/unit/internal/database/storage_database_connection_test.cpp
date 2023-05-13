@@ -1,4 +1,4 @@
-#include "internal/database/StorageDatabaseConnection.hpp"
+#include "internal/database/storage_database_connection.hpp"
 #include "test_utils.hpp"
 #include <gtest/gtest.h>
 #include <soci/soci.h>

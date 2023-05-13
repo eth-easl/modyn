@@ -1,4 +1,4 @@
-#include "internal/file_wrapper/BinaryFileWrapper.hpp"
+#include "internal/file_wrapper/binary_file_wrapper.hpp"
 #include "test_utils.hpp"
 #include "unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
 #include <fstream>
