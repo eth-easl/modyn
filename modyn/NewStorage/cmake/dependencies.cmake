@@ -56,6 +56,36 @@ if(NOT soci_POPULATED)
     add_subdirectory(${soci_SOURCE_DIR})
 endif()
 
+# Function to help us fix compiler warnings for all soci targets
+function(get_all_targets src_dir var)
+    set(targets)
+    get_all_targets_recursive(targets ${src_dir})
+    set(${var} ${targets} PARENT_SCOPE)
+endfunction()
+
+macro(get_all_targets_recursive targets dir)
+    get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
+    foreach(subdir ${subdirectories})
+        get_all_targets_recursive(${targets} ${subdir})
+    endforeach()
+
+    get_property(current_targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
+    list(APPEND ${targets} ${current_targets})
+endmacro()
+
+macro(remove_flag_from_target _target _flag)
+    get_target_property(_target_cxx_flags ${_target} COMPILE_OPTIONS)
+    if(_target_cxx_flags)
+        list(REMOVE_ITEM _target_cxx_flags ${_flag})
+        set_target_properties(${_target} PROPERTIES COMPILE_OPTIONS "${_target_cxx_flags}")
+    endif()
+endmacro()
+
+get_all_targets(${soci_SOURCE_DIR} all_soci_targets)
+foreach(_soci_target IN LISTS all_soci_targets)
+    target_compile_options(${_soci_target} INTERFACE -Wno-zero-as-null-pointer-constant -Wno-pedantic -Wno-undef)
+endforeach()
+
 
 ################### yaml-cpp ####################
 message(STATUS "Making yaml-cpp available.")
@@ -66,6 +96,8 @@ FetchContent_Declare(
   GIT_TAG yaml-cpp-0.7.0
 )
 FetchContent_MakeAvailable(yaml-cpp)
+
+target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic)
 
 ################### grpc ####################
 #message(STATUS "Making grpc available.")
