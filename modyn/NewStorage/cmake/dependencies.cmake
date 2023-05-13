@@ -32,8 +32,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
-target_compile_options(googletest INTERFACE -Wno-implicit-int-float-conversion)
-
 
 ################### libpq++ ####################
 find_package(PostgreSQL REQUIRED) # This needs to be installed on the system - cannot do a lightweight CMake install
