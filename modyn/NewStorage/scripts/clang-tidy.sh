@@ -37,7 +37,7 @@ function run_tidy() {
         -quiet \
         ${additional_args} \
         "${BUILD_DIR}"/CMakeFiles/modynstorage.dir/Unity/*.cxx \
-        "${BUILD_DIR}"/test/CMakeFiles/modynstorage-all-test-sources-for-tidy.dir/Unity/*.cxx \
+        "${BUILD_DIR}"/test/CMakeFiles/modynstorage-all-test-sources-for-tidy.dir/Unity/*.cxx
     set +x
 }
 
