@@ -129,7 +129,6 @@ TEST_F(LocalFilesystemWrapperTest, TestGetModifiedTime) {
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   ASSERT_EQ(filesystem_wrapper.get_modified_time(file_name), 0);
-
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestGetCreatedTime) {

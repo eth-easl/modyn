@@ -172,10 +172,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install clang-tidy
+      - name: Install clang 15
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "15.0"
+
+      - name: Install ccache
         run: |
           sudo apt update
           sudo apt -y install ccache
+
+
 
       - name: Create Build Environment
 
