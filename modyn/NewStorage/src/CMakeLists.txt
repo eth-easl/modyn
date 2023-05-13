@@ -26,7 +26,7 @@ target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURC
 target_include_directories(modynstorage PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
 target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
 
-target_link_libraries(modynstorage PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_postgresql_static soci_sqlite3_static soci_core_static)
+target_link_libraries(modynstorage PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_postgresql soci_sqlite3 soci_core)
 
 message(STATUS "Current dir: ${CMAKE_CURRENT_SOURCE_DIR}")
 
