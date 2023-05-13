@@ -26,10 +26,10 @@ set(MODYNSTORAGE_HEADERS
     )
 
 target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
-target_include_directories(modynstorage PUBLIC ../include  PRIVATE ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
+target_include_directories(modynstorage PUBLIC ../include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
 target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
 
-target_link_libraries(modynstorage PUBLIC spdlog argparse yaml-cpp PRIVATE ${PostgreSQL_LIBRARIES} soci_core_static soci_postgresql_static soci_sqlite3_static)
+target_link_libraries(modynstorage PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_core_static soci_postgresql_static soci_sqlite3_static)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 target_compile_definitions(modynstorage PRIVATE MODYNSTORAGE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\")

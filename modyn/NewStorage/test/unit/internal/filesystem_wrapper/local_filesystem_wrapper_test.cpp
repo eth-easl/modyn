@@ -1,5 +1,5 @@
-#include "../../../src/internal/filesystem_wrapper/LocalFilesystemWrapper.hpp"
-#include "../../TestUtils.hpp"
+#include "internal/filesystem_wrapper/LocalFilesystemWrapper.hpp"
+#include "test_utils.hpp"
 #include "gmock/gmock.h"
 #include <filesystem>
 #include <fstream>

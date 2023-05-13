@@ -1,5 +1,5 @@
-#include "../../../src/internal/file_watcher/FileWatchdog.hpp"
-#include "../../TestUtils.hpp"
+#include "internal/file_watcher/FileWatchdog.hpp"
+#include "test_utils.hpp"
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
 

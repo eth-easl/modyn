@@ -1,7 +1,6 @@
-#ifndef MOCK_FILE_WRAPPER_HPP
-#define MOCK_FILE_WRAPPER_HPP
+#pragma once
 
-#include "../../../src/internal/file_wrapper/AbstractFileWrapper.hpp"
+#include "internal/file_wrapper/AbstractFileWrapper.hpp"
 #include "gmock/gmock.h"
 #include <fstream>
 #include <gtest/gtest.h>
@@ -25,4 +24,3 @@ public:
   MOCK_METHOD(void, validate_file_extension, (), (override));
 }
 } // namespace storage
-#endif

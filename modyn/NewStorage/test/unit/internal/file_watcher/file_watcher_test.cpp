@@ -1,7 +1,7 @@
-#include "../../../src/internal/database/StorageDatabaseConnection.hpp"
-#include "../../../src/internal/file_watcher/FileWatcher.hpp"
-#include "../../TestUtils.hpp"
-#include "../filesystem_wrapper/MockFilesystemWrapper.hpp"
+#include "internal/database/StorageDatabaseConnection.hpp"
+#include "internal/file_watcher/FileWatcher.hpp"
+#include "test_utils.hpp"
+#include "unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <soci/soci.h>

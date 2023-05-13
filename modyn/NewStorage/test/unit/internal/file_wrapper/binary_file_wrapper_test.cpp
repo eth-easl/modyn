@@ -1,6 +1,6 @@
-#include "../../../src/internal/file_wrapper/BinaryFileWrapper.hpp"
-#include "../../TestUtils.hpp"
-#include "../filesystem_wrapper/MockFilesystemWrapper.hpp"
+#include "internal/file_wrapper/BinaryFileWrapper.hpp"
+#include "test_utils.hpp"
+#include "unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
 #include <fstream>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

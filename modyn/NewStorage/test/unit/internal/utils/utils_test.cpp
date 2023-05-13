@@ -1,6 +1,6 @@
-#include "../../../src/internal/utils/Utils.hpp"
-#include "../../TestUtils.hpp"
-#include "../filesystem_wrapper/MockFilesystemWrapper.hpp"
+#include "internal/utils/Utils.hpp"
+#include "test_utils.hpp"
+#include "unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
 #include "gmock/gmock.h"
 #include <filesystem>
 #include <fstream>

@@ -1,7 +1,6 @@
-#ifndef MOCK_UTILS_HPP
-#define MOCK_UTILS_HPP
+#pragma once
 
-#include "../../../src/internal/utils/Utils.hpp"
+#include "internal/utils/Utils.hpp"
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
 
@@ -22,5 +21,3 @@ public:
               (override));
 };
 } // namespace storage
-
-#endif

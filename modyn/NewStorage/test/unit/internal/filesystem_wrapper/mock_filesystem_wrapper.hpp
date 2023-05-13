@@ -1,7 +1,6 @@
-#ifndef MOCK_FILESYSTEM_WRAPPER_HPP
-#define MOCK_FILESYSTEM_WRAPPER_HPP
+#pragma once
 
-#include "../../../src/internal/filesystem_wrapper/AbstractFilesystemWrapper.hpp"
+#include "internal/filesystem_wrapper/AbstractFilesystemWrapper.hpp"
 #include "gmock/gmock.h"
 #include <fstream>
 #include <gtest/gtest.h>
@@ -25,5 +24,3 @@ public:
   MOCK_METHOD(std::string, get_name, (), (override));
 };
 } // namespace storage
-
-#endif

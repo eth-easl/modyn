@@ -9,8 +9,8 @@ add_definitions(-DGTEST_DONT_DEFINE_FAIL)
 set(
   MODYNSTORAGE_TEST_UTILS_SOURCES
 
-  TestUtils.cpp
-  TestUtils.hpp
+  test_utils.cpp
+  test_utils.hpp
 )
 
 add_library(modynstorage-test-utils-objs OBJECT ${MODYNSTORAGE_TEST_UTILS_SOURCES})
@@ -23,13 +23,22 @@ target_link_libraries(modynstorage-test-utils-objs PUBLIC gtest gmock spdlog mod
 set(
   MODYNSTORAGE_TEST_SOURCES
 
-  Storage-test.cpp # TODO populate
+  unit/storage_test.cpp
+  unit/internal/file_watcher/file_watcher_test.cpp
+  unit/internal/file_watcher/file_watchdog_test.cpp
+  unit/internal/database/storage_database_connection_test.cpp
+  unit/internal/file_wrapper/single_sample_file_wrapper_test.cpp
+  unit/internal/file_wrapper/mock_file_wrapper.hpp
+  unit/internal/file_wrapper/binary_file_wrapper_test.cpp
+  unit/internal/utils/mock_utils.hpp
+  unit/internal/utils/utils_test.cpp
+  unit/internal/filesystem_wrapper/local_filesystem_wrapper_test.cpp
+  unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp
 )
-
 
 add_library(modynstorage-test-objs OBJECT ${MODYNSTORAGE_TEST_SOURCES})
 target_link_libraries(modynstorage-test-objs PRIVATE modynstorage-test-utils-objs)
 
-add_executable(modynstorage-test main.cpp)
+add_executable(modynstorage-test newstorage_test.cpp)
 target_link_libraries(modynstorage-test PRIVATE modynstorage-test-objs modynstorage-test-utils-objs)
 add_test(modynstorage-test modynstorage-test)

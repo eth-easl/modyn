@@ -1,5 +1,5 @@
 #include "Storage.hpp"
-#include "TestUtils.hpp"
+#include "test_utils.hpp"
 #include <gtest/gtest.h>
 
 using namespace storage;

@@ -1,5 +1,5 @@
-#include "../../../src/internal/database/StorageDatabaseConnection.hpp"
-#include "../../TestUtils.hpp"
+#include "internal/database/StorageDatabaseConnection.hpp"
+#include "test_utils.hpp"
 #include <gtest/gtest.h>
 #include <soci/soci.h>
 #include <spdlog/spdlog.h>
