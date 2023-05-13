@@ -4,6 +4,8 @@
 #include <soci/soci.h>
 #include <spdlog/spdlog.h>
 
+#include <filesystem>
+
 #include "test_utils.hpp"
 
 using namespace storage;
