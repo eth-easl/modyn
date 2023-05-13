@@ -1,9 +1,8 @@
-#ifndef FILE_WATCHER_HPP
-#define FILE_WATCHER_HPP
+#pragma once
 
-#include "../database/StorageDatabaseConnection.hpp"
-#include "../file_wrapper/AbstractFileWrapper.hpp"
-#include "../filesystem_wrapper/AbstractFilesystemWrapper.hpp"
+#include "internal/database/storage_database_connection.hpp"
+#include "internal/file_wrapper/abstract_file_wrapper.hpp"
+#include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
 #include <atomic>
 #include <string>
 #include <vector>
@@ -62,5 +61,3 @@ public:
                                         std::vector<std::string> file_paths);
 };
 } // namespace storage
-
-#endif

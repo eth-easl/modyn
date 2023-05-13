@@ -1,11 +1,10 @@
-#ifndef FILE_WATCHDOG_HPP
-#define FILE_WATCHDOG_HPP
+#pragma once
 
-#include "FileWatcher.hpp"
+#include "file_watcher.hpp"
 #include <map>
 #include <tuple>
 #include <yaml-cpp/yaml.h>
-#include "../database/StorageDatabaseConnection.hpp"
+#include "internal/database/storage_database_connection.hpp"
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -33,5 +32,3 @@ public:
   std::vector<long long> get_running_file_watcher_processes();
 };
 } // namespace storage
-
-#endif

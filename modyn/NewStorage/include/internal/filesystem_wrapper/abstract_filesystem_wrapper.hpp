@@ -1,5 +1,4 @@
-#ifndef ABSTRACT_FILESYSTEM_WRAPPER_H
-#define ABSTRACT_FILESYSTEM_WRAPPER_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -27,5 +26,3 @@ public:
   virtual std::string get_name() = 0;
 };
 } // namespace storage
-
-#endif

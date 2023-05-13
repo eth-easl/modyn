@@ -1,7 +1,7 @@
-#include "../../../include/internal/file_watcher/FileWatchdog.hpp"
-#include "../../../include/internal/database/StorageDatabaseConnection.hpp"
+#include "internal/file_watcher/file_watchdog.hpp"
+#include "internal/database/storage_database_connection.hpp"
 #include <filesystem>
-#include <soci/soci.h>
+#include "soci/soci.h"
 #include <spdlog/spdlog.h>
 
 using namespace storage;

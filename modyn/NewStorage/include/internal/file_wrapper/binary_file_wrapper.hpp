@@ -1,7 +1,6 @@
-#ifndef BINARY_FILE_WRAPPER_HPP
-#define BINARY_FILE_WRAPPER_HPP
+#pragma once
 
-#include "AbstractFileWrapper.hpp"
+#include "internal/file_wrapper/abstract_file_wrapper.hpp"
 #include <cstddef>
 #include <iostream>
 
@@ -56,4 +55,3 @@ public:
 };
 } // namespace storage
 
-#endif

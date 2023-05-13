@@ -1,5 +1,4 @@
-#ifndef STORAGE_DATABASE_CONNECTION_H
-#define STORAGE_DATABASE_CONNECTION_H
+#pragma once
 
 #include "yaml-cpp/yaml.h"
 #include "soci/soci.h"
@@ -56,5 +55,3 @@ public:
 };
 
 } // namespace storage
-
-#endif

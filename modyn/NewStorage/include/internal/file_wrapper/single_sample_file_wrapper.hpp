@@ -1,7 +1,6 @@
-#ifndef SINGLE_SAMPLE_FILE_WRAPPER_HPP
-#define SINGLE_SAMPLE_FILE_WRAPPER_HPP
+#pragma once
 
-#include "AbstractFileWrapper.hpp"
+#include "internal/file_wrapper/abstract_file_wrapper.hpp"
 #include <cstddef>
 
 namespace storage {
@@ -24,4 +23,3 @@ public:
 };
 } // namespace storage
 
-#endif

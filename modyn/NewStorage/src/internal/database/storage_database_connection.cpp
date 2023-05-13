@@ -1,7 +1,7 @@
-#include "../../../include/internal/database/StorageDatabaseConnection.hpp"
+#include "internal/database/storage_database_connection.hpp"
 #include <fstream>
-#include <soci/postgresql/soci-postgresql.h>
-#include <soci/sqlite3/soci-sqlite3.h>
+#include "soci/postgresql/soci-postgresql.h"
+#include "soci/sqlite3/soci-sqlite3.h"
 #include <spdlog/spdlog.h>
 
 using namespace storage;

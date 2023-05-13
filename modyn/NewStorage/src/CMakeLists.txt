@@ -1,27 +1,27 @@
 set(MODYNSTORAGE_SOURCES
 
     Storage.cpp
-    internal/database/StorageDatabaseConnection.cpp
-    internal/file_watcher/FileWatchdog.cpp
-    internal/file_watcher/FileWatcher.cpp
-    internal/file_wrapper/BinaryFileWrapper.cpp
-    internal/file_wrapper/SingleSampleFileWrapper.cpp
-    internal/filesystem_wrapper/LocalFileSystemWrapper.cpp
+    internal/database/storage_database_connection.cpp
+    internal/file_watcher/file_watchdog.cpp
+    internal/file_watcher/file_watcher.cpp
+    internal/file_wrapper/binary_file_wrapper.cpp
+    internal/file_wrapper/single_sample_file_wrapper.cpp
+    internal/filesystem_wrapper/local_filesystem_wrapper.cpp
 )
 
 # Explicitly set all header files so that IDEs will recognize them as part of the project
 # TODO Add include directory
 set(MODYNSTORAGE_HEADERS
 
-    ../include/Storage.hpp
-    ../include/internal/database/StorageDatabaseConnection.hpp
-    ../include/internal/file_watcher/FileWatchdog.hpp
-    ../include/internal/file_watcher/FileWatcher.hpp
-    ../include/internal/file_wrapper/AbstractFileWrapper.hpp
-    ../include/internal/file_wrapper/BinaryFileWrapper.hpp
-    ../include/internal/file_wrapper/SingleSampleFileWrapper.hpp
-    ../include/internal/filesystem_wrapper/AbstractFileSystemWrapper.hpp
-    ../include/internal/filesystem_wrapper/LocalFileSystemWrapper.hpp
+    ../include/storage.hpp
+    ../include/internal/database/storage_database_connection.hpp
+    ../include/internal/file_watcher/file_watchdog.hpp
+    ../include/internal/file_watcher/file_watcher.hpp
+    ../include/internal/file_wrapper/abstract_file_wrapper.hpp
+    ../include/internal/file_wrapper/binary_file_wrapper.hpp
+    ../include/internal/file_wrapper/single_sample_file_wrapper.hpp
+    ../include/internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp
+    ../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
     ../include/internal/utils/utils.hpp
     )
 

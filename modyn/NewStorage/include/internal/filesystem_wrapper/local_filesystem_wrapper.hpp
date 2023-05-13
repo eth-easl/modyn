@@ -1,7 +1,6 @@
-#ifndef LOCAL_FILESYSTEM_WRAPPER_HPP
-#define LOCAL_FILESYSTEM_WRAPPER_HPP
+#pragma once
 
-#include "AbstractFilesystemWrapper.hpp"
+#include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
 
 namespace storage {
 class LocalFilesystemWrapper : public AbstractFilesystemWrapper {
@@ -21,5 +20,3 @@ public:
   std::string get_name() { return "LOCAL"; }
 };
 } // namespace storage
-
-#endif

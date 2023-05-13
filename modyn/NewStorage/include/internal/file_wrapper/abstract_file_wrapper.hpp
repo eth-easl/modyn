@@ -1,7 +1,6 @@
-#ifndef ABSTRACT_FILE_WRAPPER_HPP
-#define ABSTRACT_FILE_WRAPPER_HPP
+#pragma once
 
-#include "../filesystem_wrapper/AbstractFilesystemWrapper.hpp"
+#include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
 #include <string>
 #include <yaml-cpp/yaml.h>
 
@@ -32,4 +31,3 @@ public:
 };
 } // namespace storage
 
-#endif

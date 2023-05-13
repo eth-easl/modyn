@@ -1,11 +1,10 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#pragma once
 
-#include "../file_wrapper/AbstractFileWrapper.hpp"
-#include "../file_wrapper/BinaryFileWrapper.hpp"
-#include "../file_wrapper/SingleSampleFileWrapper.hpp"
-#include "../filesystem_wrapper/AbstractFilesystemWrapper.hpp"
-#include "../filesystem_wrapper/LocalFilesystemWrapper.hpp"
+#include "internal/file_wrapper/abstract_file_wrapper.hpp"
+#include "internal/file_wrapper/binary_file_wrapper.hpp"
+#include "internal/file_wrapper/single_sample_file_wrapper.hpp"
+#include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
+#include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 #include <filesystem>
 #include <iostream>
 #include <cstdlib>
@@ -62,5 +61,3 @@ public:
   }
 };
 } // namespace storage
-
-#endif
