@@ -73,14 +73,6 @@ macro(get_all_targets_recursive targets dir)
     list(APPEND ${targets} ${current_targets})
 endmacro()
 
-macro(remove_flag_from_target _target _flag)
-    get_target_property(_target_cxx_flags ${_target} COMPILE_OPTIONS)
-    if(_target_cxx_flags)
-        list(REMOVE_ITEM _target_cxx_flags ${_flag})
-        set_target_properties(${_target} PROPERTIES COMPILE_OPTIONS "${_target_cxx_flags}")
-    endif()
-endmacro()
-
 get_all_targets(${soci_SOURCE_DIR} all_soci_targets)
 foreach(_soci_target IN LISTS all_soci_targets)
     target_compile_options(${_soci_target} INTERFACE -Wno-zero-as-null-pointer-constant -Wno-pedantic -Wno-undef)
@@ -97,7 +89,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(yaml-cpp)
 
-target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic)
+target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic -Wno-deprecated-declarations)
 
 ################### grpc ####################
 #message(STATUS "Making grpc available.")

@@ -1,37 +1,38 @@
 set(MODYNSTORAGE_SOURCES
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/storage.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/internal/database/storage_database_connection.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_watcher/file_watchdog.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_watcher/file_watcher.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_wrapper/binary_file_wrapper.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_wrapper/single_sample_file_wrapper.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/internal/filesystem_wrapper/local_filesystem_wrapper.cpp
+    storage.cpp
+    internal/database/storage_database_connection.cpp
+    internal/file_watcher/file_watchdog.cpp
+    internal/file_watcher/file_watcher.cpp
+    internal/file_wrapper/binary_file_wrapper.cpp
+    internal/file_wrapper/single_sample_file_wrapper.cpp
+    internal/filesystem_wrapper/local_filesystem_wrapper.cpp
 )
 
 # Explicitly set all header files so that IDEs will recognize them as part of the project
 # TODO Add include directory
 set(MODYNSTORAGE_HEADERS
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/storage.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/database/storage_database_connection.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_watcher/file_watchdog.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_watcher/file_watcher.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_wrapper/abstract_file_wrapper.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_wrapper/binary_file_wrapper.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_wrapper/single_sample_file_wrapper.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/utils/utils.hpp
+    ../include/storage.hpp
+    ../include/internal/database/storage_database_connection.hpp
+    ../include/internal/file_watcher/file_watchdog.hpp
+    ../include/internal/file_watcher/file_watcher.hpp
+    ../include/internal/file_wrapper/abstract_file_wrapper.hpp
+    ../include/internal/file_wrapper/binary_file_wrapper.hpp
+    ../include/internal/file_wrapper/single_sample_file_wrapper.hpp
+    ../include/internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp
+    ../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
+    ../include/internal/utils/utils.hpp
     )
 
 target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
-target_include_directories(modynstorage PUBLIC ../include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
+target_include_directories(modynstorage PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
 target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
 
 target_link_libraries(modynstorage PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_core_static soci_postgresql_static soci_sqlite3_static)
 
 message(STATUS "Current dir: ${CMAKE_CURRENT_SOURCE_DIR}")
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 target_compile_definitions(modynstorage PRIVATE MODYNSTORAGE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\")
 
