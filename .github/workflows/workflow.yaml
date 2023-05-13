@@ -136,10 +136,10 @@ jobs:
           sudo apt -y install clang-tidy-15
 
       - name: Configure CMake
-        run: bash scripts/clang-tidy.sh build
+        run: bash modyn/NewStorage/scripts/clang-tidy.sh build
 
       - name: Run clang-tidy
-        run: bash scripts/clang-tidy.sh run_tidy
+        run: bash modyn/NewStorage/scripts/clang-tidy.sh run_tidy
 
   cpp_build_and_test:
     name: Build + Test (C++)
@@ -178,7 +178,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
         run: >
-          cmake modyn/NewStorage/${{github.workspace}}
+          cmake ${{github.workspace}}/modyn/NewStorage
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
@@ -240,7 +240,7 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: >
-          cmake ${{github.workspace}} -DCMAKE_BUILD_TYPE=Debug
+          cmake ${{github.workspace}}/modyn/NewStorage -DCMAKE_BUILD_TYPE=Debug
           -DMODYNSTORAGE_BUILD_PLAYGROUND=ON -DMODYNSTORAGE_BUILD_TESTS=ON -DMODYNSTORAGE_TEST_COVERAGE=ON
 
       - name: Build
