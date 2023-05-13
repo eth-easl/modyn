@@ -19,7 +19,7 @@ function run_build() {
 }
 
 function run_tidy() {
-    echo "Running clang-tidy using run-clang-tidy..."
+    echo "Running clang-tidy using run-clang-tidy... Working dir is $PWD"
     set -x
 
     fix=$1
