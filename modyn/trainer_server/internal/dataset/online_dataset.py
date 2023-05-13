@@ -17,6 +17,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disab
     GetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.trainer_server.internal.dataset.local_dataset_handler import LocalDatasetHandler
 from modyn.utils.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
@@ -54,13 +55,16 @@ class OnlineDataset(IterableDataset):
         self._transform: Optional[Callable] = None
         self._storagestub: StorageStub = None
         self._selectorstub: SelectorStub = None
+        self._local_dataset_handler = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
+        self._keys_source = "selector"
 
         logger.debug("Initialized OnlineDataset.")
 
     # pylint: disable=unused-argument
     def _get_keys_from_selector(self, worker_id: int, partition_id: int) -> list[int]:
+        assert self._keys_source == "selector"
         assert self._selectorstub is not None
 
         req = GetSamplesRequest(
@@ -70,6 +74,11 @@ class OnlineDataset(IterableDataset):
         return flatten(
             [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
         )
+
+    def _get_keys_and_weights_from_local(self, worker_id: int, partition_id: int) -> tuple[list[int], list[float]]:
+        assert self._keys_source == "local"
+        assert self._local_dataset_handler is not None
+        return self._local_dataset_handler.get_keys_and_weights(worker_id, partition_id)
 
     def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -138,12 +147,24 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[int], list[bytes], list[int]]:
-        self._info("Getting keys from selector", worker_id)
-        keys = self._get_keys_from_selector(worker_id, partition_id)
+    def switch_to_local_key_source(self) -> None:
+        self._keys_source = "local"
+        self._local_dataset_handler = LocalDatasetHandler(self._pipeline_id)
+
+    def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[int], list[bytes], list[int], list[float]]:
+        assert self._keys_source in ["local", "selector"]
+
+        if self._keys_source == "selector":
+            self._info("Getting keys from selector", worker_id)
+            keys = self._get_keys_from_selector(worker_id, partition_id)
+            weights = [1.0] * len(keys)
+        else:
+            self._info("Getting keys from local", worker_id)
+            keys, weights = self._get_keys_and_weights_from_local(worker_id, partition_id)
+
         self._info("Getting data from storage", worker_id)
         data, labels = self._get_data_from_storage(keys)
-        return keys, data, labels
+        return keys, data, labels, weights
 
     def _get_num_data_partitions(self) -> int:
         assert self._selectorstub is not None
@@ -179,7 +200,7 @@ class OnlineDataset(IterableDataset):
         self._num_partitions = self._get_num_data_partitions()
         self._info(f"Total number of partitions will be {self._num_partitions}", worker_id)
 
-        keys, data, labels = self._get_data(worker_id=worker_id, partition_id=0)
+        keys, data, labels, weights = self._get_data(worker_id=worker_id, partition_id=0)
 
         for partition in range(self._num_partitions):
             num_samples_on_this_partition = len(keys)
@@ -187,20 +208,24 @@ class OnlineDataset(IterableDataset):
             fetch_next_partition_idx = int(num_samples_on_this_partition * 0.8)
             self._info(f"Train on partition {partition}, on {num_samples_on_this_partition} batches", worker_id)
 
-            for idx, (key, sample, label) in enumerate(zip(keys, data, labels)):
+            for idx, (key, sample, label, weight) in enumerate(zip(keys, data, labels, weights)):
                 if partition < self._num_partitions - 1 and idx == fetch_next_partition_idx:
                     # TODO(#175) in case this blocks training
-                    new_keys, new_data, new_labels = self._get_data(worker_id=worker_id, partition_id=partition + 1)
+                    new_keys, new_data, new_labels, new_weights = self._get_data(
+                        worker_id=worker_id, partition_id=partition + 1
+                    )
                 # mypy complains here because _transform has unknown type, which is ok
-                yield key, self._transform(sample), label  # type: ignore
+                yield key, self._transform(sample), label, weight  # type: ignore
 
             # this should mean we keep only two partitions in mem
             if partition < self._num_partitions - 1:
                 del keys
                 del data
                 del labels
-                keys, data, labels = new_keys, new_data, new_labels
+                del weights
+                keys, data, labels, weights = new_keys, new_data, new_labels, new_weights
                 del new_keys
                 del new_data
                 del new_labels
+                del new_weights
                 gc.collect()

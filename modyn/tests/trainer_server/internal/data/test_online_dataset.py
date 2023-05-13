@@ -265,7 +265,7 @@ def test_dataloader_dataset(
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
-        assert len(batch) == 3
+        assert len(batch) == 4
         assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
         assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
@@ -298,7 +298,7 @@ def test_dataloader_dataset_multi_worker(
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
     for batch in dataloader:
-        assert len(batch) == 3
+        assert len(batch) == 4
         assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
@@ -400,7 +400,7 @@ def test_iter_multi_partition(
 
     idx = 0
     for idx, batch in enumerate(dataloader):
-        assert len(batch) == 3
+        assert len(batch) == 4
         assert batch[0] == (str(4 * idx), str(4 * idx + 1), str(4 * idx + 2), str(4 * idx + 3))
         assert torch.equal(batch[1], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
@@ -449,7 +449,7 @@ def test_iter_multi_partition_cross(
 
     idx = 0
     for idx, batch in enumerate(dataloader):
-        assert len(batch) == 3
+        assert len(batch) == 4
         if idx < 10:
             assert batch[0] == (
                 str(6 * idx),
@@ -505,7 +505,7 @@ def test_iter_multi_partition_multi_workers(
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
     idx = 0
     for idx, batch in enumerate(dataloader):
-        assert len(batch) == 3
+        assert len(batch) == 4
         assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
@@ -537,7 +537,7 @@ def test_multi_epoch_dataloader_dataset(
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for _ in range(5):
         for i, batch in enumerate(dataloader):
-            assert len(batch) == 3
+            assert len(batch) == 4
             assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
             assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
             assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))

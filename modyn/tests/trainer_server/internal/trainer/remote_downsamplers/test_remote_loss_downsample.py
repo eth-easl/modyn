@@ -12,14 +12,14 @@ def test_sample_shape():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteLossDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
 
     forward_output = model(data)
-    indexes, weights = sampler.sample(forward_output, target)
+    indexes, weights = sampler.batch_then_sample(forward_output, target)
     sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, ids)
 
     assert sampled_data.shape[0] == downsampled_batch_size
@@ -35,14 +35,14 @@ def test_sample_weights():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteLossDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
 
     forward_output = model(data)
-    _, weights = sampler.sample(forward_output, target)
+    _, weights = sampler.batch_then_sample(forward_output, target)
 
     assert weights.sum() > 0
     assert set(ids) <= set(list(range(8)))
@@ -60,7 +60,7 @@ def test_sample_loss_dependent_sampling():
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteLossDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
     # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
     target = torch.cat([torch.zeros(4), torch.ones(4)])
@@ -71,7 +71,7 @@ def test_sample_loss_dependent_sampling():
     ids = list(range(8))
 
     forward_output = model(data)
-    indexes, _ = sampler.sample(forward_output, target)
+    indexes, _ = sampler.batch_then_sample(forward_output, target)
     _, sampled_target, _ = get_tensors_subset(indexes, data, target, ids)
 
     # Assert that no points with a loss of zero were selected
@@ -105,10 +105,10 @@ def test_sample_dict_input():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": 3, "sample_before_batch": False}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteLossDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_output = mymodel(data)
-    indexes, weights = sampler.sample(forward_output, target)
+    indexes, weights = sampler.batch_then_sample(forward_output, target)
     sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, sample_ids)
 
     # check that the output has the correct shape and type

@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Union
 
+import numpy as np
 import torch
+from modyn.trainer_server.internal.trainer.remote_downsamplers.sample_then_batch_handler import SampleThenBatchHandler
 
 
 def get_tensors_subset(
@@ -19,25 +21,36 @@ def get_tensors_subset(
 
 
 class AbstractRemoteDownsamplingStrategy(ABC):
-    def __init__(self, params_from_selector: dict) -> None:
+    def __init__(self, pipeline_id: int, batch_size: int, params_from_selector: dict) -> None:
         assert "sample_before_batch" in params_from_selector
         self.sample_before_batch = params_from_selector["sample_before_batch"]
+        self.pipeline_id = pipeline_id
+        self.batch_size = batch_size
 
         if self.sample_before_batch:
             assert "downsampled_batch_ratio" in params_from_selector
             self.downsampled_batch_ratio = params_from_selector["downsampled_batch_ratio"]
+            self.sample_then_batch_handler = SampleThenBatchHandler(
+                self.pipeline_id, self.batch_size, self.downsampled_batch_ratio
+            )
         else:
             assert "downsampled_batch_size" in params_from_selector
             self.downsampled_batch_size = params_from_selector["downsampled_batch_size"]
 
         self.replacement = params_from_selector.get("replacement", True)
 
-    def sample(
+    def get_downsampled_batch_ratio(self) -> float:
+        assert self.sample_before_batch
+        return self.downsampled_batch_ratio
+
+    def batch_then_sample(
         self,
         forward_output: torch.Tensor,
         target: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        probabilities = self.get_probabilities(forward_output, target)
+        assert not self.sample_before_batch
+        scores = self.get_scores(forward_output, target)
+        probabilities = scores / scores.sum()
         downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=self.replacement)
 
         # lower probability, higher weight to reducce the variance
@@ -45,6 +58,12 @@ class AbstractRemoteDownsamplingStrategy(ABC):
 
         return downsampled_idxs, weights
 
+    def sample_then_batch_accumulator(self) -> SampleThenBatchHandler:
+        return self.sample_then_batch_handler
+
+    def get_samples_for_file(self, file_index: int) -> np.ndarray:
+        return self.sample_then_batch_handler.get_samples_per_file(file_index)
+
     @abstractmethod
-    def get_probabilities(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    def get_scores(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()

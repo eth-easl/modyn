@@ -14,14 +14,14 @@ def test_sample_shape_ce():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
     forward_outputs = model(data)
 
-    downsampled_indexes, weights = sampler.sample(forward_outputs, target)
+    downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
 
     assert downsampled_indexes.shape[0] == downsampled_batch_size
     assert weights.shape[0] == downsampled_batch_size
@@ -42,7 +42,7 @@ def test_sample_shape_other_losses():
     per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,), dtype=torch.float32).unsqueeze(1)
@@ -50,7 +50,7 @@ def test_sample_shape_other_losses():
 
     forward_outputs = model(data)
 
-    downsampled_indexes, weights = sampler.sample(forward_outputs, target)
+    downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
 
     assert downsampled_indexes.shape[0] == downsampled_batch_size
     assert weights.shape[0] == downsampled_batch_size
@@ -79,15 +79,15 @@ def test_sampling_crossentropy():
     }
 
     # Here we use autograd since the number of classes is not provided
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
     forward_outputs = model(data)
 
-    _, autograd_weights = sampler.sample(forward_outputs, target)
+    _, autograd_weights = sampler.batch_then_sample(forward_outputs, target)
 
     # Here we use the closed form shortcut
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
-    _, closed_form_weights = sampler.sample(forward_outputs, target)
+    _, closed_form_weights = sampler.batch_then_sample(forward_outputs, target)
 
     # We sort them since in this case sampling is just a permutation (we sample every point without replacement
     autograd_weights, _ = torch.sort(autograd_weights)
@@ -122,11 +122,11 @@ def test_sample_dict_input():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampled_batch_size": 3, "sample_before_batch": False}
-    sampler = RemoteGradNormDownsampling(params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_outputs = model(data)
 
-    downsampled_indexes, weights = sampler.sample(forward_outputs, target)
+    downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
 
     assert downsampled_indexes.shape == (3,)
     assert weights.shape == (3,)

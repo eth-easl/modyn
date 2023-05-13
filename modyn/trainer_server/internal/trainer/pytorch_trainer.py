@@ -15,6 +15,7 @@ import torch
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
+from modyn.trainer_server.internal.dataset.local_dataset_handler import LocalDatasetHandler
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
@@ -76,6 +77,7 @@ class PytorchTrainer:
             training_info.selector_address,
             training_info.training_id,
         )
+        self._batch_size = training_info.batch_size
 
         self._mod_dict: dict[str, Any] = {}
         self._label_tranformer_function: Optional[Callable] = None
@@ -234,7 +236,8 @@ class PytorchTrainer:
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)
 
-        return downsampler_class(params_from_selector, per_sample_loss), params_from_selector["sample_before_batch"]
+        downsampler = downsampler_class(self.pipeline_id, self._batch_size, params_from_selector, per_sample_loss)
+        return downsampler, params_from_selector["sample_before_batch"]
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -245,6 +248,9 @@ class PytorchTrainer:
             callback.on_train_begin(self._model.model, self._optimizers)
 
         self._info("Handled OnBegin Callbacks.")
+
+        if self._downsampling_enabled and self._sample_before_batch:
+            self.sample_data()
 
         batch_number = 0
         for _ in range(self.epochs_per_trigger):
@@ -266,26 +272,11 @@ class PytorchTrainer:
                 except queue.Empty:
                     pass
 
-                sample_ids = batch[0]
-                if isinstance(sample_ids, torch.Tensor):
-                    sample_ids = sample_ids.tolist()
-                elif isinstance(sample_ids, tuple):
-                    sample_ids = list(sample_ids)
+                sample_ids, target, data = self.prepare_data(batch)
 
-                assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
-
-                if self._label_tranformer_function is None:
-                    target = batch[2].to(self._device)
-                else:
-                    target = self._label_tranformer_function(batch[2]).to(self._device)
-
-                data: Union[torch.Tensor, dict]
-                if isinstance(batch[1], torch.Tensor):
-                    data = batch[1].to(self._device)
-                elif isinstance(batch[1], dict):
-                    data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
-                    for name, tensor in batch[1].items():
-                        data[name] = tensor.to(self._device)
+                if self._downsampling_enabled and self._sample_before_batch:
+                    weights = batch[3]
+                    weights = weights.float()
 
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
@@ -301,11 +292,12 @@ class PytorchTrainer:
                         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
                         assert self._downsampler is not None
                         big_batch_output = self._model.model(data)
-                        downsampled_indexes, weights = self._downsampler.sample(big_batch_output, target)
+                        downsampled_indexes, weights = self._downsampler.batch_then_sample(big_batch_output, target)
                         data, target, sample_ids = get_tensors_subset(downsampled_indexes, data, target, sample_ids)
                         # TODO(#219) Investigate if we can avoid 2 forward passes
 
                     output = self._model.model(data)
+
                     if self._weighted_opt:
                         # weighted gradient descent
                         assert weights is not None
@@ -349,6 +341,59 @@ class PytorchTrainer:
         self.save_state(final_checkpoint_file_name)
 
         self._info("Training complete!")
+
+    def prepare_data(self, batch: tuple) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
+        sample_ids = batch[0]
+        if isinstance(sample_ids, torch.Tensor):
+            sample_ids = sample_ids.tolist()
+        elif isinstance(sample_ids, tuple):
+            sample_ids = list(sample_ids)
+
+        assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
+
+        if self._label_tranformer_function is None:
+            target = batch[2].to(self._device)
+        else:
+            target = self._label_tranformer_function(batch[2]).to(self._device)
+
+        data: Union[torch.Tensor, dict]
+        if isinstance(batch[1], torch.Tensor):
+            data = batch[1].to(self._device)
+        elif isinstance(batch[1], dict):
+            data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
+            for name, tensor in batch[1].items():
+                data[name] = tensor.to(self._device)
+
+        return sample_ids, target, data
+
+    def sample_data(self) -> None:
+        """
+        Function to score every datapoint in the current dataset and sample a fraction of it
+        Used for downsampling strategies in sample_then_batch mode
+
+        """
+        assert self._downsampler is not None
+        assert self._sample_before_batch
+
+        number_of_batches = 0
+        with self._downsampler.sample_then_batch_accumulator() as stb_handler:
+            for batch_number, batch in enumerate(self._train_dataloader):
+                number_of_batches += 1
+                sample_ids, target, data = self.prepare_data(batch)
+
+                with torch.autocast(self._device_type, enabled=self._amp):
+                    # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
+                    model_output = self._model.model(data)
+                    scores = self._downsampler.get_scores(model_output, target).numpy()
+                    stb_handler.accumulate(sample_ids, scores, batch_number)
+
+        offline_dataset = LocalDatasetHandler(self.pipeline_id, self._batch_size)
+
+        for i in range(number_of_batches):
+            samples_list = self._downsampler.get_samples_for_file(i)
+            offline_dataset.inform_samples(samples_list)
+
+        self._train_dataloader.dataset.switch_to_local_key_source()
 
 
 def train(
