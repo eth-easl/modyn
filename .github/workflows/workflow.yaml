@@ -111,7 +111,7 @@ jobs:
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
 
-  clang-format:
+  format:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     - uses: actions/checkout@v2
@@ -121,7 +121,7 @@ jobs:
         extensions: 'hpp,cpp'
         clangFormatVersion: 14
 
-  clang-tidy:
+  tidy:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     - uses: actions/checkout@v2
@@ -213,7 +213,7 @@ jobs:
           name: coverage-results
           path: ${{github.workspace}}/build/test/coverage
 
-  cpp-coverage-main:
+  cpp_coverage_main:
     name: C++ Test Coverage (main)
     runs-on: ubuntu-latest
     env:
@@ -257,7 +257,7 @@ jobs:
           echo ::set-output name=BRANCH_COVERAGE::"$(cat output.txt | cut -d ' ' -f 10)"
         id: run_main_test_with_coverage
 
-  cpp-comment-on-pr:
+  cpp_comment_on_pr:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
     name: Comment Coverage Results
@@ -292,8 +292,8 @@ jobs:
       - isort
       - black
       - cpp_build_and_test
-      - clang-tidy
-      - clang-format
+      - tidy
+      - format
 
     steps:
     - name: Check out code
