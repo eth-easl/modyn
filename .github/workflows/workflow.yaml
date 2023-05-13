@@ -114,28 +114,32 @@ jobs:
   format:
     timeout-minutes: 20
     runs-on: ubuntu-latest
-    - uses: actions/checkout@v2
-    - uses: DoozyX/clang-format-lint-action@v0.14
-      with:
-        source: 'modyn/NewStorage/src modyn/NewStorage/include modyn/NewStorage/test'
-        extensions: 'hpp,cpp'
-        clangFormatVersion: 14
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: DoozyX/clang-format-lint-action@v0.14
+        with:
+          source: 'modyn/NewStorage/src modyn/NewStorage/include modyn/NewStorage/test'
+          extensions: 'hpp,cpp'
+          clangFormatVersion: 14
 
   tidy:
     timeout-minutes: 20
     runs-on: ubuntu-latest
-    - uses: actions/checkout@v2
 
-    - name: Install clang-tidy
-       run: |
-         sudo apt update
-         sudo apt -y install clang-tidy-15
+    steps:
+      - uses: actions/checkout@v2
 
-    - name: Configure CMake
-      run: bash scripts/clang-tidy.sh build
+      - name: Install clang-tidy
+        run: |
+          sudo apt update
+          sudo apt -y install clang-tidy-15
 
-    - name: Run clang-tidy
-      run: bash scripts/clang-tidy.sh run_tidy
+      - name: Configure CMake
+        run: bash scripts/clang-tidy.sh build
+
+      - name: Run clang-tidy
+        run: bash scripts/clang-tidy.sh run_tidy
 
   cpp_build_and_test:
     name: Build + Test (C++)
