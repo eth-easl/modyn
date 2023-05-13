@@ -6,8 +6,8 @@ defaults:
     shell: bash
 
 env:
-  CLANG_TIDY: clang-tidy-15
-  RUN_CLANG_TIDY: run-clang-tidy-15
+  CLANG_TIDY: clang-tidy-14
+  RUN_CLANG_TIDY: run-clang-tidy-14
 
 jobs:
   flake8:
@@ -133,7 +133,7 @@ jobs:
       - name: Install clang-tidy
         run: |
           sudo apt update
-          sudo apt -y install clang-tidy-15
+          sudo apt -y install clang-tidy-14
           cmake --version
 
       - name: Configure CMake
@@ -157,12 +157,12 @@ jobs:
         compiler:
           - { c: gcc, cxx: g++, version: 11 }
           - { c: clang, cxx: clang++, version: 12 }
-          - { c: clang, cxx: clang++, version: 14 }
-          - { c: clang, cxx: clang++, version: 15, coverage: true }
+          - { c: clang, cxx: clang++, version: 14, coverage: true }
+          #- { c: clang, cxx: clang++, version: 15 }
         include:
-          - compiler: {c: clang, cxx: clang++, version: 15}
+          - compiler: {c: clang, cxx: clang++, version: 14}
             build-type: Tsan
-          - compiler: {c: clang, cxx: clang++, version: 15}
+          - compiler: {c: clang, cxx: clang++, version: 14}
             build-type: Asan
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
@@ -172,17 +172,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install clang 15
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "15.0"
-
       - name: Install ccache
         run: |
           sudo apt update
           sudo apt -y install ccache
-
-
 
       - name: Create Build Environment
 
@@ -219,9 +212,9 @@ jobs:
         if: ${{ matrix.compiler.coverage && matrix.build-type == 'Debug' }}
         working-directory: ${{github.workspace}}/modyn/NewStorage/build/test
         run: |
-          llvm-profdata-15 merge -sparse default.profraw -o tests.profdata
-          llvm-cov-15 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
-          llvm-cov-15 show -instr-profile tests.profdata -object modynstorage-test -format=html -output-dir=coverage -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false
+          llvm-profdata-14 merge -sparse default.profraw -o tests.profdata
+          llvm-cov-14 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
+          llvm-cov-14 show -instr-profile tests.profdata -object modynstorage-test -format=html -output-dir=coverage -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false
           echo ::set-output name=LINE_COVERAGE::"$(cat output.txt | cut -d ' ' -f 7)"
           echo ::set-output name=BRANCH_COVERAGE::"$(cat output.txt | cut -d ' ' -f 10)"
         id: run_test_with_coverage
@@ -237,8 +230,8 @@ jobs:
     name: C++ Test Coverage (main)
     runs-on: ubuntu-latest
     env:
-      CC: clang-15
-      CXX: clang++-15
+      CC: clang-14
+      CXX: clang++-14
     outputs:
       line-coverage: ${{steps.run_main_test_with_coverage.outputs.LINE_COVERAGE}}
       branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
@@ -271,8 +264,8 @@ jobs:
       - name: Create Coverage Report for main branch
         working-directory: ${{github.workspace}}/modyn/NewStorage/build/test
         run: |
-          llvm-profdata-15 merge -sparse default.profraw -o tests.profdata
-          llvm-cov-15 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
+          llvm-profdata-14 merge -sparse default.profraw -o tests.profdata
+          llvm-cov-14 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
           echo ::set-output name=LINE_COVERAGE::"$(cat output.txt | cut -d ' ' -f 7)"
           echo ::set-output name=BRANCH_COVERAGE::"$(cat output.txt | cut -d ' ' -f 10)"
         id: run_main_test_with_coverage
