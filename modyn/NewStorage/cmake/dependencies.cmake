@@ -32,6 +32,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+target_compile_options(googletest INTERFACE -Wno-implicit-int-float-conversion)
+
+
 ################### libpq++ ####################
 find_package(PostgreSQL REQUIRED) # This needs to be installed on the system - cannot do a lightweight CMake install
 
@@ -75,7 +78,7 @@ endmacro()
 
 get_all_targets(${soci_SOURCE_DIR} all_soci_targets)
 foreach(_soci_target IN LISTS all_soci_targets)
-    target_compile_options(${_soci_target} INTERFACE -Wno-zero-as-null-pointer-constant -Wno-pedantic -Wno-undef)
+    target_compile_options(${_soci_target} INTERFACE -Wno-shadow -Wno-zero-as-null-pointer-constant -Wno-pedantic -Wno-undef)
 endforeach()
 
 

@@ -134,8 +134,11 @@ int LocalFilesystemWrapper::get_created_time(std::string path) {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
   struct stat file_info;
-  time_t creation_time = file_info.st_ctime;
-  return creation_time;
+  // TODO(Viktor): something is missing here (some call to get file info)
+  //time_t creation_time = file_info.st_ctime;
+  //return creation_time;
+
+  return 0;
 }
 
 bool LocalFilesystemWrapper::is_valid_path(std::string path) { return path.find("..") == std::string::npos; }
