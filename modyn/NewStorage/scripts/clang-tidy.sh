@@ -32,7 +32,7 @@ function run_tidy() {
 
     ${RUN_CLANG_TIDY} -p "${BUILD_DIR}" \
         -clang-tidy-binary="${CLANG_TIDY}" \
-        -header-filter='(.*modyn/modyn/NewStorage/src/.*)|(.*modyn/modyn/NewStorage/include/.*)|(.*modyn/modyn/NewStorage/test/.*)' \
+        -header-filter='.*src/.*|.*include/.*|.*test/.*' \
         -checks='-bugprone-suspicious-include,-google-global-names-in-headers' \
         -quiet \
         ${additional_args} \
