@@ -2,6 +2,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <filesystem>
 #include <fstream>
 
 #include "soci/postgresql/soci-postgresql.h"
