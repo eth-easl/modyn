@@ -118,7 +118,7 @@ bool StorageDatabaseConnection::add_dataset(std::string name, std::string base_p
     add_sample_dataset_partition(name, session);
 
     delete session;
-  } catch (std::exception e) {
+  } catch (const std::exception e&) {
     SPDLOG_ERROR("Error adding dataset {}: {}", name, e.what());
     return false;
   }

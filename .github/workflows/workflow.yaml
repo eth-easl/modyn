@@ -237,8 +237,8 @@ jobs:
       branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: main
+        #with: TODO(MaxiBoether): add after merge.
+        #  ref: main 
 
       - name: Create Build Environment
         run: |
