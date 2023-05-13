@@ -1,9 +1,11 @@
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
+
+#include <sys/stat.h>
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
-#include <sys/stat.h>
 #include <vector>
 
 #ifdef WIN32
@@ -19,7 +21,7 @@ const char kPathSeparator =
 
 using namespace storage;
 
-std::vector<unsigned char> *LocalFilesystemWrapper::get(std::string path) {
+std::vector<unsigned char>* LocalFilesystemWrapper::get(std::string path) {
   if (not this->is_valid_path(path)) {
     throw std::invalid_argument("Path " + path + " is not valid.");
   }
@@ -31,8 +33,8 @@ std::vector<unsigned char> *LocalFilesystemWrapper::get(std::string path) {
   file.seekg(0, std::ios::end);
   int size = file.tellg();
   file.seekg(0, std::ios::beg);
-  std::vector<unsigned char> *buffer = new std::vector<unsigned char>(size);
-  file.read((char *)buffer->data(), size);
+  std::vector<unsigned char>* buffer = new std::vector<unsigned char>(size);
+  file.read((char*)buffer->data(), size);
   file.close();
   return buffer;
 }
@@ -48,26 +50,23 @@ bool LocalFilesystemWrapper::exists(std::string path) {
   return exists;
 }
 
-std::vector<std::string> *LocalFilesystemWrapper::list(std::string path,
-                                                       bool recursive) {
+std::vector<std::string>* LocalFilesystemWrapper::list(std::string path, bool recursive) {
   if (not this->is_valid_path(path)) {
     throw std::invalid_argument("Path " + path + " is not valid.");
   }
   if (not this->is_directory(path)) {
     throw std::runtime_error("Path " + path + " is a file.");
   }
-  std::vector<std::string> *files = new std::vector<std::string>();
-  std::vector<std::string> *directories = new std::vector<std::string>();
-  std::vector<std::string> *paths = new std::vector<std::string>();
+  std::vector<std::string>* files = new std::vector<std::string>();
+  std::vector<std::string>* directories = new std::vector<std::string>();
+  std::vector<std::string>* paths = new std::vector<std::string>();
   paths->push_back(path);
   while (paths->size() > 0) {
     std::string current_path = paths->back();
     paths->pop_back();
-    std::vector<std::string> *current_files = new std::vector<std::string>();
-    std::vector<std::string> *current_directories =
-        new std::vector<std::string>();
-    for (const auto &entry :
-         std::filesystem::directory_iterator(current_path)) {
+    std::vector<std::string>* current_files = new std::vector<std::string>();
+    std::vector<std::string>* current_directories = new std::vector<std::string>();
+    for (const auto& entry : std::filesystem::directory_iterator(current_path)) {
       std::string entry_path = entry.path();
       if (std::filesystem::is_directory(entry_path)) {
         current_directories->push_back(entry_path);
@@ -76,12 +75,10 @@ std::vector<std::string> *LocalFilesystemWrapper::list(std::string path,
       }
     }
     if (recursive) {
-      paths->insert(paths->end(), current_directories->begin(),
-                    current_directories->end());
+      paths->insert(paths->end(), current_directories->begin(), current_directories->end());
     }
     files->insert(files->end(), current_files->begin(), current_files->end());
-    directories->insert(directories->end(), current_directories->begin(),
-                        current_directories->end());
+    directories->insert(directories->end(), current_directories->begin(), current_directories->end());
     delete current_files;
     delete current_directories;
   }
@@ -142,9 +139,7 @@ int LocalFilesystemWrapper::get_created_time(std::string path) {
   return creation_time;
 }
 
-bool LocalFilesystemWrapper::is_valid_path(std::string path) {
-  return path.find("..") == std::string::npos;
-}
+bool LocalFilesystemWrapper::is_valid_path(std::string path) { return path.find("..") == std::string::npos; }
 
 std::string LocalFilesystemWrapper::join(std::vector<std::string> paths) {
   std::string joined_path = "";

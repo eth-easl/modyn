@@ -57,3 +57,6 @@ report.html
 
 !modyn/NewStorage/lib
 !modyn/NewStorage/lib/googletest
+
+# Unity build files
+cmake-build-debug 

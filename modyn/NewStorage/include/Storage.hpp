@@ -1,15 +1,16 @@
 #pragma once
 
 #include <string>
+
 #include "yaml-cpp/yaml.h"
 
 namespace storage {
 class Storage {
-private:
+ private:
   YAML::Node config;
 
-public:
+ public:
   Storage(std::string config_file);
   void run();
 };
-} // namespace storage
+}  // namespace storage

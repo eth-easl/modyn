@@ -1,12 +1,14 @@
 #include "internal/file_watcher/file_watchdog.hpp"
-#include "test_utils.hpp"
+
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
+
+#include "test_utils.hpp"
 
 using namespace storage;
 
 class FileWatchdogTest : public ::testing::Test {
-protected:
+ protected:
   void SetUp() override {
     TestUtils::create_dummy_yaml();
     YAML::Node config = YAML::LoadFile("config.yaml");
@@ -23,20 +25,18 @@ protected:
 };
 
 TEST_F(FileWatchdogTest, TestConstructor) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
-      std::make_shared<std::atomic<bool>>(false);
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   ASSERT_NO_THROW(FileWatchdog watchdog("config.yaml", stop_file_watcher));
 }
 
 TEST_F(FileWatchdogTest, TestRun) {
   // Collect the output of the watchdog
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
-      std::make_shared<std::atomic<bool>>(false);
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
 
   FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
   std::stringstream ss;
-  std::streambuf *old_cout = std::cout.rdbuf(ss.rdbuf());
+  std::streambuf* old_cout = std::cout.rdbuf(ss.rdbuf());
 
   std::thread th(&FileWatchdog::run, &watchdog);
   std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -52,8 +52,7 @@ TEST_F(FileWatchdogTest, TestRun) {
 }
 
 TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
-      std::make_shared<std::atomic<bool>>(false);
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
@@ -81,16 +80,14 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
 }
 
 TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
-      std::make_shared<std::atomic<bool>>(false);
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection *connection = new StorageDatabaseConnection(config);
+  StorageDatabaseConnection* connection = new StorageDatabaseConnection(config);
 
-  connection->add_dataset(
-      "test_dataset", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-      TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection->add_dataset("test_dataset", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
+                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_process(0);
 
@@ -107,22 +104,19 @@ TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
 }
 
 TEST_F(FileWatchdogTest, Test) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher =
-      std::make_shared<std::atomic<bool>>(false);
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection *connection = new StorageDatabaseConnection(config);
+  StorageDatabaseConnection* connection = new StorageDatabaseConnection(config);
 
-  soci::session *sql = connection->get_session();
+  soci::session* sql = connection->get_session();
 
-  connection->add_dataset(
-      "test_dataset1", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-      TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection->add_dataset("test_dataset1", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
+                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  connection->add_dataset(
-      "test_dataset2", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-      TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection->add_dataset("test_dataset2", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
+                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_processes(connection);
 

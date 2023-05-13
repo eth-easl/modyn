@@ -1,14 +1,14 @@
-#include "storage.hpp"
+#include <spdlog/spdlog.h>
+
 #include <argparse/argparse.hpp>
 #include <filesystem>
 #include <iostream>
-#include <spdlog/spdlog.h>
+
+#include "storage.hpp"
 
 using namespace storage;
 
-void setup_logger() {
-  spdlog::set_pattern("[%Y-%m-%d:%H:%M:%S] [%s:%#] [%l] %v");
-}
+void setup_logger() { spdlog::set_pattern("[%Y-%m-%d:%H:%M:%S] [%s:%#] [%l] %v"); }
 
 argparse::ArgumentParser setup_argparser() {
   argparse::ArgumentParser parser("Modyn Storage");
@@ -18,7 +18,7 @@ argparse::ArgumentParser setup_argparser() {
   return parser;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   /* Entrypoint for the storage service. */
   setup_logger();
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
   try {
     parser.parse_args(argc, argv);
-  } catch (const std::runtime_error &err) {
+  } catch (const std::runtime_error& err) {
     SPDLOG_ERROR("{}", err.what());
     exit(0);
   }

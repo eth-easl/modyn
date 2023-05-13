@@ -1,11 +1,13 @@
 #include "Storage.hpp"
-#include "test_utils.hpp"
+
 #include <gtest/gtest.h>
+
+#include "test_utils.hpp"
 
 using namespace storage;
 
 class StorageTest : public ::testing::Test {
-protected:
+ protected:
   void SetUp() override { TestUtils::create_dummy_yaml(); }
 
   void TearDown() override { TestUtils::delete_dummy_yaml(); }

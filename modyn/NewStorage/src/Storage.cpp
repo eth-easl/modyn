@@ -1,7 +1,9 @@
 #include "storage.hpp"
+
+#include <spdlog/spdlog.h>
+
 #include <filesystem>
 #include <iostream>
-#include <spdlog/spdlog.h>
 
 using namespace storage;
 

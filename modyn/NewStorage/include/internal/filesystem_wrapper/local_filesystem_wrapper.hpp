@@ -4,12 +4,11 @@
 
 namespace storage {
 class LocalFilesystemWrapper : public AbstractFilesystemWrapper {
-public:
-  LocalFilesystemWrapper(std::string base_path)
-      : AbstractFilesystemWrapper(base_path) {}
-  std::vector<unsigned char> *get(std::string path);
+ public:
+  LocalFilesystemWrapper(std::string base_path) : AbstractFilesystemWrapper(base_path) {}
+  std::vector<unsigned char>* get(std::string path);
   bool exists(std::string path);
-  std::vector<std::string> *list(std::string path, bool recursive = false);
+  std::vector<std::string>* list(std::string path, bool recursive = false);
   bool is_directory(std::string path);
   bool is_file(std::string path);
   int get_file_size(std::string path);
@@ -19,4 +18,4 @@ public:
   bool is_valid_path(std::string path);
   std::string get_name() { return "LOCAL"; }
 };
-} // namespace storage
+}  // namespace storage

@@ -136,10 +136,12 @@ jobs:
           sudo apt -y install clang-tidy-15
 
       - name: Configure CMake
-        run: bash modyn/NewStorage/scripts/clang-tidy.sh build
+        run: bash scripts/clang-tidy.sh build
+        working-directory: ${{github.workspace}}/modyn/NewStorage
 
       - name: Run clang-tidy
         run: bash modyn/NewStorage/scripts/clang-tidy.sh run_tidy
+        working-directory: ${{github.workspace}}/modyn/NewStorage
 
   cpp_build_and_test:
     name: Build + Test (C++)
