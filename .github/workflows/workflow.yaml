@@ -265,7 +265,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
     name: Comment Coverage Results
-    needs: [ cpp_build_and_test, cpp-coverage-main ]
+    needs: [ cpp_build_and_test, cpp_coverage_main ]
     steps:
       - name: Calculate changes
         shell: bash
