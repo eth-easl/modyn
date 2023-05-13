@@ -31,6 +31,7 @@ target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
 
 target_link_libraries(modynstorage PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_core_static soci_postgresql_static soci_sqlite3_static)
 
+message(STATUS "Current dir: ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 target_compile_definitions(modynstorage PRIVATE MODYNSTORAGE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\")
 
