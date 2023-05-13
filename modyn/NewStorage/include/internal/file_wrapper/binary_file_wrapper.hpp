@@ -16,16 +16,16 @@ class BinaryFileWrapper : public AbstractFileWrapper {
   int int_from_bytes(unsigned char* begin, unsigned char* end);
 
  public:
-  BinaryFileWrapper(std::string path, YAML::Node file_wrapper_config, AbstractFilesystemWrapper* filesystem_wrapper)
-      : AbstractFileWrapper(path, file_wrapper_config, filesystem_wrapper) {
-    if (!file_wrapper_config["record_size"]) {
+  BinaryFileWrapper(std::string path, YAML::Node fw_config, AbstractFilesystemWrapper* fs_wrapper)
+      : AbstractFileWrapper(path, fw_config, fs_wrapper) {
+    if (!fw_config["record_size"]) {
       throw std::runtime_error("record_size must be specified in the file wrapper config.");
     }
-    this->record_size = file_wrapper_config["record_size"].as<int>();
-    if (!file_wrapper_config["label_size"]) {
+    this->record_size = fw_config["record_size"].as<int>();
+    if (!fw_config["label_size"]) {
       throw std::runtime_error("label_size must be specified in the file wrapper config.");
     }
-    this->label_size = file_wrapper_config["label_size"].as<int>();
+    this->label_size = fw_config["label_size"].as<int>();
     this->sample_size = this->record_size - this->label_size;
 
     if (this->record_size - this->label_size < 1) {
@@ -35,7 +35,7 @@ class BinaryFileWrapper : public AbstractFileWrapper {
     }
 
     this->validate_file_extension();
-    this->file_size = filesystem_wrapper->get_file_size(path);
+    this->file_size = fs_wrapper->get_file_size(path);
 
     if (this->file_size % this->record_size != 0) {
       throw std::runtime_error("File size must be a multiple of the record size.");
@@ -47,7 +47,8 @@ class BinaryFileWrapper : public AbstractFileWrapper {
   std::vector<std::vector<unsigned char>>* get_samples(int start, int end);
   std::vector<unsigned char>* get_sample(int index);
   std::vector<std::vector<unsigned char>>* get_samples_from_indices(std::vector<int>* indices);
-  std::string get_name() { return "BIN"; };
   void validate_file_extension();
+  std::string get_name() { return "BIN"; }
+  ~BinaryFileWrapper() {}
 };
 }  // namespace storage

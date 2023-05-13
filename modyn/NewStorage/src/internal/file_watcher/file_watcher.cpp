@@ -149,13 +149,21 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
     int files_per_thread = file_paths->size() / this->insertion_threads;
     std::vector<std::thread> children;
     for (int i = 0; i < this->insertion_threads; i++) {
+      std::vector<std::string>* file_paths_thread = new std::vector<std::string>();
+      if (i == this->insertion_threads - 1) {
+        file_paths_thread->insert(file_paths_thread->end(), file_paths->begin() + i * files_per_thread,
+                                  file_paths->end());
+      } else {
+        file_paths_thread->insert(file_paths_thread->end(), file_paths->begin() + i * files_per_thread,
+                                  file_paths->begin() + (i + 1) * files_per_thread);
+      }
       std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
       FileWatcher watcher(this->config_file, this->dataset_id, true, stop_file_watcher);
-      std::thread t(&FileWatcher::handle_file_paths, watcher, file_paths, data_file_extension, file_wrapper_type,
-                    filesystem_wrapper, timestamp);
+      children.push_back(std::thread(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
+                                     file_wrapper_type, filesystem_wrapper, timestamp));
     }
 
-    for (int i = 0; i < children.size(); i++) {
+    for (unsigned long i = 0; i < children.size(); i++) {
       children[i].join();
     }
   }
@@ -202,7 +210,7 @@ void FileWatcher::seek() {
               ":dataset_id",
           soci::use(last_timestamp), soci::use(this->dataset_id);
     }
-  } catch (std::exception& e) {
+  } catch (std::exception) {
     SPDLOG_ERROR(
         "Dataset {} was deleted while the file watcher was running. "
         "Stopping file watcher.",

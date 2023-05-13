@@ -18,43 +18,44 @@ const char kPathSeparator =
     '/';
 #endif
 
-void teardown_test_dir() {
-  std::string current_dir = std::filesystem::current_path();
+std::string current_dir = std::filesystem::current_path();
+std::string test_base_dir = current_dir + kPathSeparator + "test_dir";
 
-  std::string test_dir = current_dir + kPathSeparator + "test_dir";
-  std::filesystem::remove_all(test_dir);
-}
+class LocalFilesystemWrapperTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    std::string test_dir = current_dir + kPathSeparator + "test_dir";
+    std::filesystem::create_directory(test_dir);
 
-std::string setup_test_dir() {
-  teardown_test_dir();
-  std::string current_dir = std::filesystem::current_path();
+    std::string test_dir_2 = test_dir + kPathSeparator + "test_dir_2";
+    std::filesystem::create_directory(test_dir_2);
 
-  std::string test_dir = current_dir + kPathSeparator + "test_dir";
-  std::filesystem::create_directory(test_dir);
+    std::string test_file = test_dir + kPathSeparator + "test_file.txt";
+    std::ofstream file(test_file, std::ios::binary);
+    file << "12345678";
+    file.close();
 
-  std::string test_dir_2 = test_dir + kPathSeparator + "test_dir_2";
-  std::filesystem::create_directory(test_dir_2);
+    time_t zero_time = 0;
+    utimbuf ub;
+    ub.modtime = zero_time;
 
-  std::string test_file = test_dir + kPathSeparator + "test_file.txt";
-  std::ofstream file(test_file, std::ios::binary);
-  file << "12345678";
-  file.close();
+    utime(test_file.c_str(), &ub);
 
-  time_t zero_time = 0;
-  utimbuf ub;
-  ub.modtime = zero_time;
+    std::string test_file_2 = test_dir_2 + kPathSeparator + "test_file_2.txt";
+    std::ofstream file_2(test_file_2, std::ios::binary);
+    file_2 << "12345678";
+    file_2.close();
+  }
 
-  utime(test_file.c_str(), &ub);
+  void TearDown() override {
+    std::string current_dir = std::filesystem::current_path();
 
-  std::string test_file_2 = test_dir_2 + kPathSeparator + "test_file_2.txt";
-  std::ofstream file_2(test_file_2, std::ios::binary);
-  file_2 << "12345678";
-  file_2.close();
-  return test_dir;
-}
+    std::string test_dir = current_dir + kPathSeparator + "test_dir";
+    std::filesystem::remove_all(test_dir);
+  }
+};
 
-TEST(LocalFilesystemWrapperTest, TestGet) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestGet) {
   YAML::Node config = TestUtils::get_dummy_config();
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(file_name);
@@ -68,21 +69,17 @@ TEST(LocalFilesystemWrapperTest, TestGet) {
   ASSERT_EQ((*bytes)[5], '6');
   ASSERT_EQ((*bytes)[6], '7');
   ASSERT_EQ((*bytes)[7], '8');
-  teardown_test_dir();
 }
 
-TEST(LocalFilesystemWrapperTest, TestExists) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestExists) {
   YAML::Node config = TestUtils::get_dummy_config();
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(file_name);
   ASSERT_TRUE(filesystem_wrapper.exists(file_name));
-  teardown_test_dir();
   ASSERT_FALSE(filesystem_wrapper.exists(file_name));
 }
 
-TEST(LocalFilesystemWrapperTest, TestList) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestList) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::vector<std::string>* files = filesystem_wrapper.list(test_base_dir);
@@ -91,9 +88,7 @@ TEST(LocalFilesystemWrapperTest, TestList) {
   ASSERT_EQ((*files)[0], file_name);
 }
 
-TEST(LocalFilesystemWrapperTest, TestListRecursive) {
-  std::string test_base_dir = setup_test_dir();
-
+TEST_F(LocalFilesystemWrapperTest, TestListRecursive) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::vector<std::string>* files = filesystem_wrapper.list(test_base_dir, true);
@@ -104,75 +99,61 @@ TEST(LocalFilesystemWrapperTest, TestListRecursive) {
   ASSERT_EQ((*files)[1], file_name_2);
 }
 
-TEST(LocalFilesystemWrapperTest, TestIsDirectory) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestIsDirectory) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   ASSERT_TRUE(filesystem_wrapper.is_directory(test_base_dir));
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   ASSERT_FALSE(filesystem_wrapper.is_directory(file_name));
-  teardown_test_dir();
   ASSERT_FALSE(filesystem_wrapper.is_directory(test_base_dir));
 }
 
-TEST(LocalFilesystemWrapperTest, TestIsFile) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestIsFile) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   ASSERT_FALSE(filesystem_wrapper.is_file(test_base_dir));
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   ASSERT_TRUE(filesystem_wrapper.is_file(file_name));
-  teardown_test_dir();
   ASSERT_FALSE(filesystem_wrapper.is_file(test_base_dir));
 }
 
-TEST(LocalFilesystemWrapperTest, TestGetFileSize) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestGetFileSize) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   ASSERT_EQ(filesystem_wrapper.get_file_size(file_name), 8);
-  teardown_test_dir();
 }
 
-TEST(LocalFilesystemWrapperTest, TestGetModifiedTime) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestGetModifiedTime) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   ASSERT_EQ(filesystem_wrapper.get_modified_time(file_name), 0);
-  teardown_test_dir();
+
 }
 
-TEST(LocalFilesystemWrapperTest, TestGetCreatedTime) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestGetCreatedTime) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   struct stat file_info;
-  int result = stat(file_name.c_str(), &file_info);
   time_t creation_time = file_info.st_ctime;
   ASSERT_EQ(filesystem_wrapper.get_created_time(file_name), creation_time);
-  teardown_test_dir();
 }
 
-TEST(LocalFilesystemWrapperTest, TestJoin) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestJoin) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::string file_name = "test_file.txt";
   std::vector<std::string> paths = {test_base_dir, file_name};
   ASSERT_EQ(filesystem_wrapper.join(paths), test_base_dir + kPathSeparator + "" + file_name);
-  teardown_test_dir();
 }
 
-TEST(LocalFilesystemWrapperTest, TestIsValidPath) {
-  std::string test_base_dir = setup_test_dir();
+TEST_F(LocalFilesystemWrapperTest, TestIsValidPath) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   ASSERT_TRUE(filesystem_wrapper.is_valid_path(test_base_dir));
   ASSERT_TRUE(filesystem_wrapper.is_valid_path(file_name));
   ASSERT_FALSE(filesystem_wrapper.is_valid_path(test_base_dir + kPathSeparator + ".." + kPathSeparator));
-  teardown_test_dir();
 }

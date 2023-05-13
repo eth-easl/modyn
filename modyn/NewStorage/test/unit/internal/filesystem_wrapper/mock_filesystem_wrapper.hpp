@@ -10,7 +10,7 @@
 namespace storage {
 class MockFilesystemWrapper : public storage::AbstractFilesystemWrapper {
  public:
-  MockFilesystemWrapper() : AbstractFilesystemWrapper(""){};
+  MockFilesystemWrapper() : AbstractFilesystemWrapper(""){}
   MOCK_METHOD(std::vector<unsigned char>*, get, (std::string path), (override));
   MOCK_METHOD(bool, exists, (std::string path), (override));
   MOCK_METHOD(std::vector<std::string>*, list, (std::string path, bool recursive), (override));
@@ -22,5 +22,6 @@ class MockFilesystemWrapper : public storage::AbstractFilesystemWrapper {
   MOCK_METHOD(std::string, join, (std::vector<std::string> paths), (override));
   MOCK_METHOD(bool, is_valid_path, (std::string path), (override));
   MOCK_METHOD(std::string, get_name, (), (override));
+  ~MockFilesystemWrapper() {}
 };
 }  // namespace storage

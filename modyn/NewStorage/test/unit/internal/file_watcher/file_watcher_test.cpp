@@ -80,8 +80,6 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   YAML::Node config = YAML::LoadFile("config.yaml");
   StorageDatabaseConnection connection(config);
 
-  soci::session* sql = connection.get_session();
-
   connection.add_dataset("test_dataset", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
@@ -126,7 +124,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   files->push_back("test.txt");
   MockFilesystemWrapper filesystem_wrapper;
 
-  EXPECT_CALL(filesystem_wrapper, list(testing::_)).WillOnce(files);
+  EXPECT_CALL(filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
 
   ASSERT_NO_THROW(watcher.update_files_in_directory(&filesystem_wrapper, "tmp", 0));
 }

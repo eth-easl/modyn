@@ -134,7 +134,6 @@ int LocalFilesystemWrapper::get_created_time(std::string path) {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
   struct stat file_info;
-  int result = stat(path.c_str(), &file_info);
   time_t creation_time = file_info.st_ctime;
   return creation_time;
 }
@@ -143,7 +142,7 @@ bool LocalFilesystemWrapper::is_valid_path(std::string path) { return path.find(
 
 std::string LocalFilesystemWrapper::join(std::vector<std::string> paths) {
   std::string joined_path = "";
-  for (int i = 0; i < paths.size(); i++) {
+  for (unsigned long i = 0; i < paths.size(); i++) {
     joined_path += paths[i];
     if (i < paths.size() - 1) {
       joined_path += kPathSeparator;

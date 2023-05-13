@@ -9,7 +9,7 @@ class AbstractFilesystemWrapper {
   std::string base_path;
 
  public:
-  AbstractFilesystemWrapper(std::string base_path) { this->base_path = base_path; }
+  AbstractFilesystemWrapper(std::string path) { this->base_path = path; }
   virtual std::vector<unsigned char>* get(std::string path) = 0;
   virtual bool exists(std::string path) = 0;
   virtual std::vector<std::string>* list(std::string path, bool recursive = false) = 0;
@@ -21,5 +21,6 @@ class AbstractFilesystemWrapper {
   virtual std::string join(std::vector<std::string> paths) = 0;
   virtual bool is_valid_path(std::string path) = 0;
   virtual std::string get_name() = 0;
+  virtual ~AbstractFilesystemWrapper() = 0;
 };
 }  // namespace storage

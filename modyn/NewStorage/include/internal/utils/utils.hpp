@@ -35,7 +35,7 @@ class Utils {
   }
   static std::string join_string_list(std::vector<std::string> list, std::string delimiter) {
     std::string result = "";
-    for (int i = 0; i < list.size(); i++) {
+    for (unsigned long i = 0; i < list.size(); i++) {
       result += list[i];
       if (i < list.size() - 1) {
         result += delimiter;

@@ -21,5 +21,6 @@ class MockFileWrapper : public AbstractFileWrapper {
               (override));
   MOCK_METHOD(std::string, get_name, (), (override));
   MOCK_METHOD(void, validate_file_extension, (), (override));
+  ~MockFileWrapper() {}
 }
 }  // namespace storage
