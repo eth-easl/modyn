@@ -387,12 +387,13 @@ class PytorchTrainer:
                     scores = self._downsampler.get_scores(model_output, target).numpy()
                     stb_handler.accumulate(sample_ids, scores, batch_number)
 
-        offline_dataset = LocalDatasetHandler(self.pipeline_id, self._batch_size)
+        local_dataset = LocalDatasetHandler(self.pipeline_id, self._batch_size)
 
         for i in range(number_of_batches):
             samples_list = self._downsampler.get_samples_for_file(i)
-            offline_dataset.inform_samples(samples_list)
+            local_dataset.inform_samples(samples_list)
 
+        local_dataset.store_last_samples()
         self._train_dataloader.dataset.switch_to_local_key_source()
 
 

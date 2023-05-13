@@ -3,13 +3,23 @@ from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStor
 
 
 class LocalDatasetHandler(TriggerSampleStorage):
+    """
+    Class that wraps TriggerSampleStorage to use it as a local storage for samples.
+    This class is used to:
+        - store (sample_id, score) for each selected sample in the dataset
+        - retrieve these samples to train on
+    """
+
     def __init__(self, pipeline_id: int, number_of_samples_per_file: int = -1) -> None:
         super().__init__(".tmp_offline_dataset")
+        # files are numbered from 0. Each file has a size of number_of_samples_per_file
         self.current_file_index = 0
         self.current_sample_index = 0
-        self.file_size = number_of_samples_per_file
+        self.file_size = number_of_samples_per_file  # -1 if we just use the class to read
         self.pipeline_id = pipeline_id
         if self.file_size > 0:
+            # tuples are progressively accumulated in this ndarray and then dumped to file when the
+            # desired file size is reached
             self.output_samples_list = np.empty(self.file_size, dtype=np.dtype("i8,f8"))
 
     def inform_samples(self, input_samples_list: np.ndarray) -> None:
@@ -21,6 +31,11 @@ class LocalDatasetHandler(TriggerSampleStorage):
 
             if self.current_sample_index == self.file_size:
                 self.samples_ready()
+
+    def store_last_samples(self) -> None:
+        if self.current_sample_index > 0:
+            self.output_samples_list = self.output_samples_list[: self.current_sample_index]  # remove empty elements
+            self.samples_ready()
 
     def samples_ready(self) -> None:
         assert self.file_size > 0
