@@ -40,7 +40,7 @@ add_library(modynstorage-test-objs OBJECT ${MODYNSTORAGE_TEST_SOURCES})
 target_link_libraries(modynstorage-test-objs PRIVATE modynstorage-test-utils-objs)
 
 add_executable(modynstorage-test newstorage_test.cpp)
-target_link_libraries(modynstorage-test PRIVATE modynstorage-test-objs modynstorage-test-utils-objs soci_core_static soci_postgresql_static soci_sqlite3_static)
+target_link_libraries(modynstorage-test PRIVATE modynstorage-test-objs modynstorage-test-utils-objs)
 add_test(modynstorage-test modynstorage-test)
 
 ##################################################################
