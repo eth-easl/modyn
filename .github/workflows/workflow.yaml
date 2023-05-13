@@ -138,7 +138,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/modyn/NewStorage
-        run: ls -lisah && bash scripts/clang-tidy.sh build
+        run: ls -lisah && ls -lisah include && bash scripts/clang-tidy.sh build
 
       - name: Run clang-tidy
         working-directory: ${{github.workspace}}/modyn/NewStorage
