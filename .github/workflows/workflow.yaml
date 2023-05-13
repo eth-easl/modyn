@@ -5,9 +5,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  CLANG_TIDY: clang-tidy-14
-  RUN_CLANG_TIDY: run-clang-tidy-14
 
 jobs:
   flake8:
@@ -126,6 +123,9 @@ jobs:
   tidy:
     timeout-minutes: 20
     runs-on: ubuntu-latest
+    env:
+      CLANG_TIDY: clang-tidy-15
+      RUN_CLANG_TIDY: run-clang-tidy-15
 
     steps:
       - uses: actions/checkout@v2
@@ -133,7 +133,7 @@ jobs:
       - name: Install clang-tidy
         run: |
           sudo apt update
-          sudo apt -y install clang-tidy-14
+          sudo apt -y install clang-tidy-15
           cmake --version
 
       - name: Configure CMake
