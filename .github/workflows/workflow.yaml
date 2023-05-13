@@ -172,6 +172,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install clang-tidy
+        run: |
+          sudo apt update
+          sudo apt -y install ccache
+
       - name: Create Build Environment
 
         run: cmake -E make_directory ${{github.workspace}}/modyn/NewStorage/build
