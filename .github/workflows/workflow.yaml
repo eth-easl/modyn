@@ -167,7 +167,7 @@ jobs:
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
       CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
-      CCACHE_BASEDIR: ${{github.workspace}}
+      CCACHE_BASEDIR: ${{github.workspace}}/modyn/NewStorage
 
     steps:
       - uses: actions/checkout@v2
