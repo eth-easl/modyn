@@ -1,28 +1,28 @@
 set(MODYNSTORAGE_SOURCES
 
-    Storage.cpp
-    internal/database/storage_database_connection.cpp
-    internal/file_watcher/file_watchdog.cpp
-    internal/file_watcher/file_watcher.cpp
-    internal/file_wrapper/binary_file_wrapper.cpp
-    internal/file_wrapper/single_sample_file_wrapper.cpp
-    internal/filesystem_wrapper/local_filesystem_wrapper.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/storage.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/internal/database/storage_database_connection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_watcher/file_watchdog.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_watcher/file_watcher.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_wrapper/binary_file_wrapper.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/internal/file_wrapper/single_sample_file_wrapper.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/internal/filesystem_wrapper/local_filesystem_wrapper.cpp
 )
 
 # Explicitly set all header files so that IDEs will recognize them as part of the project
 # TODO Add include directory
 set(MODYNSTORAGE_HEADERS
 
-    ../include/storage.hpp
-    ../include/internal/database/storage_database_connection.hpp
-    ../include/internal/file_watcher/file_watchdog.hpp
-    ../include/internal/file_watcher/file_watcher.hpp
-    ../include/internal/file_wrapper/abstract_file_wrapper.hpp
-    ../include/internal/file_wrapper/binary_file_wrapper.hpp
-    ../include/internal/file_wrapper/single_sample_file_wrapper.hpp
-    ../include/internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp
-    ../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
-    ../include/internal/utils/utils.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/storage.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/database/storage_database_connection.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_watcher/file_watchdog.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_watcher/file_watcher.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_wrapper/abstract_file_wrapper.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_wrapper/binary_file_wrapper.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/file_wrapper/single_sample_file_wrapper.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/internal/utils/utils.hpp
     )
 
 target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
