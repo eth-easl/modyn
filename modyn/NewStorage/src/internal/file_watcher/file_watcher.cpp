@@ -210,7 +210,7 @@ void FileWatcher::seek() {
               ":dataset_id",
           soci::use(last_timestamp), soci::use(this->dataset_id);
     }
-  } catch (std::exception) {
+  } catch (const std::exception&) {
     SPDLOG_ERROR(
         "Dataset {} was deleted while the file watcher was running. "
         "Stopping file watcher.",
