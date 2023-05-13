@@ -27,6 +27,6 @@ class AbstractFileWrapper {
   virtual std::vector<std::vector<unsigned char>>* get_samples_from_indices(std::vector<int>* indices) = 0;
   virtual std::string get_name() = 0;
   virtual void validate_file_extension() = 0;
-  virtual ~AbstractFileWrapper() = 0;
+  virtual ~AbstractFileWrapper() {}
 };
 }  // namespace storage

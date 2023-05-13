@@ -1,5 +1,4 @@
 set(MODYNSTORAGE_SOURCES
-
     storage.cpp
     internal/database/storage_database_connection.cpp
     internal/file_watcher/file_watchdog.cpp
@@ -12,7 +11,6 @@ set(MODYNSTORAGE_SOURCES
 # Explicitly set all header files so that IDEs will recognize them as part of the project
 # TODO Add include directory
 set(MODYNSTORAGE_HEADERS
-
     ../include/storage.hpp
     ../include/internal/database/storage_database_connection.hpp
     ../include/internal/file_watcher/file_watchdog.hpp

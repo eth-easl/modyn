@@ -21,6 +21,6 @@ class AbstractFilesystemWrapper {
   virtual std::string join(std::vector<std::string> paths) = 0;
   virtual bool is_valid_path(std::string path) = 0;
   virtual std::string get_name() = 0;
-  virtual ~AbstractFilesystemWrapper() = 0;
+  virtual ~AbstractFilesystemWrapper() {}
 };
 }  // namespace storage
