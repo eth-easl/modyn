@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS files (
+R"(CREATE TABLE IF NOT EXISTS files (
     file_id BIGINT NOT NULL AUTOINCREMENT,
     dataset_id INTEGER NOT NULL,
     path VARCHAR(120) NOT NULL,
@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS files (
     PRIMARY KEY (file_id),
     INDEX (dataset_id),
     INDEX (updated_at)
-);
+);)"

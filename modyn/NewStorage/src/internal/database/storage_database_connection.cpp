@@ -29,45 +29,35 @@ soci::session* StorageDatabaseConnection::get_session() {
 void StorageDatabaseConnection::create_tables() {
   soci::session* session = this->get_session();
 
-  std::string input_file_path = std::filesystem::path(__FILE__).parent_path() / "sql/Dataset.sql";
-  std::ifstream dataset_input_file(input_file_path);
-  if (dataset_input_file.is_open()) {
-    std::string content((std::istreambuf_iterator<char>(dataset_input_file)), std::istreambuf_iterator<char>());
-    dataset_input_file.close();
-    *session << content;
-  } else {
-    SPDLOG_ERROR("Unable to open Dataset.sql file");
-  }
+  const char *dataset_table_sql = 
+  #include "sql/Dataset.sql"
+  ;
 
-  std::string file_input_file_path;
-  std::string sample_input_file_path;
+  *session << dataset_table_sql;
+
+  const char *file_table_sql;
+  const char *sample_table_sql;
   if (this->drivername == "postgresql") {
-    sample_input_file_path = std::filesystem::path(__FILE__).parent_path() / "sql/Sample.sql";
-    file_input_file_path = std::filesystem::path(__FILE__).parent_path() / "sql/File.sql";
+    file_table_sql = 
+    #include "sql/File.sql"
+    ;
+    sample_table_sql = 
+    #include "sql/Sample.sql"
+    ;
   } else if (this->drivername == "sqlite3") {
-    sample_input_file_path = std::filesystem::path(__FILE__).parent_path() / "sql/SQLiteSample.sql";
-    file_input_file_path = std::filesystem::path(__FILE__).parent_path() / "sql/SQLiteFile.sql";
+    file_table_sql = 
+    #include "sql/SQLiteFile.sql"
+    ;
+    sample_table_sql = 
+    #include "sql/SQLiteSample.sql"
+    ;
   } else {
     throw std::runtime_error("Unsupported database driver: " + this->drivername);
   }
 
-  std::ifstream file_input_file(file_input_file_path);
-  if (file_input_file.is_open()) {
-    std::string content((std::istreambuf_iterator<char>(file_input_file)), std::istreambuf_iterator<char>());
-    file_input_file.close();
-    *session << content;
-  } else {
-    SPDLOG_ERROR("Unable to open File.sql file");
-  }
+  *session << file_table_sql;
 
-  std::ifstream sample_input_file(sample_input_file_path);
-  if (sample_input_file.is_open()) {
-    std::string content((std::istreambuf_iterator<char>(sample_input_file)), std::istreambuf_iterator<char>());
-    sample_input_file.close();
-    *session << content;
-  } else {
-    SPDLOG_ERROR("Unable to open Sample.sql file");
-  }
+  *session << sample_table_sql;
 
   delete session;
 }

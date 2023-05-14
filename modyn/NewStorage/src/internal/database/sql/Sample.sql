@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS samples (
+R"(CREATE TABLE IF NOT EXISTS samples (
     sample_id BIGINT NOT NULL AUTOINCREMENT,
     dataset_id INTEGER NOT NULL,
     file_id INTEGER,
@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS samples (
     label BIGINT,
     PRIMARY KEY (sample_id, dataset_id),
     PARTITION BY LIST (dataset_id)
-);
+);)"

@@ -40,7 +40,8 @@ class FileWatcher {
   }
   void run();
   void handle_file_paths(std::vector<std::string>* file_paths, std::string data_file_extension,
-                         std::string file_wrapper_type, AbstractFilesystemWrapper* filesystem_wrapper, int timestamp);
+                         std::string file_wrapper_type, AbstractFilesystemWrapper* filesystem_wrapper, int timestamp,
+                         YAML::Node file_wrapper_config);
   void update_files_in_directory(AbstractFilesystemWrapper* filesystem_wrapper, std::string directory_path,
                                  int timestamp);
   void seek_dataset();

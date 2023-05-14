@@ -1,12 +1,16 @@
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#ifndef WIN32
+#include <unistd.h>
+#endif
 
 #ifdef WIN32
 #define stat _stat
@@ -123,7 +127,13 @@ int LocalFilesystemWrapper::get_modified_time(std::string path) {
   if (not this->exists(path)) {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
-  return std::filesystem::last_write_time(path).time_since_epoch().count();
+  struct stat result;
+  if (stat(path.c_str(), &result) == 0) {
+    auto mod_time = result.st_mtime;
+    return mod_time;
+  } else {
+    throw std::runtime_error("Path " + path + " does not exist.");
+  }
 }
 
 int LocalFilesystemWrapper::get_created_time(std::string path) {
@@ -133,10 +143,6 @@ int LocalFilesystemWrapper::get_created_time(std::string path) {
   if (not this->exists(path)) {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
-  // struct stat file_info;
-  //  TODO(Viktor): something is missing here (some call to get file info)
-  // time_t creation_time = file_info.st_ctime;
-  // return creation_time;
 
   return 0;
 }

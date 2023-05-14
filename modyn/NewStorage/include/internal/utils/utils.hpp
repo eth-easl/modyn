@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <spdlog/spdlog.h>
 
 #include "internal/file_wrapper/abstract_file_wrapper.hpp"
 #include "internal/file_wrapper/binary_file_wrapper.hpp"
@@ -17,10 +18,11 @@ namespace storage {
 class Utils {
  public:
   static AbstractFilesystemWrapper* get_filesystem_wrapper(std::string path, std::string type) {
+    SPDLOG_INFO("Creating filesystem wrapper of type {} for path {}", type, path);
     if (type == "LOCAL") {
       return new LocalFilesystemWrapper(path);
     } else {
-      throw std::runtime_error("Unknown filesystem wrapper type");
+      throw std::runtime_error("Unknown filesystem wrapper type: " + type);
     }
   }
   static AbstractFileWrapper* get_file_wrapper(std::string path, std::string type, YAML::Node file_wrapper_config,
@@ -30,7 +32,7 @@ class Utils {
     } else if (type == "SINGLE_SAMPLE") {
       return new SingleSampleFileWrapper(path, file_wrapper_config, filesystem_wrapper);
     } else {
-      throw std::runtime_error("Unknown file wrapper type");
+      throw std::runtime_error("Unknown file wrapper type: " + type);
     }
   }
   static std::string join_string_list(std::vector<std::string> list, std::string delimiter) {

@@ -39,6 +39,9 @@ YAML::Node TestUtils::get_dummy_file_wrapper_config() {
 }
 
 std::string TestUtils::get_dummy_file_wrapper_config_inline() {
-  std::string test_config = "file_extension: .txt\nlabel_file_extension: .lbl";
+  const std::string test_config = R"(
+file_extension: ".txt"
+label_file_extension: ".lbl"
+)";
   return test_config;
 }
