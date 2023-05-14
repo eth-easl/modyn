@@ -74,9 +74,10 @@ TEST_F(LocalFilesystemWrapperTest, TestGet) {
 TEST_F(LocalFilesystemWrapperTest, TestExists) {
   YAML::Node config = TestUtils::get_dummy_config();
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
+  std::string file_name_2 = test_base_dir + kPathSeparator + "test_file_2.txt";
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(file_name);
   ASSERT_TRUE(filesystem_wrapper.exists(file_name));
-  ASSERT_FALSE(filesystem_wrapper.exists(file_name));
+  ASSERT_FALSE(filesystem_wrapper.exists(file_name_2));
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestList) {
@@ -105,7 +106,7 @@ TEST_F(LocalFilesystemWrapperTest, TestIsDirectory) {
   ASSERT_TRUE(filesystem_wrapper.is_directory(test_base_dir));
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
   ASSERT_FALSE(filesystem_wrapper.is_directory(file_name));
-  ASSERT_FALSE(filesystem_wrapper.is_directory(test_base_dir));
+  ASSERT_TRUE(filesystem_wrapper.is_directory(test_base_dir));
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestIsFile) {
@@ -135,8 +136,12 @@ TEST_F(LocalFilesystemWrapperTest, TestGetCreatedTime) {
   YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
   std::string file_name = test_base_dir + kPathSeparator + "test_file.txt";
-  struct stat file_info;
-  time_t creation_time = file_info.st_ctime;
+  int creation_time;
+  struct stat result;
+  if (stat(file_name.c_str(), &result) == 0) {
+    auto mod_time = result.st_mtime;
+    creation_time = mod_time;
+  }
   ASSERT_EQ(filesystem_wrapper.get_created_time(file_name), creation_time);
 }
 

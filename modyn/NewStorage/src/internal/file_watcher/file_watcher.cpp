@@ -159,7 +159,7 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
                                   file_paths->begin() + (i + 1) * files_per_thread);
       }
       std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-      FileWatcher watcher(this->config_file, this->dataset_id, true, stop_file_watcher);
+      FileWatcher watcher(this->config_file, this->dataset_id, stop_file_watcher);
       children.push_back(std::thread(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
                                      file_wrapper_type, filesystem_wrapper, timestamp, file_wrapper_config_node));
     }

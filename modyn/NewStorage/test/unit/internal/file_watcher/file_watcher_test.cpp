@@ -37,12 +37,12 @@ class FileWatcherTest : public ::testing::Test {
 
 TEST_F(FileWatcherTest, TestConstructor) {
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  ASSERT_NO_THROW(FileWatcher watcher("config.yaml", 1, true, stop_file_watcher));
+  ASSERT_NO_THROW(FileWatcher watcher("config.yaml", 1, stop_file_watcher));
 }
 
 TEST_F(FileWatcherTest, TestSeek) {
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher("config.yaml", 1, true, stop_file_watcher);
+  FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
   StorageDatabaseConnection connection(config);
@@ -85,7 +85,7 @@ TEST_F(FileWatcherTest, TestSeek) {
 
 TEST_F(FileWatcherTest, TestSeekDataset) {
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher("config.yaml", 1, true, stop_file_watcher);
+  FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
   StorageDatabaseConnection connection(config);
@@ -119,7 +119,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
 
 TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher("config.yaml", 1, true, stop_file_watcher);
+  FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(1000));
@@ -145,7 +145,7 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
 
 TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher("config.yaml", 1, true, stop_file_watcher);
+  FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
   StorageDatabaseConnection connection(config);
@@ -169,7 +169,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
 
 TEST_F(FileWatcherTest, TestFallbackInsertion) {
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher("config.yaml", 1, true, stop_file_watcher);
+  FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
   StorageDatabaseConnection connection(config);
@@ -200,7 +200,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
 
 TEST_F(FileWatcherTest, TestHandleFilePaths) {
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher("config.yaml", 1, true, stop_file_watcher);
+  FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   std::vector<std::string>* file_paths = new std::vector<std::string>();
   file_paths->push_back("test.txt");

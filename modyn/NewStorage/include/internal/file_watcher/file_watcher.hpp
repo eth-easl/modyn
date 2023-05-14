@@ -18,20 +18,18 @@ class FileWatcher {
   std::string config_file;
   long long dataset_id;
   int insertion_threads;
-  bool is_test;
   bool disable_multithreading;
   int sample_dbinsertion_batchsize = 1000000;
   StorageDatabaseConnection* storage_database_connection;
   std::shared_ptr<std::atomic<bool>> stop_file_watcher;
 
  public:
-  FileWatcher(std::string config_file, long long dataset_id, bool is_test,
+  FileWatcher(std::string config_file, long long dataset_id,
               std::shared_ptr<std::atomic<bool>> stop_file_watcher) {
     this->config = YAML::LoadFile(config_file);
     this->config_file = config_file;
     this->dataset_id = dataset_id;
     this->insertion_threads = config["storage"]["insertion_threads"].as<int>();
-    this->is_test = is_test;
     this->disable_multithreading = insertion_threads <= 1;
     this->stop_file_watcher = stop_file_watcher;
     if (config["storage"]["sample_dbinsertion_batchsize"]) {

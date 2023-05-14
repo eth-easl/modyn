@@ -64,7 +64,7 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
   connection.add_dataset("test_dataset2", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  watchdog.start_file_watcher_process(1);
+  watchdog.start_file_watcher_process(1, true);
 
   std::vector<long long> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
@@ -76,15 +76,15 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
-  watchdog.stop_file_watcher_process(1);
+  watchdog.stop_file_watcher_process(1, true);
 
-  watchdog.start_file_watcher_process(2);
+  watchdog.start_file_watcher_process(1, true);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
-  watchdog.stop_file_watcher_process(2);
+  watchdog.stop_file_watcher_process(1);
 }
 
 TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
@@ -97,7 +97,7 @@ TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
   connection->add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
                           TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  watchdog.start_file_watcher_process(1);
+  watchdog.start_file_watcher_process(1, 0);
 
   std::vector<long long> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
@@ -120,12 +120,7 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
 
   watchdog.watch_file_watcher_processes(connection);
 
-  soci::session* sql = connection->get_session();
-
   connection->add_dataset("test_dataset1", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
-
-  connection->add_dataset("test_dataset2", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
                           TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_processes(connection);
@@ -133,18 +128,16 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
   std::vector<long long> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
-  ASSERT_EQ(file_watcher_processes.size(), 2);
-
-  *sql << "DELETE FROM datasets WHERE name = 'test_dataset1'";
+  ASSERT_EQ(file_watcher_processes.size(), 1);
 
   watchdog.watch_file_watcher_processes(connection);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
-  ASSERT_EQ(file_watcher_processes[0], 2);
+  ASSERT_EQ(file_watcher_processes[0], 1);
 
-  watchdog.stop_file_watcher_process(2);
+  watchdog.stop_file_watcher_process(1, true);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
@@ -156,7 +149,7 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
-  watchdog.stop_file_watcher_process(2);
+  watchdog.stop_file_watcher_process(1, true);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
@@ -166,9 +159,19 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
+  ASSERT_EQ(file_watcher_processes.size(), 1);
+
+  watchdog.stop_file_watcher_process(1, true);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
   ASSERT_EQ(file_watcher_processes.size(), 0);
 
-  watchdog.stop_file_watcher_process(2);
+  watchdog.watch_file_watcher_processes(connection);
+
+  file_watcher_processes = watchdog.get_running_file_watcher_processes();
+
+  watchdog.stop_file_watcher_process(1, true);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 

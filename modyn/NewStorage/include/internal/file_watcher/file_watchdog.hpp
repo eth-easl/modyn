@@ -30,8 +30,8 @@ class FileWatchdog {
     this->stop_file_watchdog = stop_file_watchdog;
   }
   void watch_file_watcher_processes(StorageDatabaseConnection* storage_database_connection);
-  void start_file_watcher_process(long long dataset_id);
-  void stop_file_watcher_process(long long dataset_id);
+  void start_file_watcher_process(long long dataset_id, int retries);
+  void stop_file_watcher_process(long long dataset_id, bool is_test = false);
   void run();
   std::vector<long long> get_running_file_watcher_processes();
 };

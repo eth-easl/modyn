@@ -143,8 +143,13 @@ int LocalFilesystemWrapper::get_created_time(std::string path) {
   if (not this->exists(path)) {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
-
-  return 0;
+  struct stat result;
+  if (stat(path.c_str(), &result) == 0) {
+    auto mod_time = result.st_mtime;
+    return mod_time;
+  } else {
+    throw std::runtime_error("Path " + path + " does not exist.");
+  }
 }
 
 bool LocalFilesystemWrapper::is_valid_path(std::string path) { return path.find("..") == std::string::npos; }
