@@ -223,15 +223,17 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
 
   ASSERT_NO_THROW(
       watcher.handle_file_paths(file_paths, ".txt", "SINGLE_SAMPLE", &filesystem_wrapper, 0, file_wrapper_config_node));
-  
+
   // Check if the samples are added to the database
   int file_id;
   int label;
-  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(file_id), soci::into(label);
+  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(file_id),
+      soci::into(label);
   ASSERT_EQ(file_id, 1);
   ASSERT_EQ(label, 1);
 
-  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(2), soci::into(file_id), soci::into(label);
+  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(2), soci::into(file_id),
+      soci::into(label);
   ASSERT_EQ(file_id, 2);
   ASSERT_EQ(label, 2);
 
