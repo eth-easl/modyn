@@ -21,6 +21,7 @@ class SampleThenBatchHandler:
         self.grouped_samples_per_file: list[int] = []
         self.number_of_samples_per_file: list[int] = []
         self.number_of_samples_seen = 0
+        self.normalizer = 0.0
         self._failed_accumulation = False
 
     def __enter__(self) -> Self:
@@ -35,6 +36,7 @@ class SampleThenBatchHandler:
         self.file_total_scores = []
         self.number_of_samples_per_file = []
         self.number_of_samples_seen = 0
+        self.normalizer = 0.0
         return self
 
     def accumulate(self, sample_ids: list, scores: torch.Tensor, batch_number: int) -> None:
@@ -48,6 +50,7 @@ class SampleThenBatchHandler:
         self.number_of_samples_seen += len(sample_ids)
         self.file_total_scores.append(scores.sum())
         self.number_of_samples_per_file.append(len(sample_ids))
+        self.normalizer += scores.sum().item()
         to_save = np.empty(len(sample_ids), dtype=np.dtype("i8,f8"))
         for i, (sample_id, score) in enumerate(zip(sample_ids, scores)):
             to_save[i] = (sample_id, score)
@@ -73,6 +76,8 @@ class SampleThenBatchHandler:
             self.number_of_samples_seen * self.downsampled_batch_ratio / self.batch_size
         )
         self.grouped_samples_per_file = [0] * len(file_probabilities)
+
+        self.normalizer = self.normalizer / self.number_of_samples_seen
 
         counter_assigned = 0
         # oversample by a factor 1.25
@@ -107,13 +112,12 @@ class SampleThenBatchHandler:
             return samples_list
 
         samples = self.scores_storage.get_trigger_samples(self.current_pipeline_id, 0, file_index)
-        print(target_samples, len(samples))
         sample_ids = [sample[0] for sample in samples]
         scores = torch.Tensor([sample[1] for sample in samples])
         selected_ids = torch.multinomial(scores, target_samples)
 
         for i in range(target_samples):
-            samples_list[i] = (sample_ids[selected_ids[i]], scores[selected_ids[i]])
+            samples_list[i] = (sample_ids[selected_ids[i]], self.normalizer / scores[selected_ids[i]])
 
         if file_index == len(self.grouped_samples_per_file) - 1:
             shutil.rmtree(".tmp_scores")
