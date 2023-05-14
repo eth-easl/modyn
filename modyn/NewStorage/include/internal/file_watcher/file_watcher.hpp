@@ -1,6 +1,7 @@
 #pragma once
 
 #include <yaml-cpp/yaml.h>
+#include <spdlog/spdlog.h>
 
 #include <atomic>
 #include <string>

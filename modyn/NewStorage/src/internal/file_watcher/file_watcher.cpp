@@ -144,7 +144,8 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
   std::vector<std::string>* file_paths = filesystem_wrapper->list(directory_path, true);
 
   if (this->disable_multithreading) {
-    this->handle_file_paths(file_paths, data_file_extension, file_wrapper_type, filesystem_wrapper, timestamp, file_wrapper_config_node);
+    this->handle_file_paths(file_paths, data_file_extension, file_wrapper_type, filesystem_wrapper, timestamp,
+                            file_wrapper_config_node);
   } else {
     int files_per_thread = file_paths->size() / this->insertion_threads;
     std::vector<std::thread> children;
@@ -180,7 +181,7 @@ void FileWatcher::seek_dataset() {
           "WHERE dataset_id = :dataset_id",
       soci::into(dataset_path), soci::into(dataset_filesystem_wrapper_type), soci::into(last_timestamp),
       soci::use(this->dataset_id);
-  
+
   if (dataset_path.empty()) {
     throw std::runtime_error("Loading dataset failed, is the dataset_id correct?");
   }
@@ -199,9 +200,10 @@ void FileWatcher::seek() {
   soci::session* sql = this->storage_database_connection->get_session();
   std::string dataset_name;
 
-  *sql << "SELECT name FROM datasets WHERE dataset_id = :dataset_id", soci::into(dataset_name), soci::use(this->dataset_id);
+  *sql << "SELECT name FROM datasets WHERE dataset_id = :dataset_id", soci::into(dataset_name),
+      soci::use(this->dataset_id);
 
-  //try {
+  try {
     this->seek_dataset();
 
     int last_timestamp;
@@ -214,21 +216,17 @@ void FileWatcher::seek() {
               ":dataset_id",
           soci::use(last_timestamp), soci::use(this->dataset_id);
     }
-  // } catch (const std::exception&) {
-  //   SPDLOG_ERROR(
-  //       "Dataset {} was deleted while the file watcher was running. "
-  //       "Stopping file watcher.",
-  //       this->dataset_id);
-  //   sql->rollback();
-  //   storage_database_connection->delete_dataset(dataset_name);
-  // }
+  } catch (const std::exception& e) {
+    SPDLOG_ERROR("File watcher failed for dataset {} with error: {}", dataset_name, e.what());
+    this->stop_file_watcher.get()->store(true);
+  }
 }
 
 void FileWatcher::run() {
   soci::session* sql = this->storage_database_connection->get_session();
 
   int file_watcher_interval;
-  *sql << "SELECT file_watcher_interval FROM datasets dataset_id = :dataset_id", soci::into(file_watcher_interval),
+  *sql << "SELECT file_watcher_interval FROM datasets WHERE dataset_id = :dataset_id", soci::into(file_watcher_interval),
       soci::use(this->dataset_id);
 
   if (file_watcher_interval == 0) {
@@ -236,10 +234,14 @@ void FileWatcher::run() {
   }
 
   while (true) {
-    this->seek();
-    if (this->stop_file_watcher.get()->load()) {
-      break;
+    try {
+      this->seek();
+      if (this->stop_file_watcher.get()->load()) {
+        break;
+      }
+    } catch (const std::exception& e) {
+      SPDLOG_ERROR("File watcher failed: {}", e.what());
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(file_watcher_interval));
+    std::this_thread::sleep_for(std::chrono::seconds(file_watcher_interval));
   }
 }

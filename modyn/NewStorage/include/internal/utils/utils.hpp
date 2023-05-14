@@ -18,7 +18,6 @@ namespace storage {
 class Utils {
  public:
   static AbstractFilesystemWrapper* get_filesystem_wrapper(std::string path, std::string type) {
-    SPDLOG_INFO("Creating filesystem wrapper of type {} for path {}", type, path);
     if (type == "LOCAL") {
       return new LocalFilesystemWrapper(path);
     } else {

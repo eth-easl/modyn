@@ -22,7 +22,7 @@ soci::session* StorageDatabaseConnection::get_session() {
     std::unique_ptr<soci::session> sql(new soci::session(parameters));
     return sql.release();
   } else {
-    throw std::runtime_error("Unsupported database driver: " + this->drivername);
+    throw std::runtime_error("Error getting session: Unsupported database driver: " + this->drivername);
   }
 }
 
@@ -52,7 +52,7 @@ void StorageDatabaseConnection::create_tables() {
     #include "sql/SQLiteSample.sql"
     ;
   } else {
-    throw std::runtime_error("Unsupported database driver: " + this->drivername);
+    throw std::runtime_error("Error creating tables: Unsupported database driver: " + this->drivername);
   }
 
   *session << file_table_sql;
@@ -101,7 +101,7 @@ bool StorageDatabaseConnection::add_dataset(std::string name, std::string base_p
           soci::use(description), soci::use(version), soci::use(file_wrapper_config), soci::use(boolean_string),
           soci::use(file_watcher_interval);
     } else {
-      throw std::runtime_error("Unsupported database driver: " + this->drivername);
+      throw std::runtime_error("Error adding dataset: Unsupported database driver: " + this->drivername);
     }
 
     // Create partition table for samples

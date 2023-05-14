@@ -10,19 +10,21 @@
 using namespace storage;
 
 void FileWatchdog::start_file_watcher_process(long long dataset_id) {
+  SPDLOG_INFO("Start FileWatcher process for dataset {}", dataset_id);
   // Start a new child process of a FileWatcher
   std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher file_watcher(this->config_file, dataset_id, false, stop_file_watcher);
-  std::thread th(&FileWatcher::run, &file_watcher);
-
+  FileWatcher *file_watcher = new FileWatcher(this->config_file, dataset_id, false, stop_file_watcher);
+  std::thread th(&FileWatcher::run, file_watcher);
   this->file_watcher_processes[dataset_id] = std::tuple(std::move(th), 0, stop_file_watcher);
 }
 
 void FileWatchdog::stop_file_watcher_process(long long dataset_id) {
+  SPDLOG_INFO("Stop FileWatcher process for dataset {}", dataset_id);
   if (this->file_watcher_processes.count(dataset_id) == 1) {
     // Set the stop flag for the FileWatcher process
     std::get<2>(this->file_watcher_processes[dataset_id]).get()->store(true);
-    SPDLOG_INFO("FileWatcher process for dataset {} stopped", dataset_id);
+    // Wait for the FileWatcher process to stop
+    std::get<0>(this->file_watcher_processes[dataset_id]).join();
     std::unordered_map<long long, std::tuple<std::thread, int, std::shared_ptr<std::atomic<bool>>>>::iterator it;
     it = this->file_watcher_processes.find(dataset_id);
     this->file_watcher_processes.erase(it);
@@ -32,9 +34,11 @@ void FileWatchdog::stop_file_watcher_process(long long dataset_id) {
 }
 
 void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* storage_database_connection) {
+  SPDLOG_INFO("Watch FileWatcher processes");
   soci::session* sql = storage_database_connection->get_session();
   int number_of_datasets = 0;
   *sql << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
+  SPDLOG_INFO("Number of datasets: {}", number_of_datasets);
   if (number_of_datasets == 0) {
     // There are no datasets in the database. Stop all FileWatcher processes.
     for (const auto& pair : this->file_watcher_processes) {
@@ -45,6 +49,8 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
   std::vector<long long> dataset_ids = std::vector<long long>(number_of_datasets);
   *sql << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
+  SPDLOG_INFO("Number of FileWatcher processes: {}", this->file_watcher_processes.size());
+  SPDLOG_INFO("Number of datasets: {}", dataset_ids.size());
   long long dataset_id;
   for (const auto& pair : this->file_watcher_processes) {
     dataset_id = pair.first;
@@ -56,6 +62,7 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
   }
 
   for (const auto& dataset_id : dataset_ids) {
+    SPDLOG_INFO("Dataset ID: {}", dataset_id);
     if (this->file_watcher_processes.find(dataset_id) == this->file_watcher_processes.end()) {
       // There is no FileWatcher process running for this dataset. Start one.
       this->start_file_watcher_process(dataset_id);
@@ -87,7 +94,7 @@ void FileWatchdog::run() {
     }
     this->watch_file_watcher_processes(&storage_database_connection);
     // Wait for 3 seconds
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   for (auto& file_watcher_process : this->file_watcher_processes) {
     std::get<2>(file_watcher_process.second).get()->store(true);
