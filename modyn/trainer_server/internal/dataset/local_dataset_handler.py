@@ -1,5 +1,10 @@
+import os
+import shutil
+
 import numpy as np
 from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStorage
+
+LOCAL_STORAGE_FOLDER = ".tmp_offline_dataset"
 
 
 class LocalDatasetHandler(TriggerSampleStorage):
@@ -11,7 +16,7 @@ class LocalDatasetHandler(TriggerSampleStorage):
     """
 
     def __init__(self, pipeline_id: int, number_of_samples_per_file: int = -1) -> None:
-        super().__init__(".tmp_offline_dataset")
+        super().__init__(LOCAL_STORAGE_FOLDER)
         # files are numbered from 0. Each file has a size of number_of_samples_per_file
         self.current_file_index = 0
         self.current_sample_index = 0
@@ -55,3 +60,7 @@ class LocalDatasetHandler(TriggerSampleStorage):
             keys.append(key)
             weights.append(weight)
         return keys, weights
+
+    def _clean_working_directory(self) -> None:
+        if os.path.isdir(LOCAL_STORAGE_FOLDER):
+            shutil.rmtree(LOCAL_STORAGE_FOLDER)

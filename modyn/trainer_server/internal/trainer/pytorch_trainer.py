@@ -363,6 +363,11 @@ class PytorchTrainer:
             data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
             for name, tensor in batch[1].items():
                 data[name] = tensor.to(self._device)
+        else:
+            raise ValueError(
+                "The format of the data provided is not supported in modyn. "
+                "Please use either torch tensors or dict[str, torch.Tensor]"
+            )
 
         return sample_ids, target, data
 
@@ -376,24 +381,32 @@ class PytorchTrainer:
         assert self._sample_before_batch
 
         number_of_batches = 0
+        # context manager to automatically handle beginning (reset, cleaning..)
+        # and end (computing the scores and sampling).
         with self._downsampler.sample_then_batch_accumulator() as stb_handler:
+            # sample ids are retrieved from the selector as in the usual training loop
             for batch_number, batch in enumerate(self._train_dataloader):
                 number_of_batches += 1
                 sample_ids, target, data = self.prepare_data(batch)
 
                 with torch.autocast(self._device_type, enabled=self._amp):
-                    # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
+                    # compute the scores and accumulate them
                     model_output = self._model.model(data)
                     scores = self._downsampler.get_scores(model_output, target).numpy()
                     stb_handler.accumulate(sample_ids, scores, batch_number)
 
+        # to store all the selected (sample, weight).
         local_dataset = LocalDatasetHandler(self.pipeline_id, self._batch_size)
 
         for i in range(number_of_batches):
             samples_list = self._downsampler.get_samples_for_file(i)
             local_dataset.inform_samples(samples_list)
 
+        # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
+        # we need to manually trigger the store
         local_dataset.store_last_samples()
+
+        # instead of getting keys from the selector, now are taken from the local storage
         self._train_dataloader.dataset.switch_to_local_key_source()
 
 

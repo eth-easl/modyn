@@ -152,11 +152,13 @@ class OnlineDataset(IterableDataset):
         self._local_dataset_handler = LocalDatasetHandler(self._pipeline_id)
 
     def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[int], list[bytes], list[int], list[float]]:
+        # Keys can either be retreived from the selector or from local.
         assert self._keys_source in ["local", "selector"]
 
         if self._keys_source == "selector":
             self._info("Getting keys from selector", worker_id)
             keys = self._get_keys_from_selector(worker_id, partition_id)
+            # right now the selector does not store weights, so a list of ones is returned
             weights = [1.0] * len(keys)
         else:
             self._info("Getting keys from local", worker_id)
