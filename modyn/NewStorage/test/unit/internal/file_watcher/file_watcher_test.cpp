@@ -21,7 +21,7 @@ class FileWatcherTest : public ::testing::Test {
     // Create temporary directory
     std::filesystem::create_directory("tmp");
     YAML::Node config = YAML::LoadFile("config.yaml");
-    StorageDatabaseConnection connection(config);
+    const StorageDatabaseConnection connection(config);
     connection.create_tables();
   }
 
@@ -45,7 +45,7 @@ TEST_F(FileWatcherTest, TestSeek) {
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
 
@@ -88,7 +88,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   connection.add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
@@ -133,7 +133,7 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
   ASSERT_TRUE(watcher.check_valid_file("test.txt", ".txt", true, 0, &filesystem_wrapper));
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
 
@@ -148,7 +148,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   connection.add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
@@ -172,7 +172,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
 
@@ -207,7 +207,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   file_paths->push_back("test2.txt");
 
   YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
 

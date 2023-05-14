@@ -16,7 +16,7 @@
 #define stat _stat
 #endif
 
-const char kPathSeparator =
+const char path_separator =
 #ifdef _WIN32
     '\\';
 #else
@@ -38,7 +38,7 @@ std::vector<unsigned char>* LocalFilesystemWrapper::get(std::string path) {
   int size = file.tellg();
   file.seekg(0, std::ios::beg);
   std::vector<unsigned char>* buffer = new std::vector<unsigned char>(size);
-  file.read((char*)buffer->data(), size);
+  file.read(reinterpret_cast<char*>(buffer->data()), size);
   file.close();
   return buffer;
 }
@@ -120,46 +120,48 @@ int LocalFilesystemWrapper::get_file_size(std::string path) {
   return size;
 }
 
-int LocalFilesystemWrapper::get_modified_time(std::string path) {
+int64_t LocalFilesystemWrapper::get_modified_time(std::string path) {
   if (not this->is_valid_path(path)) {
     throw std::invalid_argument("Path " + path + " is not valid.");
   }
   if (not this->exists(path)) {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
-  struct stat result;
+  struct stat result = {};
+  int64_t mod_time;
   if (stat(path.c_str(), &result) == 0) {
-    auto mod_time = result.st_mtime;
-    return mod_time;
+    mod_time = static_cast<int64_t>(result.st_mtime);
   } else {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
+  return mod_time;
 }
 
-int LocalFilesystemWrapper::get_created_time(std::string path) {
+int64_t LocalFilesystemWrapper::get_created_time(std::string path) {
   if (not this->is_valid_path(path)) {
     throw std::invalid_argument("Path " + path + " is not valid.");
   }
   if (not this->exists(path)) {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
-  struct stat result;
+  struct stat result = {};
+  int64_t mod_time;
   if (stat(path.c_str(), &result) == 0) {
-    auto mod_time = result.st_mtime;
-    return mod_time;
+    mod_time = static_cast<int64_t>(result.st_mtime);
   } else {
     throw std::runtime_error("Path " + path + " does not exist.");
   }
+  return mod_time;
 }
 
 bool LocalFilesystemWrapper::is_valid_path(std::string path) { return path.find("..") == std::string::npos; }
 
-std::string LocalFilesystemWrapper::join(std::vector<std::string> paths) {
+std::string LocalFilesystemWrapper::join(std::vector<std::string> paths) {  // NOLINT
   std::string joined_path = "";
-  for (unsigned long i = 0; i < paths.size(); i++) {
+  for (uint64_t i = 0; i < paths.size(); i++) {
     joined_path += paths[i];
     if (i < paths.size() - 1) {
-      joined_path += kPathSeparator;
+      joined_path += path_separator;
     }
   }
   return joined_path;

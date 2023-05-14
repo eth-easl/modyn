@@ -8,40 +8,37 @@
 namespace storage {
 class StorageDatabaseConnection {
  private:
-  std::string username;
-  std::string password;
-  std::string host;
-  std::string port;
-  std::string database;
-  int hash_partition_modulus = 8;
-  bool sample_table_unlogged = true;
+  std::string username_;
+  std::string password_;
+  std::string host_;
+  std::string port_;
+  std::string database_;
+  int hash_partition_modulus_ = 8;
 
  public:
   std::string drivername;
-  StorageDatabaseConnection(YAML::Node config) {
+  explicit StorageDatabaseConnection(const YAML::Node& config) {
     if (!config["storage"]["database"]) {
       throw std::runtime_error("No database configuration found");
     }
     this->drivername = config["storage"]["database"]["drivername"].as<std::string>();
-    this->username = config["storage"]["database"]["username"].as<std::string>();
-    this->password = config["storage"]["database"]["password"].as<std::string>();
-    this->host = config["storage"]["database"]["host"].as<std::string>();
-    this->port = config["storage"]["database"]["port"].as<std::string>();
-    this->database = config["storage"]["database"]["database"].as<std::string>();
+    this->username_ = config["storage"]["database"]["username"].as<std::string>();
+    this->password_ = config["storage"]["database"]["password"].as<std::string>();
+    this->host_ = config["storage"]["database"]["host"].as<std::string>();
+    this->port_ = config["storage"]["database"]["port"].as<std::string>();
+    this->database_ = config["storage"]["database"]["database"].as<std::string>();
     if (config["storage"]["database"]["hash_partition_modulus"]) {
-      this->hash_partition_modulus = config["storage"]["database"]["hash_partition_modulus"].as<int>();
-    }
-    if (config["storage"]["database"]["sample_table_unlogged"]) {
-      this->sample_table_unlogged = config["storage"]["database"]["sample_table_unlogged"].as<bool>();
+      this->hash_partition_modulus_ = config["storage"]["database"]["hash_partition_modulus"].as<int>();
     }
   }
-  void create_tables();
-  bool add_dataset(std::string name, std::string base_path, std::string filesystem_wrapper_type,
-                   std::string file_wrapper_type, std::string description, std::string version,
-                   std::string file_wrapper_config, bool ignore_last_timestamp = false, int file_watcher_interval = 5);
-  bool delete_dataset(std::string name);
-  void add_sample_dataset_partition(std::string dataset_name, soci::session* session);
-  soci::session* get_session();
+  void create_tables() const;
+  bool add_dataset(const std::string& name, const std::string& base_path, const std::string& filesystem_wrapper_type,
+                   const std::string& file_wrapper_type, const std::string& description, const std::string& version,
+                   const std::string& file_wrapper_config, const bool& ignore_last_timestamp,
+                   const int& file_watcher_interval = 5) const;
+  bool delete_dataset(const std::string& name) const;
+  void add_sample_dataset_partition(const std::string& dataset_name, soci::session* session) const;
+  soci::session* get_session() const;
 };
 
 }  // namespace storage

@@ -3,20 +3,20 @@
 #include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
 
 namespace storage {
-class LocalFilesystemWrapper : public AbstractFilesystemWrapper {
+class LocalFilesystemWrapper : public AbstractFilesystemWrapper {  // NOLINT
  public:
-  LocalFilesystemWrapper(std::string path) : AbstractFilesystemWrapper(path) {}
-  std::vector<unsigned char>* get(std::string path);
-  bool exists(std::string path);
-  std::vector<std::string>* list(std::string path, bool recursive = false);
-  bool is_directory(std::string path);
-  bool is_file(std::string path);
-  int get_file_size(std::string path);
-  int get_modified_time(std::string path);
-  int get_created_time(std::string path);
-  std::string join(std::vector<std::string> paths);
-  bool is_valid_path(std::string path);
-  std::string get_name() { return "LOCAL"; }
-  ~LocalFilesystemWrapper() {}
+  explicit LocalFilesystemWrapper(std::string path) : AbstractFilesystemWrapper(std::move(path)) {}
+  std::vector<unsigned char>* get(std::string path) override;
+  bool exists(std::string path) override;
+  std::vector<std::string>* list(std::string path, bool recursive = false) override;  // NOLINT
+  bool is_directory(std::string path) override;
+  bool is_file(std::string path) override;
+  int get_file_size(std::string path) override;
+  int64_t get_modified_time(std::string path) override;
+  int64_t get_created_time(std::string path) override;
+  std::string join(std::vector<std::string> paths) override;
+  bool is_valid_path(std::string path) override;
+  std::string get_name() final { return "LOCAL"; }
+  ~LocalFilesystemWrapper() override = default;
 };
 }  // namespace storage

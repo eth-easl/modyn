@@ -14,7 +14,7 @@ class StorageTest : public ::testing::Test {
 };
 
 TEST_F(StorageTest, TestStorage) {
-  std::string config_file = "config.yaml";
+  const std::string config_file = "config.yaml";
   storage::Storage storage(config_file);
   storage.run();
 }

@@ -21,7 +21,7 @@ TEST(UtilsTest, TestGetFilesystemWrapper) {
 }
 
 TEST(UtilsTest, TestGetFileWrapper) {
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();  // NOLINT
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   AbstractFileWrapper* file_wrapper1 =

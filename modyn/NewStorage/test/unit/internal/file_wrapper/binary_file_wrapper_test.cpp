@@ -13,7 +13,7 @@ using namespace storage;
 
 TEST(BinaryFileWrapperTest, TestGetNumberOfSamples) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   storage::BinaryFileWrapper file_wrapper = storage::BinaryFileWrapper(file_name, config, &filesystem_wrapper);
@@ -22,7 +22,7 @@ TEST(BinaryFileWrapperTest, TestGetNumberOfSamples) {
 
 TEST(BinaryFileWrapperTest, TestValidateFileExtension) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   ASSERT_NO_THROW(storage::BinaryFileWrapper file_wrapper =
@@ -36,7 +36,7 @@ TEST(BinaryFileWrapperTest, TestValidateFileExtension) {
 
 TEST(BinaryFileWrapperTest, TestValidateRequestIndices) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   EXPECT_CALL(filesystem_wrapper, get(testing::_))
@@ -51,7 +51,7 @@ TEST(BinaryFileWrapperTest, TestValidateRequestIndices) {
 
 TEST(BinaryFileWrapperTest, TestGetLabel) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   std::vector<unsigned char>* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
@@ -65,7 +65,7 @@ TEST(BinaryFileWrapperTest, TestGetLabel) {
 
 TEST(BinaryFileWrapperTest, TestGetAllLabels) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   std::vector<unsigned char>* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
@@ -81,7 +81,7 @@ TEST(BinaryFileWrapperTest, TestGetAllLabels) {
 
 TEST(BinaryFileWrapperTest, TestGetSample) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   std::vector<unsigned char>* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
@@ -94,7 +94,7 @@ TEST(BinaryFileWrapperTest, TestGetSample) {
 
 TEST(BinaryFileWrapperTest, TestGetAllSamples) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   std::vector<unsigned char>* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
@@ -108,7 +108,7 @@ TEST(BinaryFileWrapperTest, TestGetAllSamples) {
 
 TEST(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   std::string file_name = "test.bin";
-  YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   std::vector<unsigned char>* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));

@@ -11,10 +11,10 @@
 
 using namespace storage;
 
-void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, std::string data_file_extension,
-                                    std::string file_wrapper_type, AbstractFilesystemWrapper* filesystem_wrapper,
-                                    int timestamp, YAML::Node file_wrapper_config) {
-  soci::session* sql = this->storage_database_connection->get_session();
+void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, const std::string& data_file_extension,
+                                    const std::string& file_wrapper_type, AbstractFilesystemWrapper* filesystem_wrapper,
+                                    int timestamp, const YAML::Node& file_wrapper_config) {
+  soci::session* sql = this->storage_database_connection_->get_session();
 
   std::vector<std::string> valid_files;
   for (const auto& file_path : *file_paths) {
@@ -24,7 +24,7 @@ void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, std::s
   }
 
   if (valid_files.size() > 0) {
-    std::string file_path;
+    std::string file_path;  // NOLINT
     int number_of_samples;
     std::vector<std::tuple<long long, long long, int, int>> file_frame =
         std::vector<std::tuple<long long, long long, int, int>>();
@@ -36,7 +36,7 @@ void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, std::s
       *sql << "INSERT INTO files (dataset_id, path, number_of_samples, "
               "created_at, updated_at) VALUES (:dataset_id, :path, "
               ":number_of_samples, :created_at, :updated_at)",
-          soci::use(this->dataset_id), soci::use(file_path), soci::use(number_of_samples),
+          soci::use(this->dataset_id_), soci::use(file_path), soci::use(number_of_samples),
           soci::use(filesystem_wrapper->get_created_time(file_path)),
           soci::use(filesystem_wrapper->get_modified_time(file_path));
 
@@ -48,13 +48,13 @@ void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, std::s
       std::tuple<long long, long long, int, int> frame;
       int index = 0;
       for (const auto& label : labels) {
-        frame = std::make_tuple(this->dataset_id, file_id, index, label);
+        frame = std::make_tuple(this->dataset_id_, file_id, index, label);
         file_frame.push_back(frame);
         index++;
       }
     }
 
-    if (this->storage_database_connection->drivername == "postgresql") {
+    if (this->storage_database_connection_->drivername == "postgresql") {
       this->postgres_copy_insertion(file_frame, sql);
     } else {
       this->fallback_insertion(file_frame, sql);
@@ -62,30 +62,15 @@ void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, std::s
   }
 }
 
-void FileWatcher::fallback_insertion(std::vector<std::tuple<long long, long long, int, int>> file_frame,
-                                     soci::session* sql) {
-  // Prepare query
-  std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
-
-  for (const auto& frame : file_frame) {
-    query += "(" + std::to_string(std::get<0>(frame)) + "," + std::to_string(std::get<1>(frame)) + "," +
-             std::to_string(std::get<2>(frame)) + "," + std::to_string(std::get<3>(frame)) + "),";
-  }
-
-  // Remove last comma
-  query.pop_back();
-  *sql << query;
-}
-
 void FileWatcher::postgres_copy_insertion(std::vector<std::tuple<long long, long long, int, int>> file_frame,
-                                          soci::session* sql) {
-  std::string table_name = "samples__did" + std::to_string(this->dataset_id);
+                                          soci::session* sql) const {
+  std::string table_name = "samples__did" + std::to_string(this->dataset_id_);
   std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   std::string cmd = "COPY " + table_name + table_columns + " FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')";
 
   // Create stringbuffer, dump data into file buffer csv and send to
   // postgresql
-  std::stringstream ss;
+  std::stringstream ss;  // NOLINT
   for (const auto& frame : file_frame) {
     ss << std::get<0>(frame) << "," << std::get<1>(frame) << "," << std::get<2>(frame) << "," << std::get<3>(frame)
        << "\n";
@@ -103,18 +88,19 @@ void FileWatcher::postgres_copy_insertion(std::vector<std::tuple<long long, long
   *sql << cmd, soci::use(tmp_file_name);
 
   // Remove temp file
-  remove("temp.csv");
+  (void)remove("temp.csv");
 }
 
-bool FileWatcher::check_valid_file(std::string file_path, std::string data_file_extension, bool ignore_last_timestamp,
-                                   int timestamp, AbstractFilesystemWrapper* filesystem_wrapper) {
+bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
+                                   bool ignore_last_timestamp, int timestamp,
+                                   AbstractFilesystemWrapper* filesystem_wrapper) {
   std::string file_extension = file_path.substr(file_path.find_last_of("."));
   if (file_extension != data_file_extension) {
     return false;
   }
-  soci::session* sql = this->storage_database_connection->get_session();
+  soci::session* sql = this->storage_database_connection_->get_session();
 
-  long long file_id = -1;
+  int64_t file_id = -1;  // NOLINT
 
   *sql << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
 
@@ -127,31 +113,31 @@ bool FileWatcher::check_valid_file(std::string file_path, std::string data_file_
   return false;
 }
 
-void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesystem_wrapper, std::string directory_path,
-                                            int timestamp) {
-  std::string file_wrapper_config;
-  std::string file_wrapper_type;
+void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesystem_wrapper,
+                                            const std::string& directory_path, int timestamp) {
+  std::string file_wrapper_config;  // NOLINT
+  std::string file_wrapper_type;    // NOLINT
 
-  soci::session* sql = this->storage_database_connection->get_session();
+  soci::session* sql = this->storage_database_connection_->get_session();
 
   *sql << "SELECT file_wrapper_type, file_wrapper_config FROM datasets "
           "WHERE dataset_id = :dataset_id",
-      soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(this->dataset_id);
+      soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(this->dataset_id_);
 
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
   std::string data_file_extension = file_wrapper_config_node["file_extension"].as<std::string>();
 
   std::vector<std::string>* file_paths = filesystem_wrapper->list(directory_path, true);
 
-  if (this->disable_multithreading) {
+  if (this->disable_multithreading_) {
     this->handle_file_paths(file_paths, data_file_extension, file_wrapper_type, filesystem_wrapper, timestamp,
                             file_wrapper_config_node);
   } else {
-    int files_per_thread = file_paths->size() / this->insertion_threads;
+    int files_per_thread = file_paths->size() / this->insertion_threads_;
     std::vector<std::thread> children;
-    for (int i = 0; i < this->insertion_threads; i++) {
+    for (int i = 0; i < this->insertion_threads_; i++) {
       std::vector<std::string>* file_paths_thread = new std::vector<std::string>();
-      if (i == this->insertion_threads - 1) {
+      if (i == this->insertion_threads_ - 1) {
         file_paths_thread->insert(file_paths_thread->end(), file_paths->begin() + i * files_per_thread,
                                   file_paths->end());
       } else {
@@ -159,28 +145,28 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
                                   file_paths->begin() + (i + 1) * files_per_thread);
       }
       std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-      FileWatcher watcher(this->config_file, this->dataset_id, stop_file_watcher);
+      FileWatcher watcher(this->config_file_, this->dataset_id_, stop_file_watcher);
       children.push_back(std::thread(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
                                      file_wrapper_type, filesystem_wrapper, timestamp, file_wrapper_config_node));
     }
 
-    for (unsigned long i = 0; i < children.size(); i++) {
+    for (uint64_t i = 0; i < children.size(); i++) {
       children[i].join();
     }
   }
 }
 
 void FileWatcher::seek_dataset() {
-  soci::session* sql = this->storage_database_connection->get_session();
+  soci::session* sql = this->storage_database_connection_->get_session();
 
-  std::string dataset_path;
-  std::string dataset_filesystem_wrapper_type;
+  std::string dataset_path;                     // NOLINT
+  std::string dataset_filesystem_wrapper_type;  // NOLINT
   int last_timestamp;
 
   *sql << "SELECT base_path, filesystem_wrapper_type, last_timestamp FROM datasets "
           "WHERE dataset_id = :dataset_id",
       soci::into(dataset_path), soci::into(dataset_filesystem_wrapper_type), soci::into(last_timestamp),
-      soci::use(this->dataset_id);
+      soci::use(this->dataset_id_);
 
   if (dataset_path.empty()) {
     throw std::runtime_error("Loading dataset failed, is the dataset_id correct?");
@@ -197,11 +183,11 @@ void FileWatcher::seek_dataset() {
 }
 
 void FileWatcher::seek() {
-  soci::session* sql = this->storage_database_connection->get_session();
-  std::string dataset_name;
+  soci::session* sql = this->storage_database_connection_->get_session();
+  std::string dataset_name;  // NOLINT
 
   *sql << "SELECT name FROM datasets WHERE dataset_id = :dataset_id", soci::into(dataset_name),
-      soci::use(this->dataset_id);
+      soci::use(this->dataset_id_);
 
   try {
     this->seek_dataset();
@@ -209,25 +195,25 @@ void FileWatcher::seek() {
     int last_timestamp;
     *sql << "SELECT updated_at FROM files WHERE dataset_id = :dataset_id ORDER "
             "BY updated_at DESC LIMIT 1",
-        soci::into(last_timestamp), soci::use(this->dataset_id);
+        soci::into(last_timestamp), soci::use(this->dataset_id_);
 
     if (last_timestamp > 0) {
       *sql << "UPDATE datasets SET last_timestamp = :last_timestamp WHERE dataset_id = "
               ":dataset_id",
-          soci::use(last_timestamp), soci::use(this->dataset_id);
+          soci::use(last_timestamp), soci::use(this->dataset_id_);
     }
   } catch (const std::exception& e) {
     SPDLOG_ERROR("File watcher failed for dataset {} with error: {}", dataset_name, e.what());
-    this->stop_file_watcher.get()->store(true);
+    this->stop_file_watcher_.get()->store(true);
   }
 }
 
 void FileWatcher::run() {
-  soci::session* sql = this->storage_database_connection->get_session();
+  soci::session* sql = this->storage_database_connection_->get_session();
 
   int file_watcher_interval;
-  *sql << "SELECT file_watcher_interval FROM datasets WHERE dataset_id = :dataset_id", soci::into(file_watcher_interval),
-      soci::use(this->dataset_id);
+  *sql << "SELECT file_watcher_interval FROM datasets WHERE dataset_id = :dataset_id",
+      soci::into(file_watcher_interval), soci::use(this->dataset_id_);
 
   if (file_watcher_interval == 0) {
     throw std::runtime_error("File watcher interval is invalid, does the dataset exist?");
@@ -236,7 +222,7 @@ void FileWatcher::run() {
   while (true) {
     try {
       this->seek();
-      if (this->stop_file_watcher.get()->load()) {
+      if (this->stop_file_watcher_.get()->load()) {
         break;
       }
     } catch (const std::exception& e) {

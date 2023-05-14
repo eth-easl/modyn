@@ -7,10 +7,10 @@
 namespace storage {
 class Storage {
  private:
-  YAML::Node config;
+  YAML::Node config_;
 
  public:
-  Storage(std::string config_file);
+  explicit Storage(const std::string& config_file);
   void run();
 };
 }  // namespace storage

@@ -7,13 +7,13 @@
 
 using namespace storage;
 
-Storage::Storage(std::string config_file) {
+Storage::Storage(const std::string& config_file) {
   /* Initialize the storage service. */
-  YAML::Node config = YAML::LoadFile(config_file);
-  this->config = config;
+  const YAML::Node config = YAML::LoadFile(config_file);
+  this->config_ = config;
 }
 
-void Storage::run() {
+void Storage::run() {  // NOLINT // TODO: Remove NOLINT after implementation
   /* Run the storage service. */
   SPDLOG_INFO("Running storage service.");
 

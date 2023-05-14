@@ -7,18 +7,15 @@
 #include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
 
 namespace storage {
-class AbstractFileWrapper {
+class AbstractFileWrapper {  // NOLINT
  protected:
-  std::string file_path;
-  YAML::Node file_wrapper_config;
-  AbstractFilesystemWrapper* filesystem_wrapper;
+  std::string file_path_;
+  YAML::Node file_wrapper_config_;
+  AbstractFilesystemWrapper* filesystem_wrapper_;
 
  public:
-  AbstractFileWrapper(std::string path, YAML::Node fw_config, AbstractFilesystemWrapper* fs_wrapper) {
-    this->file_path = path;
-    this->file_wrapper_config = fw_config;
-    this->filesystem_wrapper = fs_wrapper;
-  }
+  AbstractFileWrapper(const std::string& path, const YAML::Node& fw_config, AbstractFilesystemWrapper* fs_wrapper)
+      : file_path_(std::move(path)), file_wrapper_config_(fw_config), filesystem_wrapper_(fs_wrapper) {}
   virtual int get_number_of_samples() = 0;
   virtual std::vector<std::vector<unsigned char>>* get_samples(int start, int end) = 0;
   virtual int get_label(int index) = 0;
@@ -27,6 +24,6 @@ class AbstractFileWrapper {
   virtual std::vector<std::vector<unsigned char>>* get_samples_from_indices(std::vector<int>* indices) = 0;
   virtual std::string get_name() = 0;
   virtual void validate_file_extension() = 0;
-  virtual ~AbstractFileWrapper() {}
+  virtual ~AbstractFileWrapper() {}  // NOLINT
 };
 }  // namespace storage

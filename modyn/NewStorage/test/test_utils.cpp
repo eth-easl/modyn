@@ -16,7 +16,7 @@ void TestUtils::create_dummy_yaml() {
   out.close();
 }
 
-void TestUtils::delete_dummy_yaml() { std::remove("config.yaml"); }
+void TestUtils::delete_dummy_yaml() { (void)std::remove("config.yaml"); }
 
 YAML::Node TestUtils::get_dummy_config() {
   YAML::Node config;
@@ -39,7 +39,7 @@ YAML::Node TestUtils::get_dummy_file_wrapper_config() {
 }
 
 std::string TestUtils::get_dummy_file_wrapper_config_inline() {
-  const std::string test_config = R"(
+  std::string test_config = R"(
 file_extension: ".txt"
 label_file_extension: ".lbl"
 )";
