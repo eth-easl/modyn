@@ -52,8 +52,8 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             if "downsampled_batch_ratio" not in config:
                 raise ValueError("Please specify downsampled_batch_ratio to use sample-then-batch")
             self.downsampled_batch_ratio = config["downsampled_batch_ratio"]
-            if not (0 < self.downsampled_batch_ratio < 1) or not isinstance(self.downsampled_batch_ratio, float):
-                raise ValueError("The downsampled batch ratio must be a float in (0,1)")
+            if not (0 < self.downsampled_batch_ratio < 100) or not isinstance(self.downsampled_batch_ratio, int):
+                raise ValueError("The downsampled batch ratio must be an integer in (0,100)")
 
         else:
             # batch-then-sample

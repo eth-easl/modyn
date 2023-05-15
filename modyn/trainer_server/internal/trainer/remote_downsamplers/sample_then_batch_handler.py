@@ -1,4 +1,3 @@
-import math
 import os.path
 import shutil
 from typing import Any
@@ -13,7 +12,7 @@ TEMPORARY_LOCAL_STORAGE_PATH = ".tmp_scores"  # should we provide it through the
 
 class SampleThenBatchHandler:
     def __init__(
-        self, pipeline_id: int, batch_size: int, downsampled_batch_ratio: float, maximum_keys_in_memory: int
+        self, pipeline_id: int, batch_size: int, downsampled_batch_ratio: int, maximum_keys_in_memory: int
     ) -> None:
         # used to temporarily store the computed scores
         self.scores_storage = TriggerSampleStorage(TEMPORARY_LOCAL_STORAGE_PATH)
@@ -22,7 +21,7 @@ class SampleThenBatchHandler:
         self.batch_size = batch_size
         assert maximum_keys_in_memory > 0
         self.maximum_keys_in_memory = maximum_keys_in_memory
-        assert 0 < downsampled_batch_ratio < 1
+        assert 0 < downsampled_batch_ratio < 100
         self.downsampled_batch_ratio = downsampled_batch_ratio
 
         # below a list of arguments that are used throughout the function but not yet available
@@ -43,7 +42,7 @@ class SampleThenBatchHandler:
         """
         assert self.batch_size > 0
         assert self.current_pipeline_id >= 0
-        assert 0 < self.downsampled_batch_ratio < 1
+        assert 0 < self.downsampled_batch_ratio < 100
         self.to_be_stored = []
         self.current_file_index = 0
         self.current_scores_sum = 0.0
@@ -83,13 +82,12 @@ class SampleThenBatchHandler:
 
         file_probabilities = torch.Tensor([score / sum(self.file_total_scores) for score in self.file_total_scores])
 
-        # The aim is to an exact number of batches.
-        # Virtually this number is self.downsampled_batch_ratio * self.batch_size
-        # but this number is not ensured to be an integer
         number_of_samples_seen = sum(self.number_of_samples_per_file)
-        target_num_samples = self.batch_size * math.floor(
-            number_of_samples_seen * self.downsampled_batch_ratio / self.batch_size
-        )
+        target_num_samples = number_of_samples_seen * self.downsampled_batch_ratio / 100
+
+        if target_num_samples % self.batch_size == 1:
+            # having a batch of just one element might be a problem for some operations (ex batch norm)
+            target_num_samples -= 1
 
         self.grouped_samples_per_file = [0] * len(file_probabilities)
 

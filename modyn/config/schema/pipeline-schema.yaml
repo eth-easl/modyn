@@ -127,7 +127,7 @@ properties:
               downsampled_batch_ratio:
                 type: number
                 description: |
-                  [AbstractDownsampleStrategy] Ratio post_sampling_batch_size/batch_size. For example, with 16 batches and a ratio of 0.5 we keep 8*batch_size samples. Requires sample_before_batch set to True
+                  [AbstractDownsampleStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Requires sample_before_batch set to True and must be in (0,100)
           processor_type:
             type: string
             description: |

@@ -43,7 +43,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
 
         self.replacement = params_from_selector.get("replacement", True)
 
-    def get_downsampled_batch_ratio(self) -> float:
+    def get_downsampled_batch_ratio(self) -> int:
         assert self.sample_before_batch
         return self.downsampled_batch_ratio
 

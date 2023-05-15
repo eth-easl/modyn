@@ -7,7 +7,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.sample_then_batch
 
 def test_init_accumulation():
     # batch size of 4, we want to extract 2 batches so 8 samples
-    handler = SampleThenBatchHandler(0, 4, 0.5, 10000)
+    handler = SampleThenBatchHandler(0, 4, 50, 10000)
 
     with handler:
         handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
@@ -33,7 +33,7 @@ def test_init_accumulation():
 
 def test_init_accumulation_limit():
     # batch size of 4, we want to extract 2 batches
-    handler = SampleThenBatchHandler(0, 4, 0.5, 4)
+    handler = SampleThenBatchHandler(0, 4, 50, 4)
 
     with handler:
         handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
@@ -59,7 +59,7 @@ def test_init_accumulation_limit():
 
 
 def test_skewed_distribution():
-    handler = SampleThenBatchHandler(0, 4, 0.5, 1000)
+    handler = SampleThenBatchHandler(0, 4, 50, 1000)
 
     # samples from even files are useless
     with handler:
@@ -80,7 +80,7 @@ def test_skewed_distribution():
 
 
 def test_restart_accumulation():
-    handler = SampleThenBatchHandler(0, 4, 0.5, 1000)
+    handler = SampleThenBatchHandler(0, 4, 50, 1000)
 
     # samples from even files are useless
     with handler:
@@ -109,7 +109,7 @@ def test_restart_accumulation():
     assert handler.number_of_samples_per_file == [12]
 
     assert handler.normalizer == 60 / 12
-    assert sum(handler.grouped_samples_per_file) == 4
+    assert sum(handler.grouped_samples_per_file) == 6
 
     samples = handler.get_samples_per_file(0)
     selected_ids = [el[0] for el in samples]
@@ -120,7 +120,7 @@ def test_restart_accumulation():
 
 
 def test_restart_accumulation_limited():
-    handler = SampleThenBatchHandler(0, 4, 0.5, 4)
+    handler = SampleThenBatchHandler(0, 4, 50, 4)
 
     # samples from even files are useless
     with handler:
@@ -150,7 +150,7 @@ def test_restart_accumulation_limited():
         assert handler.normalizer == 60
 
     assert handler.normalizer == 60 / 12
-    assert sum(handler.grouped_samples_per_file) == 4
+    assert sum(handler.grouped_samples_per_file) == 6
 
     selected_ids = []
     for file in range(3):
