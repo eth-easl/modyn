@@ -52,5 +52,3 @@ add_executable(modynstorage-all-test-sources-for-tidy EXCLUDE_FROM_ALL
 # just for the include directories
 target_link_libraries(modynstorage-all-test-sources-for-tidy PRIVATE
 modynstorage-test-objs modynstorage-test-utils-objs modynstorage)
-
-target_include_directories(modynstorage-all-test-sources-for-tidy PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${soci_SOURCE_DIR}/build/include)

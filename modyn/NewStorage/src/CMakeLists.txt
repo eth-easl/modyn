@@ -23,12 +23,13 @@ set(MODYNSTORAGE_HEADERS
     )
 
 target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
-target_include_directories(modynstorage PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
+target_include_directories(modynstorage PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../cmake-build-debug/clang-tidy-build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
 target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
 
 target_link_libraries(modynstorage PUBLIC spdlog argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_postgresql soci_sqlite3 soci_core)
 
 message(STATUS "Current dir: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "Current binary dir: ${CMAKE_CURRENT_BINARY_DIR}")
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 target_compile_definitions(modynstorage PRIVATE MODYNSTORAGE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\")
