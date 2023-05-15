@@ -30,8 +30,12 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         if self.sample_before_batch:
             assert "downsampled_batch_ratio" in params_from_selector
             self.downsampled_batch_ratio = params_from_selector["downsampled_batch_ratio"]
+            assert "maximum_keys_in_memory" in params_from_selector
             self.sample_then_batch_handler = SampleThenBatchHandler(
-                self.pipeline_id, self.batch_size, self.downsampled_batch_ratio
+                self.pipeline_id,
+                self.batch_size,
+                self.downsampled_batch_ratio,
+                params_from_selector["maximum_keys_in_memory"],
             )
         else:
             assert "downsampled_batch_size" in params_from_selector

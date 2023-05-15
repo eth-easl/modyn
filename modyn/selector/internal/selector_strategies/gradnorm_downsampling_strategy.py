@@ -10,6 +10,7 @@ class GradNormDownsamplingStrategy(AbstractDownsampleStrategy):
             params = {
                 "downsampled_batch_ratio": self.downsampled_batch_ratio,
                 "downsampling_period": self.downsampling_period,
+                "maximum_keys_in_memory": self._maximum_keys_in_memory,
             }
         else:
             params = {"downsampled_batch_size": self.downsampled_batch_size}

@@ -12,13 +12,16 @@ TEMPORARY_LOCAL_STORAGE_PATH = ".tmp_scores"  # should we provide it through the
 
 
 class SampleThenBatchHandler:
-    def __init__(self, pipeline_id: int, batch_size: int, downsampled_batch_ratio: float) -> None:
+    def __init__(
+        self, pipeline_id: int, batch_size: int, downsampled_batch_ratio: float, maximum_keys_in_memory: int
+    ) -> None:
         # used to temporarily store the computed scores
         self.scores_storage = TriggerSampleStorage(TEMPORARY_LOCAL_STORAGE_PATH)
         self.current_pipeline_id = pipeline_id
         assert batch_size > 0
         self.batch_size = batch_size
-        self.maximum_keys_in_memory = 1000
+        assert maximum_keys_in_memory > 0
+        self.maximum_keys_in_memory = maximum_keys_in_memory
         assert 0 < downsampled_batch_ratio < 1
         self.downsampled_batch_ratio = downsampled_batch_ratio
 
