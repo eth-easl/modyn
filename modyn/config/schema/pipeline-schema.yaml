@@ -116,6 +116,10 @@ properties:
                 type: boolean
                 description: |
                   [AbstractDownsampleStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
+              downsampling_period:
+                type: number
+                description: |
+                  [AbstractDownsampleStrategy] Points are downsampled every downsampling_period epochs (0, downsampling_period, 2*downsampling_period ...). Requires sample_before_batch = True and the default value is 1
               downsampled_batch_size:
                 type: number
                 description: |

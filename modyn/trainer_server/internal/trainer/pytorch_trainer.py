@@ -115,7 +115,7 @@ class PytorchTrainer:
 
         if self._downsampling_enabled:
             self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
-            self._downsampler, self._sample_before_batch = self.instantiate_downsampler(
+            self._downsampler, self._sample_before_batch, self._downsampling_period = self.instantiate_downsampler(
                 strategy_name, params_from_selector, self._criterion_nored
             )
             self._weighted_opt = True
@@ -231,13 +231,17 @@ class PytorchTrainer:
 
     def instantiate_downsampler(
         self, strategy_name: str, params_from_selector: dict, per_sample_loss: Any
-    ) -> tuple[AbstractRemoteDownsamplingStrategy, bool]:
+    ) -> tuple[AbstractRemoteDownsamplingStrategy, bool, int]:
         assert "sample_before_batch" in params_from_selector
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)
 
         downsampler = downsampler_class(self.pipeline_id, self._batch_size, params_from_selector, per_sample_loss)
-        return downsampler, params_from_selector["sample_before_batch"]
+        return (
+            downsampler,
+            params_from_selector["sample_before_batch"],
+            params_from_selector.get("downsampling_period", 1),
+        )
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -249,11 +253,10 @@ class PytorchTrainer:
 
         self._info("Handled OnBegin Callbacks.")
 
-        if self._downsampling_enabled and self._sample_before_batch:
-            self.sample_data()
-
         batch_number = 0
-        for _ in range(self.epochs_per_trigger):
+        for epoch in range(self.epochs_per_trigger):
+            if self._downsampling_enabled and self._sample_before_batch and epoch % self._downsampling_period == 0:
+                self.sample_data()
             for batch_number, batch in enumerate(self._train_dataloader):
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
@@ -379,6 +382,9 @@ class PytorchTrainer:
         """
         assert self._downsampler is not None
         assert self._sample_before_batch
+
+        # keys must be taken from the selector. This operation is needed only when we sample several times
+        self._train_dataloader.dataset.switch_to_selector_key_source()
 
         number_of_batches = 0
         # context manager to automatically handle beginning (reset, cleaning..)

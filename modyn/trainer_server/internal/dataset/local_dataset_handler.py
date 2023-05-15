@@ -61,6 +61,6 @@ class LocalDatasetHandler(TriggerSampleStorage):
             weights.append(weight)
         return keys, weights
 
-    def _clean_working_directory(self) -> None:
+    def clean_working_directory(self) -> None:
         if os.path.isdir(LOCAL_STORAGE_FOLDER):
             shutil.rmtree(LOCAL_STORAGE_FOLDER)

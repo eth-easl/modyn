@@ -43,6 +43,10 @@ class AbstractDownsampleStrategy(AbstractSelectionStrategy):
             )
         self.sample_before_batch = config["sample_before_batch"]
 
+        if self.sample_before_batch and "downsampling_period" in config:
+            raise ValueError("downsampling_period can be used only in sample-then-batch.")
+        self.downsampling_period = config.get("downsampling_period", 1)
+
         if self.sample_before_batch:
             # sample-then-batch, downsampled_batch_ratio is needed
             if "downsampled_batch_ratio" not in config:

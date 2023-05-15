@@ -151,6 +151,14 @@ class OnlineDataset(IterableDataset):
         self._keys_source = "local"
         self._local_dataset_handler = LocalDatasetHandler(self._pipeline_id)
 
+    def switch_to_selector_key_source(self) -> None:
+        if self._keys_source == "selector":
+            return
+        self._keys_source = "local"
+        assert self._local_dataset_handler is not None
+        self._local_dataset_handler.clean_working_directory()
+        self._local_dataset_handler = None
+
     def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[int], list[bytes], list[int], list[float]]:
         # Keys can either be retreived from the selector or from local.
         assert self._keys_source in ["local", "selector"]

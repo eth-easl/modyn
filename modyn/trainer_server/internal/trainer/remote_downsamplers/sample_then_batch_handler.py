@@ -41,7 +41,7 @@ class SampleThenBatchHandler:
         assert self.batch_size > 0
         assert self.current_pipeline_id >= 0
         assert 0 < self.downsampled_batch_ratio < 1
-        self.to_be_stored: list[tuple[int, float]] = []
+        self.to_be_stored = []
         self.current_file_index = 0
         self.current_scores_sum = 0.0
         self.file_total_scores = []
@@ -74,7 +74,7 @@ class SampleThenBatchHandler:
         """
         assert exc[0] is None, f"Something went wrong: {exc}"
 
-        #store the last samples
+        # store the last samples
         if len(self.to_be_stored) > 0:
             self._store_values()
 

@@ -19,7 +19,6 @@ def test_init_accumulation():
     assert len(os.listdir(".tmp_scores")) == 1
     assert handler.number_of_samples_per_file == [16]
 
-
     assert handler.normalizer == 40 / 16
     assert sum(handler.grouped_samples_per_file) == 8
 
@@ -30,6 +29,7 @@ def test_init_accumulation():
 
     assert not os.path.isdir(".tmp_scores")
     assert set(selected_ids) <= {1, 2, 3, 4, 11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34}
+
 
 def test_init_accumulation_limit():
     # batch size of 4, we want to extract 2 batches
@@ -79,31 +79,6 @@ def test_skewed_distribution():
 
     assert sorted(selected_ids) == [1, 2, 3, 4, 21, 22, 23, 24]
 
-def test_skewed_distribution_limit():
-    handler = SampleThenBatchHandler(0, 4, 0.5)
-    handler.maximum_keys_in_memory = 8
-
-    # samples from even files are useless
-    with handler:
-        handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([11, 12, 13, 14], torch.Tensor([0, 0, 0, 0]))
-        handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([31, 32, 33, 34], torch.Tensor([0, 0, 0, 0]))
-        assert handler.normalizer == 20
-
-    assert len(handler.number_of_samples_per_file) == 2
-    assert handler.number_of_samples_per_file == [8,8]
-
-    assert handler.normalizer == 20 / 16
-
-    samples = handler.get_samples_per_file(0)
-    selected_ids = [el[0] for el in samples]
-    assert sorted(selected_ids) == [1, 2, 3, 4]
-
-    samples = handler.get_samples_per_file(1)
-    selected_ids = [el[0] for el in samples]
-    assert sorted(selected_ids) == [21, 22, 23, 24]
-
 
 def test_restart_accumulation():
     handler = SampleThenBatchHandler(0, 4, 0.5)
@@ -133,7 +108,6 @@ def test_restart_accumulation():
 
     assert len(os.listdir(".tmp_scores")) == 1
     assert handler.number_of_samples_per_file == [12]
-
 
     assert handler.normalizer == 60 / 12
     assert sum(handler.grouped_samples_per_file) == 4

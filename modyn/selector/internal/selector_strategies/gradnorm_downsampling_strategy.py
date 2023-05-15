@@ -7,7 +7,10 @@ class GradNormDownsamplingStrategy(AbstractDownsampleStrategy):
 
     def get_downsampling_params(self) -> dict:
         if self.sample_before_batch:
-            params = {"downsampled_batch_ratio": self.downsampled_batch_ratio}
+            params = {
+                "downsampled_batch_ratio": self.downsampled_batch_ratio,
+                "downsampling_period": self.downsampling_period,
+            }
         else:
             params = {"downsampled_batch_size": self.downsampled_batch_size}
         params["sample_before_batch"] = self.sample_before_batch
