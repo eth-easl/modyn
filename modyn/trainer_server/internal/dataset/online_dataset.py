@@ -43,7 +43,7 @@ class OnlineDataset(IterableDataset):
         self._training_id = training_id
         self._dataset_id = dataset_id
         self._dataset_len = 0
-        self._trainining_set_number = 0
+        self._first_call = True
         self._mod_dict: dict[str, Any] = {}
 
         self._bytes_parser = bytes_parser
@@ -165,7 +165,8 @@ class OnlineDataset(IterableDataset):
         else:
             worker_id = worker_info.id
 
-        if self._trainining_set_number == 0:
+        if self._first_call:
+            self._first_call = False
             self._debug("This is the first run of iter, making gRPC connections.", worker_id)
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
@@ -175,7 +176,6 @@ class OnlineDataset(IterableDataset):
             self._debug("gRPC initialized.", worker_id)
 
         assert self._transform is not None
-        self._trainining_set_number += 1
         self._num_partitions = self._get_num_data_partitions()
         self._info(f"Total number of partitions will be {self._num_partitions}", worker_id)
 
