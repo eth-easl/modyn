@@ -383,9 +383,10 @@ class PytorchTrainer:
         number_of_batches = 0
         # context manager to automatically handle beginning (reset, cleaning..)
         # and end (computing the scores and sampling).
-        with self._downsampler.sample_then_batch_accumulator() as stb_handler:
+        stb_handler = self._downsampler.sample_then_batch_accumulator()
+        with stb_handler:
             # sample ids are retrieved from the selector as in the usual training loop
-            for batch_number, batch in enumerate(self._train_dataloader):
+            for _, batch in enumerate(self._train_dataloader):
                 number_of_batches += 1
                 sample_ids, target, data = self.prepare_data(batch)
 
@@ -393,12 +394,13 @@ class PytorchTrainer:
                     # compute the scores and accumulate them
                     model_output = self._model.model(data)
                     scores = self._downsampler.get_scores(model_output, target).numpy()
-                    stb_handler.accumulate(sample_ids, scores, batch_number)
+                    stb_handler.accumulate(sample_ids, scores)
 
+        number_of_files = stb_handler.get_total_number_of_files()
         # to store all the selected (sample, weight).
         local_dataset = LocalDatasetHandler(self.pipeline_id, self._batch_size)
 
-        for i in range(number_of_batches):
+        for i in range(number_of_files):
             samples_list = self._downsampler.get_samples_for_file(i)
             local_dataset.inform_samples(samples_list)
 

@@ -18,10 +18,14 @@ class SampleThenBatchHandler:
         self.current_pipeline_id = pipeline_id
         assert batch_size > 0
         self.batch_size = batch_size
+        self.maximum_keys_in_memory = 1000
         assert 0 < downsampled_batch_ratio < 1
         self.downsampled_batch_ratio = downsampled_batch_ratio
 
         # below a list of arguments that are used throughout the function but not yet available
+        self.to_be_stored: list[tuple[int, float]] = []
+        self.current_file_index = 0
+        self.current_scores_sum = 0.0
         self.file_total_scores: list[float] = []
         self.grouped_samples_per_file: list[int] = []
         self.number_of_samples_per_file: list[int] = []
@@ -37,13 +41,16 @@ class SampleThenBatchHandler:
         assert self.batch_size > 0
         assert self.current_pipeline_id >= 0
         assert 0 < self.downsampled_batch_ratio < 1
+        self.to_be_stored: list[tuple[int, float]] = []
+        self.current_file_index = 0
+        self.current_scores_sum = 0.0
         self.file_total_scores = []
         self.number_of_samples_per_file = []
         self.normalizer = 0.0
         self._clean_working_directory()
         return self
 
-    def accumulate(self, sample_ids: list, scores: torch.Tensor, batch_number: int) -> None:
+    def accumulate(self, sample_ids: list, scores: torch.Tensor) -> None:
         """
         Function to accumulate ids and scores. These values are temporarily stored using TriggerSampleStorage
         Args:
@@ -53,13 +60,12 @@ class SampleThenBatchHandler:
         """
         assert len(sample_ids) == scores.shape[0]
 
-        self.file_total_scores.append(scores.sum().item())
-        self.number_of_samples_per_file.append(len(sample_ids))
         self.normalizer += scores.sum().item()
-        to_save = np.empty(len(sample_ids), dtype=np.dtype("i8,f8"))
-        for i, (sample_id, score) in enumerate(zip(sample_ids, scores)):
-            to_save[i] = (sample_id, score)
-        self.scores_storage.save_trigger_sample(self.current_pipeline_id, 0, batch_number, to_save, -1)
+        for sample_id, score in zip(sample_ids, scores):
+            self.to_be_stored.append((sample_id, score))
+            self.current_scores_sum += score.item()
+            if len(self.to_be_stored) == self.maximum_keys_in_memory:
+                self._store_values()
 
     def __exit__(self, *exc: Any) -> None:
         """
@@ -67,6 +73,10 @@ class SampleThenBatchHandler:
         When all datapoints have been accumulated, the number of points per file are sampled.
         """
         assert exc[0] is None, f"Something went wrong: {exc}"
+
+        #store the last samples
+        if len(self.to_be_stored) > 0:
+            self._store_values()
 
         file_probabilities = torch.Tensor([score / sum(self.file_total_scores) for score in self.file_total_scores])
 
@@ -133,3 +143,18 @@ class SampleThenBatchHandler:
     def _clean_working_directory(self) -> None:
         if os.path.isdir(TEMPORARY_LOCAL_STORAGE_PATH):
             shutil.rmtree(TEMPORARY_LOCAL_STORAGE_PATH)
+
+    def _store_values(self) -> None:
+        array_to_be_stored = np.array(self.to_be_stored, dtype=np.dtype("i8,f8"))
+        self.scores_storage.save_trigger_sample(
+            self.current_pipeline_id, 0, self.current_file_index, array_to_be_stored, -1
+        )
+        self.file_total_scores.append(self.current_scores_sum)
+        self.number_of_samples_per_file.append(len(self.to_be_stored))
+
+        self.to_be_stored = []
+        self.current_file_index += 1
+        self.current_scores_sum = 0
+
+    def get_total_number_of_files(self) -> int:
+        return self.current_file_index
