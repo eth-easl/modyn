@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+
 #include <cstddef>
 #include <iostream>
 
@@ -8,14 +10,15 @@
 namespace storage {
 class BinaryFileWrapper : public AbstractFileWrapper {  // NOLINT
  private:
-  int record_size_;
-  int label_size_;
-  int file_size_;
-  int sample_size_;
-  static void validate_request_indices(int total_samples, const std::vector<int>* indices) {
-    for (uint64_t i = 0; i < indices->size(); i++) {
-      if (indices->at(i) < 0 || indices->at(i) > (total_samples - 1)) {
-        throw std::runtime_error("Requested index is out of bounds.");
+  int64_t record_size_;
+  int64_t label_size_;
+  int64_t file_size_;
+  int64_t sample_size_;
+  static void validate_request_indices(int total_samples, const std::vector<int64_t>* indices) {
+    for (int indice : *indices) {  // NOLINT (we want to iterate over the indices)
+      if (indice < 0 || indice > (total_samples - 1)) {
+        SPDLOG_ERROR("Requested index {} is out of bounds.", indice);
+        throw std::out_of_range("Requested index is out of bounds.");
       }
     }
   }
@@ -51,9 +54,9 @@ class BinaryFileWrapper : public AbstractFileWrapper {  // NOLINT
   int get_number_of_samples() override;
   int get_label(int index) override;
   std::vector<int>* get_all_labels() override;
-  std::vector<std::vector<unsigned char>>* get_samples(int start, int end) override;
-  std::vector<unsigned char>* get_sample(int index) override;
-  std::vector<std::vector<unsigned char>>* get_samples_from_indices(std::vector<int>* indices) override;
+  std::vector<std::vector<unsigned char>>* get_samples(int64_t start, int64_t end) override;
+  std::vector<unsigned char>* get_sample(int64_t index) override;
+  std::vector<std::vector<unsigned char>>* get_samples_from_indices(std::vector<int64_t>* indices) override;
   void validate_file_extension() override;
   std::string get_name() override { return "BIN"; }
   ~BinaryFileWrapper() override = default;

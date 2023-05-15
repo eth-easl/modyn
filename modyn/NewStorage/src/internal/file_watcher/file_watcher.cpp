@@ -18,16 +18,16 @@ void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, const 
 
   std::vector<std::string> valid_files;
   for (const auto& file_path : *file_paths) {
-    if (this->check_valid_file(file_path, data_file_extension, false, timestamp, filesystem_wrapper)) {
+    if (this->check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/ false, timestamp, filesystem_wrapper)) {
       valid_files.push_back(file_path);
     }
   }
 
-  if (valid_files.size() > 0) {
+  if (!valid_files.empty()) {
     std::string file_path;  // NOLINT
     int number_of_samples;
-    std::vector<std::tuple<long long, long long, int, int>> file_frame =
-        std::vector<std::tuple<long long, long long, int, int>>();
+    std::vector<std::tuple<int64_t, int64_t, int, int>> file_frame =
+        std::vector<std::tuple<int64_t, int64_t, int, int>>();
     for (const auto& file_path : valid_files) {
       AbstractFileWrapper* file_wrapper =
           Utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
@@ -40,12 +40,12 @@ void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, const 
           soci::use(filesystem_wrapper->get_created_time(file_path)),
           soci::use(filesystem_wrapper->get_modified_time(file_path));
 
-      long long file_id;
+      int64_t file_id;
       sql->get_last_insert_id("files", file_id);
 
       std::vector<int> labels = *file_wrapper->get_all_labels();
 
-      std::tuple<long long, long long, int, int> frame;
+      std::tuple<int64_t, int64_t, int, int> frame;
       int index = 0;
       for (const auto& label : labels) {
         frame = std::make_tuple(this->dataset_id_, file_id, index, label);
@@ -62,11 +62,11 @@ void FileWatcher::handle_file_paths(std::vector<std::string>* file_paths, const 
   }
 }
 
-void FileWatcher::postgres_copy_insertion(std::vector<std::tuple<long long, long long, int, int>> file_frame,
+void FileWatcher::postgres_copy_insertion(std::vector<std::tuple<int64_t, int64_t, int, int>> file_frame,
                                           soci::session* sql) const {
-  std::string table_name = "samples__did" + std::to_string(this->dataset_id_);
-  std::string table_columns = "(dataset_id,file_id,sample_index,label)";
-  std::string cmd = "COPY " + table_name + table_columns + " FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')";
+  const std::string table_name = "samples__did" + std::to_string(this->dataset_id_);
+  const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
+  const std::string cmd = "COPY " + table_name + table_columns + " FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')";
 
   // Create stringbuffer, dump data into file buffer csv and send to
   // postgresql
@@ -94,7 +94,7 @@ void FileWatcher::postgres_copy_insertion(std::vector<std::tuple<long long, long
 bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                                    bool ignore_last_timestamp, int timestamp,
                                    AbstractFilesystemWrapper* filesystem_wrapper) {
-  std::string file_extension = file_path.substr(file_path.find_last_of("."));
+  const std::string file_extension = file_path.substr(file_path.find_last_of('.'));
   if (file_extension != data_file_extension) {
     return false;
   }
@@ -125,7 +125,7 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
       soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(this->dataset_id_);
 
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
-  std::string data_file_extension = file_wrapper_config_node["file_extension"].as<std::string>();
+  const auto data_file_extension = file_wrapper_config_node["file_extension"].as<std::string>();
 
   std::vector<std::string>* file_paths = filesystem_wrapper->list(directory_path, true);
 
@@ -133,10 +133,10 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
     this->handle_file_paths(file_paths, data_file_extension, file_wrapper_type, filesystem_wrapper, timestamp,
                             file_wrapper_config_node);
   } else {
-    int files_per_thread = file_paths->size() / this->insertion_threads_;
+    const int files_per_thread = file_paths->size() / this->insertion_threads_;
     std::vector<std::thread> children;
     for (int i = 0; i < this->insertion_threads_; i++) {
-      std::vector<std::string>* file_paths_thread = new std::vector<std::string>();
+      auto* file_paths_thread = new std::vector<std::string>();
       if (i == this->insertion_threads_ - 1) {
         file_paths_thread->insert(file_paths_thread->end(), file_paths->begin() + i * files_per_thread,
                                   file_paths->end());
@@ -146,12 +146,12 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
       }
       std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
       FileWatcher watcher(this->config_file_, this->dataset_id_, stop_file_watcher);
-      children.push_back(std::thread(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
+      children.emplace_back(std::thread(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
                                      file_wrapper_type, filesystem_wrapper, timestamp, file_wrapper_config_node));
     }
 
-    for (uint64_t i = 0; i < children.size(); i++) {
-      children[i].join();
+    for (auto & child : children) {
+      child.join();
     }
   }
 }

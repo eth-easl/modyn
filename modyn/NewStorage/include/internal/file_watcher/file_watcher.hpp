@@ -26,9 +26,9 @@ class FileWatcher {
  public:
   explicit FileWatcher(const std::string& config_file, const int64_t& dataset_id,  // NOLINT
                        std::shared_ptr<std::atomic<bool>> stop_file_watcher)
-      : config_file_(config_file), dataset_id_(dataset_id), stop_file_watcher_(stop_file_watcher) {
+      : config_file_(config_file), dataset_id_(dataset_id), stop_file_watcher_(std::move(stop_file_watcher)) {
     this->config_ = YAML::LoadFile(config_file);
-    this->insertion_threads_ = int(this->config_["storage"]["insertion_threads"].as<int>());
+    this->insertion_threads_ = this->config_["storage"]["insertion_threads"].as<int>();
     this->disable_multithreading_ = this->insertion_threads_ <= 1;  // NOLINT
     if (this->config_["storage"]["sample_dbinsertion_batchsize"]) {
       this->sample_dbinsertion_batchsize_ = this->config_["storage"]["sample_dbinsertion_batchsize"].as<int>();
@@ -47,7 +47,7 @@ class FileWatcher {
                         bool ignore_last_timestamp, int timestamp, AbstractFilesystemWrapper* filesystem_wrapper);
   void postgres_copy_insertion(std::vector<std::tuple<int64_t, int64_t, int, int>> file_frame,
                                soci::session* sql) const;
-  static void fallback_insertion(std::vector<std::tuple<int64_t, int64_t, int, int>> file_frame, soci::session* sql) {
+  static void fallback_insertion(const std::vector<std::tuple<int64_t, int64_t, int, int>> &file_frame, soci::session* sql) {
     // Prepare query
     std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
 

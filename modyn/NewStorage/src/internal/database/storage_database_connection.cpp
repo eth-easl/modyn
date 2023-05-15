@@ -11,7 +11,7 @@
 using namespace storage;
 
 soci::session* StorageDatabaseConnection::get_session() const {
-  std::string connection_string = "dbname='" + this->database_ + "' user='" + this->username_ + "' password='" +
+  const std::string connection_string = "dbname='" + this->database_ + "' user='" + this->username_ + "' password='" +
                                   this->password_ + "' host='" + this->host_ + "' port=" + this->port_;
   soci::connection_parameters parameters;
   if (this->drivername == "postgresql") {

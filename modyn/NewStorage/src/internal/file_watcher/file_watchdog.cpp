@@ -11,7 +11,7 @@ using namespace storage;
 
 void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int retries) {
   // Start a new child process of a FileWatcher
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   auto file_watcher = new FileWatcher(this->config_file_, dataset_id, stop_file_watcher);  // NOLINT
   std::thread th(&FileWatcher::run, file_watcher);
   this->file_watcher_processes_[dataset_id] = std::tuple(std::move(th), retries, stop_file_watcher);
@@ -83,7 +83,7 @@ void FileWatchdog::run() {
   SPDLOG_INFO("FileWatchdog running");
 
   while (true) {
-    if (this->stop_file_watchdog_.get()->load()) {
+    if (this->stop_file_watchdog_->load()) {
       break;
     }
     this->watch_file_watcher_processes(&storage_database_connection);

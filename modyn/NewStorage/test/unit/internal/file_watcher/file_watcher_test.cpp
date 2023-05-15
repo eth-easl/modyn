@@ -20,7 +20,7 @@ class FileWatcherTest : public ::testing::Test {
     TestUtils::create_dummy_yaml();
     // Create temporary directory
     std::filesystem::create_directory("tmp");
-    YAML::Node config = YAML::LoadFile("config.yaml");
+    const YAML::Node config = YAML::LoadFile("config.yaml");
     const StorageDatabaseConnection connection(config);
     connection.create_tables();
   }
@@ -36,15 +36,15 @@ class FileWatcherTest : public ::testing::Test {
 };
 
 TEST_F(FileWatcherTest, TestConstructor) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  ASSERT_NO_THROW(FileWatcher watcher("config.yaml", 1, stop_file_watcher));
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  ASSERT_NO_THROW(const FileWatcher watcher("config.yaml", 1, stop_file_watcher));
 }
 
 TEST_F(FileWatcherTest, TestSeek) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
@@ -66,7 +66,7 @@ TEST_F(FileWatcherTest, TestSeek) {
   ASSERT_NO_THROW(watcher.seek());
 
   // Check if the file is added to the database
-  std::string file_path = "tmp/test_file.txt";
+  const std::string file_path = "tmp/test_file.txt";
   std::vector<std::string> file_paths = std::vector<std::string>(1);
   *sql << "SELECT path FROM files", soci::into(file_paths);
   ASSERT_EQ(file_paths[0], file_path);
@@ -84,10 +84,10 @@ TEST_F(FileWatcherTest, TestSeek) {
 }
 
 TEST_F(FileWatcherTest, TestSeekDataset) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
 
   connection.add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
@@ -105,7 +105,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   ASSERT_NO_THROW(watcher.seek_dataset());
 
   // Check if the file is added to the database
-  std::string file_path = "tmp/test_file.txt";
+  const std::string file_path = "tmp/test_file.txt";
   std::vector<std::string> file_paths = std::vector<std::string>(1);
   soci::session* sql = connection.get_session();
   *sql << "SELECT path FROM files", soci::into(file_paths);
@@ -118,7 +118,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
 }
 
 TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
   MockFilesystemWrapper filesystem_wrapper;
@@ -132,7 +132,7 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
 
   ASSERT_TRUE(watcher.check_valid_file("test.txt", ".txt", true, 0, &filesystem_wrapper));
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
@@ -144,16 +144,16 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
 }
 
 TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
 
   connection.add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  std::vector<std::string>* files = new std::vector<std::string>();
+  auto* files = new std::vector<std::string>();
   files->push_back("test.txt");
   files->push_back("test.lbl");
   MockFilesystemWrapper filesystem_wrapper;
@@ -161,27 +161,27 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   EXPECT_CALL(filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
   EXPECT_CALL(filesystem_wrapper, get_created_time(testing::_)).WillOnce(testing::Return(1000));
-  std::vector<unsigned char>* bytes = new std::vector<unsigned char>{'1'};
+  auto* bytes = new std::vector<unsigned char>{'1'};
   EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
 
   ASSERT_NO_THROW(watcher.update_files_in_directory(&filesystem_wrapper, "tmp", 0));
 }
 
 TEST_F(FileWatcherTest, TestFallbackInsertion) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher("config.yaml", 1, stop_file_watcher);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
 
-  std::vector<std::tuple<long long, long long, int, int>> files;
+  std::vector<std::tuple<int64_t, int64_t, int, int>> files;
 
   // Add some files to the vector
-  files.push_back(std::make_tuple(1, 1, 1, 1));
-  files.push_back(std::make_tuple(2, 2, 2, 2));
-  files.push_back(std::make_tuple(3, 3, 3, 3));
+  files.emplace_back(1, 1, 1, 1);
+  files.emplace_back(2, 2, 2, 2);
+  files.emplace_back(3, 3, 3, 3);
 
   // Insert the files into the database
   ASSERT_NO_THROW(watcher.fallback_insertion(files, sql));
@@ -199,14 +199,14 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
 }
 
 TEST_F(FileWatcherTest, TestHandleFilePaths) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
-  std::vector<std::string>* file_paths = new std::vector<std::string>();
+  auto* file_paths = new std::vector<std::string>();
   file_paths->push_back("test.txt");
   file_paths->push_back("test2.txt");
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
 
   soci::session* sql = connection.get_session();
@@ -214,12 +214,12 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
   EXPECT_CALL(filesystem_wrapper, get_created_time(testing::_)).WillRepeatedly(testing::Return(1000));
-  std::vector<unsigned char>* bytes = new std::vector<unsigned char>{'1'};
+  auto* bytes = new std::vector<unsigned char>{'1'};
   EXPECT_CALL(filesystem_wrapper, get("test.lbl")).WillOnce(testing::Return(bytes));
   bytes = new std::vector<unsigned char>{'2'};
   EXPECT_CALL(filesystem_wrapper, get("test2.lbl")).WillOnce(testing::Return(bytes));
 
-  YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
+  const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
 
   ASSERT_NO_THROW(
       watcher.handle_file_paths(file_paths, ".txt", "SINGLE_SAMPLE", &filesystem_wrapper, 0, file_wrapper_config_node));

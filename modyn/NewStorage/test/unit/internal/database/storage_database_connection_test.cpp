@@ -38,7 +38,7 @@ TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
   const storage::StorageDatabaseConnection connection2 = storage::StorageDatabaseConnection(config);
   soci::session* sql = connection2.get_session();
 
-  soci::rowset<soci::row> tables = (sql->prepare << "SELECT name FROM sqlite_master WHERE type='table';");
+  const soci::rowset<soci::row> tables = (sql->prepare << "SELECT name FROM sqlite_master WHERE type='table';");
 
   // Assert datasets, files and samples tables exist
   int number_of_tables = 0;  // NOLINT

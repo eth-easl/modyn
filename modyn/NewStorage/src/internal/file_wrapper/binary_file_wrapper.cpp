@@ -25,7 +25,7 @@ int BinaryFileWrapper::int_from_bytes(const unsigned char* begin, const unsigned
 int BinaryFileWrapper::get_number_of_samples() { return this->file_size_ / this->record_size_; }
 
 void BinaryFileWrapper::validate_file_extension() {
-  std::string extension = this->file_path_.substr(this->file_path_.find_last_of(".") + 1);
+  const std::string extension = this->file_path_.substr(this->file_path_.find_last_of('.') + 1);
   if (extension != "bin") {
     throw std::invalid_argument("Binary file wrapper only supports .bin files.");
   }
@@ -40,59 +40,58 @@ int BinaryFileWrapper::get_label(int index) {
 }
 
 std::vector<int>* BinaryFileWrapper::get_all_labels() {
-  int num_samples = this->get_number_of_samples();
-  std::vector<int>* labels = new std::vector<int>();
+  const int64_t num_samples = this->get_number_of_samples();
+  auto* labels = new std::vector<int>();
   labels->reserve(num_samples);
   unsigned char* data = this->filesystem_wrapper_->get(this->file_path_)->data();
   for (int64_t i = 0; i < num_samples; i++) {
     unsigned char* label_begin = data + (i * this->record_size_);
     unsigned char* label_end = label_begin + this->label_size_;
-    int label = int_from_bytes(label_begin, label_end);
+    const int label = int_from_bytes(label_begin, label_end);
     labels->push_back(label);
   }
   return labels;
 }
 
-std::vector<std::vector<unsigned char>>* BinaryFileWrapper::get_samples(int start, int end) {
-  std::vector<int> indices = {start, end};
-  this->validate_request_indices(this->get_number_of_samples(), &indices);
-  int num_samples = end - start;
-  const int record_start = start * this->record_size_;
-  const int record_end = end * this->record_size_;
+std::vector<std::vector<unsigned char>>* BinaryFileWrapper::get_samples(int64_t start, int64_t end) {
+  const std::vector<int64_t> indices = {start, end};
+  BinaryFileWrapper::validate_request_indices(this->get_number_of_samples(), &indices);
+  const int64_t num_samples = end - start;
+  const int64_t record_start = start * this->record_size_;
+  const int64_t record_end = end * this->record_size_;
   unsigned char* data = this->filesystem_wrapper_->get(this->file_path_)->data();
-  std::vector<std::vector<unsigned char>>* samples = new std::vector<std::vector<unsigned char>>;
+  auto* samples = new std::vector<std::vector<unsigned char>>;
   samples->reserve(num_samples);
-  for (int i = record_start; i < record_end; i += this->record_size_) {
+  for (int64_t i = record_start; i < record_end; i += this->record_size_) {
     unsigned char* sample_begin = data + i + this->label_size_;
     unsigned char* sample_end = sample_begin + this->sample_size_;
-    std::vector<unsigned char> sample(sample_begin, sample_end);
+    const std::vector<unsigned char> sample(sample_begin, sample_end);
     samples->push_back(sample);
   }
   return samples;
 }
 
-std::vector<unsigned char>* BinaryFileWrapper::get_sample(int index) {
-  std::vector<int> indices = {index};
-  this->validate_request_indices(this->get_number_of_samples(), &indices);
-  const int record_start = index * this->record_size_;
+std::vector<unsigned char>* BinaryFileWrapper::get_sample(int64_t index) {
+  const std::vector<int64_t> indices = {index};
+  BinaryFileWrapper::validate_request_indices(this->get_number_of_samples(), &indices);
+  const int64_t record_start = index * this->record_size_;
   unsigned char* data = this->filesystem_wrapper_->get(this->file_path_)->data();
   unsigned char* sample_begin = data + record_start + this->label_size_;
   unsigned char* sample_end = sample_begin + this->sample_size_;
-  std::vector<unsigned char>* sample = new std::vector<unsigned char>(sample_begin, sample_end);
+  auto* sample = new std::vector<unsigned char>(sample_begin, sample_end);
   return sample;
 }
 
-std::vector<std::vector<unsigned char>>* BinaryFileWrapper::get_samples_from_indices(std::vector<int>* indices) {
-  this->validate_request_indices(this->get_number_of_samples(), indices);
-  std::vector<std::vector<unsigned char>>* samples = new std::vector<std::vector<unsigned char>>;
+std::vector<std::vector<unsigned char>>* BinaryFileWrapper::get_samples_from_indices(std::vector<int64_t>* indices) {
+  BinaryFileWrapper::validate_request_indices(this->get_number_of_samples(), indices);
+  auto* samples = new std::vector<std::vector<unsigned char>>;
   samples->reserve(indices->size());
   unsigned char* data = this->filesystem_wrapper_->get(this->file_path_)->data();
-  for (uint64_t i = 0; i < indices->size(); i++) {
-    int index = indices->at(i);
-    const int record_start = index * this->record_size_;
+  for (const int64_t index : *indices) {
+    const int64_t record_start = index * this->record_size_;
     unsigned char* sample_begin = data + record_start + this->label_size_;
     unsigned char* sample_end = sample_begin + this->sample_size_;
-    std::vector<unsigned char> sample(sample_begin, sample_end);
+    const std::vector<unsigned char> sample(sample_begin, sample_end);
     samples->push_back(sample);
   }
   return samples;

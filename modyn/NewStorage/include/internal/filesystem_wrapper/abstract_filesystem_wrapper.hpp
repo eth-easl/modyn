@@ -9,13 +9,13 @@ class AbstractFilesystemWrapper {  // NOLINT
   std::string base_path_;
 
  public:
-  explicit AbstractFilesystemWrapper(const std::string& path) : base_path_(std::move(path)) {}
+  explicit AbstractFilesystemWrapper(std::string path) : base_path_(std::move(path)) {}
   virtual std::vector<unsigned char>* get(std::string path) = 0;
   virtual bool exists(std::string path) = 0;
-  virtual std::vector<std::string>* list(std::string path, bool recursive = false) = 0;
+  virtual std::vector<std::string>* list(std::string path, bool recursive) = 0;
   virtual bool is_directory(std::string path) = 0;
   virtual bool is_file(std::string path) = 0;
-  virtual int get_file_size(std::string path) = 0;
+  virtual int64_t get_file_size(std::string path) = 0;
   virtual int64_t get_modified_time(std::string path) = 0;
   virtual int64_t get_created_time(std::string path) = 0;
   virtual std::string join(std::vector<std::string> paths) = 0;

@@ -15,7 +15,7 @@ class FileWatchdogTest : public ::testing::Test {
     TestUtils::create_dummy_yaml();
     // Create temporary directory
     std::filesystem::create_directory("tmp");
-    YAML::Node config = YAML::LoadFile("config.yaml");
+    const YAML::Node config = YAML::LoadFile("config.yaml");
     const StorageDatabaseConnection connection(config);
     connection.create_tables();
   }
@@ -31,13 +31,13 @@ class FileWatchdogTest : public ::testing::Test {
 };
 
 TEST_F(FileWatchdogTest, TestConstructor) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  ASSERT_NO_THROW(FileWatchdog watchdog("config.yaml", stop_file_watcher));
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  ASSERT_NO_THROW(const FileWatchdog watchdog("config.yaml", stop_file_watcher));
 }
 
 TEST_F(FileWatchdogTest, TestRun) {
   // Collect the output of the watchdog
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
 
   auto* watchdog = new FileWatchdog("config.yaml", stop_file_watcher);
 
@@ -52,21 +52,21 @@ TEST_F(FileWatchdogTest, TestRun) {
 }
 
 TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
 
   // Add two dataset to the database
   connection.add_dataset("test_dataset1", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), /*is_test=*/true);
+                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
   connection.add_dataset("test_dataset2", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), /*is_test=*/true);
+                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_process(1, 0);
 
-  std::vector<long long> file_watcher_processes;
+  std::vector<int64_t> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
@@ -88,18 +88,18 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
 }
 
 TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   auto* connection = new StorageDatabaseConnection(config);
 
   connection->add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
-                          TestUtils::get_dummy_file_wrapper_config_inline(), /*is_test=*/true);
+                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_process(1, 0);
 
-  std::vector<long long> file_watcher_processes;
+  std::vector<int64_t> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
@@ -112,20 +112,20 @@ TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
 }
 
 TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatchdog watchdog("config.yaml", stop_file_watcher);
 
-  YAML::Node config = YAML::LoadFile("config.yaml");
+  const YAML::Node config = YAML::LoadFile("config.yaml");
   auto* connection = new StorageDatabaseConnection(config);
 
   watchdog.watch_file_watcher_processes(connection);
 
   connection->add_dataset("test_dataset1", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-                          TestUtils::get_dummy_file_wrapper_config_inline(), /*is_test=*/true);
+                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_processes(connection);
 
-  std::vector<long long> file_watcher_processes;
+  std::vector<int64_t> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
