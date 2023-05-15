@@ -62,10 +62,12 @@ class AbstractRemoteDownsamplingStrategy(ABC):
 
         return downsampled_idxs, weights
 
-    def sample_then_batch_accumulator(self) -> SampleThenBatchHandler:
+    def get_sample_then_batch_accumulator(self) -> SampleThenBatchHandler:
+        assert self.sample_before_batch
         return self.sample_then_batch_handler
 
     def get_samples_for_file(self, file_index: int) -> np.ndarray:
+        assert self.sample_before_batch
         return self.sample_then_batch_handler.get_samples_per_file(file_index)
 
     @abstractmethod

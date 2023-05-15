@@ -389,7 +389,7 @@ class PytorchTrainer:
         number_of_batches = 0
         # context manager to automatically handle beginning (reset, cleaning..)
         # and end (computing the scores and sampling).
-        stb_handler = self._downsampler.sample_then_batch_accumulator()
+        stb_handler = self._downsampler.get_sample_then_batch_accumulator()
         with stb_handler:
             # sample ids are retrieved from the selector as in the usual training loop
             for _, batch in enumerate(self._train_dataloader):

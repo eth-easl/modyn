@@ -35,14 +35,15 @@ class LocalDatasetHandler(TriggerSampleStorage):
             self.current_sample_index += 1
 
             if self.current_sample_index == self.file_size:
-                self.samples_ready()
+                self._samples_ready()
 
     def store_last_samples(self) -> None:
+        assert self.file_size > 0
         if self.current_sample_index > 0:
             self.output_samples_list = self.output_samples_list[: self.current_sample_index]  # remove empty elements
-            self.samples_ready()
+            self._samples_ready()
 
-    def samples_ready(self) -> None:
+    def _samples_ready(self) -> None:
         assert self.file_size > 0
         assert self.output_samples_list is not None
         self.save_trigger_sample(self.pipeline_id, 0, self.current_file_index, self.output_samples_list, -1)
