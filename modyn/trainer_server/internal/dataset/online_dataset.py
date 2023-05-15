@@ -154,7 +154,7 @@ class OnlineDataset(IterableDataset):
     def switch_to_selector_key_source(self) -> None:
         if self._keys_source == "selector":
             return
-        self._keys_source = "local"
+        self._keys_source = "selector"
         assert self._local_dataset_handler is not None
         self._local_dataset_handler.clean_working_directory()
         self._local_dataset_handler = None
