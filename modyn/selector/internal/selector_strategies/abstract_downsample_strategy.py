@@ -24,7 +24,7 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
         if "downsampled_batch_size" not in self._config:
-            raise ValueError("To use Loss Downsampling strategy, you have to specify the downsampled_batch_size")
+            raise ValueError("To use downsampling strategies, you have to specify the downsampled_batch_size")
         self.downsampled_batch_size = self._config["downsampled_batch_size"]
 
         if not isinstance(self.downsampled_batch_size, int):
