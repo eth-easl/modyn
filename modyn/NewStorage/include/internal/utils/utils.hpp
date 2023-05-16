@@ -19,23 +19,24 @@ namespace storage {
 
 class Utils {
  public:
-  static AbstractFilesystemWrapper* get_filesystem_wrapper(const std::string& path, const std::string& type) {
-    AbstractFilesystemWrapper* abstract_filesystem_wrapper;
+  static std::shared_ptr<AbstractFilesystemWrapper> get_filesystem_wrapper(const std::string& path,
+                                                                           const std::string& type) {
+    std::shared_ptr<AbstractFilesystemWrapper> abstract_filesystem_wrapper;
     if (type == "LOCAL") {
-      abstract_filesystem_wrapper = new LocalFilesystemWrapper(path);
+      abstract_filesystem_wrapper = std::make_unique<LocalFilesystemWrapper>(path);
     } else {
       throw std::runtime_error("Unknown filesystem wrapper type: " + type);
     }
     return abstract_filesystem_wrapper;
   }
-  static AbstractFileWrapper* get_file_wrapper(const std::string& path, const std::string& type,
-                                               const YAML::Node& file_wrapper_config,
-                                               AbstractFilesystemWrapper* filesystem_wrapper) {
-    AbstractFileWrapper* file_wrapper;
+  static std::unique_ptr<AbstractFileWrapper> get_file_wrapper(
+      const std::string& path, const std::string& type, const YAML::Node& file_wrapper_config,
+      const std::shared_ptr<AbstractFilesystemWrapper> &filesystem_wrapper) {
+    std::unique_ptr<AbstractFileWrapper> file_wrapper;
     if (type == "BIN") {
-      file_wrapper = new BinaryFileWrapper(path, file_wrapper_config, filesystem_wrapper);
+      file_wrapper = std::make_unique<BinaryFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
     } else if (type == "SINGLE_SAMPLE") {
-      file_wrapper = new SingleSampleFileWrapper(path, file_wrapper_config, filesystem_wrapper);
+      file_wrapper = std::make_unique<SingleSampleFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
     } else {
       throw std::runtime_error("Unknown file wrapper type: " + type);
     }

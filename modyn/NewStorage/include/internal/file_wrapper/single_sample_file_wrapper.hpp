@@ -7,7 +7,8 @@
 namespace storage {
 class SingleSampleFileWrapper : public AbstractFileWrapper {  // NOLINT
  public:
-  SingleSampleFileWrapper(const std::string& path, const YAML::Node& fw_config, AbstractFilesystemWrapper* fs_wrapper)
+  SingleSampleFileWrapper(const std::string& path, const YAML::Node& fw_config,
+                          std::shared_ptr<AbstractFilesystemWrapper> fs_wrapper)
       : AbstractFileWrapper(path, fw_config, fs_wrapper) {
     validate_file_extension();
   }

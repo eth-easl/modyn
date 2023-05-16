@@ -31,15 +31,17 @@ class FileWatchdogTest : public ::testing::Test {
 };
 
 TEST_F(FileWatchdogTest, TestConstructor) {
-  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  ASSERT_NO_THROW(const FileWatchdog watchdog("config.yaml", stop_file_watcher));
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  ASSERT_NO_THROW(const FileWatchdog watchdog(config, stop_file_watcher));
 }
 
 TEST_F(FileWatchdogTest, TestRun) {
   // Collect the output of the watchdog
-  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
 
-  auto* watchdog = new FileWatchdog("config.yaml", stop_file_watcher);
+  auto* watchdog = new FileWatchdog(config, stop_file_watcher);
 
   std::thread th(&FileWatchdog::run, watchdog);
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -52,10 +54,10 @@ TEST_F(FileWatchdogTest, TestRun) {
 }
 
 TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
-  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatchdog watchdog("config.yaml", stop_file_watcher);
-
   const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  FileWatchdog watchdog(config, stop_file_watcher);
+
   const StorageDatabaseConnection connection(config);
 
   // Add two dataset to the database
@@ -88,10 +90,10 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
 }
 
 TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
-  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatchdog watchdog("config.yaml", stop_file_watcher);
-
   const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  FileWatchdog watchdog(config, stop_file_watcher);
+
   auto* connection = new StorageDatabaseConnection(config);
 
   connection->add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
@@ -112,10 +114,10 @@ TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
 }
 
 TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
-  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatchdog watchdog("config.yaml", stop_file_watcher);
-
   const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  FileWatchdog watchdog(config, stop_file_watcher);
+
   auto* connection = new StorageDatabaseConnection(config);
 
   watchdog.watch_file_watcher_processes(connection);

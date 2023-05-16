@@ -7,19 +7,16 @@
 #include <iostream>
 #include <sstream>
 
-#include "internal/utils/utils.hpp"
-
 using namespace storage;
 
 void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-                                    const std::string& file_wrapper_type, AbstractFilesystemWrapper* filesystem_wrapper,
-                                    int64_t timestamp, const YAML::Node& file_wrapper_config) {
+                                    const std::string& file_wrapper_type, int64_t timestamp,
+                                    const YAML::Node& file_wrapper_config) {
   soci::session* sql = storage_database_connection_->get_session();
 
   std::vector<std::string> valid_files;
   for (const auto& file_path : file_paths) {
-    if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp,
-                         filesystem_wrapper)) {
+    if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp)) {
       valid_files.push_back(file_path);
     }
   }
@@ -30,16 +27,16 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>> file_frame =
         std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>();
     for (const auto& file_path : valid_files) {
-      AbstractFileWrapper* file_wrapper =
+      auto file_wrapper =
           Utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
       number_of_samples = file_wrapper->get_number_of_samples();
-
+      int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
+      int64_t created_time = filesystem_wrapper->get_created_time(file_path);
       *sql << "INSERT INTO files (dataset_id, path, number_of_samples, "
               "created_at, updated_at) VALUES (:dataset_id, :path, "
               ":number_of_samples, :created_at, :updated_at)",
-          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples),
-          soci::use(filesystem_wrapper->get_created_time(file_path)),
-          soci::use(filesystem_wrapper->get_modified_time(file_path));
+          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(created_time),
+          soci::use(modified_time);
 
       long long file_id;  // NOLINT // soci get_last_insert_id requires a long long
       sql->get_last_insert_id("files", file_id);
@@ -92,8 +89,7 @@ void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, 
 }
 
 bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
-                                   bool ignore_last_timestamp, int64_t timestamp,
-                                   AbstractFilesystemWrapper* filesystem_wrapper) {
+                                   bool ignore_last_timestamp, int64_t timestamp) {
   const std::string file_extension = file_path.substr(file_path.find_last_of('.'));
   if (file_extension != data_file_extension) {
     return false;
@@ -113,8 +109,7 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
   return false;
 }
 
-void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesystem_wrapper,
-                                            const std::string& directory_path, int64_t timestamp) {
+void FileWatcher::update_files_in_directory(const std::string& directory_path, int64_t timestamp) {
   std::string file_wrapper_config;
   std::string file_wrapper_type;
 
@@ -130,8 +125,7 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
   std::vector<std::string> file_paths = filesystem_wrapper->list(directory_path, /*recursive=*/true);
 
   if (disable_multithreading_) {
-    handle_file_paths(file_paths, data_file_extension, file_wrapper_type, filesystem_wrapper, timestamp,
-                      file_wrapper_config_node);
+    handle_file_paths(file_paths, data_file_extension, file_wrapper_type, timestamp, file_wrapper_config_node);
   } else {
     const int64_t files_per_thread = static_cast<int64_t>(file_paths.size()) / insertion_threads_;
     std::vector<std::thread> children;
@@ -143,10 +137,10 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
         file_paths_thread.insert(file_paths_thread.end(), file_paths.begin() + i * files_per_thread,
                                  file_paths.begin() + (i + 1) * files_per_thread);
       }
-      const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-      const FileWatcher watcher(config_file_, dataset_id_, stop_file_watcher);
+      std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+      const FileWatcher watcher(config_, dataset_id_, stop_file_watcher);
       children.emplace_back(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
-                            file_wrapper_type, filesystem_wrapper, timestamp, file_wrapper_config_node);
+                            file_wrapper_type, timestamp, file_wrapper_config_node);
     }
 
     for (auto& child : children) {
@@ -158,27 +152,13 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
 void FileWatcher::seek_dataset() {
   soci::session* sql = storage_database_connection_->get_session();
 
-  std::string dataset_path;
-  std::string dataset_filesystem_wrapper_type;
   int64_t last_timestamp;
 
-  *sql << "SELECT base_path, filesystem_wrapper_type, last_timestamp FROM datasets "
+  *sql << "SELECT last_timestamp FROM datasets "
           "WHERE dataset_id = :dataset_id",
-      soci::into(dataset_path), soci::into(dataset_filesystem_wrapper_type), soci::into(last_timestamp),
-      soci::use(dataset_id_);
+      soci::into(last_timestamp), soci::use(dataset_id_);
 
-  if (dataset_path.empty()) {
-    throw std::runtime_error("Loading dataset failed, is the dataset_id correct?");
-  }
-
-  AbstractFilesystemWrapper* filesystem_wrapper =
-      Utils::get_filesystem_wrapper(dataset_path, dataset_filesystem_wrapper_type);
-
-  if (filesystem_wrapper->exists(dataset_path) && filesystem_wrapper->is_directory(dataset_path)) {
-    update_files_in_directory(filesystem_wrapper, dataset_path, last_timestamp);
-  } else {
-    throw std::runtime_error("Dataset path does not exist or is not a directory.");
-  }
+  update_files_in_directory(dataset_path_, last_timestamp);
 }
 
 void FileWatcher::seek() {

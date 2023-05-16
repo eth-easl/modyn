@@ -11,10 +11,10 @@ using namespace storage;
 
 void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int16_t retries) {
   // Start a new child process of a FileWatcher
-  const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  const FileWatcher file_watcher = FileWatcher(config_file_, dataset_id, stop_file_watcher);
+  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
+  const FileWatcher file_watcher = FileWatcher(config_, dataset_id, stop_file_watcher);
   std::thread th(&FileWatcher::run, file_watcher);
-  file_watcher_processes_[dataset_id] = std::tuple(std::move(th), retries, stop_file_watcher);
+  file_watcher_processes_[dataset_id] = std::tuple(std::move(th), retries, std::move(stop_file_watcher));
 }
 
 void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {

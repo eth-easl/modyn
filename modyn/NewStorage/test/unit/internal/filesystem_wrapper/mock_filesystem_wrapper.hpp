@@ -23,5 +23,6 @@ class MockFilesystemWrapper : public storage::AbstractFilesystemWrapper {
   MOCK_METHOD(bool, is_valid_path, (const std::string& path), (override));
   MOCK_METHOD(std::string, get_name, (), (override));
   ~MockFilesystemWrapper() override = default;
+  MockFilesystemWrapper(const MockFilesystemWrapper& other) : AbstractFilesystemWrapper(other.base_path_) {}
 };
 }  // namespace storage

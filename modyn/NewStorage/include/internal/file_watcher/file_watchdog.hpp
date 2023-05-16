@@ -16,15 +16,13 @@ namespace storage {
 class FileWatchdog {
  private:
   YAML::Node config_;
-  std::string config_file_;
   std::unordered_map<int64_t, std::tuple<std::thread, int16_t, std::shared_ptr<std::atomic<bool>>>>
       file_watcher_processes_;
   std::shared_ptr<std::atomic<bool>> stop_file_watchdog_;
 
  public:
-  FileWatchdog(const std::string& config_file, std::shared_ptr<std::atomic<bool>> stop_file_watchdog)  // NOLINT
-      : config_file_(config_file), stop_file_watchdog_(std::move(stop_file_watchdog)) {
-    config_ = YAML::LoadFile(config_file);
+  FileWatchdog(const YAML::Node& config, std::shared_ptr<std::atomic<bool>>& stop_file_watchdog)
+      : config_{config}, stop_file_watchdog_(std::move(stop_file_watchdog)) {
     file_watcher_processes_ =
         std::unordered_map<int64_t, std::tuple<std::thread, int16_t, std::shared_ptr<std::atomic<bool>>>>();
   }

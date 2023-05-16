@@ -15,7 +15,7 @@ class BinaryFileWrapper : public AbstractFileWrapper {  // NOLINT
   int64_t file_size_;
   int64_t sample_size_;
   static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices) {
-    for (int64_t indice : indices) {  // NOLINT (we want to iterate over the indices)
+    for (int64_t indice : indices) {
       if (indice < 0 || indice > (total_samples - 1)) {
         SPDLOG_ERROR("Requested index {} is out of bounds.", indice);
         throw std::out_of_range("Requested index is out of bounds.");
@@ -26,7 +26,7 @@ class BinaryFileWrapper : public AbstractFileWrapper {  // NOLINT
 
  public:
   BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,  // NOLINT
-                    AbstractFilesystemWrapper* fs_wrapper)
+                    std::shared_ptr<AbstractFilesystemWrapper> fs_wrapper)
       : AbstractFileWrapper(path, fw_config, fs_wrapper) {
     if (!fw_config["record_size"]) {
       throw std::runtime_error("record_size_must be specified in the file wrapper config.");
