@@ -391,12 +391,3 @@ class AbstractSelectionStrategy(ABC):
 
         for proc in processes:
             proc.join()
-
-    def seed_selector(self, seed: float) -> bool:
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            if database.drivername == "postgresql":
-                assert -1 <= seed <= 1
-                database.session.execute(func.setseed(seed))
-                return True
-            logging.info("Seeding is available only in postgresql")
-            return False

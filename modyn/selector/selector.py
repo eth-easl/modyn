@@ -109,6 +109,3 @@ class Selector:
         if self._strategy._requires_remote_computation and isinstance(self._strategy, AbstractDownsampleStrategy):
             return True, self._strategy.get_downsampling_strategy(), self._strategy.get_downsampling_params()
         return False, "", {}
-
-    def seed_selector(self, seed: float) -> bool:
-        return self._strategy.seed_selector(seed)

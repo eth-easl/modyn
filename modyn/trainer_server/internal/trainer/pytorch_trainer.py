@@ -12,12 +12,7 @@ from typing import Any, Callable, Optional, Union
 
 import grpc
 import torch
-from modyn.selector.internal.grpc.generated.selector_pb2 import (
-    GetSelectionStrategyRequest,
-    SeedSelectorRequest,
-    SeedSelectorResponse,
-    SelectionStrategyResponse,
-)
+from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
@@ -55,7 +50,7 @@ class PytorchTrainer:
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed >= 0:
-            self.seed_everything(training_info.seed)
+            self.seed_trainer_server(training_info.seed)
             self._info("Everything seeded")
 
         self._info("Initializing Pytorch Trainer")
@@ -234,20 +229,11 @@ class PytorchTrainer:
         params = json.loads(response.params.value)
         return response.downsampling_enabled, response.strategy_name, params
 
-    def seed_everything(self, seed: int) -> None:
+    def seed_trainer_server(self, seed: int) -> None:
         if not (0 <= seed <= 100 and isinstance(seed, int)):
             raise ValueError("The seed must be an integer in the range [0,100]")
         # seed the trainer server
         seed_everything(seed)
-
-        # we need to generate a different (but deterministic) seed since pytorch needs an integer and postgres a float
-        postgres_seed = (seed - 50) / 50
-
-        # seed the database
-        req = SeedSelectorRequest(pipeline_id=self.pipeline_id, seed=postgres_seed)
-
-        response: SeedSelectorResponse = self.selector_stub.seed_selector(req)
-        assert response.success, "Seeding is only available using postgresql"
 
     def connect_to_selector(self, selector_address: str) -> SelectorStub:
         selector_channel = grpc.insecure_channel(selector_address)
