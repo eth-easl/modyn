@@ -10,7 +10,7 @@ using namespace storage;
 Storage::Storage(const std::string& config_file) {
   /* Initialize the storage service. */
   const YAML::Node config = YAML::LoadFile(config_file);
-  this->config_ = config;
+  config_ = config;
 }
 
 void Storage::run() {  // NOLINT // TODO: Remove NOLINT after implementation

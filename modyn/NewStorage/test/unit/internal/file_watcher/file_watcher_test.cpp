@@ -72,12 +72,12 @@ TEST_F(FileWatcherTest, TestSeek) {
   ASSERT_EQ(file_paths[0], file_path);
 
   // Check if the sample is added to the database
-  std::vector<int> sample_ids = std::vector<int>(1);
+  std::vector<int64_t> sample_ids = std::vector<int64_t>(1);
   *sql << "SELECT sample_id FROM samples", soci::into(sample_ids);
   ASSERT_EQ(sample_ids[0], 1);
 
   // Assert the last timestamp of the dataset is updated
-  int last_timestamp;
+  int32_t last_timestamp;
   *sql << "SELECT last_timestamp FROM datasets WHERE dataset_id = :id", soci::use(1), soci::into(last_timestamp);
 
   ASSERT_TRUE(last_timestamp > 0);
@@ -112,7 +112,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   ASSERT_EQ(file_paths[0], file_path);
 
   // Check if the sample is added to the database
-  std::vector<int> sample_ids = std::vector<int>(1);
+  std::vector<int64_t> sample_ids = std::vector<int64_t>(1);
   *sql << "SELECT sample_id FROM samples", soci::into(sample_ids);
   ASSERT_EQ(sample_ids[0], 1);
 }
@@ -153,15 +153,15 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   connection.add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  auto* files = new std::vector<std::string>();
-  files->push_back("test.txt");
-  files->push_back("test.lbl");
+  std::vector<std::string> files = std::vector<std::string>();
+  files.emplace_back("test.txt");
+  files.emplace_back("test.lbl");
   MockFilesystemWrapper filesystem_wrapper;
 
   EXPECT_CALL(filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
   EXPECT_CALL(filesystem_wrapper, get_created_time(testing::_)).WillOnce(testing::Return(1000));
-  auto* bytes = new std::vector<unsigned char>{'1'};
+  const std::vector<unsigned char> bytes{'1'};
   EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
 
   ASSERT_NO_THROW(watcher.update_files_in_directory(&filesystem_wrapper, "tmp", 0));
@@ -176,7 +176,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
 
   soci::session* sql = connection.get_session();
 
-  std::vector<std::tuple<int64_t, int64_t, int, int>> files;
+  std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>> files;
 
   // Add some files to the vector
   files.emplace_back(1, 1, 1, 1);
@@ -187,7 +187,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   ASSERT_NO_THROW(watcher.fallback_insertion(files, sql));
 
   // Check if the files are added to the database
-  int file_id;
+  int32_t file_id;
   *sql << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(1), soci::into(file_id);
   ASSERT_EQ(file_id, 1);
 
@@ -202,9 +202,11 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
   FileWatcher watcher("config.yaml", 1, stop_file_watcher);
 
-  auto* file_paths = new std::vector<std::string>();
-  file_paths->push_back("test.txt");
-  file_paths->push_back("test2.txt");
+  std::vector<std::string> files = std::vector<std::string>();
+  files.emplace_back("test.txt");
+  files.emplace_back("test.lbl");
+  files.emplace_back("test2.txt");
+  files.emplace_back("test2.lbl");
 
   const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
@@ -214,30 +216,33 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
   EXPECT_CALL(filesystem_wrapper, get_created_time(testing::_)).WillRepeatedly(testing::Return(1000));
-  auto* bytes = new std::vector<unsigned char>{'1'};
+  std::vector<unsigned char> bytes{'1'};
   EXPECT_CALL(filesystem_wrapper, get("test.lbl")).WillOnce(testing::Return(bytes));
-  bytes = new std::vector<unsigned char>{'2'};
+  bytes = {'2'};
   EXPECT_CALL(filesystem_wrapper, get("test2.lbl")).WillOnce(testing::Return(bytes));
 
   const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
 
   ASSERT_NO_THROW(
-      watcher.handle_file_paths(file_paths, ".txt", "SINGLE_SAMPLE", &filesystem_wrapper, 0, file_wrapper_config_node));
+      watcher.handle_file_paths(files, ".txt", "SINGLE_SAMPLE", &filesystem_wrapper, 0, file_wrapper_config_node));
 
   // Check if the samples are added to the database
-  int file_id;
-  int label;
-  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(file_id),
-      soci::into(label);
-  ASSERT_EQ(file_id, 1);
-  ASSERT_EQ(label, 1);
+  int32_t sample_id1;
+  int32_t label1;
+  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(sample_id1),
+      soci::into(label1);
+  ASSERT_EQ(sample_id1, 1);
+  ASSERT_EQ(label1, 1);
 
-  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(2), soci::into(file_id),
-      soci::into(label);
-  ASSERT_EQ(file_id, 2);
-  ASSERT_EQ(label, 2);
+  int32_t sample_id2;
+  int32_t label2;
+  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(2), soci::into(sample_id2),
+      soci::into(label2);
+  ASSERT_EQ(sample_id2, 2);
+  ASSERT_EQ(label2, 2);
 
   // Check if the files are added to the database
+  int32_t file_id;
   *sql << "SELECT file_id FROM files WHERE file_id = :id", soci::use(1), soci::into(file_id);
   ASSERT_EQ(file_id, 1);
 

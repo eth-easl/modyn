@@ -11,22 +11,22 @@
 using namespace storage;
 
 soci::session* StorageDatabaseConnection::get_session() const {
-  const std::string connection_string = "dbname='" + this->database_ + "' user='" + this->username_ + "' password='" +
-                                  this->password_ + "' host='" + this->host_ + "' port=" + this->port_;
+  const std::string connection_string = "dbname='" + database_ + "' user='" + username_ + "' password='" + password_ +
+                                        "' host='" + host_ + "' port=" + port_;
   soci::connection_parameters parameters;
-  if (this->drivername == "postgresql") {
+  if (drivername == "postgresql") {
     parameters = soci::connection_parameters(soci::postgresql, connection_string);
-  } else if (this->drivername == "sqlite3") {
+  } else if (drivername == "sqlite3") {
     parameters = soci::connection_parameters(soci::sqlite3, connection_string);
   } else {
-    throw std::runtime_error("Error getting session: Unsupported database driver: " + this->drivername);
+    throw std::runtime_error("Error getting session: Unsupported database driver: " + drivername);
   }
   std::unique_ptr<soci::session> sql(new soci::session(parameters));
   return sql.release();
 }
 
 void StorageDatabaseConnection::create_tables() const {
-  soci::session* session = this->get_session();
+  soci::session* session = get_session();
 
   const char* dataset_table_sql =
 #include "sql/Dataset.sql"
@@ -36,14 +36,14 @@ void StorageDatabaseConnection::create_tables() const {
 
   const char* file_table_sql;
   const char* sample_table_sql;
-  if (this->drivername == "postgresql") {
+  if (drivername == "postgresql") {
     file_table_sql =
 #include "sql/File.sql"
         ;
     sample_table_sql =
 #include "sql/Sample.sql"
         ;
-  } else if (this->drivername == "sqlite3") {
+  } else if (drivername == "sqlite3") {
     file_table_sql =
 #include "sql/SQLiteFile.sql"
         ;
@@ -51,7 +51,7 @@ void StorageDatabaseConnection::create_tables() const {
 #include "sql/SQLiteSample.sql"
         ;
   } else {
-    throw std::runtime_error("Error creating tables: Unsupported database driver: " + this->drivername);
+    throw std::runtime_error("Error creating tables: Unsupported database driver: " + drivername);
   }
 
   *session << file_table_sql;
@@ -65,10 +65,10 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
                                             const std::string& version, const std::string& file_wrapper_config,
                                             const bool& ignore_last_timestamp, const int& file_watcher_interval) const {
   try {
-    soci::session* session = this->get_session();
+    soci::session* session = get_session();
 
     std::string boolean_string = ignore_last_timestamp ? "true" : "false";
-    if (this->drivername == "postgresql") {
+    if (drivername == "postgresql") {
       *session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
                   "file_wrapper_type, description, version, file_wrapper_config, "
                   "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
@@ -86,7 +86,7 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
           soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type), soci::use(file_wrapper_type),
           soci::use(description), soci::use(version), soci::use(file_wrapper_config), soci::use(boolean_string),
           soci::use(file_watcher_interval);
-    } else if (this->drivername == "sqlite3") {
+    } else if (drivername == "sqlite3") {
       *session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
                   "file_wrapper_type, description, version, file_wrapper_config, "
                   "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
@@ -98,7 +98,7 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
           soci::use(description), soci::use(version), soci::use(file_wrapper_config), soci::use(boolean_string),
           soci::use(file_watcher_interval);
     } else {
-      throw std::runtime_error("Error adding dataset: Unsupported database driver: " + this->drivername);
+      throw std::runtime_error("Error adding dataset: Unsupported database driver: " + drivername);
     }
 
     // Create partition table for samples
@@ -112,7 +112,7 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
 
 bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
   try {
-    soci::session* session = this->get_session();
+    soci::session* session = get_session();
 
     int64_t dataset_id;
     *session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
@@ -134,7 +134,7 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
 
 void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& dataset_name,
                                                              soci::session* session) const {
-  if (this->drivername == "postgresql") {
+  if (drivername == "postgresql") {
     int64_t dataset_id;
     *session << "SELECT dataset_id FROM datasets WHERE name = :dataset_name", soci::into(dataset_id),
         soci::use(dataset_name);
@@ -148,19 +148,19 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
                 "PARTITION BY HASH (sample_id)",
         soci::use(dataset_partition_table_name), soci::use(dataset_id);
 
-    for (int64_t i = 0; i < this->hash_partition_modulus_; i++) {
+    for (int64_t i = 0; i < hash_partition_modulus_; i++) {
       std::string hash_partition_name = dataset_partition_table_name + "_part" + std::to_string(i);
       *session << "CREATE TABLE IF NOT EXISTS :hash_partition_name PARTITION "
                   "OF :dataset_partition_table_name "
                   "FOR VALUES WITH (modulus :hash_partition_modulus, "
                   "REMAINDER :i)",
-          soci::use(hash_partition_name), soci::use(dataset_partition_table_name),
-          soci::use(this->hash_partition_modulus_), soci::use(i);
+          soci::use(hash_partition_name), soci::use(dataset_partition_table_name), soci::use(hash_partition_modulus_),
+          soci::use(i);
     }
   } else {
     SPDLOG_INFO(
         "Skipping partition creation for dataset {}, not supported for "
         "driver {}",
-        dataset_name, this->drivername);
+        dataset_name, drivername);
   }
 }

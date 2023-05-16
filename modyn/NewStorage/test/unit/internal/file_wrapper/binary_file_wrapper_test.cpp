@@ -29,9 +29,9 @@ TEST(BinaryFileWrapperTest, TestValidateFileExtension) {
                       storage::BinaryFileWrapper(file_name, config, &filesystem_wrapper));
 
   file_name = "test.txt";
-  ASSERT_THROW(
-      const storage::BinaryFileWrapper file_wrapper2 = storage::BinaryFileWrapper(file_name, config, &filesystem_wrapper),
-      std::invalid_argument);
+  ASSERT_THROW(const storage::BinaryFileWrapper file_wrapper2 =
+                   storage::BinaryFileWrapper(file_name, config, &filesystem_wrapper),
+               std::invalid_argument);
 }
 
 TEST(BinaryFileWrapperTest, TestValidateRequestIndices) {
@@ -39,8 +39,8 @@ TEST(BinaryFileWrapperTest, TestValidateRequestIndices) {
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
-  EXPECT_CALL(filesystem_wrapper, get(testing::_))
-      .WillOnce(testing::Return(new std::vector<unsigned char>{'1', '2', '3', '4', '5', '6', '7', '8'}));
+  const std::vector<unsigned char> bytes = {1, 2, 3, 4, 5, 6, 7, 8};
+  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
   storage::BinaryFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
   ASSERT_NO_THROW(file_wrapper.get_sample(0));
 
@@ -53,7 +53,7 @@ TEST(BinaryFileWrapperTest, TestGetLabel) {
   const std::string file_name = "test.bin";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
-  auto* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<unsigned char> bytes = {1, 2, 3, 4, 5, 6, 7, 8};
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillRepeatedly(testing::Return(bytes));
   storage::BinaryFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
@@ -67,57 +67,112 @@ TEST(BinaryFileWrapperTest, TestGetAllLabels) {
   const std::string file_name = "test.bin";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
-  auto* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
+  const std::vector<unsigned char> bytes = {1, 2, 3, 4, 5, 6, 7, 8};
   EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
   storage::BinaryFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
-  std::vector<int>* labels = file_wrapper.get_all_labels();
-  ASSERT_EQ(labels->size(), 4);
-  ASSERT_EQ((*labels)[0], 1);
-  ASSERT_EQ((*labels)[1], 3);
-  ASSERT_EQ((*labels)[2], 5);
-  ASSERT_EQ((*labels)[3], 7);
+  std::vector<int64_t> labels = file_wrapper.get_all_labels();
+  ASSERT_EQ(labels.size(), 4);
+  ASSERT_EQ((labels)[0], 1);
+  ASSERT_EQ((labels)[1], 3);
+  ASSERT_EQ((labels)[2], 5);
+  ASSERT_EQ((labels)[3], 7);
 }
 
 TEST(BinaryFileWrapperTest, TestGetSample) {
   const std::string file_name = "test.bin";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
-  auto* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
-  EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
-  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
+  const std::vector<unsigned char> bytes = {1, 2, 3, 4, 5, 6, 7, 8};
+  EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillRepeatedly(testing::Return(8));
+  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillRepeatedly(testing::Return(bytes));
   storage::BinaryFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
-  std::vector<unsigned char>* sample = file_wrapper.get_sample(0);
-  ASSERT_EQ(sample->size(), 1);
-  ASSERT_EQ((*sample)[0], 2);
+  std::vector<unsigned char> sample = file_wrapper.get_sample(0);
+  ASSERT_EQ(sample.size(), 1);
+  ASSERT_EQ((sample)[0], 2);
+
+  sample = file_wrapper.get_sample(1);
+  ASSERT_EQ(sample.size(), 1);
+  ASSERT_EQ((sample)[0], 4);
+
+  sample = file_wrapper.get_sample(2);
+  ASSERT_EQ(sample.size(), 1);
+  ASSERT_EQ((sample)[0], 6);
+
+  sample = file_wrapper.get_sample(3);
+  ASSERT_EQ(sample.size(), 1);
+  ASSERT_EQ((sample)[0], 8);
 }
 
-TEST(BinaryFileWrapperTest, TestGetAllSamples) {
+TEST(BinaryFileWrapperTest, TestGetSamples) {
   const std::string file_name = "test.bin";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
-  auto* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
-  EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
-  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
+  const std::vector<unsigned char> bytes = {1, 2, 3, 4, 5, 6, 7, 8};
+  EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillRepeatedly(testing::Return(8));
+  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillRepeatedly(testing::Return(bytes));
   storage::BinaryFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
-  std::vector<std::vector<unsigned char>>* samples = file_wrapper.get_samples(0, 2);
-  ASSERT_EQ(samples->size(), 2);
-  ASSERT_EQ((*samples)[0][0], 2);
-  ASSERT_EQ((*samples)[1][0], 4);
+  std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples(0, 3);
+  ASSERT_EQ(samples.size(), 4);
+  ASSERT_EQ((samples)[0][0], 2);
+  ASSERT_EQ((samples)[1][0], 4);
+  ASSERT_EQ((samples)[2][0], 6);
+  ASSERT_EQ((samples)[3][0], 8);
+
+  samples = file_wrapper.get_samples(1, 3);
+  ASSERT_EQ(samples.size(), 3);
+  ASSERT_EQ((samples)[0][0], 4);
+  ASSERT_EQ((samples)[1][0], 6);
+  ASSERT_EQ((samples)[2][0], 8);
+
+  samples = file_wrapper.get_samples(2, 3);
+  ASSERT_EQ(samples.size(), 2);
+  ASSERT_EQ((samples)[0][0], 6);
+  ASSERT_EQ((samples)[1][0], 8);
+
+  samples = file_wrapper.get_samples(3, 3);
+  ASSERT_EQ(samples.size(), 1);
+  ASSERT_EQ((samples)[0][0], 8);
+
+  ASSERT_THROW(file_wrapper.get_samples(4, 3), std::out_of_range);
+
+  samples = file_wrapper.get_samples(1, 2);
+  ASSERT_EQ(samples.size(), 2);
+  ASSERT_EQ((samples)[0][0], 4);
+  ASSERT_EQ((samples)[1][0], 6);
 }
 
 TEST(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   const std::string file_name = "test.bin";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   MockFilesystemWrapper filesystem_wrapper;
-  auto* bytes = new std::vector<unsigned char>{1, 2, 3, 4, 5, 6, 7, 8};
-  EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
-  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
+  const std::vector<unsigned char> bytes = {1, 2, 3, 4, 5, 6, 7, 8};
+  EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillRepeatedly(testing::Return(8));
+  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillRepeatedly(testing::Return(bytes));
   storage::BinaryFileWrapper file_wrapper(file_name, config, &filesystem_wrapper);
-  auto* indices = new std::vector<int64_t>{0, 1, 2};
-  std::vector<std::vector<unsigned char>>* samples = file_wrapper.get_samples_from_indices(indices);
-  ASSERT_EQ(samples->size(), 3);
-  ASSERT_EQ((*samples)[0][0], 2);
-  ASSERT_EQ((*samples)[1][0], 4);
-  ASSERT_EQ((*samples)[2][0], 6);
+  std::vector<int64_t> label_indices{0, 1, 2, 3};
+  std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(label_indices);
+  ASSERT_EQ(samples.size(), 4);
+  ASSERT_EQ((samples)[0][0], 2);
+  ASSERT_EQ((samples)[1][0], 4);
+  ASSERT_EQ((samples)[2][0], 6);
+  ASSERT_EQ((samples)[3][0], 8);
+
+  label_indices = {1, 2, 3};
+  samples = file_wrapper.get_samples_from_indices(label_indices);
+  ASSERT_EQ(samples.size(), 3);
+  ASSERT_EQ((samples)[0][0], 4);
+  ASSERT_EQ((samples)[1][0], 6);
+  ASSERT_EQ((samples)[2][0], 8);
+
+  label_indices = {2};
+  samples = file_wrapper.get_samples_from_indices(label_indices);
+  ASSERT_EQ(samples.size(), 1);
+  ASSERT_EQ((samples)[0][0], 6);
+
+  label_indices = {1, 3};
+  samples = file_wrapper.get_samples_from_indices(label_indices);
+  ASSERT_EQ(samples.size(), 2);
+  ASSERT_EQ((samples)[0][0], 4);
+  ASSERT_EQ((samples)[1][0], 8);
 }

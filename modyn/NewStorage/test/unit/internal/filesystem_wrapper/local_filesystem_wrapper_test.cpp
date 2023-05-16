@@ -1,6 +1,7 @@
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 
 #include <gtest/gtest.h>
+#include <spdlog/spdlog.h>
 #include <utime.h>
 
 #include <cstdint>
@@ -60,16 +61,16 @@ TEST_F(LocalFilesystemWrapperTest, TestGet) {
   const YAML::Node config = TestUtils::get_dummy_config();
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(file_name);
-  std::vector<unsigned char>* bytes = filesystem_wrapper.get(file_name);
-  ASSERT_EQ(bytes->size(), 8);
-  ASSERT_EQ((*bytes)[0], '1');
-  ASSERT_EQ((*bytes)[1], '2');
-  ASSERT_EQ((*bytes)[2], '3');
-  ASSERT_EQ((*bytes)[3], '4');
-  ASSERT_EQ((*bytes)[4], '5');
-  ASSERT_EQ((*bytes)[5], '6');
-  ASSERT_EQ((*bytes)[6], '7');
-  ASSERT_EQ((*bytes)[7], '8');
+  std::vector<unsigned char> bytes = filesystem_wrapper.get(file_name);
+  ASSERT_EQ(bytes.size(), 8);
+  ASSERT_EQ((bytes)[0], '1');
+  ASSERT_EQ((bytes)[1], '2');
+  ASSERT_EQ((bytes)[2], '3');
+  ASSERT_EQ((bytes)[3], '4');
+  ASSERT_EQ((bytes)[4], '5');
+  ASSERT_EQ((bytes)[5], '6');
+  ASSERT_EQ((bytes)[6], '7');
+  ASSERT_EQ((bytes)[7], '8');
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestExists) {
@@ -84,21 +85,21 @@ TEST_F(LocalFilesystemWrapperTest, TestExists) {
 TEST_F(LocalFilesystemWrapperTest, TestList) {
   const YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
-  std::vector<std::string>* files = filesystem_wrapper.list(test_base_dir, /*recursive=*/false);
+  std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/false);
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
-  ASSERT_EQ(files->size(), 1);
-  ASSERT_EQ((*files)[0], file_name);
+  ASSERT_EQ(files.size(), 1);
+  ASSERT_EQ((files)[0], file_name);
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestListRecursive) {
   const YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
-  std::vector<std::string>* files = filesystem_wrapper.list(test_base_dir, /*recursive=*/true);
-  ASSERT_EQ(files->size(), 2);
+  std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/true);
+  ASSERT_EQ(files.size(), 2);
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
-  ASSERT_EQ((*files)[0], file_name);
+  ASSERT_EQ((files)[0], file_name);
   const std::string file_name_2 = test_base_dir + path_seperator + "test_dir_2/test_file_2.txt";
-  ASSERT_EQ((*files)[1], file_name_2);
+  ASSERT_EQ((files)[1], file_name_2);
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestIsDirectory) {

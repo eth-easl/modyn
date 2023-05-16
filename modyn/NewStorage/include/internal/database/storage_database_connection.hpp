@@ -13,7 +13,7 @@ class StorageDatabaseConnection {
   std::string host_;
   std::string port_;
   std::string database_;
-  int hash_partition_modulus_ = 8;
+  int16_t hash_partition_modulus_ = 8;
 
  public:
   std::string drivername;
@@ -21,14 +21,14 @@ class StorageDatabaseConnection {
     if (!config["storage"]["database"]) {
       throw std::runtime_error("No database configuration found");
     }
-    this->drivername = config["storage"]["database"]["drivername"].as<std::string>();
-    this->username_ = config["storage"]["database"]["username"].as<std::string>();
-    this->password_ = config["storage"]["database"]["password"].as<std::string>();
-    this->host_ = config["storage"]["database"]["host"].as<std::string>();
-    this->port_ = config["storage"]["database"]["port"].as<std::string>();
-    this->database_ = config["storage"]["database"]["database"].as<std::string>();
+    drivername = config["storage"]["database"]["drivername"].as<std::string>();
+    username_ = config["storage"]["database"]["username"].as<std::string>();
+    password_ = config["storage"]["database"]["password"].as<std::string>();
+    host_ = config["storage"]["database"]["host"].as<std::string>();
+    port_ = config["storage"]["database"]["port"].as<std::string>();
+    database_ = config["storage"]["database"]["database"].as<std::string>();
     if (config["storage"]["database"]["hash_partition_modulus"]) {
-      this->hash_partition_modulus_ = config["storage"]["database"]["hash_partition_modulus"].as<int>();
+      hash_partition_modulus_ = config["storage"]["database"]["hash_partition_modulus"].as<int16_t>();
     }
   }
   void create_tables() const;
