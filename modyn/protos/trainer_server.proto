@@ -53,7 +53,8 @@ message StartTrainingRequest {
   PythonString label_transformer = 19;
   JsonString grad_scaler_configuration = 20;
   int32 epochs_per_trigger = 21;
-  int32 seed = 22;
+  bool seed_available= 22;
+  optional int32 seed = 23;
 }
 
 message StartTrainingResponse {

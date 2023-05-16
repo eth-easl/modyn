@@ -82,7 +82,7 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         pretrained_model_path="",
         lr_scheduler=JsonString(value=json.dumps({})),
         grad_scaler_configuration=JsonString(value=json.dumps({})),
-        seed=-1,
+        seed_available=False,
     )
 
 

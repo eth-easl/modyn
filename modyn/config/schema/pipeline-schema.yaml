@@ -72,7 +72,8 @@ properties:
       seed:
         type: number
         description: |
-          If provided, every random function is seeded with this number. Must be in the range [0,100].
+          If provided, every random python function (torch, numpy..) is seeded with this number. Must be in the range [0,100].
+          Please be aware that if you want to seed postgres you must specify its seed in the modyn_config.
       selection_strategy:
         type: object
         description: |

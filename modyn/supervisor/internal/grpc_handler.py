@@ -302,7 +302,7 @@ class GRPCHandler:
         if "seed" in pipeline_config["training"]:
             seed = pipeline_config["training"]["seed"]
         else:
-            seed = -1
+            seed = None
 
         if "transformations" in pipeline_config["data"]:
             transform_list = pipeline_config["data"]["transformations"]
@@ -360,6 +360,7 @@ class GRPCHandler:
             lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
             grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
             epochs_per_trigger=epochs_per_trigger,
+            seed_available=seed is not None,
             seed=seed,
         )
 

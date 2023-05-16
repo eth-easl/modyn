@@ -49,7 +49,7 @@ class PytorchTrainer:
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
-        if training_info.seed >= 0:
+        if training_info.seed_available:
             self.seed_trainer_server(training_info.seed)
             self._info("Everything seeded")
 
