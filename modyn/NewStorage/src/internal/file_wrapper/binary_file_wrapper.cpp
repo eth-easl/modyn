@@ -9,11 +9,9 @@ using namespace storage;
 int64_t BinaryFileWrapper::int_from_bytes(const unsigned char* begin, const unsigned char* end) {
   int64_t value = 0;
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  value = std::accumulate(begin, end, 0,
-                          [](uint64_t acc, unsigned char other) { return (acc << 8u) | other; });
+  value = std::accumulate(begin, end, 0, [](uint64_t acc, unsigned char other) { return (acc << 8u) | other; });
 #elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  value = std::accumulate(begin, end, 0,
-                          [](uint64_t acc, unsigned char other) { return (acc << 8u) | other; });
+  value = std::accumulate(begin, end, 0, [](uint64_t acc, unsigned char other) { return (acc << 8u) | other; });
 #else
 #error "Unknown byte order"
 #endif

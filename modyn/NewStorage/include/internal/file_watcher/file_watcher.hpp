@@ -45,7 +45,7 @@ class FileWatcher {
   void seek();
   bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                         bool ignore_last_timestamp, int64_t timestamp, AbstractFilesystemWrapper* filesystem_wrapper);
-  void postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>> &file_frame,
+  void postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame,
                                soci::session* sql) const;
   static void fallback_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame,
                                  soci::session* sql) {

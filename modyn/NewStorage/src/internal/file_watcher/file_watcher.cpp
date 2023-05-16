@@ -61,7 +61,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   }
 }
 
-void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>> &file_frame,
+void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame,
                                           soci::session* sql) const {
   const std::string table_name = "samples__did" + std::to_string(dataset_id_);
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
@@ -145,9 +145,8 @@ void FileWatcher::update_files_in_directory(AbstractFilesystemWrapper* filesyste
       }
       const std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
       const FileWatcher watcher(config_file_, dataset_id_, stop_file_watcher);
-      children.emplace_back(&FileWatcher::handle_file_paths, watcher, file_paths_thread,
-                                        data_file_extension, file_wrapper_type, filesystem_wrapper, timestamp,
-                                        file_wrapper_config_node);
+      children.emplace_back(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
+                            file_wrapper_type, filesystem_wrapper, timestamp, file_wrapper_config_node);
     }
 
     for (auto& child : children) {
