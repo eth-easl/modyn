@@ -143,12 +143,6 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_selection_strategy_remote()
 
-    def seed_selector(self, pipeline_id: int, seed: float) -> bool:
-        if pipeline_id not in self._selectors:
-            raise ValueError(f"Requested to seed pipeline {pipeline_id} which does not exist!")
-
-        return self._selectors[pipeline_id].seed_selector(seed)
-
     def cleanup_trigger_samples(self) -> None:
         if (
             "cleanup_trigger_samples_after_shutdown" in self._modyn_config["selector"]
