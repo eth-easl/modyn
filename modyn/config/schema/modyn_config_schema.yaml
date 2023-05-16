@@ -224,6 +224,10 @@ properties:
         type: number
         description: |
           The modulus to use for the hash partitioning of the metadata.
+      seed:
+        type: number
+        description: |
+          The number used to seed the database. Must be in [-1,1].
     required:
       - drivername
       - username
