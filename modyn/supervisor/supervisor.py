@@ -23,7 +23,7 @@ class Supervisor:
         "FreshnessSamplingStrategy",
         "LossDownsamplingStrategy",
         "GradNormDownsamplingStrategy",
-        "RandomDownsamplingStrategy",
+        "RandomPresamplingStrategy",
     ]
 
     def __init__(
