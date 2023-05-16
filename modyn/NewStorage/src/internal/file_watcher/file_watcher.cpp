@@ -41,7 +41,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
           soci::use(filesystem_wrapper->get_created_time(file_path)),
           soci::use(filesystem_wrapper->get_modified_time(file_path));
 
-      int64_t file_id;
+      long long file_id;  // NOLINT // soci get_last_insert_id requires a long long
       sql->get_last_insert_id("files", file_id);
 
       const std::vector<int64_t> labels = file_wrapper->get_all_labels();
