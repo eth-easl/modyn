@@ -36,11 +36,11 @@ class FileWatcher {
     }
     StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
     storage_database_connection_ = &storage_database_connection;
-    soci::session* sql = storage_database_connection_->get_session();
+    soci::session sql = storage_database_connection_->get_session();
 
     std::string dataset_path;
     int64_t filesystem_wrapper_type_int;
-    *sql << "SELECT base_path, filesystem_wrapper_type FROM datasets "
+    sql << "SELECT base_path, filesystem_wrapper_type FROM datasets "
             "WHERE dataset_id = :dataset_id",
         soci::into(dataset_path), soci::into(filesystem_wrapper_type_int), soci::use(dataset_id_);
     const auto filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
@@ -70,20 +70,7 @@ class FileWatcher {
   void seek();
   bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                         bool ignore_last_timestamp, int64_t timestamp);
-  void postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame,
-                               soci::session* sql) const;
-  static void fallback_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame,
-                                 soci::session* sql) {
-    // Prepare query
-    std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
-    for (const auto& frame : file_frame) {
-      query += "(" + std::to_string(std::get<0>(frame)) + "," + std::to_string(std::get<1>(frame)) + "," +
-               std::to_string(std::get<2>(frame)) + "," + std::to_string(std::get<3>(frame)) + "),";
-    }
-
-    // Remove last comma
-    query.pop_back();
-    *sql << query;
-  }
+  void postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const;
+  void fallback_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const;
 };
 }  // namespace storage

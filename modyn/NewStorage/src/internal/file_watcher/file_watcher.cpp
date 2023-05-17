@@ -12,7 +12,7 @@ using namespace storage;
 void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
                                     const FileWrapperType& file_wrapper_type, int64_t timestamp,
                                     const YAML::Node& file_wrapper_config) {
-  soci::session* sql = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_->get_session();
 
   std::vector<std::string> valid_files;
   for (const auto& file_path : file_paths) {
@@ -32,14 +32,14 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       number_of_samples = file_wrapper->get_number_of_samples();
       int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
       int64_t created_time = filesystem_wrapper->get_created_time(file_path);
-      *sql << "INSERT INTO files (dataset_id, path, number_of_samples, "
+      session << "INSERT INTO files (dataset_id, path, number_of_samples, "
               "created_at, updated_at) VALUES (:dataset_id, :path, "
               ":number_of_samples, :created_at, :updated_at)",
           soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(created_time),
           soci::use(modified_time);
 
       long long file_id;  // NOLINT // soci get_last_insert_id requires a long long
-      sql->get_last_insert_id("files", file_id);
+      session.get_last_insert_id("files", file_id);
 
       const std::vector<int64_t> labels = file_wrapper->get_all_labels();
 
@@ -51,15 +51,15 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     }
 
     if (storage_database_connection_->drivername == "postgresql") {
-      postgres_copy_insertion(file_frame, sql);
+      postgres_copy_insertion(file_frame);
     } else {
-      fallback_insertion(file_frame, sql);
+      fallback_insertion(file_frame);
     }
   }
 }
 
-void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame,
-                                          soci::session* sql) const {
+void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const {
+  soci::session session = storage_database_connection_->get_session();
   const std::string table_name = "samples__did" + std::to_string(dataset_id_);
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
@@ -82,11 +82,26 @@ void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, 
     SPDLOG_ERROR("Unable to open file");
   }
 
-  *sql << cmd, soci::use(tmp_file_name);
+  session << cmd, soci::use(tmp_file_name);
 
   // Remove temp file
   (void)remove("temp.csv");
 }
+
+void FileWatcher::fallback_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const
+{
+    soci::session session = storage_database_connection_->get_session();
+    // Prepare query
+    std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
+    for (const auto& frame : file_frame) {
+      query += "(" + std::to_string(std::get<0>(frame)) + "," + std::to_string(std::get<1>(frame)) + "," +
+               std::to_string(std::get<2>(frame)) + "," + std::to_string(std::get<3>(frame)) + "),";
+    }
+
+    // Remove last comma
+    query.pop_back();
+    session << query;
+  }
 
 bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                                    bool ignore_last_timestamp, int64_t timestamp) {
@@ -94,11 +109,11 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
   if (file_extension != data_file_extension) {
     return false;
   }
-  soci::session* sql = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_->get_session();
 
   int64_t file_id = -1;
 
-  *sql << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
+  session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
 
   if (file_id == -1) {
     if (ignore_last_timestamp) {
@@ -113,9 +128,9 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   std::string file_wrapper_config;
   int64_t file_wrapper_type_id;
 
-  soci::session* sql = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_->get_session();
 
-  *sql << "SELECT file_wrapper_type, file_wrapper_config FROM datasets "
+  session << "SELECT file_wrapper_type, file_wrapper_config FROM datasets "
           "WHERE dataset_id = :dataset_id",
       soci::into(file_wrapper_type_id), soci::into(file_wrapper_config), soci::use(dataset_id_);
   const auto file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type_id);
@@ -151,11 +166,11 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 }
 
 void FileWatcher::seek_dataset() {
-  soci::session* sql = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_->get_session();
 
   int64_t last_timestamp;
 
-  *sql << "SELECT last_timestamp FROM datasets "
+  session << "SELECT last_timestamp FROM datasets "
           "WHERE dataset_id = :dataset_id",
       soci::into(last_timestamp), soci::use(dataset_id_);
 
@@ -163,21 +178,21 @@ void FileWatcher::seek_dataset() {
 }
 
 void FileWatcher::seek() {
-  soci::session* sql = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_->get_session();
   std::string dataset_name;
 
-  *sql << "SELECT name FROM datasets WHERE dataset_id = :dataset_id", soci::into(dataset_name), soci::use(dataset_id_);
+  session << "SELECT name FROM datasets WHERE dataset_id = :dataset_id", soci::into(dataset_name), soci::use(dataset_id_);
 
   try {
     seek_dataset();
 
     int64_t last_timestamp;
-    *sql << "SELECT updated_at FROM files WHERE dataset_id = :dataset_id ORDER "
+    session << "SELECT updated_at FROM files WHERE dataset_id = :dataset_id ORDER "
             "BY updated_at DESC LIMIT 1",
         soci::into(last_timestamp), soci::use(dataset_id_);
 
     if (last_timestamp > 0) {
-      *sql << "UPDATE datasets SET last_timestamp = :last_timestamp WHERE dataset_id = "
+      session << "UPDATE datasets SET last_timestamp = :last_timestamp WHERE dataset_id = "
               ":dataset_id",
           soci::use(last_timestamp), soci::use(dataset_id_);
     }
@@ -188,10 +203,10 @@ void FileWatcher::seek() {
 }
 
 void FileWatcher::run() {
-  soci::session* sql = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_->get_session();
 
   int64_t file_watcher_interval;
-  *sql << "SELECT file_watcher_interval FROM datasets WHERE dataset_id = :dataset_id",
+  session << "SELECT file_watcher_interval FROM datasets WHERE dataset_id = :dataset_id",
       soci::into(file_watcher_interval), soci::use(dataset_id_);
 
   if (file_watcher_interval == 0) {

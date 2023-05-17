@@ -51,7 +51,7 @@ TEST_F(FileWatcherTest, TestSeek) {
 
   const StorageDatabaseConnection connection(config);
 
-  soci::session* sql = connection.get_session();
+  soci::session session = connection.get_session();
 
   // Add a file to the temporary directory
   std::ofstream file("tmp/test_file.txt");
@@ -68,17 +68,17 @@ TEST_F(FileWatcherTest, TestSeek) {
   // Check if the file is added to the database
   const std::string file_path = "tmp/test_file.txt";
   std::vector<std::string> file_paths = std::vector<std::string>(1);
-  *sql << "SELECT path FROM files", soci::into(file_paths);
+  session << "SELECT path FROM files", soci::into(file_paths);
   ASSERT_EQ(file_paths[0], file_path);
 
   // Check if the sample is added to the database
   std::vector<int64_t> sample_ids = std::vector<int64_t>(1);
-  *sql << "SELECT sample_id FROM samples", soci::into(sample_ids);
+  session << "SELECT sample_id FROM samples", soci::into(sample_ids);
   ASSERT_EQ(sample_ids[0], 1);
 
   // Assert the last timestamp of the dataset is updated
   int32_t last_timestamp;
-  *sql << "SELECT last_timestamp FROM datasets WHERE dataset_id = :id", soci::use(1), soci::into(last_timestamp);
+  session << "SELECT last_timestamp FROM datasets WHERE dataset_id = :id", soci::use(1), soci::into(last_timestamp);
 
   ASSERT_TRUE(last_timestamp > 0);
 }
@@ -104,13 +104,13 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   // Check if the file is added to the database
   const std::string file_path = "tmp/test_file.txt";
   std::vector<std::string> file_paths = std::vector<std::string>(1);
-  soci::session* sql = connection.get_session();
-  *sql << "SELECT path FROM files", soci::into(file_paths);
+  soci::session session = connection.get_session();
+  session << "SELECT path FROM files", soci::into(file_paths);
   ASSERT_EQ(file_paths[0], file_path);
 
   // Check if the sample is added to the database
   std::vector<int64_t> sample_ids = std::vector<int64_t>(1);
-  *sql << "SELECT sample_id FROM samples", soci::into(sample_ids);
+  session << "SELECT sample_id FROM samples", soci::into(sample_ids);
   ASSERT_EQ(sample_ids[0], 1);
 }
 
@@ -133,9 +133,9 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
 
   const StorageDatabaseConnection connection(config);
 
-  soci::session* sql = connection.get_session();
+  soci::session session = connection.get_session();
 
-  *sql << "INSERT INTO files (file_id, dataset_id, path, updated_at) VALUES "
+  session << "INSERT INTO files (file_id, dataset_id, path, updated_at) VALUES "
           "(1, 1, 'test.txt', 1000)";
 
   ASSERT_FALSE(watcher.check_valid_file("test.txt", ".txt", false, 0));
@@ -171,7 +171,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
 
   const StorageDatabaseConnection connection(config);
 
-  soci::session* sql = connection.get_session();
+  soci::session session = connection.get_session();
 
   std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>> files;
 
@@ -181,17 +181,17 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   files.emplace_back(3, 3, 3, 3);
 
   // Insert the files into the database
-  ASSERT_NO_THROW(watcher.fallback_insertion(files, sql));
+  ASSERT_NO_THROW(watcher.fallback_insertion(files));
 
   // Check if the files are added to the database
   int32_t file_id;
-  *sql << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(1), soci::into(file_id);
+  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(1), soci::into(file_id);
   ASSERT_EQ(file_id, 1);
 
-  *sql << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(2), soci::into(file_id);
+  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(2), soci::into(file_id);
   ASSERT_EQ(file_id, 2);
 
-  *sql << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(3), soci::into(file_id);
+  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(3), soci::into(file_id);
   ASSERT_EQ(file_id, 3);
 }
 
@@ -208,7 +208,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
 
   const StorageDatabaseConnection connection(config);
 
-  soci::session* sql = connection.get_session();
+  soci::session session = connection.get_session();
 
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
@@ -227,23 +227,23 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   // Check if the samples are added to the database
   int32_t sample_id1;
   int32_t label1;
-  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(sample_id1),
+  session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(sample_id1),
       soci::into(label1);
   ASSERT_EQ(sample_id1, 1);
   ASSERT_EQ(label1, 1);
 
   int32_t sample_id2;
   int32_t label2;
-  *sql << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(2), soci::into(sample_id2),
+  session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(2), soci::into(sample_id2),
       soci::into(label2);
   ASSERT_EQ(sample_id2, 2);
   ASSERT_EQ(label2, 2);
 
   // Check if the files are added to the database
   int32_t file_id;
-  *sql << "SELECT file_id FROM files WHERE file_id = :id", soci::use(1), soci::into(file_id);
+  session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(1), soci::into(file_id);
   ASSERT_EQ(file_id, 1);
 
-  *sql << "SELECT file_id FROM files WHERE file_id = :id", soci::use(2), soci::into(file_id);
+  session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(2), soci::into(file_id);
   ASSERT_EQ(file_id, 2);
 }
