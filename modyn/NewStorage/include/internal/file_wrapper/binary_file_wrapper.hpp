@@ -5,10 +5,10 @@
 #include <cstddef>
 #include <iostream>
 
-#include "internal/file_wrapper/abstract_file_wrapper.hpp"
+#include "internal/file_wrapper/file_wrapper.hpp"
 
 namespace storage {
-class BinaryFileWrapper : public AbstractFileWrapper {  // NOLINT
+class BinaryFileWrapper : public FileWrapper {  // NOLINT
  private:
   int64_t record_size_;
   int64_t label_size_;
@@ -26,8 +26,8 @@ class BinaryFileWrapper : public AbstractFileWrapper {  // NOLINT
 
  public:
   BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,  // NOLINT
-                    std::shared_ptr<AbstractFilesystemWrapper> fs_wrapper)
-      : AbstractFileWrapper(path, fw_config, fs_wrapper) {
+                    std::shared_ptr<FilesystemWrapper> fs_wrapper)
+      : FileWrapper(path, fw_config, fs_wrapper) {
     if (!fw_config["record_size"]) {
       throw std::runtime_error("record_size_must be specified in the file wrapper config.");
     }
@@ -58,7 +58,7 @@ class BinaryFileWrapper : public AbstractFileWrapper {  // NOLINT
   std::vector<unsigned char> get_sample(int64_t index) override;
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<int64_t>& indices) override;
   void validate_file_extension() override;
-  std::string get_name() override { return "BIN"; }
+  FileWrapperType get_type() override { return FileWrapperType::BINARY; }
   ~BinaryFileWrapper() override = default;
 };
 }  // namespace storage

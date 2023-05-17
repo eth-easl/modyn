@@ -6,14 +6,13 @@
 #include <fstream>
 
 #include "gmock/gmock.h"
-#include "internal/file_wrapper/AbstractFileWrapper.hpp"
+#include "internal/file_wrapper/FileWrapper.hpp"
 
 namespace storage {
-class MockFileWrapper : public AbstractFileWrapper {
+class MockFileWrapper : public FileWrapper {
  public:
-  MockFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                  std::shared_ptr<AbstractFilesystemWrapper>& fs_wrapper)
-      : AbstractFileWrapper(path, fw_config, fs_wrapper) {}
+  MockFileWrapper(const std::string& path, const YAML::Node& fw_config, std::shared_ptr<FilesystemWrapper>& fs_wrapper)
+      : FileWrapper(path, fw_config, fs_wrapper) {}
   MOCK_METHOD(int64_t, get_number_of_samples, (), (override));
   MOCK_METHOD(std::vector<std::vector<unsigned char>>*, get_samples, (int64_t start, int64_t end), (override));
   MOCK_METHOD(int64_t, get_label, (int64_t index), (override));
@@ -24,6 +23,6 @@ class MockFileWrapper : public AbstractFileWrapper {
   MOCK_METHOD(std::string, get_name, (), (override));
   MOCK_METHOD(void, validate_file_extension, (), (override));
   ~MockFileWrapper() override = default;
-  MockFileWrapper(const MockFileWrapper& other) : AbstractFileWrapper(other) {}
+  MockFileWrapper(const MockFileWrapper& other) : FileWrapper(other) {}
 }
 }  // namespace storage

@@ -62,8 +62,8 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
   ASSERT_EQ(number_of_datasets, 0);
 
   // Add dataset
-  ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path", "test_filesystem_wrapper_type",
-                                      "test_file_wrapper_type", "test_description", "test_version",
+  ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
+                                      FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
                                       "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists
@@ -88,8 +88,8 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
   ASSERT_EQ(number_of_datasets, 0);
 
   // Add dataset
-  ASSERT_NO_THROW(connection2.add_dataset("test_dataset", "test_base_path", "test_filesystem_wrapper_type",
-                                          "test_file_wrapper_type", "test_description", "test_version",
+  ASSERT_NO_THROW(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
+                                          FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
                                           "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists

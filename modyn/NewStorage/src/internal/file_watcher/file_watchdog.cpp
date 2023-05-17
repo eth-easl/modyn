@@ -11,16 +11,16 @@ using namespace storage;
 
 void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int16_t retries) {
   // Start a new child process of a FileWatcher
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  const FileWatcher file_watcher = FileWatcher(config_, dataset_id, stop_file_watcher);
+  std::atomic<bool> stop_file_watcher = false;
+  const FileWatcher file_watcher = FileWatcher(config_, dataset_id, &stop_file_watcher);
   std::thread th(&FileWatcher::run, file_watcher);
-  file_watcher_processes_[dataset_id] = std::tuple(std::move(th), retries, std::move(stop_file_watcher));
+  file_watcher_processes_[dataset_id] = std::tuple(std::move(th), retries, &stop_file_watcher);
 }
 
 void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
   if (file_watcher_processes_.count(dataset_id) == 1) {
     // Set the stop flag for the FileWatcher process
-    std::get<2>(file_watcher_processes_[dataset_id]).get()->store(true);
+    std::get<2>(file_watcher_processes_[dataset_id])->store(true);
     // Wait for the FileWatcher process to stop
     if (std::get<0>(file_watcher_processes_[dataset_id]).joinable()) {
       std::get<0>(file_watcher_processes_[dataset_id]).join();
@@ -28,7 +28,7 @@ void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
     if (!is_test) {
       // Remove the FileWatcher process from the map, unless this is a test (we want to be able to fake kill the thread
       // to test the watchdog)
-      std::unordered_map<int64_t, std::tuple<std::thread, int16_t, std::shared_ptr<std::atomic<bool>>>>::iterator it;
+      std::unordered_map<int64_t, std::tuple<std::thread, int16_t, std::atomic<bool>*>>::iterator it;
       it = file_watcher_processes_.find(dataset_id);
       file_watcher_processes_.erase(it);
     }
@@ -91,7 +91,7 @@ void FileWatchdog::run() {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   for (auto& file_watcher_process : file_watcher_processes_) {
-    std::get<2>(file_watcher_process.second).get()->store(true);
+    std::get<2>(file_watcher_process.second)->store(true);
   }
 }
 

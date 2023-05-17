@@ -93,13 +93,51 @@ FetchContent_MakeAvailable(yaml-cpp)
 target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic -Wno-deprecated-declarations)
 
 ################### grpc ####################
-#message(STATUS "Making grpc available.")
+# message(STATUS "Making grpc available.")
 
-#FetchContent_Declare(
-#  grpc
-#  GIT_REPOSITORY https://github.com/grpc/grpc.git
-#  GIT_TAG v1.54.1
-#  GIT_SHALLOW    TRUE
-#  GIT_PROGRESS   TRUE
-#)
-#FetchContent_MakeAvailable(grpc)
+# FetchContent_Declare(
+#   grpc
+#   GIT_REPOSITORY https://github.com/grpc/grpc.git
+#   GIT_TAG v1.54.1
+#   GIT_SHALLOW    TRUE
+#   GIT_PROGRESS   TRUE
+# )
+# FetchContent_MakeAvailable(grpc)
+
+message(STATUS "Making proto files available.")
+# Proto file
+get_filename_component(storage_proto "../protos/storage.proto" ABSOLUTE)
+get_filename_component(storage_proto_path "${storage_proto}" PATH)
+
+# TODO: Need some Maxi magic to make this work correctly. 
+# See modyn/NewStorage/build/_deps/grpc-src/examples/cpp/helloworld/CMakeLists.txt for reference
+
+# Generated sources
+# set(storage_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/storage.pb.cc")
+# set(storage_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/storage.pb.h")
+# set(storage_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/storage.grpc.pb.cc")
+# set(storage_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/storage.grpc.pb.h")
+
+# add_custom_command(
+#       OUTPUT "${storage_proto_srcs}" "${storage_proto_hdrs}" "${storage_grpc_srcs}" "${storage_grpc_hdrs}"
+#       COMMAND ${_PROTOBUF_PROTOC}
+#       ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+#         --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+#         -I "${storage_proto_path}"
+#         --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
+#         "${storage_proto}"
+#       DEPENDS "${storage_proto}")
+
+# # Include generated *.pb.h files
+# include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+
+# # storage_grpc_proto
+# add_library(storage_grpc_proto
+#   ${storage_grpc_srcs}
+#   ${storage_grpc_hdrs}
+#   ${storage_proto_srcs}
+#   ${storage_proto_hdrs})
+# target_link_libraries(storage_grpc_proto
+#   ${_REFLECTION}
+#   ${_GRPC_GRPCPP}
+#   ${_PROTOBUF_LIBPROTOBUF})

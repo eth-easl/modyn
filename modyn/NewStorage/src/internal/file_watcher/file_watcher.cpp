@@ -10,7 +10,7 @@
 using namespace storage;
 
 void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-                                    const std::string& file_wrapper_type, int64_t timestamp,
+                                    const FileWrapperType& file_wrapper_type, int64_t timestamp,
                                     const YAML::Node& file_wrapper_config) {
   soci::session* sql = storage_database_connection_->get_session();
 
@@ -111,13 +111,14 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
 
 void FileWatcher::update_files_in_directory(const std::string& directory_path, int64_t timestamp) {
   std::string file_wrapper_config;
-  std::string file_wrapper_type;
+  int64_t file_wrapper_type_id;
 
   soci::session* sql = storage_database_connection_->get_session();
 
   *sql << "SELECT file_wrapper_type, file_wrapper_config FROM datasets "
           "WHERE dataset_id = :dataset_id",
-      soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(dataset_id_);
+      soci::into(file_wrapper_type_id), soci::into(file_wrapper_config), soci::use(dataset_id_);
+  const auto file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type_id);
 
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
   const auto data_file_extension = file_wrapper_config_node["file_extension"].as<std::string>();
@@ -137,8 +138,8 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
         file_paths_thread.insert(file_paths_thread.end(), file_paths.begin() + i * files_per_thread,
                                  file_paths.begin() + (i + 1) * files_per_thread);
       }
-      std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-      const FileWatcher watcher(config_, dataset_id_, stop_file_watcher);
+      std::atomic<bool> stop_file_watcher = false;
+      const FileWatcher watcher(config_, dataset_id_, &stop_file_watcher);
       children.emplace_back(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
                             file_wrapper_type, timestamp, file_wrapper_config_node);
     }

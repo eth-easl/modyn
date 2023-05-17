@@ -25,8 +25,8 @@ class FileWatcherTest : public ::testing::Test {
     connection.create_tables();
 
     // Add a dataset to the database
-    connection.add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
-                           TestUtils::get_dummy_file_wrapper_config_inline(), true);
+    connection.add_dataset("test_dataset", "tmp", FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
+                           "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
   }
 
   void TearDown() override {
@@ -40,14 +40,14 @@ class FileWatcherTest : public ::testing::Test {
 };
 
 TEST_F(FileWatcherTest, TestConstructor) {
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  ASSERT_NO_THROW(const FileWatcher watcher(YAML::LoadFile("config.yaml"), 1, stop_file_watcher));
+  std::atomic<bool> stop_file_watcher = false;
+  ASSERT_NO_THROW(const FileWatcher watcher(YAML::LoadFile("config.yaml"), 1, &stop_file_watcher));
 }
 
 TEST_F(FileWatcherTest, TestSeek) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher(config, 1, stop_file_watcher);
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
 
   const StorageDatabaseConnection connection(config);
 
@@ -85,8 +85,8 @@ TEST_F(FileWatcherTest, TestSeek) {
 
 TEST_F(FileWatcherTest, TestSeekDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher(config, 1, stop_file_watcher);
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
 
   const StorageDatabaseConnection connection(config);
 
@@ -116,8 +116,8 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
 
 TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher(config, 1, stop_file_watcher);
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
 
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(1000));
@@ -143,8 +143,8 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
 
 TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher(config, 1, stop_file_watcher);
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
 
   const StorageDatabaseConnection connection(config);
 
@@ -166,8 +166,8 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
 
 TEST_F(FileWatcherTest, TestFallbackInsertion) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  const FileWatcher watcher(config, 1, stop_file_watcher);
+  std::atomic<bool> stop_file_watcher = false;
+  const FileWatcher watcher(config, 1, &stop_file_watcher);
 
   const StorageDatabaseConnection connection(config);
 
@@ -197,8 +197,8 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
 
 TEST_F(FileWatcherTest, TestHandleFilePaths) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  std::shared_ptr<std::atomic<bool>> stop_file_watcher = std::make_shared<std::atomic<bool>>(false);
-  FileWatcher watcher(config, 1, stop_file_watcher);
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
 
   std::vector<std::string> files = std::vector<std::string>();
   files.emplace_back("test.txt");
@@ -221,7 +221,8 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
 
   const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
 
-  ASSERT_NO_THROW(watcher.handle_file_paths(files, ".txt", "SINGLE_SAMPLE", 0, file_wrapper_config_node));
+  ASSERT_NO_THROW(
+      watcher.handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE, 0, file_wrapper_config_node));
 
   // Check if the samples are added to the database
   int32_t sample_id1;

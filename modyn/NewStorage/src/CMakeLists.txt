@@ -14,10 +14,10 @@ set(MODYNSTORAGE_HEADERS
     ../include/internal/database/storage_database_connection.hpp
     ../include/internal/file_watcher/file_watchdog.hpp
     ../include/internal/file_watcher/file_watcher.hpp
-    ../include/internal/file_wrapper/abstract_file_wrapper.hpp
+    ../include/internal/file_wrapper/file_wrapper.hpp
     ../include/internal/file_wrapper/binary_file_wrapper.hpp
     ../include/internal/file_wrapper/single_sample_file_wrapper.hpp
-    ../include/internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp
+    ../include/internal/filesystem_wrapper/filesystem_wrapper.hpp
     ../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
     ../include/internal/utils/utils.hpp
     )

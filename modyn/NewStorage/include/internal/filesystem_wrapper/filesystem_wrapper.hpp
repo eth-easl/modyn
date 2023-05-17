@@ -4,12 +4,15 @@
 #include <vector>
 
 namespace storage {
-class AbstractFilesystemWrapper {  // NOLINT
+
+enum FilesystemWrapperType { LOCAL };
+
+class FilesystemWrapper {  // NOLINT
  protected:
   std::string base_path_;
 
  public:
-  explicit AbstractFilesystemWrapper(std::string path) : base_path_{std::move(path)} {}
+  explicit FilesystemWrapper(std::string path) : base_path_{std::move(path)} {}
   virtual std::vector<unsigned char> get(const std::string& path) = 0;
   virtual bool exists(const std::string& path) = 0;
   virtual std::vector<std::string> list(const std::string& path, bool recursive) = 0;
@@ -20,7 +23,7 @@ class AbstractFilesystemWrapper {  // NOLINT
   virtual int64_t get_created_time(const std::string& path) = 0;
   virtual std::string join(const std::vector<std::string>& paths) = 0;
   virtual bool is_valid_path(const std::string& path) = 0;
-  virtual std::string get_name() = 0;
-  virtual ~AbstractFilesystemWrapper() {}  // NOLINT
+  virtual FilesystemWrapperType get_type() = 0;
+  virtual ~FilesystemWrapper() {}  // NOLINT
 };
 }  // namespace storage

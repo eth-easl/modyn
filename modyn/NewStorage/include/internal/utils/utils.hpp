@@ -9,36 +9,36 @@
 #include <random>
 #include <string>
 
-#include "internal/file_wrapper/abstract_file_wrapper.hpp"
 #include "internal/file_wrapper/binary_file_wrapper.hpp"
+#include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/file_wrapper/single_sample_file_wrapper.hpp"
-#include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
+#include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 
 namespace storage {
 
 class Utils {
  public:
-  static std::shared_ptr<AbstractFilesystemWrapper> get_filesystem_wrapper(const std::string& path,
-                                                                           const std::string& type) {
-    std::shared_ptr<AbstractFilesystemWrapper> abstract_filesystem_wrapper;
-    if (type == "LOCAL") {
-      abstract_filesystem_wrapper = std::make_unique<LocalFilesystemWrapper>(path);
+  static std::shared_ptr<FilesystemWrapper> get_filesystem_wrapper(const std::string& path,
+                                                                   const FilesystemWrapperType& type) {
+    std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
+    if (type == FilesystemWrapperType::LOCAL) {
+      filesystem_wrapper = std::make_unique<LocalFilesystemWrapper>(path);
     } else {
-      throw std::runtime_error("Unknown filesystem wrapper type: " + type);
+      throw std::runtime_error("Unknown filesystem wrapper type");
     }
-    return abstract_filesystem_wrapper;
+    return filesystem_wrapper;
   }
-  static std::unique_ptr<AbstractFileWrapper> get_file_wrapper(
-      const std::string& path, const std::string& type, const YAML::Node& file_wrapper_config,
-      const std::shared_ptr<AbstractFilesystemWrapper> &filesystem_wrapper) {
-    std::unique_ptr<AbstractFileWrapper> file_wrapper;
-    if (type == "BIN") {
+  static std::unique_ptr<FileWrapper> get_file_wrapper(const std::string& path, const FileWrapperType& type,
+                                                       const YAML::Node& file_wrapper_config,
+                                                       const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
+    std::unique_ptr<FileWrapper> file_wrapper;
+    if (type == FileWrapperType::BINARY) {
       file_wrapper = std::make_unique<BinaryFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
-    } else if (type == "SINGLE_SAMPLE") {
+    } else if (type == FileWrapperType::SINGLE_SAMPLE) {
       file_wrapper = std::make_unique<SingleSampleFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
     } else {
-      throw std::runtime_error("Unknown file wrapper type: " + type);
+      throw std::runtime_error("Unknown file wrapper type");
     }
     return file_wrapper;
   }

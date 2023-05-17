@@ -41,7 +41,7 @@ TEST_F(FileWatchdogTest, TestRun) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
 
-  auto* watchdog = new FileWatchdog(config, &stop_file_watcher);
+  const std::shared_ptr<FileWatchdog> watchdog = std::make_shared<FileWatchdog>(config, &stop_file_watcher);
 
   std::thread th(&FileWatchdog::run, watchdog);
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -61,10 +61,10 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
   const StorageDatabaseConnection connection(config);
 
   // Add two dataset to the database
-  connection.add_dataset("test_dataset1", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
-  connection.add_dataset("test_dataset2", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset1", "tmp", FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
+                         "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset2", "tmp", FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
+                         "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_process(1, 0);
 
@@ -94,10 +94,10 @@ TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatchdog watchdog(config, &stop_file_watcher);
 
-  auto* connection = new StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection = StorageDatabaseConnection(config);
 
-  connection->add_dataset("test_dataset", "tmp", "LOCAL", "SINGLE_SAMPLE", "test description", "0.0.0",
-                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset", "tmp", FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
+                         "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_process(1, 0);
 
@@ -118,21 +118,21 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatchdog watchdog(config, &stop_file_watcher);
 
-  auto* connection = new StorageDatabaseConnection(config);
+  StorageDatabaseConnection connection = StorageDatabaseConnection(config);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.watch_file_watcher_processes(&connection);
 
-  connection->add_dataset("test_dataset1", "tmp", "LOCAL", "MOCK", "test description", "0.0.0",
-                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset1", "tmp", FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
+                         "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.watch_file_watcher_processes(&connection);
 
   std::vector<int64_t> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.watch_file_watcher_processes(&connection);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
@@ -145,7 +145,7 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
 
   ASSERT_EQ(file_watcher_processes.size(), 0);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.watch_file_watcher_processes(&connection);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
@@ -157,7 +157,7 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
 
   ASSERT_EQ(file_watcher_processes.size(), 0);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.watch_file_watcher_processes(&connection);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
@@ -169,7 +169,7 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
 
   ASSERT_EQ(file_watcher_processes.size(), 0);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.watch_file_watcher_processes(&connection);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 
@@ -179,7 +179,7 @@ TEST_F(FileWatchdogTest, TestWatchFileWatcherProcesses) {
 
   ASSERT_EQ(file_watcher_processes.size(), 0);
 
-  watchdog.watch_file_watcher_processes(connection);
+  watchdog.watch_file_watcher_processes(&connection);
 
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
 

@@ -1,10 +1,13 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+
+#include "internal/file_wrapper/file_wrapper.hpp"
+#include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/soci.h"
 #include "soci/sqlite3/soci-sqlite3.h"
 #include "yaml-cpp/yaml.h"
-
 namespace storage {
 class StorageDatabaseConnection {
  private:
@@ -32,10 +35,10 @@ class StorageDatabaseConnection {
     }
   }
   void create_tables() const;
-  bool add_dataset(const std::string& name, const std::string& base_path, const std::string& filesystem_wrapper_type,
-                   const std::string& file_wrapper_type, const std::string& description, const std::string& version,
-                   const std::string& file_wrapper_config, const bool& ignore_last_timestamp,
-                   const int& file_watcher_interval = 5) const;
+  bool add_dataset(const std::string& name, const std::string& base_path,
+                   const FilesystemWrapperType& filesystem_wrapper_type, const FileWrapperType& file_wrapper_type,
+                   const std::string& description, const std::string& version, const std::string& file_wrapper_config,
+                   const bool& ignore_last_timestamp, const int& file_watcher_interval = 5) const;
   bool delete_dataset(const std::string& name) const;
   void add_sample_dataset_partition(const std::string& dataset_name, soci::session* session) const;
   soci::session* get_session() const;

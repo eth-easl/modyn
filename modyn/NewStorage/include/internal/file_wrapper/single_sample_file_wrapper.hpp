@@ -2,14 +2,14 @@
 
 #include <cstddef>
 
-#include "internal/file_wrapper/abstract_file_wrapper.hpp"
+#include "internal/file_wrapper/file_wrapper.hpp"
 
 namespace storage {
-class SingleSampleFileWrapper : public AbstractFileWrapper {  // NOLINT
+class SingleSampleFileWrapper : public FileWrapper {  // NOLINT
  public:
   SingleSampleFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                          std::shared_ptr<AbstractFilesystemWrapper> fs_wrapper)
-      : AbstractFileWrapper(path, fw_config, fs_wrapper) {
+                          std::shared_ptr<FilesystemWrapper> fs_wrapper)
+      : FileWrapper(path, fw_config, fs_wrapper) {
     validate_file_extension();
   }
   int64_t get_number_of_samples() override;
@@ -19,7 +19,7 @@ class SingleSampleFileWrapper : public AbstractFileWrapper {  // NOLINT
   std::vector<unsigned char> get_sample(int64_t index) override;
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<int64_t>& indices) override;
   void validate_file_extension() override;
-  std::string get_name() override { return "SINGLE_SAMPLE"; }
+  FileWrapperType get_type() override { return FileWrapperType::SINGLE_SAMPLE; }
   ~SingleSampleFileWrapper() override = default;
 };
 }  // namespace storage
