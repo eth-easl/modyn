@@ -228,7 +228,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   int32_t sample_id1;
   int32_t label1;
   session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(sample_id1),
-      soci::into(label1);
+        soci::into(label1);
   ASSERT_EQ(sample_id1, 1);
   ASSERT_EQ(label1, 1);
 
