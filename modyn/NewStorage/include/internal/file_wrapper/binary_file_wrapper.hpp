@@ -28,6 +28,10 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
   BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,  // NOLINT
                     std::shared_ptr<FilesystemWrapper> fs_wrapper)
       : FileWrapper(path, fw_config, fs_wrapper) {
+    if (fs_wrapper.get() == nullptr) {
+      throw std::runtime_error("got nullptr wrapper.");  // TODO(MaxiBoether): introduce ASSERT
+    }
+
     if (!fw_config["record_size"]) {
       throw std::runtime_error("record_size_must be specified in the file wrapper config.");
     }

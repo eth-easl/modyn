@@ -67,18 +67,20 @@ TEST_F(FileWatcherTest, TestSeek) {
 
   // Check if the file is added to the database
   const std::string file_path = "tmp/test_file.txt";
-  std::vector<std::string> file_paths = std::vector<std::string>(1);
+  std::vector<std::string> file_paths(1);
   session << "SELECT path FROM files", soci::into(file_paths);
   ASSERT_EQ(file_paths[0], file_path);
 
   // Check if the sample is added to the database
-  std::vector<int64_t> sample_ids = std::vector<int64_t>(1);
+  std::vector<int64_t> sample_ids(1);
   session << "SELECT sample_id FROM samples", soci::into(sample_ids);
   ASSERT_EQ(sample_ids[0], 1);
 
   // Assert the last timestamp of the dataset is updated
+  const int32_t dataset_id = 1;
   int32_t last_timestamp;
-  session << "SELECT last_timestamp FROM datasets WHERE dataset_id = :id", soci::use(1), soci::into(last_timestamp);
+  session << "SELECT last_timestamp FROM datasets WHERE dataset_id = :id", soci::use(dataset_id),
+      soci::into(last_timestamp);
 
   ASSERT_TRUE(last_timestamp > 0);
 }
@@ -136,7 +138,7 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
   soci::session session = connection.get_session();
 
   session << "INSERT INTO files (file_id, dataset_id, path, updated_at) VALUES "
-          "(1, 1, 'test.txt', 1000)";
+             "(1, 1, 'test.txt', 1000)";
 
   ASSERT_FALSE(watcher.check_valid_file("test.txt", ".txt", false, 0));
 }
@@ -184,15 +186,18 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   ASSERT_NO_THROW(watcher.fallback_insertion(files));
 
   // Check if the files are added to the database
-  int32_t file_id;
-  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(1), soci::into(file_id);
-  ASSERT_EQ(file_id, 1);
+  int32_t file_id = 1;
+  int32_t sample_id;
+  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id);
+  ASSERT_EQ(sample_id, 1);
 
-  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(2), soci::into(file_id);
-  ASSERT_EQ(file_id, 2);
+  file_id = 2;
+  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id);
+  ASSERT_EQ(sample_id, 2);
 
-  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(3), soci::into(file_id);
-  ASSERT_EQ(file_id, 3);
+  file_id = 3;
+  session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id);
+  ASSERT_EQ(sample_id, 3);
 }
 
 TEST_F(FileWatcherTest, TestHandleFilePaths) {
@@ -227,23 +232,27 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   // Check if the samples are added to the database
   int32_t sample_id1;
   int32_t label1;
-  session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(1), soci::into(sample_id1),
-        soci::into(label1);
+  int32_t file_id = 1;
+  session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id1),
+      soci::into(label1);
   ASSERT_EQ(sample_id1, 1);
   ASSERT_EQ(label1, 1);
 
   int32_t sample_id2;
   int32_t label2;
-  session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(2), soci::into(sample_id2),
+  file_id = 2;
+  session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id2),
       soci::into(label2);
   ASSERT_EQ(sample_id2, 2);
   ASSERT_EQ(label2, 2);
 
   // Check if the files are added to the database
-  int32_t file_id;
-  session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(1), soci::into(file_id);
-  ASSERT_EQ(file_id, 1);
+  int32_t output_file_id;
+  int32_t input_file_id = 1;
+  session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(input_file_id), soci::into(output_file_id);
+  ASSERT_EQ(output_file_id, 1);
 
-  session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(2), soci::into(file_id);
-  ASSERT_EQ(file_id, 2);
+  input_file_id = 2;
+  session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(input_file_id), soci::into(output_file_id);
+  ASSERT_EQ(output_file_id, 2);
 }

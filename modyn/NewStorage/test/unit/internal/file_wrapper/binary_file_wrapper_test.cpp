@@ -14,10 +14,10 @@ using namespace storage;
 TEST(BinaryFileWrapperTest, TestGetNumberOfSamples) {
   const std::string file_name = "test.bin";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
-  MockFilesystemWrapper filesystem_wrapper;
-  EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
-  BinaryFileWrapper file_wrapper =
-      BinaryFileWrapper(file_name, config, std::make_shared<MockFilesystemWrapper>(filesystem_wrapper));
+  // MockFilesystemWrapper filesystem_wrapper;
+  // EXPECT_CALL(filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
+
+  BinaryFileWrapper file_wrapper(file_name, config, std::make_shared<MockFilesystemWrapper>());
   ASSERT_EQ(file_wrapper.get_number_of_samples(), 4);
 }
 

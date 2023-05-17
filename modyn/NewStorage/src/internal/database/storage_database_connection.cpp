@@ -71,30 +71,30 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
     std::string boolean_string = ignore_last_timestamp ? "true" : "false";
     if (drivername == "postgresql") {
       session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
-                  "file_wrapper_type, description, version, file_wrapper_config, "
-                  "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
-                  "VALUES (:name, "
-                  ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
-                  ":description, :version, :file_wrapper_config, "
-                  ":ignore_last_timestamp, :file_watcher_interval, 0) "
-                  "ON DUPLICATE KEY UPDATE base_path = :base_path, "
-                  "filesystem_wrapper_type = :filesystem_wrapper_type, "
-                  "file_wrapper_type = :file_wrapper_type, description = "
-                  ":description, version = :version, file_wrapper_config = "
-                  ":file_wrapper_config, ignore_last_timestamp = "
-                  ":ignore_last_timestamp, file_watcher_interval = "
-                  ":file_watcher_interval, last_timestamp=0",
+                 "file_wrapper_type, description, version, file_wrapper_config, "
+                 "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
+                 "VALUES (:name, "
+                 ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
+                 ":description, :version, :file_wrapper_config, "
+                 ":ignore_last_timestamp, :file_watcher_interval, 0) "
+                 "ON DUPLICATE KEY UPDATE base_path = :base_path, "
+                 "filesystem_wrapper_type = :filesystem_wrapper_type, "
+                 "file_wrapper_type = :file_wrapper_type, description = "
+                 ":description, version = :version, file_wrapper_config = "
+                 ":file_wrapper_config, ignore_last_timestamp = "
+                 ":ignore_last_timestamp, file_watcher_interval = "
+                 ":file_watcher_interval, last_timestamp=0",
           soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
           soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
           soci::use(boolean_string), soci::use(file_watcher_interval);
     } else if (drivername == "sqlite3") {
       session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
-                  "file_wrapper_type, description, version, file_wrapper_config, "
-                  "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
-                  "VALUES (:name, "
-                  ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
-                  ":description, :version, :file_wrapper_config, "
-                  ":ignore_last_timestamp, :file_watcher_interval, 0)",
+                 "file_wrapper_type, description, version, file_wrapper_config, "
+                 "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
+                 "VALUES (:name, "
+                 ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
+                 ":description, :version, :file_wrapper_config, "
+                 ":ignore_last_timestamp, :file_watcher_interval, 0)",
           soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
           soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
           soci::use(boolean_string), soci::use(file_watcher_interval);
@@ -144,17 +144,17 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
     }
     std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
     session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
-                "PARTITION OF samples "
-                "FOR VALUES IN (:dataset_id) "
-                "PARTITION BY HASH (sample_id)",
+               "PARTITION OF samples "
+               "FOR VALUES IN (:dataset_id) "
+               "PARTITION BY HASH (sample_id)",
         soci::use(dataset_partition_table_name), soci::use(dataset_id);
 
     for (int64_t i = 0; i < hash_partition_modulus_; i++) {
       std::string hash_partition_name = dataset_partition_table_name + "_part" + std::to_string(i);
       session << "CREATE TABLE IF NOT EXISTS :hash_partition_name PARTITION "
-                  "OF :dataset_partition_table_name "
-                  "FOR VALUES WITH (modulus :hash_partition_modulus, "
-                  "REMAINDER :i)",
+                 "OF :dataset_partition_table_name "
+                 "FOR VALUES WITH (modulus :hash_partition_modulus, "
+                 "REMAINDER :i)",
           soci::use(hash_partition_name), soci::use(dataset_partition_table_name), soci::use(hash_partition_modulus_),
           soci::use(i);
     }

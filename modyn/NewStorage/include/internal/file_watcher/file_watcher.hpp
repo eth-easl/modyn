@@ -28,7 +28,10 @@ class FileWatcher {
  public:
   explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id,  // NOLINT
                        std::atomic<bool>* stop_file_watcher)
-      : config_{config}, dataset_id_{dataset_id}, storage_database_connection_{StorageDatabaseConnection(config_)}, stop_file_watcher_{stop_file_watcher} {
+      : config_{config},
+        dataset_id_{dataset_id},
+        storage_database_connection_{StorageDatabaseConnection(config_)},
+        stop_file_watcher_{stop_file_watcher} {
     insertion_threads_ = config_["storage"]["insertion_threads"].as<int16_t>();
     disable_multithreading_ = insertion_threads_ <= 1;  // NOLINT
     if (config_["storage"]["sample_dbinsertion_batchsize"]) {
@@ -39,7 +42,7 @@ class FileWatcher {
     std::string dataset_path;
     int64_t filesystem_wrapper_type_int;
     session << "SELECT base_path, filesystem_wrapper_type FROM datasets "
-            "WHERE dataset_id = :dataset_id",
+               "WHERE dataset_id = :dataset_id",
         soci::into(dataset_path), soci::into(filesystem_wrapper_type_int), soci::use(dataset_id_);
     const auto filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
 
