@@ -227,7 +227,7 @@ properties:
       seed:
         type: number
         description: |
-          The number used to seed the database. Must be in [-1,1].
+          If provided, this number is used to seed the database. Must be in [-1,1].
     required:
       - drivername
       - username
