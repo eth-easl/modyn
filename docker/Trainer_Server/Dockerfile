@@ -1,5 +1,7 @@
 FROM modyndependencies:latest as apex-image
-# uncomment these three lines to install apex
+# We rely on modyndependencies so we only need to re-install apex when the dependencies change, not when the source code of Modyn changes
+# Uncomment the following lines to install apex
+
 # TODO(#104): Make this easily configurable here
 # RUN conda run -n modyn pip install packaging
 # RUN git clone https://github.com/NVIDIA/apex ./apex
@@ -7,8 +9,7 @@ FROM modyndependencies:latest as apex-image
 
 FROM modynbase:latest AS trainerserver-image
 
-# TODO(MaxiBoether): copy apex files
-
+COPY --from apex-image /opt/conda/envs/modyn /opt/conda/envs/modyn
 RUN chmod a+x /src/modyn/trainer_server/modyn-trainer-server
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
