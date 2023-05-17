@@ -46,12 +46,14 @@ if [ "$IS_MAC" != true ]; then
 
     use_cuda () {
         sed -i '/cpuonly/d' $SCRIPT_DIR/environment.yml # Delete cpuonly
-        sed -i '/nvidia::cudatoolkit/c\  - nvidia::cudatoolkit=$CUDA_VERSION' $SCRIPT_DIR/environment.yml # Enable cudatoolkit
-        sed -i '/pytorch-cuda/c\  - pytorch::pytorch-cuda=$CUDA_VERSION' $SCRIPT_DIR/environment.yml # Enable pytorch-cuda
+        sed -i "/nvidia::cudatoolkit/c\  - nvidia::cudatoolkit=$CUDA_VERSION" $SCRIPT_DIR/environment.yml # Enable cudatoolkit
+        sed -i "/pytorch-cuda/c\  - pytorch::pytorch-cuda=$CUDA_VERSION" $SCRIPT_DIR/environment.yml # Enable pytorch-cuda
+
+        # TODO: Enable CUDA in docker-compose.yml
     }
 
     while true; do
-        read -p "Do you want to use CUDA for Modyn? " yn
+        read -p "Do you want to use CUDA for Modyn? (y/n) " yn
         case $yn in
             [Yy]* ) use_cuda; break;;
             [Nn]* ) break;;
@@ -64,7 +66,7 @@ if [ "$IS_MAC" != true ]; then
     }
 
     while true; do
-        read -p "Do you want to use Apex for Modyn? (Takes a long time for initial Docker build)" yn
+        read -p "Do you want to use Apex for Modyn? (Takes a long time for initial Docker build, but required e.g. for DLRM model) (y/n) " yn
         case $yn in
             [Yy]* ) use_apex; break;;
             [Nn]* ) break;;
