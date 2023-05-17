@@ -1,3 +1,5 @@
+source initial_setup.sh
+
 docker compose down
 docker build -t modyndependencies -f docker/Dependencies/Dockerfile .
 docker build -t modynbase -f docker/Base/Dockerfile .
