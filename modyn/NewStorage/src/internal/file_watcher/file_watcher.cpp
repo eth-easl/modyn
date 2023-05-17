@@ -12,7 +12,7 @@ using namespace storage;
 void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
                                     const FileWrapperType& file_wrapper_type, int64_t timestamp,
                                     const YAML::Node& file_wrapper_config) {
-  soci::session session = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_.get_session();
 
   std::vector<std::string> valid_files;
   for (const auto& file_path : file_paths) {
@@ -50,7 +50,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       }
     }
 
-    if (storage_database_connection_->drivername == "postgresql") {
+    if (storage_database_connection_.drivername == "postgresql") {
       postgres_copy_insertion(file_frame);
     } else {
       fallback_insertion(file_frame);
@@ -59,7 +59,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 }
 
 void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const {
-  soci::session session = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_.get_session();
   const std::string table_name = "samples__did" + std::to_string(dataset_id_);
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
@@ -90,7 +90,7 @@ void FileWatcher::postgres_copy_insertion(const std::vector<std::tuple<int64_t, 
 
 void FileWatcher::fallback_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const
 {
-    soci::session session = storage_database_connection_->get_session();
+    soci::session session = storage_database_connection_.get_session();
     // Prepare query
     std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
     for (const auto& frame : file_frame) {
@@ -109,7 +109,7 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
   if (file_extension != data_file_extension) {
     return false;
   }
-  soci::session session = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_.get_session();
 
   int64_t file_id = -1;
 
@@ -128,7 +128,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   std::string file_wrapper_config;
   int64_t file_wrapper_type_id;
 
-  soci::session session = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_.get_session();
 
   session << "SELECT file_wrapper_type, file_wrapper_config FROM datasets "
           "WHERE dataset_id = :dataset_id",
@@ -166,7 +166,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 }
 
 void FileWatcher::seek_dataset() {
-  soci::session session = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_.get_session();
 
   int64_t last_timestamp;
 
@@ -178,7 +178,7 @@ void FileWatcher::seek_dataset() {
 }
 
 void FileWatcher::seek() {
-  soci::session session = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_.get_session();
   std::string dataset_name;
 
   session << "SELECT name FROM datasets WHERE dataset_id = :dataset_id", soci::into(dataset_name), soci::use(dataset_id_);
@@ -203,7 +203,7 @@ void FileWatcher::seek() {
 }
 
 void FileWatcher::run() {
-  soci::session session = storage_database_connection_->get_session();
+  soci::session session = storage_database_connection_.get_session();
 
   int64_t file_watcher_interval;
   session << "SELECT file_watcher_interval FROM datasets WHERE dataset_id = :dataset_id",

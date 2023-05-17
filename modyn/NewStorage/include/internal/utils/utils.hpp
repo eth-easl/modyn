@@ -23,7 +23,7 @@ class Utils {
                                                                    const FilesystemWrapperType& type) {
     std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
     if (type == FilesystemWrapperType::LOCAL) {
-      filesystem_wrapper = std::make_unique<LocalFilesystemWrapper>(path);
+      filesystem_wrapper = std::make_shared<LocalFilesystemWrapper>(path);
     } else {
       throw std::runtime_error("Unknown filesystem wrapper type");
     }
