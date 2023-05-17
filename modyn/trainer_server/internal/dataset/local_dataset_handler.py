@@ -1,5 +1,6 @@
 import os
 import shutil
+from typing import Optional
 
 import numpy as np
 from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStorage
@@ -15,20 +16,20 @@ class LocalDatasetHandler(TriggerSampleStorage):
         - retrieve these samples to train on
     """
 
-    def __init__(self, pipeline_id: int, number_of_samples_per_file: int = -1) -> None:
+    def __init__(self, pipeline_id: int, number_of_samples_per_file: Optional[int] = None) -> None:
         super().__init__(LOCAL_STORAGE_FOLDER)
         # files are numbered from 0. Each file has a size of number_of_samples_per_file
         self.current_file_index = 0
         self.current_sample_index = 0
-        self.file_size = number_of_samples_per_file  # -1 if we just use the class to read
+        self.file_size = number_of_samples_per_file  # None if we just use the class to read
         self.pipeline_id = pipeline_id
-        if self.file_size > 0:
+        if self.file_size is not None:
             # tuples are progressively accumulated in this ndarray and then dumped to file when the
             # desired file size is reached
             self.output_samples_list = np.empty(self.file_size, dtype=np.dtype("i8,f8"))
 
     def inform_samples(self, input_samples_list: np.ndarray) -> None:
-        assert self.file_size > 0
+        assert self.file_size is not None
         assert self.output_samples_list is not None
         for element in input_samples_list:
             self.output_samples_list[self.current_sample_index] = element
@@ -38,13 +39,13 @@ class LocalDatasetHandler(TriggerSampleStorage):
                 self._samples_ready()
 
     def store_last_samples(self) -> None:
-        assert self.file_size > 0
+        assert self.file_size is not None
         if self.current_sample_index > 0:
             self.output_samples_list = self.output_samples_list[: self.current_sample_index]  # remove empty elements
             self._samples_ready()
 
     def _samples_ready(self) -> None:
-        assert self.file_size > 0
+        assert self.file_size is not None
         assert self.output_samples_list is not None
         self.save_trigger_sample(self.pipeline_id, 0, self.current_file_index, self.output_samples_list, -1)
         self.current_sample_index = 0

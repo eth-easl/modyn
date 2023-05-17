@@ -38,7 +38,7 @@ def test_init_just_read():
     assert len(os.listdir(".tmp_offline_dataset")) == 0
     assert handler.current_file_index == 0
     assert handler.current_sample_index == 0
-    assert handler.file_size == -1
+    assert handler.file_size is None
 
     with pytest.raises(AssertionError):
         handler.inform_samples(np.array([11]))
