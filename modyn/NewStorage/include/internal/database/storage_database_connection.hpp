@@ -40,8 +40,8 @@ class StorageDatabaseConnection {
                    const std::string& description, const std::string& version, const std::string& file_wrapper_config,
                    const bool& ignore_last_timestamp, const int& file_watcher_interval = 5) const;
   bool delete_dataset(const std::string& name) const;
-  void add_sample_dataset_partition(const std::string& dataset_name, soci::session* session) const;
-  soci::session* get_session() const;
+  void add_sample_dataset_partition(const std::string& dataset_name, soci::session& session) const;
+  soci::session get_session() const;
 };
 
 }  // namespace storage

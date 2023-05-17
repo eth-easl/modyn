@@ -38,9 +38,9 @@ void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
 }
 
 void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* storage_database_connection) {
-  soci::session* sql = storage_database_connection->get_session();
+  soci::session sql = storage_database_connection->get_session();
   int64_t number_of_datasets = 0;
-  *sql << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
+  sql << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
   if (number_of_datasets == 0) {
     // There are no datasets in the database. Stop all FileWatcher processes.
     for (const auto& pair : file_watcher_processes_) {
@@ -49,7 +49,7 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
     return;
   }
   std::vector<int64_t> dataset_ids = std::vector<int64_t>(number_of_datasets);
-  *sql << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
+  sql << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
   int64_t dataset_id;
   for (const auto& pair : file_watcher_processes_) {
