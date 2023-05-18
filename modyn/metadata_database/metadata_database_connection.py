@@ -39,7 +39,8 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             self.modyn_config["metadata_database"]["seed"] if "seed" in self.modyn_config["metadata_database"] else None
         )
         if self.seed is not None:
-            assert -1 <= self.seed <= 1
+            if not -1 <= self.seed <= 1:
+                raise ValueError("Postgres seed must be in [-1,1]")
 
     def __enter__(self) -> MetadataDatabaseConnection:
         """Create the engine and session. Then, if required, applies the seed.
