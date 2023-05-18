@@ -5,8 +5,7 @@ import tempfile
 
 import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.selector.internal.selector_strategies import GradNormDownsamplingStrategy, RandomPresamplingStrategy
-from modyn.selector.internal.selector_strategies.loss_downsampling_strategy import LossDownsamplingStrategy
+from modyn.selector.internal.selector_strategies import GradNormDownsamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()
@@ -35,20 +34,6 @@ def setup_and_teardown():
 
     os.remove(database_path)
     shutil.rmtree(TMP_DIR)
-
-
-def test_init_loss():
-    # Test init works
-    strat = LossDownsamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
-
-    assert strat.downsampled_batch_size == 10
-    assert strat._pipeline_id == 42
-    assert isinstance(strat.get_downsampling_strategy(), str)
 
 
 def test_init_gradnorm():
@@ -80,31 +65,3 @@ def test_command_gradnorm():
     assert name == "RemoteGradNormDownsampling"
     assert "downsampled_batch_size" in params
     assert params["downsampled_batch_size"] == 10
-
-
-def test_init_random():
-    # Test init works
-
-    with pytest.raises(ValueError):
-        RandomPresamplingStrategy(
-            {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
-            get_minimal_modyn_config(),
-            42,
-            1000,
-        )
-
-    strat = RandomPresamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
-
-    assert strat._pipeline_id == 42
-    assert not hasattr(strat, "downsampled_batch_size")
-
-    with pytest.raises(NotImplementedError):
-        strat.get_downsampling_strategy()
-
-    with pytest.raises(NotImplementedError):
-        strat.get_downsampling_params()
