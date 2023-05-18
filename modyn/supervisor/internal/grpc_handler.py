@@ -14,6 +14,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as Se
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
+    SeedSelectorRequest,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -536,3 +537,17 @@ class GRPCHandler:
         logger.info("Wrote model to disk.")
 
         return local_model_path
+
+    def seed_selector(self, seed: int) -> None:
+        if not (0 <= seed <= 100 and isinstance(seed, int)):
+            raise ValueError("The seed must be an integer in [0,100]")
+        if not self.connected_to_selector:
+            raise ConnectionError("Tried to seed the selector, but no connection was made.")
+
+        success = self.selector.seed_selector(
+            SeedSelectorRequest(
+                seed=seed,
+            ),
+        ).success
+
+        assert success, "Something went wrong while seeding the selector"

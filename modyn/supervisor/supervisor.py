@@ -71,6 +71,9 @@ class Supervisor:
 
         self._selector_batch_size = 128
 
+        if "seed" in pipeline_config["training"]:
+            self.grpc.seed_selector(pipeline_config["training"]["seed"])
+
     def _setup_model_directory(self) -> None:
         self.model_storage_directory = (
             pathlib.Path(os.getcwd())
