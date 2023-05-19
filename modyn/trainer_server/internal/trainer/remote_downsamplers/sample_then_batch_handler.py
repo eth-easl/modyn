@@ -144,7 +144,7 @@ class SampleThenBatchHandler:
         for i in range(target_samples):
             samples_list[i] = (sample_ids[selected_ids[i]], self.normalizer / scores[selected_ids[i]])
 
-        #this class is sequentially accessed so after the last file we no longer need the files
+        # this class is sequentially accessed so after the last file we no longer need the files
         if file_index == len(self.grouped_samples_per_file) - 1:
             self._clean_working_directory()
 

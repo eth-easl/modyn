@@ -47,7 +47,7 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
             if "downsampled_batch_size" not in config:
                 raise ValueError("Please specify downsampled_batch_size to use batch-then-sample")
             self.downsampled_batch_size = self._config["downsampled_batch_size"]
-            if  not isinstance(self.downsampled_batch_size, int):
+            if not isinstance(self.downsampled_batch_size, int):
                 raise ValueError("The downsampled batch size must be an integer")
 
         self._requires_remote_computation = True

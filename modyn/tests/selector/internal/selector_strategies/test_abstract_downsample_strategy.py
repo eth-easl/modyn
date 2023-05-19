@@ -29,7 +29,13 @@ def get_minimal_modyn_config():
 
 
 def get_config():
-    return {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "downsampled_batch_size": 10, "sample_before_batch": False}
+    return {
+        "reset_after_trigger": False,
+        "presampling_ratio": 50,
+        "limit": -1,
+        "downsampled_batch_size": 10,
+        "sample_before_batch": False,
+    }
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -43,7 +49,6 @@ def setup_and_teardown():
     shutil.rmtree(TMP_DIR)
 
 
-
 def get_config_tail():
     return {
         "reset_after_trigger": False,
@@ -51,7 +56,7 @@ def get_config_tail():
         "limit": -1,
         "downsampled_batch_size": 10,
         "tail_triggers": 1,
-        "sample_before_batch": False
+        "sample_before_batch": False,
     }
 
 
@@ -66,12 +71,24 @@ def test_constructor_throws_on_invalid_config():
     with pytest.raises(ValueError):
         AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
-    conf = {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "downsampled_batch_size": 0.10, "sample_before_batch": False}
+    conf = {
+        "reset_after_trigger": False,
+        "presampling_ratio": 50,
+        "limit": -1,
+        "downsampled_batch_size": 0.10,
+        "sample_before_batch": False,
+    }
 
     with pytest.raises(ValueError):
         AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
-    conf = {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "downsampled_batch_size": 10, "sample_before_batch": False}
+    conf = {
+        "reset_after_trigger": False,
+        "presampling_ratio": 50,
+        "limit": -1,
+        "downsampled_batch_size": 10,
+        "sample_before_batch": False,
+    }
     ads = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
     assert ads._requires_remote_computation
