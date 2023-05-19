@@ -12,11 +12,18 @@ TEMPORARY_LOCAL_STORAGE_PATH = ".tmp_scores"  # should we provide it through the
 
 class SampleThenBatchHandler:
     def __init__(
-        self, pipeline_id: int, batch_size: int, downsampled_batch_ratio: int, maximum_keys_in_memory: int
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        batch_size: int,
+        downsampled_batch_ratio: int,
+        maximum_keys_in_memory: int,
     ) -> None:
         # used to temporarily store the computed scores
         self.scores_storage = TriggerSampleStorage(TEMPORARY_LOCAL_STORAGE_PATH)
-        self.current_pipeline_id = pipeline_id
+
+        self.pipeline_id = pipeline_id
+        self.trigger_id = trigger_id
         assert batch_size > 0
         self.batch_size = batch_size
         assert maximum_keys_in_memory > 0
@@ -41,7 +48,7 @@ class SampleThenBatchHandler:
 
         """
         assert self.batch_size > 0
-        assert self.current_pipeline_id >= 0
+        assert self.pipeline_id >= 0
         assert 0 < self.downsampled_batch_ratio < 100
         self.to_be_stored = []
         self.current_file_index = 0
@@ -80,10 +87,11 @@ class SampleThenBatchHandler:
         if len(self.to_be_stored) > 0:
             self._store_values()
 
+        # aggregate per-file probability mass
         file_probabilities = torch.Tensor([score / sum(self.file_total_scores) for score in self.file_total_scores])
 
         number_of_samples_seen = sum(self.number_of_samples_per_file)
-        target_num_samples = number_of_samples_seen * self.downsampled_batch_ratio / 100
+        target_num_samples = int(number_of_samples_seen * self.downsampled_batch_ratio / 100)
 
         if target_num_samples % self.batch_size == 1:
             # having a batch of just one element might be a problem for some operations (ex batch norm)
@@ -93,7 +101,6 @@ class SampleThenBatchHandler:
 
         self.normalizer = self.normalizer / number_of_samples_seen
 
-        counter_assigned = 0
         # oversample by a factor 1.25
         sampled_files = [
             el.item()
@@ -103,6 +110,7 @@ class SampleThenBatchHandler:
         ]
 
         # ensure that we don't sample more points than available in a file
+        counter_assigned = 0
         for file in sampled_files:
             if self.grouped_samples_per_file[file] < self.number_of_samples_per_file[file]:
                 self.grouped_samples_per_file[file] += 1
@@ -127,7 +135,7 @@ class SampleThenBatchHandler:
         if target_samples == 0:
             return samples_list
 
-        samples = self.scores_storage.get_trigger_samples(self.current_pipeline_id, 0, file_index)
+        samples = self.scores_storage.get_trigger_samples(self.pipeline_id, self.trigger_id, file_index)
         sample_ids = [sample[0] for sample in samples]
         scores = torch.Tensor([sample[1] for sample in samples])
 
@@ -136,6 +144,7 @@ class SampleThenBatchHandler:
         for i in range(target_samples):
             samples_list[i] = (sample_ids[selected_ids[i]], self.normalizer / scores[selected_ids[i]])
 
+        #this class is sequentially accessed so after the last file we no longer need the files
         if file_index == len(self.grouped_samples_per_file) - 1:
             self._clean_working_directory()
 
@@ -148,7 +157,7 @@ class SampleThenBatchHandler:
     def _store_values(self) -> None:
         array_to_be_stored = np.array(self.to_be_stored, dtype=np.dtype("i8,f8"))
         self.scores_storage.save_trigger_sample(
-            self.current_pipeline_id, 0, self.current_file_index, array_to_be_stored, -1
+            self.pipeline_id, self.trigger_id, self.current_file_index, array_to_be_stored, -1
         )
         self.file_total_scores.append(self.current_scores_sum)
         self.number_of_samples_per_file.append(len(self.to_be_stored))

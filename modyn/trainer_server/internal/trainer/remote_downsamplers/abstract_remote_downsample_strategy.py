@@ -21,11 +21,12 @@ def get_tensors_subset(
 
 
 class AbstractRemoteDownsamplingStrategy(ABC):
-    def __init__(self, pipeline_id: int, batch_size: int, params_from_selector: dict) -> None:
+    def __init__(self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict) -> None:
         assert "sample_before_batch" in params_from_selector
         self.sample_before_batch = params_from_selector["sample_before_batch"]
         self.pipeline_id = pipeline_id
         self.batch_size = batch_size
+        self.trigger_id = trigger_id
 
         if self.sample_before_batch:
             assert "downsampled_batch_ratio" in params_from_selector
@@ -33,6 +34,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
             assert "maximum_keys_in_memory" in params_from_selector
             self.sample_then_batch_handler = SampleThenBatchHandler(
                 self.pipeline_id,
+                self.trigger_id,
                 self.batch_size,
                 self.downsampled_batch_ratio,
                 params_from_selector["maximum_keys_in_memory"],

@@ -38,6 +38,7 @@ class OnlineDataset(IterableDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
+        number_of_workers: int,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -59,6 +60,7 @@ class OnlineDataset(IterableDataset):
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
         self._keys_source = "selector"
+        self._number_of_workers = number_of_workers
 
         logger.debug("Initialized OnlineDataset.")
 
@@ -78,7 +80,7 @@ class OnlineDataset(IterableDataset):
     def _get_keys_and_weights_from_local(self, worker_id: int, partition_id: int) -> tuple[list[int], list[float]]:
         assert self._keys_source == "local"
         assert self._local_dataset_handler is not None
-        return self._local_dataset_handler.get_keys_and_weights(worker_id, partition_id)
+        return self._local_dataset_handler.get_keys_and_weights(partition_id, worker_id)
 
     def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -149,7 +151,7 @@ class OnlineDataset(IterableDataset):
 
     def switch_to_local_key_source(self) -> None:
         self._keys_source = "local"
-        self._local_dataset_handler = LocalDatasetHandler(self._pipeline_id)
+        self._local_dataset_handler = LocalDatasetHandler(self._pipeline_id, self._trigger_id, self._number_of_workers)
 
     def switch_to_selector_key_source(self) -> None:
         if self._keys_source == "selector":
@@ -177,15 +179,21 @@ class OnlineDataset(IterableDataset):
         return keys, data, labels, weights
 
     def _get_num_data_partitions(self) -> int:
-        assert self._selectorstub is not None
+        assert self._keys_source in ["local", "selector"]
 
-        num_partitions_request = GetNumberOfPartitionsRequest(
-            pipeline_id=self._pipeline_id,
-            trigger_id=self._trigger_id,
-        )
+        if self._keys_source == "selector":
+            assert self._selectorstub is not None
 
-        response: NumberOfPartitionsResponse = self._selectorstub.get_number_of_partitions(num_partitions_request)
-        return response.num_partitions
+            num_partitions_request = GetNumberOfPartitionsRequest(
+                pipeline_id=self._pipeline_id,
+                trigger_id=self._trigger_id,
+            )
+
+            response: NumberOfPartitionsResponse = self._selectorstub.get_number_of_partitions(num_partitions_request)
+            return response.num_partitions
+        # local source
+        assert self._local_dataset_handler is not None
+        return self._local_dataset_handler.get_number_of_partitions()
 
     # pylint: disable=too-many-locals
     def __iter__(self) -> Generator:

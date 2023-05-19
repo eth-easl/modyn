@@ -14,7 +14,7 @@ def test_batch_then_sample_general():
     downsampled_batch_size = 5
 
     params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
-    sampler = AbstractRemoteDownsamplingStrategy(0, 0, params_from_selector)
+    sampler = AbstractRemoteDownsamplingStrategy(0, 0, 0, params_from_selector)
 
     assert hasattr(sampler, "downsampled_batch_size")
     assert not hasattr(sampler, "sample_then_batch_handler")
@@ -34,18 +34,18 @@ def test_sample_then_batch_general():
 
     with pytest.raises(AssertionError):
         params_from_selector = {"downsampled_batch_size": downsampled_batch_ratio, "sample_before_batch": True}
-        sampler = AbstractRemoteDownsamplingStrategy(0, 100, params_from_selector)
+        sampler = AbstractRemoteDownsamplingStrategy(0, 0, 100, params_from_selector)
 
     with pytest.raises(AssertionError):
         params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_before_batch": True}
-        sampler = AbstractRemoteDownsamplingStrategy(0, 100, params_from_selector)
+        sampler = AbstractRemoteDownsamplingStrategy(0, 0, 100, params_from_selector)
 
     params_from_selector = {
         "downsampled_batch_ratio": downsampled_batch_ratio,
         "sample_before_batch": True,
         "maximum_keys_in_memory": 1000,
     }
-    sampler = AbstractRemoteDownsamplingStrategy(0, 100, params_from_selector)
+    sampler = AbstractRemoteDownsamplingStrategy(0, 0, 100, params_from_selector)
 
     assert not hasattr(sampler, "downsampled_batch_size")
     assert hasattr(sampler, "sample_then_batch_handler")
@@ -65,7 +65,7 @@ def test_sample_then_batch():
         "sample_before_batch": True,
         "maximum_keys_in_memory": 100,
     }
-    sampler = AbstractRemoteDownsamplingStrategy(0, 100, params_from_selector)
+    sampler = AbstractRemoteDownsamplingStrategy(0, 0, 100, params_from_selector)
 
     handler = sampler.get_sample_then_batch_accumulator()
 

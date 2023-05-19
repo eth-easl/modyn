@@ -294,3 +294,6 @@ class TriggerSampleStorage:
             file_path (str): File path to parse.
         """
         return np.load(file_path, allow_pickle=False, fix_imports=False, mmap_mode="r").shape[0]
+
+    def _get_file_name(self, pipeline_id: int, trigger_id: int, partition_id: int, worker_id: int) -> Path:
+        return Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{worker_id}"

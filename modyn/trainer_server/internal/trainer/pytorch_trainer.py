@@ -42,6 +42,7 @@ class PytorchTrainer:
         self.logger = logger
         self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id
+        self.trigger_id = training_info.trigger_id
 
         self._info("Initializing Pytorch Trainer")
 
@@ -78,6 +79,7 @@ class PytorchTrainer:
             training_info.training_id,
         )
         self._batch_size = training_info.batch_size
+        self._num_dataloaders = training_info.num_dataloaders
 
         self._mod_dict: dict[str, Any] = {}
         self._label_tranformer_function: Optional[Callable] = None
@@ -236,7 +238,9 @@ class PytorchTrainer:
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)
 
-        downsampler = downsampler_class(self.pipeline_id, self._batch_size, params_from_selector, per_sample_loss)
+        downsampler = downsampler_class(
+            self.pipeline_id, self.trigger_id, self._batch_size, params_from_selector, per_sample_loss
+        )
         return (
             downsampler,
             params_from_selector["sample_before_batch"],
@@ -383,7 +387,8 @@ class PytorchTrainer:
         assert self._downsampler is not None
         assert self._sample_before_batch
 
-        # keys must be taken from the selector. This operation is needed only when we sample several times
+        # keys must be taken from the selector.
+        # This operation is needed only when we sample several times (otherwise the source is already the selector)
         self._train_dataloader.dataset.switch_to_selector_key_source()
 
         number_of_batches = 0
@@ -392,7 +397,7 @@ class PytorchTrainer:
         stb_handler = self._downsampler.get_sample_then_batch_accumulator()
         with stb_handler:
             # sample ids are retrieved from the selector as in the usual training loop
-            for _, batch in enumerate(self._train_dataloader):
+            for batch in self._train_dataloader:
                 number_of_batches += 1
                 sample_ids, target, data = self.prepare_data(batch)
 
@@ -404,10 +409,13 @@ class PytorchTrainer:
 
         number_of_files = stb_handler.get_total_number_of_files()
         # to store all the selected (sample, weight).
-        local_dataset = LocalDatasetHandler(self.pipeline_id, self._batch_size)
+        file_size = self._num_dataloaders * self._batch_size  # should we add it to the pipeline?
+        local_dataset = LocalDatasetHandler(self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size)
 
         for i in range(number_of_files):
+            # load and sample the i-th file
             samples_list = self._downsampler.get_samples_for_file(i)
+            # store the selected samples (id and weight)
             local_dataset.inform_samples(samples_list)
 
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller

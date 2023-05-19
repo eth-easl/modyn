@@ -39,7 +39,15 @@ def prepare_dataloaders(
     """
     logger.debug("Creating OnlineDataset.")
     train_set = OnlineDataset(
-        pipeline_id, trigger_id, dataset_id, bytes_parser, transform, storage_address, selector_address, training_id
+        pipeline_id,
+        trigger_id,
+        dataset_id,
+        bytes_parser,
+        transform,
+        storage_address,
+        selector_address,
+        training_id,
+        num_dataloaders,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)
