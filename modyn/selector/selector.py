@@ -93,7 +93,12 @@ class Selector:
         if trigger_id not in self._trigger_size_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
-        return self._trigger_size_cache[trigger_id]
+        # if we downsample the data, the dataset size is smaller
+        downsampling_scale = (
+            self._strategy.get_downsampling_scale() if isinstance(self._strategy, AbstractDownsampleStrategy) else 1
+        )
+
+        return int(downsampling_scale * self._trigger_size_cache[trigger_id])
 
     def get_number_of_partitions(self, trigger_id: int) -> int:
         if trigger_id not in self._trigger_partition_cache:

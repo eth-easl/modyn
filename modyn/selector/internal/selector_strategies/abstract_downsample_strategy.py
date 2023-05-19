@@ -51,3 +51,8 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
                 raise ValueError("The downsampled batch size must be an integer")
 
         self._requires_remote_computation = True
+
+    def get_downsampling_scale(self) -> float:
+        if self.sample_before_batch:
+            return self.downsampled_batch_ratio / 100
+        return 1
