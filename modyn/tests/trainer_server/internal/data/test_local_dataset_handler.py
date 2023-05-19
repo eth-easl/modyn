@@ -29,6 +29,7 @@ def test_init():
     assert handler.current_file_index == 0
     assert handler.current_sample_index == 0
     assert handler.maximum_keys_in_memory == 25
+    clean_directory()
 
 
 def test_init_just_read():
@@ -44,6 +45,8 @@ def test_init_just_read():
         handler.inform_samples(np.array([11]))
     with pytest.raises(AssertionError):
         handler.store_last_samples()
+
+    clean_directory()
 
 
 def test_writes():
@@ -64,6 +67,8 @@ def test_writes():
 
     handler.clean_this_trigger_samples()
     assert len(os.listdir(".tmp_offline_dataset")) == 0
+
+    clean_directory()
 
 
 def test_reads_pro():
@@ -113,3 +118,5 @@ def test_reads_pro():
     k21, w21 = handler.get_keys_and_weights(2, 1)
     assert k21 == list(range(1002, 1004))
     assert all(math.isclose(k * v, 1) for k, v in zip(k21, w21))  # get the correct key
+
+    clean_directory()

@@ -441,7 +441,6 @@ class GRPCHandler:
 
                     # handle corner cases
                     elif res.samples_seen > total_samples * (current_epoch + 1):
-
                         # we have to distribute new_samples across several epochs
                         this_epoch_samples = sample_pbar.total - sample_pbar.count
                         sample_pbar.update(this_epoch_samples)
