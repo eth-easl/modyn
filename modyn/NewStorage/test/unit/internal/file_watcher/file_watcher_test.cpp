@@ -157,7 +157,6 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
 
   EXPECT_CALL(filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
-  EXPECT_CALL(filesystem_wrapper, get_created_time(testing::_)).WillOnce(testing::Return(1000));
   const std::vector<unsigned char> bytes{'1'};
   EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
 
@@ -217,7 +216,6 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
 
   MockFilesystemWrapper filesystem_wrapper;
   EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
-  EXPECT_CALL(filesystem_wrapper, get_created_time(testing::_)).WillRepeatedly(testing::Return(1000));
   std::vector<unsigned char> bytes{'1'};
   EXPECT_CALL(filesystem_wrapper, get("test.lbl")).WillOnce(testing::Return(bytes));
   bytes = {'2'};

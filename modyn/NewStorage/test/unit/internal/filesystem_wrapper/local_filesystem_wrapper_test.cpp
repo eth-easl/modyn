@@ -134,19 +134,6 @@ TEST_F(LocalFilesystemWrapperTest, TestGetModifiedTime) {
   ASSERT_EQ(filesystem_wrapper.get_modified_time(file_name), 0);
 }
 
-TEST_F(LocalFilesystemWrapperTest, TestGetCreatedTime) {
-  const YAML::Node config = TestUtils::get_dummy_config();
-  LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
-  const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
-  int64_t creation_time = 0;
-  struct stat result = {};
-  if (stat(file_name.c_str(), &result) == 0) {
-    auto mod_time = result.st_mtime;
-    creation_time = mod_time;
-  }
-  ASSERT_EQ(filesystem_wrapper.get_created_time(file_name), creation_time);
-}
-
 TEST_F(LocalFilesystemWrapperTest, TestJoin) {
   const YAML::Node config = TestUtils::get_dummy_config();
   LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);

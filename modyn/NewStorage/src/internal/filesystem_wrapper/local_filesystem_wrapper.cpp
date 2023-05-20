@@ -130,23 +130,6 @@ int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   return mod_time;
 }
 
-int64_t LocalFilesystemWrapper::get_created_time(const std::string& path) {
-  if (not is_valid_path(path)) {
-    throw std::invalid_argument("Path " + path + " is not valid.");
-  }
-  if (not exists(path)) {
-    throw std::runtime_error("Path " + path + " does not exist.");
-  }
-  struct stat result = {};
-  int64_t mod_time;
-  if (stat(path.c_str(), &result) == 0) {
-    mod_time = static_cast<int64_t>(result.st_mtime);
-  } else {
-    throw std::runtime_error("Path " + path + " does not exist.");
-  }
-  return mod_time;
-}
-
 bool LocalFilesystemWrapper::is_valid_path(const std::string& path) { return path.find("..") == std::string::npos; }
 
 std::string LocalFilesystemWrapper::join(const std::vector<std::string>& paths) {

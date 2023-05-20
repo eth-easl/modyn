@@ -31,11 +31,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
           Utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
       number_of_samples = file_wrapper->get_number_of_samples();
       int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
-      int64_t created_time = filesystem_wrapper->get_created_time(file_path);
       session << "INSERT INTO files (dataset_id, path, number_of_samples, "
-                 "created_at, updated_at) VALUES (:dataset_id, :path, "
-                 ":number_of_samples, :created_at, :updated_at)",
-          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(created_time),
+                 "updated_at) VALUES (:dataset_id, :path, "
+                 ":number_of_samples, :updated_at)",
+          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples),
           soci::use(modified_time);
 
       long long file_id;  // NOLINT // soci get_last_insert_id requires a long long

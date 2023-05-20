@@ -18,7 +18,6 @@ class MockFilesystemWrapper : public storage::FilesystemWrapper {
   MOCK_METHOD(bool, is_file, (const std::string& path), (override));
   MOCK_METHOD(int64_t, get_file_size, (const std::string& path), (override));
   MOCK_METHOD(int64_t, get_modified_time, (const std::string& path), (override));
-  MOCK_METHOD(int64_t, get_created_time, (const std::string& path), (override));
   MOCK_METHOD(std::string, join, (const std::vector<std::string>& paths), (override));
   MOCK_METHOD(bool, is_valid_path, (const std::string& path), (override));
   MOCK_METHOD(FilesystemWrapperType, get_type, (), (override));

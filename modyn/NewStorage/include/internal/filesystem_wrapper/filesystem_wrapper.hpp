@@ -20,7 +20,6 @@ class FilesystemWrapper {  // NOLINT
   virtual bool is_file(const std::string& path) = 0;
   virtual int64_t get_file_size(const std::string& path) = 0;
   virtual int64_t get_modified_time(const std::string& path) = 0;
-  virtual int64_t get_created_time(const std::string& path) = 0;
   virtual std::string join(const std::vector<std::string>& paths) = 0;
   virtual bool is_valid_path(const std::string& path) = 0;
   virtual FilesystemWrapperType get_type() = 0;
