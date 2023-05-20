@@ -32,6 +32,10 @@ class Utils {
   static std::unique_ptr<FileWrapper> get_file_wrapper(const std::string& path, const FileWrapperType& type,
                                                        const YAML::Node& file_wrapper_config,
                                                        const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
+    assert(filesystem_wrapper != nullptr);
+    assert(!path.empty());
+    assert(filesystem_wrapper->exists(path));
+
     std::unique_ptr<FileWrapper> file_wrapper;
     if (type == FileWrapperType::BINARY) {
       file_wrapper = std::make_unique<BinaryFileWrapper>(path, file_wrapper_config, filesystem_wrapper);

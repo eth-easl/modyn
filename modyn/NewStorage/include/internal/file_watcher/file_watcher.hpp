@@ -55,9 +55,7 @@ class FileWatcher {
     dataset_path_ = dataset_path;
     filesystem_wrapper_type_ = filesystem_wrapper_type;
 
-    if (filesystem_wrapper->exists(dataset_path) && filesystem_wrapper->is_directory(dataset_path)) {
-      spdlog::info("Dataset path {} exists and is a directory.", dataset_path);
-    } else {
+    if (!filesystem_wrapper->exists(dataset_path) || !filesystem_wrapper->is_directory(dataset_path)) {
       throw std::runtime_error("Dataset path " + dataset_path + " does not exist or is not a directory.");
     }
   }

@@ -8,8 +8,8 @@ namespace storage {
 class SingleSampleFileWrapper : public FileWrapper {  // NOLINT
  public:
   SingleSampleFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                          std::shared_ptr<FilesystemWrapper> fs_wrapper)
-      : FileWrapper(path, fw_config, fs_wrapper) {
+                          std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+      : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     validate_file_extension();
   }
   int64_t get_number_of_samples() override;

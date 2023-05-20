@@ -121,13 +121,13 @@ TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  MockFilesystemWrapper filesystem_wrapper;
-  EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(1000));
-  watcher.filesystem_wrapper = std::make_shared<MockFilesystemWrapper>(filesystem_wrapper);
+  const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+  EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(1000));
+  watcher.filesystem_wrapper = filesystem_wrapper;
 
   ASSERT_TRUE(watcher.check_valid_file("test.txt", ".txt", false, 0));
 
-  EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(0));
 
   ASSERT_FALSE(watcher.check_valid_file("test.txt", ".txt", false, 1000));
 
@@ -148,21 +148,28 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  const StorageDatabaseConnection connection(config);
+  const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+  watcher.filesystem_wrapper = filesystem_wrapper;
 
   std::vector<std::string> files = std::vector<std::string>();
   files.emplace_back("test.txt");
   files.emplace_back("test.lbl");
-  MockFilesystemWrapper filesystem_wrapper;
 
-  EXPECT_CALL(filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
-  EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
+  EXPECT_CALL(*filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
+  EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
+  EXPECT_CALL(*filesystem_wrapper, exists(testing::_)).WillOnce(testing::Return(true));
   const std::vector<unsigned char> bytes{'1'};
-  EXPECT_CALL(filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
-
-  watcher.filesystem_wrapper = std::make_shared<MockFilesystemWrapper>(filesystem_wrapper);
+  EXPECT_CALL(*filesystem_wrapper, get("test.lbl")).WillOnce(testing::Return(bytes));
 
   ASSERT_NO_THROW(watcher.update_files_in_directory("tmp", 0));
+
+  const StorageDatabaseConnection connection(config);
+
+  soci::session session = connection.get_session();
+
+  std::vector<std::string> file_paths = std::vector<std::string>(1);
+  session << "SELECT path FROM files", soci::into(file_paths);
+  ASSERT_EQ(file_paths[0], "test.txt");
 }
 
 TEST_F(FileWatcherTest, TestFallbackInsertion) {
@@ -214,13 +221,14 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
 
   soci::session session = connection.get_session();
 
-  MockFilesystemWrapper filesystem_wrapper;
-  EXPECT_CALL(filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
+  const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+  EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
   std::vector<unsigned char> bytes{'1'};
-  EXPECT_CALL(filesystem_wrapper, get("test.lbl")).WillOnce(testing::Return(bytes));
+  EXPECT_CALL(*filesystem_wrapper, get("test.lbl")).WillOnce(testing::Return(bytes));
   bytes = {'2'};
-  EXPECT_CALL(filesystem_wrapper, get("test2.lbl")).WillOnce(testing::Return(bytes));
-  watcher.filesystem_wrapper = std::make_shared<MockFilesystemWrapper>(filesystem_wrapper);
+  EXPECT_CALL(*filesystem_wrapper, get("test2.lbl")).WillOnce(testing::Return(bytes));
+  EXPECT_CALL(*filesystem_wrapper, exists(testing::_)).WillRepeatedly(testing::Return(true));
+  watcher.filesystem_wrapper = filesystem_wrapper;
 
   const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
 

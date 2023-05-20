@@ -114,12 +114,9 @@ int64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
 }
 
 int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
-  if (not is_valid_path(path)) {
-    throw std::invalid_argument("Path " + path + " is not valid.");
-  }
-  if (not exists(path)) {
-    throw std::runtime_error("Path " + path + " does not exist.");
-  }
+  assert(is_valid_path(path));
+  assert(exists(path));
+
   struct stat result = {};
   int64_t mod_time;
   if (stat(path.c_str(), &result) == 0) {

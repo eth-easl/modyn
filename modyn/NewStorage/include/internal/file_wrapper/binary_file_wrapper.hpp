@@ -26,11 +26,9 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
 
  public:
   BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,  // NOLINT
-                    std::shared_ptr<FilesystemWrapper> fs_wrapper)
-      : FileWrapper(path, fw_config, fs_wrapper) {
-    if (fs_wrapper.get() == nullptr) {
-      throw std::runtime_error("got nullptr wrapper.");  // TODO(MaxiBoether): introduce ASSERT
-    }
+                    std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+      : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
+    assert(filesystem_wrapper_ != nullptr);
 
     if (!fw_config["record_size"]) {
       throw std::runtime_error("record_size_must be specified in the file wrapper config.");
@@ -49,7 +47,7 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
     }
 
     validate_file_extension();
-    file_size_ = fs_wrapper->get_file_size(path);
+    file_size_ = filesystem_wrapper_->get_file_size(path);
 
     if (file_size_ % record_size_ != 0) {
       throw std::runtime_error("File size must be a multiple of the record size.");

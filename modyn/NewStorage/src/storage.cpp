@@ -9,7 +9,7 @@
 
 using namespace storage;
 
-void Storage::run() {  // NOLINT // TODO: Remove NOLINT after implementation
+void Storage::run() {
   /* Run the storage service. */
   SPDLOG_INFO("Running storage service.");
 

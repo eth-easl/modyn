@@ -30,7 +30,6 @@ set(
   unit/internal/file_wrapper/single_sample_file_wrapper_test.cpp
   unit/internal/file_wrapper/mock_file_wrapper.hpp
   unit/internal/file_wrapper/binary_file_wrapper_test.cpp
-  unit/internal/utils/mock_utils.hpp
   unit/internal/utils/utils_test.cpp
   unit/internal/filesystem_wrapper/local_filesystem_wrapper_test.cpp
   unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp

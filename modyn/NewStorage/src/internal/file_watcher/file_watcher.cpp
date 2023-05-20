@@ -34,8 +34,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       session << "INSERT INTO files (dataset_id, path, number_of_samples, "
                  "updated_at) VALUES (:dataset_id, :path, "
                  ":number_of_samples, :updated_at)",
-          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples),
-          soci::use(modified_time);
+          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
 
       long long file_id;  // NOLINT // soci get_last_insert_id requires a long long
       session.get_last_insert_id("files", file_id);

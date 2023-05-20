@@ -33,10 +33,7 @@ int main(int argc, char* argv[]) {
 
   std::string config_file = parser.get<std::string>("config");
 
-  if (std::filesystem::exists(config_file) == false) {
-    SPDLOG_ERROR("Config file {} does not exist.", config_file);
-    exit(1);
-  }
+  assert(std::filesystem::exists(config_file));
 
   // Verify that the config file exists and is readable.
   YAML::Node config = YAML::LoadFile(config_file);
