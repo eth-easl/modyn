@@ -10,6 +10,7 @@ runs:
         context: .
         file: ./docker/Dependencies/Dockerfile
         tags: modyndependencies
+        outputs: type=docker
         cache-from: type=gha
         cache-to: type=gha
 
