@@ -4,6 +4,7 @@ if [[ -f ".modyn_configured" ]]; then
 fi
 
 CUDA_VERSION=11.7
+CUDA_CONTAINER=nvidia/cuda:11.7.1-devel-ubuntu22.04
 
 echo "This is the first time running Modyn, we're tweaking some nuts and bolts for your system."
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -28,6 +29,8 @@ if [[ ! -z "$CI" ]]; then
     exit 0
 fi
 
+USING_CUDA=false
+
 if [ "$IS_MAC" != true ]; then
     MAYBE_CUDA=false
     if [[ $(ls -l /usr/local | grep cuda) ]]; then
@@ -45,11 +48,36 @@ if [ "$IS_MAC" != true ]; then
     fi
 
     use_cuda () {
+        USING_CUDA=true
+        # Fix environment.yml
         sed -i '/cpuonly/d' $SCRIPT_DIR/environment.yml # Delete cpuonly
         sed -i "/nvidia::cudatoolkit/c\  - nvidia::cudatoolkit=$CUDA_VERSION" $SCRIPT_DIR/environment.yml # Enable cudatoolkit
         sed -i "/pytorch-cuda/c\  - pytorch::pytorch-cuda=$CUDA_VERSION" $SCRIPT_DIR/environment.yml # Enable pytorch-cuda
 
-        # TODO: Enable CUDA in docker-compose.yml
+        # Fix $SCRIPT_DIR/docker-compose.yml
+        startLine="$(grep -n "CUDASTART" $SCRIPT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
+        endLine="$(grep -n "CUDAEND" $SCRIPT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
+        fileLines="$(wc -l $SCRIPT_DIR/docker-compose.yml | awk '{ print $1 }')"
+        
+        fileBegin=$(tail -n "+1" $SCRIPT_DIR/docker-compose.yml | head -n $((${startLine}-1+1)))
+        let tmp=$fileLines-$endLine+1
+        fileEnd=$(tail -n "+${endLine}" $SCRIPT_DIR/docker-compose.yml | head -n $tmp)
+        let trueStart=$startLine+1
+        let tmp=$endLine-$trueStart
+        fileCuda=$(tail -n "+${trueStart}" $SCRIPT_DIR/docker-compose.yml | head -n $tmp)
+
+        cudaFixed=$(echo "$fileCuda" | sed "s/#//")
+
+        mv $SCRIPT_DIR/docker-compose.yml $SCRIPT_DIR/docker-compose.yml.original
+        echo $fileBegin > $SCRIPT_DIR/docker-compose.yml
+        echo $cudaFixed >> $SCRIPT_DIR/docker-compose.yml
+        echo $fileEnd >> $SCRIPT_DIR/docker-compose.yml
+
+        # Fix Dockerfile
+        dockerContent=$(tail -n "+1" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
+        mv $SCRIPT_DIR/docker/Dependencies/Dockerfile $SCRIPT_DIR/docker/Dependencies/Dockerfile.original
+        echo "FROM ${CUDA_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
+        echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
     }
 
     while true; do
@@ -62,17 +90,20 @@ if [ "$IS_MAC" != true ]; then
     done
 
     use_apex () {
+        cp $SCRIPT_DIR/docker/Trainer_Server/Dockerfile $SCRIPT_DIR/docker/Trainer_Server/Dockerfile.original
         sed -i 's/# RUN/RUN/' $SCRIPT_DIR/docker/Trainer_Server/Dockerfile
     }
 
-    while true; do
-        read -p "Do you want to use Apex for Modyn? (Takes a long time for initial Docker build, but required e.g. for DLRM model) (y/n) " yn
-        case $yn in
-            [Yy]* ) use_apex; break;;
-            [Nn]* ) break;;
-            * ) echo "Please answer yes or no.";;
-        esac
-    done
+    if [ "$USING_CUDA" = true ] ; then
+        while true; do
+            read -p "Do you want to use Apex for Modyn? (Takes a long time for initial Docker build, but required e.g. for DLRM model) (y/n) " yn
+            case $yn in
+                [Yy]* ) use_apex; break;;
+                [Nn]* ) break;;
+                * ) echo "Please answer yes or no.";;
+            esac
+        done
+    fi
 fi
 
 echo "Successfully configured Modyn."
