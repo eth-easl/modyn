@@ -9,7 +9,7 @@ runs:
       with:
         context: .
         file: ./docker/Dependencies/Dockerfile
-        tags: modyn
+        tags: modyndependencies
         outputs: type=docker,dest=/tmp/modyndependencies.tar
         cache-from: type=gha
         cache-to: type=gha
