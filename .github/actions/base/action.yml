@@ -8,25 +8,21 @@ runs:
       uses: docker/build-push-action@v3
       with:
         context: .
-        file: ./docker/Dependencies/Dockerfile
-        tags: modyndependencies
-        load: true
-        cache-from: type=gha
-        cache-to: type=gha
-
-    - name: Build base and push
-      uses: docker/build-push-action@v3
-      with:
-        context: .
         file: ./docker/Base/Dockerfile
-        tags: modyn
-        load: true
-        outputs: type=docker,dest=/tmp/modynbase.tar
+        tags: modyndependencies
+        outputs: type=docker,dest=/tmp/modyndependencies.tar
         cache-from: type=gha
         cache-to: type=gha
 
     - name: Load base image locally
       run: |
-        docker load --input /tmp/modynbase.tar
+        docker load --input /tmp/modyndependencies.tar
         docker image ls -a
       shell: bash
+
+    - name: Build base image
+      run: |
+        docker build -t modynbase -f docker/Base/Dockerfile .
+      shell: bash
+
+
