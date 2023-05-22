@@ -5,6 +5,7 @@ fi
 
 CUDA_VERSION=11.7
 CUDA_CONTAINER=nvidia/cuda:11.7.1-devel-ubuntu22.04
+# Make sure to use devel image!
 
 echo "This is the first time running Modyn, we're tweaking some nuts and bolts for your system."
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -91,12 +92,29 @@ if [ "$IS_MAC" != true ]; then
 
     use_apex () {
         cp $SCRIPT_DIR/docker/Trainer_Server/Dockerfile $SCRIPT_DIR/docker/Trainer_Server/Dockerfile.original
-        sed -i 's/# RUN/RUN/' $SCRIPT_DIR/docker/Trainer_Server/Dockerfile
+        sed -i 's/# RUN/RUN/' $SCRIPT_DIR/docker/Trainer_Server/Dockerfile # Enable build of Apex
+
+        runtime=$(docker info | grep "Default Runtime")
+        if [[ $runtime != *"nvidia"* ]]; then
+            # Make nvidia runtime the default 
+            echo "Apex required CUDA during container build. This is only possible by making NVIDIA the default docker runtime. Changing."
+            pushd $(mktemp -d)
+            (sudo cat /etc/docker/daemon.json 2>/dev/null || echo '{}') | \
+                jq '. + {"default-runtime": "nvidia"}' | \
+                tee tmp.json
+            sudo mv tmp.json /etc/docker/daemon.json
+            popd
+            echo "Set default runtime, restarting docker"
+            sudo systemctl restart docker
+            echo "Docker restarted"
+        else
+            echo "NVIDIA runtime already is default"
+        fi
     }
 
     if [ "$USING_CUDA" = true ] ; then
         while true; do
-            read -p "Do you want to use Apex for Modyn? (Takes a long time for initial Docker build, but required e.g. for DLRM model) (y/n) " yn
+            read -p "Do you want to use Apex for Modyn (requires sudo)? (Takes a long time for initial Docker build, but required e.g. for DLRM model) (y/n) " yn
             case $yn in
                 [Yy]* ) use_apex; break;;
                 [Nn]* ) break;;
@@ -106,5 +124,5 @@ if [ "$IS_MAC" != true ]; then
     fi
 fi
 
-echo "Successfully configured Modyn."
+echo "Successfully configured Modyn. Make sure to add mounts for datasets and fast temporary storage for the selector and enable the shm_size options, if required."
 touch ".modyn_configured"
