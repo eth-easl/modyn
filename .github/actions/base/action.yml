@@ -10,7 +10,7 @@ runs:
         context: .
         file: ./docker/Dependencies/Dockerfile
         tags: modyndependencies
-        outputs: type=docker
+        load: true
         cache-from: type=gha
         cache-to: type=gha
 
@@ -20,6 +20,7 @@ runs:
         context: .
         file: ./docker/Base/Dockerfile
         tags: modyn
+        load: true
         outputs: type=docker,dest=/tmp/modynbase.tar
         cache-from: type=gha
         cache-to: type=gha
