@@ -60,7 +60,7 @@ if [ "$IS_MAC" != true ]; then
         fileLines="$(wc -l $SCRIPT_DIR/docker-compose.yml | awk '{ print $1 }')"
         
         fileBegin=$(tail -n "+1" $SCRIPT_DIR/docker-compose.yml | head -n $((${startLine}-1+1)))
-        let tmp=$fileLines-$endLine+1
+        let tmp=$fileLines-$endLine+2
         fileEnd=$(tail -n "+${endLine}" $SCRIPT_DIR/docker-compose.yml | head -n $tmp)
         let trueStart=$startLine+1
         let tmp=$endLine-$trueStart
