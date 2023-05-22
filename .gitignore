@@ -54,3 +54,9 @@ report.html
 .coverage
 # Pytest creates files that have the name of the local desktop included, so we need to wildcard here
 .coverage.*
+
+# File that stores whether Modyn has been configured + backup environment
+.modyn_configured
+environment.yml.original
+docker-compose.yml.original
+Dockerfile.original
