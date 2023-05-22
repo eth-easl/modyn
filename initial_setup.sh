@@ -70,9 +70,9 @@ if [ "$IS_MAC" != true ]; then
         cudaFixed=$(echo "$fileCuda" | sed "s/#//")
 
         mv $SCRIPT_DIR/docker-compose.yml $SCRIPT_DIR/docker-compose.yml.original
-        echo $fileBegin > $SCRIPT_DIR/docker-compose.yml
-        echo $cudaFixed >> $SCRIPT_DIR/docker-compose.yml
-        echo $fileEnd >> $SCRIPT_DIR/docker-compose.yml
+        echo "$fileBegin" > $SCRIPT_DIR/docker-compose.yml
+        echo "$cudaFixed" >> $SCRIPT_DIR/docker-compose.yml
+        echo "$fileEnd" >> $SCRIPT_DIR/docker-compose.yml
 
         # Fix Dockerfile
         dockerContent=$(tail -n "+1" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
@@ -98,6 +98,7 @@ if [ "$IS_MAC" != true ]; then
         if [[ $runtime != *"nvidia"* ]]; then
             # Make nvidia runtime the default 
             echo "Apex required CUDA during container build. This is only possible by making NVIDIA the default docker runtime. Changing."
+            sudo nvidia-ctk runtime configure
             pushd $(mktemp -d)
             (sudo cat /etc/docker/daemon.json 2>/dev/null || echo '{}') | \
                 jq '. + {"default-runtime": "nvidia"}' | \
