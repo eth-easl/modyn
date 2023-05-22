@@ -20,6 +20,7 @@ All dependencies are listed in the `environment.yml` file in the project root.
 Development dependencies are managed in the `dev-requirements.txt` file in the project root.
 There are two ways to develop modyn locally.
 First, if not using Docker, you can install all dependencies and the Modyn module itself on your local machine via `conda env create -f ./environment.yml`, `pip install -e .`, and `pip install -r dev-requirements.txt`, as outlined in the README.
+Note that the `initial_setup.sh` scripts performs some adjustments to your conda and docker settings, depending on your local system (e.g., choose correct Pytorch channel when on macOS, or enable CUDA).
 
 Second, you can use a Docker container.
 We provide a Modyn base container where the conda setup is already done. 
