@@ -19,11 +19,9 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     RegisterModelResponse,
 )
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageServicer
-from modyn.utils import current_time_millis
+from modyn.utils import EMIT_MESSAGE_PERCENTAGES, current_time_millis
 
 logger = logging.getLogger(__name__)
-
-EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
 
 
 class ModelStorageGRPCServicer(ModelStorageServicer):
@@ -65,6 +63,7 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
 
         def callback(current_progress: float) -> None:
             nonlocal last_progress
+            logger.info(f"current: {current_progress}, last: {last_progress}")
             for emit_perc in EMIT_MESSAGE_PERCENTAGES:
                 if last_progress <= emit_perc < current_progress:
                     logger.info(f"Completed {emit_perc * 100}% of the download.")

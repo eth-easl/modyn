@@ -40,7 +40,7 @@ message StartTrainingRequest {
   JsonString model_configuration = 6;
   bool use_pretrained_model = 7;
   bool load_optimizer_state = 8;
-  optional int32 pretrained_model_id = 9;
+  int32 pretrained_model_id = 9;
   int32 batch_size = 10;
   JsonString torch_optimizers_configuration = 11;
   string torch_criterion = 12;

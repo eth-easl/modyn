@@ -34,11 +34,14 @@ from modyn.trainer_server.internal.trainer.pytorch_trainer import train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
-from modyn.utils import current_time_millis, dynamic_module_import, grpc_connection_established
+from modyn.utils import (
+    EMIT_MESSAGE_PERCENTAGES,
+    current_time_millis,
+    dynamic_module_import,
+    grpc_connection_established,
+)
 
 logger = logging.getLogger(__name__)
-
-EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
 
 
 class TrainerServerGRPCServicer:
@@ -100,7 +103,7 @@ class TrainerServerGRPCServicer:
             return StartTrainingResponse(training_started=False)
 
         pretrained_model_path: Optional[pathlib.Path] = None
-        if request.use_pretrained_model and request.pretrained_model_id is not None:
+        if request.use_pretrained_model:
             fetch_request = FetchModelRequest(model_id=request.pretrained_model_id)
             fetch_resp: FetchModelResponse = self.model_storage_stub.FetchModel(fetch_request)
 
@@ -111,27 +114,10 @@ class TrainerServerGRPCServicer:
                 )
                 return StartTrainingResponse(training_started=False)
 
-            last_progress = 0.0
-
-            def download_callback(current_progress: float) -> None:
-                nonlocal last_progress
-                for emit_perc in EMIT_MESSAGE_PERCENTAGES:
-                    if last_progress <= emit_perc < current_progress:
-                        logger.info(f"Completed {emit_perc * 100}% of the pretrained model download.")
-                last_progress = current_progress
-
             pretrained_model_path = self._modyn_base_dir / pathlib.Path(f"model_{request.pretrained_model_id}.modyn")
-            download_file(
-                hostname=self._config["model_storage"]["hostname"],
-                port=int(self._config["model_storage"]["ftp_port"]),
-                user="modyn",
-                password="modyn",
-                remote_file_path=pathlib.Path(fetch_resp.model_path),
-                local_file_path=pretrained_model_path,
-                callback=download_callback,
-            )
+            self._download_pretrained_model(pretrained_model_path, pathlib.Path(fetch_resp.model_path))
 
-            logger.info("Completed pretrained model download.")
+            logger.info(f"Completed pretrained model download. Local path: {pretrained_model_path}")
 
         with self._lock:
             training_id = self._next_training_id
@@ -170,6 +156,26 @@ class TrainerServerGRPCServicer:
 
         logger.info(f"Started training {training_id}")
         return StartTrainingResponse(training_started=True, training_id=training_id)
+
+    def _download_pretrained_model(self, local_model_path: pathlib.Path, remote_model_path: pathlib.Path) -> None:
+        last_progress = 0.0
+
+        def download_callback(current_progress: float) -> None:
+            nonlocal last_progress
+            for emit_perc in EMIT_MESSAGE_PERCENTAGES:
+                if last_progress <= emit_perc < current_progress:
+                    logger.info(f"Completed {emit_perc * 100}% of the pretrained model download.")
+            last_progress = current_progress
+
+        download_file(
+            hostname=self._config["model_storage"]["hostname"],
+            port=int(self._config["model_storage"]["ftp_port"]),
+            user="modyn",
+            password="modyn",
+            remote_file_path=remote_model_path,
+            local_file_path=local_model_path,
+            callback=download_callback,
+        )
 
     def get_training_status(
         self,

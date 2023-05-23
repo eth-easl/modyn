@@ -107,7 +107,7 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
         transform_list=[],
         use_pretrained_model=False,
-        pretrained_model_id=None,
+        pretrained_model_id=-1,
         lr_scheduler=JsonString(value=json.dumps({})),
         grad_scaler_configuration=JsonString(value=json.dumps({})),
     )

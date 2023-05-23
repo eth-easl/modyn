@@ -290,7 +290,7 @@ class GRPCHandler:
             model_id=pipeline_config["model"]["id"],
             model_configuration=TrainerServerJsonString(value=model_config),
             use_pretrained_model=previous_model_id is not None,
-            pretrained_model_id=previous_model_id,
+            pretrained_model_id=previous_model_id or -1,
             load_optimizer_state=False,  # TODO(#137): Think about this.
             batch_size=pipeline_config["training"]["batch_size"],
             torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
