@@ -47,6 +47,22 @@ storage:
         selector_batch_size: 2000000,
       }
     ]
+  evaluation_datasets:
+    [
+      {
+        name: "mnist_eval",
+        description: "MNIST Evaluation Dataset",
+        version: "0.0.1",
+        base_path: "/datasets/mnist_eval",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".png",
+            label_file_extension: ".label"
+          }
+      }
+    ]
   database:
     drivername: "postgresql"
     username: "postgres"
@@ -88,3 +104,7 @@ model_storage:
   hostname: "model_storage"
   port: "50059"
   ftp_port: "50060"
+
+evaluator:
+  hostname: "evaluator"
+  port: "50061"

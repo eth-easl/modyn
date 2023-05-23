@@ -68,6 +68,14 @@ services:
     build:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
+  evaluator:
+    restart: on-failure
+    depends_on:
+      - model_storage
+      - storage-db
+    build:
+      context: .
+      dockerfile: docker/Evaluator/Dockerfile
   trainer_server:
     restart: on-failure
     depends_on:

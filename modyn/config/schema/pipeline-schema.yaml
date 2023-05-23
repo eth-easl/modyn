@@ -309,6 +309,53 @@ properties:
           Configuration dictionary that will be passed to the trigger on initialization.
     required:
       - id
+  evaluation:
+    type: object
+    description: |
+      Evaluation configuration
+    properties:
+      dataset_id:
+        type: string
+        description: |
+          ID of dataset to be used for evaluation.
+      gpus:
+        type: number
+        description: |
+          The number of GPUs that should be used for evaluation.
+      device:
+        type: string
+        description: |
+          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu" and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
+      amp:
+        type: boolean
+        description: |
+          If True, automatic mixed precision will be used.
+      dataloader_workers:
+        type: number
+        description: |
+          The number of data loader workers on the trainer node that fetch data from storage.
+      batch_size:
+        type: number
+        description: |
+          The batch size to be used during evaluation.
+      evaluation_layer:
+        type: string
+        description: |
+          Optional layer that is appended to the output of the model.
+          An example is sigmoid in order to get values in the range [0, 1].
+      metrics:
+        type: array
+        description: |
+          The metrics used to evaluate the model. We currently support ROC-AUC, accuracy.
+        items:
+          type: string
+    required:
+      - dataset_id
+      - device
+      - amp
+      - dataloader_workers
+      - batch_size
+      - metrics
 required:
   - pipeline
   - model

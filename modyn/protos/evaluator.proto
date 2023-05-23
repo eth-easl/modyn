@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package modyn.evaluator;
+
+service Evaluator {
+  rpc evaluate_model(EvaluateModelRequest) returns (EvaluateModelResponse) {}
+  rpc get_evaluation_status(EvaluationStatusRequest) returns (EvaluationStatusResponse) {}
+  rpc get_final_evaluation(FinalEvaluationRequest) returns (FinalEvaluationResponse) {}
+}
+
+message Data {
+  string dataset_id = 1;
+  int32 num_dataloaders = 2;
+}
+
+message PythonString { string value = 1; }
+
+message EvaluateModelRequest {
+  int32 model_id  = 1;
+  Data data_info = 2;
+  string device = 3;
+  bool amp = 4;
+  int32 batch_size = 5;
+  PythonString evaluation_layer = 6;
+  repeated string metrics = 7;
+}
+
+message EvaluateModelResponse {
+  bool evaluation_started = 1;
+  int32 evaluation_id = 2;
+}
+
+message EvaluationStatusRequest { int32 evaluation_id = 1; }
+
+//TODO(#15) check what we need here
+message EvaluationStatusResponse {
+  bool valid = 1;
+  bool is_running = 2;
+  bool state_available = 3;
+  bool blocked = 4;
+  string exception = 5;
+  int32 batches_seen = 6;
+  int32 samples_seen = 7;
+}
+
+message EvaluationData {
+  string metric = 1;
+  float result = 2;
+}
+
+message FinalEvaluationRequest { int32 evaluation_id = 1; }
+
+message FinalEvaluationResponse {
+  bool valid = 1;
+  repeated EvaluationData evaluation_data = 2;
+}

@@ -128,6 +128,68 @@ properties:
             - filesystem_wrapper_type
             - file_wrapper_type
             - file_wrapper_config
+      evaluation_datasets:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the evaluation dataset.
+            description:
+              type: string
+              description: |
+                The description of the evaluation dataset.
+            version:
+              type: string
+              description: |
+                The version of the evaluation dataset.
+            base_path:
+              type: string
+              description: |
+                The base path of the evaluation dataset.
+            filesystem_wrapper_type:
+              type: string
+              description: |
+                The filesystem wrapper type of the evaluation dataset.
+            file_wrapper_type:
+              type: string
+              description: |
+                The file wrapper type of the evaluation dataset.
+            file_wrapper_config:
+              type: object
+              description: |
+                The file wrapper config of the evaluation dataset.
+              properties:
+                file_extension:
+                  type: string
+                  description: |
+                    The file extension of the evaluation dataset. Starts with a dot.
+                label_file_extension:
+                  type: string
+                  description: |
+                    The label file extension of the evaluation dataset. Starts with a dot.
+                record_size:
+                  type: number
+                  description: |
+                    The size of each full record in bytes (label + features) for a binary file wrapper.
+                label_size:
+                  type: number
+                  description: |
+                    The size of the label field in bytes for a binary file wrapper.
+                byteorder:
+                  type: string
+                  description: |
+                    The byteorder when reading an integer from multibyte data in a binary file. Should either be "big" or "little".
+          required:
+            - name
+            - description
+            - version
+            - base_path
+            - filesystem_wrapper_type
+            - file_wrapper_type
+            - file_wrapper_config
       database:
         type: object
         properties:
@@ -172,7 +234,6 @@ properties:
       - database
       - sample_batch_size
       - insertion_threads
-
   model_storage:
     type: object
     properties:
@@ -192,7 +253,20 @@ properties:
       - hostname
       - port
       - ftp_port
-
+  evaluator:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the evaluator grpc service.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the evaluator grpc service.
+    required:
+      - hostname
+      - port
   metadata_database:
     type: object
     properties:
