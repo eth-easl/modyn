@@ -11,10 +11,10 @@ using namespace storage;
 
 /*
  * Start a new FileWatcher process for the given dataset
- * 
+ *
  * Also add the FileWatcher process to the map of FileWatcher processes, we propegate the retries value to the map
  * that way we can keep track of how many retries are left for a given dataset
- * 
+ *
  * @param dataset_id The id of the dataset to start a FileWatcher process for
  * @param retries The number of retries left for the FileWatcher process
  */
@@ -29,11 +29,11 @@ void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int16_t retrie
 
 /*
  * Stop a FileWatcher process for the given dataset
- * 
+ *
  * Also remove the FileWatcher process from the map of FileWatcher processes
- * 
+ *
  * In case of a test we don't want to remove the FileWatcher process from the map, this way we can fake kill the thread
- * 
+ *
  * @param dataset_id The id of the dataset to start a FileWatcher process for
  * @param is_test Whether or not this method use is a test
  */
@@ -106,7 +106,8 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
   }
 
   for (const auto& dataset_id : dataset_ids) {
-    if (file_watcher_processes_.count(dataset_id) == 0) {
+    if (file_watcher_processes_.count(  // NOLINT - cppcheck doesn't like the count() method but we need it here
+            dataset_id) == 0) {
       // There is no FileWatcher process registered for this dataset. Start one.
       start_file_watcher_process(dataset_id, 0);
     } else if (file_watcher_process_retries_[dataset_id] > 2) {

@@ -22,7 +22,7 @@ class FileWatchdog {
   std::atomic<bool>* stop_file_watchdog_;
 
  public:
-  FileWatchdog(const YAML::Node& config, std::atomic<bool> *stop_file_watchdog)
+  FileWatchdog(const YAML::Node& config, std::atomic<bool>* stop_file_watchdog)
       : config_{config}, stop_file_watchdog_(stop_file_watchdog) {
     file_watcher_processes_ = std::unordered_map<int64_t, std::thread>();
     file_watcher_process_retries_ = std::unordered_map<int64_t, int16_t>();

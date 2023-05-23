@@ -11,11 +11,11 @@ using namespace storage;
 
 /*
  * Handles the file paths that are passsed.
- * 
+ *
  * Checks if the file is valid and if so, inserts the file into the database.
- * 
+ *
  * Valid files are files that pass the checks in check_valid_file().
- * 
+ *
  * @param file_paths The file paths to be handled.
  * @param data_file_extension The extension of the data files.
  * @param file_wrapper_type The type of the file wrapper.
@@ -70,10 +70,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
 /*
  * Inserts the file frame into the database using the optimized postgresql copy command.
- * 
+ *
  * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
  * It is then dumped into a csv file buffer and sent to postgresql using the copy command.
- * 
+ *
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::postgres_copy_insertion(
@@ -109,10 +109,10 @@ void FileWatcher::postgres_copy_insertion(
 
 /*
  * Inserts the file frame into the database using the fallback method.
- * 
+ *
  * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
  * It is then inserted into the database using a prepared statement.
- * 
+ *
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::fallback_insertion(
@@ -132,12 +132,12 @@ void FileWatcher::fallback_insertion(
 
 /*
  * Checks if the file is valid for the dataset.
- * 
+ *
  * Valid files are defined as files that adhere to the following rules:
  * - The file extension is the same as the data file extension.
  * - The file is not already in the database.
  * - If we are not ignoring the last modified timestamp, the file has been modified since the last check.
- * 
+ *
  * @param file_path The path to the file.
  * @param data_file_extension The extension of the data files.
  * @param ignore_last_timestamp If true, the last modified timestamp of the file is ignored.
@@ -167,12 +167,12 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
 
 /*
  * Updates the files in the database for the given directory.
- * 
- * Iterates over all files in the directory and depending on whether we are multi or single threaded, either handles the 
+ *
+ * Iterates over all files in the directory and depending on whether we are multi or single threaded, either handles the
  * file paths directly or spawns new threads to handle the file paths.
- * 
+ *
  * Each thread spawned will handle an equal share of the files in the directory.
- * 
+ *
  * @param directory_path The path to the directory.
  * @param timestamp The last modified timestamp of the file.
  */
