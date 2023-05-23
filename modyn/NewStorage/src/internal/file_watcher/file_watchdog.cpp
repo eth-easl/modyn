@@ -43,8 +43,12 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
   if (number_of_datasets == 0) {
     // There are no datasets in the database. Stop all FileWatcher processes.
-    for (const auto& pair : file_watcher_processes_) {
-      stop_file_watcher_process(pair.first);
+    try {
+      for (const auto& pair : file_watcher_processes_) {
+        stop_file_watcher_process(pair.first);
+      }
+    } catch (const std::runtime_error& e) {
+      spdlog::error("Error stopping FileWatcher process: {}", e.what());
     }
     return;
   }
@@ -57,7 +61,11 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
     if (std::find(dataset_ids.begin(), dataset_ids.end(), dataset_id) == dataset_ids.end()) {
       // There is a FileWatcher process running for a dataset that was deleted
       // from the database. Stop the process.
+      try {
       stop_file_watcher_process(dataset_id);
+      } catch (const std::runtime_error& e) {
+        spdlog::error("Error stopping FileWatcher process: {}", e.what());
+      }
     }
   }
 
@@ -67,7 +75,11 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
       start_file_watcher_process(dataset_id, 0);
     } else if (std::get<1>(file_watcher_processes_[dataset_id]) > 2) {
       // There have been more than 3 restart attempts for this process. Stop it.
-      stop_file_watcher_process(dataset_id);
+      try {
+        stop_file_watcher_process(dataset_id);
+      } catch (const std::runtime_error& e) {
+        spdlog::error("Error stopping FileWatcher process: {}. Trying again in the next iteration.", e.what());
+      }
     } else if (!std::get<0>(file_watcher_processes_[dataset_id]).joinable()) {
       // The FileWatcher process is not running. Start it.
       start_file_watcher_process(dataset_id, std::get<1>(file_watcher_processes_[dataset_id]));
