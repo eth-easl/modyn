@@ -11,18 +11,18 @@ Further pipelines can be found in the `benchmarks` directory.
 If you do not have a dataset yet, you can create an example MNIST dataset.
 In the `benchmark/mnist` subdirectory, run `python data_generation.py --timestamps INCREASING --dir /mnt/datasets/mnist` to download the dataset to `/mnst/datasets/mnist`.
 
-### Updating the dependencies to use CUDA
+### Running the initial setup
+Please run the `initial_setup.sh` file, if you have not configured Modyn already.
 This is necessary if you want to run model training on a GPU.
-In the `environment.yml` file, uncomment the two lines that install `pytorch-cuda` and `cudatoolkit`.
-If necessary, you can adjust the CUDA version.
-Furthermore, you need to comment out the line that installes `cpuonly` from the pytorch channel.
-Until #104 is solved, all dependencies are managed in this single file.
+This will ensure that we do not use the CPU, but CUDA version of PyTorch.
+If necessary, you can adjust the CUDA version in this file.
 
 ### Adjusting the docker-compose configurations
 Next, we need to update the `docker-compose.yml` file to reflect the local setup.
-First, for the `trainer_server` service, you should enable the `runtime` and `deploy` options such that we have access to the GPU in the trainer server container.
+First, for the `trainer_server` service, you should verify that the `runtime` and `deploy` options are enabled such that we have access to the GPU in the trainer server container (the script should have taken care of that),
 Next, for the `storage` service, you should uncomment the `volumes` option to mount `/mnt/datasets` to `/datasets` in the container.
 Optionally, you can uncomment all lines increasing the `shm_size` of the containers.
+This is required for some trainings, e.g., for Criteo training, as you run into OOM errors otherwise.
 Optionally, you can uncomment the `.:/modyn_host` mount for all services to enable faster development cycles.
 This is not required if you do not iterate.
 

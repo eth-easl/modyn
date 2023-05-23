@@ -80,6 +80,7 @@ services:
 #    volumes:
 #      - .:/modyn_host
 #    shm_size: 4gb
+# CUDASTART (ignore/delete if enabling cuda manually)
 #    runtime: nvidia
 #    deploy:
 #      resources:
@@ -88,6 +89,7 @@ services:
 #            - driver: nvidia
 #              count: 1
 #              capabilities: [gpu, utility, compute]
+# CUDAEND (ignore/delete if enabling cuda manually)
   selector:
     restart: on-failure
     depends_on:
@@ -98,6 +100,7 @@ services:
 #    volumes:
 #      - .:/modyn_host
 #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
+#    shm_size: 4gb
   supervisor:
     depends_on:
     - storage

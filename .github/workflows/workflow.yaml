@@ -316,7 +316,7 @@ jobs:
       uses: ./.github/actions/base
 
     - name: Setup dev-requirements and run pytest within container
-      run: docker run modyn conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
+      run: docker run modynbase conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
 
 
 # Tests whether docker-compose up starts all components successfully and integration tests run through
