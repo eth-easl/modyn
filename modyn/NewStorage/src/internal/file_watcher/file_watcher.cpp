@@ -9,6 +9,18 @@
 
 using namespace storage;
 
+/*
+ * Handles the file paths that are passsed.
+ * 
+ * Checks if the file is valid and if so, inserts the file into the database.
+ * 
+ * Valid files are files that pass the checks in check_valid_file().
+ * 
+ * @param file_paths The file paths to be handled.
+ * @param data_file_extension The extension of the data files.
+ * @param file_wrapper_type The type of the file wrapper.
+ * @param timestamp The timestamp to be used for the file.
+ */
 void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
                                     const FileWrapperType& file_wrapper_type, int64_t timestamp,
                                     const YAML::Node& file_wrapper_config) {
@@ -56,6 +68,14 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   }
 }
 
+/*
+ * Inserts the file frame into the database using the optimized postgresql copy command.
+ * 
+ * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
+ * It is then dumped into a csv file buffer and sent to postgresql using the copy command.
+ * 
+ * @param file_frame The file frame to be inserted.
+ */
 void FileWatcher::postgres_copy_insertion(
     const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const {
   soci::session session = storage_database_connection_.get_session();
@@ -87,6 +107,14 @@ void FileWatcher::postgres_copy_insertion(
   (void)remove("temp.csv");
 }
 
+/*
+ * Inserts the file frame into the database using the fallback method.
+ * 
+ * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
+ * It is then inserted into the database using a prepared statement.
+ * 
+ * @param file_frame The file frame to be inserted.
+ */
 void FileWatcher::fallback_insertion(
     const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const {
   soci::session session = storage_database_connection_.get_session();
@@ -102,6 +130,20 @@ void FileWatcher::fallback_insertion(
   session << query;
 }
 
+/*
+ * Checks if the file is valid for the dataset.
+ * 
+ * Valid files are defined as files that adhere to the following rules:
+ * - The file extension is the same as the data file extension.
+ * - The file is not already in the database.
+ * - If we are not ignoring the last modified timestamp, the file has been modified since the last check.
+ * 
+ * @param file_path The path to the file.
+ * @param data_file_extension The extension of the data files.
+ * @param ignore_last_timestamp If true, the last modified timestamp of the file is ignored.
+ * @param timestamp The last modified timestamp of the file.
+ * @return True if the file is valid, false otherwise.
+ */
 bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                                    bool ignore_last_timestamp, int64_t timestamp) {
   const std::string file_extension = file_path.substr(file_path.find_last_of('.'));
@@ -123,6 +165,17 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
   return false;
 }
 
+/*
+ * Updates the files in the database for the given directory.
+ * 
+ * Iterates over all files in the directory and depending on whether we are multi or single threaded, either handles the 
+ * file paths directly or spawns new threads to handle the file paths.
+ * 
+ * Each thread spawned will handle an equal share of the files in the directory.
+ * 
+ * @param directory_path The path to the directory.
+ * @param timestamp The last modified timestamp of the file.
+ */
 void FileWatcher::update_files_in_directory(const std::string& directory_path, int64_t timestamp) {
   std::string file_wrapper_config;
   int64_t file_wrapper_type_id;
@@ -164,6 +217,9 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   }
 }
 
+/*
+ * Updating the files in the database for the given directory with the last inserted timestamp.
+ */
 void FileWatcher::seek_dataset() {
   soci::session session = storage_database_connection_.get_session();
 
@@ -176,6 +232,9 @@ void FileWatcher::seek_dataset() {
   update_files_in_directory(dataset_path_, last_timestamp);
 }
 
+/*
+ * Seeking the dataset and updating the last inserted timestamp.
+ */
 void FileWatcher::seek() {
   soci::session session = storage_database_connection_.get_session();
   std::string dataset_name;
@@ -216,6 +275,8 @@ void FileWatcher::run() {
   while (true) {
     try {
       seek();
+      SPDLOG_INFO("File watcher for dataset {} is sleeping for {} seconds", dataset_id_, file_watcher_interval);
+      SPDLOG_INFO("Current flag value: {}", stop_file_watcher_->load());
       if (stop_file_watcher_->load()) {
         break;
       }

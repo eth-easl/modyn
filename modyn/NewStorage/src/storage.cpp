@@ -26,6 +26,6 @@ void Storage::run() {
   // Start the storage grpc server
 
   SPDLOG_INFO("Storage service shutting down.");
-  stop_file_watcher = true;
+  stop_file_watcher.store(true);
   file_watchdog_thread.join();
 }
