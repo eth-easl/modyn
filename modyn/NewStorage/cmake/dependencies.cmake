@@ -91,3 +91,21 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(yaml-cpp)
 
 target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic -Wno-deprecated-declarations)
+
+################### gRPC ####################
+message(STATUS "Making gRPC available (this may take a while).")
+
+set(gRPC_PROTOBUF_PROVIDER "module" CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  gRPC
+  GIT_REPOSITORY https://github.com/grpc/grpc
+  GIT_TAG        v1.53.0
+  GIT_SHALLOW TRUE
+)
+set(FETCHCONTENT_QUIET OFF)
+FetchContent_MakeAvailable(gRPC)
+set(FETCHCONTENT_QUIET ON)
+
+include("${grpc_BINARY_DIR}/third_party/protobuf/cmake/protobuf/protobuf-generate.cmake")
+
+message(STATUS "Processed gRPC.")

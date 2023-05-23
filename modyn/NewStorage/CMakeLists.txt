@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 project(modyn-storage)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -27,7 +27,7 @@ set(CMAKE_CXX_FLAGS_TSAN "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread" C
 set(CMAKE_EXE_LINKER_FLAGS_TSAN "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread" CACHE STRING "" FORCE)
 
 ##### PUBLIC OPTIONS #####
-option(DARWIN_BUILD_PLAYGROUND "Set ON to build playground" ON)
+option(MODYNSTORAGE_BUILD_PLAYGROUND "Set ON to build playground" ON)
 option(MODYNSTORAGE_BUILD_TESTS "Set ON to build tests" ON)
 option(MODYNSTORAGE_TEST_COVERAGE "Set ON to add test coverage" OFF)
 
