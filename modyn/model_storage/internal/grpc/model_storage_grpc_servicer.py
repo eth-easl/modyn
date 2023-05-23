@@ -63,7 +63,6 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
 
         def callback(current_progress: float) -> None:
             nonlocal last_progress
-            logger.info(f"current: {current_progress}, last: {last_progress}")
             for emit_perc in EMIT_MESSAGE_PERCENTAGES:
                 if last_progress <= emit_perc < current_progress:
                     logger.info(f"Completed {emit_perc * 100}% of the download.")
