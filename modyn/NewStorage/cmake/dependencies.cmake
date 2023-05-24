@@ -106,6 +106,9 @@ set(FETCHCONTENT_QUIET OFF)
 FetchContent_MakeAvailable(gRPC)
 set(FETCHCONTENT_QUIET ON)
 
-include("${grpc_BINARY_DIR}/third_party/protobuf/cmake/protobuf/protobuf-generate.cmake")
+file(DOWNLOAD
+    https://raw.githubusercontent.com/protocolbuffers/protobuf/v23.1/cmake/protobuf-generate.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
+include(${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
 
 message(STATUS "Processed gRPC.")
