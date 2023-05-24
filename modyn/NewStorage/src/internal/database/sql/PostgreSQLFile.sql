@@ -1,5 +1,5 @@
 R"(CREATE TABLE IF NOT EXISTS files (
-    file_id BIGINT NOT NULL AUTOINCREMENT,
+    file_id BIGSERIAL NOT NULL,
     dataset_id INTEGER NOT NULL,
     path VARCHAR(120) NOT NULL,
     updated_at BIGINT,

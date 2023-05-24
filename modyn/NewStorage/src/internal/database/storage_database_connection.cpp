@@ -27,22 +27,23 @@ soci::session StorageDatabaseConnection::get_session() const {
 void StorageDatabaseConnection::create_tables() const {
   soci::session session = get_session();
 
-  const char* dataset_table_sql =
-#include "sql/Dataset.sql"
-      ;
-
-  session << dataset_table_sql;
-
+  const char* dataset_table_sql;
   const char* file_table_sql;
   const char* sample_table_sql;
   if (drivername == "postgresql") {
+    dataset_table_sql = =
+#include "sql/PostgreSQLDataset.sql"
+        ;
     file_table_sql =
-#include "sql/File.sql"
+#include "sql/PostgreSQLFile.sql"
         ;
     sample_table_sql =
-#include "sql/Sample.sql"
+#include "sql/PostgreSQLSample.sql"
         ;
   } else if (drivername == "sqlite3") {
+    dataset_table_sql =
+#include "sql/SQLiteDataset.sql"
+        ;
     file_table_sql =
 #include "sql/SQLiteFile.sql"
         ;
@@ -52,6 +53,7 @@ void StorageDatabaseConnection::create_tables() const {
   } else {
     throw std::runtime_error("Error creating tables: Unsupported database driver: " + drivername);
   }
+  session << dataset_table_sql;
 
   session << file_table_sql;
 

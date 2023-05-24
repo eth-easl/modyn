@@ -67,30 +67,23 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
                          "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_process(1, 0);
-  SPDLOG_INFO("Started file watcher process 1");
   std::vector<int64_t> file_watcher_processes;
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
-  SPDLOG_INFO("Got running file watcher processes");
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
   // Test if the file watcher process is still running
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
-  SPDLOG_INFO("Got running file watcher processes");
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
   watchdog.stop_file_watcher_process(1);
-  SPDLOG_INFO("Stopped file watcher process 1");
   watchdog.start_file_watcher_process(1, 0);
-  SPDLOG_INFO("Started file watcher process 1");
   file_watcher_processes = watchdog.get_running_file_watcher_processes();
-  SPDLOG_INFO("Got running file watcher processes");
   ASSERT_EQ(file_watcher_processes.size(), 1);
 
   watchdog.stop_file_watcher_process(1);
-  SPDLOG_INFO("Stopped file watcher process 1");
 }
 
-TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
+TEsT_F(FileWatchdogTest, TestStopFileWatcherProcess) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatchdog watchdog(config, &stop_file_watcher);

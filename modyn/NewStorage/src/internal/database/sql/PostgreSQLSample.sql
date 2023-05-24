@@ -1,5 +1,5 @@
 R"(CREATE TABLE IF NOT EXISTS samples (
-    sample_id BIGINT NOT NULL AUTOINCREMENT,
+    sample_id BIGSERIAL NOT NULL,
     dataset_id INTEGER NOT NULL,
     file_id INTEGER,
     sample_index BIGINT,

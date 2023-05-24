@@ -6,6 +6,7 @@ set(MODYNSTORAGE_SOURCES
     internal/file_wrapper/binary_file_wrapper.cpp
     internal/file_wrapper/single_sample_file_wrapper.cpp
     internal/filesystem_wrapper/local_filesystem_wrapper.cpp
+    internal/grpc/storage_service_impl.cpp
 )
 
 # Explicitly set all header files so that IDEs will recognize them as part of the project
@@ -19,6 +20,7 @@ set(MODYNSTORAGE_HEADERS
     ../include/internal/file_wrapper/single_sample_file_wrapper.hpp
     ../include/internal/filesystem_wrapper/filesystem_wrapper.hpp
     ../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
+    ../include/internal/grpc/storage_grpc_server.hpp
     ../include/internal/utils/utils.hpp
     )
 
