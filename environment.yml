@@ -17,7 +17,7 @@ dependencies:
   - pip
   - tqdm
   - conda-forge::enlighten
-  - protobuf=4.22.5
+  - protobuf
   - grpcio
   - jsonschema
   - psycopg2

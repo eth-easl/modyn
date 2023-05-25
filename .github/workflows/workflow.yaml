@@ -93,6 +93,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Update system
+        run: |
+          apt-get update -yq
+          apt-get upgrade -yq
+
       - name: Check out code
         uses: actions/checkout@v3
 
