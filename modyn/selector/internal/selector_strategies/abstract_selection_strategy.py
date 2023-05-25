@@ -3,7 +3,7 @@ import multiprocessing as mp
 import os
 import platform
 from abc import ABC, abstractmethod
-from multiprocessing import shared_memory
+from multiprocessing.managers import SharedMemoryManager
 from typing import Iterable, Optional
 
 import numpy as np
@@ -212,31 +212,30 @@ class AbstractSelectionStrategy(ABC):
             samples_per_proc = int(len(training_samples) / self._insertion_threads)
             processes: list[mp.Process] = []
 
-            for i in range(self._insertion_threads):
-                start_idx = i * samples_per_proc
-                end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
-                proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
-                if len(proc_samples) > 0:
-                    shm = shared_memory.SharedMemory(
-                        create=True,
-                        size=proc_samples.nbytes,
-                    )
-                    shared_proc_samples: np.ndarray = np.ndarray(
-                        proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
-                    )
-                    shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
-                    assert proc_samples.shape == shared_proc_samples.shape
+            with SharedMemoryManager() as smm:
+                for i in range(self._insertion_threads):
+                    start_idx = i * samples_per_proc
+                    end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
+                    proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
+                    if len(proc_samples) > 0:
+                        shm = smm.SharedMemry(proc_samples.nbytes)
 
-                    logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
-                    proc = mp.Process(
-                        target=AbstractSelectionStrategy._store_triggersamples_impl,
-                        args=(partition, trigger_id, self._pipeline_id, shared_proc_samples, self._modyn_config, i),
-                    )
-                    proc.start()
-                    processes.append(proc)
+                        shared_proc_samples: np.ndarray = np.ndarray(
+                            proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
+                        )
+                        shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
+                        assert proc_samples.shape == shared_proc_samples.shape
 
-            for proc in processes:
-                proc.join()
+                        logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
+                        proc = mp.Process(
+                            target=AbstractSelectionStrategy._store_triggersamples_impl,
+                            args=(partition, trigger_id, self._pipeline_id, shared_proc_samples, self._modyn_config, i),
+                        )
+                        proc.start()
+                        processes.append(proc)
+
+                for proc in processes:
+                    proc.join()
 
         num_partitions = partition + 1 if partition is not None else 0
 
