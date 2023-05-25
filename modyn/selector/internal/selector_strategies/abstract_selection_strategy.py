@@ -218,7 +218,7 @@ class AbstractSelectionStrategy(ABC):
                     end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
                     proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
                     if len(proc_samples) > 0:
-                        shm = smm.SharedMemry(proc_samples.nbytes)
+                        shm = smm.SharedMemory(proc_samples.nbytes)
 
                         shared_proc_samples: np.ndarray = np.ndarray(
                             proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
