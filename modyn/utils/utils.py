@@ -1,9 +1,11 @@
+import errno
 import importlib
 import importlib.util
 import inspect
 import logging
 import pathlib
 import sys
+import tempfile
 import time
 from types import ModuleType
 from typing import Any, Optional
@@ -123,3 +125,20 @@ def package_available_and_can_be_imported(package: str) -> bool:
 
 def flatten(non_flat_list: list[list[Any]]) -> list[Any]:
     return [item for sublist in non_flat_list for item in sublist]
+
+
+def is_directory_writable(path: pathlib.Path) -> bool:
+    # We do not check for permission bits but just try
+    # since that is the most reliable solution
+    # See: https://stackoverflow.com/a/25868839/1625689
+
+    try:
+        testfile = tempfile.TemporaryFile(dir=path)
+        testfile.close()
+    except OSError as error:
+        if error.errno == errno.EACCES:  # 13
+            return False
+        error.filename = path
+        raise
+
+    return True
