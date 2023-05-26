@@ -1,4 +1,4 @@
-sh initial_setup.sh
+/bin/bash initial_setup.sh
 
 docker compose down
 docker build -t modyndependencies -f docker/Dependencies/Dockerfile .
