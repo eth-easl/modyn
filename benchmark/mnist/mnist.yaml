@@ -43,14 +43,7 @@ data:
     import io
     def bytes_parser_function(data: bytes) -> Image:
       return Image.open(io.BytesIO(data)).convert("RGB")
-evaluation:
-  dataset_id: mnist_eval
-  device: "cpu"
-  amp: False
-  dataloader_workers: 2
-  batch_size: 64
-  evaluation_layer: "torch.nn.Softmax()"
-  metrics: [ "accuracy", "ROC-AUC" ]
+
 trigger:
   id: DataAmountTrigger
   trigger_config:

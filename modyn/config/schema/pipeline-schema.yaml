@@ -312,12 +312,42 @@ properties:
   evaluation:
     type: object
     description: |
-      Evaluation configuration
+      Evaluation configuration.
     properties:
-      dataset_id:
-        type: string
+      datasets:
+        type: array
         description: |
-          ID of dataset to be used for evaluation.
+          An array of all datasets on which the model is evaluated.
+        minItems: 1
+        items:
+          type: object
+          description: |
+            Configuration for the evaluation dataset.
+          properties:
+            dataset_id:
+              type: string
+              description: |
+                The id of the dataset
+            batch_size:
+              type: number
+              description: |
+                The batch size to be used during evaluation.
+            dataloader_workers:
+              type: number
+              description: |
+                The number of data loader workers on the trainer node that fetch data from storage.
+            metrics:
+              type: array
+              description: |
+                The metrics used to evaluate the model. We currently support AccuracyMetric.
+              items:
+                type: string
+              minItems: 1
+          required:
+            - dataset_id
+            - dataloader_workers
+            - batch_size
+            - metrics
       gpus:
         type: number
         description: |
@@ -330,32 +360,15 @@ properties:
         type: boolean
         description: |
           If True, automatic mixed precision will be used.
-      dataloader_workers:
-        type: number
-        description: |
-          The number of data loader workers on the trainer node that fetch data from storage.
-      batch_size:
-        type: number
-        description: |
-          The batch size to be used during evaluation.
       evaluation_layer:
         type: string
         description: |
           Optional layer that is appended to the output of the model.
           An example is sigmoid in order to get values in the range [0, 1].
-      metrics:
-        type: array
-        description: |
-          The metrics used to evaluate the model. We currently support ROC-AUC, accuracy.
-        items:
-          type: string
     required:
-      - dataset_id
+      - datasets
       - device
       - amp
-      - dataloader_workers
-      - batch_size
-      - metrics
 required:
   - pipeline
   - model

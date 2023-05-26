@@ -8,21 +8,28 @@ service Evaluator {
   rpc get_final_evaluation(FinalEvaluationRequest) returns (FinalEvaluationResponse) {}
 }
 
-message Data {
+message DatasetInfo {
   string dataset_id = 1;
   int32 num_dataloaders = 2;
 }
 
 message PythonString { string value = 1; }
 
+message JsonString { string value = 1; }
+
 message EvaluateModelRequest {
-  int32 model_id  = 1;
-  Data data_info = 2;
+  int32 trained_model_id  = 1;
+  DatasetInfo dataset_info = 2;
   string device = 3;
   bool amp = 4;
   int32 batch_size = 5;
-  PythonString evaluation_layer = 6;
-  repeated string metrics = 7;
+  PythonString evaluation_layer = 7;
+  repeated string metrics = 8;
+  string model_id = 9;
+  JsonString model_configuration = 10;
+  repeated string transform_list = 11;
+  PythonString bytes_parser = 12;
+  PythonString label_transformer = 13;
 }
 
 message EvaluateModelResponse {

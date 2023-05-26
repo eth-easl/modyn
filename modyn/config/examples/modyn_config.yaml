@@ -41,25 +41,6 @@ storage:
             record_size: 160,
             label_size: 4,
             file_extension: ".bin"
-          },
-        ignore_last_timestamp: false,
-        file_watcher_interval: 5,
-        selector_batch_size: 2000000,
-      }
-    ]
-  evaluation_datasets:
-    [
-      {
-        name: "mnist_eval",
-        description: "MNIST Evaluation Dataset",
-        version: "0.0.1",
-        base_path: "/datasets/mnist_eval",
-        filesystem_wrapper_type: "LocalFilesystemWrapper",
-        file_wrapper_type: "SingleSampleFileWrapper",
-        file_wrapper_config:
-          {
-            file_extension: ".png",
-            label_file_extension: ".label"
           }
       }
     ]

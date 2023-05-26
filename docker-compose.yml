@@ -134,6 +134,8 @@ services:
         condition: service_started
       model_storage:
         condition: service_started
+      evaluator:
+        condition: service_started
       trainer_server:
         condition: service_started
       metadata-db:
