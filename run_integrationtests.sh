@@ -1,4 +1,4 @@
-source initial_setup.sh
+sh initial_setup.sh
 docker compose down
 
 # When on Github CI, we use the default postgres config to not go OOM
