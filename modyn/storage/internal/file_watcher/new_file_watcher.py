@@ -328,7 +328,7 @@ class NewFileWatcher:
             current_len += len(file_df)
 
             stopwatch.stop()
-            insertion_func_measurements = {}
+            insertion_func_measurements: dict[str, int] = {}
 
             if current_len >= sample_dbinsertion_batchsize or num_file == len(valid_files) - 1:
                 logger.debug(f"[Process {process_id}] Inserting {current_len} samples.")
@@ -376,7 +376,7 @@ class NewFileWatcher:
 
         data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
         file_paths = filesystem_wrapper.list(path, recursive=True)
-        sw = Stopwatch()
+        stopwatch = Stopwatch()
 
         assert self.__dataset_id == dataset.dataset_id
 
@@ -398,7 +398,7 @@ class NewFileWatcher:
             )
             return
 
-        sw.start("processes")
+        stopwatch.start("processes")
 
         files_per_proc = int(len(file_paths) / self._insertion_threads)
         processes: list[mp.Process] = []
@@ -432,7 +432,7 @@ class NewFileWatcher:
         for proc in processes:
             proc.join()
 
-        runtime = round(sw.stop() / 1000, 2)
+        runtime = round(stopwatch.stop() / 1000, 2)
         if runtime > 5:
             logger.debug(f"Processes finished running in in {runtime}s.")
 
