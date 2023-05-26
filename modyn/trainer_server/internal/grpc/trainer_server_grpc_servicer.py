@@ -114,7 +114,9 @@ class TrainerServerGRPCServicer:
                 )
                 return StartTrainingResponse(training_started=False)
 
-            pretrained_model_path = self._modyn_base_dir / pathlib.Path(f"model_{request.pretrained_model_id}.modyn")
+            pretrained_model_path = self._modyn_base_dir / pathlib.Path(
+                f"model_{request.pretrained_model_id}_{current_time_millis()}.modyn"
+            )
             self._download_pretrained_model(pretrained_model_path, pathlib.Path(fetch_resp.model_path))
 
             logger.info(f"Completed pretrained model download. Local path: {pretrained_model_path}")
@@ -255,10 +257,21 @@ class TrainerServerGRPCServicer:
                 logger.error(f"Could not store final model from training id {training_id}.")
                 return StoreFinalModelResponse(valid_state=False)
 
+            self._cleanup_stored_models(training_id, final_checkpoint_path)
+
             return StoreFinalModelResponse(valid_state=True, model_id=register_response.model_id)
 
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
         return StoreFinalModelResponse(valid_state=False)
+
+    def _cleanup_stored_models(self, training_id: int, final_checkpoint_path: pathlib.Path) -> None:
+        pretrained_model_path = self._training_dict[training_id].pretrained_model_path
+        if pretrained_model_path and pretrained_model_path.is_file():
+            os.remove(pretrained_model_path)
+            logger.info(f"Successfully deleted pretrained model at {pretrained_model_path}")
+        if final_checkpoint_path.is_file():
+            os.remove(final_checkpoint_path)
+            logger.info(f"Successfully deleted final model at {final_checkpoint_path}")
 
     def get_latest_model(
         self,

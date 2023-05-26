@@ -1,6 +1,7 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import json
 import multiprocessing as mp
+import os
 import pathlib
 import platform
 import tempfile
@@ -201,10 +202,10 @@ def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storag
                 request.use_pretrained_model = True
                 request.pretrained_model_id = 10
 
-                trainer_server.start_training(request, None)
-
-            with open(pathlib.Path(modyn_temp) / "model_10.modyn", "rb") as file:
-                assert file.read().decode("utf-8") == "Our pretrained model!"
+                resp = trainer_server.start_training(request, None)
+                assert resp.training_id == 2
+                with open(trainer_server._training_dict[resp.training_id].pretrained_model_path, "rb") as file:
+                    assert file.read().decode("utf-8") == "Our pretrained model!"
 
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -501,6 +502,8 @@ def test_store_final_model_found(test_is_alive, test_connect_to_model_storage):
             assert response.valid_state
             assert response.model_id == 1
 
+            assert not os.path.isfile(checkpoint_file)
+
             model_storage_mock.RegisterModel.assert_called_once()
             req: RegisterModelRequest = model_storage_mock.RegisterModel.call_args[0][0]
             assert req.pipeline_id == 1
@@ -508,9 +511,6 @@ def test_store_final_model_found(test_is_alive, test_connect_to_model_storage):
             assert req.hostname == "trainer_server"
             assert req.port == 3001
             assert req.model_path == "model_final.modyn"
-
-            with open(trainer_server._modyn_base_dir / req.model_path, "rb") as file:
-                assert torch.load(BytesIO(file.read())) == {"state": {"weight": 10}}
 
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -571,3 +571,35 @@ def test_get_latest_model_finished_found(test_get_latest_checkpoint, test_is_ali
         response = trainer_server.get_latest_model(get_latest_model_request, None)
         assert response.valid_state
         assert response.model_path == "testtesttest"
+
+
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_cleanup_stored_models(test_connect_to_model_storage):
+    with tempfile.TemporaryDirectory() as tempdir:
+        dir_path = pathlib.Path(tempdir)
+
+        pretrained_model_path = dir_path / "pretrained_1.modyn"
+        with open(pretrained_model_path, "wb") as file:
+            file.write(b"Previous Model")
+
+        trainer_server = TrainerServerGRPCServicer(modyn_config, dir_path)
+        trainer_server._training_dict[1] = get_training_info(
+            1, tempdir, tempdir, trainer_server._storage_address, trainer_server._selector_address
+        )
+        trainer_server._training_dict[1].pretrained_model_path = pretrained_model_path
+
+        final_model_path = dir_path / "model_final.modyn"
+        with open(final_model_path, "wb") as file:
+            file.write(b"Final Model")
+
+        assert os.path.isfile(final_model_path)
+        assert os.path.isfile(trainer_server._training_dict[1].pretrained_model_path)
+
+        trainer_server._cleanup_stored_models(1, final_model_path)
+
+        assert not os.path.isfile(final_model_path)
+        assert not os.path.isfile(pretrained_model_path)
+
+        trainer_server._cleanup_stored_models(1, final_model_path)
+        assert not os.path.isfile(final_model_path)
+        assert not os.path.isfile(pretrained_model_path)
