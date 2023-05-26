@@ -276,7 +276,7 @@ class NewFileWatcher:
         current_len = 0
 
         for num_file, file_path in enumerate(valid_files):
-            stopwatch.start("init")
+            stopwatch.start("init", resume=True)
 
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
@@ -287,7 +287,7 @@ class NewFileWatcher:
             )
 
             stopwatch.stop()
-            stopwatch.start("file_creation")
+            stopwatch.start("file_creation", resume=True)
 
             try:
                 file: File = File(
@@ -311,7 +311,7 @@ class NewFileWatcher:
 
             stopwatch.stop()
 
-            stopwatch.start("label_extraction")
+            stopwatch.start("label_extraction", resume=True)
             labels = file_wrapper.get_all_labels()
             stopwatch.stop()
 
@@ -320,7 +320,7 @@ class NewFileWatcher:
                 + f" {round(stopwatch.measurements['label_extraction'] / 1000, 2)}s."
             )
 
-            stopwatch.start("df_creation")
+            stopwatch.start("df_creation", resume=True)
 
             file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file_id": file_id, "label": labels})
             file_df["index"] = range(len(file_df))
@@ -332,7 +332,7 @@ class NewFileWatcher:
 
             if current_len >= sample_dbinsertion_batchsize or num_file == len(valid_files) - 1:
                 logger.debug(f"[Process {process_id}] Inserting {current_len} samples.")
-                stopwatch.start("insertion_func")
+                stopwatch.start("insertion_func", resume=True)
 
                 insertion_func(process_id, dataset_id, file_dfs, insertion_func_measurements, session)
 
@@ -343,7 +343,7 @@ class NewFileWatcher:
                     + f" {round((stopwatch.measurements['insertion_func']) / 1000, 2)}s."
                 )
 
-                stopwatch.start("cleanup")
+                stopwatch.start("cleanup", resume=True)
                 current_len = 0
                 file_dfs.clear()
                 stopwatch.stop()

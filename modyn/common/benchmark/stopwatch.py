@@ -15,8 +15,8 @@ class Stopwatch:
         self._running_measurements: dict[str, int] = {}
         self._last_started_measurement: Optional[str] = None
 
-    def start(self, name: str) -> None:
-        assert name not in self.measurements, "Measurement already done"
+    def start(self, name: str, resume: bool = False) -> None:
+        assert name not in self.measurements or resume, "Measurement already done"
         assert name not in self._running_measurements, "Measurement already running"
 
         self._running_measurements[name] = current_time_millis()
@@ -30,10 +30,10 @@ class Stopwatch:
             name = self._last_started_measurement
 
         assert name in self._running_measurements, "Measurement not running"
-        assert name not in self.measurements, "Measurement already done"
 
-        self.measurements[name] = time - self._running_measurements[name]
+        self.measurements[name] = self.measurements.get(name, 0) + time - self._running_measurements[name]
 
+        del self._running_measurements[name]
         if name == self._last_started_measurement:
             self._last_started_measurement = None
 
