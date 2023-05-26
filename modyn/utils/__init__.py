@@ -13,6 +13,7 @@ from .utils import (  # noqa: F401
     dynamic_module_import,
     flatten,
     grpc_connection_established,
+    is_directory_writable,
     model_available,
     package_available_and_can_be_imported,
     trigger_available,
