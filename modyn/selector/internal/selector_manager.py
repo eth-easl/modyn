@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from pathlib import Path
 from threading import Lock
@@ -56,7 +57,8 @@ class SelectorManager:
         if not is_directory_writable(Path(trigger_sample_directory)):
             raise ValueError(
                 f"The trigger sample directory {trigger_sample_directory} is not writable. \
-                  Please check the directory permissions and try again."
+                  Please check the directory permissions and try again.\n"
+                + f"Directory info: {os.stat(trigger_sample_directory)}"
             )
 
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
