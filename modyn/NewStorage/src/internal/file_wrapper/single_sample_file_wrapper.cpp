@@ -76,3 +76,10 @@ void SingleSampleFileWrapper::validate_file_extension() {
     throw std::runtime_error("File has wrong file extension.");
   }
 }
+
+void SingleSampleFileWrapper::delete_samples(const std::vector<int64_t>& indices) {
+  if (indices.size() != 1) {
+    throw std::runtime_error("SingleSampleFileWrapper contains only one sample.");
+  }
+  filesystem_wrapper_->remove(file_path_);
+}

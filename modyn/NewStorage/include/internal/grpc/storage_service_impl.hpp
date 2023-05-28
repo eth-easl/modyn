@@ -11,6 +11,7 @@ class StorageServiceImpl final : public modyn::storage::Service {
  private:
   YAML::Node config_;
   int16_t sample_batch_size_;
+
  public:
   StorageServiceImpl(const YAML::Node& config) : config_{config} : Service() {
     sample_batch_size_ = config_["storage"]["sample_batch_size"].as<int16_t>();

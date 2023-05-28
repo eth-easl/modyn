@@ -152,11 +152,10 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
   }
   soci::session session = storage_database_connection_.get_session();
 
-  int64_t file_id = -1;
-
+  int64_t file_id;
   session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
 
-  if (file_id == -1) {
+  if (file_id == 0) {
     if (ignore_last_timestamp) {
       return true;
     }

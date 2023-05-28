@@ -1,9 +1,9 @@
 #pragma once
 
+#include <absl/strings/str_format.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
-#include <absl/strings/str_format.h>
 
 #include "internal/grpc/storage_service_impl.hpp"
 

@@ -130,3 +130,16 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
   }
   return samples;
 }
+
+/*
+ * Delete the samples at the given index list. The indices are zero based.
+ *
+ * We do not support deleting samples from binary files.
+ * We can only delete the entire file which is done when every sample is deleted.
+ * This is done to avoid the overhead of updating the file after every deletion.
+ *
+ * See DeleteData in the storage grpc servicer for more details.
+ *
+ * @param indices The indices of the samples to delete.
+ */
+void BinaryFileWrapper::delete_samples(const std::vector<int64_t>& indices) { return }

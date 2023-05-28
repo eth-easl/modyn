@@ -301,7 +301,7 @@ class StorageGRPCServicer(StorageServicer):
                     get_filesystem_wrapper(dataset.filesystem_wrapper_type, dataset.base_path),
                 )
                 samples_to_delete = (
-                    session.query(Sample)
+                    session.query(Sample.index)
                     .filter(Sample.file_id == file.file_id)
                     .filter(Sample.sample_id.in_(request.keys))
                     .all()

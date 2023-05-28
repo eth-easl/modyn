@@ -20,6 +20,7 @@ class SingleSampleFileWrapper : public FileWrapper {  // NOLINT
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<int64_t>& indices) override;
   void validate_file_extension() override;
   FileWrapperType get_type() override { return FileWrapperType::SINGLE_SAMPLE; }
+  void delete_samples(const std::vector<int64_t>& indices) override;
   ~SingleSampleFileWrapper() override = default;
 };
 }  // namespace storage
