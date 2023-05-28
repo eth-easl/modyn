@@ -93,8 +93,8 @@ include(${MODYNSTORAGE_CMAKE_DIR}/dependencies.cmake)
 add_subdirectory(src/)
 
 ### Main binary ###
-add_executable(modyn-new-storage src/main.cpp)
-target_link_libraries(modyn-new-storage PRIVATE modynstorage)
+add_executable(modyn-storage src/main.cpp)
+target_link_libraries(modyn-storage PRIVATE modynstorage)
 
 ##### PLAYGROUND #####
 if (${MODYNSTORAGE_BUILD_PLAYGROUND})

@@ -116,7 +116,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: DoozyX/clang-format-lint-action@v0.14
         with:
-          source: 'modyn/NewStorage/src modyn/NewStorage/include modyn/NewStorage/test'
+          source: 'modyn/storage/src modyn/storage/include modyn/storage/test'
           extensions: 'hpp,cpp'
           clangFormatVersion: 14
 
@@ -137,11 +137,11 @@ jobs:
           cmake --version
 
       - name: Configure CMake
-        working-directory: ${{github.workspace}}/modyn/NewStorage
+        working-directory: ${{github.workspace}}/modyn/storage
         run: bash scripts/clang-tidy.sh build
 
       - name: Run clang-tidy
-        working-directory: ${{github.workspace}}/modyn/NewStorage
+        working-directory: ${{github.workspace}}/modyn/storage
         run: bash scripts/clang-tidy.sh run_tidy
 
   cpp_build_and_test:
@@ -167,7 +167,7 @@ jobs:
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
       CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
-      CCACHE_BASEDIR: ${{github.workspace}}/modyn/NewStorage
+      CCACHE_BASEDIR: ${{github.workspace}}/modyn/storage
 
     steps:
       - uses: actions/checkout@v2
@@ -179,14 +179,14 @@ jobs:
 
       - name: Create Build Environment
 
-        run: cmake -E make_directory ${{github.workspace}}/modyn/NewStorage/build
+        run: cmake -E make_directory ${{github.workspace}}/modyn/storage/build
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build
+        working-directory: ${{github.workspace}}/modyn/storage/build
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
         run: >
-          cmake ${{github.workspace}}/modyn/NewStorage
+          cmake ${{github.workspace}}/modyn/storage
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
@@ -195,13 +195,13 @@ jobs:
           -DMODYNSTORAGE_TEST_COVERAGE=${{matrix.compiler.coverage && 'ON' || 'OFF'}}
 
       - name: Build
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build
+        working-directory: ${{github.workspace}}/modyn/storage/build
         shell: bash
         run: cmake --build . --config ${{matrix.build-type}} -- -j8
 
       - name: Run tests
         timeout-minutes: 10
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build/test
+        working-directory: ${{github.workspace}}/modyn/storage/build/test
         shell: bash
         env: {"TSAN_OPTIONS": "halt_on_error=1", "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"}
         run: ./modynstorage-test
@@ -210,7 +210,7 @@ jobs:
 
       - name: Create Coverage Report
         if: ${{ matrix.compiler.coverage && matrix.build-type == 'Debug' }}
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build/test
+        working-directory: ${{github.workspace}}/modyn/storage/build/test
         run: |
           llvm-profdata-14 merge -sparse default.profraw -o tests.profdata
           llvm-cov-14 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
@@ -224,7 +224,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: coverage-results
-          path: ${{github.workspace}}/modyn/NewStorage/build/test/coverage
+          path: ${{github.workspace}}/modyn/storage/build/test/coverage
 
   cpp_coverage_main:
     name: C++ Test Coverage (main)
@@ -242,27 +242,27 @@ jobs:
 
       - name: Create Build Environment
         run: |
-          cmake -E make_directory ${{github.workspace}}/modyn/NewStorage/build
+          cmake -E make_directory ${{github.workspace}}/modyn/storage/build
 
       - name: Configure CMake
         shell: bash
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build
+        working-directory: ${{github.workspace}}/modyn/storage/build
         run: >
-          cmake ${{github.workspace}}/modyn/NewStorage -DCMAKE_BUILD_TYPE=Debug
+          cmake ${{github.workspace}}/modyn/storage -DCMAKE_BUILD_TYPE=Debug
           -DMODYNSTORAGE_BUILD_PLAYGROUND=ON -DMODYNSTORAGE_BUILD_TESTS=ON -DMODYNSTORAGE_TEST_COVERAGE=ON
 
       - name: Build
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build
+        working-directory: ${{github.workspace}}/modyn/storage/build
         shell: bash
         run: cmake --build . --config Debug -- -j
 
       - name: Run tests
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build/test
+        working-directory: ${{github.workspace}}/modyn/storage/build/test
         shell: bash
         run: ./modynstorage-test
 
       - name: Create Coverage Report for main branch
-        working-directory: ${{github.workspace}}/modyn/NewStorage/build/test
+        working-directory: ${{github.workspace}}/modyn/storage/build/test
         run: |
           llvm-profdata-14 merge -sparse default.profraw -o tests.profdata
           llvm-cov-14 report -instr-profile tests.profdata -object modynstorage-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt

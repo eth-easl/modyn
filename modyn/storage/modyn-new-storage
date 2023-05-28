@@ -2,17 +2,17 @@
 MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
 
 # Make build directory
-mkdir -p $MODYNPATH/NewStorage/build
+mkdir -p $MODYNPATH/storage/build
 
 # Initialise git submodules
 git submodule update --init --recursive
 
 # cmake in build directory
-cd $MODYNPATH/NewStorage/build
+cd $MODYNPATH/storage/build
 cmake ..
 
 # make
 make
 
 # run
-./src/NewStorage_run "$@"
+./src/modynstorage "$@"

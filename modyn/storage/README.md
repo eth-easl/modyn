@@ -1,5 +1,7 @@
 # Storage
 
+TODO: Update this README
+
 This is the storage submodule.
 
 Storage is the abstraction layer for the data storage. It is responsible for retrieving samples from the actual storage systems and providing them to the GPU nodes for training upon request. The storage component is started using `modyn-storage config.yaml`. The script should be in PATH after installing the `modyn` module. The configuration file describes the system setup.

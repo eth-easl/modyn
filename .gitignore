@@ -55,9 +55,9 @@ report.html
 # Pytest creates files that have the name of the local desktop included, so we need to wildcard here
 .coverage.*
 
-# NewStorage specific
-!modyn/NewStorage/lib
-!modyn/NewStorage/lib/googletest
+# storage c++ specific
+!modyn/storage/lib
+!modyn/storage/lib/googletest
 
 # Unity build files
 cmake-build-debug 
