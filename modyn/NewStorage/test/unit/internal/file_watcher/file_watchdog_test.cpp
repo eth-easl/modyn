@@ -83,7 +83,7 @@ TEST_F(FileWatchdogTest, TestStartFileWatcherProcess) {
   watchdog.stop_file_watcher_process(1);
 }
 
-TEsT_F(FileWatchdogTest, TestStopFileWatcherProcess) {
+TEST_F(FileWatchdogTest, TestStopFileWatcherProcess) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatchdog watchdog(config, &stop_file_watcher);

@@ -17,9 +17,9 @@ class FileWrapper {  // NOLINT
   std::shared_ptr<FilesystemWrapper> filesystem_wrapper_;
 
  public:
-  FileWrapper(const std::string& path, const YAML::Node& fw_config,
+  FileWrapper(std::string path, const YAML::Node& fw_config,
               std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
-      : file_path_{path}, file_wrapper_config_{fw_config}, filesystem_wrapper_{std::move(filesystem_wrapper)} {}
+      : file_path_{std::move(path)}, file_wrapper_config_{fw_config}, filesystem_wrapper_{std::move(filesystem_wrapper)} {}
   virtual int64_t get_number_of_samples() = 0;
   virtual std::vector<std::vector<unsigned char>> get_samples(int64_t start, int64_t end) = 0;
   virtual int64_t get_label(int64_t index) = 0;
@@ -30,7 +30,7 @@ class FileWrapper {  // NOLINT
   virtual void validate_file_extension() = 0;
   virtual void delete_samples(const std::vector<int64_t>& indices) = 0;
   static const std::unordered_map<std::string, FileWrapperType>& get_file_wrapper_type_map() {
-    std::unordered_map<std::string, FileWrapperType> file_wrapper_type_map = {
+    static const std::unordered_map<std::string, FileWrapperType> file_wrapper_type_map = {
         {"single_sample", FileWrapperType::SINGLE_SAMPLE},
         {"binary", FileWrapperType::BINARY},
     };

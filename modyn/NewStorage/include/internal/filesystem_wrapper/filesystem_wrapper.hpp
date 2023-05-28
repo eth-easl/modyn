@@ -25,7 +25,7 @@ class FilesystemWrapper {  // NOLINT
   virtual bool is_valid_path(const std::string& path) = 0;
   virtual FilesystemWrapperType get_type() = 0;
   static const std::unordered_map<std::string, FilesystemWrapperType>& get_filesystem_wrapper_type_map() {
-    std::unordered_map<std::string, FilesystemWrapperType> filesystem_wrapper_type_map = {
+    static const std::unordered_map<std::string, FilesystemWrapperType> filesystem_wrapper_type_map = {
         {"local", FilesystemWrapperType::LOCAL},
     };
     return filesystem_wrapper_type_map;
