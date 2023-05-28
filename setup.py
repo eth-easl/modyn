@@ -75,7 +75,6 @@ setup(
                    "_modyn_model_storage=modyn.model_storage.model_storage_entrypoint:main"]},
     scripts=[
         'modyn/supervisor/modyn-supervisor',
-        'modyn/storage/modyn-storage',
         'modyn/trainer_server/modyn-trainer-server',
         'modyn/selector/modyn-selector',
         'modyn/metadata_processor/modyn-metadata-processor',
