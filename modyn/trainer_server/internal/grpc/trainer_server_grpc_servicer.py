@@ -114,16 +114,18 @@ class TrainerServerGRPCServicer:
                 )
                 return StartTrainingResponse(training_started=False)
 
-            pretrained_model_path = self._modyn_base_dir / pathlib.Path(
-                f"model_{request.pretrained_model_id}_{current_time_millis()}.modyn"
-            )
+            with self._lock:
+                training_id = self._next_training_id
+                self._next_training_id += 1
+
+            pretrained_model_path = self._modyn_base_dir / pathlib.Path(f"pretrained_model_{training_id}.modyn")
             self._download_pretrained_model(pretrained_model_path, pathlib.Path(fetch_resp.model_path))
 
             logger.info(f"Completed pretrained model download. Local path: {pretrained_model_path}")
-
-        with self._lock:
-            training_id = self._next_training_id
-            self._next_training_id += 1
+        else:
+            with self._lock:
+                training_id = self._next_training_id
+                self._next_training_id += 1
 
         final_checkpoint_path = self._modyn_base_dir / f"training_{training_id}"
         training_info = TrainingInfo(
@@ -236,9 +238,9 @@ class TrainerServerGRPCServicer:
             logger.error(f"Training with id {training_id} is still running.")
             return StoreFinalModelResponse(valid_state=False)
 
-        final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
-        if final_checkpoint_path.exists():
-            prefix_path = str(final_checkpoint_path.relative_to(self._modyn_base_dir))
+        final_model_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
+        if final_model_path.exists():
+            prefix_path = str(final_model_path.relative_to(self._modyn_base_dir))
 
             pipeline_id = self._training_dict[training_id].pipeline_id
             trigger_id = self._training_dict[training_id].trigger_id
@@ -257,21 +259,21 @@ class TrainerServerGRPCServicer:
                 logger.error(f"Could not store final model from training id {training_id}.")
                 return StoreFinalModelResponse(valid_state=False)
 
-            self._cleanup_stored_models(training_id, final_checkpoint_path)
+            self._cleanup_stored_models(training_id, final_model_path)
 
             return StoreFinalModelResponse(valid_state=True, model_id=register_response.model_id)
 
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
         return StoreFinalModelResponse(valid_state=False)
 
-    def _cleanup_stored_models(self, training_id: int, final_checkpoint_path: pathlib.Path) -> None:
+    def _cleanup_stored_models(self, training_id: int, final_model_path: pathlib.Path) -> None:
         pretrained_model_path = self._training_dict[training_id].pretrained_model_path
         if pretrained_model_path and pretrained_model_path.is_file():
             os.remove(pretrained_model_path)
             logger.info(f"Successfully deleted pretrained model at {pretrained_model_path}")
-        if final_checkpoint_path.is_file():
-            os.remove(final_checkpoint_path)
-            logger.info(f"Successfully deleted final model at {final_checkpoint_path}")
+        if final_model_path.is_file():
+            os.remove(final_model_path)
+            logger.info(f"Successfully deleted final model at {final_model_path}")
 
     def get_latest_model(
         self,
