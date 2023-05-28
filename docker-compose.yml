@@ -97,9 +97,10 @@ services:
     build:
       context: .
       dockerfile: docker/Selector/Dockerfile
-#    volumes:
-#      - .:/modyn_host
+    volumes:
+       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (line below)
 #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
+#      - .:/modyn_host
 #    shm_size: 4gb
   supervisor:
     depends_on:
@@ -138,3 +139,4 @@ services:
       - storage-data:/app/storage
 volumes:
   storage-data:
+  selector-data:
