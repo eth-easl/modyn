@@ -7,8 +7,10 @@
 
 using namespace storage;
 
-grpc::Status StorageServiceImpl::Get(grpc::ServerContext* context, const modyn::storage::GetRequest* request,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
-                                     grpc::ServerWriter<modyn::storage::GetResponse>* writer) override {
+grpc::Status StorageServiceImpl::Get(
+    grpc::ServerContext* context,
+    const modyn::storage::GetRequest* request,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
+    grpc::ServerWriter<modyn::storage::GetResponse>* writer) override {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
@@ -91,7 +93,8 @@ grpc::Status StorageServiceImpl::Get(grpc::ServerContext* context, const modyn::
   }
 }
 grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,  // NOLINT (misc-unused-parameters)
+    grpc::ServerContext* context,
+    const modyn::storage::GetNewDataSinceRequest* request,  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) override {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
@@ -120,7 +123,8 @@ grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identi
 }
 
 grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* context, const modyn::storage::GetDataInIntervalRequest* request,  // NOLINT (misc-unused-parameters)
+    grpc::ServerContext* context,
+    const modyn::storage::GetDataInIntervalRequest* request,  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) override {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
@@ -150,9 +154,10 @@ grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-iden
   }
 }
 
-grpc::Status StorageServiceImpl::CheckAvailability(grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
-                                                   const modyn::storage::DatasetAvailableRequest* request,
-                                                   modyn::storage::DatasetAvailableResponse* response) override {
+grpc::Status StorageServiceImpl::CheckAvailability(
+    grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
+    const modyn::storage::DatasetAvailableRequest* request,
+    modyn::storage::DatasetAvailableResponse* response) override {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
@@ -168,9 +173,10 @@ grpc::Status StorageServiceImpl::CheckAvailability(grpc::ServerContext* context,
   }
 }
 
-grpc::Status StorageServiceImpl::RegisterNewDataset(grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
-                                                    const modyn::storage::RegisterNewDatasetRequest* request,
-                                                    modyn::storage::RegisterNewDatasetResponse* response) override {
+grpc::Status StorageServiceImpl::RegisterNewDataset(
+    grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
+    const modyn::storage::RegisterNewDatasetRequest* request,
+    modyn::storage::RegisterNewDatasetResponse* response) override {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
 
   bool success = storage_database_connection.add_dataset(
@@ -186,18 +192,19 @@ grpc::Status StorageServiceImpl::RegisterNewDataset(grpc::ServerContext* context
   }
 }
 
-grpc::Status StorageServiceImpl::GetCurrentTimestamp(grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
-                                                     const modyn::storage::GetCurrentTimestampRequest* request,
-                                                     modyn::storage::GetCurrentTimestampResponse* response) override {
+grpc::Status StorageServiceImpl::GetCurrentTimestamp(
+    grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
+    const modyn::storage::GetCurrentTimestampRequest* request,
+    modyn::storage::GetCurrentTimestampResponse* response) override {
   response->set_timestamp(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
           .count());
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::DeleteDataset(grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
-                                               const modyn::storage::DatasetAvailableRequest* request,
-                                               modyn::storage::DeleteDatasetResponse* response) override {
+grpc::Status StorageServiceImpl::DeleteDataset(
+    grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
+    const modyn::storage::DatasetAvailableRequest* request, modyn::storage::DeleteDatasetResponse* response) override {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   bool success = storage_database_connection.delete_dataset(request->dataset_id());
   response->set_success(success);
@@ -207,9 +214,9 @@ grpc::Status StorageServiceImpl::DeleteDataset(grpc::ServerContext* context,  //
     return grpc::Status(grpc::StatusCode::ERROR, "Could not delete dataset.");
   }
 }
-grpc::Status StorageServiceImpl::DeleteData(grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
-                                            const modyn::storage::DeleteDataRequest* request,
-                                            modyn::storage::DeleteDataResponse* response) override {
+grpc::Status StorageServiceImpl::DeleteData(
+    grpc::ServerContext* context,  // NOLINT (readability-identifier-naming, misc-unused-parameters)
+    const modyn::storage::DeleteDataRequest* request, modyn::storage::DeleteDataResponse* response) override {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
