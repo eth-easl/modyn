@@ -17,6 +17,7 @@ For deploying and running integration tests, you will need [Docker](https://docs
 Furthermore, we use [conda](https://docs.conda.io/en/latest/) for local environments and [tmuxp](https://github.com/tmux-python/tmuxp) for easily managing components panes (optional).
 For local development, run
 ```bash
+./initial_setup.sh
 conda env create -f ./environment.yml
 conda activate modyn
 pip install -e .
@@ -35,9 +36,9 @@ For running all integration tests, run
 ./run_integrationtests.sh
 ```
 
-> **_macOS Installation:_**: If you develop/run on macOS, you need to modify the `environment.yml` file until we have conditional dependencies (#104). You need to remove the pytorch channel and all occurences of `pytorch::` from the file.
+> **_macOS Installation:_**: Make sure to run `./initial_setup.py` as outlined above. If not, installation might fail due to PyTorch not being found. Unfortunately, the PyTorch channel currently does not support macOS.
 
-> **_GPU Installation:_**: If you want to use a GPU, you need to install `nvidia-docker` and adjust the `docker-compose.yml` file as explained in the file. Furthermore, you need to modify the `environment.yml` to use the CUDA version of Pytorch.
+> **_GPU Installation:_**: If you want to use a GPU, make sure to install `nvidia-docker` and confirm to use CUDA on first run of `./initial_setup.py`. Optionally, if you want to use Apex (require, e.g., for DLRM model), make sure to confirm to install Apex. In this case, having the NVIDIA docker runtime as Docker default runtime is required. The script will try to enable this, if we have sudo priviliges on the system. The CUDA version can be adjusted in the `initial_setup.sh` file.
 
 **Next Steps**.
 Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.

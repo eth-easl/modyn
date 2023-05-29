@@ -4,18 +4,25 @@ runs:
     - name: Setup Docker buildx
       uses: docker/setup-buildx-action@v2
     
-    - name: Build and push
+    - name: Build dependencies and push
       uses: docker/build-push-action@v3
       with:
         context: .
-        file: ./docker/Base/Dockerfile
-        tags: modyn
-        outputs: type=docker,dest=/tmp/modynimage.tar
+        file: ./docker/Dependencies/Dockerfile
+        tags: modyndependencies
+        outputs: type=docker,dest=/tmp/modyndependencies.tar
         cache-from: type=gha
         cache-to: type=gha
 
-    - name: Load Docker image locally
+    - name: Load base image locally
       run: |
-        docker load --input /tmp/modynimage.tar
+        docker load --input /tmp/modyndependencies.tar
         docker image ls -a
       shell: bash
+
+    - name: Build base image
+      run: |
+        docker build -t modynbase -f docker/Base/Dockerfile .
+      shell: bash
+
+
