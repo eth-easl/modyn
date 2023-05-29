@@ -1,12 +1,12 @@
 from typing import Any
 
 import torch
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
-    AbstractRemoteDownsamplingStrategy,
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampler_temporary_storage import (
+    AbstractRemoteDownsamplingTemporaryStorage,
 )
 
 
-class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
+class RemoteGradNormDownsampling(AbstractRemoteDownsamplingTemporaryStorage):
     """
     Method adapted from
     Not All Samples Are Created Equal: Deep Learning with Importance Sampling (Katharopoulos, Fleuret)
@@ -38,3 +38,12 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
             scores = torch.norm(last_layer_gradients, dim=-1)
 
         return scores
+
+    def accumulate_sample_then_batch(
+        self,
+        model_output: torch.Tensor,
+        target: torch.Tensor,
+        sample_ids: list,
+    ) -> None:
+        scores = self.get_scores(model_output, target).numpy()
+        self.sample_then_batch_temporary_storage.accumulate(sample_ids, scores)

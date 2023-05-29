@@ -394,29 +394,30 @@ class PytorchTrainer:
         number_of_batches = 0
         # context manager to automatically handle beginning (reset, cleaning..)
         # and end (computing the scores and sampling).
-        stb_handler = self._downsampler.get_sample_then_batch_accumulator()
-        with stb_handler:
-            # sample ids are retrieved from the selector as in the usual training loop
-            for batch in self._train_dataloader:
-                number_of_batches += 1
-                sample_ids, target, data = self.prepare_data(batch)
+        self._downsampler.setup_sample_then_batch()
+        for batch in self._train_dataloader:
+            number_of_batches += 1
+            sample_ids, target, data = self.prepare_data(batch)
 
-                with torch.autocast(self._device_type, enabled=self._amp):
-                    # compute the scores and accumulate them
-                    model_output = self._model.model(data)
-                    scores = self._downsampler.get_scores(model_output, target).numpy()
-                    stb_handler.accumulate(sample_ids, scores)
+            with torch.autocast(self._device_type, enabled=self._amp):
+                # compute the scores and accumulate them
+                model_output = self._model.model(data)
+                self._downsampler.accumulate_sample_then_batch(model_output, target, sample_ids)
 
-        number_of_files = stb_handler.get_total_number_of_files()
+        self._downsampler.end_sample_then_batch()
+
         # to store all the selected (sample, weight).
         file_size = self._num_dataloaders * self._batch_size  # should we add it to the pipeline?
         local_dataset = LocalDatasetHandler(self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size)
 
-        for i in range(number_of_files):
-            # load and sample the i-th file
-            samples_list = self._downsampler.get_samples_for_file(i)
+        # each strategy can supply samples in different ways
+        samples_avilable = self._downsampler.samples_available()
+
+        while samples_avilable:
+            samples_list = self._downsampler.get_samples()
             # store the selected samples (id and weight)
             local_dataset.inform_samples(samples_list)
+            samples_avilable = self._downsampler.samples_available()
 
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
         # we need to manually trigger the store

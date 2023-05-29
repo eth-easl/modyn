@@ -3,7 +3,6 @@ from typing import Union
 
 import numpy as np
 import torch
-from modyn.trainer_server.internal.trainer.remote_downsamplers.sample_then_batch_handler import SampleThenBatchHandler
 
 
 def get_tensors_subset(
@@ -31,14 +30,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         if self.sample_before_batch:
             assert "downsampled_batch_ratio" in params_from_selector
             self.downsampled_batch_ratio = params_from_selector["downsampled_batch_ratio"]
-            assert "maximum_keys_in_memory" in params_from_selector
-            self.sample_then_batch_handler = SampleThenBatchHandler(
-                self.pipeline_id,
-                self.trigger_id,
-                self.batch_size,
-                self.downsampled_batch_ratio,
-                params_from_selector["maximum_keys_in_memory"],
-            )
+            self._sampling_concluded = False
         else:
             assert "downsampled_batch_size" in params_from_selector
             self.downsampled_batch_size = params_from_selector["downsampled_batch_size"]
@@ -64,13 +56,30 @@ class AbstractRemoteDownsamplingStrategy(ABC):
 
         return downsampled_idxs, weights
 
-    def get_sample_then_batch_accumulator(self) -> SampleThenBatchHandler:
-        assert self.sample_before_batch
-        return self.sample_then_batch_handler
+    @abstractmethod
+    def setup_sample_then_batch(self) -> None:
+        raise NotImplementedError()
 
-    def get_samples_for_file(self, file_index: int) -> np.ndarray:
-        assert self.sample_before_batch
-        return self.sample_then_batch_handler.get_samples_per_file(file_index)
+    @abstractmethod
+    def accumulate_sample_then_batch(
+        self,
+        model_output: torch.Tensor,
+        target: torch.Tensor,
+        sample_ids: list,
+    ) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def end_sample_then_batch(self) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def samples_available(self) -> bool:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_samples(self) -> np.ndarray:
+        raise NotImplementedError()
 
     @abstractmethod
     def get_scores(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:

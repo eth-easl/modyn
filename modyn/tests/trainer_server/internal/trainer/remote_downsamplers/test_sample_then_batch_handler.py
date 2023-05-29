@@ -2,19 +2,22 @@ import os
 
 import pytest
 import torch
-from modyn.trainer_server.internal.trainer.remote_downsamplers.sample_then_batch_handler import SampleThenBatchHandler
+from modyn.trainer_server.internal.trainer.remote_downsamplers.sample_then_batch_temporary_storage import (
+    SampleThenBatchTemporaryStorage,
+)
 
 
 def test_init_accumulation():
     # batch size of 4, we want to extract 2 batches so 8 samples
-    handler = SampleThenBatchHandler(0, 0, 4, 50, 10000)
+    handler = SampleThenBatchTemporaryStorage(0, 0, 4, 50, 10000)
 
-    with handler:
-        handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
-        assert handler.normalizer == 40
+    handler.reset_temporary_storage()
+    handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
+    assert handler.normalizer == 40
+    handler.end_accumulation()
 
     assert len(os.listdir(".tmp_scores")) == 1
     assert handler.number_of_samples_per_file == [16]
@@ -33,16 +36,17 @@ def test_init_accumulation():
 
 def test_init_accumulation_limit():
     # batch size of 4, we want to extract 2 batches
-    handler = SampleThenBatchHandler(0, 0, 4, 50, 4)
+    handler = SampleThenBatchTemporaryStorage(0, 0, 4, 50, 4)
 
-    with handler:
-        handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
-        assert len(os.listdir(".tmp_scores")) == 4
-        assert handler.number_of_samples_per_file == [4, 4, 4, 4]
-        assert handler.normalizer == 40
+    handler.reset_temporary_storage()
+    handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
+    assert len(os.listdir(".tmp_scores")) == 4
+    assert handler.number_of_samples_per_file == [4, 4, 4, 4]
+    assert handler.normalizer == 40
+    handler.end_accumulation()
 
     assert handler.normalizer == 40 / 16
     assert sum(handler.grouped_samples_per_file) == 8
@@ -59,15 +63,16 @@ def test_init_accumulation_limit():
 
 
 def test_skewed_distribution():
-    handler = SampleThenBatchHandler(0, 0, 4, 50, 1000)
+    handler = SampleThenBatchTemporaryStorage(0, 0, 4, 50, 1000)
 
     # samples from even files are useless
-    with handler:
-        handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([11, 12, 13, 14], torch.Tensor([0, 0, 0, 0]))
-        handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([31, 32, 33, 34], torch.Tensor([0, 0, 0, 0]))
-        assert handler.normalizer == 20
+    handler.reset_temporary_storage()
+    handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([11, 12, 13, 14], torch.Tensor([0, 0, 0, 0]))
+    handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([31, 32, 33, 34], torch.Tensor([0, 0, 0, 0]))
+    assert handler.normalizer == 20
+    handler.end_accumulation()
 
     assert len(handler.number_of_samples_per_file) == 1
 
@@ -80,15 +85,16 @@ def test_skewed_distribution():
 
 
 def test_restart_accumulation():
-    handler = SampleThenBatchHandler(0, 0, 4, 50, 1000)
+    handler = SampleThenBatchTemporaryStorage(0, 0, 4, 50, 1000)
 
     # samples from even files are useless
-    with handler:
-        handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
-        assert handler.normalizer == 40
+    handler.reset_temporary_storage()
+    handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
+    assert handler.normalizer == 40
+    handler.end_accumulation()
 
     assert len(os.listdir(".tmp_scores")) == 1
     assert handler.number_of_samples_per_file == [16]
@@ -96,14 +102,15 @@ def test_restart_accumulation():
     assert handler.normalizer == 40 / 16
     assert sum(handler.grouped_samples_per_file) == 8
 
-    with handler:
-        assert handler.normalizer == 0
-        assert not handler.number_of_samples_per_file
-        assert not os.path.isdir(".tmp_scores")
-        handler.accumulate([101, 102, 103, 104], torch.Tensor([10, 3, 3, 4]))
-        handler.accumulate([111, 112, 113, 114], torch.Tensor([10, 3, 3, 4]))
-        handler.accumulate([121, 122, 123, 124], torch.Tensor([10, 3, 3, 4]))
-        assert handler.normalizer == 60
+    handler.reset_temporary_storage()
+    assert handler.normalizer == 0
+    assert not handler.number_of_samples_per_file
+    assert not os.path.isdir(".tmp_scores")
+    handler.accumulate([101, 102, 103, 104], torch.Tensor([10, 3, 3, 4]))
+    handler.accumulate([111, 112, 113, 114], torch.Tensor([10, 3, 3, 4]))
+    handler.accumulate([121, 122, 123, 124], torch.Tensor([10, 3, 3, 4]))
+    assert handler.normalizer == 60
+    handler.end_accumulation()
 
     assert len(os.listdir(".tmp_scores")) == 1
     assert handler.number_of_samples_per_file == [12]
@@ -120,34 +127,36 @@ def test_restart_accumulation():
 
 
 def test_restart_accumulation_limited():
-    handler = SampleThenBatchHandler(0, 0, 4, 50, 4)
+    handler = SampleThenBatchTemporaryStorage(0, 0, 4, 50, 4)
 
     # samples from even files are useless
-    with handler:
-        handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
-        handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
-        assert len(os.listdir(".tmp_scores")) == 4
+    handler.reset_temporary_storage()
+    handler.accumulate([1, 2, 3, 4], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([11, 12, 13, 14], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([21, 22, 23, 24], torch.Tensor([1, 2, 3, 4]))
+    handler.accumulate([31, 32, 33, 34], torch.Tensor([1, 2, 3, 4]))
+    assert len(os.listdir(".tmp_scores")) == 4
 
-        assert handler.number_of_samples_per_file == [4, 4, 4, 4]
-        assert handler.normalizer == 40
+    assert handler.number_of_samples_per_file == [4, 4, 4, 4]
+    assert handler.normalizer == 40
+    handler.end_accumulation()
 
     assert len(os.listdir(".tmp_scores")) == 4
     assert handler.normalizer == 40 / 16
     assert sum(handler.grouped_samples_per_file) == 8
 
-    with handler:
-        assert handler.normalizer == 0
-        assert not handler.number_of_samples_per_file
-        assert not os.path.isdir(".tmp_scores")
-        handler.accumulate([101, 102, 103, 104], torch.Tensor([10, 3, 3, 4]))
-        handler.accumulate([111, 112, 113, 114], torch.Tensor([10, 3, 3, 4]))
-        handler.accumulate([121, 122, 123, 124], torch.Tensor([10, 3, 3, 4]))
-        assert len(os.listdir(".tmp_scores")) == 3
+    handler.reset_temporary_storage()
+    assert handler.normalizer == 0
+    assert not handler.number_of_samples_per_file
+    assert not os.path.isdir(".tmp_scores")
+    handler.accumulate([101, 102, 103, 104], torch.Tensor([10, 3, 3, 4]))
+    handler.accumulate([111, 112, 113, 114], torch.Tensor([10, 3, 3, 4]))
+    handler.accumulate([121, 122, 123, 124], torch.Tensor([10, 3, 3, 4]))
+    assert len(os.listdir(".tmp_scores")) == 3
 
-        assert handler.number_of_samples_per_file == [4, 4, 4]
-        assert handler.normalizer == 60
+    assert handler.number_of_samples_per_file == [4, 4, 4]
+    assert handler.normalizer == 60
+    handler.end_accumulation()
 
     assert handler.normalizer == 60 / 12
     assert sum(handler.grouped_samples_per_file) == 6

@@ -1,6 +1,5 @@
 import os.path
 import shutil
-from typing import Any
 
 import numpy as np
 import torch
@@ -10,7 +9,7 @@ from typing_extensions import Self
 TEMPORARY_LOCAL_STORAGE_PATH = ".tmp_scores"  # should we provide it through the config?
 
 
-class SampleThenBatchHandler:
+class SampleThenBatchTemporaryStorage:
     def __init__(
         self,
         pipeline_id: int,
@@ -41,9 +40,9 @@ class SampleThenBatchHandler:
         self.number_of_samples_seen = 0
         self.normalizer = 0.0
 
-    def __enter__(self) -> Self:
+    def reset_temporary_storage(self) -> Self:
         """
-        Used in the context manager. Checks that everything is available and resets the counters
+        Checks that everything is available and resets the counters
         Returns: Self
 
         """
@@ -76,13 +75,10 @@ class SampleThenBatchHandler:
             if len(self.to_be_stored) == self.maximum_keys_in_memory:
                 self._store_values()
 
-    def __exit__(self, *exc: Any) -> None:
+    def end_accumulation(self) -> None:
         """
-        Used in the context manager.
         When all datapoints have been accumulated, the number of points per file are sampled.
         """
-        assert exc[0] is None, f"Something went wrong: {exc}"
-
         # store the last samples
         if len(self.to_be_stored) > 0:
             self._store_values()
