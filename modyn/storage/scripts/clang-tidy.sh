@@ -9,6 +9,7 @@ PROTO_OUT_DIR=${1:-${BUILD_DIR}/src/generated}
 PROTO_IN_DIR=${PROTO_IN_DIR:-../protos}
 
 function generate_proto() {
+    echo "Generating proto files..."
     mkdir -p ${PROTO_OUT_DIR}
 
     PROTO_FILE=storage.proto
@@ -20,6 +21,9 @@ function generate_proto() {
     --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN_PATH} \
     --cpp_out=${PROTO_OUT_DIR} \
     ${PROTO_IN_DIR}/${PROTO_FILE}
+
+    echo "Generating proto files...done"
+    ls -l ${PROTO_OUT_DIR}
 }
 
 function run_build() {
