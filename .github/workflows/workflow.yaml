@@ -133,7 +133,7 @@ jobs:
       - name: Install clang-tidy
         run: |
           sudo apt update
-          sudo apt -y install clang-tidy-15
+          sudo apt -y install clang-tidy-15 protobuf-compiler-grpc
           cmake --version
 
       - name: Generate proto headers
