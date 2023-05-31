@@ -12,7 +12,7 @@ function run_build() {
 
     mkdir -p "${BUILD_DIR}"
 
-    cmake -S . -B "${BUILD_DIR}" --target modynstorage-proto
+    cmake -B "${BUILD_DIR}" --target modynstorage-proto
 
     cmake -S . -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
