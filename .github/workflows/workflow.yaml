@@ -136,6 +136,10 @@ jobs:
           sudo apt -y install clang-tidy-15
           cmake --version
 
+      - name: Generate proto headers
+        working-directory: ${{github.workspace}}/modyn/storage
+        run: bash scripts/clang-tidy.sh generate_proto
+
       - name: Configure CMake
         working-directory: ${{github.workspace}}/modyn/storage
         run: bash scripts/clang-tidy.sh build
