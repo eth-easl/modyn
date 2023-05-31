@@ -21,6 +21,7 @@ class MockFilesystemWrapper : public storage::FilesystemWrapper {
   MOCK_METHOD(std::string, join, (const std::vector<std::string>& paths), (override));
   MOCK_METHOD(bool, is_valid_path, (const std::string& path), (override));
   MOCK_METHOD(FilesystemWrapperType, get_type, (), (override));
+  MOCK_METHOD(bool, remove, (const std::string& path), (override));
   ~MockFilesystemWrapper() override = default;
   MockFilesystemWrapper(const MockFilesystemWrapper& other) : FilesystemWrapper(other.base_path_) {}
 };

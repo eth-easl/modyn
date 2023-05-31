@@ -129,7 +129,21 @@ int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
 
 bool LocalFilesystemWrapper::is_valid_path(const std::string& path) { return path.find("..") == std::string::npos; }
 
-std::string LocalFilesystemWrapper::join(const std::vector<std::string>& paths) {
+bool LocalFilesystemWrapper::remove(const std::string& path) {
+  if (not is_valid_path(path)) {
+    throw std::invalid_argument("Path " + path + " is not valid.");
+  }
+  if (not exists(path)) {
+    throw std::runtime_error("Path " + path + " does not exist.");
+  }
+  if (is_directory(path)) {
+    throw std::runtime_error("Path " + path + " is a directory.");
+  }
+  return std::filesystem::remove(path);
+}
+
+std::string LocalFilesystemWrapper::join(     // NOLINT (readability-convert-member-functions-to-static)
+    const std::vector<std::string>& paths) {  // NOLINT (misc-unused-parameters)
   std::string joined_path;
   for (uint64_t i = 0; i < paths.size(); i++) {
     joined_path += paths[i];

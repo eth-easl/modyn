@@ -73,7 +73,8 @@ void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
  *
  * @param storage_database_connection The StorageDatabaseConnection object to use for database queries
  */
-void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* storage_database_connection) {
+void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert-member-functions-to-static)
+    StorageDatabaseConnection* storage_database_connection) {
   soci::session session = storage_database_connection->get_session();
   int64_t number_of_datasets = 0;
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
@@ -91,7 +92,7 @@ void FileWatchdog::watch_file_watcher_processes(StorageDatabaseConnection* stora
   std::vector<int64_t> dataset_ids = std::vector<int64_t>(number_of_datasets);
   session << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
-  int64_t dataset_id;
+  int64_t dataset_id = 0;
   for (const auto& pair : file_watcher_processes_) {
     dataset_id = pair.first;
     if (std::find(dataset_ids.begin(), dataset_ids.end(), dataset_id) == dataset_ids.end()) {

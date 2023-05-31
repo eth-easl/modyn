@@ -31,7 +31,7 @@ void StorageDatabaseConnection::create_tables() const {
   const char* file_table_sql;
   const char* sample_table_sql;
   if (drivername == "postgresql") {
-    dataset_table_sql = =
+    dataset_table_sql =
 #include "sql/PostgreSQLDataset.sql"
         ;
     file_table_sql =
@@ -117,7 +117,7 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
   try {
     soci::session session = get_session();
 
-    int64_t dataset_id;
+    int64_t dataset_id = 0;
     session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
 
     // Delete all samples for this dataset
@@ -138,7 +138,7 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
 void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& dataset_name) const {
   soci::session session = get_session();
   if (drivername == "postgresql") {
-    int64_t dataset_id;
+    int64_t dataset_id = 0;
     session << "SELECT dataset_id FROM datasets WHERE name = :dataset_name", soci::into(dataset_id),
         soci::use(dataset_name);
     if (dataset_id == 0) {

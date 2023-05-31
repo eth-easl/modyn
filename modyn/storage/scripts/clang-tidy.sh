@@ -5,6 +5,22 @@ RUN_CLANG_TIDY=${RUN_CLANG_TIDY:-run-clang-tidy}
 CLANG_TIDY=${CLANG_TIDY:-clang-tidy}
 BUILD_DIR=${BUILD_DIR:-cmake-build-debug/clang-tidy-build}
 APPLY_REPLACEMENTS_BINARY=${APPLY_REPLACEMENTS_BINARY:-clang-apply-replacements}
+PROTO_OUT_DIR=${1:-${BUILD_DIR}/src/generated}
+PROTO_IN_DIR=${PROTO_IN_DIR:-../protos}
+
+function generate_proto() {
+    mkdir -p ${PROTO_OUT_DIR}
+
+    PROTO_FILE=storage.proto
+    GRPC_CPP_PLUGIN_PATH=$(which grpc_cpp_plugin)
+
+    protoc \
+    -I=${PROTO_IN_DIR} \
+    --grpc_out=${PROTO_OUT_DIR} \
+    --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN_PATH} \
+    --cpp_out=${PROTO_OUT_DIR} \
+    ${PROTO_IN_DIR}/${PROTO_FILE}
+}
 
 function run_build() {
     echo "Running cmake build..."
@@ -42,6 +58,9 @@ function run_tidy() {
 }
 
 case $1 in
+    "generate_proto")
+        generate_proto
+        ;;
     "build")
         run_build
         ;;
@@ -52,6 +71,7 @@ case $1 in
         run_tidy true
         ;;
     *)
+        generate_proto
         run_build
         run_tidy false
         ;;

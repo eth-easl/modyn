@@ -17,10 +17,14 @@ class StorageGrpcServer {
  public:
   StorageGrpcServer(const YAML::Node& config, std::atomic<bool>* stop_grpc_server)
       : config_{config}, stop_grpc_server_(stop_grpc_server) {}
-  void run_server() {
-    int16_t port = config_["storage"]["port"].as<int16_t>();
+  void run() {
+    if (!config_["storage"]["port"]) {
+      SPDLOG_ERROR("No port specified in config.yaml");
+      return;
+    }
+    auto port = config_["storage"]["port"].as<int64_t>();
     std::string server_address = absl::StrFormat("0.0.0.0:%d", port);
-    StorageServiceImpl service;
+    StorageServiceImpl service(config_);
 
     grpc::EnableDefaultHealthCheckService(true);
     grpc::reflection::InitProtoReflectionServerBuilderPlugin();

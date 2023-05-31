@@ -24,11 +24,12 @@ class FilesystemWrapper {  // NOLINT
   virtual std::string join(const std::vector<std::string>& paths) = 0;
   virtual bool is_valid_path(const std::string& path) = 0;
   virtual FilesystemWrapperType get_type() = 0;
-  static const std::unordered_map<std::string, FilesystemWrapperType>& get_filesystem_wrapper_type_map() {
-    static const std::unordered_map<std::string, FilesystemWrapperType> filesystem_wrapper_type_map = {
+  virtual bool remove(const std::string& path) = 0;
+  static FilesystemWrapperType get_filesystem_wrapper_type(const std::string& type) {
+    static const std::unordered_map<std::string, FilesystemWrapperType> FILESYSTEM_WRAPPER_TYPE_MAP = {
         {"local", FilesystemWrapperType::LOCAL},
     };
-    return filesystem_wrapper_type_map;
+    return FILESYSTEM_WRAPPER_TYPE_MAP.at(type);
   }
   virtual ~FilesystemWrapper() {}  // NOLINT
 };

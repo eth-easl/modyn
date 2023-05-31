@@ -148,7 +148,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+  std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   watcher.filesystem_wrapper = filesystem_wrapper;
 
   std::vector<std::string> files = std::vector<std::string>();
@@ -193,7 +193,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
 
   // Check if the files are added to the database
   int32_t file_id = 1;
-  int32_t sample_id;
+  int32_t sample_id = 0;
   session << "SELECT sample_id FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id);
   ASSERT_EQ(sample_id, 1);
 
@@ -253,7 +253,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   ASSERT_EQ(label2, 2);
 
   // Check if the files are added to the database
-  int32_t output_file_id;
+  int32_t output_file_id = 0;
   int32_t input_file_id = 1;
   session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(input_file_id), soci::into(output_file_id);
   ASSERT_EQ(output_file_id, 1);

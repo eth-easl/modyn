@@ -16,6 +16,7 @@ class LocalFilesystemWrapper : public FilesystemWrapper {  // NOLINT
   std::string join(const std::vector<std::string>& paths) override;
   bool is_valid_path(const std::string& path) override;
   FilesystemWrapperType get_type() final { return FilesystemWrapperType::LOCAL; }
+  bool remove(const std::string& path) override;
   ~LocalFilesystemWrapper() override = default;
 };
 }  // namespace storage

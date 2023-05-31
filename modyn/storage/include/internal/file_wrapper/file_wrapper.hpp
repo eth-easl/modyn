@@ -30,12 +30,12 @@ class FileWrapper {  // NOLINT
   virtual FileWrapperType get_type() = 0;
   virtual void validate_file_extension() = 0;
   virtual void delete_samples(const std::vector<int64_t>& indices) = 0;
-  static const std::unordered_map<std::string, FileWrapperType>& get_file_wrapper_type_map() {
-    static const std::unordered_map<std::string, FileWrapperType> file_wrapper_type_map = {
+  static FileWrapperType get_file_wrapper_type(const std::string& type) {
+    static const std::unordered_map<std::string, FileWrapperType> FILE_WRAPPER_TYPE_MAP = {
         {"single_sample", FileWrapperType::SINGLE_SAMPLE},
         {"binary", FileWrapperType::BINARY},
     };
-    return file_wrapper_type_map;
+    return FILE_WRAPPER_TYPE_MAP.at(type);
   }
   virtual ~FileWrapper() {}  // NOLINT
   FileWrapper(const FileWrapper& other) = default;

@@ -21,9 +21,9 @@ using namespace storage;
  * @param file_wrapper_type The type of the file wrapper.
  * @param timestamp The timestamp to be used for the file.
  */
-void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-                                    const FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                    const YAML::Node& file_wrapper_config) {
+void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths,  // NOLINT (misc-unused-parameters)
+                                    const std::string& data_file_extension, const FileWrapperType& file_wrapper_type,
+                                    int64_t timestamp, const YAML::Node& file_wrapper_config) {
   soci::session session = storage_database_connection_.get_session();
 
   std::vector<std::string> valid_files;
@@ -32,6 +32,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       valid_files.push_back(file_path);
     }
   }
+
+  SPDLOG_INFO("Found {} valid files", valid_files.size());
 
   if (!valid_files.empty()) {
     std::string file_path;  // NOLINT // soci::use() requires a non-const reference
@@ -48,7 +50,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
                  ":number_of_samples, :updated_at)",
           soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
 
-      long long file_id;  // NOLINT // soci get_last_insert_id requires a long long
+      long long file_id = 0;  // NOLINT // soci get_last_insert_id requires a long long
       session.get_last_insert_id("files", file_id);
 
       const std::vector<int64_t> labels = file_wrapper->get_all_labels();
@@ -60,7 +62,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       }
     }
 
-    if (storage_database_connection_.drivername == "postgresql") {
+    if (storage_database_connection_.drivername == "postgresql") {  // NOLINT (bugprone-branch-clone)
       postgres_copy_insertion(file_frame);
     } else {
       fallback_insertion(file_frame);
@@ -77,7 +79,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::postgres_copy_insertion(
-    const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const {
+    const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame)  // NOLINT (misc-unused-parameters)
+    const {
   soci::session session = storage_database_connection_.get_session();
   const std::string table_name = "samples__did" + std::to_string(dataset_id_);
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
@@ -116,7 +119,8 @@ void FileWatcher::postgres_copy_insertion(
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::fallback_insertion(
-    const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const {
+    const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame)  // NOLINT (misc-unused-parameters)
+    const {
   soci::session session = storage_database_connection_.get_session();
   // Prepare query
   std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
@@ -152,7 +156,7 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
   }
   soci::session session = storage_database_connection_.get_session();
 
-  int64_t file_id;
+  int64_t file_id = 0;
   session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
 
   if (file_id == 0) {
@@ -177,7 +181,7 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
  */
 void FileWatcher::update_files_in_directory(const std::string& directory_path, int64_t timestamp) {
   std::string file_wrapper_config;
-  int64_t file_wrapper_type_id;
+  int64_t file_wrapper_type_id = 0;
 
   soci::session session = storage_database_connection_.get_session();
 
@@ -198,7 +202,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
     std::vector<std::thread> children;
     for (int64_t i = 0; i < insertion_threads_; i++) {
       std::vector<std::string> file_paths_thread = std::vector<std::string>();
-      if (i == insertion_threads_ - 1) {
+      if (i == insertion_threads_ - 1) {  // NOLINT (bugprone-branch-clone)
         file_paths_thread.insert(file_paths_thread.end(), file_paths.begin() + i * files_per_thread, file_paths.end());
       } else {
         file_paths_thread.insert(file_paths_thread.end(), file_paths.begin() + i * files_per_thread,
@@ -227,6 +231,8 @@ void FileWatcher::seek_dataset() {
   session << "SELECT last_timestamp FROM datasets "
              "WHERE dataset_id = :dataset_id",
       soci::into(last_timestamp), soci::use(dataset_id_);
+
+  SPDLOG_INFO("Last timestamp: {}", last_timestamp);
 
   update_files_in_directory(dataset_path_, last_timestamp);
 }

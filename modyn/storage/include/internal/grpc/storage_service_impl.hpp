@@ -1,19 +1,26 @@
 #pragma once
 
 #include <grpcpp/grpcpp.h>
+#include <soci/soci.h>
 #include <spdlog/spdlog.h>
+#include <yaml-cpp/yaml.h>
 
 #include "storage.grpc.pb.h"
 
 namespace storage {
 
-class StorageServiceImpl final : public modyn::storage::Service {
+class StorageServiceImpl final : public modyn::storage::Storage::Service {
  private:
   YAML::Node config_;
   int16_t sample_batch_size_;
 
  public:
-  explicit StorageServiceImpl(const YAML::Node& config) : config_{config} : Service() {
+  explicit StorageServiceImpl(const YAML::Node& config)
+      : Service(), config_{config} {  // NOLINT (cppcoreguidelines-pro-type-member-init)
+    if (!config_["storage"]["sample_batch_size"]) {
+      SPDLOG_ERROR("No sample_batch_size specified in config.yaml");
+      return;
+    }
     sample_batch_size_ = config_["storage"]["sample_batch_size"].as<int16_t>();
   }
   grpc::Status Get(grpc::ServerContext* context, const modyn::storage::GetRequest* request,
@@ -34,5 +41,11 @@ class StorageServiceImpl final : public modyn::storage::Service {
                              modyn::storage::DeleteDatasetResponse* response) override;
   grpc::Status DeleteData(grpc::ServerContext* context, const modyn::storage::DeleteDataRequest* request,
                           modyn::storage::DeleteDataResponse* response) override;
+  static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session) {
+    int64_t dataset_id = 0;
+    session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
+
+    return dataset_id;
+  }
 };
 }  // namespace storage

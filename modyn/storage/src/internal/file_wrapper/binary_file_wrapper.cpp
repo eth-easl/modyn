@@ -115,7 +115,7 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
  * @param indices The indices of the sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indices(
-    const std::vector<int64_t>& indices) {
+    const std::vector<int64_t>& indices) {  // NOLINT (misc-unused-parameters)
   BinaryFileWrapper::validate_request_indices(get_number_of_samples(), indices);
   std::vector<std::vector<unsigned char>> samples = std::vector<std::vector<unsigned char>>();
   samples.reserve(indices.size());
@@ -142,4 +142,5 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
  *
  * @param indices The indices of the samples to delete.
  */
-void BinaryFileWrapper::delete_samples(const std::vector<int64_t>& indices) { return }
+void BinaryFileWrapper::delete_samples(  // NOLINT (readability-convert-member-functions-to-static)
+    const std::vector<int64_t>& /*indices*/) {}

@@ -57,7 +57,7 @@ std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples(int
 }
 
 std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples_from_indices(
-    const std::vector<int64_t>& indices) {
+    const std::vector<int64_t>& indices) {  // NOLINT (misc-unused-parameters)
   if (get_number_of_samples() == 0) {
     throw std::runtime_error("File has wrong file extension.");
   }
@@ -77,7 +77,7 @@ void SingleSampleFileWrapper::validate_file_extension() {
   }
 }
 
-void SingleSampleFileWrapper::delete_samples(const std::vector<int64_t>& indices) {
+void SingleSampleFileWrapper::delete_samples(const std::vector<int64_t>& indices) {  // NOLINT (misc-unused-parameters)
   if (indices.size() != 1) {
     throw std::runtime_error("SingleSampleFileWrapper contains only one sample.");
   }
