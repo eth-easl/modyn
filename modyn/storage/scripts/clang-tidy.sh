@@ -5,32 +5,14 @@ RUN_CLANG_TIDY=${RUN_CLANG_TIDY:-run-clang-tidy}
 CLANG_TIDY=${CLANG_TIDY:-clang-tidy}
 BUILD_DIR=${BUILD_DIR:-cmake-build-debug/clang-tidy-build}
 APPLY_REPLACEMENTS_BINARY=${APPLY_REPLACEMENTS_BINARY:-clang-apply-replacements}
-PROTO_OUT_DIR=${PROTO_OUT_DIR:-${BUILD_DIR}/src/generated}
-PROTO_IN_DIR=${PROTO_IN_DIR:-../protos}
-
-function generate_proto() {
-    echo "Generating proto files..."
-    mkdir -p ${PROTO_OUT_DIR}
-
-    PROTO_FILE=storage.proto
-    GRPC_CPP_PLUGIN_PATH=$(which grpc_cpp_plugin)
-
-    protoc \
-    -I=${PROTO_IN_DIR} \
-    --grpc_out=${PROTO_OUT_DIR} \
-    --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN_PATH} \
-    --cpp_out=${PROTO_OUT_DIR} \
-    ${PROTO_IN_DIR}/${PROTO_FILE}
-
-    echo "Generating proto files...done"
-    ls -l ${PROTO_OUT_DIR}
-}
 
 function run_build() {
     echo "Running cmake build..."
     set -x
 
-    cmake --build "${BUILD_DIR}" --target modynstorage-proto
+    mkdir -p "${BUILD_DIR}"
+
+    cmake -S . -B "${BUILD_DIR}" --target modynstorage-proto
 
     cmake -S . -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
