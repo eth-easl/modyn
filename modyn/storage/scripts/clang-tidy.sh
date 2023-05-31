@@ -29,6 +29,9 @@ function generate_proto() {
 function run_build() {
     echo "Running cmake build..."
     set -x
+
+    cmake --build "${BUILD_DIR}" --target modynstorage-proto
+
     cmake -S . -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_UNITY_BUILD=ON \
@@ -62,9 +65,6 @@ function run_tidy() {
 }
 
 case $1 in
-    "generate_proto")
-        generate_proto
-        ;;
     "build")
         run_build
         ;;
@@ -75,7 +75,6 @@ case $1 in
         run_tidy true
         ;;
     *)
-        generate_proto
         run_build
         run_tidy false
         ;;
