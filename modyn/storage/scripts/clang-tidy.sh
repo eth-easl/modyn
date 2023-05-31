@@ -5,7 +5,7 @@ RUN_CLANG_TIDY=${RUN_CLANG_TIDY:-run-clang-tidy}
 CLANG_TIDY=${CLANG_TIDY:-clang-tidy}
 BUILD_DIR=${BUILD_DIR:-cmake-build-debug/clang-tidy-build}
 APPLY_REPLACEMENTS_BINARY=${APPLY_REPLACEMENTS_BINARY:-clang-apply-replacements}
-PROTO_OUT_DIR=${1:-${BUILD_DIR}/src/generated}
+PROTO_OUT_DIR=${PROTO_OUT_DIR:-${BUILD_DIR}/src/generated}
 PROTO_IN_DIR=${PROTO_IN_DIR:-../protos}
 
 function generate_proto() {
