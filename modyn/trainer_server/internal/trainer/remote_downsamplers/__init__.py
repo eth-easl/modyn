@@ -1,6 +1,7 @@
 import os
 
 from .remote_gradnorm_downsample import RemoteGradNormDownsampling  # noqa: F401
+from .remote_craig_downsample import RemoteCRAIGDownsampling  # noqa: F401
 from .remote_loss_downsample import RemoteLossDownsampling  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
