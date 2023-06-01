@@ -101,9 +101,9 @@ def test_stb():
         sampler.accumulate_sample_then_batch(forward_outputs, target, ids)
         batch_counter += 1
 
-    #to simulate 2 dataloaders
+    # to simulate 2 dataloaders
 
-    #last, smaller, batch
+    # last, smaller, batch
     size = 10
     data = torch.randn(size, 10)
     target = torch.randint(2, size=(size,))
@@ -122,7 +122,6 @@ def test_stb():
     forward_outputs = model(data)
     sampler.accumulate_sample_then_batch(forward_outputs, target, ids)
     batch_counter += 1
-
 
     sampler.end_sample_then_batch()
 

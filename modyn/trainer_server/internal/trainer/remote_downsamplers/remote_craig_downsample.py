@@ -111,24 +111,21 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
     def finalize_selection(self) -> tuple[list, torch.Tensor]:
         dist_mat = torch.zeros([self.dist_mat_size, self.dist_mat_size], dtype=torch.float32)
 
-
         if self.selection_type == "PerBatch":
             self.g_is = torch.cat(self.g_is, dim=0)
             dist_mat = self.distance(self.g_is, self.g_is).cpu()
         else:
-            """
-            Original code. Adapted to support multiple dataloaders.
-            first_i = True
-            for i, g_i in enumerate(self.g_is):
-                if first_i:
-                    size_b = g_i.size(0)
-                    first_i = False
-                for j, g_j in enumerate(self.g_is):
-                    distance = self.distance(g_i, g_j).cpu()
-                    dist_mat[
-                        i * size_b : i * size_b + g_i.size(0), j * size_b : j * size_b + g_j.size(0)
-                    ] = distance
-            """
+            # Original code. Adapted to support multiple dataloaders.
+            # first_i = True
+            # for i, g_i in enumerate(self.g_is):
+            #    if first_i:
+            #        size_b = g_i.size(0)
+            #        first_i = False
+            #    for j, g_j in enumerate(self.g_is):
+            #        distance = self.distance(g_i, g_j).cpu()
+            #        dist_mat[
+            #            i * size_b : i * size_b + g_i.size(0), j * size_b : j * size_b + g_j.size(0)
+            #        ] = distance
 
             current_i = 0
             for g_i in self.g_is:
@@ -136,7 +133,7 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
                 for g_j in self.g_is:
                     end_i = current_i + g_i.shape[0]
                     end_j = current_j + g_j.shape[0]
-                    dist_mat[current_i : end_i, current_j : end_j] = self.distance(g_i, g_j).cpu()
+                    dist_mat[current_i:end_i, current_j:end_j] = self.distance(g_i, g_j).cpu()
                     current_j = end_j
                 current_i = end_i
 
@@ -181,7 +178,7 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
             metric="precomputed",
             n_samples=math.ceil(budget / self.batch_size),
             optimizer=self.optimizer,
-            verbose=False
+            verbose=False,
         )
         sim_sub = facility_location.fit_transform(dist_mat)
         temp_list = list(np.array(np.argmax(sim_sub, axis=1)).reshape(-1))
@@ -245,5 +242,3 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
         del self.dist_mat_size
 
         return torch.Tensor(selected_ids).int(), selected_weights
-
-
