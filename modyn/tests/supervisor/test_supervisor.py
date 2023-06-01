@@ -1,5 +1,4 @@
 # pylint: disable=unused-argument,redefined-outer-name
-import pathlib
 import typing
 from unittest.mock import MagicMock, call, patch
 
@@ -489,22 +488,22 @@ def test__handle_triggers_within_batch_empty_triggers(
     test_inform_selector.assert_called_once_with(42, [(14, 5), (15, 6), (16, 7)])
 
 
-@patch.object(GRPCHandler, "fetch_trained_model", return_value=pathlib.Path("/"))
+@patch.object(GRPCHandler, "store_trained_model", return_value=101)
 @patch.object(GRPCHandler, "start_training", return_value=1337)
 @patch.object(GRPCHandler, "wait_for_training_completion")
 def test__run_training(
-    test_wait_for_training_completion: MagicMock, test_start_training: MagicMock, test_fetch_trained_model: MagicMock
+    test_wait_for_training_completion: MagicMock, test_start_training: MagicMock, test_store_trained_model: MagicMock
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.pipeline_id = 42
 
     sup._run_training(21)
-
+    assert sup.previous_model_id == 101
     assert sup.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
     test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None)
-    test_fetch_trained_model.assert_called_once()
+    test_store_trained_model.assert_called_once()
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)

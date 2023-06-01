@@ -212,7 +212,7 @@ def get_training_info(
                 transform_list=[],
                 use_pretrained_model=use_pretrained,
                 load_optimizer_state=load_optimizer_state,
-                pretrained_model_path=str(pretrained_model_path),
+                pretrained_model_id=1 if use_pretrained else -1,
                 lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),

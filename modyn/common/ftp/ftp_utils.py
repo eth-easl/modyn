@@ -22,7 +22,7 @@ def download_file(
         password: the password of the user.
         remote_file_path: path to the remote file.
         local_file_path: local path to the file.
-        callback(int, int): function called every block of data with the total size and the block size.
+        callback(float): function called every block of data with the current progress in [0, 1].
 
     Returns:
 
@@ -36,13 +36,16 @@ def download_file(
 
     assert size, f"Could not read size of file with path {remote_file_path} from FTP server."
 
+    total_downloaded = 0
+
     with open(local_file_path, "wb") as local_file:
 
         def write_callback(data: Any) -> None:
             local_file.write(data)
             if callback:
-                nonlocal size
-                callback(float(len(data)) / size)  # type: ignore
+                nonlocal size, total_downloaded
+                total_downloaded += len(data)
+                callback(float(total_downloaded) / size)  # type: ignore
 
         ftp.retrbinary(f"RETR {remote_file_path}", write_callback)
 

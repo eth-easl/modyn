@@ -8,7 +8,7 @@ service TrainerServer {
   rpc start_training(StartTrainingRequest) returns (StartTrainingResponse) {}
   rpc get_training_status(TrainingStatusRequest)
       returns (TrainingStatusResponse) {}
-  rpc get_final_model(GetFinalModelRequest) returns (GetFinalModelResponse) {}
+  rpc store_final_model(StoreFinalModelRequest) returns (StoreFinalModelResponse) {}
   rpc get_latest_model(GetLatestModelRequest) returns (GetLatestModelResponse) {
   }
 }
@@ -40,7 +40,7 @@ message StartTrainingRequest {
   JsonString model_configuration = 6;
   bool use_pretrained_model = 7;
   bool load_optimizer_state = 8;
-  string pretrained_model_path = 9;
+  int32 pretrained_model_id = 9;
   int32 batch_size = 10;
   JsonString torch_optimizers_configuration = 11;
   string torch_criterion = 12;
@@ -72,11 +72,11 @@ message TrainingStatusResponse {
   optional int32 samples_seen = 7;
 }
 
-message GetFinalModelRequest { int32 training_id = 1; }
+message StoreFinalModelRequest { int32 training_id = 1; }
 
-message GetFinalModelResponse {
+message StoreFinalModelResponse {
   bool valid_state = 1;
-  string model_path = 2;
+  int32 model_id = 2;
 }
 
 message GetLatestModelRequest { int32 training_id = 1; }
