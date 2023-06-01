@@ -259,21 +259,14 @@ class TrainerServerGRPCServicer:
                 logger.error(f"Could not store final model from training id {training_id}.")
                 return StoreFinalModelResponse(valid_state=False)
 
-            self._cleanup_stored_models(training_id, final_model_path)
+            os.remove(final_model_path)
+
+            logger.info(f"Deleted final model at {final_model_path}")
 
             return StoreFinalModelResponse(valid_state=True, model_id=register_response.model_id)
 
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
         return StoreFinalModelResponse(valid_state=False)
-
-    def _cleanup_stored_models(self, training_id: int, final_model_path: pathlib.Path) -> None:
-        pretrained_model_path = self._training_dict[training_id].pretrained_model_path
-        if pretrained_model_path and pretrained_model_path.is_file():
-            os.remove(pretrained_model_path)
-            logger.info(f"Successfully deleted pretrained model at {pretrained_model_path}")
-        if final_model_path.is_file():
-            os.remove(final_model_path)
-            logger.info(f"Successfully deleted final model at {final_model_path}")
 
     def get_latest_model(
         self,

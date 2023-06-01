@@ -571,35 +571,3 @@ def test_get_latest_model_finished_found(test_get_latest_checkpoint, test_is_ali
         response = trainer_server.get_latest_model(get_latest_model_request, None)
         assert response.valid_state
         assert response.model_path == "testtesttest"
-
-
-@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_cleanup_stored_models(test_connect_to_model_storage):
-    with tempfile.TemporaryDirectory() as tempdir:
-        dir_path = pathlib.Path(tempdir)
-
-        pretrained_model_path = dir_path / "pretrained_1.modyn"
-        with open(pretrained_model_path, "wb") as file:
-            file.write(b"Previous Model")
-
-        trainer_server = TrainerServerGRPCServicer(modyn_config, dir_path)
-        trainer_server._training_dict[1] = get_training_info(
-            1, tempdir, tempdir, trainer_server._storage_address, trainer_server._selector_address
-        )
-        trainer_server._training_dict[1].pretrained_model_path = pretrained_model_path
-
-        final_model_path = dir_path / "model_final.modyn"
-        with open(final_model_path, "wb") as file:
-            file.write(b"Final Model")
-
-        assert os.path.isfile(final_model_path)
-        assert os.path.isfile(trainer_server._training_dict[1].pretrained_model_path)
-
-        trainer_server._cleanup_stored_models(1, final_model_path)
-
-        assert not os.path.isfile(final_model_path)
-        assert not os.path.isfile(pretrained_model_path)
-
-        trainer_server._cleanup_stored_models(1, final_model_path)
-        assert not os.path.isfile(final_model_path)
-        assert not os.path.isfile(pretrained_model_path)
