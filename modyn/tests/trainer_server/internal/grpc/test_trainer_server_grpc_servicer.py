@@ -1,23 +1,32 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import json
 import multiprocessing as mp
+import os
 import pathlib
 import platform
 import tempfile
 from io import BytesIO
 from time import sleep
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import torch
+from modyn.common.ftp import FTPServer
+from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
+    FetchModelRequest,
+    FetchModelResponse,
+    RegisterModelRequest,
+    RegisterModelResponse,
+)
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
-    GetFinalModelRequest,
     GetLatestModelRequest,
     JsonString,
     PythonString,
     StartTrainingRequest,
+    StoreFinalModelRequest,
+    StoreFinalModelResponse,
     TrainerAvailableRequest,
     TrainingStatusRequest,
 )
@@ -28,14 +37,34 @@ from modyn.trainer_server.internal.utils.training_process_info import TrainingPr
 
 trainer_available_request = TrainerAvailableRequest()
 get_status_request = TrainingStatusRequest(training_id=1)
-get_final_model_request = GetFinalModelRequest(training_id=1)
+store_final_model_request = StoreFinalModelRequest(training_id=1)
 get_latest_model_request = GetLatestModelRequest(training_id=1)
 
 modyn_config = {
-    "trainer_server": {"hostname": "trainer_server", "port": "5001"},
+    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
+    "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
+
+modyn_download_file_config = {
+    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
+    "storage": {"hostname": "storage", "port": "5002"},
+    "selector": {"hostname": "selector", "port": "5003"},
+    "model_storage": {"hostname": "localhost", "port": "5004", "ftp_port": "3002"},
+}
+
+
+class DummyModelStorageStub:
+    # pylint: disable-next=invalid-name
+    def FetchModel(self, request: FetchModelRequest) -> FetchModelResponse:
+        if request.model_id <= 10:
+            return FetchModelResponse(success=True, model_path="testpath.modyn")
+        return FetchModelResponse(success=False)
+
+    # pylint: disable-next=invalid-name
+    def RegisterModel(self, request: RegisterModelRequest) -> RegisterModelResponse:
+        return RegisterModelResponse(success=True, model_id=1)
 
 
 class DummyModelWrapper:
@@ -79,7 +108,7 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
         bytes_parser=PythonString(value="def bytes_parser_function(x):\n\treturn x"),
         transform_list=[],
         use_pretrained_model=False,
-        pretrained_model_path="",
+        pretrained_model_id=-1,
         lr_scheduler=JsonString(value=json.dumps({})),
         grad_scaler_configuration=JsonString(value=json.dumps({})),
     )
@@ -98,22 +127,26 @@ def get_training_info(
     return training_info
 
 
-def test_init():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_init(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         assert trainer_server._storage_address == "storage:5002"
         assert trainer_server._selector_address == "selector:5003"
+        test_connect_to_model_storage.assert_called_with("model_storage:5004")
 
 
-def test_trainer_available():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_trainer_available(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         response = trainer_server.trainer_available(trainer_available_request, None)
         assert response.available
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-def test_trainer_not_available(test_is_alive):
+def test_trainer_not_available(test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         trainer_server._training_process_dict[10] = TrainingProcessInfo(
@@ -123,8 +156,9 @@ def test_trainer_not_available(test_is_alive):
         assert not response.available
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=False)
-def test_start_training_invalid(test_hasattr):
+def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         response = trainer_server.start_training(get_start_training_request(valid_model=False), None)
@@ -132,15 +166,24 @@ def test_start_training_invalid(test_hasattr):
         assert not trainer_server._training_dict
         assert trainer_server._next_training_id == 0
 
+        req = get_start_training_request(valid_model=True)
+        req.use_pretrained_model = True
+        req.pretrained_model_id = 15
+        resp = trainer_server.start_training(req, None)
+        assert not resp.training_started
 
+
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
 @patch(
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,
 )
-def test_start_training(test_getattr, test_hasattr):
+def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
-        trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
+        trainer_server = TrainerServerGRPCServicer(modyn_download_file_config, modyn_temp)
+        with open(pathlib.Path(modyn_temp) / "testpath.modyn", "wb") as file:
+            file.write(b"Our pretrained model!")
         mock_start = mock.Mock()
         mock_start.side_effect = noop
         trainer_server._training_dict[1] = None
@@ -154,14 +197,26 @@ def test_start_training(test_getattr, test_hasattr):
             assert 1 in trainer_server._training_process_dict
             assert trainer_server._next_training_id == 2
 
+            with FTPServer(str(3002), pathlib.Path(modyn_temp)):
+                request = get_start_training_request(valid_model=True)
+                request.use_pretrained_model = True
+                request.pretrained_model_id = 10
 
-def test_get_training_status_not_registered():
+                resp = trainer_server.start_training(request, None)
+                assert resp.training_id == 2
+                with open(trainer_server._training_dict[resp.training_id].pretrained_model_path, "rb") as file:
+                    assert file.read().decode("utf-8") == "Our pretrained model!"
+
+
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_get_training_status_not_registered(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         response = trainer_server.get_training_status(get_status_request, None)
         assert not response.valid
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
 @patch.object(TrainerServerGRPCServicer, "get_status", return_value=(10, 100))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
@@ -171,6 +226,7 @@ def test_get_training_status_alive(
     test_check_for_training_exception,
     test_get_status,
     test_is_alive,
+    test_connect_to_model_storage,
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
@@ -188,6 +244,7 @@ def test_get_training_status_alive(
         test_check_for_training_exception.assert_not_called()
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
 @patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
@@ -197,6 +254,7 @@ def test_get_training_status_alive_blocked(
     test_check_for_training_exception,
     test_get_status,
     test_is_alive,
+    test_connect_to_model_storage,
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
@@ -212,6 +270,7 @@ def test_get_training_status_alive_blocked(
         test_check_for_training_exception.assert_not_called()
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
@@ -221,6 +280,7 @@ def test_get_training_status_finished_with_exception(
     test_check_for_training_exception,
     test_get_latest_checkpoint,
     test_is_alive,
+    test_connect_to_model_storage,
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
@@ -238,6 +298,7 @@ def test_get_training_status_finished_with_exception(
         test_get_status.assert_not_called()
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
@@ -247,6 +308,7 @@ def test_get_training_status_finished_no_checkpoint(
     test_check_for_training_exception,
     test_get_latest_checkpoint,
     test_is_alive,
+    test_connect_to_model_storage,
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
@@ -261,7 +323,8 @@ def test_get_training_status_finished_no_checkpoint(
         test_get_status.assert_not_called()
 
 
-def test_get_training_status():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_get_training_status(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         state_dict = {"state": {}, "num_batches": 10, "num_samples": 100}
@@ -295,7 +358,8 @@ def test_get_training_status():
         assert query == TrainerMessages.STATUS_QUERY_MESSAGE
 
 
-def test_check_for_training_exception_not_found():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_check_for_training_exception_not_found(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         trainer_server._training_process_dict[1] = get_training_process_info()
@@ -303,7 +367,8 @@ def test_check_for_training_exception_not_found():
         assert child_exception is None
 
 
-def test_check_for_training_exception_found():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_check_for_training_exception_found(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         training_process_info = get_training_process_info()
@@ -316,7 +381,8 @@ def test_check_for_training_exception_found():
         assert child_exception == exception_msg
 
 
-def test_get_latest_checkpoint_not_found():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_get_latest_checkpoint_not_found(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         with tempfile.TemporaryDirectory() as temp:
@@ -331,7 +397,8 @@ def test_get_latest_checkpoint_not_found():
         assert num_samples is None
 
 
-def test_get_latest_checkpoint_found():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_get_latest_checkpoint_found(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as temp:
         with tempfile.TemporaryDirectory() as final_temp:
             with tempfile.TemporaryDirectory() as modyn_temp:
@@ -357,7 +424,8 @@ def test_get_latest_checkpoint_found():
                     assert torch.load(BytesIO(file.read()))["state"] == dict_to_save["state"]
 
 
-def test_get_latest_checkpoint_invalid():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_get_latest_checkpoint_invalid(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as temp:
         with tempfile.TemporaryDirectory() as modyn_temp:
             trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
@@ -377,24 +445,27 @@ def test_get_latest_checkpoint_invalid():
             assert num_samples is None
 
 
-def test_get_final_model_not_registered():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_store_final_model_not_registered(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
-        response = trainer_server.get_final_model(get_final_model_request, None)
+        response = trainer_server.store_final_model(store_final_model_request, None)
         assert not response.valid_state
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-def test_get_final_model_still_running(test_is_alive):
+def test_store_final_model_still_running(test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         trainer_server._training_process_dict[1] = get_training_process_info()
-        response = trainer_server.get_final_model(get_final_model_request, None)
+        response = trainer_server.store_final_model(store_final_model_request, None)
         assert not response.valid_state
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
-def test_get_final_model_not_found(test_is_alive):
+def test_store_final_model_not_found(test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as temp:
         with tempfile.TemporaryDirectory() as final_temp:
             with tempfile.TemporaryDirectory() as modyn_temp:
@@ -403,12 +474,16 @@ def test_get_final_model_not_found(test_is_alive):
                     1, temp, final_temp, trainer_server._storage_address, trainer_server._selector_address
                 )
                 trainer_server._training_process_dict[1] = get_training_process_info()
-                response = trainer_server.get_final_model(get_final_model_request, None)
+                response = trainer_server.store_final_model(store_final_model_request, None)
                 assert not response.valid_state
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage")
 @patch.object(mp.Process, "is_alive", return_value=False)
-def test_get_final_model_found(test_is_alive):
+def test_store_final_model_found(test_is_alive, test_connect_to_model_storage):
+    model_storage_mock = MagicMock()
+    test_connect_to_model_storage.return_value = model_storage_mock
+    model_storage_mock.RegisterModel.return_value = RegisterModelResponse(success=True, model_id=1)
     with tempfile.TemporaryDirectory() as temp:
         with tempfile.TemporaryDirectory() as final_temp:
             base_path = pathlib.Path(final_temp)
@@ -423,22 +498,33 @@ def test_get_final_model_found(test_is_alive):
 
             trainer_server._training_dict[1] = training_info
             trainer_server._training_process_dict[1] = get_training_process_info()
-            response = trainer_server.get_final_model(get_final_model_request, None)
+            response: StoreFinalModelResponse = trainer_server.store_final_model(store_final_model_request, None)
             assert response.valid_state
-            with open(base_path / response.model_path, "rb") as file:
-                assert torch.load(BytesIO(file.read())) == {"state": {"weight": 10}}
+            assert response.model_id == 1
+
+            assert not os.path.isfile(checkpoint_file)
+
+            model_storage_mock.RegisterModel.assert_called_once()
+            req: RegisterModelRequest = model_storage_mock.RegisterModel.call_args[0][0]
+            assert req.pipeline_id == 1
+            assert req.trigger_id == 1
+            assert req.hostname == "trainer_server"
+            assert req.port == 3001
+            assert req.model_path == "model_final.modyn"
 
 
-def test_get_latest_model_not_registered():
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_get_latest_model_not_registered(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         response = trainer_server.get_latest_model(get_latest_model_request, None)
         assert not response.valid_state
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
 @patch.object(TrainerServerGRPCServicer, "get_model_state", return_value=None)
-def test_get_latest_model_alive_not_found(test_get_model_state, test_is_alive):
+def test_get_latest_model_alive_not_found(test_get_model_state, test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         trainer_server._training_dict[1] = None
@@ -447,9 +533,10 @@ def test_get_latest_model_alive_not_found(test_get_model_state, test_is_alive):
         assert not response.valid_state
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
 @patch.object(TrainerServerGRPCServicer, "get_model_state", return_value=b"state")
-def test_get_latest_model_alive_found(test_get_model_state, test_is_alive):
+def test_get_latest_model_alive_found(test_get_model_state, test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         trainer_server._training_process_dict[1] = get_training_process_info()
@@ -460,9 +547,10 @@ def test_get_latest_model_alive_found(test_get_model_state, test_is_alive):
             assert file.read() == b"state"
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None))
-def test_get_latest_model_finished_not_found(test_get_latest_checkpoint, test_is_alive):
+def test_get_latest_model_finished_not_found(test_get_latest_checkpoint, test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as tempdir:
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
         trainer_server._training_dict[1] = None
@@ -471,9 +559,10 @@ def test_get_latest_model_finished_not_found(test_get_latest_checkpoint, test_is
         assert not response.valid_state
 
 
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
-def test_get_latest_model_finished_found(test_get_latest_checkpoint, test_is_alive):
+def test_get_latest_model_finished_found(test_get_latest_checkpoint, test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as tempdir:
         test_get_latest_checkpoint.return_value = (pathlib.Path(tempdir) / "testtesttest", 10, 100)
         trainer_server = TrainerServerGRPCServicer(modyn_config, tempdir)
