@@ -392,8 +392,7 @@ class PytorchTrainer:
         self._train_dataloader.dataset.switch_to_selector_key_source()
 
         number_of_batches = 0
-        # context manager to automatically handle beginning (reset, cleaning..)
-        # and end (computing the scores and sampling).
+
         self._downsampler.setup_sample_then_batch()
         for batch in self._train_dataloader:
             number_of_batches += 1
