@@ -4,6 +4,9 @@ from inspect import isfunction
 from typing import Any, Callable, Generator, Optional
 
 import grpc
+from modyn.models.tokenizer.distill_bert_tokenizer import (  # noqa: F401, pylint: disable=unused-import
+    DistilBertTokenizerTransform,
+)
 
 # pylint: disable-next=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import (

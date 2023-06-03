@@ -1,0 +1,50 @@
+pipeline:
+  name: Yearbook Test Pipeline
+  description: Example pipeline
+  version: 1.0.0
+model:
+  id: YearbookNet
+  config:
+    num_input_channels: 1
+    num_classes: 2
+training:
+  gpus: 1
+  device: "cuda:0"
+  dataloader_workers: 2
+  use_previous_model: False
+  initial_model: random
+  initial_pass:
+    activated: False
+  batch_size: 64
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.001
+            momentum: 0.9
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: False
+  selection_strategy:
+    name: NewDataStrategy
+    maximum_keys_in_memory: 10000
+    config:
+      limit: -1
+      reset_after_trigger: False
+data:
+  dataset_id: yearbook
+  transformations: []
+  bytes_parser_function: |
+    import torch
+    import numpy as np
+    def bytes_parser_function(data: bytes) -> torch.Tensor:
+      return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1, 32, 32)
+
+trigger:
+  id: TimeTrigger
+  trigger_config:
+    trigger_every: "1d"
