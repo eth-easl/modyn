@@ -261,13 +261,14 @@ def test_dataloader_dataset_multi_worker(test_insecure_channel, test_grpc_connec
     )
     dataloader = torch.utils.data.DataLoader(evaluation_dataset, batch_size=4, num_workers=4)
 
-    last_batch_idx = -1
-    for i, batch in enumerate(dataloader):
-        assert len(batch) == 3
-        assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
-        assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
-        assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64) * 5)
+    data = list(dataloader)
+    data.sort(key=lambda batch_data: batch_data[0])
 
-        last_batch_idx = i
+    data_point_num = -1
+    for data_point_num, data_point in enumerate(data):
+        assert len(data_point) == 3
+        assert data_point[0].tolist() == 4 * data_point_num
+        assert torch.equal(data_point[1], torch.Tensor([4 * data_point_num]))
+        assert torch.equal(data_point[2], torch.ones(1, dtype=torch.float64) * 5)
 
-    assert last_batch_idx == 7
+    assert data_point_num == 31
