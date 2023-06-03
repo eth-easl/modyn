@@ -84,7 +84,6 @@ def test_init(test_insecure_channel, test_grpc_connection_established):
     assert online_dataset._pipeline_id == 1
     assert online_dataset._trigger_id == 1
     assert online_dataset._dataset_id == "MNIST"
-    assert online_dataset._dataset_len == 0
     assert online_dataset._first_call
     assert online_dataset._bytes_parser_function is None
     assert online_dataset._selectorstub is None

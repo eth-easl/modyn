@@ -72,7 +72,7 @@ services:
     restart: on-failure
     depends_on:
       - model_storage
-      - storage-db
+      - storage
     build:
       context: .
       dockerfile: docker/Evaluator/Dockerfile
@@ -118,6 +118,7 @@ services:
     - selector
     - metadata_processor
     - trainer_server
+    - evaluator
     build:
       context: .
       dockerfile: docker/Supervisor/Dockerfile

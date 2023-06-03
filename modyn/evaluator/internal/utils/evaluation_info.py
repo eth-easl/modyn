@@ -4,6 +4,7 @@ import pathlib
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelRequest
+from modyn.evaluator.internal.metrics import AbstractEvaluationMetric
 from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
@@ -17,17 +18,18 @@ class EvaluationInfo:
         request: EvaluateModelRequest,
         evaluation_id: int,
         storage_address: str,
+        metrics: list[AbstractEvaluationMetric],
         model_path: pathlib.Path,
     ) -> None:
         self.trained_model_id = request.trained_model_id
-        self.dataset_id = request.data_info.dataset_id
-        self.num_dataloaders = request.data_info.num_dataloaders
+        self.dataset_id = request.dataset_info.dataset_id
+        self.num_dataloaders = request.dataset_info.num_dataloaders
 
         self.device = request.device
         self.amp = request.amp
         self.batch_size = request.batch_size
-        self.evaluation_layer = request.evaluation_layer
-        self.metrics = list(request.metrics)
+        self.evaluation_transformer = request.evaluation_transformer.value
+        self.metrics = metrics
 
         self.model_id = request.model_id
         model_module = dynamic_module_import("modyn.models")

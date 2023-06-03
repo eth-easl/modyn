@@ -348,10 +348,6 @@ properties:
             - dataloader_workers
             - batch_size
             - metrics
-      gpus:
-        type: number
-        description: |
-          The number of GPUs that should be used for evaluation.
       device:
         type: string
         description: |
@@ -360,11 +356,10 @@ properties:
         type: boolean
         description: |
           If True, automatic mixed precision will be used.
-      evaluation_layer:
+      evaluation_transformer:
         type: string
         description: |
-          Optional layer that is appended to the output of the model.
-          An example is sigmoid in order to get values in the range [0, 1].
+          Optional transformation to be applied to the output of the model before evaluation.
     required:
       - datasets
       - device

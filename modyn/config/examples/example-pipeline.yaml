@@ -69,4 +69,7 @@ evaluation:
       metrics: ["AccuracyMetric"]
   device: "cpu"
   amp: False
-  evaluation_layer: "torch.nn.Softmax()"
+  evaluation_transformer: |
+    import torch
+    def evaluation_transformer(model_output: torch.Tensor) -> torch.Tensor:
+      return torch.argmax(model_output, dim=-1)

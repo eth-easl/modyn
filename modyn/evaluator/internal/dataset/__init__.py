@@ -6,9 +6,7 @@ The evaluator module contains all classes and functions related the evaluation o
 
 import os
 
-from .evaluation_info import EvaluationInfo  # noqa: F401
-from .evaluation_process_info import EvaluationProcessInfo  # noqa: F401
-from .evaluator_messages import EvaluatorMessages  # noqa: F401
+from .evaluation_dataset import EvaluationDataset  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

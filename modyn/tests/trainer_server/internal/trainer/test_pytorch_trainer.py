@@ -654,10 +654,6 @@ def test_train(
     assert test_send_metadata.call_count == len(trainer._callbacks)
     test_cleanup.assert_called_once()
 
-    if not platform.system() == "Darwin":
-        assert status_queue.qsize() == 1
-    else:
-        assert not status_queue.empty()
     elapsed = 0
     while True:
         if not platform.system() == "Darwin":
@@ -673,6 +669,7 @@ def test_train(
         if elapsed >= timeout:
             raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
+        # TODO(@robin-oester & @MaxiBoether): this is does not seem to be right...
         status = status_queue.get()
         assert status["num_batches"] == 0
         assert status["num_samples"] == 0

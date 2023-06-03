@@ -4,6 +4,7 @@ import os
 import pathlib
 from unittest.mock import patch
 
+import pytest
 from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.file_wrapper.single_sample_file_wrapper import SingleSampleFileWrapper
@@ -12,6 +13,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     DeleteDataRequest,
     GetDataInIntervalRequest,
+    GetDataPerWorkerRequest,
+    GetDataPerWorkerResponse,
     GetNewDataSinceRequest,
     GetRequest,
     RegisterNewDatasetRequest,
@@ -320,6 +323,47 @@ def test_get_data_in_interval_invalid_dataset():
     assert response.keys == []
     assert response.timestamps == []
     assert response.labels == []
+
+
+def test_get_data_subset():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+    expected = [(0, 3), (3, 3), (6, 3), (9, 2), (11, 2)]
+
+    for worker in range(5):
+        assert expected[worker] == server.get_data_subset(worker, 5, 13)
+
+    assert server.get_data_subset(0, 2, 1) == (0, 1)
+    assert server.get_data_subset(1, 2, 1) == (1, 0)
+
+    for worker in range(10):
+        assert server.get_data_subset(worker, 10, 100) == (worker * 10, 10)
+
+
+def test_get_data_per_worker():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+
+    request = GetDataPerWorkerRequest(dataset_id="test", worker_id=0, total_workers=2)
+    response: [GetDataPerWorkerResponse] = list(server.GetDataPerWorker(request, None))
+    assert len(response) == 1
+    assert response[0].keys == [1, 2]
+
+    request = GetDataPerWorkerRequest(dataset_id="test", worker_id=1, total_workers=2)
+    response = list(server.GetDataPerWorker(request, None))
+    assert len(response) == 1
+    assert response[0].keys == [3]
+
+    request = GetDataPerWorkerRequest(dataset_id="test", worker_id=3, total_workers=4)
+    response: [GetDataPerWorkerResponse] = list(server.GetDataPerWorker(request, None))
+    assert len(response) == 0
+
+    request = GetDataPerWorkerRequest(dataset_id="test", worker_id=0, total_workers=1)
+    response: [GetDataPerWorkerResponse] = list(server.GetDataPerWorker(request, None))
+    assert len(response) == 1
+    assert response[0].keys == [1, 2, 3]
+
+    request = GetDataPerWorkerRequest(dataset_id="test", worker_id=2, total_workers=2)
+    with pytest.raises(ValueError):
+        list(server.GetDataPerWorker(request, None))
 
 
 def test_check_availability():

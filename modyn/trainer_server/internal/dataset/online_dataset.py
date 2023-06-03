@@ -42,7 +42,6 @@ class OnlineDataset(IterableDataset):
         self._trigger_id = trigger_id
         self._training_id = training_id
         self._dataset_id = dataset_id
-        self._dataset_len = 0
         self._first_call = True
         self._mod_dict: dict[str, Any] = {}
 

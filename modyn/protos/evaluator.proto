@@ -23,13 +23,13 @@ message EvaluateModelRequest {
   string device = 3;
   bool amp = 4;
   int32 batch_size = 5;
-  PythonString evaluation_layer = 7;
-  repeated string metrics = 8;
-  string model_id = 9;
-  JsonString model_configuration = 10;
-  repeated string transform_list = 11;
-  PythonString bytes_parser = 12;
-  PythonString label_transformer = 13;
+  PythonString evaluation_transformer = 6;
+  repeated string metrics = 7;
+  string model_id = 8;
+  JsonString model_configuration = 9;
+  repeated string transform_list = 10;
+  PythonString bytes_parser = 11;
+  PythonString label_transformer = 12;
 }
 
 message EvaluateModelResponse {
@@ -39,7 +39,6 @@ message EvaluateModelResponse {
 
 message EvaluationStatusRequest { int32 evaluation_id = 1; }
 
-//TODO(#15) check what we need here
 message EvaluationStatusResponse {
   bool valid = 1;
   bool is_running = 2;

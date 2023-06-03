@@ -166,6 +166,12 @@ def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
         assert not trainer_server._training_dict
         assert trainer_server._next_training_id == 0
 
+
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
+def test_start_training_invalid_id(test_hasattr, test_connect_to_model_storage):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         req = get_start_training_request(valid_model=True)
         req.use_pretrained_model = True
         req.pretrained_model_id = 15

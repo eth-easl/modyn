@@ -1,43 +1,46 @@
 import os
 import pathlib
+import tempfile
+from unittest.mock import patch
 
-import pytest
 from modyn.evaluator import Evaluator
-from modyn.utils import validate_yaml
+from modyn.evaluator.internal.grpc.evaluator_grpc_server import EvaluatorGRPCServer
 
 modyn_config = (
     pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "examples" / "modyn_config.yaml"
 )
-example_pipeline_config = (
-    pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "examples" / "example-pipeline.yaml"
-)
-benchmark_pipeline_config = (
-    pathlib.Path(os.path.abspath(__file__)).parent.parent.parent.parent / "benchmark" / "mnist" / "mnist.yaml"
-)
 
 
-def get_invalid_modyn_config() -> dict:
-    return {"invalid": "not_valid"}
+class MockGRPCInstance:
+    def wait_for_termination(self, *args, **kwargs):  # pylint: disable=unused-argument
+        return
 
 
-def test_evaluator_init():
+class MockGRPCServer(EvaluatorGRPCServer):
+    def __enter__(self):
+        return MockGRPCInstance()
+
+    def __exit__(self, *args, **kwargs):  # pylint: disable=unused-argument
+        pass
+
+
+def test_init():
     evaluator = Evaluator(modyn_config)
     assert evaluator.config == modyn_config
 
 
-def test_validate_config():
-    model_storage = Evaluator(modyn_config)
-    assert model_storage._validate_config()[0]
+@patch("modyn.evaluator.evaluator.EvaluatorGRPCServer", MockGRPCServer)
+def test_run():
+    trainer_server = Evaluator(modyn_config)
+    trainer_server.run()
 
 
-def test_validate_pipeline_config():
-    schema_path = (
-        pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "schema" / "pipeline-schema.yaml"
-    )
-    assert validate_yaml(example_pipeline_config, schema_path)[0]
-    assert validate_yaml(benchmark_pipeline_config, schema_path)[0]
+@patch("modyn.evaluator.evaluator.EvaluatorGRPCServer", MockGRPCServer)
+def test_cleanup_at_exit():
+    modyn_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
+    assert not modyn_dir.exists()
 
-
-def test_invalid_config():
-    with pytest.raises(ValueError):
-        Evaluator(get_invalid_modyn_config())
+    evaluator = Evaluator(modyn_config)
+    assert modyn_dir.exists()
+    evaluator.run()
+    assert not modyn_dir.exists()

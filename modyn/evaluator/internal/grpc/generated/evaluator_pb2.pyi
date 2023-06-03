@@ -73,7 +73,7 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     DEVICE_FIELD_NUMBER: builtins.int
     AMP_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
-    EVALUATION_LAYER_FIELD_NUMBER: builtins.int
+    EVALUATION_TRANSFORMER_FIELD_NUMBER: builtins.int
     METRICS_FIELD_NUMBER: builtins.int
     MODEL_ID_FIELD_NUMBER: builtins.int
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
@@ -87,7 +87,7 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     amp: builtins.bool
     batch_size: builtins.int
     @property
-    def evaluation_layer(self) -> global___PythonString: ...
+    def evaluation_transformer(self) -> global___PythonString: ...
     @property
     def metrics(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     model_id: builtins.str
@@ -107,7 +107,7 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         device: builtins.str = ...,
         amp: builtins.bool = ...,
         batch_size: builtins.int = ...,
-        evaluation_layer: global___PythonString | None = ...,
+        evaluation_transformer: global___PythonString | None = ...,
         metrics: collections.abc.Iterable[builtins.str] | None = ...,
         model_id: builtins.str = ...,
         model_configuration: global___JsonString | None = ...,
@@ -115,8 +115,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "evaluation_layer", b"evaluation_layer", "label_transformer", b"label_transformer", "model_configuration", b"model_configuration"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["amp", b"amp", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "device", b"device", "evaluation_layer", b"evaluation_layer", "label_transformer", b"label_transformer", "metrics", b"metrics", "model_configuration", b"model_configuration", "model_id", b"model_id", "trained_model_id", b"trained_model_id", "transform_list", b"transform_list"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "evaluation_transformer", b"evaluation_transformer", "label_transformer", b"label_transformer", "model_configuration", b"model_configuration"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["amp", b"amp", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "device", b"device", "evaluation_transformer", b"evaluation_transformer", "label_transformer", b"label_transformer", "metrics", b"metrics", "model_configuration", b"model_configuration", "model_id", b"model_id", "trained_model_id", b"trained_model_id", "transform_list", b"transform_list"]) -> None: ...
 
 global___EvaluateModelRequest = EvaluateModelRequest
 
@@ -155,8 +155,6 @@ global___EvaluationStatusRequest = EvaluationStatusRequest
 
 @typing_extensions.final
 class EvaluationStatusResponse(google.protobuf.message.Message):
-    """TODO(#15) check what we need here"""
-
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     VALID_FIELD_NUMBER: builtins.int
