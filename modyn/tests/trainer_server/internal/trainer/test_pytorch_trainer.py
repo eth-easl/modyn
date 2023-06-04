@@ -669,7 +669,7 @@ def test_train(
         if elapsed >= timeout:
             raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
-        # TODO(@robin-oester & @MaxiBoether): this is does not seem to be right...
+        # TODO(@robin-oester & @MaxiBoether): this does not seem to be right...
         status = status_queue.get()
         assert status["num_batches"] == 0
         assert status["num_samples"] == 0

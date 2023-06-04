@@ -41,7 +41,10 @@ storage:
             record_size: 160,
             label_size: 4,
             file_extension: ".bin"
-          }
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2000000,
       }
     ]
   database:
