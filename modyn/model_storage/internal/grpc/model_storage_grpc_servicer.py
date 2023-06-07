@@ -19,11 +19,9 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     RegisterModelResponse,
 )
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageServicer
-from modyn.utils import current_time_millis
+from modyn.utils import EMIT_MESSAGE_PERCENTAGES, current_time_millis
 
 logger = logging.getLogger(__name__)
-
-EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
 
 
 class ModelStorageGRPCServicer(ModelStorageServicer):
