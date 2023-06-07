@@ -92,6 +92,7 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
   }
   return grpc::Status::OK;
 }
+
 grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetNewDataSinceRequest* request,                  // NOLINT (misc-unused-parameters)
@@ -265,6 +266,7 @@ grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifi
   }
   return status;
 }
+
 grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DeleteDataRequest* request,  // NOLINT (misc-unused-parameters)

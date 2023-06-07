@@ -12,14 +12,16 @@ function run_build() {
 
     mkdir -p "${BUILD_DIR}"
 
-    cmake -B "${BUILD_DIR}" --target modynstorage-proto
+    cmake -B "${BUILD_DIR}"
 
     cmake -S . -B "${BUILD_DIR}" \
-        -DCMAKE_BUILD_TYPE=Debug \
-        -DCMAKE_UNITY_BUILD=ON \
-        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
+        -DCMAKE_BUILD_TYPE=Debug
+
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
     ln -fs "${PWD}"/test/.clang-tidy "${BUILD_DIR}"/test/
+
+    make -C "${BUILD_DIR}" modynstorage-proto
+
     set +x
 }
 
