@@ -119,7 +119,7 @@ properties:
               downsampling_period:
                 type: number
                 description: |
-                  [AbstractDownsampleStrategy] Points are downsampled every downsampling_period epochs (0, downsampling_period, 2*downsampling_period ...). Requires sample_then_batch = True and the default value is 1
+                  [AbstractDownsampleStrategy] In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
               downsampled_batch_size:
                 type: number
                 description: |

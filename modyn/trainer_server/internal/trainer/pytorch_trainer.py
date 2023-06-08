@@ -7,6 +7,7 @@ import os
 import pathlib
 import queue
 import traceback
+from enum import Enum
 from inspect import isfunction
 from typing import Any, Callable, Optional, Union
 
@@ -26,6 +27,8 @@ from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import dynamic_module_import, grpc_connection_established, package_available_and_can_be_imported
+
+DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "SAMPLE_THEN_BATCH"])
 
 
 class PytorchTrainer:
@@ -98,15 +101,21 @@ class PytorchTrainer:
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
-        self._downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy()
+        downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy()
         self._weighted_opt = False
 
-        if self._downsampling_enabled:
+        if downsampling_enabled:
             self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
-            self._downsampler, self._sample_before_batch, self._downsampling_period = self.instantiate_downsampler(
+            self._downsampler, sample_then_batch, self._downsampling_period = self.instantiate_downsampler(
                 strategy_name, params_from_selector, self._criterion_nored
             )
+            if sample_then_batch:
+                self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
+            else:
+                self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
             self._weighted_opt = True
+        else:
+            self._downsampling_mode = DownsamplingMode.DISABLED
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -249,6 +258,16 @@ class PytorchTrainer:
             params_from_selector.get("downsampling_period", 1),
         )
 
+    def sample_then_batch_this_epoch(self, epoch: int) -> bool:
+        if self._downsampling_mode != DownsamplingMode.SAMPLE_THEN_BATCH:
+            return False
+
+        # self._downsampling_period = 0 : downsample one time per trigger
+        if self._downsampling_period == 0:
+            return epoch == 0
+        # otherwise dowsample every self._downsampling_period epochs
+        return epoch % self._downsampling_period == 0
+
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
 
@@ -261,7 +280,7 @@ class PytorchTrainer:
 
         batch_number = 0
         for epoch in range(self.epochs_per_trigger):
-            if self._downsampling_enabled and self._sample_before_batch and epoch % self._downsampling_period == 0:
+            if self.sample_then_batch_this_epoch(epoch):
                 self.sample_data()
             for batch_number, batch in enumerate(self._train_dataloader):
                 for _, callback in self._callbacks.items():
@@ -283,7 +302,7 @@ class PytorchTrainer:
 
                 sample_ids, target, data = self.prepare_data(batch)
 
-                if self._downsampling_enabled and self._sample_before_batch:
+                if self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
                     weights = batch[3]
                     weights = weights.float()
 
@@ -297,7 +316,7 @@ class PytorchTrainer:
                 pre_downsampling_size = target.shape[0]
 
                 with torch.autocast(self._device_type, enabled=self._amp):
-                    if self._downsampling_enabled and not self._sample_before_batch:
+                    if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
                         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
                         assert self._downsampler is not None
                         big_batch_output = self._model.model(data)
@@ -387,7 +406,7 @@ class PytorchTrainer:
 
         """
         assert self._downsampler is not None
-        assert self._sample_before_batch
+        assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
 
         # keys must be taken from the selector.
         # This operation is needed only when we sample several times (otherwise the source is already the selector)
