@@ -64,20 +64,6 @@ class PytorchTrainer:
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
 
-        # setup dataloaders
-        self._info("Setting up data loaders.")
-        self._train_dataloader, self._val_dataloader = prepare_dataloaders(
-            training_info.pipeline_id,
-            training_info.trigger_id,
-            training_info.dataset_id,
-            training_info.num_dataloaders,
-            training_info.batch_size,
-            training_info.bytes_parser,
-            training_info.transform_list,
-            training_info.storage_address,
-            training_info.selector_address,
-            training_info.training_id,
-        )
         self._batch_size = training_info.batch_size
         self._num_dataloaders = training_info.num_dataloaders
 
@@ -121,6 +107,22 @@ class PytorchTrainer:
                 strategy_name, params_from_selector, self._criterion_nored
             )
             self._weighted_opt = True
+
+        # setup dataloaders
+        self._info("Setting up data loaders.")
+        self._train_dataloader, self._val_dataloader = prepare_dataloaders(
+            training_info.pipeline_id,
+            training_info.trigger_id,
+            training_info.dataset_id,
+            training_info.num_dataloaders,
+            training_info.batch_size,
+            training_info.bytes_parser,
+            training_info.transform_list,
+            training_info.storage_address,
+            training_info.selector_address,
+            training_info.training_id,
+            self._weighted_opt,
+        )
 
         # create callbacks - For now, assume LossCallback by default
         # TODO(#140): should be defined by the pipeline and passed with training request

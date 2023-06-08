@@ -18,6 +18,7 @@ def prepare_dataloaders(
     storage_address: str,
     selector_address: str,
     training_id: int,
+    return_weights: bool = False,
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -33,6 +34,7 @@ def prepare_dataloaders(
         transform (list[str]): List of serialized torchvision transforms for the samples, before loading.
         storage_address (str): Address of the Storage endpoint that the OnlineDataset workers connect to.
         selector_address (str): Address of the Selector endpoint that the OnlineDataset workers connect to.
+        return_weights (bool): if the dataloader must return the weights
     Returns:
         tuple[Optional[torch.utils.data.DataLoader]]: Dataloaders for train and validation
 
@@ -48,6 +50,7 @@ def prepare_dataloaders(
         selector_address,
         training_id,
         num_dataloaders,
+        return_weights,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)

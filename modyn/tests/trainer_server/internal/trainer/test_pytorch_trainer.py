@@ -125,6 +125,7 @@ def mock_get_dataloaders(
     storage_address,
     selector_address,
     training_id,
+    return_weights,
 ):
     mock_train_dataloader = iter(
         [(("1",) * 8, torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]

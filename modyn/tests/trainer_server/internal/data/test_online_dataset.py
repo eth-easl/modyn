@@ -98,21 +98,25 @@ def test_init(test_insecure_channel, test_grpc_connection_established):
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
-def test_get_keys_from_selector(test_insecure_channel, test_grpc_connection_established):
-    online_dataset = OnlineDataset(
-        pipeline_id=1,
-        trigger_id=1,
-        dataset_id="MNIST",
-        bytes_parser=get_mock_bytes_parser(),
-        serialized_transforms=[],
-        storage_address="localhost:1234",
-        selector_address="localhost:1234",
-        training_id=42,
-        number_of_workers=1,
-    )
+def test_get_keys_and_weights_from_selector(test_insecure_channel, test_grpc_connection_established):
+    for return_weights in [True, False]:
+        online_dataset = OnlineDataset(
+            pipeline_id=1,
+            trigger_id=1,
+            dataset_id="MNIST",
+            bytes_parser=get_mock_bytes_parser(),
+            serialized_transforms=[],
+            storage_address="localhost:1234",
+            selector_address="localhost:1234",
+            training_id=42,
+            number_of_workers=1,
+            return_weights=return_weights,
+        )
 
-    online_dataset._init_grpc()
-    assert online_dataset._get_keys_from_selector(0, 0) == [1, 2, 3]
+        online_dataset._init_grpc()
+        keys, weights = online_dataset._get_keys_and_weights_from_selector(0, 0)
+        assert keys == [1, 2, 3]
+        assert weights == [1.0, 1.0, 1.0] if return_weights else weights is None
 
 
 @patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
@@ -196,7 +200,7 @@ def test_deserialize_torchvision_transforms(
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(10)))
+@patch.object(OnlineDataset, "_get_keys_and_weights_from_selector", return_value=(list(range(10)), None))
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
 def test_dataset_iter(
     test_get_num_data_partitions, test_get_keys, test_get_data, test_insecure_channel, test_grpc_connection_established
@@ -211,6 +215,7 @@ def test_dataset_iter(
         selector_address="localhost:1234",
         training_id=42,
         number_of_workers=1,
+        return_weights=False,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -226,7 +231,7 @@ def test_dataset_iter(
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(10)))
+@patch.object(OnlineDataset, "_get_keys_and_weights_from_selector", return_value=(list(range(10)), None))
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
 def test_dataset_iter_with_parsing(
     test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
@@ -241,6 +246,7 @@ def test_dataset_iter_with_parsing(
         selector_address="localhost:1234",
         training_id=42,
         number_of_workers=1,
+        return_weights=False,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -256,7 +262,7 @@ def test_dataset_iter_with_parsing(
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(16)], [1] * 16)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(16)))
+@patch.object(OnlineDataset, "_get_keys_and_weights_from_selector", return_value=(list(range(16)), None))
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
 def test_dataloader_dataset(
     test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
@@ -271,10 +277,11 @@ def test_dataloader_dataset(
         selector_address="localhost:1234",
         training_id=42,
         number_of_workers=1,
+        return_weights=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
-        assert len(batch) == 4
+        assert len(batch) == 3
         assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
         assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
@@ -284,8 +291,41 @@ def test_dataloader_dataset(
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(16)], [1] * 16)
+)
+@patch.object(OnlineDataset, "_get_keys_and_weights_from_selector", return_value=(list(range(16)), [2.0] * 16))
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
+def test_dataloader_dataset_weighted(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+        number_of_workers=1,
+        return_weights=True,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
+    for i, batch in enumerate(dataloader):
+        assert len(batch) == 4
+        assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
+        assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
+        assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+        assert torch.equal(batch[3], 2 * torch.ones(4, dtype=torch.float64))
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
 @patch.object(OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(4)], [1] * 4))
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(4)))
+@patch.object(OnlineDataset, "_get_keys_and_weights_from_selector", return_value=(list(range(4)), None))
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
 def test_dataloader_dataset_multi_worker(
     test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
@@ -308,7 +348,7 @@ def test_dataloader_dataset_multi_worker(
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
     for batch in dataloader:
-        assert len(batch) == 4
+        assert len(batch) == 3
         assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
@@ -386,12 +426,12 @@ def test_init_transforms(test_insecure_channel, test_grpc_connection_established
 )
 @patch.object(
     OnlineDataset,
-    "_get_keys_from_selector",
+    "_get_keys_and_weights_from_selector",
     side_effect=[
-        [str(i) for i in range(16)],
-        [str(i) for i in range(16, 32)],
-        [str(i) for i in range(32, 48)],
-        [str(i) for i in range(48, 64)],
+        ([str(i) for i in range(16)], None),
+        ([str(i) for i in range(16, 32)], None),
+        ([str(i) for i in range(32, 48)], None),
+        ([str(i) for i in range(48, 64)], None),
     ],
 )
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=4)
@@ -408,12 +448,13 @@ def test_iter_multi_partition(
         selector_address="localhost:1234",
         training_id=42,
         number_of_workers=1,
+        return_weights=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
 
     idx = 0
     for idx, batch in enumerate(dataloader):
-        assert len(batch) == 4
+        assert len(batch) == 3
         assert batch[0] == (str(4 * idx), str(4 * idx + 1), str(4 * idx + 2), str(4 * idx + 3))
         assert torch.equal(batch[1], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
@@ -436,12 +477,64 @@ def test_iter_multi_partition(
 )
 @patch.object(
     OnlineDataset,
-    "_get_keys_from_selector",
+    "_get_keys_and_weights_from_selector",
     side_effect=[
-        [str(i) for i in range(16)],
-        [str(i) for i in range(16, 32)],
-        [str(i) for i in range(32, 48)],
-        [str(i) for i in range(48, 64)],
+        ([str(i) for i in range(16)], [0.9] * 16),
+        ([str(i) for i in range(16, 32)], [0.9] * 16),
+        ([str(i) for i in range(32, 48)], [0.9] * 16),
+        ([str(i) for i in range(48, 64)], [0.9] * 16),
+    ],
+)
+@patch.object(OnlineDataset, "_get_num_data_partitions", return_value=4)
+def test_iter_multi_partition_weighted(
+    test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
+):
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+        number_of_workers=1,
+        return_weights=True,
+    )
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
+
+    idx = 0
+    for idx, batch in enumerate(dataloader):
+        assert len(batch) == 4
+        assert batch[0] == (str(4 * idx), str(4 * idx + 1), str(4 * idx + 2), str(4 * idx + 3))
+        assert torch.equal(batch[1], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
+        assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+        assert torch.equal(batch[3], 0.9 * torch.ones(4, dtype=torch.float64))
+    assert idx == 15
+
+
+@patch("modyn.trainer_server.internal.dataset.online_dataset.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset,
+    "_get_data_from_storage",
+    side_effect=[
+        ([x.to_bytes(2, "big") for x in range(16)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(16, 32)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(32, 48)], [1] * 16),
+        ([x.to_bytes(2, "big") for x in range(48, 64)], [1] * 16),
+    ],
+)
+@patch.object(
+    OnlineDataset,
+    "_get_keys_and_weights_from_selector",
+    side_effect=[
+        ([str(i) for i in range(16)], None),
+        ([str(i) for i in range(16, 32)], None),
+        ([str(i) for i in range(32, 48)], None),
+        ([str(i) for i in range(48, 64)], None),
     ],
 )
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=4)
@@ -463,7 +556,7 @@ def test_iter_multi_partition_cross(
 
     idx = 0
     for idx, batch in enumerate(dataloader):
-        assert len(batch) == 4
+        assert len(batch) == 3
         if idx < 10:
             assert batch[0] == (
                 str(6 * idx),
@@ -496,7 +589,11 @@ def test_iter_multi_partition_cross(
         ([x.to_bytes(2, "big") for x in range(4)], [1] * 4),
     ],
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", side_effect=[list(range(4)), list(range(4))])
+@patch.object(
+    OnlineDataset,
+    "_get_keys_and_weights_from_selector",
+    side_effect=[(list(range(4)), [1.0] * 4), (list(range(4)), [1.0] * 4)],
+)
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=2)
 def test_iter_multi_partition_multi_workers(
     test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
@@ -534,7 +631,7 @@ def test_iter_multi_partition_multi_workers(
 @patch.object(
     OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(100)], [1] * 100)
 )
-@patch.object(OnlineDataset, "_get_keys_from_selector", return_value=list(range(100)))
+@patch.object(OnlineDataset, "_get_keys_and_weights_from_selector", return_value=(list(range(100)), None))
 @patch.object(OnlineDataset, "_get_num_data_partitions", return_value=1)
 def test_multi_epoch_dataloader_dataset(
     test_get_num_data_partitions, test_get_data, test_get_keys, test_insecure_channel, test_grpc_connection_established
@@ -553,7 +650,7 @@ def test_multi_epoch_dataloader_dataset(
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for _ in range(5):
         for i, batch in enumerate(dataloader):
-            assert len(batch) == 4
+            assert len(batch) == 3
             assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
             assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
             assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
