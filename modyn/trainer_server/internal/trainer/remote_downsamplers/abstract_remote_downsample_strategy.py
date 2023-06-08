@@ -21,13 +21,13 @@ def get_tensors_subset(
 
 class AbstractRemoteDownsamplingStrategy(ABC):
     def __init__(self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict) -> None:
-        assert "sample_before_batch" in params_from_selector
-        self.sample_before_batch = params_from_selector["sample_before_batch"]
+        assert "sample_then_batch" in params_from_selector
+        self.sample_then_batch = params_from_selector["sample_then_batch"]
         self.pipeline_id = pipeline_id
         self.batch_size = batch_size
         self.trigger_id = trigger_id
 
-        if self.sample_before_batch:
+        if self.sample_then_batch:
             assert "downsampled_batch_ratio" in params_from_selector
             self.downsampled_batch_ratio = params_from_selector["downsampled_batch_ratio"]
             self._sampling_concluded = False
@@ -38,7 +38,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         self.replacement = params_from_selector.get("replacement", True)
 
     def get_downsampled_batch_ratio(self) -> int:
-        assert self.sample_before_batch
+        assert self.sample_then_batch
         return self.downsampled_batch_ratio
 
     def batch_then_sample(
@@ -46,7 +46,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         forward_output: torch.Tensor,
         target: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        assert not self.sample_before_batch
+        assert not self.sample_then_batch
         scores = self.get_scores(forward_output, target)
         probabilities = scores / scores.sum()
         downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=self.replacement)

@@ -23,18 +23,18 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
-        if "sample_before_batch" not in config:
+        if "sample_then_batch" not in config:
             raise ValueError(
                 "Please specify if you want to sample and then batch or vice versa. "
-                "Use the sample_before_batch parameter"
+                "Use the sample_then_batch parameter"
             )
-        self.sample_before_batch = config["sample_before_batch"]
+        self.sample_then_batch = config["sample_then_batch"]
 
-        if self.sample_before_batch and "downsampling_period" in config:
+        if self.sample_then_batch and "downsampling_period" in config:
             raise ValueError("downsampling_period can be used only in sample-then-batch.")
         self.downsampling_period = config.get("downsampling_period", 1)
 
-        if self.sample_before_batch:
+        if self.sample_then_batch:
             # sample-then-batch, downsampled_batch_ratio is needed
             if "downsampled_batch_ratio" not in config:
                 raise ValueError("Please specify downsampled_batch_ratio to use sample-then-batch")
@@ -53,6 +53,6 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
         self._requires_remote_computation = True
 
     def get_downsampling_scale(self) -> float:
-        if self.sample_before_batch:
+        if self.sample_then_batch:
             return self.downsampled_batch_ratio / 100
         return 1

@@ -13,7 +13,7 @@ def test_sample_shape_ce():
     downsampled_batch_size = 5
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
+    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -41,7 +41,7 @@ def test_sample_shape_other_losses():
     downsampled_batch_size = 5
     per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
+    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -75,7 +75,7 @@ def test_sampling_crossentropy():
     params_from_selector = {
         "downsampled_batch_size": downsampled_batch_size,
         "replacement": False,
-        "sample_before_batch": False,
+        "sample_then_batch": False,
     }
 
     # Here we use autograd since the number of classes is not provided
@@ -121,7 +121,7 @@ def test_sample_dict_input():
     model = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": 3, "sample_before_batch": False}
+    params_from_selector = {"downsampled_batch_size": 3, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_outputs = model(data)

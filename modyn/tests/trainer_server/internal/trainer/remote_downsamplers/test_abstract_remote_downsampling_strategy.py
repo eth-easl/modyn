@@ -11,7 +11,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 def test_batch_then_sample_general():
     downsampled_batch_size = 5
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_before_batch": False}
+    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_then_batch": False}
     sampler = AbstractRemoteDownsamplingStrategy(0, 0, 0, params_from_selector)
 
     assert hasattr(sampler, "downsampled_batch_size")
@@ -27,7 +27,7 @@ def test_sample_then_batch_general():
     downsampled_batch_ratio = 50
 
     with pytest.raises(AssertionError):
-        params_from_selector = {"downsampled_batch_size": downsampled_batch_ratio, "sample_before_batch": True}
+        params_from_selector = {"downsampled_batch_size": downsampled_batch_ratio, "sample_then_batch": True}
         sampler = AbstractRemoteDownsamplingStrategy(0, 0, 100, params_from_selector)
 
     with pytest.raises(AssertionError):
@@ -38,7 +38,7 @@ def test_sample_then_batch_general():
 
     params_from_selector = {
         "downsampled_batch_ratio": downsampled_batch_ratio,
-        "sample_before_batch": True,
+        "sample_then_batch": True,
         "maximum_keys_in_memory": 1000,
     }
     sampler = AbstractRemoteDownsamplingStrategy(0, 0, 100, params_from_selector)

@@ -234,7 +234,7 @@ class PytorchTrainer:
     def instantiate_downsampler(
         self, strategy_name: str, params_from_selector: dict, per_sample_loss: Any
     ) -> tuple[AbstractRemoteDownsamplingStrategy, bool, int]:
-        assert "sample_before_batch" in params_from_selector
+        assert "sample_then_batch" in params_from_selector
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)
 
@@ -243,7 +243,7 @@ class PytorchTrainer:
         )
         return (
             downsampler,
-            params_from_selector["sample_before_batch"],
+            params_from_selector["sample_then_batch"],
             params_from_selector.get("downsampling_period", 1),
         )
 

@@ -112,22 +112,22 @@ properties:
                 type: number
                 description: |
                   [AbstractDownsampleStrategy] percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
-              sample_before_batch:
+              sample_then_batch:
                 type: boolean
                 description: |
                   [AbstractDownsampleStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
               downsampling_period:
                 type: number
                 description: |
-                  [AbstractDownsampleStrategy] Points are downsampled every downsampling_period epochs (0, downsampling_period, 2*downsampling_period ...). Requires sample_before_batch = True and the default value is 1
+                  [AbstractDownsampleStrategy] Points are downsampled every downsampling_period epochs (0, downsampling_period, 2*downsampling_period ...). Requires sample_then_batch = True and the default value is 1
               downsampled_batch_size:
                 type: number
                 description: |
-                  [AbstractDownsampleStrategy] How many points are sampled after computing the metric. Requires sample_before_batch set to False
+                  [AbstractDownsampleStrategy] How many points are sampled after computing the metric. Requires sample_then_batch set to False
               downsampled_batch_ratio:
                 type: number
                 description: |
-                  [AbstractDownsampleStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Requires sample_before_batch set to True and must be in (0,100)
+                  [AbstractDownsampleStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Requires sample_then_batch set to True and must be in (0,100)
           processor_type:
             type: string
             description: |

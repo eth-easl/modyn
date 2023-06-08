@@ -34,7 +34,7 @@ def get_config():
         "presampling_ratio": 50,
         "limit": -1,
         "downsampled_batch_size": 10,
-        "sample_before_batch": False,
+        "sample_then_batch": False,
     }
 
 
@@ -56,7 +56,7 @@ def get_config_tail():
         "limit": -1,
         "downsampled_batch_size": 10,
         "tail_triggers": 1,
-        "sample_before_batch": False,
+        "sample_then_batch": False,
     }
 
 
@@ -66,7 +66,7 @@ def test_constructor():
 
 
 def test_constructor_throws_on_invalid_config():
-    conf = {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "sample_before_batch": False}
+    conf = {"reset_after_trigger": False, "presampling_ratio": 50, "limit": -1, "sample_then_batch": False}
 
     with pytest.raises(ValueError):
         AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
@@ -76,7 +76,7 @@ def test_constructor_throws_on_invalid_config():
         "presampling_ratio": 50,
         "limit": -1,
         "downsampled_batch_size": 0.10,
-        "sample_before_batch": False,
+        "sample_then_batch": False,
     }
 
     with pytest.raises(ValueError):
@@ -87,7 +87,7 @@ def test_constructor_throws_on_invalid_config():
         "presampling_ratio": 50,
         "limit": -1,
         "downsampled_batch_size": 10,
-        "sample_before_batch": False,
+        "sample_then_batch": False,
     }
     ads = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 

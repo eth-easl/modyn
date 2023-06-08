@@ -63,10 +63,10 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
         self._samples_available = False
 
     def setup_sample_then_batch(self) -> None:
-        assert self.sample_before_batch
+        assert self.sample_then_batch
 
     def accumulate_sample_then_batch(self, model_output: torch.Tensor, target: torch.Tensor, sample_ids: list) -> None:
-        assert self.sample_before_batch
+        assert self.sample_then_batch
         loss = self.per_sample_loss_fct(model_output, target).sum()
         l0_grads = torch.autograd.grad(loss, model_output, retain_graph=False)[0]
 
@@ -82,15 +82,15 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
         self.number_of_samples_seen += model_output.size()[0]
 
     def end_sample_then_batch(self) -> None:
-        assert self.sample_before_batch
+        assert self.sample_then_batch
         self._samples_available = True
 
     def samples_available(self) -> bool:
-        assert self.sample_before_batch
+        assert self.sample_then_batch
         return self._samples_available
 
     def get_samples(self) -> np.ndarray:
-        assert self.sample_before_batch
+        assert self.sample_then_batch
         assert self._samples_available
         self._samples_available = False
         selected_ids, selected_weights = self.finalize_selection()
@@ -142,7 +142,7 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
 
         budget = (
             int(self.number_of_samples_seen * self.downsampled_batch_ratio / 100)
-            if self.sample_before_batch
+            if self.sample_then_batch
             else self.downsampled_batch_size
         )
 
@@ -225,7 +225,7 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
         forward_output: torch.Tensor,
         target: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        assert not self.sample_before_batch
+        assert not self.sample_then_batch
         assert self.selection_type == "Supervised"
 
         loss = self.per_sample_loss_fct(forward_output, target).sum()

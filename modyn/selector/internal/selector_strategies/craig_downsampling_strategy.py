@@ -6,7 +6,7 @@ class CRAIGDownsamplingStrategy(AbstractDownsampleStrategy):
         return "RemoteCRAIGDownsampling"
 
     def get_downsampling_params(self) -> dict:
-        if self.sample_before_batch:
+        if self.sample_then_batch:
             params = {
                 "downsampled_batch_ratio": self.downsampled_batch_ratio,
                 "downsampling_period": self.downsampling_period,
@@ -14,5 +14,5 @@ class CRAIGDownsamplingStrategy(AbstractDownsampleStrategy):
             }
         else:
             params = {"downsampled_batch_size": self.downsampled_batch_size}
-        params["sample_before_batch"] = self.sample_before_batch
+        params["sample_then_batch"] = self.sample_then_batch
         return params

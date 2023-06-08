@@ -13,7 +13,7 @@ def test_sample_shape_ce():
 
     params_from_selector = {
         "downsampled_batch_size": downsampled_batch_size,
-        "sample_before_batch": False,
+        "sample_then_batch": False,
         "selection_type": "Supervised",
     }
     sampler = RemoteCRAIGDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
@@ -41,12 +41,12 @@ def test_sample_shape_ce():
 def test_init():
     params_from_selector_bts = {
         "downsampled_batch_size": 4,
-        "sample_before_batch": False,
+        "sample_then_batch": False,
         "selection_type": "Supervised",
     }
     params_from_selector_stb = {
         "downsampled_batch_ratio": 4,
-        "sample_before_batch": True,
+        "sample_then_batch": True,
         "selection_type": "Supervised",
     }
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
@@ -81,7 +81,7 @@ def test_stb():
     model = torch.nn.Linear(10, 3)
     params_from_selector_stb = {
         "downsampled_batch_ratio": 50,
-        "sample_before_batch": True,
+        "sample_then_batch": True,
         "selection_type": "Supervised",
     }
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
