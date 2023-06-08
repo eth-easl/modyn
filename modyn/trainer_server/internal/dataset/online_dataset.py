@@ -1,12 +1,10 @@
 import gc
 import logging
+from enum import Enum
 from inspect import isfunction
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, Generator, Optional, Tuple, Union
 
 import grpc
-from modyn.models.tokenizer.distill_bert_tokenizer import (  # noqa: F401, pylint: disable=unused-import
-    DistilBertTokenizerTransform,
-)
 
 # pylint: disable-next=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -28,6 +26,9 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 
+KeySource = Enum("KeySource", ["LOCAL", "SELECTOR"])
+
+
 class OnlineDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
@@ -42,6 +43,7 @@ class OnlineDataset(IterableDataset):
         selector_address: str,
         training_id: int,
         number_of_workers: int,
+        return_weights: bool = False,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -62,28 +64,49 @@ class OnlineDataset(IterableDataset):
         self._local_dataset_handler = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
-        self._keys_source = "selector"
+        self._key_source = KeySource.SELECTOR
         self._number_of_workers = number_of_workers
+        self._return_weights = return_weights
 
         logger.debug("Initialized OnlineDataset.")
 
     # pylint: disable=unused-argument
-    def _get_keys_from_selector(self, worker_id: int, partition_id: int) -> list[int]:
-        assert self._keys_source == "selector"
+    def _get_keys_and_weights_from_selector(
+        self, worker_id: int, partition_id: int
+    ) -> tuple[list[int], Optional[list[float]]]:
+        assert self._key_source == KeySource.SELECTOR
         assert self._selectorstub is not None
 
         req = GetSamplesRequest(
             pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id, partition_id=partition_id
         )
         # TODO(#138): take into account sample weights when needed
-        return flatten(
-            [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
-        )
 
-    def _get_keys_and_weights_from_local(self, worker_id: int, partition_id: int) -> tuple[list[int], list[float]]:
-        assert self._keys_source == "local"
+        if self._return_weights:
+            keys_and_weights = [
+                (response.training_samples_subset, response.training_samples_weights)
+                for response in self._selectorstub.get_sample_keys_and_weights(req)
+            ]
+            keys = flatten([element[0] for element in keys_and_weights])
+            weights = flatten([element[1] for element in keys_and_weights])
+        else:
+            keys = flatten(
+                [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
+            )
+            weights = None
+
+        return keys, weights
+
+    def _get_keys_and_weights_from_local(
+        self, worker_id: int, partition_id: int
+    ) -> tuple[list[int], Optional[list[float]]]:
+        assert self._key_source == KeySource.LOCAL
         assert self._local_dataset_handler is not None
-        return self._local_dataset_handler.get_keys_and_weights(partition_id, worker_id)
+        keys, weights = self._local_dataset_handler.get_keys_and_weights(partition_id, worker_id)
+
+        if self._return_weights:
+            return keys, weights
+        return keys, None
 
     def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -153,26 +176,25 @@ class OnlineDataset(IterableDataset):
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def switch_to_local_key_source(self) -> None:
-        self._keys_source = "local"
+        self._key_source = KeySource.LOCAL
         self._local_dataset_handler = LocalDatasetHandler(self._pipeline_id, self._trigger_id, self._number_of_workers)
 
     def switch_to_selector_key_source(self) -> None:
-        if self._keys_source == "selector":
+        if self._key_source == KeySource.SELECTOR:
             return
-        self._keys_source = "selector"
+        self._key_source = KeySource.SELECTOR
         assert self._local_dataset_handler is not None
         self._local_dataset_handler.clean_working_directory()
         self._local_dataset_handler = None
 
-    def _get_data(self, worker_id: int, partition_id: int) -> tuple[list[int], list[bytes], list[int], list[float]]:
+    def _get_data(
+        self, worker_id: int, partition_id: int
+    ) -> tuple[list[int], list[bytes], list[int], Optional[list[float]]]:
         # Keys can either be retreived from the selector or from local.
-        assert self._keys_source in ["local", "selector"]
 
-        if self._keys_source == "selector":
+        if self._key_source == KeySource.SELECTOR:
             self._info("Getting keys from selector", worker_id)
-            keys = self._get_keys_from_selector(worker_id, partition_id)
-            # right now the selector does not store weights, so a list of ones is returned
-            weights = [1.0] * len(keys)
+            keys, weights = self._get_keys_and_weights_from_selector(worker_id, partition_id)
         else:
             self._info("Getting keys from local", worker_id)
             keys, weights = self._get_keys_and_weights_from_local(worker_id, partition_id)
@@ -182,9 +204,7 @@ class OnlineDataset(IterableDataset):
         return keys, data, labels, weights
 
     def _get_num_data_partitions(self) -> int:
-        assert self._keys_source in ["local", "selector"]
-
-        if self._keys_source == "selector":
+        if self._key_source == KeySource.SELECTOR:
             assert self._selectorstub is not None
 
             num_partitions_request = GetNumberOfPartitionsRequest(
@@ -198,7 +218,19 @@ class OnlineDataset(IterableDataset):
         assert self._local_dataset_handler is not None
         return self._local_dataset_handler.get_number_of_partitions()
 
-    # pylint: disable=too-many-locals
+    def _get_data_iterator(
+        self, keys: list[int], data: list[bytes], labels: list[int], weights: Optional[list[float]]
+    ) -> enumerate[Union[Tuple[int, bytes, int, float], Tuple[int, bytes, int]]]:
+        # pylint: disable-next=unsubscriptable-object
+        iterator: Union[zip[Tuple[int, bytes, int, float]], zip[Tuple[int, bytes, int]]]
+        if self._return_weights:
+            assert weights is not None
+            iterator = zip(keys, data, labels, weights)
+        else:
+            iterator = zip(keys, data, labels)
+        return enumerate(iterator)
+
+    # pylint: disable=too-many-locals, too-many-branches
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -229,14 +261,19 @@ class OnlineDataset(IterableDataset):
             fetch_next_partition_idx = int(num_samples_on_this_partition * 0.8)
             self._info(f"Train on partition {partition}, on {num_samples_on_this_partition} batches", worker_id)
 
-            for idx, (key, sample, label, weight) in enumerate(zip(keys, data, labels, weights)):
+            for idx, data_tuple in self._get_data_iterator(keys, data, labels, weights):
+                key, sample, label, weight = self._unpack_data_tuple(data_tuple)
+
                 if partition < self._num_partitions - 1 and idx == fetch_next_partition_idx:
                     # TODO(#175) in case this blocks training
                     new_keys, new_data, new_labels, new_weights = self._get_data(
                         worker_id=worker_id, partition_id=partition + 1
                     )
                 # mypy complains here because _transform has unknown type, which is ok
-                yield key, self._transform(sample), label, weight  # type: ignore
+                if self._return_weights:
+                    yield key, self._transform(sample), label, weight  # type: ignore
+                else:
+                    yield key, self._transform(sample), label  # type: ignore
 
             # this should mean we keep only two partitions in mem
             if partition < self._num_partitions - 1:
@@ -250,3 +287,12 @@ class OnlineDataset(IterableDataset):
                 del new_labels
                 del new_weights
                 gc.collect()
+
+    def _unpack_data_tuple(self, data_tuple: Tuple) -> Tuple[int, bytes, int, Optional[float]]:
+        if self._return_weights:
+            key, sample, label, weight = data_tuple
+        else:
+            key, sample, label = data_tuple
+            weight = None
+
+        return key, sample, label, weight
