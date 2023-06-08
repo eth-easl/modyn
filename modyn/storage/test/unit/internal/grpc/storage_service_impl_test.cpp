@@ -15,37 +15,21 @@ using namespace storage;
 
 class StorageServiceImplTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-  }
+  void SetUp() override {}
 
-  void TearDown() override {
-  }
+  void TearDown() override {}
 };
 
-TEST_F(StorageServiceImplTest, TestGet) {
+TEST_F(StorageServiceImplTest, TestGet) {}
 
-}
+TEST_F(StorageServiceImplTest, TestGetNewDataSince) {}
 
-TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
+TEST_F(StorageServiceImplTest, TestGetDataInInterval) {}
 
-}
+TEST_F(StorageServiceImplTest, TestCheckAvailability) {}
 
-TEST_F(StorageServiceImplTest, TestGetDataInInterval) {
+TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {}
 
-}
+TEST_F(StorageServiceImplTest, TestDeleteDataset) {}
 
-TEST_F(StorageServiceImplTest, TestCheckAvailability) {
-
-}
-
-TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
-
-}
-
-TEST_F(StorageServiceImplTest, TestDeleteDataset) {
-
-}
-
-TEST_F(StorageServiceImplTest, TestDeleteData) {
-
-}
+TEST_F(StorageServiceImplTest, TestDeleteData) {}
