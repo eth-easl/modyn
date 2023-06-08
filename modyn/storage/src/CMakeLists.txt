@@ -28,20 +28,19 @@ set(MODYNSTORAGE_PROTOS
     ../../protos/storage.proto
 )
 
-add_library(modynstorage-proto-headers ${MODYNSTORAGE_PROTOS})
 add_library(modynstorage-proto ${MODYNSTORAGE_PROTOS})
 
 set(PROTO_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY ${PROTO_BINARY_DIR})
 
 protobuf_generate(
-    TARGET modynstorage-proto-headers
+    TARGET modynstorage-proto
     OUT_VAR PROTO_GENERATED_FILES
     IMPORT_DIRS ../../protos
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
 set_source_files_properties(${PROTO_GENERATED_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION on)
 protobuf_generate(
-    TARGET modynstorage-proto-headers
+    TARGET modynstorage-proto
     OUT_VAR PROTO_GENERATED_FILES
     LANGUAGE grpc
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
@@ -51,14 +50,9 @@ protobuf_generate(
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
 set_source_files_properties(${PROTO_GENERATED_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION on)
 
-target_include_directories(modynstorage-proto-headers PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
+target_include_directories(modynstorage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
-target_link_libraries(modynstorage-proto
-    PUBLIC
-        libprotobuf
-        grpc++
-        modynstorage-proto-headers
-)
+target_link_libraries(modynstorage-proto PUBLIC libprotobuf grpc++)
 target_compile_options(modynstorage-proto INTERFACE -Wno-unused-parameter -Wno-c++98-compat-extra-semi -Wno-conditional-uninitialized -Wno-documentation)
 
 target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
