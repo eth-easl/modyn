@@ -5,7 +5,6 @@ defaults:
   run:
     shell: bash
 
-
 jobs:
   flake8:
     timeout-minutes: 20
@@ -156,7 +155,8 @@ jobs:
         build-type: [ Release, Debug ]
         compiler:
           - { c: gcc, cxx: g++, version: 11 }
-          - { c: clang, cxx: clang++, version: 12 }
+          - { c: gcc, cxx: g++, version: 12 }
+          - { c: clang, cxx: clang++, version: 15 }
           - { c: clang, cxx: clang++, version: 14, coverage: true }
           #- { c: clang, cxx: clang++, version: 15 }
         include:
@@ -229,6 +229,7 @@ jobs:
   cpp_coverage_main:
     name: C++ Test Coverage (main)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       CC: clang-14
       CXX: clang++-14
