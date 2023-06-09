@@ -183,30 +183,12 @@ jobs:
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: ${{ matrix.compiler.version }}.0
+          env: true
 
-      - name: list paths
+      - name: Add to PATH
         if: ${{ matrix.compiler.version > 14 }}
-        run: ls -lisah
-        working-directory: ${{ env.LLVM_PATH }}/bin
-
-      - name: check clang
-        if: ${{ matrix.compiler.version > 14 }}
-        run: clang++ --version
-        working-directory: ${{ env.LLVM_PATH }}/bin
-
-      - name: Symlink clang
-        if: ${{ matrix.compiler.version > 14 }}
-        run: ln -s clang /usr/local/bin/clang-${{ matrix.compiler.version }}
-        working-directory: ${{ env.LLVM_PATH }}/bin
-
-      - name: Symlink clang++
-        if: ${{ matrix.compiler.version > 14 }}
-        run: ln -s clang++ /usr/local/bin/clang++-${{ matrix.compiler.version }}
-        working-directory: ${{ env.LLVM_PATH }}/bin
-
-      - name: Verify clang is accessible
-        if: ${{ matrix.compiler.version > 14 }}
-        run: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}} --version
+        run: |
+          echo "${env.LLVM_PATH}/bin" >> $GITHUB_PATH
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/modyn/storage/build
