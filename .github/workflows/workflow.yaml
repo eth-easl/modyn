@@ -120,7 +120,7 @@ jobs:
           clangFormatVersion: 16
 
   tidy:
-    timeout-minutes: 20
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     env:
       CLANG_TIDY: clang-tidy-15
@@ -146,6 +146,7 @@ jobs:
   cpp_build_and_test:
     name: Build + Test (C++)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     outputs:
       line-coverage: ${{steps.run_test_with_coverage.outputs.LINE_COVERAGE}}
       branch-coverage: ${{steps.run_test_with_coverage.outputs.BRANCH_COVERAGE}}
@@ -207,7 +208,7 @@ jobs:
         run: cmake --build . --target modynstorage modynstorage-test modyn-storage playground --config ${{matrix.build-type}} -- -j8
 
       - name: Run tests
-        timeout-minutes: 15
+        timeout-minutes: 20
         working-directory: ${{github.workspace}}/modyn/storage/build/test
         shell: bash
         env: {"TSAN_OPTIONS": "halt_on_error=1", "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"}
@@ -236,7 +237,7 @@ jobs:
   cpp_coverage_main:
     name: C++ Test Coverage (gets coverage of main branch, currently not main branch because no C++ on main)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       CC: clang-16
       CXX: clang++-16
@@ -289,6 +290,7 @@ jobs:
     runs-on: self-hosted
     name: Comment Coverage Results
     needs: [ cpp_build_and_test, cpp_coverage_main ]
+    timeout-minutes: 5
     steps:
       - name: Calculate changes
         shell: bash
