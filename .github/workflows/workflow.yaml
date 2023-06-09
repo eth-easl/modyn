@@ -124,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CLANG_TIDY: clang-tidy-15
-      RUN_CLANG_TIDY: run-clang-tidy-15s
+      RUN_CLANG_TIDY: run-clang-tidy-15
 
     steps:
       - uses: actions/checkout@v2
@@ -159,9 +159,11 @@ jobs:
           - { c: clang, cxx: clang++, version: 14 }
           - { c: clang, cxx: clang++, version: 16, coverage: true }
         include:
-          - compiler: {c: clang, cxx: clang++, version: 14} # Tsan/16 does not work right now
+          # Currently, there is a linking error with zlib if we use clang 16 for sanitizers
+          # Let's investigate this when clang 16 is os default - one problem could be the external clang installation
+          - compiler: {c: clang, cxx: clang++, version: 14}
             build-type: Tsan
-          - compiler: {c: clang, cxx: clang++, version: 16}
+          - compiler: {c: clang, cxx: clang++, version: 14}
             build-type: Asan
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
@@ -202,7 +204,7 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/modyn/storage/build
         shell: bash
-        run: cmake --build . --config ${{matrix.build-type}} -- -j8
+        run: cmake --build . --target modynstorage modynstorage-test modyn-storage playground --config ${{matrix.build-type}} -- -j8
 
       - name: Run tests
         timeout-minutes: 15
@@ -266,7 +268,7 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/modyn/storage/build
         shell: bash
-        run: cmake --build . --config Debug -- -j8
+        run: cmake --build . --config Debug --target modynstorage modynstorage-test -- -j8
 
       - name: Run tests
         working-directory: ${{github.workspace}}/modyn/storage/build/test
