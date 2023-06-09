@@ -159,7 +159,7 @@ jobs:
           - { c: clang, cxx: clang++, version: 14 }
           - { c: clang, cxx: clang++, version: 16, coverage: true }
         include:
-          - compiler: {c: clang, cxx: clang++, version: 16}
+          - compiler: {c: clang, cxx: clang++, version: 14} # Tsan/16 does not work right now
             build-type: Tsan
           - compiler: {c: clang, cxx: clang++, version: 16}
             build-type: Asan
