@@ -156,7 +156,8 @@ jobs:
         compiler:
           - { c: gcc, cxx: g++, version: 11 }
           - { c: gcc, cxx: g++, version: 12 }
-          - { c: clang, cxx: clang++, version: 13 }
+          - { c: clang, cxx: clang++, version: 15 }
+          - { c: clang, cxx: clang++, version: 16 }
           - { c: clang, cxx: clang++, version: 14, coverage: true }
           #- { c: clang, cxx: clang++, version: 15 }
         include:
@@ -176,6 +177,12 @@ jobs:
         run: |
           sudo apt update
           sudo apt -y install ccache
+
+      - name: Install clang version
+        if: ${{ matrix.compiler.version > 14 }}
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "${matrix.compiler.version}.0"
 
       - name: Create Build Environment
 
