@@ -186,7 +186,7 @@ jobs:
 
       - name: list paths
         if: ${{ matrix.compiler.version > 14 }}
-        run: ln -lisah
+        run: ls -lisah
         working-directory: ${{ env.LLVM_PATH }}/bin
 
       - name: check clang
