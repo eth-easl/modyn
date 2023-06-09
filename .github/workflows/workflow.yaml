@@ -185,11 +185,6 @@ jobs:
           version: ${{ matrix.compiler.version }}.0
           env: true
 
-      - name: Add to PATH
-        if: ${{ matrix.compiler.version > 14 }}
-        run: |
-          echo "${env.LLVM_PATH}/bin" >> $GITHUB_PATH
-
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/modyn/storage/build
 
