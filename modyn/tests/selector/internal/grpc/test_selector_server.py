@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import tempfile
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
@@ -23,36 +24,45 @@ def get_modyn_config():
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
-    config = get_modyn_config()
-    grpc_server = SelectorServer(config)
-    assert grpc_server.modyn_config == config
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        config = get_modyn_config()
+        config["selector"]["trigger_sample_directory"] = tmp_dir
+        grpc_server = SelectorServer(config)
+        assert grpc_server.modyn_config == config
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_prepare_server():
-    grpc_server = SelectorServer(get_modyn_config())
-    mock_add = mock.Mock()
-    grpc_server._add_servicer_to_server_func = mock_add
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        config = get_modyn_config()
+        config["selector"]["trigger_sample_directory"] = tmp_dir
+        grpc_server = SelectorServer(config)
+        mock_add = mock.Mock()
+        grpc_server._add_servicer_to_server_func = mock_add
 
-    assert grpc_server.prepare_server() is not None
+        assert grpc_server.prepare_server() is not None
 
-    mock_add.assert_called_once()
+        mock_add.assert_called_once()
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorServer, "prepare_server")
 def test_run(test_prepare_server: MagicMock):
-    grpc_server = SelectorServer(get_modyn_config())
-    mock_start = mock.Mock()
-    mock_wait = mock.Mock()
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        config = get_modyn_config()
+        config["selector"]["trigger_sample_directory"] = tmp_dir
+        grpc_server = SelectorServer(config)
 
-    server = grpc_server.prepare_server()
-    server.start = mock_start
-    server.wait_for_termination = mock_wait
+        mock_start = mock.Mock()
+        mock_wait = mock.Mock()
 
-    test_prepare_server.return_value = server
+        server = grpc_server.prepare_server()
+        server.start = mock_start
+        server.wait_for_termination = mock_wait
 
-    grpc_server.run()
+        test_prepare_server.return_value = server
 
-    mock_start.assert_called_once()
-    mock_wait.assert_called_once()
+        grpc_server.run()
+
+        mock_start.assert_called_once()
+        mock_wait.assert_called_once()

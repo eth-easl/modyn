@@ -12,6 +12,7 @@ import time
 from typing import Any, Optional
 
 import pandas as pd
+from modyn.common.benchmark import Stopwatch
 from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
@@ -162,7 +163,9 @@ class NewFileWatcher:
     def _postgres_copy_insertion(
         process_id: int, dataset_id: int, file_dfs: list[pd.DataFrame], time_spent: dict, session: Session
     ) -> None:
-        session_setup_start = current_time_millis()
+        stopwatch = Stopwatch()
+
+        stopwatch.start("session_setup")
 
         conn = session.connection().engine.raw_connection()
         cursor = conn.cursor()
@@ -172,10 +175,9 @@ class NewFileWatcher:
         cmd = f"COPY {table_name}{table_columns} FROM STDIN WITH (FORMAT CSV, HEADER FALSE)"
 
         logger.debug(f"[Process {process_id}] Dumping CSV in buffer.")
+        stopwatch.stop()
 
-        time_spent["other"] += current_time_millis() - session_setup_start
-
-        csv_creation_start = current_time_millis()
+        stopwatch.start("csv_creation")
         output = io.StringIO()
         for file_df in file_dfs:
             file_df.to_csv(
@@ -183,14 +185,15 @@ class NewFileWatcher:
             )
 
         output.seek(0)
-        time_spent["csv_creation"] += current_time_millis() - csv_creation_start
+        stopwatch.stop()
 
-        db_insertion_start = current_time_millis()
+        stopwatch.start("db_insertion")
         logger.debug(f"[Process {process_id}] Copying to DB.")
         cursor.copy_expert(cmd, output)
         conn.commit()
+        stopwatch.stop()
 
-        time_spent["db_insertion"] += current_time_millis() - db_insertion_start
+        time_spent.update(stopwatch.measurements)
 
     @staticmethod
     def _fallback_copy_insertion(
@@ -198,20 +201,22 @@ class NewFileWatcher:
     ) -> None:
         del process_id
         del dataset_id
+        stopwatch = Stopwatch()
 
-        dict_creation_start = current_time_millis()
-
+        stopwatch.start("dict_creation")
         for file_df in file_dfs:
             file_df["sample_id"] = None
 
         data = list(itertools.chain.from_iterable([file_df.to_dict("records") for file_df in file_dfs]))
 
-        time_spent["dict_creation"] += current_time_millis() - dict_creation_start
+        stopwatch.stop()
 
-        db_insertion_start = current_time_millis()
+        stopwatch.start("db_insertion")
         session.bulk_insert_mappings(Sample, data)
         session.commit()
-        time_spent["db_insertion"] += current_time_millis() - db_insertion_start
+        stopwatch.stop()
+
+        time_spent.update(stopwatch.measurements)
 
     # pylint: disable=too-many-locals,too-many-statements
 
@@ -237,6 +242,7 @@ class NewFileWatcher:
         assert sample_dbinsertion_batchsize > 0, "Invalid sample_dbinsertion_batchsize"
 
         db_connection: Optional[StorageDatabaseConnection] = None
+        stopwatch = Stopwatch()
 
         if session is None:  # Multithreaded
             db_connection = StorageDatabaseConnection(modyn_config)
@@ -269,19 +275,8 @@ class NewFileWatcher:
         file_dfs = []
         current_len = 0
 
-        time_spent = {
-            "init": 0,
-            "file_creation": 0,
-            "label_extraction": 0,
-            "df_creation": 0,
-            "csv_creation": 0,
-            "dict_creation": 0,
-            "db_insertion": 0,
-            "other": 0,
-        }
-
         for num_file, file_path in enumerate(valid_files):
-            init_start = current_time_millis()
+            stopwatch.start("init", resume=True)
 
             file_wrapper = get_file_wrapper(
                 file_wrapper_type, file_path, dataset.file_wrapper_config, filesystem_wrapper
@@ -291,9 +286,8 @@ class NewFileWatcher:
                 f"[Process {process_id}] Found new, unknown file: {file_path} with {number_of_samples} samples."
             )
 
-            time_spent["init"] += current_time_millis() - init_start
-
-            file_creation_start = current_time_millis()
+            stopwatch.stop()
+            stopwatch.start("file_creation", resume=True)
 
             try:
                 file: File = File(
@@ -315,47 +309,51 @@ class NewFileWatcher:
                 f"[Process {process_id}] Extracting and inserting samples for file {file_path} (id = {file_id})"
             )
 
-            time_spent["file_creation"] += current_time_millis() - file_creation_start
-            label_extraction_start = current_time_millis()
+            stopwatch.stop()
 
+            stopwatch.start("label_extraction", resume=True)
             labels = file_wrapper.get_all_labels()
+            stopwatch.stop()
+
             logger.debug(
                 f"[Process {process_id}] Labels extracted in"
-                + f" {round((current_time_millis() - label_extraction_start) / 1000, 2)}s."
+                + f" {round(stopwatch.measurements['label_extraction'] / 1000, 2)}s."
             )
 
-            time_spent["label_extraction"] += current_time_millis() - label_extraction_start
-            df_creation_start = current_time_millis()
+            stopwatch.start("df_creation", resume=True)
 
             file_df = pd.DataFrame.from_dict({"dataset_id": dataset_id, "file_id": file_id, "label": labels})
             file_df["index"] = range(len(file_df))
             file_dfs.append(file_df)
             current_len += len(file_df)
 
-            time_spent["df_creation"] += current_time_millis() - df_creation_start
+            stopwatch.stop()
+            insertion_func_measurements: dict[str, int] = {}
 
             if current_len >= sample_dbinsertion_batchsize or num_file == len(valid_files) - 1:
                 logger.debug(f"[Process {process_id}] Inserting {current_len} samples.")
-                insertion_func_start = current_time_millis()
-                insertion_func(process_id, dataset_id, file_dfs, time_spent, session)
+                stopwatch.start("insertion_func", resume=True)
+
+                insertion_func(process_id, dataset_id, file_dfs, insertion_func_measurements, session)
+
+                stopwatch.stop()
 
                 logger.debug(
                     f"[Process {process_id}] Inserted {current_len} samples in"
-                    + f" {round((current_time_millis() - insertion_func_start) / 1000, 2)}s."
+                    + f" {round((stopwatch.measurements['insertion_func']) / 1000, 2)}s."
                 )
 
-                cleanup_start = current_time_millis()
-
+                stopwatch.start("cleanup", resume=True)
                 current_len = 0
                 file_dfs.clear()
-
-                time_spent["other"] += current_time_millis() - cleanup_start
+                stopwatch.stop()
 
         if dump_measurements and len(valid_files) > 0:
+            measurements = {**stopwatch.measurements, **insertion_func_measurements}
             with open(
                 f"/tmp/modyn_{current_time_millis()}_process{process_id}_stats.json", "w", encoding="utf-8"
             ) as statsfile:
-                json.dump(time_spent, statsfile)
+                json.dump(measurements, statsfile)
 
         if db_connection is not None:
             db_connection.terminate_connection()
@@ -378,6 +376,7 @@ class NewFileWatcher:
 
         data_file_extension = json.loads(dataset.file_wrapper_config)["file_extension"]
         file_paths = filesystem_wrapper.list(path, recursive=True)
+        stopwatch = Stopwatch()
 
         assert self.__dataset_id == dataset.dataset_id
 
@@ -399,7 +398,7 @@ class NewFileWatcher:
             )
             return
 
-        process_start_time = current_time_millis()
+        stopwatch.start("processes")
 
         files_per_proc = int(len(file_paths) / self._insertion_threads)
         processes: list[mp.Process] = []
@@ -433,7 +432,7 @@ class NewFileWatcher:
         for proc in processes:
             proc.join()
 
-        runtime = round((current_time_millis() - process_start_time) / 1000, 2)
+        runtime = round(stopwatch.stop() / 1000, 2)
         if runtime > 5:
             logger.debug(f"Processes finished running in in {runtime}s.")
 

@@ -10,13 +10,21 @@ import grpc
 import torch
 
 # pylint: disable=no-name-in-module
+from modyn.common.ftp import download_file
+from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
+    FetchModelRequest,
+    FetchModelResponse,
+    RegisterModelRequest,
+    RegisterModelResponse,
+)
+from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    GetFinalModelRequest,
-    GetFinalModelResponse,
     GetLatestModelRequest,
     GetLatestModelResponse,
     StartTrainingRequest,
     StartTrainingResponse,
+    StoreFinalModelRequest,
+    StoreFinalModelResponse,
     TrainerAvailableRequest,
     TrainerAvailableResponse,
     TrainingStatusRequest,
@@ -26,7 +34,12 @@ from modyn.trainer_server.internal.trainer.pytorch_trainer import train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
-from modyn.utils import current_time_millis, dynamic_module_import
+from modyn.utils import (
+    EMIT_MESSAGE_PERCENTAGES,
+    current_time_millis,
+    dynamic_module_import,
+    grpc_connection_established,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +48,8 @@ class TrainerServerGRPCServicer:
     """Implements necessary functionality in order to communicate with the supervisor."""
 
     def __init__(self, config: dict, tempdir: Union[str, pathlib.Path]) -> None:
+        self._config = config
+
         self._next_training_id = 0
         self._lock = Lock()  # TODO(#118): Fix race conditions in the trainer server
         self._training_dict: dict[int, TrainingInfo] = {}
@@ -48,8 +63,21 @@ class TrainerServerGRPCServicer:
 
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
+        self.model_storage_stub = TrainerServerGRPCServicer.connect_to_model_storage(
+            f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
+        )
 
         logger.info("TrainerServer gRPC Servicer initialized.")
+
+    @staticmethod
+    def connect_to_model_storage(model_storage_address: str) -> ModelStorageStub:
+        model_storage_channel = grpc.insecure_channel(model_storage_address)
+        assert model_storage_channel is not None
+        if not grpc_connection_established(model_storage_channel):
+            raise ConnectionError(
+                f"Could not establish gRPC connection to model storage at address {model_storage_address}."
+            )
+        return ModelStorageStub(model_storage_channel)
 
     def trainer_available(
         self,
@@ -75,15 +103,29 @@ class TrainerServerGRPCServicer:
             return StartTrainingResponse(training_started=False)
 
         pretrained_model_path: Optional[pathlib.Path] = None
-        if request.pretrained_model_path is not None and request.pretrained_model_path != "":
-            pretrained_model_path = self._modyn_base_dir / pathlib.Path(request.pretrained_model_path)
-            if not pretrained_model_path.exists():
-                logger.error(f"Pretrained Model Path {pretrained_model_path} does not exist. Cannot start training.")
+        if request.use_pretrained_model:
+            fetch_request = FetchModelRequest(model_id=request.pretrained_model_id)
+            fetch_resp: FetchModelResponse = self.model_storage_stub.FetchModel(fetch_request)
+
+            if not fetch_resp.success:
+                logger.error(
+                    f"Pretrained Model {request.pretrained_model_id} cannot be fetched from model storage. "
+                    f"Training cannot be started."
+                )
                 return StartTrainingResponse(training_started=False)
 
-        with self._lock:
-            training_id = self._next_training_id
-            self._next_training_id += 1
+            with self._lock:
+                training_id = self._next_training_id
+                self._next_training_id += 1
+
+            pretrained_model_path = self._modyn_base_dir / pathlib.Path(f"pretrained_model_{training_id}.modyn")
+            self._download_pretrained_model(pretrained_model_path, pathlib.Path(fetch_resp.model_path))
+
+            logger.info(f"Completed pretrained model download. Local path: {pretrained_model_path}")
+        else:
+            with self._lock:
+                training_id = self._next_training_id
+                self._next_training_id += 1
 
         final_checkpoint_path = self._modyn_base_dir / f"training_{training_id}"
         training_info = TrainingInfo(
@@ -118,6 +160,26 @@ class TrainerServerGRPCServicer:
 
         logger.info(f"Started training {training_id}")
         return StartTrainingResponse(training_started=True, training_id=training_id)
+
+    def _download_pretrained_model(self, local_model_path: pathlib.Path, remote_model_path: pathlib.Path) -> None:
+        last_progress = 0.0
+
+        def download_callback(current_progress: float) -> None:
+            nonlocal last_progress
+            for emit_perc in EMIT_MESSAGE_PERCENTAGES:
+                if last_progress <= emit_perc < current_progress:
+                    logger.info(f"Completed {emit_perc * 100}% of the pretrained model download.")
+            last_progress = current_progress
+
+        download_file(
+            hostname=self._config["model_storage"]["hostname"],
+            port=int(self._config["model_storage"]["ftp_port"]),
+            user="modyn",
+            password="modyn",
+            remote_file_path=remote_model_path,
+            local_file_path=local_model_path,
+            callback=download_callback,
+        )
 
     def get_training_status(
         self,
@@ -160,29 +222,51 @@ class TrainerServerGRPCServicer:
         cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v is not None}
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
 
-    def get_final_model(
+    def store_final_model(
         self,
-        request: GetFinalModelRequest,
+        request: StoreFinalModelRequest,
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
-    ) -> GetFinalModelResponse:
+    ) -> StoreFinalModelResponse:
         training_id = request.training_id
         logger.info(f"Received get final model request for training {training_id}.")
 
         if training_id not in self._training_dict:
-            logger.error(f"Training with id {training_id} has not been registered")
-            return GetFinalModelResponse(valid_state=False)
+            logger.error(f"Training with id {training_id} has not been registered.")
+            return StoreFinalModelResponse(valid_state=False)
 
         if self._training_process_dict[training_id].process_handler.is_alive():
-            logger.error(f"Training with id {training_id} is still running")
-            return GetFinalModelResponse(valid_state=False)
+            logger.error(f"Training with id {training_id} is still running.")
+            return StoreFinalModelResponse(valid_state=False)
 
-        final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
-        if final_checkpoint_path.exists():
-            prefix_path = str(final_checkpoint_path.relative_to(self._modyn_base_dir))
-            return GetFinalModelResponse(valid_state=True, model_path=prefix_path)
+        final_model_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
+        if final_model_path.exists():
+            prefix_path = str(final_model_path.relative_to(self._modyn_base_dir))
+
+            pipeline_id = self._training_dict[training_id].pipeline_id
+            trigger_id = self._training_dict[training_id].trigger_id
+
+            register_request = RegisterModelRequest(
+                pipeline_id=pipeline_id,
+                trigger_id=trigger_id,
+                hostname=self._config["trainer_server"]["hostname"],
+                port=int(self._config["trainer_server"]["ftp_port"]),
+                model_path=prefix_path,
+            )
+
+            register_response: RegisterModelResponse = self.model_storage_stub.RegisterModel(register_request)
+
+            if not register_response.success:
+                logger.error(f"Could not store final model from training id {training_id}.")
+                return StoreFinalModelResponse(valid_state=False)
+
+            os.remove(final_model_path)
+
+            logger.info(f"Deleted final model at {final_model_path}")
+
+            return StoreFinalModelResponse(valid_state=True, model_id=register_response.model_id)
 
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
-        return GetFinalModelResponse(valid_state=False)
+        return StoreFinalModelResponse(valid_state=False)
 
     def get_latest_model(
         self,
@@ -201,7 +285,7 @@ class TrainerServerGRPCServicer:
             training_state = self.get_model_state(training_id)
             if training_state is not None:
                 checkpoint_path = self._modyn_base_dir / "tmp-state" / f"{current_time_millis()}-{training_id}"
-                self.persist_state_to_disk(training_state, checkpoint_path)
+                TrainerServerGRPCServicer.persist_state_to_disk(training_state, checkpoint_path)
             else:
                 checkpoint_path = None
         else:
@@ -269,6 +353,7 @@ class TrainerServerGRPCServicer:
                 logger.error(f"The checkpoint {checkpoint} is corrupted: {exception}")
         return None, None, None
 
-    def persist_state_to_disk(self, state: bytes, path: pathlib.Path) -> None:
+    @staticmethod
+    def persist_state_to_disk(state: bytes, path: pathlib.Path) -> None:
         with open(path, "wb") as file:
             file.write(state)

@@ -132,10 +132,10 @@ properties:
         type: string
         description: |
           What type of initial model should be used (random or pretrained).
-      initial_model_path:
-        type: string
+      initial_model_id:
+        type: number
         description: |
-          In case of pretrained initial model, provide path (local on supervisor) to initial model
+          In case of pretrained initial model, provide the model id of the initial model
       initial_pass:
         type: object
         description: |
