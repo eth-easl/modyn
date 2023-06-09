@@ -182,7 +182,7 @@ jobs:
         if: ${{ matrix.compiler.version > 14 }}
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: "${matrix.compiler.version}.0"
+          version: ${{ matrix.compiler.version }}.0
 
       - name: Create Build Environment
 
