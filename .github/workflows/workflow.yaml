@@ -184,6 +184,16 @@ jobs:
         with:
           version: ${{ matrix.compiler.version }}.0
 
+      - name: list paths
+        if: ${{ matrix.compiler.version > 14 }}
+        run: ln -lisah
+        working-directory: ${{ env.LLVM_PATH }}/bin
+
+      - name: check clang
+        if: ${{ matrix.compiler.version > 14 }}
+        run: clang++ --version
+        working-directory: ${{ env.LLVM_PATH }}/bin
+
       - name: Symlink clang
         if: ${{ matrix.compiler.version > 14 }}
         run: ln -s clang /usr/local/bin/clang-${{ matrix.compiler.version }}
