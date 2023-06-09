@@ -184,8 +184,21 @@ jobs:
         with:
           version: ${{ matrix.compiler.version }}.0
 
-      - name: Create Build Environment
+      - name: Symlink clang
+        if: ${{ matrix.compiler.version > 14 }}
+        run: ln -s clang /usr/local/bin/clang-${{ matrix.compiler.version }}
+        working-directory: ${{ env.LLVM_PATH }}/bin
 
+      - name: Symlink clang++
+        if: ${{ matrix.compiler.version > 14 }}
+        run: ln -s clang++ /usr/local/bin/clang++-${{ matrix.compiler.version }}
+        working-directory: ${{ env.LLVM_PATH }}/bin
+
+      - name: Verify clang is accessible
+        if: ${{ matrix.compiler.version > 14 }}
+        run: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}} --version
+
+      - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/modyn/storage/build
 
       - name: Configure CMake
