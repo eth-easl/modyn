@@ -2,6 +2,7 @@ import os
 from typing import Optional
 
 import numpy as np
+import torch
 from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStorage
 
 LOCAL_STORAGE_FOLDER = ".tmp_offline_dataset"
@@ -35,10 +36,15 @@ class LocalDatasetHandler(TriggerSampleStorage):
             # desired file size is reached
             self.output_samples_list = np.empty(self.maximum_keys_in_memory, dtype=np.dtype("i8,f8"))
 
-    def inform_samples(self, input_samples_list: np.ndarray) -> None:
+    def inform_samples(self, sample_ids: list, sample_weights: torch.Tensor) -> None:
         assert self.maximum_keys_in_memory is not None
         assert self.output_samples_list is not None
-        for element in input_samples_list:
+
+        samples_list = np.empty(len(sample_ids), dtype=np.dtype("i8,f8"))
+        for i, _ in enumerate(sample_ids):
+            samples_list[i] = (sample_ids[i], sample_weights[i])
+
+        for element in samples_list:
             self.output_samples_list[self.current_sample_index] = element
             self.current_sample_index += 1
 

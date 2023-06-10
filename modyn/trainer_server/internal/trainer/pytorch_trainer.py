@@ -321,8 +321,10 @@ class PytorchTrainer:
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
                         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
                         assert self._downsampler is not None
+                        self._downsampler.init_downsampler()
                         big_batch_output = self._model.model(data)
-                        downsampled_indexes, weights = self._downsampler.batch_then_sample(big_batch_output, target)
+                        self._downsampler.inform_samples(big_batch_output, target)
+                        downsampled_indexes, weights = self._downsampler.select_points()
                         data, target, sample_ids = get_tensors_subset(downsampled_indexes, data, target, sample_ids)
                         # TODO(#219) Investigate if we can avoid 2 forward passes
 
@@ -416,30 +418,30 @@ class PytorchTrainer:
 
         number_of_batches = 0
 
-        self._downsampler.setup_sample_then_batch()
+        self._downsampler.init_downsampler()
+
+        sample_ids_order = []
+
         for batch in self._train_dataloader:
             number_of_batches += 1
             sample_ids, target, data = self.prepare_data(batch)
+            sample_ids_order += sample_ids
 
             with torch.autocast(self._device_type, enabled=self._amp):
                 # compute the scores and accumulate them
                 model_output = self._model.model(data)
-                self._downsampler.accumulate_sample_then_batch(model_output, target, sample_ids)
+                self._downsampler.inform_samples(model_output, target)
 
-        self._downsampler.end_sample_then_batch()
+        downsampled_idxs, weights = self._downsampler.select_points()
+
+        selected_ids = [sample_ids_order[sample] for sample in downsampled_idxs]
 
         # to store all the selected (sample, weight).
         file_size = self._num_dataloaders * self._batch_size  # should we add it to the pipeline?
         local_dataset = LocalDatasetHandler(self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size)
 
-        # each strategy can supply samples in different ways
-        samples_avilable = self._downsampler.samples_available()
-
-        while samples_avilable:
-            samples_list = self._downsampler.get_samples()
-            # store the selected samples (id and weight)
-            local_dataset.inform_samples(samples_list)
-            samples_avilable = self._downsampler.samples_available()
+        # store the selected samples (id and weight)
+        local_dataset.inform_samples(selected_ids, weights)
 
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
         # we need to manually trigger the store

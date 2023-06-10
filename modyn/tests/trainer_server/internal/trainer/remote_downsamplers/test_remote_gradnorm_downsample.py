@@ -20,8 +20,8 @@ def test_sample_shape_ce():
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
     forward_outputs = model(data)
-
-    downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
+    sampler.inform_samples(forward_outputs, target)
+    downsampled_indexes, weights = sampler.select_points()
 
     assert downsampled_indexes.shape[0] == 4  # 50% of 8
     assert weights.shape[0] == 4
@@ -50,7 +50,8 @@ def test_sample_shape_other_losses():
 
     forward_outputs = model(data)
 
-    downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
+    sampler.inform_samples(forward_outputs, target)
+    downsampled_indexes, weights = sampler.select_points()
 
     assert downsampled_indexes.shape[0] == 4
     assert weights.shape[0] == 4
@@ -82,12 +83,13 @@ def test_sampling_crossentropy():
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
     forward_outputs = model(data)
 
-    _, autograd_weights = sampler.batch_then_sample(forward_outputs, target)
-
+    sampler.inform_samples(forward_outputs, target)
+    _, autograd_weights = sampler.select_points()
     # Here we use the closed form shortcut
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
-    _, closed_form_weights = sampler.batch_then_sample(forward_outputs, target)
+    sampler.inform_samples(forward_outputs, target)
+    _, closed_form_weights = sampler.select_points()
 
     # We sort them since in this case sampling is just a permutation (we sample every point without replacement
     autograd_weights, _ = torch.sort(autograd_weights)
@@ -126,7 +128,8 @@ def test_sample_dict_input():
 
     forward_outputs = model(data)
 
-    downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
+    sampler.inform_samples(forward_outputs, target)
+    downsampled_indexes, weights = sampler.select_points()
 
     assert downsampled_indexes.shape == (3,)
     assert weights.shape == (3,)

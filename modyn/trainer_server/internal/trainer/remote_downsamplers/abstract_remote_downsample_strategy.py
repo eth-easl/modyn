@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Union
 
-import numpy as np
 import torch
 
 
@@ -37,49 +36,14 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         assert self.sample_then_batch
         return self.downsampled_batch_ratio
 
-    def batch_then_sample(
-        self,
-        forward_output: torch.Tensor,
-        target: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        assert not self.sample_then_batch
-        scores = self.get_scores(forward_output, target)
-        probabilities = scores / scores.sum()
-
-        target_size = int(self.downsampled_batch_ratio * forward_output.shape[0] / 100)
-
-        downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=self.replacement)
-
-        # lower probability, higher weight to reducce the variance
-        weights = 1.0 / (forward_output.shape[0] * probabilities[downsampled_idxs])
-
-        return downsampled_idxs, weights
+    @abstractmethod
+    def init_downsampler(self) -> None:
+        raise NotImplementedError
 
     @abstractmethod
-    def setup_sample_then_batch(self) -> None:
-        raise NotImplementedError()
+    def inform_samples(self, forward_output: torch.Tensor, target: torch.Tensor) -> None:
+        raise NotImplementedError
 
     @abstractmethod
-    def accumulate_sample_then_batch(
-        self,
-        model_output: torch.Tensor,
-        target: torch.Tensor,
-        sample_ids: list,
-    ) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def end_sample_then_batch(self) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def samples_available(self) -> bool:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_samples(self) -> np.ndarray:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_scores(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError()
+    def select_points(self) -> tuple[torch.Tensor, torch.Tensor]:
+        raise NotImplementedError
