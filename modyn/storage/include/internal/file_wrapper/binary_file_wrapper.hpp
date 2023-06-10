@@ -61,6 +61,14 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<int64_t>& indices) override;
   void validate_file_extension() override;
   void delete_samples(const std::vector<int64_t>& indices) override;
+  void set_file_path(const std::string& path) override {
+    file_path_ = path;
+    file_size_ = filesystem_wrapper_->get_file_size(path);
+
+    if (file_size_ % record_size_ != 0) {
+      throw std::runtime_error("File size must be a multiple of the record size.");
+    }
+  }
   FileWrapperType get_type() override { return FileWrapperType::BINARY; }
   ~BinaryFileWrapper() override = default;
 };

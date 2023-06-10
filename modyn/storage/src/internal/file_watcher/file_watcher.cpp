@@ -1,5 +1,6 @@
 #include "internal/file_watcher/file_watcher.hpp"
 
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 #include <csignal>
@@ -26,7 +27,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
                                     int64_t timestamp, const YAML::Node& file_wrapper_config) {
   soci::session session = storage_database_connection_.get_session();
 
-  std::vector<std::string> valid_files;
+  std::deque<std::string> valid_files;
   for (const auto& file_path : file_paths) {
     if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp)) {
       valid_files.push_back(file_path);
@@ -36,13 +37,13 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   SPDLOG_INFO("Found {} valid files", valid_files.size());
 
   if (!valid_files.empty()) {
-    std::string file_path;  // NOLINT // soci::use() requires a non-const reference
+    std::string file_path = valid_files.front();
     int64_t number_of_samples;
     std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>> file_frame =
         std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>();
+    auto file_wrapper = Utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
     for (const auto& file_path : valid_files) {
-      auto file_wrapper =
-          Utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+      file_wrapper->set_file_path(file_path);
       number_of_samples = file_wrapper->get_number_of_samples();
       int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
       session << "INSERT INTO files (dataset_id, path, number_of_samples, "
@@ -79,20 +80,17 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::postgres_copy_insertion(
-    const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame)  // NOLINT (misc-unused-parameters)
-    const {
+    const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const {
   soci::session session = storage_database_connection_.get_session();
-  const std::string table_name = "samples__did" + std::to_string(dataset_id_);
+  const std::string table_name = fmt::format("samples__did{}", dataset_id_);
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
-      "COPY " + table_name + table_columns + " FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')";
+      fmt::format("COPY {}{} FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')", table_name, table_columns);
 
-  // Create stringbuffer, dump data into file buffer csv and send to
-  // postgresql
+  // Create stringbuffer, dump data into file buffer csv and send to postgresql
   std::stringstream ss;
   for (const auto& frame : file_frame) {
-    ss << std::get<0>(frame) << "," << std::get<1>(frame) << "," << std::get<2>(frame) << "," << std::get<3>(frame)
-       << "\n";
+    ss << fmt::format("{},{},{},{}\n", std::get<0>(frame), std::get<1>(frame), std::get<2>(frame), std::get<3>(frame));
   }
 
   std::string tmp_file_name = "temp.csv";
@@ -124,13 +122,19 @@ void FileWatcher::fallback_insertion(
   soci::session session = storage_database_connection_.get_session();
   // Prepare query
   std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
-  for (const auto& frame : file_frame) {
-    query += "(" + std::to_string(std::get<0>(frame)) + "," + std::to_string(std::get<1>(frame)) + "," +
-             std::to_string(std::get<2>(frame)) + "," + std::to_string(std::get<3>(frame)) + "),";
+
+  if (!file_frame.empty()) {
+    for (auto frame = file_frame.cbegin(); frame != std::prev(file_frame.cend()); ++frame) {
+      query += fmt::format("({},{},{},{}),", std::get<0>(*frame), std::get<1>(*frame), std::get<2>(*frame),
+                           std::get<3>(*frame));
+    }
+
+    // Add the last tuple without the trailing comma
+    const auto& last_frame = file_frame.back();
+    query += fmt::format("({},{},{},{})", std::get<0>(last_frame), std::get<1>(last_frame), std::get<2>(last_frame),
+                         std::get<3>(last_frame));
   }
 
-  // Remove last comma
-  query.pop_back();
   session << query;
 }
 
@@ -198,24 +202,37 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   if (disable_multithreading_) {
     handle_file_paths(file_paths, data_file_extension, file_wrapper_type, timestamp, file_wrapper_config_node);
   } else {
-    const int64_t files_per_thread = static_cast<int64_t>(file_paths.size()) / insertion_threads_;
-    std::vector<std::thread> children;
-    for (int64_t i = 0; i < insertion_threads_; i++) {
-      std::vector<std::string> file_paths_thread = std::vector<std::string>();
-      if (i == insertion_threads_ - 1) {  // NOLINT (bugprone-branch-clone)
-        file_paths_thread.insert(file_paths_thread.end(), file_paths.begin() + i * files_per_thread, file_paths.end());
-      } else {
-        file_paths_thread.insert(file_paths_thread.end(), file_paths.begin() + i * files_per_thread,
-                                 file_paths.begin() + (i + 1) * files_per_thread);
+    const size_t chunk_size = file_paths.size() / thread_pool.size();
+
+    for (size_t i = 0; i < thread_pool.size(); ++i) {
+      auto begin = file_paths.begin() + i * chunk_size;
+      auto end = i < thread_pool.size() - 1 ? begin + chunk_size : file_paths.end();
+      std::vector<std::string> file_paths_thread(begin, end);
+
+      // wrap the task inside a lambda and push it to the tasks queue
+      {
+        std::lock_guard<std::mutex> lock(mtx);
+        tasks.push_back([this, &file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp,
+                         &file_wrapper_config_node]() {
+          std::atomic<bool> stop_file_watcher = false;
+          FileWatcher watcher(config_, dataset_id_, &stop_file_watcher);
+          watcher.handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
+                                    file_wrapper_config_node);
+        });
       }
-      std::atomic<bool> stop_file_watcher = false;
-      const FileWatcher watcher(config_, dataset_id_, &stop_file_watcher);
-      children.emplace_back(&FileWatcher::handle_file_paths, watcher, file_paths_thread, data_file_extension,
-                            file_wrapper_type, timestamp, file_wrapper_config_node);
+      cv.notify_one();  // notify a thread about an available task
     }
 
-    for (auto& child : children) {
-      child.join();
+    // add termination tasks
+    for (size_t i = 0; i < thread_pool.size(); ++i) {
+      std::lock_guard<std::mutex> lock(mtx);
+      tasks.push_back({});
+    }
+    cv.notify_all();  // notify all threads about available (termination) tasks
+
+    // join all threads
+    for (auto& thread : thread_pool) {
+      thread.join();
     }
   }
 }

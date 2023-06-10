@@ -15,7 +15,7 @@ set(
 
 add_library(modynstorage-test-utils-objs OBJECT ${MODYNSTORAGE_TEST_UTILS_SOURCES})
 target_include_directories(modynstorage-test-utils-objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(modynstorage-test-utils-objs PUBLIC gtest gmock spdlog modynstorage)
+target_link_libraries(modynstorage-test-utils-objs PUBLIC gtest gmock spdlog fmt modynstorage)
 
 #################################################t
 # UNIT TESTS
@@ -33,6 +33,7 @@ set(
   unit/internal/utils/utils_test.cpp
   unit/internal/filesystem_wrapper/local_filesystem_wrapper_test.cpp
   unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp
+  unit/internal/grpc/storage_service_impl_test.cpp
 )
 
 add_library(modynstorage-test-objs OBJECT ${MODYNSTORAGE_TEST_SOURCES})

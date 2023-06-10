@@ -13,6 +13,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
+################### fmt ####################
+message(STATUS "Making fmt available.")
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG 10.0.0
+)
+FetchContent_MakeAvailable(fmt)
+
 ################### argparse ####################
 message(STATUS "Making argparse available.")
 FetchContent_Declare(

@@ -9,6 +9,12 @@
 
 namespace storage {
 
+struct SampleData {
+  std::vector<int64_t> ids;
+  std::vector<int64_t> indices;
+  std::vector<int64_t> labels;
+};
+
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
  private:
   YAML::Node config_;

@@ -31,55 +31,62 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
     sample_ids[i] = request->keys(i);
   }
 
-  std::vector<int64_t> sample_ids_found = std::vector<int64_t>(request->keys_size());
-  std::vector<int64_t> sample_file_ids = std::vector<int64_t>(request->keys_size());
-  std::vector<int64_t> sample_indices = std::vector<int64_t>(request->keys_size());
-  std::vector<int64_t> sample_labels = std::vector<int64_t>(request->keys_size());
+  // Group the samples and indices by file
+  std::map<int64_t, SampleData> file_id_to_sample_data;
+
+  std::vector<int64_t> sample_ids_found(sample_ids.size());
+  std::vector<int64_t> sample_file_ids(sample_ids.size());
+  std::vector<int64_t> sample_indices(sample_ids.size());
+  std::vector<int64_t> sample_labels(sample_ids.size());
+
   session << "SELECT sample_id, file_id, sample_index, label FROM samples WHERE dataset_id = :dataset_id AND sample_id "
              "IN :sample_ids",
       soci::into(sample_ids_found), soci::into(sample_file_ids), soci::into(sample_indices), soci::into(sample_labels),
       soci::use(dataset_id), soci::use(sample_ids);
 
   for (std::size_t i = 0; i < sample_ids_found.size(); i++) {
-    if (sample_ids_found[i] == 0) {
-      SPDLOG_ERROR("Sample {} does not exist in dataset {}.", sample_ids[i], request->dataset_id());
-      return {grpc::StatusCode::NOT_FOUND, "Sample does not exist."};
-    }
-  }
-
-  // Group the samples and indices by file
-  std::map<int64_t, std::tuple<std::vector<int64_t>, std::vector<int64_t>, std::vector<int64_t>>> file_id_to_sample_ids;
-  for (std::size_t i = 0; i < sample_ids_found.size(); i++) {
-    std::get<0>(file_id_to_sample_ids[sample_file_ids[i]]).push_back(sample_ids_found[i]);
-    std::get<1>(file_id_to_sample_ids[sample_file_ids[i]]).push_back(sample_indices[i]);
-    std::get<2>(file_id_to_sample_ids[sample_file_ids[i]]).push_back(sample_labels[i]);
+    file_id_to_sample_data[sample_file_ids[i]].ids.push_back(sample_ids_found[i]);
+    file_id_to_sample_data[sample_file_ids[i]].indices.push_back(sample_indices[i]);
+    file_id_to_sample_data[sample_file_ids[i]].labels.push_back(sample_labels[i]);
   }
 
   auto filesystem_wrapper =
       Utils::get_filesystem_wrapper(base_path, FilesystemWrapper::get_filesystem_wrapper_type(filesystem_wrapper_type));
   const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
 
+  if (file_id_to_sample_data.size() == 0) {
+    SPDLOG_ERROR("No samples found in dataset {}.", request->dataset_id());
+    return {grpc::StatusCode::NOT_FOUND, "No samples found."};
+  }
+
+  std::string file_path;
+
+  auto& [file_id, sample_data] = *file_id_to_sample_data.begin();
+
+  session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
+
+  auto file_wrapper = Utils::get_file_wrapper(file_path, FileWrapper::get_file_wrapper_type(file_wrapper_type),
+                                              file_wrapper_config_node, filesystem_wrapper);
+
   // Get the data from the files
-  for (auto& [file_id, sample_ids_and_indices] : file_id_to_sample_ids) {
+  for (auto& [file_id, sample_data] : file_id_to_sample_data) {
     // Get the file path
-    std::string file_path;
+
     session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
 
     // Get the data from the file
-    auto file_wrapper = Utils::get_file_wrapper(file_path, FileWrapper::get_file_wrapper_type(file_wrapper_type),
-                                                file_wrapper_config_node, filesystem_wrapper);
+    file_wrapper->set_file_path(file_path);
 
-    std::vector<std::vector<unsigned char>> samples =
-        file_wrapper->get_samples_from_indices(std::get<1>(sample_ids_and_indices));
+    std::vector<std::vector<unsigned char>> samples = file_wrapper->get_samples_from_indices(sample_data.indices);
 
     // Send the data to the client
     modyn::storage::GetResponse response;
     for (std::size_t i = 0; i < samples.size(); i++) {
-      response.add_keys(std::get<0>(sample_ids_and_indices)[i]);
+      response.add_keys(sample_data.ids[i]);
       for (auto sample : samples[i]) {
         response.add_samples(std::string(1, sample));
       }
-      response.add_labels(std::get<2>(sample_ids_and_indices)[i]);
+      response.add_labels(sample_data.labels[i]);
 
       if (i % sample_batch_size_ == 0) {
         writer->Write(response);
@@ -211,6 +218,7 @@ grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-iden
 
   grpc::Status status;
   if (dataset_id == 0) {
+    response->set_available(false);
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     status = grpc::Status(grpc::StatusCode::NOT_FOUND, "Dataset does not exist.");
   } else {
@@ -290,9 +298,9 @@ grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-
     return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
 
-  std::vector<int64_t> sample_ids = std::vector<int64_t>(request->keys_size());
+  std::vector<int64_t> sample_ids;
   for (int i = 0; i < request->keys_size(); i++) {
-    sample_ids[i] = request->keys(i);
+    sample_ids.push_back(request->keys(i));
   }
 
   int64_t number_of_files;
@@ -311,11 +319,21 @@ grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
 
   try {
-    for (int64_t file_id : file_ids) {
-      std::string path;
-      session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(path), soci::use(file_id);
-      auto file_wrapper = Utils::get_file_wrapper(path, FileWrapper::get_file_wrapper_type(file_wrapper_type),
-                                                  file_wrapper_config_node, filesystem_wrapper);
+    std::vector<std::string> file_paths;
+    session << "SELECT path FROM files WHERE file_id IN :file_ids", soci::into(file_paths), soci::use(file_ids);
+
+    if (file_paths.size() != file_ids.size()) {
+      SPDLOG_ERROR("Error deleting data: Could not find all files.");
+      return {grpc::StatusCode::INTERNAL, "Error deleting data."};
+    }
+
+    auto file_wrapper =
+        Utils::get_file_wrapper(file_paths.front(), FileWrapper::get_file_wrapper_type(file_wrapper_type),
+                                file_wrapper_config_node, filesystem_wrapper);
+    for (size_t i = 0; i < file_paths.size(); ++i) {
+      const auto& file_id = file_ids[i];
+      const auto& path = file_paths[i];
+      file_wrapper->set_file_path(path);
 
       int64_t samples_to_delete;
       session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id AND sample_id IN :sample_ids",

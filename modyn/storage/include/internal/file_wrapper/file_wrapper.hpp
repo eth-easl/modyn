@@ -37,6 +37,7 @@ class FileWrapper {  // NOLINT
     };
     return FILE_WRAPPER_TYPE_MAP.at(type);
   }
+  virtual void set_file_path(const std::string& path) { file_path_ = path; }
   virtual ~FileWrapper() {}  // NOLINT
   FileWrapper(const FileWrapper& other) = default;
 };

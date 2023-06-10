@@ -4,7 +4,9 @@
 #include <yaml-cpp/yaml.h>
 
 #include <atomic>
+#include <deque>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "internal/database/storage_database_connection.hpp"
@@ -24,6 +26,10 @@ class FileWatcher {
   std::atomic<bool>* stop_file_watcher_;
   std::string dataset_path_;
   FilesystemWrapperType filesystem_wrapper_type_;
+  std::vector<std::thread> thread_pool;
+  std::deque<std::function<void()>> tasks;
+  std::mutex mtx;
+  std::condition_variable cv;
 
  public:
   explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id,  // NOLINT
@@ -57,6 +63,30 @@ class FileWatcher {
 
     if (!filesystem_wrapper->exists(dataset_path) || !filesystem_wrapper->is_directory(dataset_path)) {
       throw std::runtime_error("Dataset path " + dataset_path + " does not exist or is not a directory.");
+    }
+
+    if (disable_multithreading_) {
+      SPDLOG_INFO("Multithreading disabled.");
+    } else {
+      SPDLOG_INFO("Multithreading enabled.");
+
+      thread_pool.resize(insertion_threads_);
+
+      for (auto& thread : thread_pool) {
+        thread = std::thread([&]() {
+          while (true) {
+            std::function<void()> task;
+            {
+              std::unique_lock<std::mutex> lock(mtx);
+              cv.wait(lock, [&]() { return !tasks.empty(); });
+              task = std::move(tasks.front());
+              tasks.pop_front();
+            }
+            if (!task) break;  // If the task is empty, it's a signal to terminate the thread
+            task();
+          }
+        });
+      }
     }
   }
   std::shared_ptr<FilesystemWrapper> filesystem_wrapper;

@@ -21,7 +21,8 @@ using namespace storage;
 void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int16_t retries) {
   // Start a new child process of a FileWatcher
   file_watcher_process_stop_flags_.emplace(dataset_id, false);
-  const FileWatcher file_watcher = FileWatcher(config_, dataset_id, &file_watcher_process_stop_flags_[dataset_id]);
+  std::shared_ptr<FileWatcher> file_watcher =
+      std::make_shared<FileWatcher>(config_, dataset_id, &file_watcher_process_stop_flags_[dataset_id]);
   std::thread th(&FileWatcher::run, file_watcher);
   file_watcher_processes_[dataset_id] = std::move(th);
   file_watcher_process_retries_[dataset_id] = retries;
