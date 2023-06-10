@@ -617,7 +617,7 @@ def test_iter_multi_partition_multi_workers(
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
     idx = 0
     for idx, batch in enumerate(dataloader):
-        assert len(batch) == 4
+        assert len(batch) == 3
         assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
