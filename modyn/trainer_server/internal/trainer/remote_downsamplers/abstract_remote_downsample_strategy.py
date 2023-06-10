@@ -27,13 +27,9 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         self.batch_size = batch_size
         self.trigger_id = trigger_id
 
-        if self.sample_then_batch:
-            assert "downsampled_batch_ratio" in params_from_selector
-            self.downsampled_batch_ratio = params_from_selector["downsampled_batch_ratio"]
-            self._sampling_concluded = False
-        else:
-            assert "downsampled_batch_size" in params_from_selector
-            self.downsampled_batch_size = params_from_selector["downsampled_batch_size"]
+        assert "downsampled_batch_ratio" in params_from_selector
+        self.downsampled_batch_ratio = params_from_selector["downsampled_batch_ratio"]
+        self._sampling_concluded = False
 
         self.replacement = params_from_selector.get("replacement", True)
 
@@ -49,7 +45,10 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         assert not self.sample_then_batch
         scores = self.get_scores(forward_output, target)
         probabilities = scores / scores.sum()
-        downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=self.replacement)
+
+        target_size = int(self.downsampled_batch_ratio * forward_output.shape[0] / 100)
+
+        downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=self.replacement)
 
         # lower probability, higher weight to reducce the variance
         weights = 1.0 / (forward_output.shape[0] * probabilities[downsampled_idxs])

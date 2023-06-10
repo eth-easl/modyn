@@ -8,6 +8,7 @@ from modyn.metadata_database.metadata_database_connection import MetadataDatabas
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
 from modyn.selector.internal.selector_strategies.abstract_presample_strategy import AbstractPresampleStrategy
+from modyn.utils import DownsamplingMode
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -33,7 +34,7 @@ def get_config():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_size": 10,
+        "downsampled_batch_ratio": 50,
         "sample_then_batch": False,
     }
 
@@ -54,7 +55,7 @@ def get_config_tail():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_size": 10,
+        "downsampled_batch_ratio": 50,
         "tail_triggers": 1,
         "sample_then_batch": False,
     }
@@ -63,6 +64,8 @@ def get_config_tail():
 def test_constructor():
     strat = AbstractDownsampleStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     assert strat.presampling_ratio >= 0
+    assert strat.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
+    assert strat.downsampled_batch_ratio == 50
 
 
 def test_constructor_throws_on_invalid_config():
@@ -75,7 +78,7 @@ def test_constructor_throws_on_invalid_config():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_size": 0.10,
+        "downsampled_batch_ratio": 0.10,
         "sample_then_batch": False,
     }
 
@@ -86,7 +89,7 @@ def test_constructor_throws_on_invalid_config():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_size": 10,
+        "downsampled_batch_ratio": 50,
         "sample_then_batch": False,
     }
     ads = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)

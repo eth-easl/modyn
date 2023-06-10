@@ -7,7 +7,6 @@ import os
 import pathlib
 import queue
 import traceback
-from enum import Enum
 from inspect import isfunction
 from typing import Any, Callable, Optional, Union
 
@@ -26,9 +25,12 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
-from modyn.utils import dynamic_module_import, grpc_connection_established, package_available_and_can_be_imported
-
-DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "SAMPLE_THEN_BATCH"])
+from modyn.utils import (
+    DownsamplingMode,
+    dynamic_module_import,
+    grpc_connection_established,
+    package_available_and_can_be_imported,
+)
 
 
 class PytorchTrainer:

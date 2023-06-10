@@ -8,11 +8,11 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_craig_down
 
 def test_sample_shape_ce():
     model = torch.nn.Linear(10, 3)
-    downsampled_batch_size = 5
+    downsampled_batch_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {
-        "downsampled_batch_size": downsampled_batch_size,
+        "downsampled_batch_ratio": downsampled_batch_ratio,
         "sample_then_batch": False,
         "selection_type": "Supervised",
     }
@@ -25,22 +25,22 @@ def test_sample_shape_ce():
 
     downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
 
-    assert downsampled_indexes.shape[0] == downsampled_batch_size
-    assert weights.shape[0] == downsampled_batch_size
+    assert downsampled_indexes.shape[0] == 4
+    assert weights.shape[0] == 4
 
     sampled_data, sampled_target, sampled_ids = get_tensors_subset(downsampled_indexes, data, target, ids)
 
     assert weights.shape[0] == sampled_target.shape[0]
-    assert sampled_data.shape[0] == downsampled_batch_size
+    assert sampled_data.shape[0] == 4
     assert sampled_data.shape[1] == data.shape[1]
-    assert weights.shape[0] == downsampled_batch_size
-    assert sampled_target.shape[0] == downsampled_batch_size
+    assert weights.shape[0] == 4
+    assert sampled_target.shape[0] == 4
     assert set(sampled_ids) <= set(range(8))
 
 
 def test_init():
     params_from_selector_bts = {
-        "downsampled_batch_size": 4,
+        "downsampled_batch_ratio": 50,
         "sample_then_batch": False,
         "selection_type": "Supervised",
     }

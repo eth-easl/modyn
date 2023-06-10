@@ -120,10 +120,6 @@ properties:
                 type: number
                 description: |
                   [AbstractDownsampleStrategy] In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
-              downsampled_batch_size:
-                type: number
-                description: |
-                  [AbstractDownsampleStrategy] How many points are sampled after computing the metric. Requires sample_then_batch set to False
               downsampled_batch_ratio:
                 type: number
                 description: |

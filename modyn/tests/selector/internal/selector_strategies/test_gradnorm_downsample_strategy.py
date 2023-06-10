@@ -43,7 +43,7 @@ def test_init_gradnorm():
             "limit": -1,
             "reset_after_trigger": False,
             "presampling_ratio": 80,
-            "downsampled_batch_size": 10,
+            "downsampled_batch_ratio": 50,
             "sample_then_batch": False,
         },
         get_minimal_modyn_config(),
@@ -51,7 +51,7 @@ def test_init_gradnorm():
         1000,
     )
 
-    assert strat.downsampled_batch_size == 10
+    assert strat.downsampled_batch_ratio == 50
     assert strat._pipeline_id == 42
     assert isinstance(strat.get_downsampling_strategy(), str)
 
@@ -63,7 +63,7 @@ def test_command_gradnorm():
             "limit": -1,
             "reset_after_trigger": False,
             "presampling_ratio": 80,
-            "downsampled_batch_size": 10,
+            "downsampled_batch_ratio": 10,
             "sample_then_batch": False,
         },
         get_minimal_modyn_config(),
@@ -75,5 +75,5 @@ def test_command_gradnorm():
     params = strat.get_downsampling_params()
     assert isinstance(name, str)
     assert name == "RemoteGradNormDownsampling"
-    assert "downsampled_batch_size" in params
-    assert params["downsampled_batch_size"] == 10
+    assert "downsampled_batch_ratio" in params
+    assert params["downsampled_batch_ratio"] == 10

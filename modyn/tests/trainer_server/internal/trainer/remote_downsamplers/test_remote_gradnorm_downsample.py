@@ -10,10 +10,10 @@ from torch import nn
 
 def test_sample_shape_ce():
     model = torch.nn.Linear(10, 3)
-    downsampled_batch_size = 5
+    downsampled_batch_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_then_batch": False}
+    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -23,25 +23,25 @@ def test_sample_shape_ce():
 
     downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
 
-    assert downsampled_indexes.shape[0] == downsampled_batch_size
-    assert weights.shape[0] == downsampled_batch_size
+    assert downsampled_indexes.shape[0] == 4  # 50% of 8
+    assert weights.shape[0] == 4
 
     sampled_data, sampled_target, sampled_ids = get_tensors_subset(downsampled_indexes, data, target, ids)
 
     assert weights.shape[0] == sampled_target.shape[0]
-    assert sampled_data.shape[0] == downsampled_batch_size
+    assert sampled_data.shape[0] == 4
     assert sampled_data.shape[1] == data.shape[1]
-    assert weights.shape[0] == downsampled_batch_size
-    assert sampled_target.shape[0] == downsampled_batch_size
+    assert weights.shape[0] == 4
+    assert sampled_target.shape[0] == 4
     assert set(sampled_ids) <= set(range(8))
 
 
 def test_sample_shape_other_losses():
     model = torch.nn.Linear(10, 1)
-    downsampled_batch_size = 5
+    downsampled_batch_ratio = 50
     per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size, "sample_then_batch": False}
+    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -52,28 +52,28 @@ def test_sample_shape_other_losses():
 
     downsampled_indexes, weights = sampler.batch_then_sample(forward_outputs, target)
 
-    assert downsampled_indexes.shape[0] == downsampled_batch_size
-    assert weights.shape[0] == downsampled_batch_size
+    assert downsampled_indexes.shape[0] == 4
+    assert weights.shape[0] == 4
 
     sampled_data, sampled_target, _ = get_tensors_subset(downsampled_indexes, data, target, ids)
 
     assert weights.shape[0] == sampled_target.shape[0]
-    assert sampled_data.shape[0] == downsampled_batch_size
+    assert sampled_data.shape[0] == 4
     assert sampled_data.shape[1] == data.shape[1]
-    assert weights.shape[0] == downsampled_batch_size
-    assert sampled_target.shape[0] == downsampled_batch_size
+    assert weights.shape[0] == 4
+    assert sampled_target.shape[0] == 4
 
 
 def test_sampling_crossentropy():
     model = torch.nn.Linear(10, 3)
-    downsampled_batch_size = 8
+    downsampled_batch_ratio = 100
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
 
     params_from_selector = {
-        "downsampled_batch_size": downsampled_batch_size,
+        "downsampled_batch_ratio": downsampled_batch_ratio,
         "replacement": False,
         "sample_then_batch": False,
     }
@@ -121,7 +121,7 @@ def test_sample_dict_input():
     model = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": 3, "sample_then_batch": False}
+    params_from_selector = {"downsampled_batch_ratio": 50, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_outputs = model(data)

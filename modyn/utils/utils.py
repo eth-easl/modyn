@@ -7,6 +7,7 @@ import pathlib
 import sys
 import tempfile
 import time
+from enum import Enum
 from types import ModuleType
 from typing import Any, Optional
 
@@ -19,6 +20,8 @@ logger = logging.getLogger(__name__)
 UNAVAILABLE_PKGS = []
 SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
 MAX_MESSAGE_SIZE = 1024 * 1024 * 128  # 128 MB
+
+DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "SAMPLE_THEN_BATCH"])
 
 
 def dynamic_module_import(name: str) -> ModuleType:

@@ -43,7 +43,7 @@ def test_init_loss():
             "limit": -1,
             "reset_after_trigger": False,
             "presampling_ratio": 80,
-            "downsampled_batch_size": 10,
+            "downsampled_batch_ratio": 10,
             "sample_then_batch": False,
         },
         get_minimal_modyn_config(),
@@ -51,6 +51,6 @@ def test_init_loss():
         1000,
     )
 
-    assert strat.downsampled_batch_size == 10
+    assert strat.downsampled_batch_ratio == 10
     assert strat._pipeline_id == 42
     assert isinstance(strat.get_downsampling_strategy(), str)

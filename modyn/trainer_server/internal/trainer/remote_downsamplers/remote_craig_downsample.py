@@ -140,11 +140,7 @@ class RemoteCRAIGDownsampling(AbstractRemoteDownsamplingStrategy):
         const = torch.max(dist_mat).item()
         dist_mat = (const - dist_mat).numpy()
 
-        budget = (
-            int(self.number_of_samples_seen * self.downsampled_batch_ratio / 100)
-            if self.sample_then_batch
-            else self.downsampled_batch_size
-        )
+        budget = int(self.number_of_samples_seen * self.downsampled_batch_ratio / 100)
 
         if self.selection_type == "Supervised":
             total_greedy_list, gammas = self._finalize_supervised(budget, dist_mat)

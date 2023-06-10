@@ -7,6 +7,7 @@ import os
 
 from .utils import (  # noqa: F401
     MAX_MESSAGE_SIZE,
+    DownsamplingMode,
     convert_timestr_to_seconds,
     current_time_millis,
     dynamic_module_import,

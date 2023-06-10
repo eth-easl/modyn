@@ -172,7 +172,6 @@ properties:
       - database
       - sample_batch_size
       - insertion_threads
-
   model_storage:
     type: object
     properties:
@@ -192,7 +191,6 @@ properties:
       - hostname
       - port
       - ftp_port
-
   metadata_database:
     type: object
     properties:
