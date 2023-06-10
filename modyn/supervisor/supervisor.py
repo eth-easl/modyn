@@ -8,7 +8,6 @@ import enlighten
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.trigger import Trigger
 from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
-from modyn.utils.utils import current_time_millis
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class Supervisor:
         self.modyn_config = modyn_config
         self.current_training_id: Optional[int] = None
         self.pipeline_id: Optional[int] = None
-        self.previous_model: Optional[pathlib.Path] = None
+        self.previous_model_id: Optional[int] = None
 
         self.progress_mgr = enlighten.get_manager()
         self.status_bar = self.progress_mgr.status_bar(
@@ -68,17 +67,8 @@ class Supervisor:
             self.stop_replay_at = stop_replay_at
 
         self._setup_trigger()
-        self._setup_model_directory()
 
         self._selector_batch_size = 128
-
-    def _setup_model_directory(self) -> None:
-        self.model_storage_directory = (
-            pathlib.Path(os.getcwd())
-            / f"models_{self.pipeline_config['pipeline']['name'].replace(' ', '_')}"
-            / str(current_time_millis())
-        )
-        os.makedirs(self.model_storage_directory)
 
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
@@ -137,15 +127,11 @@ class Supervisor:
                 )
                 is_valid = False
 
-            if "initial_model_path" not in self.pipeline_config["training"]:
-                logger.error("Initial model set to pretrained, but no initial_model_path given")
+            if "initial_model_id" not in self.pipeline_config["training"]:
+                logger.error("Initial model set to pretrained, but no initial_model_id given")
                 is_valid = False
             else:
-                self.previous_model = self.pipeline_config["training"]["initial_model_path"]
-                assert self.previous_model is not None  # makes mypy happy
-                if not self.previous_model.exists():
-                    logger.error(f"Path {self.previous_model} does not exist.")
-                    is_valid = False
+                self.previous_model_id = self.pipeline_config["training"]["initial_model_id"]
 
         if self.pipeline_config["training"]["initial_pass"]["activated"]:
             reference = self.pipeline_config["training"]["initial_pass"]["reference"]
@@ -322,22 +308,22 @@ class Supervisor:
         logger.info(f"Running training for trigger {trigger_id}")
 
         self.current_training_id = self.grpc.start_training(
-            self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model
+            self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model_id
         )
         self.grpc.wait_for_training_completion(self.current_training_id, self.pipeline_id, trigger_id)
 
-        # We download the trained model for evaluation in any case.
-        trained_model = self.grpc.fetch_trained_model(self.current_training_id, self.model_storage_directory)
+        # We store the trained model for evaluation in any case.
+        trained_model_id = self.grpc.store_trained_model(self.current_training_id)
 
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
         if self.pipeline_config["training"]["use_previous_model"]:
-            self.previous_model = trained_model
+            self.previous_model_id = trained_model_id
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.
         # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
         # for reference = amount, we need support from the storage module to return the required keys
-        # In case self.previous_model is set, respect and update!
+        # In case self.previous_model_id is set, respect and update!
         pass
 
     def replay_data(self) -> None:
