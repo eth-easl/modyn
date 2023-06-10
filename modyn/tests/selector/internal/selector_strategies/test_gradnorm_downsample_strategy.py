@@ -72,7 +72,7 @@ def test_command_gradnorm():
     )
 
     name = strat.get_downsampling_strategy()
-    params = strat.get_downsampling_params()
+    params = strat.get_downsampler_config()
     assert isinstance(name, str)
     assert name == "RemoteGradNormDownsampling"
     assert "downsampled_batch_ratio" in params

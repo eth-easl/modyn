@@ -103,21 +103,23 @@ class PytorchTrainer:
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
-        downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy()
-        self._weighted_opt = False
+        downsampling_enabled, strategy_name, downsampler_config, trainer_config = self.get_selection_strategy()
 
         if downsampling_enabled:
             self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
-            self._downsampler, sample_then_batch, self._downsampling_period = self.instantiate_downsampler(
-                strategy_name, params_from_selector, self._criterion_nored
-            )
-            if sample_then_batch:
+            self._downsampler = self.instantiate_downsampler(strategy_name, downsampler_config, self._criterion_nored)
+
+            assert "sample_then_batch" in trainer_config
+            if trainer_config["sample_then_batch"]:
                 self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
+                assert "downsampling_period" in trainer_config
+                self._downsampling_period = trainer_config["downsampling_period"]
             else:
                 self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
             self._weighted_opt = True
         else:
             self._downsampling_mode = DownsamplingMode.DISABLED
+            self._weighted_opt = False
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -230,12 +232,14 @@ class PytorchTrainer:
     def send_status_to_server(self, batch_number: int) -> None:
         self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
-    def get_selection_strategy(self) -> tuple[bool, str, dict]:
+    def get_selection_strategy(self) -> tuple[bool, str, dict, dict]:
         req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
 
         response: SelectionStrategyResponse = self.selector_stub.get_selection_strategy(req)
-        params = json.loads(response.params.value)
-        return response.downsampling_enabled, response.strategy_name, params
+        downsampler_config = json.loads(response.downsampler_config.value)
+        trainer_config = json.loads(response.trainer_config.value)
+
+        return response.downsampling_enabled, response.strategy_name, downsampler_config, trainer_config
 
     def connect_to_selector(self, selector_address: str) -> SelectorStub:
         selector_channel = grpc.insecure_channel(selector_address)
@@ -245,20 +249,15 @@ class PytorchTrainer:
         return SelectorStub(selector_channel)
 
     def instantiate_downsampler(
-        self, strategy_name: str, params_from_selector: dict, per_sample_loss: Any
-    ) -> tuple[AbstractRemoteDownsamplingStrategy, bool, int]:
-        assert "sample_then_batch" in params_from_selector
+        self, strategy_name: str, downsampler_config: dict, per_sample_loss: Any
+    ) -> AbstractRemoteDownsamplingStrategy:
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)
 
         downsampler = downsampler_class(
-            self.pipeline_id, self.trigger_id, self._batch_size, params_from_selector, per_sample_loss
+            self.pipeline_id, self.trigger_id, self._batch_size, downsampler_config, per_sample_loss
         )
-        return (
-            downsampler,
-            params_from_selector["sample_then_batch"],
-            params_from_selector.get("downsampling_period", 1),
-        )
+        return downsampler
 
     def sample_then_batch_this_epoch(self, epoch: int) -> bool:
         if self._downsampling_mode != DownsamplingMode.SAMPLE_THEN_BATCH:

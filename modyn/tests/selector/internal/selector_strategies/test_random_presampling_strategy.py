@@ -56,9 +56,3 @@ def test_init_random():
 
     assert strat._pipeline_id == 42
     assert not hasattr(strat, "downsampled_batch_size")
-
-    with pytest.raises(NotImplementedError):
-        strat.get_downsampling_strategy()
-
-    with pytest.raises(NotImplementedError):
-        strat.get_downsampling_params()

@@ -167,15 +167,3 @@ class AbstractPresampleStrategy(AbstractSelectionStrategy):
                 )
                 .count()
             )
-
-    def get_downsampling_strategy(self) -> str:
-        """
-        Abstract method to get the downsampling strategy that is transfered from the selector to the pytorch trainer.
-        """
-        raise NotImplementedError()
-
-    def get_downsampling_params(self) -> dict:
-        """
-        Abstract method to get the downsampling parameters that are transfered from the selector to the pytorch trainer.
-        """
-        raise NotImplementedError()

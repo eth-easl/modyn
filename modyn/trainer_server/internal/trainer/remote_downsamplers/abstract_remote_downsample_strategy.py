@@ -20,8 +20,6 @@ def get_tensors_subset(
 
 class AbstractRemoteDownsamplingStrategy(ABC):
     def __init__(self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict) -> None:
-        assert "sample_then_batch" in params_from_selector
-        self.sample_then_batch = params_from_selector["sample_then_batch"]
         self.pipeline_id = pipeline_id
         self.batch_size = batch_size
         self.trigger_id = trigger_id
@@ -33,7 +31,6 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         self.replacement = params_from_selector.get("replacement", True)
 
     def get_downsampled_batch_ratio(self) -> int:
-        assert self.sample_then_batch
         return self.downsampled_batch_ratio
 
     @abstractmethod

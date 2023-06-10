@@ -114,10 +114,19 @@ class SelectorGRPCServicer(SelectorServicer):
         pipeline_id = request.pipeline_id
         logger.info(f"[Pipeline {pipeline_id}]: Received selection strategy request")
 
-        downsampling_enabled, name, params = self.selector_manager.get_selection_strategy_remote(pipeline_id)
+        (
+            downsampling_enabled,
+            name,
+            downsampler_config,
+            trainer_config,
+        ) = self.selector_manager.get_selection_strategy_remote(pipeline_id)
 
-        params = json.dumps(params)
+        downsampler_config = json.dumps(downsampler_config)
+        trainer_config = json.dumps(trainer_config)
 
         return SelectionStrategyResponse(
-            downsampling_enabled=downsampling_enabled, strategy_name=name, params=SelectorJsonString(value=params)
+            downsampling_enabled=downsampling_enabled,
+            strategy_name=name,
+            downsampler_config=SelectorJsonString(value=downsampler_config),
+            trainer_config=SelectorJsonString(value=trainer_config),
         )

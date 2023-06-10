@@ -54,14 +54,20 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
             return self.downsampled_batch_ratio / 100
         return 1
 
-    def get_downsampling_params(self) -> dict:
-        params = {
+    def get_downsampler_config(self) -> dict:
+        config = {
             "downsampled_batch_ratio": self.downsampled_batch_ratio,
             "maximum_keys_in_memory": self._maximum_keys_in_memory,
+        }
+
+        return config
+
+    def get_trainer_config(self) -> dict:
+        config = {
             "sample_then_batch": self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH,
         }
 
         if self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
-            params["downsampling_period"] = self.downsampling_period
+            config["downsampling_period"] = self.downsampling_period
 
-        return params
+        return config

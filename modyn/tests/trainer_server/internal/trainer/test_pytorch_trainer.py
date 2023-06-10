@@ -237,7 +237,7 @@ def get_training_info(
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.dynamic_module_import")
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
-@patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}, {}))
 def get_mock_trainer(
     query_queue: mp.Queue(),
     response_queue: mp.Queue(),
@@ -750,7 +750,7 @@ def test_train(
     mock_get_dataloaders,
 )
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
-@patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}, {}))
 def test_create_trainer_with_exception(
     test_selector_connection,
     test_election_strategy,
