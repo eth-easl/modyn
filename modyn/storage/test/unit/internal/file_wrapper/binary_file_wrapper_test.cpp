@@ -173,3 +173,14 @@ TEST(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   ASSERT_EQ((samples)[0][0], 4);
   ASSERT_EQ((samples)[1][0], 8);
 }
+
+TEST(BinaryFileWrapperTest, TestDeleteSamples) {
+  const std::string file_name = "test.bin";
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+
+  BinaryFileWrapper file_wrapper = BinaryFileWrapper(file_name, config, filesystem_wrapper);
+  std::vector<int64_t> label_indices{0, 1, 2, 3};
+
+  ASSERT_NO_THROW(file_wrapper.delete_samples(label_indices));
+}

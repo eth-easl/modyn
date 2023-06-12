@@ -150,3 +150,12 @@ TEST_F(LocalFilesystemWrapperTest, TestIsValidPath) {
   ASSERT_TRUE(filesystem_wrapper.is_valid_path(file_name));
   ASSERT_FALSE(filesystem_wrapper.is_valid_path(test_base_dir + path_seperator + ".." + path_seperator));
 }
+
+TEST_F(LocalFilesystemWrapperTest, TestRemove) {
+  const YAML::Node config = TestUtils::get_dummy_config();
+  LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper(test_base_dir);
+  const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
+  ASSERT_TRUE(filesystem_wrapper.exists(file_name));
+  filesystem_wrapper.remove(file_name);
+  ASSERT_FALSE(filesystem_wrapper.exists(file_name));
+}

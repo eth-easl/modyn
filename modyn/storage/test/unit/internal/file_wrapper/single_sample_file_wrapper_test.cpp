@@ -102,3 +102,20 @@ TEST(SingleSampleFileWrapperTest, TestGetSamplesFromIndices) {
   ASSERT_EQ((samples)[0][6], '7');
   ASSERT_EQ((samples)[0][7], '8');
 }
+
+TEST(SingleSampleFileWrapperTest, TestDeleteSamples) {
+  const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+  EXPECT_CALL(*filesystem_wrapper, remove(testing::_)).Times(1);
+
+  const std::string file_name = "test.txt";
+  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+
+  storage::SingleSampleFileWrapper file_wrapper =
+      storage::SingleSampleFileWrapper(file_name, config, filesystem_wrapper);
+
+  const std::vector<int64_t> indices = {0};
+  file_wrapper.delete_samples(indices);
+
+  const std::vector<int64_t> indices2 = {0, 1};
+  ASSERT_THROW(file_wrapper.delete_samples(indices2), std::runtime_error);
+}
