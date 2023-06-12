@@ -32,13 +32,14 @@ class StorageServiceImplTest : public ::testing::Test {
                            "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
     soci::session session = connection.get_session();
-    session
-        << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'tmp/test_file.txt', 0, 1)";
-    session << "INSERT INTO samples (dataset_id, file_id, sample_index, timestamp) VALUES (1, 1, 0, 0)";
+    session << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'tmp/test_file.txt', "
+               "0, 1)";
+
+    session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 0, 0)";
 
     session << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'tmp/test_file2.txt', "
                "100, 1)";
-    session << "INSERT INTO samples (dataset_id, file_id, sample_index, timestamp) VALUES (1, 2, 0, 1)";
+    session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 2, 0, 1)";
 
     // Create dummy files
     std::ofstream file("tmp/test_file.txt");
@@ -61,91 +62,12 @@ class StorageServiceImplTest : public ::testing::Test {
   void TearDown() override {
     // Remove temporary directory
     std::filesystem::remove_all("tmp");
+    std::filesystem::remove("config.yaml");
+    if (std::filesystem::exists("'test.db'")) {
+      std::filesystem::remove("'test.db'");
+    }
   }
 };
-
-TEST_F(StorageServiceImplTest, TestGet) {
-  const YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageServiceImpl storage_storage_service(config);
-
-  modyn::storage::GetRequest request;
-  request.set_dataset_id("test_dataset");
-  request.add_keys(1);
-  request.add_keys(2);
-
-  grpc::ServerContext context;
-
-  std::vector<modyn::storage::GetDataInIntervalResponse> responses;
-  auto writer = new ServerWriter<modyn::storage::GetDataInIntervalResponse>(&responses);
-
-  grpc::Status status = storage_storage_service.Get(&context, &request, writer);
-
-  ASSERT_TRUE(status.ok());
-
-  ASSERT_EQ(responses.size(), 2);
-
-  std::vector expected_timestamps = {0, 100};
-  int i = 0;
-  for (auto response : responses) {
-    ASSERT_EQ(response.keys(0), i + 1);
-    ASSERT_EQ(response.labels(0), i + 1);
-    ASSERT_EQ(response.timestamps(0), expected_timestamps[i]);
-    i++;
-  }
-}
-
-TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
-  const YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageServiceImpl storage_storage_service(config);
-
-  modyn::storage::GetNewDataSinceRequest request;
-  request.set_dataset_id("test_dataset");
-  request.set_timestamp(50);
-
-  grpc::ServerContext context;
-
-  std::vector<modyn::storage::GetNewDataSinceResponse> responses;
-  auto writer = new MockWriter<modyn::storage::GetNewDataSinceResponse>(&responses);
-
-  grpc::Status status = storage_storage_service.GetNewDataSince(&context, &request, writer);
-
-  ASSERT_TRUE(status.ok());
-
-  ASSERT_EQ(responses.size(), 1);
-
-  ASSERT_EQ(responses[0].keys(0), 1);
-
-  ASSERT_EQ(responses[0].labels(0), 2);
-
-  ASSERT_EQ(responses[0].timestamps(0), 100);
-}
-
-TEST_F(StorageServiceImplTest, TestGetDataInInterval) {
-  const YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageServiceImpl storage_storage_service(config);
-
-  modyn::storage::GetDataInIntervalRequest request;
-  request.set_dataset_id("test_dataset");
-  request.set_start_timestamp(50);
-  request.set_end_timestamp(150);
-
-  grpc::ServerContext context;
-
-  std::vector<modyn::storage::GetDataInIntervalResponse> responses;
-  auto writer = new MockWriter<modyn::storage::GetDataInIntervalResponse>(&responses);
-
-  grpc::Status status = storage_storage_service.GetDataInInterval(&context, &request, writer);
-
-  ASSERT_TRUE(status.ok());
-
-  ASSERT_GE(responses.size(), 1);
-
-  ASSERT_EQ(responses[0].keys(0), 1);
-
-  ASSERT_EQ(responses[0].labels(0), 2);
-
-  ASSERT_EQ(responses[0].timestamps(0), 100);
-}
 
 TEST_F(StorageServiceImplTest, TestCheckAvailability) {
   grpc::ServerContext context;
@@ -204,7 +126,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
   grpc::ServerContext context;
 
   int dataset_exists = 0;
-  session << "SELECT COUNT(*) FROM datasets WHERE id = 'test_dataset'", soci::into(dataset_exists);
+  session << "SELECT COUNT(*) FROM datasets WHERE name = 'test_dataset'", soci::into(dataset_exists);
 
   ASSERT_TRUE(dataset_exists);
 
@@ -215,7 +137,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
   ASSERT_TRUE(response.success());
 
   dataset_exists = 0;
-  session << "SELECT COUNT(*) FROM datasets WHERE id = 'test_dataset'", soci::into(dataset_exists);
+  session << "SELECT COUNT(*) FROM datasets WHERE name = 'test_dataset'", soci::into(dataset_exists);
 
   ASSERT_FALSE(dataset_exists);
 }

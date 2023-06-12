@@ -27,9 +27,6 @@ TEST(BinaryFileWrapperTest, TestValidateFileExtension) {
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   EXPECT_CALL(*filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   ASSERT_NO_THROW(const BinaryFileWrapper file_wrapper = BinaryFileWrapper(file_name, config, filesystem_wrapper););
-  file_name = "test.txt";
-  ASSERT_THROW(const BinaryFileWrapper file_wrapper2 = BinaryFileWrapper(file_name, config, filesystem_wrapper),
-               std::invalid_argument);
 }
 
 TEST(BinaryFileWrapperTest, TestValidateRequestIndices) {

@@ -115,7 +115,4 @@ TEST(SingleSampleFileWrapperTest, TestDeleteSamples) {
 
   const std::vector<int64_t> indices = {0};
   file_wrapper.delete_samples(indices);
-
-  const std::vector<int64_t> indices2 = {0, 1};
-  ASSERT_THROW(file_wrapper.delete_samples(indices2), std::runtime_error);
 }

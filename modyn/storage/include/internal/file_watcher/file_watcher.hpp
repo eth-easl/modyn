@@ -38,6 +38,8 @@ class FileWatcher {
         dataset_id_{dataset_id},
         storage_database_connection_{StorageDatabaseConnection(config_)},
         stop_file_watcher_{stop_file_watcher} {
+    SPDLOG_INFO("Initializing file watcher for dataset {}.", dataset_id_);
+
     insertion_threads_ = config_["storage"]["insertion_threads"].as<int16_t>();
     disable_multithreading_ = insertion_threads_ <= 1;  // NOLINT
     if (config_["storage"]["sample_dbinsertion_batchsize"]) {
@@ -53,7 +55,9 @@ class FileWatcher {
     const auto filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
 
     if (dataset_path.empty()) {
-      throw std::runtime_error("Loading dataset failed, is the dataset_id correct?");
+      SPDLOG_ERROR("Dataset with id {} not found.", dataset_id_);
+      stop_file_watcher_->store(true);
+      return;
     }
 
     filesystem_wrapper = Utils::get_filesystem_wrapper(dataset_path, filesystem_wrapper_type);
@@ -62,7 +66,9 @@ class FileWatcher {
     filesystem_wrapper_type_ = filesystem_wrapper_type;
 
     if (!filesystem_wrapper->exists(dataset_path) || !filesystem_wrapper->is_directory(dataset_path)) {
-      throw std::runtime_error("Dataset path " + dataset_path + " does not exist or is not a directory.");
+      SPDLOG_ERROR("Dataset path {} does not exist or is not a directory.", dataset_path);
+      stop_file_watcher_->store(true);
+      return;
     }
 
     if (disable_multithreading_) {

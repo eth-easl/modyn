@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+
 #include <string>
 #include <unordered_map>
 #include <vector>

@@ -19,6 +19,7 @@ soci::session StorageDatabaseConnection::get_session() const {
   } else if (drivername == "sqlite3") {
     parameters = soci::connection_parameters(soci::sqlite3, connection_string);
   } else {
+    SPDLOG_ERROR("Unsupported database driver: {}", drivername);
     throw std::runtime_error("Error getting session: Unsupported database driver: " + drivername);
   }
   return soci::session(parameters);
@@ -51,6 +52,7 @@ void StorageDatabaseConnection::create_tables() const {
 #include "sql/SQLiteSample.sql"
         ;
   } else {
+    SPDLOG_ERROR("Error creating tables: Unsupported database driver: {}", drivername);
     throw std::runtime_error("Error creating tables: Unsupported database driver: " + drivername);
   }
   session << dataset_table_sql;
@@ -101,7 +103,8 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
           soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
           soci::use(boolean_string), soci::use(file_watcher_interval);
     } else {
-      throw std::runtime_error("Error adding dataset: Unsupported database driver: " + drivername);
+      SPDLOG_ERROR("Error adding dataset: Unsupported database driver: " + drivername);
+      return false;
     }
 
     // Create partition table for samples
@@ -142,7 +145,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
     session << "SELECT dataset_id FROM datasets WHERE name = :dataset_name", soci::into(dataset_id),
         soci::use(dataset_name);
     if (dataset_id == 0) {
-      throw std::runtime_error("Dataset " + dataset_name + " not found");
+      SPDLOG_ERROR("Dataset {} not found", dataset_name);
     }
     std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
     session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "

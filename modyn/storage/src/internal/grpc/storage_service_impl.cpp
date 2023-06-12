@@ -14,8 +14,8 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
   // Check if the dataset exists
   int64_t dataset_id = 0;
   std::string base_path;
-  std::string filesystem_wrapper_type;
-  std::string file_wrapper_type;
+  int64_t filesystem_wrapper_type;
+  int64_t file_wrapper_type;
   std::string file_wrapper_config;
   session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
              "datasets WHERE name = :name",
@@ -51,7 +51,7 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
   }
 
   auto filesystem_wrapper =
-      Utils::get_filesystem_wrapper(base_path, FilesystemWrapper::get_filesystem_wrapper_type(filesystem_wrapper_type));
+      Utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
   const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
 
   if (file_id_to_sample_data.size() == 0) {
@@ -65,7 +65,7 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
 
   session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
 
-  auto file_wrapper = Utils::get_file_wrapper(file_path, FileWrapper::get_file_wrapper_type(file_wrapper_type),
+  auto file_wrapper = Utils::get_file_wrapper(file_path, static_cast<FileWrapperType>(file_wrapper_type),
                                               file_wrapper_config_node, filesystem_wrapper);
 
   // Get the data from the files
@@ -100,7 +100,7 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::GetNewDataSince(                           // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetNewDataSinceRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -152,7 +152,7 @@ grpc::Status StorageServiceImpl::GetNewDataSince(                           // N
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::GetDataInInterval(                           // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetDataInIntervalRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -206,7 +206,7 @@ grpc::Status StorageServiceImpl::GetDataInInterval(                           //
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DatasetAvailableResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -215,6 +215,8 @@ grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readabil
 
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+
+  SPDLOG_INFO("Dataset {} exists: {}", request->dataset_id(), dataset_id != 0);
 
   grpc::Status status;
   if (dataset_id == 0) {
@@ -228,7 +230,7 @@ grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readabil
   return status;
 }
 
-grpc::Status StorageServiceImpl::RegisterNewDataset(           // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::RegisterNewDatasetRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::RegisterNewDatasetResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -250,7 +252,7 @@ grpc::Status StorageServiceImpl::RegisterNewDataset(           // NOLINT (readab
   return status;
 }
 
-grpc::Status StorageServiceImpl::GetCurrentTimestamp(         // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
     modyn::storage::GetCurrentTimestampResponse* response) {  // NOLINT (misc-unused-parameters)
   response->set_timestamp(
@@ -259,7 +261,7 @@ grpc::Status StorageServiceImpl::GetCurrentTimestamp(         // NOLINT (readabi
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDatasetResponse* response) {       // NOLINT (misc-unused-parameters)
@@ -275,7 +277,7 @@ grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readabil
   return status;
 }
 
-grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DeleteDataRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDataResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -285,8 +287,8 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
   // Check if the dataset exists
   int64_t dataset_id = 0;
   std::string base_path;
-  std::string filesystem_wrapper_type;
-  std::string file_wrapper_type;
+  int64_t filesystem_wrapper_type;
+  int64_t file_wrapper_type;
   std::string file_wrapper_config;
   session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
              "datasets WHERE name = :name",
@@ -309,39 +311,47 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
   }
 
   int64_t number_of_files;
-  session << "SELECT COUNT(file_id) FROM samples WHERE dataset_id = :dataset_id AND sample_id IN :sample_ids GROUP "
-             "BY file_id",
-      soci::into(number_of_files), soci::use(dataset_id), soci::use(sample_ids);
 
+  std::string sample_placeholders = fmt::format("({})", fmt::join(sample_ids, ","));
+
+  session << "SELECT DISTINCT COUNT(file_id) FROM samples WHERE dataset_id = :dataset_id AND sample_id IN " +
+                 sample_placeholders,
+      soci::into(number_of_files), soci::use(dataset_id);
+
+  if (number_of_files == 0) {
+    SPDLOG_ERROR("No samples found in dataset {}.", dataset_id);
+    return {grpc::StatusCode::NOT_FOUND, "No samples found."};
+  }
   // Get the file ids
   std::vector<int64_t> file_ids = std::vector<int64_t>(number_of_files);
-  session << "SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN :sample_ids GROUP BY "
-             "file_id",
-      soci::into(file_ids), soci::use(dataset_id), soci::use(sample_ids);
+  session << "SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN " + sample_placeholders,
+      soci::into(file_ids), soci::use(dataset_id);
+
+  // TODO: Check if all files exist
 
   auto filesystem_wrapper =
-      Utils::get_filesystem_wrapper(base_path, FilesystemWrapper::get_filesystem_wrapper_type(filesystem_wrapper_type));
+      Utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
+  std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
 
   try {
     std::vector<std::string> file_paths;
-    session << "SELECT path FROM files WHERE file_id IN :file_ids", soci::into(file_paths), soci::use(file_ids);
-
+    session << "SELECT path FROM files WHERE file_id IN " + file_placeholders, soci::into(file_paths);
     if (file_paths.size() != file_ids.size()) {
       SPDLOG_ERROR("Error deleting data: Could not find all files.");
       return {grpc::StatusCode::INTERNAL, "Error deleting data."};
     }
 
-    auto file_wrapper =
-        Utils::get_file_wrapper(file_paths.front(), FileWrapper::get_file_wrapper_type(file_wrapper_type),
-                                file_wrapper_config_node, filesystem_wrapper);
+    auto file_wrapper = Utils::get_file_wrapper(file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
+                                                file_wrapper_config_node, filesystem_wrapper);
     for (size_t i = 0; i < file_paths.size(); ++i) {
       const auto& file_id = file_ids[i];
       const auto& path = file_paths[i];
       file_wrapper->set_file_path(path);
 
       int64_t samples_to_delete;
-      session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id AND sample_id IN :sample_ids",
+      session << "SELECT DISTINCT COUNT(file_id) FROM samples WHERE file_id = :file_id AND sample_id IN " +
+                     sample_placeholders,
           soci::into(samples_to_delete), soci::use(file_id), soci::use(sample_ids);
 
       std::vector<int64_t> sample_ids_to_delete_indices = std::vector<int64_t>(samples_to_delete);

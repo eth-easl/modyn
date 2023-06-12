@@ -65,7 +65,8 @@ void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
       file_watcher_process_stop_flags_.erase(file_watcher_process_stop_flags_it);
     }
   } else {
-    throw std::runtime_error("FileWatcher process not found");
+    SPDLOG_ERROR("FileWatcher process for dataset {} not found", dataset_id);
+    stop_file_watcher_process(dataset_id, is_test);
   }
 }
 
@@ -86,7 +87,7 @@ void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert
         stop_file_watcher_process(pair.first);
       }
     } catch (const std::runtime_error& e) {
-      spdlog::error("Error stopping FileWatcher process: {}", e.what());
+      SPDLOG_ERROR("Error stopping FileWatcher process: {}", e.what());
     }
     return;
   }
@@ -102,7 +103,7 @@ void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert
       try {
         stop_file_watcher_process(dataset_id);
       } catch (const std::runtime_error& e) {
-        spdlog::error("Error stopping FileWatcher process: {}", e.what());
+        SPDLOG_ERROR("Error stopping FileWatcher process: {}", e.what());
       }
     }
   }
@@ -117,7 +118,7 @@ void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert
       try {
         stop_file_watcher_process(dataset_id);
       } catch (const std::runtime_error& e) {
-        spdlog::error("Error stopping FileWatcher process: {}. Trying again in the next iteration.", e.what());
+        SPDLOG_ERROR("Error stopping FileWatcher process: {}. Trying again in the next iteration.", e.what());
       }
     } else if (!file_watcher_processes_[dataset_id].joinable()) {
       // The FileWatcher process is not running. Start it.
@@ -143,6 +144,9 @@ void FileWatchdog::run() {
   }
   for (auto& file_watcher_process_flag : file_watcher_process_stop_flags_) {
     file_watcher_process_flag.second.store(true);
+  }
+  for (auto& file_watcher_process : file_watcher_processes_) {
+    file_watcher_process.second.join();
   }
 }
 

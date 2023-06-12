@@ -291,15 +291,15 @@ void FileWatcher::run() {
       soci::into(file_watcher_interval), soci::use(dataset_id_);
 
   if (file_watcher_interval == 0) {
-    throw std::runtime_error("File watcher interval is invalid, does the dataset exist?");
+    SPDLOG_ERROR("File watcher interval is invalid, does the dataset exist?");
+    return;
   }
 
   while (true) {
     try {
       seek();
-      SPDLOG_INFO("File watcher for dataset {} is sleeping for {} seconds", dataset_id_, file_watcher_interval);
-      SPDLOG_INFO("Current flag value: {}", stop_file_watcher_->load());
       if (stop_file_watcher_->load()) {
+        SPDLOG_INFO("File watcher for dataset {} is stopping", dataset_id_);
         break;
       }
     } catch (const std::exception& e) {

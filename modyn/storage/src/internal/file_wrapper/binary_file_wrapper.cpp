@@ -34,7 +34,7 @@ int64_t BinaryFileWrapper::get_number_of_samples() { return file_size_ / record_
 void BinaryFileWrapper::validate_file_extension() {
   const std::string extension = file_path_.substr(file_path_.find_last_of('.') + 1);
   if (extension != "bin") {
-    throw std::invalid_argument("Binary file wrapper only supports .bin files.");
+    SPDLOG_ERROR("Binary file wrapper only supports .bin files.");
   }
 }
 
