@@ -4,15 +4,12 @@ MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
 # Make build directory
 mkdir -p $MODYNPATH/storage/build
 
-# Initialise git submodules
-git submodule update --init --recursive
-
 # cmake in build directory
 cd $MODYNPATH/storage/build
 cmake ..
 
 # make
-make
+make -j8
 
 # run
 ./src/modynstorage "$@"
