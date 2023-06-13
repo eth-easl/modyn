@@ -310,33 +310,43 @@ grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-
     sample_ids.push_back(request->keys(i));
   }
 
-  int64_t number_of_files;
+  int64_t number_of_files = 0;
 
   std::string sample_placeholders = fmt::format("({})", fmt::join(sample_ids, ","));
 
-  session << "SELECT DISTINCT COUNT(file_id) FROM samples WHERE dataset_id = :dataset_id AND sample_id IN " +
-                 sample_placeholders,
-      soci::into(number_of_files), soci::use(dataset_id);
+  std::string sql = fmt::format(
+      "SELECT COUNT(DISTINCT file_id) FROM (SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id "
+      "IN {})",
+      sample_placeholders);
+  session << sql, soci::into(number_of_files), soci::use(dataset_id);
 
   if (number_of_files == 0) {
     SPDLOG_ERROR("No samples found in dataset {}.", dataset_id);
     return {grpc::StatusCode::NOT_FOUND, "No samples found."};
   }
-  // Get the file ids
-  std::vector<int64_t> file_ids = std::vector<int64_t>(number_of_files);
-  session << "SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN " + sample_placeholders,
-      soci::into(file_ids), soci::use(dataset_id);
 
-  // TODO: Check if all files exist
+  // Get the file ids
+  std::vector<int64_t> file_ids =
+      std::vector<int64_t>(number_of_files + 1);  // There is some undefined behaviour if number_of_files is 1
+  sql = fmt::format("SELECT DISTINCT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {}",
+                    sample_placeholders);
+  session << sql, soci::into(file_ids), soci::use(dataset_id);
+
+  if (file_ids.size() == 0) {
+    SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
+    return {grpc::StatusCode::NOT_FOUND, "No files found."};
+  }
 
   auto filesystem_wrapper =
       Utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
   std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
+  std::string index_placeholders;
 
   try {
-    std::vector<std::string> file_paths;
-    session << "SELECT path FROM files WHERE file_id IN " + file_placeholders, soci::into(file_paths);
+    std::vector<std::string> file_paths = std::vector<std::string>(number_of_files + 1);
+    sql = fmt::format("SELECT path FROM files WHERE file_id IN {}", file_placeholders);
+    session << sql, soci::into(file_paths);
     if (file_paths.size() != file_ids.size()) {
       SPDLOG_ERROR("Error deleting data: Could not find all files.");
       return {grpc::StatusCode::INTERNAL, "Error deleting data."};
@@ -350,18 +360,20 @@ grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-
       file_wrapper->set_file_path(path);
 
       int64_t samples_to_delete;
-      session << "SELECT DISTINCT COUNT(file_id) FROM samples WHERE file_id = :file_id AND sample_id IN " +
-                     sample_placeholders,
-          soci::into(samples_to_delete), soci::use(file_id), soci::use(sample_ids);
+      sql = fmt::format("SELECT COUNT(sample_id) FROM samples WHERE file_id = :file_id AND sample_id IN {}",
+                        sample_placeholders);
+      session << sql, soci::into(samples_to_delete), soci::use(file_id);
 
-      std::vector<int64_t> sample_ids_to_delete_indices = std::vector<int64_t>(samples_to_delete);
-      session << "SELECT sample_id FROM samples WHERE file_id = :file_id AND sample_id IN :sample_ids",
-          soci::into(sample_ids_to_delete_indices), soci::use(file_id), soci::use(sample_ids);
+      std::vector<int64_t> sample_ids_to_delete_indices = std::vector<int64_t>(samples_to_delete + 1);
+      sql = fmt::format("SELECT sample_id FROM samples WHERE file_id = :file_id AND sample_id IN {}",
+                        sample_placeholders);
+      session << sql, soci::into(sample_ids_to_delete_indices), soci::use(file_id);
 
       file_wrapper->delete_samples(sample_ids_to_delete_indices);
 
-      session << "DELETE FROM samples WHERE file_id = :file_id AND index IN :index", soci::use(file_id),
-          soci::use(sample_ids_to_delete_indices);
+      index_placeholders = fmt::format("({})", fmt::join(sample_ids_to_delete_indices, ","));
+      sql = fmt::format("DELETE FROM samples WHERE file_id = :file_id AND sample_id IN {}", index_placeholders);
+      session << sql, soci::use(file_id);
 
       int64_t number_of_samples_in_file;
       session << "SELECT number_of_samples FROM files WHERE file_id = :file_id", soci::into(number_of_samples_in_file),

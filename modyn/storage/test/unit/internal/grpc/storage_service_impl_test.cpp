@@ -150,6 +150,11 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   request.set_dataset_id("test_dataset");
   request.add_keys(1);
 
+  // Add an additional sample for file 1 to the database
+  const StorageDatabaseConnection connection(config);
+  soci::session session = connection.get_session();
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 1, 0)";
+
   modyn::storage::DeleteDataResponse response;
 
   grpc::ServerContext context;
@@ -159,18 +164,14 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   ASSERT_TRUE(status.ok());
   ASSERT_TRUE(response.success());
 
-  const StorageDatabaseConnection connection(config);
-
-  soci::session session = connection.get_session();
-
   int number_of_samples = 0;
   session << "SELECT COUNT(*) FROM samples WHERE dataset_id = 1", soci::into(number_of_samples);
 
-  ASSERT_EQ(number_of_samples, 1);
+  ASSERT_EQ(number_of_samples, 2);
 
-  ASSERT_FALSE(std::filesystem::exists("tmp/test_file"));
+  ASSERT_FALSE(std::filesystem::exists("tmp/test_file.txt"));
 
-  ASSERT_TRUE(std::filesystem::exists("tmp/test_file2"));
+  ASSERT_TRUE(std::filesystem::exists("tmp/test_file2.txt"));
 
   request.clear_keys();
 
@@ -182,7 +183,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
   status = storage_service.DeleteData(&context, &request, &response);
 
-  ASSERT_EQ(status.error_code(), grpc::StatusCode::INTERNAL);
+  ASSERT_EQ(status.error_code(), grpc::StatusCode::NOT_FOUND);
 
   request.clear_keys();
   request.add_keys(2);
@@ -195,5 +196,5 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   number_of_samples = 0;
   session << "SELECT COUNT(*) FROM samples WHERE dataset_id = 1", soci::into(number_of_samples);
 
-  ASSERT_EQ(number_of_samples, 0);
+  ASSERT_EQ(number_of_samples, 1);
 }
