@@ -562,7 +562,7 @@ def test_send_status_to_server():
     response_queue = mp.Queue()
     query_queue = mp.Queue()
     trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "", False)
-    trainer.send_status_to_server(20)
+    trainer.send_status_to_server_training(20)
     response = response_queue.get()
     assert response["num_batches"] == 20
     assert response["num_samples"] == 0

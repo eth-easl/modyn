@@ -218,7 +218,7 @@ def test_get_training_status_not_registered(test_connect_to_model_storage):
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(10, 100))
+@patch.object(TrainerServerGRPCServicer, "get_status_training", return_value=(10, 100))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive(
@@ -246,7 +246,7 @@ def test_get_training_status_alive(
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None))
+@patch.object(TrainerServerGRPCServicer, "get_status_training", return_value=(None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive_blocked(
@@ -274,7 +274,7 @@ def test_get_training_status_alive_blocked(
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
-@patch.object(TrainerServerGRPCServicer, "get_status")
+@patch.object(TrainerServerGRPCServicer, "get_status_training")
 def test_get_training_status_finished_with_exception(
     test_get_status,
     test_check_for_training_exception,
@@ -302,7 +302,7 @@ def test_get_training_status_finished_with_exception(
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
-@patch.object(TrainerServerGRPCServicer, "get_status")
+@patch.object(TrainerServerGRPCServicer, "get_status_training")
 def test_get_training_status_finished_no_checkpoint(
     test_get_status,
     test_check_for_training_exception,
@@ -332,7 +332,7 @@ def test_get_training_status(test_connect_to_model_storage):
         training_process_info = get_training_process_info()
         trainer_server._training_process_dict[1] = training_process_info
         training_process_info.status_response_queue.put(state_dict)
-        num_batches, num_samples = trainer_server.get_status(1)
+        num_batches, num_samples = trainer_server.get_status_training(1)
         assert num_batches == state_dict["num_batches"]
         assert num_samples == state_dict["num_samples"]
 

@@ -40,8 +40,8 @@ class PytorchTrainer:
         self,
         training_info: TrainingInfo,
         device: str,
-        status_query_queue: mp.Queue,
-        status_response_queue: mp.Queue,
+        status_query_queue_training: mp.Queue,
+        status_response_queue_training: mp.Queue,
         logger: logging.Logger,
     ) -> None:
         self.logger = logger
@@ -95,8 +95,8 @@ class PytorchTrainer:
 
         self._final_checkpoint_path.mkdir()  # exist_ok == False, this directory should not exist before
 
-        self._status_query_queue = status_query_queue
-        self._status_response_queue = status_response_queue
+        self._status_query_queue_training = status_query_queue_training
+        self._status_response_queue_training = status_response_queue_training
 
         self._num_samples = 0
 
@@ -227,10 +227,10 @@ class PytorchTrainer:
         self.save_state(buffer)
         buffer.seek(0)
         bytes_state = buffer.read()
-        self._status_response_queue.put(bytes_state)
+        self._status_response_queue_training.put(bytes_state)
 
-    def send_status_to_server(self, batch_number: int) -> None:
-        self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})
+    def send_status_to_server_training(self, batch_number: int) -> None:
+        self._status_response_queue_training.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
     def get_selection_strategy(self) -> tuple[bool, str, dict, dict]:
         req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
@@ -291,9 +291,9 @@ class PytorchTrainer:
                 # we try to fetch an element within 10ms. If there is no
                 # element within that timeframe returned, we continue.
                 try:
-                    req = self._status_query_queue.get(timeout=0.01)
+                    req = self._status_query_queue_training.get(timeout=0.01)
                     if req == TrainerMessages.STATUS_QUERY_MESSAGE:
-                        self.send_status_to_server(batch_number)
+                        self.send_status_to_server_training(batch_number)
                     elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
                         self.send_model_state_to_server()
                     else:

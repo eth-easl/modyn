@@ -196,14 +196,14 @@ class TrainerServerGRPCServicer:
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
             logger.info(f"Training {training_id} is still running, obtaining info from running process.")
-            num_batches, num_samples = self.get_status(training_id)
+            training_num_batches, training_num_samples = self.get_status_training(training_id)
             response_kwargs_running: dict[str, Any] = {
                 "valid": True,
                 "is_running": True,
-                "blocked": num_batches is None,
-                "state_available": num_batches is not None and num_samples is not None,
-                "batches_seen": num_batches,
-                "samples_seen": num_samples,
+                "blocked": training_num_batches is None,
+                "state_available": training_num_batches is not None and training_num_samples is not None,
+                "batches_seen": training_num_batches,
+                "samples_seen": training_num_samples,
             }
             cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v is not None}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
@@ -296,7 +296,7 @@ class TrainerServerGRPCServicer:
             return GetLatestModelResponse(valid_state=True, model_path=prefix_path)
         return GetLatestModelResponse(valid_state=False)
 
-    def get_status(self, training_id: int) -> tuple[Optional[int], Optional[int]]:
+    def get_status_training(self, training_id: int) -> tuple[Optional[int], Optional[int]]:
         status_query_queue = self._training_process_dict[training_id].status_query_queue
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:

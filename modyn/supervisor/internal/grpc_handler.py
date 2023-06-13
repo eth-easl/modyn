@@ -24,6 +24,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.supervisor.internal.supervisor_counter import SupervisorCounter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -336,13 +337,9 @@ class GRPCHandler:
         self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        last_samples = 0
-        current_epoch = 0
-        sample_pbar = self.progress_mgr.counter(
-            total=total_samples,
-            desc=f"[Training {training_id} Epoch {current_epoch}] Training on Samples",
-            unit="samples",
-        )
+        sample_pbar = SupervisorCounter(self.progress_mgr, training_id)
+
+        sample_pbar.start_training(total_samples)
 
         blocked_in_a_row = 0
 
@@ -372,53 +369,7 @@ class GRPCHandler:
                         "batches_seen"
                     ), f"Inconsistent server response:\n{res}"
 
-                    new_samples = res.samples_seen - last_samples
-
-                    increment_epoch = 0
-
-                    # conclude/progress the current epoch
-                    if new_samples > 0 and res.samples_seen <= total_samples * (current_epoch + 1):
-                        sample_pbar.update(new_samples)
-
-                    # start a new epoch
-                    elif res.samples_seen == total_samples * (current_epoch + 1):
-                        sample_pbar.clear(flush=True)
-                        sample_pbar.close(clear=True)
-                        increment_epoch += 1
-                        sample_pbar = self.progress_mgr.counter(
-                            total=total_samples,
-                            desc=f"[Training {training_id} Epoch {current_epoch + 1}] Training on Samples",
-                            unit="samples",
-                        )
-
-                    # handle corner cases
-                    elif res.samples_seen > total_samples * (current_epoch + 1):
-                        # we have to distribute new_samples across several epochs
-                        this_epoch_samples = sample_pbar.total - sample_pbar.count
-                        sample_pbar.update(this_epoch_samples)
-                        remaining_samples = new_samples - this_epoch_samples
-
-                        while True:
-                            sample_pbar.clear(flush=True)
-                            sample_pbar.close(clear=True)
-                            sample_pbar = self.progress_mgr.counter(
-                                total=total_samples,
-                                desc=f"[Training {training_id} Epoch {current_epoch + increment_epoch + 1}] "
-                                f"Training on Samples",
-                                unit="samples",
-                            )
-                            increment_epoch += 1
-                            if remaining_samples > total_samples:
-                                # epoch started before the last update and already finished
-                                sample_pbar.update(total_samples)
-                                remaining_samples -= total_samples
-                            else:
-                                # just one new epoch
-                                sample_pbar.update(remaining_samples)
-                                break
-
-                    last_samples = res.samples_seen
-                    current_epoch += increment_epoch
+                    sample_pbar.progress_counter(res.samples_seen)
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -428,9 +379,7 @@ class GRPCHandler:
             else:
                 break
 
-        sample_pbar.update(sample_pbar.total - sample_pbar.count)
-        sample_pbar.clear(flush=True)
-        sample_pbar.close(clear=True)
+        sample_pbar.end_training()
         logger.info("Training completed 🚀")
 
     def store_trained_model(self, training_id: int) -> int:
