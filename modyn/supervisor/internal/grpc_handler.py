@@ -2,7 +2,7 @@
 import json
 import logging
 from time import sleep
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 import enlighten
 import grpc
@@ -320,13 +320,14 @@ class GRPCHandler:
 
         return training_id
 
-    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> Tuple[int, float]:
         request = GetNumberOfSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
         response: NumberOfSamplesResponse = self.selector.get_number_of_samples(request)
 
-        return response.num_samples
+        return response.num_samples, response.downsampling_ratio
 
     # pylint: disable=too-many-nested-blocks
+
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> None:  # pragma: no cover
@@ -336,10 +337,9 @@ class GRPCHandler:
             )
         self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
-        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        sample_pbar = SupervisorCounter(self.progress_mgr, training_id)
+        total_samples, downsampling_ratio = self.get_number_of_samples(pipeline_id, trigger_id)
 
-        sample_pbar.start_training(total_samples)
+        sample_pbar = SupervisorCounter(self.progress_mgr, training_id, total_samples, downsampling_ratio)
 
         blocked_in_a_row = 0
 
@@ -365,11 +365,11 @@ class GRPCHandler:
                 blocked_in_a_row = 0
 
                 if res.state_available:
-                    assert res.HasField("samples_seen") and res.HasField(
-                        "batches_seen"
+                    assert (res.HasField("samples_seen") and res.HasField("batches_seen")) or (
+                        res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
 
-                    sample_pbar.progress_counter(res.samples_seen)
+                    sample_pbar.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -379,7 +379,7 @@ class GRPCHandler:
             else:
                 break
 
-        sample_pbar.end_training()
+        sample_pbar.close_counter()
         logger.info("Training completed 🚀")
 
     def store_trained_model(self, training_id: int) -> int:

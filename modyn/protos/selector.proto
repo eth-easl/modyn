@@ -52,7 +52,10 @@ message GetNumberOfSamplesRequest {
   int32 trigger_id = 2;
 }
 
-message NumberOfSamplesResponse { int32 num_samples = 1; }
+message NumberOfSamplesResponse {
+  int32 num_samples = 1;
+  float downsampling_ratio = 2;
+}
 
 message GetNumberOfPartitionsRequest {
   int32 pipeline_id = 1;

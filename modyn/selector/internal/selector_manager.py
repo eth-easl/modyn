@@ -6,6 +6,7 @@ import os
 import shutil
 from pathlib import Path
 from threading import Lock
+from typing import Tuple
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
@@ -121,7 +122,7 @@ class SelectorManager:
         with self._selector_locks[pipeline_id]:
             return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
-    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> Tuple[int, float]:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested number of samples from pipeline {pipeline_id} which does not exist!")
 

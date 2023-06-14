@@ -7,6 +7,7 @@ import os
 import pathlib
 import queue
 import traceback
+from enum import Enum
 from inspect import isfunction
 from typing import Any, Callable, Optional, Union
 
@@ -32,6 +33,8 @@ from modyn.utils import (
     package_available_and_can_be_imported,
 )
 
+AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
+
 
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
@@ -42,6 +45,8 @@ class PytorchTrainer:
         device: str,
         status_query_queue_training: mp.Queue,
         status_response_queue_training: mp.Queue,
+        status_query_queue_downsampling: mp.Queue,
+        status_response_queue_downsampling: mp.Queue,
         logger: logging.Logger,
     ) -> None:
         self.logger = logger
@@ -97,6 +102,9 @@ class PytorchTrainer:
 
         self._status_query_queue_training = status_query_queue_training
         self._status_response_queue_training = status_response_queue_training
+
+        self._status_query_queue_downsampling = status_query_queue_downsampling
+        self._status_response_queue_downsampling = status_response_queue_downsampling
 
         self._num_samples = 0
 
@@ -282,24 +290,13 @@ class PytorchTrainer:
         batch_number = 0
         for epoch in range(self.epochs_per_trigger):
             if self.sample_then_batch_this_epoch(epoch):
+                self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
                 self.sample_data()
             for batch_number, batch in enumerate(self._train_dataloader):
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
 
-                # As empty() is unreliable
-                # we try to fetch an element within 10ms. If there is no
-                # element within that timeframe returned, we continue.
-                try:
-                    req = self._status_query_queue_training.get(timeout=0.01)
-                    if req == TrainerMessages.STATUS_QUERY_MESSAGE:
-                        self.send_status_to_server_training(batch_number)
-                    elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
-                        self.send_model_state_to_server()
-                    else:
-                        raise ValueError("Unknown message in the status query queue")
-                except queue.Empty:
-                    pass
+                self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=True)
 
                 sample_ids, target, data = self.prepare_data(batch)
 
@@ -373,6 +370,34 @@ class PytorchTrainer:
 
         self._info("Training complete!")
 
+    def update_queue(
+        self, queue_name: AvailableQueues, batch_number: int, number_of_samples: int, training_active: bool
+    ) -> None:
+        if queue_name == AvailableQueues.TRAINING:
+            queue_in = self._status_query_queue_training
+            queue_out = self._status_response_queue_training
+        elif queue_name == AvailableQueues.DOWNSAMPLING:
+            queue_in = self._status_query_queue_downsampling
+            queue_out = self._status_response_queue_downsampling
+        else:
+            raise AssertionError(f"Queue {queue_name} does not exist.")
+
+        # As empty() is unreliable
+        # we try to fetch an element within 10ms. If there is no
+        # element within that timeframe returned, we continue.
+        try:
+            req = queue_in.get(timeout=0.01)
+            if req == TrainerMessages.STATUS_QUERY_MESSAGE:
+                queue_out.put(
+                    {"num_batches": batch_number, "num_samples": number_of_samples, "training_active": training_active}
+                )
+            elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
+                self.send_model_state_to_server()
+            else:
+                raise ValueError("Unknown message in the status query queue")
+        except queue.Empty:
+            pass
+
     def prepare_data(self, batch: tuple) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
         sample_ids = batch[0]
         if isinstance(sample_ids, torch.Tensor):
@@ -416,6 +441,7 @@ class PytorchTrainer:
         self._train_dataloader.dataset.switch_to_selector_key_source()
 
         number_of_batches = 0
+        number_of_samples = 0
 
         self._downsampler.init_downsampler()
 
@@ -423,7 +449,10 @@ class PytorchTrainer:
 
         for batch in self._train_dataloader:
             number_of_batches += 1
+            self.update_queue(AvailableQueues.DOWNSAMPLING, number_of_batches, number_of_samples, training_active=False)
+
             sample_ids, target, data = self.prepare_data(batch)
+            number_of_samples += len(sample_ids)
             sample_ids_order += sample_ids
 
             with torch.autocast(self._device_type, enabled=self._amp):
@@ -449,14 +478,18 @@ class PytorchTrainer:
         # instead of getting keys from the selector, now are taken from the local storage
         self._train_dataloader.dataset.switch_to_local_key_source()
 
+        self.update_queue(AvailableQueues.DOWNSAMPLING, number_of_batches, number_of_samples, training_active=True)
+
 
 def train(
     training_info: TrainingInfo,
     device: str,
     log_path: pathlib.Path,
     exception_queue: mp.Queue,
-    status_query_queue: mp.Queue,
-    status_response_queue: mp.Queue,
+    status_query_queue_training: mp.Queue,
+    status_response_queue_training: mp.Queue,
+    status_query_queue_downsampling: mp.Queue,
+    status_response_queue_downsampling: mp.Queue,
 ) -> None:
     logging.basicConfig(
         level=logging.DEBUG,
@@ -468,7 +501,15 @@ def train(
     logger.addHandler(file_handler)
 
     try:
-        trainer = PytorchTrainer(training_info, device, status_query_queue, status_response_queue, logger)
+        trainer = PytorchTrainer(
+            training_info,
+            device,
+            status_query_queue_training,
+            status_response_queue_training,
+            status_query_queue_downsampling,
+            status_response_queue_downsampling,
+            logger,
+        )
         trainer.train()
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()

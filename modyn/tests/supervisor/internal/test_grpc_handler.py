@@ -437,7 +437,7 @@ def test_wait_for_training_completion(test_connection_established):
         status_format="Test",
     )
 
-    with patch.object(GRPCHandler, "get_number_of_samples", return_value=22):
+    with patch.object(GRPCHandler, "get_number_of_samples", return_value=(22, 1)):
         handler = GRPCHandler(get_simple_config(), mgr, pbar)
         assert handler.trainer_server is not None
 

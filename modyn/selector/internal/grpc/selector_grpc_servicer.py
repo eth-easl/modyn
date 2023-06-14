@@ -94,9 +94,9 @@ class SelectorGRPCServicer(SelectorServicer):
         pipeline_id, trigger_id = request.pipeline_id, request.trigger_id
         logger.info(f"[Pipeline {pipeline_id}]: Received number of samples request for trigger id {trigger_id}")
 
-        num_samples = self.selector_manager.get_number_of_samples(pipeline_id, trigger_id)
+        num_samples, downsampling_ratio = self.selector_manager.get_number_of_samples(pipeline_id, trigger_id)
 
-        return NumberOfSamplesResponse(num_samples=num_samples)
+        return NumberOfSamplesResponse(num_samples=num_samples, downsampling_ratio=downsampling_ratio)
 
     def get_number_of_partitions(  # pylint: disable-next=unused-argument
         self, request: GetNumberOfPartitionsRequest, context: grpc.ServicerContext

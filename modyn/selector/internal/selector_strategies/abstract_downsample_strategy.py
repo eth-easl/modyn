@@ -34,7 +34,7 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
         else:
             self.downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
-        if self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH and "downsampling_period" in config:
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and "downsampling_period" in config:
             raise ValueError("downsampling_period can be used only in sample-then-batch.")
 
         self.downsampling_period = config.get("downsampling_period", 1)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, Tuple
 
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
@@ -89,16 +89,16 @@ class Selector:
 
         return trigger_id
 
-    def get_number_of_samples(self, trigger_id: int) -> int:
+    def get_number_of_samples(self, trigger_id: int) -> Tuple[int, float]:
         if trigger_id not in self._trigger_size_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
         # if we downsample the data, the dataset size is smaller
         downsampling_scale = (
-            self._strategy.get_downsampling_scale() if isinstance(self._strategy, AbstractDownsampleStrategy) else 1
+            self._strategy.get_downsampling_scale() if isinstance(self._strategy, AbstractDownsampleStrategy) else 1.0
         )
 
-        return int(downsampling_scale * self._trigger_size_cache[trigger_id])
+        return self._trigger_size_cache[trigger_id], downsampling_scale
 
     def get_number_of_partitions(self, trigger_id: int) -> int:
         if trigger_id not in self._trigger_partition_cache:

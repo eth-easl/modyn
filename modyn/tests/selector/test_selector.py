@@ -119,7 +119,7 @@ def test_get_number_of_samples():
     selector = Selector(MockStrategy(), 42, 3)
     selector._trigger_size_cache[42] = 2
 
-    assert selector.get_number_of_samples(42) == 2
+    assert selector.get_number_of_samples(42) == (2, 1)
 
     with pytest.raises(ValueError):
         selector.get_number_of_samples(21)

@@ -185,13 +185,16 @@ class NumberOfSamplesResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     NUM_SAMPLES_FIELD_NUMBER: builtins.int
+    DOWNSAMPLING_RATIO_FIELD_NUMBER: builtins.int
     num_samples: builtins.int
+    downsampling_ratio: builtins.float
     def __init__(
         self,
         *,
         num_samples: builtins.int = ...,
+        downsampling_ratio: builtins.float = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["num_samples", b"num_samples"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["downsampling_ratio", b"downsampling_ratio", "num_samples", b"num_samples"]) -> None: ...
 
 global___NumberOfSamplesResponse = NumberOfSamplesResponse
 
