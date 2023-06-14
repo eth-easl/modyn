@@ -1,14 +1,5 @@
 #!/bin/bash
 MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
 
-# Make build directory
-mkdir -p $MODYNPATH/storage/build
-
-# cmake in build directory
-(cd $MODYNPATH/storage/build && cmake ..)
-
-# make
-(cd $MODYNPATH/storage/build && make -j8)
-
 # run
 $MODYNPATH/storage/build/modyn-storage "$@"
