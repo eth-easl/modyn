@@ -64,5 +64,8 @@ class TrainingInfo:
 
         self.final_checkpoint_path = final_checkpoint_path
 
-        self.seed_available = request.seed_available
-        self.seed = request.seed
+        self.seed: Optional[int]
+        if request.HasField("seed"):
+            self.seed = request.seed
+        else:
+            self.seed = None
