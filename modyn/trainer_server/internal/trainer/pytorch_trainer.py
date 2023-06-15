@@ -291,14 +291,14 @@ class PytorchTrainer:
         for epoch in range(self.epochs_per_trigger):
             if self.sample_then_batch_this_epoch(epoch):
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
-                self.sample_data()
+                self.downsample_trigger_training_set()
             for batch_number, batch in enumerate(self._train_dataloader):
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
 
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=True)
 
-                sample_ids, target, data = self.prepare_data(batch)
+                sample_ids, target, data = self.preprocess_batch(batch)
 
                 if self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
                     weights = batch[3]
@@ -398,7 +398,7 @@ class PytorchTrainer:
         except queue.Empty:
             pass
 
-    def prepare_data(self, batch: tuple) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
+    def preprocess_batch(self, batch: tuple) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
         sample_ids = batch[0]
         if isinstance(sample_ids, torch.Tensor):
             sample_ids = sample_ids.tolist()
@@ -427,7 +427,7 @@ class PytorchTrainer:
 
         return sample_ids, target, data
 
-    def sample_data(self) -> None:
+    def downsample_trigger_training_set(self) -> None:
         """
         Function to score every datapoint in the current dataset and sample a fraction of it
         Used for downsampling strategies in sample_then_batch mode
@@ -440,18 +440,17 @@ class PytorchTrainer:
         # This operation is needed only when we sample several times (otherwise the source is already the selector)
         self._train_dataloader.dataset.switch_to_selector_key_source()
 
-        number_of_batches = 0
         number_of_samples = 0
 
         self._downsampler.init_downsampler()
 
         sample_ids_order = []
 
-        for batch in self._train_dataloader:
-            number_of_batches += 1
-            self.update_queue(AvailableQueues.DOWNSAMPLING, number_of_batches, number_of_samples, training_active=False)
+        batch_number = 0
+        for batch_number, batch in enumerate(self._train_dataloader):
+            self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
 
-            sample_ids, target, data = self.prepare_data(batch)
+            sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
             sample_ids_order += sample_ids
 
@@ -478,7 +477,7 @@ class PytorchTrainer:
         # instead of getting keys from the selector, now are taken from the local storage
         self._train_dataloader.dataset.switch_to_local_key_source()
 
-        self.update_queue(AvailableQueues.DOWNSAMPLING, number_of_batches, number_of_samples, training_active=True)
+        self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
 
 
 def train(
