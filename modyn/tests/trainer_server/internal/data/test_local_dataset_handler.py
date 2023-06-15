@@ -44,7 +44,7 @@ def test_init_just_read():
     with pytest.raises(AssertionError):
         handler.inform_samples([11], torch.Tensor([11]))
     with pytest.raises(AssertionError):
-        handler.store_last_samples()
+        handler.finalize()
 
     clean_directory()
 
@@ -62,7 +62,7 @@ def test_writes():
     handler.inform_samples(*prepare_samples(1, 49))
     assert len(os.listdir(".tmp_offline_dataset")) == 3
 
-    handler.store_last_samples()
+    handler.finalize()
     assert len(os.listdir(".tmp_offline_dataset")) == 4
 
     handler.clean_this_trigger_samples()
@@ -107,7 +107,7 @@ def test_reads_pro():
     handler.inform_samples(*samples)
 
     assert handler.get_number_of_partitions() == 2
-    handler.store_last_samples()
+    handler.finalize()
     assert handler.get_number_of_partitions() == 3
 
     # check that everything is ok

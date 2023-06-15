@@ -111,17 +111,17 @@ class PytorchTrainer:
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
-        downsampling_enabled, strategy_name, downsampler_config, trainer_config = self.get_selection_strategy()
+        downsampling_enabled, strategy_name, downsampler_config = self.get_selection_strategy()
 
         if downsampling_enabled:
             self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
             self._downsampler = self.instantiate_downsampler(strategy_name, downsampler_config, self._criterion_nored)
 
-            assert "sample_then_batch" in trainer_config
-            if trainer_config["sample_then_batch"]:
+            assert "sample_then_batch" in downsampler_config
+            if downsampler_config["sample_then_batch"]:
                 self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
-                assert "downsampling_period" in trainer_config
-                self._downsampling_period = trainer_config["downsampling_period"]
+                assert "downsampling_period" in downsampler_config
+                self._downsampling_period = downsampler_config["downsampling_period"]
             else:
                 self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
             self._weighted_opt = True
@@ -240,14 +240,13 @@ class PytorchTrainer:
     def send_status_to_server_training(self, batch_number: int) -> None:
         self._status_response_queue_training.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
-    def get_selection_strategy(self) -> tuple[bool, str, dict, dict]:
+    def get_selection_strategy(self) -> tuple[bool, str, dict]:
         req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
 
         response: SelectionStrategyResponse = self.selector_stub.get_selection_strategy(req)
         downsampler_config = json.loads(response.downsampler_config.value)
-        trainer_config = json.loads(response.trainer_config.value)
 
-        return response.downsampling_enabled, response.strategy_name, downsampler_config, trainer_config
+        return response.downsampling_enabled, response.strategy_name, downsampler_config
 
     def connect_to_selector(self, selector_address: str) -> SelectorStub:
         selector_channel = grpc.insecure_channel(selector_address)
@@ -472,7 +471,7 @@ class PytorchTrainer:
 
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
         # we need to manually trigger the store
-        local_dataset.store_last_samples()
+        local_dataset.finalize()
 
         # instead of getting keys from the selector, now are taken from the local storage
         self._train_dataloader.dataset.switch_to_local_key_source()

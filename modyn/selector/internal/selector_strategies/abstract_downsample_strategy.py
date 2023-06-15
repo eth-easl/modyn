@@ -58,12 +58,6 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
         config = {
             "downsampled_batch_ratio": self.downsampled_batch_ratio,
             "maximum_keys_in_memory": self._maximum_keys_in_memory,
-        }
-
-        return config
-
-    def get_trainer_config(self) -> dict:
-        config = {
             "sample_then_batch": self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH,
         }
 

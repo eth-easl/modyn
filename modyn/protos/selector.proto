@@ -72,5 +72,4 @@ message SelectionStrategyResponse {
     bool downsampling_enabled = 1;
     string strategy_name = 2;
     JsonString downsampler_config = 3;
-    JsonString trainer_config = 4;
 }

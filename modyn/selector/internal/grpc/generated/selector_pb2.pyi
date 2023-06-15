@@ -253,22 +253,18 @@ class SelectionStrategyResponse(google.protobuf.message.Message):
     DOWNSAMPLING_ENABLED_FIELD_NUMBER: builtins.int
     STRATEGY_NAME_FIELD_NUMBER: builtins.int
     DOWNSAMPLER_CONFIG_FIELD_NUMBER: builtins.int
-    TRAINER_CONFIG_FIELD_NUMBER: builtins.int
     downsampling_enabled: builtins.bool
     strategy_name: builtins.str
     @property
     def downsampler_config(self) -> global___JsonString: ...
-    @property
-    def trainer_config(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
         downsampling_enabled: builtins.bool = ...,
         strategy_name: builtins.str = ...,
         downsampler_config: global___JsonString | None = ...,
-        trainer_config: global___JsonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["downsampler_config", b"downsampler_config", "trainer_config", b"trainer_config"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["downsampler_config", b"downsampler_config", "downsampling_enabled", b"downsampling_enabled", "strategy_name", b"strategy_name", "trainer_config", b"trainer_config"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["downsampler_config", b"downsampler_config"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["downsampler_config", b"downsampler_config", "downsampling_enabled", b"downsampling_enabled", "strategy_name", b"strategy_name"]) -> None: ...
 
 global___SelectionStrategyResponse = SelectionStrategyResponse

@@ -106,7 +106,7 @@ class Selector:
 
         return self._trigger_partition_cache[trigger_id]
 
-    def get_selection_strategy_remote(self) -> tuple[bool, str, dict, dict]:
+    def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
         assert not (
             self._strategy._requires_remote_computation and not isinstance(self._strategy, AbstractDownsampleStrategy)
         )
@@ -116,6 +116,5 @@ class Selector:
                 True,
                 self._strategy.get_downsampling_strategy(),
                 self._strategy.get_downsampler_config(),
-                self._strategy.get_trainer_config(),
             )
-        return False, "", {}, {}
+        return False, "", {}

@@ -51,7 +51,7 @@ class LocalDatasetHandler(TriggerSampleStorage):
             if self.current_sample_index == self.maximum_keys_in_memory:
                 self._samples_ready()
 
-    def store_last_samples(self) -> None:
+    def finalize(self) -> None:
         assert self.maximum_keys_in_memory is not None
         if self.current_sample_index > 0:
             self.output_samples_list = self.output_samples_list[: self.current_sample_index]  # remove empty elements
