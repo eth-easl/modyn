@@ -34,19 +34,6 @@ RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; 
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda update -n base -c defaults conda && conda update --all && conda init bash
 
-# Install CMake
-ARG CMAKE_VERSION=3.26.4
-
-RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh \
-      -q -O /tmp/cmake-install.sh \
-      && chmod u+x /tmp/cmake-install.sh \
-      && mkdir /usr/bin/cmake \
-      && /tmp/cmake-install.sh --skip-license --prefix=/usr/bin/cmake \
-      && rm /tmp/cmake-install.sh \
-      && chmod u+x /usr/bin/cmake
-
-ENV PATH="/usr/local/cmake/bin:${PATH}"
-
 # Install dependencies
 COPY ./environment.yml /tmp/environment.yml
 RUN conda env create -f /tmp/environment.yml
