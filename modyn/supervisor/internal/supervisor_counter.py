@@ -81,7 +81,9 @@ class SupervisorCounter:
             self._start_downsampling()
 
         if self.current_event == CurrentEvent.TRAINING:
-            assert samples_seen_training >= self.last_samples_training
+            if samples_seen_training < self.last_samples_training:
+                # outdated message
+                return
             self._progress_counter_training(samples_seen_training)
 
         elif self.current_event == CurrentEvent.DOWNSAMPLING:

@@ -16,7 +16,7 @@ import torch
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
-from modyn.trainer_server.internal.dataset.local_dataset_handler import LocalDatasetHandler
+from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
@@ -464,7 +464,7 @@ class PytorchTrainer:
 
         # to store all the selected (sample, weight).
         file_size = self._num_dataloaders * self._batch_size  # should we add it to the pipeline?
-        local_dataset = LocalDatasetHandler(self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size)
+        local_dataset = LocalDatasetWriter(self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size)
 
         # store the selected samples (id and weight)
         local_dataset.inform_samples(selected_ids, weights)

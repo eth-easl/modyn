@@ -18,7 +18,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disab
     GetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.trainer_server.internal.dataset.local_dataset_handler import LocalDatasetHandler
+from modyn.trainer_server.internal.dataset.local_dataset_reader import LocalDatasetReader
 from modyn.utils.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
@@ -26,7 +26,7 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 
-KeySource = Enum("KeySource", ["LOCAL", "SELECTOR"])
+KeySource = Enum("KeySource", ["LOCAL_DOWNSAMPLER", "SELECTOR"])
 
 
 class OnlineDataset(IterableDataset):
@@ -100,7 +100,7 @@ class OnlineDataset(IterableDataset):
     def _get_keys_and_weights_from_local(
         self, worker_id: int, partition_id: int
     ) -> tuple[list[int], Optional[list[float]]]:
-        assert self._key_source == KeySource.LOCAL
+        assert self._key_source == KeySource.LOCAL_DOWNSAMPLER
         assert self._local_dataset_handler is not None
         keys, weights = self._local_dataset_handler.get_keys_and_weights(partition_id, worker_id)
 
@@ -176,8 +176,8 @@ class OnlineDataset(IterableDataset):
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def switch_to_local_key_source(self) -> None:
-        self._key_source = KeySource.LOCAL
-        self._local_dataset_handler = LocalDatasetHandler(self._pipeline_id, self._trigger_id, self._number_of_workers)
+        self._key_source = KeySource.LOCAL_DOWNSAMPLER
+        self._local_dataset_handler = LocalDatasetReader(self._pipeline_id, self._trigger_id, self._number_of_workers)
 
     def switch_to_selector_key_source(self) -> None:
         if self._key_source == KeySource.SELECTOR:
@@ -215,6 +215,7 @@ class OnlineDataset(IterableDataset):
             response: NumberOfPartitionsResponse = self._selectorstub.get_number_of_partitions(num_partitions_request)
             return response.num_partitions
         # local source
+        assert self._key_source == KeySource.LOCAL_DOWNSAMPLER
         assert self._local_dataset_handler is not None
         return self._local_dataset_handler.get_number_of_partitions()
 
