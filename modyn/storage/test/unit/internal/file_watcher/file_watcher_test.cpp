@@ -262,3 +262,201 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   session << "SELECT file_id FROM files WHERE file_id = :id", soci::use(input_file_id), soci::into(output_file_id);
   ASSERT_EQ(output_file_id, 2);
 }
+
+TEST_F(FileWatcherTest, TestConstructorWithInvalidInterval) {
+  std::atomic<bool> stop_file_watcher = false;
+  const FileWatcher watcher(YAML::LoadFile("config.yaml"), -1, &stop_file_watcher);
+  ASSERT_TRUE(watcher.stop_file_watcher_->load());
+}
+
+TEST_F(FileWatcherTest, TestConstructorWithNullStopFileWatcher) {
+  ASSERT_THROW(const FileWatcher watcher(YAML::LoadFile("config.yaml"), 1, nullptr), std::runtime_error);
+}
+
+TEST_F(FileWatcherTest, TestSeekWithNonExistentDirectory) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
+  std::filesystem::remove_all("tmp");
+
+  watcher.seek();
+  ASSERT_TRUE(watcher.stop_file_watcher_->load());
+}
+
+TEST_F(FileWatcherTest, TestSeekDatasetWithNonExistentDirectory) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
+  std::filesystem::remove_all("tmp");
+
+  ASSERT_THROW(watcher.seek_dataset(), std::runtime_error);
+}
+
+TEST_F(FileWatcherTest, TestCheckValidFileWithInvalidPath) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
+
+  ASSERT_FALSE(watcher.check_valid_file("", ".txt", false, 0));
+  ASSERT_FALSE(watcher.check_valid_file("test", ".txt", true, 0));
+}
+
+TEST_F(FileWatcherTest, TestUpdateFilesInDirectoryWithNonExistentDirectory) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
+  std::filesystem::remove_all("tmp");
+
+  ASSERT_THROW(watcher.update_files_in_directory("tmp", 0), std::runtime_error);
+}
+
+TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  const FileWatcher watcher(config, 1, &stop_file_watcher);
+
+  std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>> files;
+
+  ASSERT_NO_THROW(watcher.fallback_insertion(files));
+}
+
+TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
+
+  std::vector<std::string> files;
+
+  const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
+
+  ASSERT_NO_THROW(
+      watcher.handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE, 0, file_wrapper_config_node));
+}
+
+TEST_F(FileWatcherTest, TestMultipleFileHandling) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
+
+  int16_t number_of_files = 10;
+
+  // Add several files to the temporary directory
+  for (int i = 0; i < number_of_files; i++) {
+    std::ofstream file("tmp/test_file" + std::to_string(i) + ".txt");
+    file << "test";
+    file.close();
+
+    file = std::ofstream("tmp/test_file" + std::to_string(i) + ".lbl");
+    file << i;
+    file.close();
+  }
+
+  // Seek the temporary directory
+  ASSERT_NO_THROW(watcher.seek());
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session = connection.get_session();
+
+  // Check if the files are added to the database
+  std::vector<std::string> file_paths(number_of_files);
+  session << "SELECT path FROM files", soci::into(file_paths);
+
+  // Make sure all files were detected and processed
+  for (int i = 0; i < number_of_files; i++) {
+    ASSERT_TRUE(std::find(file_paths.begin(), file_paths.end(), "tmp/test_file" + std::to_string(i) + ".txt") !=
+                file_paths.end());
+  }
+}
+
+TEST_F(FileWatcherTest, TestDirectoryUpdateWhileRunning) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  std::atomic<bool> stop_file_watcher = false;
+  FileWatcher watcher(config, 1, &stop_file_watcher);
+
+  std::thread watcher_thread([&watcher, &stop_file_watcher]() {
+    while (!stop_file_watcher) {
+      watcher.seek();
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  });
+
+  // Add a file to the temporary directory
+  std::ofstream file("tmp/test_file1.txt");
+  file << "test";
+  file.close();
+  file = std::ofstream("tmp/test_file1.lbl");
+  file << "1";
+  file.close();
+
+  std::this_thread::sleep_for(std::chrono::seconds(2));  // wait for the watcher to process
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session = connection.get_session();
+
+  // Check if the file is added to the database
+  std::string file_path;
+  session << "SELECT path FROM files WHERE file_id=1", soci::into(file_path);
+  ASSERT_EQ(file_path, "tmp/test_file1.txt");
+
+  // Add another file to the temporary directory
+  file = std::ofstream("tmp/test_file2.txt");
+  file << "test";
+  file.close();
+  file = std::ofstream("tmp/test_file2.lbl");
+  file << "2";
+  file.close();
+
+  std::this_thread::sleep_for(std::chrono::seconds(2));  // wait for the watcher to process
+
+  // Check if the second file is added to the database
+  session << "SELECT path FROM files WHERE file_id=2", soci::into(file_path);
+  ASSERT_EQ(file_path, "tmp/test_file2.txt");
+
+  stop_file_watcher = true;
+  watcher_thread.join();
+}
+
+TEST_F(FileWatcherTest, TestMultithreadedInsertion) {
+  // Define test directory and files
+  const std::string directory_path = "tmp/test_directory";
+  const int num_files = 20;
+
+  // Create test directory
+  ASSERT_TRUE(std::filesystem::create_directory(directory_path));
+
+  // Create several files in the directory
+  for (int i = 0; i < num_files; i++) {
+    std::ofstream file(directory_path + "/test_file" + std::to_string(i) + ".txt");
+    file << "test";
+    file.close();
+
+    file = std::ofstream(directory_path + "/test_file" + std::to_string(i) + ".lbl");
+    file << i;
+    file.close();
+  }
+
+  // Create a configuration with multiple insertion threads
+  YAML::Node config = YAML::LoadFile("config.yaml");
+  config["storage"]["insertion_threads"] = 2;
+
+  // Create a FileWatcher instance with the multithreaded configuration
+  std::atomic<bool> stop_file_watcher = false;
+  storage::FileWatcher watcher(config, 1, &stop_file_watcher, 2);
+
+  // Call the FileWatcher's seek function
+  watcher.seek();
+
+  // Check that all files have been processed and inserted into the database
+  const storage::StorageDatabaseConnection connection(config);
+  soci::session session = connection.get_session();
+
+  std::vector<std::string> file_paths(num_files);
+  session << "SELECT path FROM files", soci::into(file_paths);
+  
+  for (const auto& file_path : file_paths) {
+    ASSERT_TRUE(std::filesystem::exists(file_path));
+  }
+
+  // Clean up test directory
+  std::filesystem::remove_all(directory_path);
+}

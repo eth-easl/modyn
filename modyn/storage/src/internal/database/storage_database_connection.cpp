@@ -92,6 +92,12 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
           soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
           soci::use(boolean_string), soci::use(file_watcher_interval);
     } else if (drivername == "sqlite3") {
+      int64_t dataset_id = 0;
+      session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
+      if (dataset_id != 0) {
+        SPDLOG_ERROR("Dataset {} already exists, deleting", name);
+        session << "DELETE FROM datasets WHERE dataset_id = :dataset_id", soci::use(dataset_id);
+      }
       session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
                  "file_wrapper_type, description, version, file_wrapper_config, "
                  "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
@@ -122,6 +128,11 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
 
     int64_t dataset_id = 0;
     session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
+
+    if (dataset_id == 0) {
+      SPDLOG_ERROR("Dataset {} not found", name);
+      return false;
+    }
 
     // Delete all samples for this dataset
     session << "DELETE FROM samples WHERE dataset_id = :dataset_id", soci::use(dataset_id);

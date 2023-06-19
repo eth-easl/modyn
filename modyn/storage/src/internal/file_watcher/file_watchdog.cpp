@@ -19,10 +19,11 @@ using namespace storage;
  * @param retries The number of retries left for the FileWatcher process
  */
 void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int16_t retries) {
+  SPDLOG_INFO("Starting FileWatcher process for dataset {}", dataset_id);
   // Start a new child process of a FileWatcher
   file_watcher_process_stop_flags_.emplace(dataset_id, false);
   std::shared_ptr<FileWatcher> file_watcher =
-      std::make_shared<FileWatcher>(config_, dataset_id, &file_watcher_process_stop_flags_[dataset_id]);
+      std::make_shared<FileWatcher>(config_, dataset_id, &file_watcher_process_stop_flags_[dataset_id], config_["storage"]["insertion_threads"].as<int16_t>());
   std::thread th(&FileWatcher::run, file_watcher);
   file_watcher_processes_[dataset_id] = std::move(th);
   file_watcher_process_retries_[dataset_id] = retries;
@@ -39,12 +40,10 @@ void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int16_t retrie
  * @param is_test Whether or not this method use is a test
  */
 void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
+  SPDLOG_INFO("Stopping FileWatcher process for dataset {}", dataset_id);
   if (file_watcher_processes_.count(dataset_id) == 1) {
     // Set the stop flag for the FileWatcher process
-    SPDLOG_INFO("Stopping FileWatcher process for dataset {}", dataset_id);
     file_watcher_process_stop_flags_[dataset_id].store(true);
-    SPDLOG_INFO("Waiting for FileWatcher process for dataset {} to stop", dataset_id);
-    SPDLOG_INFO("Current flag value: {}", file_watcher_process_stop_flags_[dataset_id].load());
     // Wait for the FileWatcher process to stop
     if (file_watcher_processes_[dataset_id].joinable()) {
       file_watcher_processes_[dataset_id].join();
@@ -66,7 +65,6 @@ void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
     }
   } else {
     SPDLOG_ERROR("FileWatcher process for dataset {} not found", dataset_id);
-    stop_file_watcher_process(dataset_id, is_test);
   }
 }
 
@@ -77,14 +75,19 @@ void FileWatchdog::stop_file_watcher_process(int64_t dataset_id, bool is_test) {
  */
 void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert-member-functions-to-static)
     StorageDatabaseConnection* storage_database_connection) {
+  if (storage_database_connection == nullptr) {
+    SPDLOG_ERROR("StorageDatabaseConnection is null");
+    throw std::runtime_error("StorageDatabaseConnection is null");
+  }
   soci::session session = storage_database_connection->get_session();
   int64_t number_of_datasets = 0;
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
   if (number_of_datasets == 0) {
     // There are no datasets in the database. Stop all FileWatcher processes.
     try {
-      for (const auto& pair : file_watcher_processes_) {
-        stop_file_watcher_process(pair.first);
+      std::vector<int64_t> running_file_watcher_processes = get_running_file_watcher_processes();
+      for (const auto& dataset_id : running_file_watcher_processes) {
+        stop_file_watcher_process(dataset_id);
       }
     } catch (const std::runtime_error& e) {
       SPDLOG_ERROR("Error stopping FileWatcher process: {}", e.what());
@@ -94,9 +97,8 @@ void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert
   std::vector<int64_t> dataset_ids = std::vector<int64_t>(number_of_datasets);
   session << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
-  int64_t dataset_id = 0;
-  for (const auto& pair : file_watcher_processes_) {
-    dataset_id = pair.first;
+  std::vector<int64_t> running_file_watcher_processes = get_running_file_watcher_processes();
+  for (const auto& dataset_id : running_file_watcher_processes) {
     if (std::find(dataset_ids.begin(), dataset_ids.end(), dataset_id) == dataset_ids.end()) {
       // There is a FileWatcher process running for a dataset that was deleted
       // from the database. Stop the process.
@@ -126,6 +128,7 @@ void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert
       file_watcher_process_retries_[dataset_id] += 1;
     }
   }
+  session.close();
 }
 
 void FileWatchdog::run() {

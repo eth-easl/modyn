@@ -46,10 +46,15 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       file_wrapper->set_file_path(file_path);
       number_of_samples = file_wrapper->get_number_of_samples();
       int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
+      try {
       session << "INSERT INTO files (dataset_id, path, number_of_samples, "
                  "updated_at) VALUES (:dataset_id, :path, "
                  ":number_of_samples, :updated_at)",
           soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
+      } catch (const std::exception& e) {
+        SPDLOG_ERROR("File watcher failed for file {} with error: {}", file_path, e.what());
+        stop_file_watcher_->store(true);
+      }
 
       long long file_id = 0;  // NOLINT // soci get_last_insert_id requires a long long
       session.get_last_insert_id("files", file_id);
@@ -133,9 +138,14 @@ void FileWatcher::fallback_insertion(
     const auto& last_frame = file_frame.back();
     query += fmt::format("({},{},{},{})", std::get<0>(last_frame), std::get<1>(last_frame), std::get<2>(last_frame),
                          std::get<3>(last_frame));
+    
+    try {
+      session << query;
+    } catch (const std::exception& e) {
+      SPDLOG_ERROR("File watcher failed for query {} with error: {}", query, e.what());
+      stop_file_watcher_->store(true);
+    }
   }
-
-  session << query;
 }
 
 /*
@@ -154,14 +164,26 @@ void FileWatcher::fallback_insertion(
  */
 bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                                    bool ignore_last_timestamp, int64_t timestamp) {
-  const std::string file_extension = file_path.substr(file_path.find_last_of('.'));
+  if (file_path.empty()) {
+    return false;
+  }
+  const std::size_t last_occurence_dot = file_path.find_last_of('.');
+  if (last_occurence_dot == std::string::npos) {
+    return false;
+  }
+  const std::string file_extension = file_path.substr(last_occurence_dot);
   if (file_extension != data_file_extension) {
     return false;
   }
   soci::session session = storage_database_connection_.get_session();
 
   int64_t file_id = 0;
-  session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
+  try {
+    session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
+  } catch (const std::exception& e) {
+    SPDLOG_ERROR("File watcher failed for file {} with error: {}", file_path, e.what());
+    stop_file_watcher_->store(true);
+  }
 
   if (file_id == 0) {
     if (ignore_last_timestamp) {
@@ -206,21 +228,23 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 
     for (size_t i = 0; i < thread_pool.size(); ++i) {
       auto begin = file_paths.begin() + i * chunk_size;
-      auto end = i < thread_pool.size() - 1 ? begin + chunk_size : file_paths.end();
+      auto end = (i < thread_pool.size() - 1) ? (begin + chunk_size) : file_paths.end();
+
       std::vector<std::string> file_paths_thread(begin, end);
 
+      SPDLOG_INFO("File watcher thread {} will handle {} files", i, file_paths_thread.size());
       // wrap the task inside a lambda and push it to the tasks queue
       {
-        std::lock_guard<std::mutex> lock(mtx);
-        tasks.push_back([this, &file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp,
-                         &file_wrapper_config_node]() {
+        tasks.push_back([this, file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp,
+                         &file_wrapper_config_node]() mutable {
           std::atomic<bool> stop_file_watcher = false;
-          FileWatcher watcher(config_, dataset_id_, &stop_file_watcher);
+          FileWatcher watcher(config_, dataset_id_, &stop_file_watcher, 1);
           watcher.handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
                                     file_wrapper_config_node);
         });
       }
       cv.notify_one();  // notify a thread about an available task
+      SPDLOG_INFO("File watcher thread {} started", i);
     }
 
     // add termination tasks
@@ -248,8 +272,6 @@ void FileWatcher::seek_dataset() {
   session << "SELECT last_timestamp FROM datasets "
              "WHERE dataset_id = :dataset_id",
       soci::into(last_timestamp), soci::use(dataset_id_);
-
-  SPDLOG_INFO("Last timestamp: {}", last_timestamp);
 
   update_files_in_directory(dataset_path_, last_timestamp);
 }

@@ -23,7 +23,6 @@ class FileWatcher {
   bool disable_multithreading_;
   int32_t sample_dbinsertion_batchsize_ = 1000000;
   StorageDatabaseConnection storage_database_connection_;
-  std::atomic<bool>* stop_file_watcher_;
   std::string dataset_path_;
   FilesystemWrapperType filesystem_wrapper_type_;
   std::vector<std::thread> thread_pool;
@@ -32,15 +31,21 @@ class FileWatcher {
   std::condition_variable cv;
 
  public:
+  std::atomic<bool>* stop_file_watcher_;
   explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id,  // NOLINT
-                       std::atomic<bool>* stop_file_watcher)
+                       std::atomic<bool>* stop_file_watcher, int16_t insertion_threads = 1)
       : config_{config},
         dataset_id_{dataset_id},
+        insertion_threads_{insertion_threads},
         storage_database_connection_{StorageDatabaseConnection(config_)},
         stop_file_watcher_{stop_file_watcher} {
+    if (stop_file_watcher_ == nullptr) {
+      SPDLOG_ERROR("stop_file_watcher_ is nullptr.");
+      throw std::runtime_error("stop_file_watcher_ is nullptr.");
+    }
+
     SPDLOG_INFO("Initializing file watcher for dataset {}.", dataset_id_);
 
-    insertion_threads_ = config_["storage"]["insertion_threads"].as<int16_t>();
     disable_multithreading_ = insertion_threads_ <= 1;  // NOLINT
     if (config_["storage"]["sample_dbinsertion_batchsize"]) {
       sample_dbinsertion_batchsize_ = config_["storage"]["sample_dbinsertion_batchsize"].as<int32_t>();
