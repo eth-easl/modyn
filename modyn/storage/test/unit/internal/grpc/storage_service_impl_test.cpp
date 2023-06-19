@@ -227,7 +227,9 @@ TEST_F(StorageServiceImplTest, TestDeleteData_ErrorHandling) {
   // Here we create a sample that doesn't link to a file.
   const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
-  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file with this id
+  session
+      << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file
+                                                                                                    // with this id
   request.clear_keys();
   request.add_keys(0);
   status = storage_service.DeleteData(&context, &request, &response);
