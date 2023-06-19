@@ -9,6 +9,7 @@ storage:
   sample_batch_size: 2000000
   sample_dbinsertion_batchsize: 1000000
   insertion_threads: 8
+  retrieval_threads: 8
   sample_table_unlogged: true
   datasets:
     [

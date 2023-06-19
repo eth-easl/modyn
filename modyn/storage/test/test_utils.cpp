@@ -8,6 +8,7 @@ void TestUtils::create_dummy_yaml() {
   out << "  port: 50051" << std::endl;
   out << "  sample_batch_size: 5" << std::endl;
   out << "  insertion_threads: 1" << std::endl;
+  out << "  retrieval_threads: 1" << std::endl;
   out << "  database:" << std::endl;
   out << "    drivername: sqlite3" << std::endl;
   out << "    database: test.db" << std::endl;

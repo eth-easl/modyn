@@ -24,7 +24,12 @@ class StorageGrpcServer {
     }
     auto port = config_["storage"]["port"].as<int64_t>();
     std::string server_address = absl::StrFormat("0.0.0.0:%d", port);
-    StorageServiceImpl service(config_);
+    if (!config_["storage"]["retrieval_threads"]) {
+      SPDLOG_ERROR("No retrieval_threads specified in config.yaml");
+      return;
+    }
+    auto retrieval_threads = config_["storage"]["retrieval_threads"].as<int16_t>();
+    StorageServiceImpl service(config_, retrieval_threads);
 
     grpc::EnableDefaultHealthCheckService(true);
     grpc::reflection::InitProtoReflectionServerBuilderPlugin();

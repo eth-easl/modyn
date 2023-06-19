@@ -23,7 +23,8 @@ void FileWatchdog::start_file_watcher_process(int64_t dataset_id, int16_t retrie
   // Start a new child process of a FileWatcher
   file_watcher_process_stop_flags_.emplace(dataset_id, false);
   std::shared_ptr<FileWatcher> file_watcher =
-      std::make_shared<FileWatcher>(config_, dataset_id, &file_watcher_process_stop_flags_[dataset_id], config_["storage"]["insertion_threads"].as<int16_t>());
+      std::make_shared<FileWatcher>(config_, dataset_id, &file_watcher_process_stop_flags_[dataset_id],
+                                    config_["storage"]["insertion_threads"].as<int16_t>());
   std::thread th(&FileWatcher::run, file_watcher);
   file_watcher_processes_[dataset_id] = std::move(th);
   file_watcher_process_retries_[dataset_id] = retries;

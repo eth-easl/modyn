@@ -198,3 +198,39 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
   ASSERT_EQ(number_of_samples, 1);
 }
+
+TEST_F(StorageServiceImplTest, TestDeleteData_ErrorHandling) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  StorageServiceImpl storage_service(config);
+
+  modyn::storage::DeleteDataRequest request;
+  modyn::storage::DeleteDataResponse response;
+
+  grpc::ServerContext context;
+
+  // Test case when dataset does not exist
+  request.set_dataset_id("non_existent_dataset");
+  request.add_keys(1);
+  grpc::Status status = storage_service.DeleteData(&context, &request, &response);
+  ASSERT_EQ(status.error_code(), grpc::StatusCode::NOT_FOUND);
+  ASSERT_FALSE(response.success());
+
+  // Test case when no samples found for provided keys
+  request.set_dataset_id("test_dataset");
+  request.clear_keys();
+  request.add_keys(99999);  // Assuming no sample with this key
+  status = storage_service.DeleteData(&context, &request, &response);
+  ASSERT_EQ(status.error_code(), grpc::StatusCode::NOT_FOUND);
+  ASSERT_FALSE(response.success());
+
+  // Test case when no files found for the samples
+  // Here we create a sample that doesn't link to a file.
+  const StorageDatabaseConnection connection(config);
+  soci::session session = connection.get_session();
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file with this id
+  request.clear_keys();
+  request.add_keys(0);
+  status = storage_service.DeleteData(&context, &request, &response);
+  ASSERT_EQ(status.error_code(), grpc::StatusCode::NOT_FOUND);
+  ASSERT_FALSE(response.success());
+}

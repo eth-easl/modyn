@@ -452,7 +452,7 @@ TEST_F(FileWatcherTest, TestMultithreadedInsertion) {
 
   std::vector<std::string> file_paths(num_files);
   session << "SELECT path FROM files", soci::into(file_paths);
-  
+
   for (const auto& file_path : file_paths) {
     ASSERT_TRUE(std::filesystem::exists(file_path));
   }

@@ -59,48 +59,68 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
     return {grpc::StatusCode::NOT_FOUND, "No samples found."};
   }
 
-  std::string file_path;
-
-  auto& [file_id, sample_data] = *file_id_to_sample_data.begin();
-
-  session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
-
-  auto file_wrapper = Utils::get_file_wrapper(file_path, static_cast<FileWrapperType>(file_wrapper_type),
-                                              file_wrapper_config_node, filesystem_wrapper);
-
-  // Get the data from the files
-  for (auto& [file_id, sample_data] : file_id_to_sample_data) {
-    // Get the file path
-
-    session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
-
-    // Get the data from the file
-    file_wrapper->set_file_path(file_path);
-
-    std::vector<std::vector<unsigned char>> samples = file_wrapper->get_samples_from_indices(sample_data.indices);
-
-    // Send the data to the client
-    modyn::storage::GetResponse response;
-    for (std::size_t i = 0; i < samples.size(); i++) {
-      response.add_keys(sample_data.ids[i]);
-      for (auto sample : samples[i]) {
-        response.add_samples(std::string(1, sample));
-      }
-      response.add_labels(sample_data.labels[i]);
-
-      if (i % sample_batch_size_ == 0) {
-        writer->Write(response);
-        response.Clear();
-      }
+  if (disable_multithreading_) {
+    for (auto& [file_id, sample_data] : file_id_to_sample_data) {
+      send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type);
     }
-    if (response.keys_size() > 0) {
-      writer->Write(response);
+  } else {
+    for (auto& [file_id, sample_data] : file_id_to_sample_data) {
+      tasks.push_back([&, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type]() {
+        send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper,
+                          file_wrapper_type);
+      });
+    }
+    cv.notify_all();
+
+    // add termination tasks
+    for (size_t i = 0; i < thread_pool.size(); ++i) {
+      std::lock_guard<std::mutex> lock(mtx);
+      tasks.push_back({});
+    }
+    cv.notify_all();  // notify all threads about available (termination) tasks
+
+    for (auto& thread : thread_pool) {
+      thread.join();
     }
   }
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identifier-naming)
+void StorageServiceImpl::send_get_response(grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
+                                           SampleData sample_data, const YAML::Node& file_wrapper_config,
+                                           const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
+                                           int64_t file_wrapper_type) {
+  const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
+  soci::session session = storage_database_connection.get_session();
+  // Get the file path
+  std::string file_path;
+  session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
+
+  auto file_wrapper = Utils::get_file_wrapper(file_path, static_cast<FileWrapperType>(file_wrapper_type),
+                                              file_wrapper_config, filesystem_wrapper);
+
+  std::vector<std::vector<unsigned char>> samples = file_wrapper->get_samples_from_indices(sample_data.indices);
+
+  // Send the data to the client
+  modyn::storage::GetResponse response;
+  for (std::size_t i = 0; i < samples.size(); i++) {
+    response.add_keys(sample_data.ids[i]);
+    for (auto sample : samples[i]) {
+      response.add_samples(std::string(1, sample));
+    }
+    response.add_labels(sample_data.labels[i]);
+
+    if (i % sample_batch_size_ == 0) {
+      writer->Write(response);
+      response.Clear();
+    }
+  }
+  if (response.keys_size() > 0) {
+    writer->Write(response);
+  }
+}
+
+grpc::Status StorageServiceImpl::GetNewDataSince(                           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetNewDataSinceRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -125,34 +145,58 @@ grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identi
   session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp > :timestamp",
       soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->timestamp());
 
-  for (int64_t file_id : file_ids) {
-    int64_t number_of_samples;
-    session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples),
-        soci::use(file_id);
-    std::vector<int64_t> sample_ids = std::vector<int64_t>(number_of_samples);
-    std::vector<int64_t> sample_labels = std::vector<int64_t>(number_of_samples);
-    soci::rowset<soci::row> rs = (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id",
-                                  soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id));
-
-    modyn::storage::GetNewDataSinceResponse response;
-    int64_t count = 0;
-    for (auto it = rs.begin(); it != rs.end(); ++it) {
-      response.add_keys(sample_ids[count]);
-      response.add_labels(sample_labels[count]);
-      count++;
-      if (count % sample_batch_size_ == 0) {
-        writer->Write(response);
-        response.Clear();
-      }
+  if (disable_multithreading_) {
+    for (int64_t file_id : file_ids) {
+      send_get_new_data_since_response(writer, file_id);
     }
-    if (response.keys_size() > 0) {
-      writer->Write(response);
+  } else {
+    for (int64_t file_id : file_ids) {
+      tasks.push_back([&, file_id]() { send_get_new_data_since_response(writer, file_id); });
+    }
+    cv.notify_all();
+
+    // add termination tasks
+    for (size_t i = 0; i < thread_pool.size(); ++i) {
+      std::lock_guard<std::mutex> lock(mtx);
+      tasks.push_back({});
+    }
+    cv.notify_all();  // notify all threads about available (termination) tasks
+
+    for (auto& thread : thread_pool) {
+      thread.join();
     }
   }
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-identifier-naming)
+void StorageServiceImpl::send_get_new_data_since_response(
+    grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer, int64_t file_id) {
+  const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
+  soci::session session = storage_database_connection.get_session();
+  int64_t number_of_samples;
+  session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
+  std::vector<int64_t> sample_ids = std::vector<int64_t>(number_of_samples);
+  std::vector<int64_t> sample_labels = std::vector<int64_t>(number_of_samples);
+  soci::rowset<soci::row> rs = (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id",
+                                soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id));
+
+  modyn::storage::GetNewDataSinceResponse response;
+  int64_t count = 0;
+  for (auto it = rs.begin(); it != rs.end(); ++it) {
+    response.add_keys(sample_ids[count]);
+    response.add_labels(sample_labels[count]);
+    count++;
+    if (count % sample_batch_size_ == 0) {
+      writer->Write(response);
+      response.Clear();
+    }
+  }
+  if (response.keys_size() > 0) {
+    writer->Write(response);
+  }
+}
+
+grpc::Status StorageServiceImpl::GetDataInInterval(                           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetDataInIntervalRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -179,34 +223,58 @@ grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-iden
       soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->start_timestamp()),
       soci::use(request->end_timestamp());
 
-  for (int64_t file_id : file_ids) {
-    int64_t number_of_samples;
-    session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples),
-        soci::use(file_id);
-    std::vector<int64_t> sample_ids = std::vector<int64_t>(number_of_samples);
-    std::vector<int64_t> sample_labels = std::vector<int64_t>(number_of_samples);
-    soci::rowset<soci::row> rs = (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id",
-                                  soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id));
-
-    modyn::storage::GetDataInIntervalResponse response;
-    int64_t count = 0;
-    for (auto it = rs.begin(); it != rs.end(); ++it) {
-      response.add_keys(sample_ids[count]);
-      response.add_labels(sample_labels[count]);
-      count++;
-      if (count % sample_batch_size_ == 0) {
-        writer->Write(response);
-        response.Clear();
-      }
+  if (disable_multithreading_) {
+    for (int64_t file_id : file_ids) {
+      send_get_new_data_in_interval_response(writer, file_id);
     }
-    if (response.keys_size() > 0) {
-      writer->Write(response);
+  } else {
+    for (int64_t file_id : file_ids) {
+      tasks.push_back([&, file_id]() { send_get_new_data_in_interval_response(writer, file_id); });
+    }
+    cv.notify_all();
+
+    // add termination tasks
+    for (size_t i = 0; i < thread_pool.size(); ++i) {
+      std::lock_guard<std::mutex> lock(mtx);
+      tasks.push_back({});
+    }
+    cv.notify_all();  // notify all threads about available (termination) tasks
+
+    for (auto& thread : thread_pool) {
+      thread.join();
     }
   }
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-identifier-naming)
+void StorageServiceImpl::send_get_new_data_in_interval_response(
+    grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer, int64_t file_id) {
+  const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
+  soci::session session = storage_database_connection.get_session();
+  int64_t number_of_samples;
+  session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
+  std::vector<int64_t> sample_ids = std::vector<int64_t>(number_of_samples);
+  std::vector<int64_t> sample_labels = std::vector<int64_t>(number_of_samples);
+  soci::rowset<soci::row> rs = (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id",
+                                soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id));
+
+  modyn::storage::GetDataInIntervalResponse response;
+  int64_t count = 0;
+  for (auto it = rs.begin(); it != rs.end(); ++it) {
+    response.add_keys(sample_ids[count]);
+    response.add_labels(sample_labels[count]);
+    count++;
+    if (count % sample_batch_size_ == 0) {
+      writer->Write(response);
+      response.Clear();
+    }
+  }
+  if (response.keys_size() > 0) {
+    writer->Write(response);
+  }
+}
+
+grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DatasetAvailableResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -230,7 +298,7 @@ grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-iden
   return status;
 }
 
-grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::RegisterNewDataset(           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::RegisterNewDatasetRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::RegisterNewDatasetResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -252,7 +320,7 @@ grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT (readability-ide
   return status;
 }
 
-grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetCurrentTimestamp(         // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
     modyn::storage::GetCurrentTimestampResponse* response) {  // NOLINT (misc-unused-parameters)
   response->set_timestamp(
@@ -261,7 +329,7 @@ grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT (readability-id
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDatasetResponse* response) {       // NOLINT (misc-unused-parameters)
@@ -277,7 +345,7 @@ grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifi
   return status;
 }
 
-grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DeleteDataRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDataResponse* response) {    // NOLINT (misc-unused-parameters)

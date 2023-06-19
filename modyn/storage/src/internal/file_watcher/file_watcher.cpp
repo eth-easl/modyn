@@ -47,10 +47,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       number_of_samples = file_wrapper->get_number_of_samples();
       int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
       try {
-      session << "INSERT INTO files (dataset_id, path, number_of_samples, "
-                 "updated_at) VALUES (:dataset_id, :path, "
-                 ":number_of_samples, :updated_at)",
-          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
+        session << "INSERT INTO files (dataset_id, path, number_of_samples, "
+                   "updated_at) VALUES (:dataset_id, :path, "
+                   ":number_of_samples, :updated_at)",
+            soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
       } catch (const std::exception& e) {
         SPDLOG_ERROR("File watcher failed for file {} with error: {}", file_path, e.what());
         stop_file_watcher_->store(true);
@@ -138,7 +138,7 @@ void FileWatcher::fallback_insertion(
     const auto& last_frame = file_frame.back();
     query += fmt::format("({},{},{},{})", std::get<0>(last_frame), std::get<1>(last_frame), std::get<2>(last_frame),
                          std::get<3>(last_frame));
-    
+
     try {
       session << query;
     } catch (const std::exception& e) {
