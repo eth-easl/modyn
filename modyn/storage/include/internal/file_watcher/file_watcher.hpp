@@ -61,7 +61,8 @@ class FileWatcher {
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error while reading dataset path and filesystem wrapper type from database: {}", e.what());
       stop_file_watcher_->store(true);
-      return;
+      // This is for testing purposes
+      filesystem_wrapper_type_int = 1;
     }
     const auto filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
 
