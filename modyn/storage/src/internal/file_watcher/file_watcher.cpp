@@ -182,7 +182,7 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
     session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
   } catch (const std::exception& e) {
     SPDLOG_ERROR("File watcher failed for file {} with error: {}", file_path, e.what());
-    stop_file_watcher_->store(true);
+    return false;
   }
 
   if (file_id == 0) {
@@ -235,6 +235,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
       SPDLOG_INFO("File watcher thread {} will handle {} files", i, file_paths_thread.size());
       // wrap the task inside a lambda and push it to the tasks queue
       {
+        std::lock_guard<std::mutex> lock(mtx);
         tasks.push_back([this, file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp,
                          &file_wrapper_config_node]() mutable {
           std::atomic<bool> stop_file_watcher = false;

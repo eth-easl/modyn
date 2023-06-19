@@ -65,6 +65,7 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
     }
   } else {
     for (auto& item : file_id_to_sample_data) {
+      std::lock_guard<std::mutex> lock(mtx);
       tasks.push_back([&, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type]() {
         auto& [file_id, sample_data] = item;
         send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper,
@@ -152,6 +153,7 @@ grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identi
     }
   } else {
     for (int64_t file_id : file_ids) {
+      std::lock_guard<std::mutex> lock(mtx);
       tasks.push_back([&, file_id]() { send_get_new_data_since_response(writer, file_id); });
     }
     cv.notify_all();
@@ -230,6 +232,7 @@ grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-iden
     }
   } else {
     for (int64_t file_id : file_ids) {
+      std::lock_guard<std::mutex> lock(mtx);
       tasks.push_back([&, file_id]() { send_get_new_data_in_interval_response(writer, file_id); });
     }
     cv.notify_all();
