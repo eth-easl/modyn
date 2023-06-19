@@ -64,8 +64,9 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
       send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type);
     }
   } else {
-    for (auto& [file_id, sample_data] : file_id_to_sample_data) {
-      tasks.push_back([&, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type]() {
+    for (auto& item : file_id_to_sample_data) {
+      tasks.push_back([&, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type]() {
+        auto& [file_id, sample_data] = item;
         send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper,
                           file_wrapper_type);
       });
@@ -120,7 +121,7 @@ void StorageServiceImpl::send_get_response(grpc::ServerWriter<modyn::storage::Ge
   }
 }
 
-grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetNewDataSince(                           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetNewDataSinceRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -196,7 +197,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
   }
 }
 
-grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetDataInInterval(                           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetDataInIntervalRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -274,7 +275,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   }
 }
 
-grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DatasetAvailableResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -298,7 +299,7 @@ grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-iden
   return status;
 }
 
-grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::RegisterNewDataset(           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::RegisterNewDatasetRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::RegisterNewDatasetResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -320,7 +321,7 @@ grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT (readability-ide
   return status;
 }
 
-grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetCurrentTimestamp(         // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
     modyn::storage::GetCurrentTimestampResponse* response) {  // NOLINT (misc-unused-parameters)
   response->set_timestamp(
@@ -329,7 +330,7 @@ grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT (readability-id
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDatasetResponse* response) {       // NOLINT (misc-unused-parameters)
@@ -345,7 +346,7 @@ grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifi
   return status;
 }
 
-grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DeleteDataRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDataResponse* response) {    // NOLINT (misc-unused-parameters)
