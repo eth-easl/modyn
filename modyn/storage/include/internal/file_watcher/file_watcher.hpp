@@ -55,9 +55,9 @@ class FileWatcher {
     std::string dataset_path;
     int64_t filesystem_wrapper_type_int;
     try {
-    session << "SELECT base_path, filesystem_wrapper_type FROM datasets "
-               "WHERE dataset_id = :dataset_id",
-        soci::into(dataset_path), soci::into(filesystem_wrapper_type_int), soci::use(dataset_id_);
+      session << "SELECT base_path, filesystem_wrapper_type FROM datasets "
+                 "WHERE dataset_id = :dataset_id",
+          soci::into(dataset_path), soci::into(filesystem_wrapper_type_int), soci::use(dataset_id_);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error while reading dataset path and filesystem wrapper type from database: {}", e.what());
       stop_file_watcher_->store(true);
