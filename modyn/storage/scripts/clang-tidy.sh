@@ -14,8 +14,7 @@ function run_build() {
 
     cmake -B "${BUILD_DIR}"
 
-    cmake -S . -B "${BUILD_DIR}" \
-        -DCMAKE_BUILD_TYPE=Debug
+    cmake -S . -B "${BUILD_DIR}"
 
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
     ln -fs "${PWD}"/test/.clang-tidy "${BUILD_DIR}"/test/
