@@ -91,6 +91,10 @@ properties:
                 type: number
                 description: |
                   This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.
+              uses_weights:
+                type: boolean
+                description: |
+                  If set to true, weights are supplied and weighted SGD is used to train. By default, weights are ignored (uses_weights=False)
               reset_after_trigger:
                 type: boolean
                 description: |
