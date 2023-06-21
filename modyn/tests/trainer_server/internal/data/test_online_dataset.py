@@ -139,6 +139,7 @@ def test_get_keys_and_weights_from_selector(
 
         online_dataset._key_source._uses_weights = return_weights
         online_dataset._init_grpc()
+        online_dataset._key_source.init_worker()
         keys, weights = online_dataset._key_source.get_keys_and_weights(0, 0)
         assert keys == [1, 2, 3]
         assert weights == [1.0, 1.0, 1.0] if return_weights else weights is None
@@ -458,6 +459,7 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established, test
     assert online_dataset._storagestub is None
 
     online_dataset._init_grpc()
+    online_dataset._key_source.init_worker()
 
     assert isinstance(online_dataset._key_source._selectorstub, MockSelectorStub)
     assert isinstance(online_dataset._storagestub, MockStorageStub)

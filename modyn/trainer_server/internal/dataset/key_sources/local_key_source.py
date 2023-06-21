@@ -4,7 +4,7 @@ from typing import Optional
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
 
-LOCAL_STORAGE_FOLDER = ".tmp_offline_dataset"
+LOCAL_STORAGE_FOLDER = "/tmp/.tmp_offline_dataset"
 
 
 class LocalKeySource(AbstractKeySource):
@@ -43,6 +43,9 @@ class LocalKeySource(AbstractKeySource):
 
     def uses_weights(self) -> bool:
         return True
+
+    def init_worker(self) -> None:
+        pass
 
     def end_of_trigger_cleaning(self) -> None:
         # remove all the files belonging to this pipeline and trigger

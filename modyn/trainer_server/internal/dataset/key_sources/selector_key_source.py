@@ -20,22 +20,8 @@ class SelectorKeySource(AbstractKeySource):
         super().__init__(pipeline_id, trigger_id)
 
         self._selector_address = selector_address
-        self._selectorstub = self._connect_to_selector()
+        self._selectorstub = None  # connection is made when the pytorch worker is started
         self._uses_weights = False
-
-    def _connect_to_selector(self) -> SelectorStub:
-        selector_channel = grpc.insecure_channel(
-            self._selector_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
-        if not grpc_connection_established(selector_channel):
-            raise ConnectionError(
-                f"Could not establish gRPC connection to selector at address {self._selector_address}."
-            )
-        return SelectorStub(selector_channel)
 
     def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
         assert self._selectorstub is not None
@@ -49,6 +35,7 @@ class SelectorKeySource(AbstractKeySource):
         return self._get_just_keys(req)
 
     def _get_just_keys(self, req: GetSamplesRequest) -> tuple[list[int], Optional[list[float]]]:
+        assert self._selectorstub is not None
         keys = flatten(
             [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
         )
@@ -57,6 +44,7 @@ class SelectorKeySource(AbstractKeySource):
         return keys, weights
 
     def _get_both_keys_and_weights(self, req: GetSamplesRequest) -> tuple[list[int], list[float]]:
+        assert self._selectorstub is not None
         keys_and_weights = [
             (response.training_samples_subset, response.training_samples_weights)
             for response in self._selectorstub.get_sample_keys_and_weights(req)
@@ -78,9 +66,27 @@ class SelectorKeySource(AbstractKeySource):
         return response.num_partitions
 
     def uses_weights(self) -> bool:
+        assert self._selectorstub is not None
         req = UsesWeightsRequest(pipeline_id=self._pipeline_id)
         response: UsesWeightsResponse = self._selectorstub.uses_weights(req)
         return response.uses_weights
+
+    def init_worker(self) -> None:
+        self._selectorstub = self._connect_to_selector()
+
+    def _connect_to_selector(self) -> SelectorStub:
+        selector_channel = grpc.insecure_channel(
+            self._selector_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
+        if not grpc_connection_established(selector_channel):
+            raise ConnectionError(
+                f"Could not establish gRPC connection to selector at address {self._selector_address}."
+            )
+        return SelectorStub(selector_channel)
 
     def end_of_trigger_cleaning(self) -> None:
         pass

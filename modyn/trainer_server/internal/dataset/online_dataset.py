@@ -53,13 +53,12 @@ class OnlineDataset(IterableDataset):
 
         # the default key source is the Selector. Then it can be changed using change_key_source
         self._key_source = SelectorKeySource(self._pipeline_id, self._trigger_id, self._selector_address)
-        self._uses_weights = self._key_source.uses_weights()
+        self._uses_weights = None
 
         logger.debug("Initialized OnlineDataset.")
 
     def change_key_source(self, source: AbstractKeySource) -> None:
         self._key_source = source
-        self._uses_weights = self._key_source.uses_weights()
 
     def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -127,6 +126,8 @@ class OnlineDataset(IterableDataset):
     def _get_data_iterator(
         self, keys: list[int], data: list[bytes], labels: list[int], weights: Optional[list[float]]
     ) -> enumerate:
+        assert self._uses_weights is not None
+
         # pylint: disable-next = unsubscriptable-object
         iterator: Union[zip[Tuple[int, bytes, int]], zip[Tuple[int, bytes, int, float]]]
         if self._uses_weights:
@@ -137,6 +138,8 @@ class OnlineDataset(IterableDataset):
         return enumerate(iterator)
 
     def _unpack_data_tuple(self, data_tuple: Tuple) -> Tuple[int, bytes, int, Optional[float]]:
+        assert self._uses_weights is not None
+
         if self._uses_weights:
             key, sample, label, weight = data_tuple
         else:
@@ -146,10 +149,14 @@ class OnlineDataset(IterableDataset):
         return key, sample, label, weight
 
     def _yield_samples(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Tuple:
+        assert self._uses_weights is not None
         # mypy complains here because _transform has unknown type, which is ok
         if self._uses_weights:
             return key, self._transform(sample), label, weight  # type: ignore
         return key, self._transform(sample), label  # type: ignore
+
+    def end_of_trigger_cleaning(self) -> None:
+        self._key_source.end_of_trigger_cleaning()
 
     # pylint: disable=too-many-locals, too-many-branches
     def __iter__(self) -> Generator:
@@ -167,6 +174,8 @@ class OnlineDataset(IterableDataset):
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
             self._init_grpc()
+            self._key_source.init_worker()
+            self._uses_weights = self._key_source.uses_weights()
             self._silence_pil()
             self._debug("gRPC initialized.", worker_id)
 

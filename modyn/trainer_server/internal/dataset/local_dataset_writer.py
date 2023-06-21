@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStorage
 
-LOCAL_STORAGE_FOLDER = ".tmp_offline_dataset"
+LOCAL_STORAGE_FOLDER = "/tmp/.tmp_offline_dataset"
 
 
 class LocalDatasetWriter(TriggerSampleStorage):

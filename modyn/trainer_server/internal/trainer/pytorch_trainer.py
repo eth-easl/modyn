@@ -16,7 +16,7 @@ import torch
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
-from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource
+from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
@@ -112,6 +112,7 @@ class PytorchTrainer:
         self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
+        self.selector_address = training_info.selector_address
         downsampling_enabled, strategy_name, downsampler_config = self.get_selection_strategy()
 
         if downsampling_enabled:
@@ -440,7 +441,10 @@ class PytorchTrainer:
 
         # keys must be taken from the selector.
         # This operation is needed only when we sample several times (otherwise the source is already the selector)
-        self._train_dataloader.dataset.switch_to_selector_key_source()
+        selector_key_source = SelectorKeySource(
+            pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, selector_address=self.selector_address
+        )
+        self._train_dataloader.dataset.change_key_source(selector_key_source)
 
         number_of_samples = 0
 

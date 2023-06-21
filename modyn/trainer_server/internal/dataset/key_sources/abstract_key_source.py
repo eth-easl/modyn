@@ -20,6 +20,11 @@ class AbstractKeySource(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def init_worker(self) -> None:
+        # init connections when pytorch worker is created
+        raise NotImplementedError()
+
+    @abstractmethod
     def end_of_trigger_cleaning(self) -> None:
         # remove temporary files when the trigger ends
         raise NotImplementedError()
