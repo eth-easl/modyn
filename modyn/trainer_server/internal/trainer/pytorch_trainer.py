@@ -367,6 +367,9 @@ class PytorchTrainer:
         final_checkpoint_file_name = self._final_checkpoint_path / "model_final.modyn"
         self.save_state(final_checkpoint_file_name)
 
+        # clean temporary directories in dataloader
+        self.end_of_trigger_cleaning()
+
         self._info("Training complete!")
 
     def update_queue(
@@ -478,6 +481,9 @@ class PytorchTrainer:
         self._train_dataloader.dataset.change_key_source(new_key_source)
 
         self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
+
+    def end_of_trigger_cleaning(self) -> None:
+        self._train_dataloader.dataset.end_of_trigger_cleaning()
 
 
 def train(

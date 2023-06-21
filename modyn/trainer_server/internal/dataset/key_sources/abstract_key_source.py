@@ -18,3 +18,8 @@ class AbstractKeySource(ABC):
     @abstractmethod
     def uses_weights(self) -> bool:
         raise NotImplementedError()
+
+    @abstractmethod
+    def end_of_trigger_cleaning(self) -> None:
+        # remove temporary files when the trigger ends
+        raise NotImplementedError()

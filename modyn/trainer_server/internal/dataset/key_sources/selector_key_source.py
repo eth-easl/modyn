@@ -81,3 +81,6 @@ class SelectorKeySource(AbstractKeySource):
         req = UsesWeightsRequest(pipeline_id=self._pipeline_id)
         response: UsesWeightsResponse = self._selectorstub.uses_weights(req)
         return response.uses_weights
+
+    def end_of_trigger_cleaning(self) -> None:
+        pass

@@ -622,7 +622,9 @@ def test_train_invalid_query_message():
 @patch.object(MetadataCollector, "send_metadata", return_value=None)
 @patch.object(MetadataCollector, "cleanup", return_value=None)
 @patch.object(CustomLRScheduler, "step", return_value=None)
+@patch.object(PytorchTrainer, "end_of_trigger_cleaning", return_value=None)
 def test_train(
+    test_cleaning,
     test_step,
     test_cleanup,
     test_send_metadata,

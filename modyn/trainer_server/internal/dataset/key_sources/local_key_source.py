@@ -44,17 +44,7 @@ class LocalKeySource(AbstractKeySource):
     def uses_weights(self) -> bool:
         return True
 
-    def clean_working_directory(self) -> None:
-        # remove all the files belonging to this pipeline
-        if os.path.isdir(LOCAL_STORAGE_FOLDER):
-            this_pipeline_files = list(
-                filter(lambda file: file.startswith(f"{self._pipeline_id}_"), os.listdir(LOCAL_STORAGE_FOLDER))
-            )
-
-            for file in this_pipeline_files:
-                os.remove(os.path.join(LOCAL_STORAGE_FOLDER, file))
-
-    def clean_this_trigger_samples(self) -> None:
+    def end_of_trigger_cleaning(self) -> None:
         # remove all the files belonging to this pipeline and trigger
 
         if os.path.isdir(LOCAL_STORAGE_FOLDER):
