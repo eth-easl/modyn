@@ -69,7 +69,12 @@ class AbstractPresampleStrategy(AbstractSelectionStrategy):
         dataset_size = self._get_dataset_size()
         target_presampling = (dataset_size * self.presampling_ratio) // 100
 
-        return target_presampling
+        if self.has_limit:
+            target_size = min(self.training_set_size_limit, target_presampling)
+        else:
+            target_size = target_presampling
+
+        return target_size
 
     def _get_all_data(self) -> Iterable[list[int]]:
         """Returns all sample
@@ -121,12 +126,7 @@ class AbstractPresampleStrategy(AbstractSelectionStrategy):
         return self.get_general_stmt()
 
     def get_general_stmt(self) -> Union[Select[Any], Select[tuple[Any]]]:
-        presampling_target_size = self.get_presampling_target_size()
-
-        if self.has_limit:
-            target_size = min(self.training_set_size_limit, presampling_target_size)
-        else:
-            target_size = presampling_target_size
+        target_size = self.get_presampling_target_size()
 
         subq = (
             select(SelectorStateMetadata.sample_key)
