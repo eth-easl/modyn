@@ -8,8 +8,8 @@ from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalData
 
 
 def clean_directory():
-    if ".tmp_offline_dataset" in os.listdir():
-        shutil.rmtree(".tmp_offline_dataset")
+    if ".tmp_offline_dataset" in os.listdir("/tmp"):
+        shutil.rmtree("/tmp/.tmp_offline_dataset")
 
 
 def prepare_samples(start_index: int, size: int):
@@ -24,8 +24,8 @@ def prepare_samples(start_index: int, size: int):
 def test_init_writer():
     clean_directory()
     handler = LocalDatasetWriter(12, 1, 1, 25)
-    assert ".tmp_offline_dataset" in os.listdir()
-    assert len(os.listdir(".tmp_offline_dataset")) == 0
+    assert ".tmp_offline_dataset" in os.listdir("/tmp/")
+    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
     assert handler.current_file_index == 0
     assert handler.current_sample_index == 0
     assert handler.maximum_keys_in_memory == 25
@@ -35,8 +35,8 @@ def test_init_writer():
 def test_init_just_read():
     clean_directory()
     handler = LocalKeySource(12, 1)
-    assert ".tmp_offline_dataset" in os.listdir()
-    assert len(os.listdir(".tmp_offline_dataset")) == 0
+    assert ".tmp_offline_dataset" in os.listdir("/tmp/")
+    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
     assert handler._pipeline_id == 12
     assert handler._trigger_id == 1
     clean_directory()
@@ -46,21 +46,21 @@ def test_writes():
     clean_directory()
     handler = LocalDatasetWriter(12, 1, 1, 25)
 
-    assert ".tmp_offline_dataset" in os.listdir()
-    assert len(os.listdir(".tmp_offline_dataset")) == 0
+    assert ".tmp_offline_dataset" in os.listdir("/tmp/")
+    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
     assert handler.maximum_keys_in_memory == 25
 
     handler.inform_samples(*prepare_samples(1, 50))
-    assert len(os.listdir(".tmp_offline_dataset")) == 2
+    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 2
 
     handler.inform_samples(*prepare_samples(1, 49))
-    assert len(os.listdir(".tmp_offline_dataset")) == 3
+    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 3
 
     handler.finalize()
-    assert len(os.listdir(".tmp_offline_dataset")) == 4
+    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 4
 
     handler.clean_this_trigger_samples()
-    assert len(os.listdir(".tmp_offline_dataset")) == 0
+    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
 
     clean_directory()
 
