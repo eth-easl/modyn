@@ -22,15 +22,16 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
 
     def init_downsampler(self) -> None:
         self.probabilities = []
+        self.index_sampleid_map: list[int] = []
         self.number_of_points_seen = 0
 
-    def inform_samples(self, forward_output: torch.Tensor, target: torch.Tensor) -> None:
+    def inform_samples(self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor) -> None:
         scores = self.get_scores(forward_output, target)
         self.probabilities.append(scores)
-
         self.number_of_points_seen += forward_output.shape[0]
+        self.index_sampleid_map += sample_ids
 
-    def select_points(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def select_points(self) -> tuple[list[int], torch.Tensor]:
         target_size = int(self.downsampled_batch_ratio * self.number_of_points_seen / 100)
 
         probabilities = torch.cat(self.probabilities, dim=0)
@@ -41,4 +42,5 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         # lower probability, higher weight to reduce the variance
         weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])
 
-        return downsampled_idxs, weights
+        selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
+        return selected_ids, weights

@@ -319,9 +319,11 @@ class PytorchTrainer:
                         assert self._downsampler is not None
                         self._downsampler.init_downsampler()
                         big_batch_output = self._model.model(data)
-                        self._downsampler.inform_samples(big_batch_output, target)
-                        downsampled_indexes, weights = self._downsampler.select_points()
-                        data, target, sample_ids = get_tensors_subset(downsampled_indexes, data, target, sample_ids)
+                        self._downsampler.inform_samples(sample_ids, big_batch_output, target)
+                        selected_indexes, weights = self._downsampler.select_points()
+                        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
+
+                        sample_ids, data, target = selected_indexes, selected_data, selected_target
                         # TODO(#219) Investigate if we can avoid 2 forward passes
 
                     output = self._model.model(data)
@@ -450,24 +452,19 @@ class PytorchTrainer:
 
         self._downsampler.init_downsampler()
 
-        sample_ids_order = []
-
         batch_number = 0
         for batch_number, batch in enumerate(self._train_dataloader):
             self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
 
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
-            sample_ids_order += sample_ids
 
             with torch.autocast(self._device_type, enabled=self._amp):
                 # compute the scores and accumulate them
                 model_output = self._model.model(data)
-                self._downsampler.inform_samples(model_output, target)
+                self._downsampler.inform_samples(sample_ids, model_output, target)
 
-        downsampled_idxs, weights = self._downsampler.select_points()
-
-        selected_ids = [sample_ids_order[sample] for sample in downsampled_idxs]
+        selected_ids, weights = self._downsampler.select_points()
 
         # to store all the selected (sample, weight).
         file_size = self._num_dataloaders * self._batch_size  # should we add it to the pipeline?

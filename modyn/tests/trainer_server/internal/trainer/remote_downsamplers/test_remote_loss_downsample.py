@@ -19,16 +19,16 @@ def test_sample_shape():
     ids = list(range(8))
 
     forward_output = model(data)
-    sampler.inform_samples(forward_output, target)
+    sampler.inform_samples(ids, forward_output, target)
     indexes, weights = sampler.select_points()
 
-    sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, ids)
+    sampled_data, sampled_target = get_tensors_subset(indexes, data, target, ids)
 
     assert sampled_data.shape[0] == 4  # (50% of 8)
     assert sampled_data.shape[1] == data.shape[1]
     assert weights.shape[0] == 4
     assert sampled_target.shape[0] == 4
-    assert len(sampled_ids) == 4
+    assert len(indexes) == 4
 
 
 def test_sample_weights():
@@ -44,11 +44,11 @@ def test_sample_weights():
     ids = list(range(8))
 
     forward_output = model(data)
-    sampler.inform_samples(forward_output, target)
-    _, weights = sampler.select_points()
+    sampler.inform_samples(ids, forward_output, target)
+    selected_ids, weights = sampler.select_points()
 
     assert weights.sum() > 0
-    assert set(ids) <= set(list(range(8)))
+    assert set(selected_ids) <= set(list(range(8)))
 
 
 # Create a model that always predicts the same class
@@ -74,10 +74,10 @@ def test_sample_loss_dependent_sampling():
     ids = list(range(8))
 
     forward_output = model(data)
-    sampler.inform_samples(forward_output, target)
+    sampler.inform_samples(ids, forward_output, target)
     indexes, _ = sampler.select_points()
 
-    _, sampled_target, _ = get_tensors_subset(indexes, data, target, ids)
+    _, sampled_target = get_tensors_subset(indexes, data, target, ids)
 
     # Assert that no points with a loss of zero were selected
     assert (sampled_target == 0).sum() == 0
@@ -113,9 +113,9 @@ def test_sample_dict_input():
     sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_output = mymodel(data)
-    sampler.inform_samples(forward_output, target)
+    sampler.inform_samples(sample_ids, forward_output, target)
     indexes, weights = sampler.select_points()
-    sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, sample_ids)
+    sampled_data, sampled_target = get_tensors_subset(indexes, data, target, sample_ids)
 
     # check that the output has the correct shape and type
     assert isinstance(sampled_data, dict)
@@ -124,5 +124,5 @@ def test_sample_dict_input():
 
     assert weights.shape == (3,)
     assert sampled_target.shape == (3, 8)
-    assert len(sampled_ids) == 3
-    assert set(sampled_ids) <= set(sample_ids)
+    assert len(indexes) == 3
+    assert set(indexes) <= set(sample_ids)
