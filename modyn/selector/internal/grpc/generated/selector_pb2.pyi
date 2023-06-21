@@ -268,3 +268,33 @@ class SelectionStrategyResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["downsampler_config", b"downsampler_config", "downsampling_enabled", b"downsampling_enabled", "strategy_name", b"strategy_name"]) -> None: ...
 
 global___SelectionStrategyResponse = SelectionStrategyResponse
+
+@typing_extensions.final
+class UsesWeightsRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+
+global___UsesWeightsRequest = UsesWeightsRequest
+
+@typing_extensions.final
+class UsesWeightsResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    USES_WEIGHTS_FIELD_NUMBER: builtins.int
+    uses_weights: builtins.bool
+    def __init__(
+        self,
+        *,
+        uses_weights: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["uses_weights", b"uses_weights"]) -> None: ...
+
+global___UsesWeightsResponse = UsesWeightsResponse

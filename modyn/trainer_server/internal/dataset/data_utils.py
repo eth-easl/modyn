@@ -18,7 +18,6 @@ def prepare_dataloaders(
     storage_address: str,
     selector_address: str,
     training_id: int,
-    return_weights: bool = False,
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -50,7 +49,6 @@ def prepare_dataloaders(
         selector_address,
         training_id,
         num_dataloaders,
-        return_weights,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)

@@ -142,7 +142,6 @@ class PytorchTrainer:
             training_info.storage_address,
             training_info.selector_address,
             training_info.training_id,
-            self._weighted_opt,
         )
 
         # create callbacks - For now, assume LossCallback by default

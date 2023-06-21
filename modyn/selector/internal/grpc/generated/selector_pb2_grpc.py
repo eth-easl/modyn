@@ -48,6 +48,11 @@ class SelectorStub(object):
                 request_serializer=selector__pb2.GetSelectionStrategyRequest.SerializeToString,
                 response_deserializer=selector__pb2.SelectionStrategyResponse.FromString,
                 )
+        self.uses_weights = channel.unary_unary(
+                '/selector.Selector/uses_weights',
+                request_serializer=selector__pb2.UsesWeightsRequest.SerializeToString,
+                response_deserializer=selector__pb2.UsesWeightsResponse.FromString,
+                )
 
 
 class SelectorServicer(object):
@@ -95,6 +100,12 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def uses_weights(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SelectorServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -132,6 +143,11 @@ def add_SelectorServicer_to_server(servicer, server):
                     servicer.get_selection_strategy,
                     request_deserializer=selector__pb2.GetSelectionStrategyRequest.FromString,
                     response_serializer=selector__pb2.SelectionStrategyResponse.SerializeToString,
+            ),
+            'uses_weights': grpc.unary_unary_rpc_method_handler(
+                    servicer.uses_weights,
+                    request_deserializer=selector__pb2.UsesWeightsRequest.FromString,
+                    response_serializer=selector__pb2.UsesWeightsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -259,5 +275,22 @@ class Selector(object):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_selection_strategy',
             selector__pb2.GetSelectionStrategyRequest.SerializeToString,
             selector__pb2.SelectionStrategyResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def uses_weights(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/uses_weights',
+            selector__pb2.UsesWeightsRequest.SerializeToString,
+            selector__pb2.UsesWeightsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

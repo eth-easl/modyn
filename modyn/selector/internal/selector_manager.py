@@ -134,6 +134,12 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_number_of_partitions(trigger_id)
 
+    def uses_weights(self, pipeline_id: int) -> bool:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested number of partitions from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].uses_weights()
+
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
         maximum_keys_in_memory = selection_strategy["maximum_keys_in_memory"]

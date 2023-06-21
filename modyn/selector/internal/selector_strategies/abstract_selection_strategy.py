@@ -25,6 +25,7 @@ class AbstractSelectionStrategy(ABC):
         modyn_config (dict): the configurations for the modyn module
     """
 
+    # pylint: disable-next=too-many-branches
     def __init__(
         self,
         config: dict,
@@ -46,6 +47,12 @@ class AbstractSelectionStrategy(ABC):
         self.training_set_size_limit: int = config["limit"]
         self.has_limit = self.training_set_size_limit > 0
         self.reset_after_trigger: bool = config["reset_after_trigger"]
+
+        # weighted optimization is quite unusual, so the default us false
+        if "uses_weights" in config:
+            self._uses_weights = config["uses_weights"]
+        else:
+            self._uses_weights = False
 
         if "tail_triggers" in config:
             self.tail_triggers = config["tail_triggers"]

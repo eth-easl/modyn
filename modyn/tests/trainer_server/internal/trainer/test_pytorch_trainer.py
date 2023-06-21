@@ -17,6 +17,7 @@ import pytest
 import torch
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
@@ -125,7 +126,6 @@ def mock_get_dataloaders(
     storage_address,
     selector_address,
     training_id,
-    return_weights,
 ):
     mock_train_dataloader = iter(
         [(("1",) * 8, torch.ones(8, 10, requires_grad=True), torch.ones(8, dtype=int)) for _ in range(100)]
@@ -233,11 +233,16 @@ def get_training_info(
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.trainer_server.internal.dataset.key_sources.selector_key_source.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.dynamic_module_import")
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(SelectorKeySource, "uses_weights", return_value=False)
 def get_mock_trainer(
     query_queue: mp.Queue(),
     response_queue: mp.Queue(),
@@ -247,11 +252,13 @@ def get_mock_trainer(
     num_optimizers: int,
     lr_scheduler: str,
     transform_label: bool,
+    mock_weights: MagicMock,
     mock_selection_strategy: MagicMock,
     mock_selector_connection: MagicMock,
     lr_scheduler_dynamic_module_patch: MagicMock,
     model_dynamic_module_patch: MagicMock,
     test_insecure_channel: MagicMock,
+    test_grpc_connection_established_selector: MagicMock,
     test_grpc_connection_established: MagicMock,
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)

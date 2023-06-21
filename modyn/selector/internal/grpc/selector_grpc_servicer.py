@@ -22,6 +22,8 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     SamplesResponse,
     SelectionStrategyResponse,
     TriggerResponse,
+    UsesWeightsRequest,
+    UsesWeightsResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer  # noqa: E402, E501
 from modyn.selector.internal.selector_manager import SelectorManager
@@ -107,6 +109,16 @@ class SelectorGRPCServicer(SelectorServicer):
         num_partitions = self.selector_manager.get_number_of_partitions(pipeline_id, trigger_id)
 
         return NumberOfPartitionsResponse(num_partitions=num_partitions)
+
+    def uses_weights(  # pylint: disable-next=unused-argument
+        self, request: UsesWeightsRequest, context: grpc.ServicerContext
+    ) -> UsesWeightsResponse:
+        pipeline_id = request.pipeline_id
+        logger.info(f"[Pipeline {pipeline_id}]: Received is weighted request")
+
+        uses_weights = self.selector_manager.uses_weights(pipeline_id)
+
+        return UsesWeightsResponse(uses_weights=uses_weights)
 
     def get_selection_strategy(  # pylint: disable-next=unused-argument
         self, request: GetSelectionStrategyRequest, context: grpc.ServicerContext
