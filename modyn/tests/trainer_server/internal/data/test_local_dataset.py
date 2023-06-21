@@ -3,7 +3,7 @@ import os
 import shutil
 
 import torch
-from modyn.trainer_server.internal.dataset.local_dataset_reader import LocalDatasetReader
+from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 
 
@@ -34,12 +34,11 @@ def test_init_writer():
 
 def test_init_just_read():
     clean_directory()
-    handler = LocalDatasetReader(12, 1, 1)
+    handler = LocalKeySource(12, 1)
     assert ".tmp_offline_dataset" in os.listdir()
     assert len(os.listdir(".tmp_offline_dataset")) == 0
-    assert handler.pipeline_id == 12
-    assert handler.trigger_id == 1
-    assert handler.number_of_workers == 1
+    assert handler._pipeline_id == 12
+    assert handler._trigger_id == 1
     clean_directory()
 
 
@@ -69,7 +68,7 @@ def test_writes():
 def test_reads_pro():
     clean_directory()
     writer = LocalDatasetWriter(pipeline_id=0, trigger_id=0, number_of_workers=1, maximum_keys_in_memory=25)
-    reader = LocalDatasetReader(pipeline_id=0, trigger_id=0, number_of_workers=2)
+    reader = LocalKeySource(pipeline_id=0, trigger_id=0)
     # We can just keep 25 keys in memory. So, after it we dup to 2 files (one for each worker)
 
     # 50 samples: we expect 4 files 1) p=0, w=0 containing [1,12], 2) p=0, w=1 containing [13,25]
@@ -79,11 +78,11 @@ def test_reads_pro():
 
     assert writer.get_number_of_partitions() == 2
 
-    k00, w00 = reader.get_keys_and_weights(0, 0)
+    k00, w00 = reader.get_keys_and_weights(worker_id=0, partition_id=0)
     assert k00 == list(range(1, 26))
     assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(k00, w00))  # get the correct key
 
-    k10, w10 = reader.get_keys_and_weights(1, 0)
+    k10, w10 = reader.get_keys_and_weights(worker_id=0, partition_id=1)
     assert k10 == list(range(26, 51))
     assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(k10, w10))  # get the correct key
 
@@ -95,13 +94,13 @@ def test_reads_pro():
     writer.inform_samples(*samples)
 
     assert writer.get_number_of_partitions() == 2
-    assert reader.get_number_of_partitions() == 2
+    assert reader.get_num_data_partitions() == 2
     writer.finalize()
     assert writer.get_number_of_partitions() == 3
-    assert reader.get_number_of_partitions() == 3
+    assert reader.get_num_data_partitions() == 3
 
     # check that everything is ok
-    k20, w20 = reader.get_keys_and_weights(2, 0)
+    k20, w20 = reader.get_keys_and_weights(worker_id=0, partition_id=2)
     assert k20 == list(range(1000, 1004))
     assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(k20, w20))  # get the correct key
 

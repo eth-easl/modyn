@@ -16,6 +16,7 @@ import torch
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
+from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
@@ -466,14 +467,15 @@ class PytorchTrainer:
         local_dataset = LocalDatasetWriter(self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size)
 
         # store the selected samples (id and weight)
-        local_dataset.inform_samples(selected_ids, weights)
+        local_dataset.inform_samples(sample_ids=selected_ids, sample_weights=weights)
 
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
         # we need to manually trigger the store
         local_dataset.finalize()
 
         # instead of getting keys from the selector, now are taken from the local storage
-        self._train_dataloader.dataset.switch_to_local_key_source()
+        new_key_source = LocalKeySource(pipeline_id=self.pipeline_id, trigger_id=self.trigger_id)
+        self._train_dataloader.dataset.change_key_source(new_key_source)
 
         self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
 

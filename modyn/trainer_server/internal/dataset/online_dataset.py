@@ -59,6 +59,7 @@ class OnlineDataset(IterableDataset):
 
     def change_key_source(self, source: AbstractKeySource) -> None:
         self._key_source = source
+        self._uses_weights = self._key_source.uses_weights()
 
     def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
@@ -152,7 +153,6 @@ class OnlineDataset(IterableDataset):
 
     # pylint: disable=too-many-locals, too-many-branches
     def __iter__(self) -> Generator:
-        self._uses_weights = self._key_source.uses_weights()
         worker_info = get_worker_info()
         if worker_info is None:
             # Non-multithreaded data loading. We use worker_id 0.
