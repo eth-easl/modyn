@@ -24,10 +24,10 @@ class CsvFileWrapper(AbstractFileWrapper):
             )
         self.label_index = file_wrapper_config["label_column"]
 
-        if "ignore_header" in file_wrapper_config:
-            self.ignore_header = file_wrapper_config["ignore_header"]
+        if "ignore_first_line" in file_wrapper_config:
+            self.ignore_first_line = file_wrapper_config["ignore_header"]
         else:
-            self.ignore_header = False
+            self.ignore_first_line = False
 
         if "encoding" in file_wrapper_config:
             self.encoding = file_wrapper_config["encoding"]
@@ -72,6 +72,9 @@ class CsvFileWrapper(AbstractFileWrapper):
     def get_all_labels(self) -> list[Optional[int]]:
         reader = self._get_csv_reader()
 
+        if self.label_index is None:
+            return [None] * self.get_number_of_samples()
+
         labels = []
         for row in reader:
             only_label = row[self.label_index]
@@ -96,7 +99,7 @@ class CsvFileWrapper(AbstractFileWrapper):
         reader = csv.reader(lines, delimiter=self.separator)
 
         # skip the header if required
-        if self.ignore_header:
+        if self.ignore_first_line:
             next(reader)
 
         return reader
