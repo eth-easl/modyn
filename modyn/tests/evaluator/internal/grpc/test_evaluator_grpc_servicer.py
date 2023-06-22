@@ -21,7 +21,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     MetricConfiguration,
     PythonString,
 )
-from modyn.evaluator.internal.metric_factory import ACCURACY_METRIC_NAME
 from modyn.evaluator.internal.metrics import Accuracy
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
@@ -106,7 +105,7 @@ def get_evaluation_info(evaluation_id, valid_model: bool, model_path: pathlib.Pa
         request=get_evaluate_model_request(valid_model),
         evaluation_id=evaluation_id,
         storage_address=storage_address,
-        metrics=[Accuracy(ACCURACY_METRIC_NAME, "", {})],
+        metrics=[Accuracy("", {})],
         model_path=model_path,
     )
 
@@ -342,6 +341,20 @@ def test_get_evaluation_result_still_running(test_is_alive, test_connect_to_mode
         assert not response.valid
 
 
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+@patch.object(mp.Process, "is_alive", return_value=False)
+def test_get_evaluation_result_missing_metric(test_is_alive, test_connect_to_model_storage):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+        evaluation_process_info = get_evaluation_process_info()
+        evaluator._evaluation_process_dict[3] = evaluation_process_info
+        config = get_modyn_config()
+        evaluator._evaluation_dict[3] = get_evaluation_info(3, True, pathlib.Path("trained.model"), config)
+        response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=3), None)
+        assert response.valid
+        assert len(response.evaluation_data) == 0
+
+
 @patch.object(Accuracy, "get_evaluation_result", return_value=0.5)
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -358,7 +371,7 @@ def test_get_evaluation_result(test_is_alive, test_connect_to_model_storage, tes
         evaluation_process_info = get_evaluation_process_info()
         evaluator._evaluation_process_dict[1] = evaluation_process_info
         for metric in evaluator._evaluation_dict[1].metrics:
-            evaluation_process_info.metric_result_queue.put((metric.name, metric.get_evaluation_result()))
+            evaluation_process_info.metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
 
         timeout = 5
         elapsed = 0
@@ -380,6 +393,6 @@ def test_get_evaluation_result(test_is_alive, test_connect_to_model_storage, tes
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=1), None)
         assert response.valid
         assert len(response.evaluation_data) == 1
-        assert response.evaluation_data[0].metric == ACCURACY_METRIC_NAME
+        assert response.evaluation_data[0].metric == Accuracy.get_name()
         assert response.evaluation_data[0].result == 0.5
         test_metric.assert_called_once()

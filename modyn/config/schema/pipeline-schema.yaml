@@ -335,7 +335,7 @@ properties:
             dataloader_workers:
               type: number
               description: |
-                The number of data loader workers on the trainer node that fetch data from storage.
+                The number of data loader workers on the evaluation node that fetch data from storage.
             metrics:
               type: array
               description: |

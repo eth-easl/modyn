@@ -1,10 +1,5 @@
 import pytest
-from modyn.evaluator.internal.metric_factory import (
-    ACCURACY_METRIC_NAME,
-    F1_SCORE_METRIC_NAME,
-    ROC_AUC_METRIC_NAME,
-    MetricFactory,
-)
+from modyn.evaluator.internal.metric_factory import MetricFactory
 
 
 def test_metric_unavailability():
@@ -13,13 +8,11 @@ def test_metric_unavailability():
 
 
 def test_metric_availability():
-    accuracy = MetricFactory.get_evaluation_metric(ACCURACY_METRIC_NAME, config={}, evaluation_transform_func="")
-    f1_score = MetricFactory.get_evaluation_metric(
-        F1_SCORE_METRIC_NAME, config={"test_attr": 10}, evaluation_transform_func=""
-    )
-    auc_roc = MetricFactory.get_evaluation_metric(ROC_AUC_METRIC_NAME, config={}, evaluation_transform_func="")
+    accuracy = MetricFactory.get_evaluation_metric("Accuracy", config={}, evaluation_transform_func="")
+    f1_score = MetricFactory.get_evaluation_metric("F1-score", config={"test_attr": 10}, evaluation_transform_func="")
+    auc_roc = MetricFactory.get_evaluation_metric("ROC-AUC", config={}, evaluation_transform_func="")
 
-    assert accuracy.name == ACCURACY_METRIC_NAME
-    assert f1_score.name == F1_SCORE_METRIC_NAME
+    assert accuracy.get_name() == "Accuracy"
+    assert f1_score.get_name() == "F1-score"
     assert f1_score.config["test_attr"] == 10
-    assert auc_roc.name == ROC_AUC_METRIC_NAME
+    assert auc_roc.get_name() == "ROC-AUC"

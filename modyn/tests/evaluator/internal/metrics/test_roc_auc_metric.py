@@ -5,14 +5,14 @@ from modyn.evaluator.internal.metrics import AbstractHolisticMetric, RocAuc
 
 
 def get_evaluation_result(y_true: np.ndarray, y_score: np.ndarray):
-    roc_auc = RocAuc("ROC-AUC", evaluation_transform_func="", config={})
+    roc_auc = RocAuc(evaluation_transform_func="", config={})
     roc_auc.dataset_evaluated_callback(torch.from_numpy(y_true), torch.from_numpy(y_score))
 
     return roc_auc.get_evaluation_result()
 
 
 def test_roc_auc_metric():
-    roc_auc = RocAuc("ROC-AUC", evaluation_transform_func="", config={})
+    roc_auc = RocAuc(evaluation_transform_func="", config={})
 
     assert isinstance(roc_auc, AbstractHolisticMetric)
 

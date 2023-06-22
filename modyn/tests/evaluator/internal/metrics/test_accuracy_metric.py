@@ -21,11 +21,11 @@ def get_mock_evaluation_transformer():
 
 def test_accuracy_invalid_transform():
     with pytest.raises(ValueError):
-        Accuracy("Accuracy", evaluation_transform_func=get_invalid_evaluation_transformer(), config={})
+        Accuracy(evaluation_transform_func=get_invalid_evaluation_transformer(), config={})
 
 
 def test_accuracy_valid_transform():
-    accuracy = Accuracy("Accuracy", evaluation_transform_func=get_mock_evaluation_transformer(), config={})
+    accuracy = Accuracy(evaluation_transform_func=get_mock_evaluation_transformer(), config={})
 
     _, trf_output = accuracy.evaluation_transformer_function(5, torch.arange(10))
     assert trf_output == 9
@@ -39,7 +39,7 @@ def test_accuracy_valid_transform():
 
 
 def test_accuracy_metric():
-    accuracy = Accuracy("Accuracy", evaluation_transform_func="", config={})
+    accuracy = Accuracy(evaluation_transform_func="", config={})
 
     assert isinstance(accuracy, AbstractDecomposableMetric)
 
@@ -66,7 +66,7 @@ def test_accuracy_metric():
 
 
 def test_accuracy_metric_invalid():
-    accuracy = Accuracy("Accuracy", evaluation_transform_func="", config={})
+    accuracy = Accuracy(evaluation_transform_func="", config={})
 
     zeroes = torch.zeros((5, 1))
     y_pred = torch.zeros((4, 1))

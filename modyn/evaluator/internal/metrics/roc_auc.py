@@ -10,8 +10,8 @@ class RocAuc(AbstractHolisticMetric):
     ROC-AUC metric implementation.
     """
 
-    def __init__(self, name: str, evaluation_transform_func: str, config: dict[str, Any]) -> None:
-        super().__init__(name, evaluation_transform_func, config)
+    def __init__(self, evaluation_transform_func: str, config: dict[str, Any]) -> None:
+        super().__init__(evaluation_transform_func, config)
 
         self.evaluation_result: Optional[float] = None
 
@@ -55,3 +55,7 @@ class RocAuc(AbstractHolisticMetric):
         assert self.evaluation_result is not None
 
         return self.evaluation_result
+
+    @staticmethod
+    def get_name() -> str:
+        return "ROC-AUC"

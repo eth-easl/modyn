@@ -27,7 +27,6 @@ class TriggerSampleStorage:
     ):
         self.trigger_sample_directory = trigger_sample_directory
         if not Path(self.trigger_sample_directory).exists():
-            print("CREATE TRIGGER SAMPLE DIRECTORY")
             Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
             logger.info(f"Created the trigger sample directory {self.trigger_sample_directory}.")
         if sys.maxsize < 2**63 - 1:

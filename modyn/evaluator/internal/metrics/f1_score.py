@@ -9,8 +9,8 @@ class F1Score(AbstractDecomposableMetric):
     F1-score implementation.
     """
 
-    def __init__(self, name: str, evaluation_transform_func: str, config: dict[str, Any]) -> None:
-        super().__init__(name, evaluation_transform_func, config)
+    def __init__(self, evaluation_transform_func: str, config: dict[str, Any]) -> None:
+        super().__init__(evaluation_transform_func, config)
         self.seen_samples = 0
         self.total_correct = 0
         # TODO(#269): build confusion matrix
@@ -23,3 +23,7 @@ class F1Score(AbstractDecomposableMetric):
     def get_evaluation_result(self) -> float:
         # TODO(#269): implement final result
         return 0.0
+
+    @staticmethod
+    def get_name() -> str:
+        return "F1-score"

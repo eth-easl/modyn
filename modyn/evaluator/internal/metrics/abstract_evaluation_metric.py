@@ -12,16 +12,14 @@ class AbstractEvaluationMetric(ABC):
     This abstract class is used to represent an evaluation metric which can be used to evaluate a trained model.
     """
 
-    def __init__(self, name: str, evaluation_transformer: str, config: dict[str, Any]):
+    def __init__(self, evaluation_transformer: str, config: dict[str, Any]):
         """
         Initialize the evaluation metric.
 
         Args:
-            name: the name of the metric.
             evaluation_transformer: transformation that is applied to the label and model output before evaluation.
             config: configuration options for the metric.
         """
-        self.name = name
         self.config = config
 
         self.evaluation_transformer_function = deserialize_function(
@@ -39,4 +37,15 @@ class AbstractEvaluationMetric(ABC):
         raise NotImplementedError()
 
     def warning(self, message: str) -> None:
-        logger.warning(f"[{self.name}] {message}")
+        logger.warning(f"[{self.get_name()}] {message}")
+
+    @staticmethod
+    @abstractmethod
+    def get_name() -> str:
+        """
+        Get the name of the metric.
+
+        Returns:
+            str: the metric name.
+        """
+        raise NotImplementedError()

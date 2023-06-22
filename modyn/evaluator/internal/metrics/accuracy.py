@@ -9,8 +9,8 @@ class Accuracy(AbstractDecomposableMetric):
     Accuracy metric implementation.
     """
 
-    def __init__(self, name: str, evaluation_transform_func: str, config: dict[str, Any]) -> None:
-        super().__init__(name, evaluation_transform_func, config)
+    def __init__(self, evaluation_transform_func: str, config: dict[str, Any]) -> None:
+        super().__init__(evaluation_transform_func, config)
         self.seen_samples = 0
         self.total_correct = 0
 
@@ -38,3 +38,7 @@ class Accuracy(AbstractDecomposableMetric):
             return 0
 
         return float(self.total_correct) / self.seen_samples
+
+    @staticmethod
+    def get_name() -> str:
+        return "Accuracy"

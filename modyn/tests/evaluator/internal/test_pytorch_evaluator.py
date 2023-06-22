@@ -142,7 +142,7 @@ def get_mock_evaluator(
     evaluation_info = get_evaluation_info(
         1,
         "storage:5000",
-        [Accuracy("Accuracy", config={}, evaluation_transform_func=get_mock_evaluation_transformer())],
+        [Accuracy(config={}, evaluation_transform_func=get_mock_evaluation_transformer())],
         trained_model_path,
         label_transformer,
     )
@@ -154,9 +154,7 @@ def get_mock_evaluator(
 
 @patch.object(PytorchEvaluator, "_load_state")
 def test_evaluator_init(load_state_mock: MagicMock):
-    evaluator: PytorchEvaluator = get_mock_evaluator(
-        mp.Queue(), mp.Queue(), mp.Manager().dict(), "trained_model.modyn", True
-    )
+    evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Queue(), "trained_model.modyn", True)
 
     assert isinstance(evaluator._model, MockModelWrapper)
     assert isinstance(evaluator._model.model, MockModel)
@@ -179,9 +177,7 @@ def test_evaluator_init(load_state_mock: MagicMock):
 
 @patch.object(PytorchEvaluator, "_load_state")
 def test_no_transform_evaluator_init(load_state_mock: MagicMock):
-    evaluator: PytorchEvaluator = get_mock_evaluator(
-        mp.Queue(), mp.Queue(), mp.Manager().dict(), "trained_model.modyn", False
-    )
+    evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Queue(), "trained_model.modyn", False)
 
     assert isinstance(evaluator._model, MockModelWrapper)
     assert isinstance(evaluator._model.model, MockModel)
@@ -204,7 +200,7 @@ def test_load_model():
 
         torch.save(dict_to_save, model_path)
 
-        evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Manager().dict(), model_path, False)
+        evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Queue(), model_path, False)
 
         assert evaluator._model.model.state_dict() == dict_to_save["model"]
         assert torch.all(torch.eq(evaluator._model.model(torch.ones(4)), torch.ones(4) * 2))
@@ -215,7 +211,7 @@ def test_load_model():
 def test_send_status_to_server(load_state_mock: MagicMock):
     response_queue = mp.Queue()
     evaluator: PytorchEvaluator = get_mock_evaluator(
-        mp.Queue(), response_queue, mp.Manager().dict(), "trained_model.modyn", True
+        mp.Queue(), response_queue, mp.Queue(), "trained_model.modyn", True
     )
 
     evaluator.send_status_to_server(20)
@@ -230,7 +226,7 @@ def test_train_invalid_query_message(load_state_mock: MagicMock):
     query_status_queue = mp.Queue()
     response_queue = mp.Queue()
     evaluator: PytorchEvaluator = get_mock_evaluator(
-        query_status_queue, response_queue, mp.Manager().dict(), "trained_model.modyn", True
+        query_status_queue, response_queue, mp.Queue(), "trained_model.modyn", True
     )
 
     query_status_queue.put("INVALID MESSAGE")
@@ -307,5 +303,5 @@ def test_train(load_state_mock: MagicMock):
 
     # accuracy metric
     metric_name, metric_result = metric_result_queue.get()
-    assert metric_name == "Accuracy"
+    assert metric_name == Accuracy.get_name()
     assert metric_result == pytest.approx(1)

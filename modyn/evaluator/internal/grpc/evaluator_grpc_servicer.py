@@ -132,11 +132,11 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             metric = MetricFactory.get_evaluation_metric(
                 configuration.name, configuration.evaluation_transform_function.value, loaded_config
             )
-            if metric.name not in metric_names:
+            if metric.get_name() not in metric_names:
                 metrics.append(metric)
-                metric_names.add(metric.name)
+                metric_names.add(metric.get_name())
             else:
-                logger.warning(f"Metric {metric.name} is already registered.")
+                logger.warning(f"Metric {metric.get_name()} is already registered.")
         return metrics
 
     def _run_evaluation(self, evaluation_id: int) -> None:
@@ -227,7 +227,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self, request: EvaluationResultRequest, context: grpc.ServicerContext
     ) -> EvaluationResultResponse:
         evaluation_id = request.evaluation_id
-        logger.info(f"Received get final evaluation request for evaluation {evaluation_id}.")
+        logger.info(f"Received get evaluation result request for evaluation {evaluation_id}.")
 
         if evaluation_id not in self._evaluation_dict:
             logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
