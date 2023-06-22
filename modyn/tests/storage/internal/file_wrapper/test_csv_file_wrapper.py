@@ -8,6 +8,7 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 
 TMP_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn")
 FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.csv")
+WRONG_FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "wrong_test.csv")
 FILE_DATA = b"a;b;c;d;12\ne;f;g;h;76"
 INVALID_FILE_EXTENSION_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.txt")
 FILE_WRAPPER_CONFIG = {
@@ -132,3 +133,38 @@ def test_get_samples_from_indices_with_invalid_indices():
     file_wrapper = CsvFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
     with pytest.raises(IndexError):
         file_wrapper.get_samples_from_indices([-2, 1])
+
+def write_to_file(wrong_data):
+    with open(WRONG_FILE_PATH, "wb") as file:
+        file.write(wrong_data)
+
+def test_invalid_file_content():
+    # extra field in one row
+    wrong_data = b"a;b;c;d;12;e\ne;f;g;h;76"
+    write_to_file(wrong_data)
+
+    with pytest.raises(ValueError):
+        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+
+    # label column outside boundary
+    wrong_data = b"a;b;c;12\ne;f;g;76"
+    write_to_file(wrong_data)
+
+    with pytest.raises(ValueError):
+        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+
+    # str label column
+    wrong_data = b"a;b;c;d;e;12\ne;f;g;h;h;76"
+    write_to_file(wrong_data)
+    with pytest.raises(ValueError):
+        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+
+    # just one str in label
+    wrong_data = b"a;b;c;d;88;12\ne;f;g;h;h;76"
+    write_to_file(wrong_data)
+    with pytest.raises(ValueError):
+        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+
+
+
+

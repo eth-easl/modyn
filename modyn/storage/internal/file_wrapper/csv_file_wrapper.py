@@ -35,6 +35,7 @@ class CsvFileWrapper(AbstractFileWrapper):
             self.encoding = "utf-8"
 
         self._validate_file_extension()
+        self._validate_file_content()
 
     def _validate_file_extension(self) -> None:
         """Validates the file extension as csv
@@ -45,6 +46,24 @@ class CsvFileWrapper(AbstractFileWrapper):
         if not self.file_path.endswith(".csv"):
             raise ValueError("File has wrong file extension.")
 
+    def _validate_file_content(self):
+
+        reader = self._get_csv_reader()
+
+        number_of_columns = []
+
+        for i, row in enumerate(reader):
+
+            number_of_columns.append(len(row))
+            if self.label_index is not None:
+                if not 0 <= self.label_index < len(row):
+                    raise ValueError("Label index outside row boundary")
+                if not row[self.label_index].isnumeric():
+                    raise ValueError("The label must be an integer")
+
+        if not len(set(number_of_columns)) == 1:
+            raise ValueError("Some rows have different width. "
+                             f"This is the number of columns row by row {number_of_columns}")
     def get_sample(self, index: int) -> bytes:
         samples = self._filter_rows_samples([index])
 
