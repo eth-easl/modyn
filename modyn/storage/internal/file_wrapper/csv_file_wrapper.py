@@ -128,3 +128,6 @@ class CsvFileWrapper(AbstractFileWrapper):
                 filtered_rows.append(only_label)
 
         return filtered_rows
+
+    def delete_samples(self, indices: list) -> None:
+        return
