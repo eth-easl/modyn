@@ -37,7 +37,8 @@ properties:
       sample_batch_size:
         type: number
         description: |
-          The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce the size of a single answer the keys are batched in sizes of `sample_batch_size`.
+          The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce 
+          the size of a single answer the keys are batched in sizes of `sample_batch_size`.
       sample_dbinsertion_batchsize:
         type: number
         description: |
@@ -49,7 +50,9 @@ properties:
       sample_table_unlogged:
         type: boolean
         description: |
-          This configures whether the table storing all samples is UNLOGGED (= high performance) or crash resilient. Defaults to True. For datasets with many samples (such as Criteo), this is recommended for highest insertion performance. In other scenarios, this might not be necessary.
+          This configures whether the table storing all samples is UNLOGGED (= high performance) or crash resilient. 
+          Defaults to True. For datasets with many samples (such as Criteo), this is recommended for highest insertion performance. 
+          In other scenarios, this might not be necessary.
       force_fallback_insert:
         type: boolean
         description: |
@@ -99,15 +102,34 @@ properties:
                 record_size:
                   type: number
                   description: |
-                    The size of each full record in bytes (label + features) for a binary file wrapper.
+                    [BinaryFileWrapper] The size of each full record in bytes (label + features).
                 label_size:
                   type: number
                   description: |
-                    The size of the label field in bytes for a binary file wrapper.
+                    [BinaryFileWrapper] The size of the label field in bytes for a binary file wrapper.
                 byteorder:
                   type: string
                   description: |
-                    The byteorder when reading an integer from multibyte data in a binary file. Should either be "big" or "little".
+                    [BinaryFileWrapper] The byteorder when reading an integer from multibyte data in a binary file. 
+                    Should either be "big" or "little".
+                separator:
+                  type: string
+                  description: |
+                    [CsvFileWrapper] The separator used in the CSV file. The default is ";"
+                label_index:
+                  type: number
+                  description: |
+                    [CsvFileWrapper] Column index of the label.
+                    For example, if the columns are "width", "height", "age", "label" you should set label_index to 3.
+                ignore_first_line:
+                  type: boolean
+                  description: |
+                    [CsvFileWrapper] If the first line is the table header, you can skip it setting this parameter to True. 
+                    Default is False.
+                encoding:
+                  type: string
+                  description: |
+                    [CsvFileWrapper] Encoding of your file. Default is utf-8
             ignore_last_timestamp:
               type: boolean
               description: |

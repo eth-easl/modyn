@@ -49,7 +49,7 @@ class CsvFileWrapper(AbstractFileWrapper):
         if not self.file_path.endswith(".csv"):
             raise ValueError("File has wrong file extension.")
 
-    def _validate_file_content(self):
+    def _validate_file_content(self) -> None:
         """
         Performs the following checks:
         - specified label column is castable to integer
@@ -63,20 +63,20 @@ class CsvFileWrapper(AbstractFileWrapper):
 
         number_of_columns = []
 
-        for i, row in enumerate(reader):
-
+        for row in reader:
             number_of_columns.append(len(row))
             if self.label_index is not None:
                 if not 0 <= self.label_index < len(row):
                     raise ValueError("Label index outside row boundary")
-                if not row[self.label_index].isnumeric(): #returns true iff all the characters are numbers
+                if not row[self.label_index].isnumeric():  # returns true iff all the characters are numbers
                     raise ValueError("The label must be an integer")
 
-        if not len(set(number_of_columns)) == 1:
-            raise ValueError("Some rows have different width. "
-                             f"This is the number of columns row by row {number_of_columns}")
-    def get_sample(self, index: int) -> bytes:
+        if len(set(number_of_columns)) != 1:
+            raise ValueError(
+                "Some rows have different width. " f"This is the number of columns row by row {number_of_columns}"
+            )
 
+    def get_sample(self, index: int) -> bytes:
         samples = self._filter_rows_samples([index])
 
         if len(samples) != 1:
