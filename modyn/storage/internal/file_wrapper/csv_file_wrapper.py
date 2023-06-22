@@ -79,13 +79,15 @@ class CsvFileWrapper(AbstractFileWrapper):
     def get_all_labels(self) -> list[Optional[int]]:
         reader = self._get_csv_reader()
 
+        labels: list[Optional[int]] = []
+
         if self.label_index is None:
             return [None] * self.get_number_of_samples()
 
-        labels = []
         for row in reader:
-            only_label = row[self.label_index]
-            labels.append(only_label)
+            # labels are integer in modyn
+            int_label = int(row[self.label_index])
+            labels.append(int_label)
 
         return labels
 
@@ -131,8 +133,9 @@ class CsvFileWrapper(AbstractFileWrapper):
         filtered_rows = []
         for i, row in enumerate(reader):
             if i in indices:
-                only_label = row[self.label_index]
-                filtered_rows.append(only_label)
+                # labels are integer in modyn
+                int_label = int(row[self.label_index])
+                filtered_rows.append(int_label)
 
         return filtered_rows
 
