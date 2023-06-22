@@ -1,6 +1,10 @@
+import logging
 from abc import ABC, abstractmethod
+from typing import Any
 
-import torch
+from modyn.utils import EVALUATION_TRANSFORMER_FUNC_NAME, deserialize_function
+
+logger = logging.getLogger(__name__)
 
 
 class AbstractEvaluationMetric(ABC):
@@ -8,32 +12,21 @@ class AbstractEvaluationMetric(ABC):
     This abstract class is used to represent an evaluation metric which can be used to evaluate a trained model.
     """
 
-    def __init__(self, progressive: bool):
+    def __init__(self, name: str, evaluation_transformer: str, config: dict[str, Any]):
         """
-        Abstract class for all evaluation metrics.
-        Currently we only allow progressive metrics i.e metrics where the final evaluation value can be calculated
-        on-the-fly without having the model output from all batches.
+        Initialize the evaluation metric.
 
         Args:
-            progressive: whether the metrics is progressive.
+            name: the name of the metric.
+            evaluation_transformer: transformation that is applied to the label and model output before evaluation.
+            config: configuration options for the metric.
         """
-        self.progressive = progressive
+        self.name = name
+        self.config = config
 
-        if not self.progressive:
-            raise NotImplementedError("Only progressive metrics are allowed.")
-
-    @abstractmethod
-    def evaluate_batch(self, y_true: torch.tensor, y_pred: torch.tensor, batch_size: int) -> None:
-        """
-        Function that is called whenever a batch was evaluated.
-        Use it for bookkeeping and to store temporary results needed for the final evaluation
-
-        Args:
-            y_true: True labels of the samples.
-            y_pred: Model predictions.
-            batch_size: Size of the batch.
-        """
-        raise NotImplementedError()
+        self.evaluation_transformer_function = deserialize_function(
+            evaluation_transformer, EVALUATION_TRANSFORMER_FUNC_NAME
+        )
 
     @abstractmethod
     def get_evaluation_result(self) -> float:
@@ -44,3 +37,6 @@ class AbstractEvaluationMetric(ABC):
             float: the calculated value of the metric.
         """
         raise NotImplementedError()
+
+    def warning(self, message: str) -> None:
+        logger.warning(f"[{self.name}] {message}")

@@ -5,23 +5,25 @@ import os
 import pathlib
 import queue
 import traceback
-from inspect import isfunction
-from typing import Any, Callable, Optional, Union
+from typing import Union
 
 import torch
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
+from modyn.evaluator.internal.metric_factory import MetricFactory
+from modyn.evaluator.internal.metrics import AbstractDecomposableMetric, AbstractHolisticMetric
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluatorMessages
-
-EVALUATION_TRANSFORMER_FUNC_NAME = "evaluation_transformer"
-LABEL_TRANSFORMER_FUNC_NAME = "label_transformer_function"
+from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 
 class PytorchEvaluator:
+    # pylint: disable=too-many-branches
+
     def __init__(
         self,
         evaluation_info: EvaluationInfo,
         status_query_queue: mp.Queue,
         status_response_queue: mp.Queue,
+        metric_result_queue: mp.Queue,
         logger: logging.Logger,
     ) -> None:
         self.logger = logger
@@ -36,14 +38,8 @@ class PytorchEvaluator:
         self._info("Setting up data loaders.")
         self._dataloader = self._prepare_dataloader(evaluation_info)
 
-        self._mod_dict: dict[str, Any] = {}
-        self._evaluation_transformer = self._setup_transformer_function(
-            evaluation_info.evaluation_transformer, EVALUATION_TRANSFORMER_FUNC_NAME
-        )
-
         self._metrics = evaluation_info.metrics
-
-        self._label_tranformer_function = self._setup_transformer_function(
+        self._label_tranformer_function = deserialize_function(
             evaluation_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
 
@@ -53,8 +49,10 @@ class PytorchEvaluator:
 
         self._status_query_queue = status_query_queue
         self._status_response_queue = status_response_queue
+        self._metric_result_queue = metric_result_queue
 
         self._num_samples = 0
+        self._contains_holistic_metric = MetricFactory.contains_holistic_metric(self._metrics)
 
         self._info("Initialized PyTorch evaluator.")
 
@@ -73,14 +71,6 @@ class PytorchEvaluator:
         )
 
         return dataloader
-
-    def _setup_transformer_function(self, serialized_code: str, func_name: str) -> Optional[Callable]:
-        if serialized_code == "":
-            return None
-        exec(serialized_code, self._mod_dict)  # pylint: disable=exec-used
-        if func_name not in self._mod_dict or not isfunction(self._mod_dict[func_name]):
-            raise ValueError(f"Invalid function is provided. Expected a function with name {func_name}.")
-        return self._mod_dict[func_name]
 
     def _info(self, msg: str) -> None:
         self.logger.info(f"[Evaluation {self._evaluation_id}] {msg}")
@@ -106,6 +96,9 @@ class PytorchEvaluator:
 
     def evaluate(self) -> None:
         self._info(f"Process {os.getpid()} starts evaluation.")
+
+        y_true = []
+        y_score = []
 
         self._model.model.eval()
         with torch.no_grad():
@@ -141,14 +134,25 @@ class PytorchEvaluator:
                 with torch.autocast(self._device_type, enabled=self._amp):
                     output = self._model.model(data)
 
-                    if self._evaluation_transformer:
-                        output = self._evaluation_transformer(output)
-
                     for metric in self._metrics:
-                        metric.evaluate_batch(target, output, batch_size)
+                        if isinstance(metric, AbstractDecomposableMetric):
+                            metric.batch_evaluated_callback(target, output, batch_size)
+
+                    if self._contains_holistic_metric:
+                        y_true.append(target.cpu())
+                        y_score.append(output.cpu())
 
                 self._num_samples += batch_size
 
+        if self._contains_holistic_metric:
+            y_true = torch.cat(y_true)
+            y_score = torch.cat(y_score)
+
+        for metric in self._metrics:
+            if isinstance(metric, AbstractHolisticMetric):
+                metric.dataset_evaluated_callback(y_true, y_score)
+
+            self._metric_result_queue.put((metric.name, metric.get_evaluation_result()))
         self._info(f"Finished evaluation: {self._num_samples} samples, {batch_number + 1} batches.")
 
 
@@ -158,6 +162,7 @@ def evaluate(
     exception_queue: mp.Queue,
     status_query_queue: mp.Queue,
     status_response_queue: mp.Queue,
+    metric_result_queue: mp.Queue,
 ) -> None:
     logging.basicConfig(
         level=logging.DEBUG,
@@ -169,7 +174,9 @@ def evaluate(
     logger.addHandler(file_handler)
 
     try:
-        evaluator = PytorchEvaluator(evaluation_info, status_query_queue, status_response_queue, logger)
+        evaluator = PytorchEvaluator(
+            evaluation_info, status_query_queue, status_response_queue, metric_result_queue, logger
+        )
         evaluator.evaluate()
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()

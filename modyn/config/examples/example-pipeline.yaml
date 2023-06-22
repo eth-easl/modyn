@@ -66,10 +66,20 @@ evaluation:
     - dataset_id: mnist
       batch_size: 64
       dataloader_workers: 2
-      metrics: ["AccuracyMetric"]
+      metrics:
+        - name: "Accuracy"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(label: torch.Tensor, model_output: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+              trf_output = torch.argmax(model_output, dim=-1)
+              return label, trf_output
+        - name: "F1-score"
+          config:
+            average: "micro"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(label: torch.Tensor, model_output: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+              trf_output = torch.functional.one_hot(model_output, num_classes=10)
+              return label, trf_output
   device: "cpu"
   amp: False
-  evaluation_transformer: |
-    import torch
-    def evaluation_transformer(model_output: torch.Tensor) -> torch.Tensor:
-      return torch.argmax(model_output, dim=-1)

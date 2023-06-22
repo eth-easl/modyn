@@ -38,20 +38,16 @@ class SelectorManager:
         )
         trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
 
-        if (
-            Path(trigger_sample_directory).exists()
-            and any(Path(trigger_sample_directory).iterdir())
-            and not ignore_existing_trigger_samples
-        ):
-            raise ValueError(
-                f"The trigger sample directory {trigger_sample_directory} is not empty. \
-                  Please delete the directory or set the ignore_existing_trigger_samples flag to True."
-            )
-
         if not Path(trigger_sample_directory).exists():
             raise ValueError(
                 f"The trigger sample directory {trigger_sample_directory} does not exist. \
                   Please create the directory or mount another, existing directory."
+            )
+
+        if any(Path(trigger_sample_directory).iterdir()) and not ignore_existing_trigger_samples:
+            raise ValueError(
+                f"The trigger sample directory {trigger_sample_directory} is not empty. \
+                  Please delete the directory or set the ignore_existing_trigger_samples flag to True."
             )
 
         if not is_directory_writable(Path(trigger_sample_directory)):

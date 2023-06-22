@@ -41,7 +41,7 @@ class MockStorageStub:
 
 
 def test_invalid_bytes_parser():
-    with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
+    with pytest.raises(AssertionError):
         OnlineDataset(
             pipeline_id=1,
             trigger_id=1,
@@ -53,7 +53,7 @@ def test_invalid_bytes_parser():
             training_id=42,
         )._init_transforms()
 
-    with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
+    with pytest.raises(ValueError):
         OnlineDataset(
             pipeline_id=1,
             trigger_id=1,

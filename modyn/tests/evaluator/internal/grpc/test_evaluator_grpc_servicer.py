@@ -15,12 +15,14 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
     EvaluateModelResponse,
+    EvaluationResultRequest,
     EvaluationStatusRequest,
-    FinalEvaluationRequest,
     JsonString,
+    MetricConfiguration,
     PythonString,
 )
-from modyn.evaluator.internal.metrics import AccuracyMetric
+from modyn.evaluator.internal.metric_factory import ACCURACY_METRIC_NAME
+from modyn.evaluator.internal.metrics import Accuracy
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 
@@ -50,9 +52,10 @@ def get_evaluation_process_info():
     status_query_queue = mp.Queue()
     status_response_queue = mp.Queue()
     exception_queue = mp.Queue()
+    metric_result_queue = mp.Queue()
 
     evaluation_process_info = EvaluationProcessInfo(
-        mp.Process(), exception_queue, status_query_queue, status_response_queue
+        mp.Process(), exception_queue, status_query_queue, status_response_queue, metric_result_queue
     )
     return evaluation_process_info
 
@@ -82,8 +85,13 @@ def get_evaluate_model_request(valid_model: bool):
         device="cpu",
         amp=False,
         batch_size=4,
-        evaluation_transformer=PythonString(value=""),
-        metrics=["AccuracyMetric"],
+        metrics=[
+            MetricConfiguration(
+                name="Accuracy",
+                config=JsonString(value=json.dumps({})),
+                evaluation_transform_function=PythonString(value=""),
+            )
+        ],
         model_id="ResNet18" if valid_model else "unknown",
         model_configuration=JsonString(value=json.dumps({})),
         transform_list=[],
@@ -98,7 +106,7 @@ def get_evaluation_info(evaluation_id, valid_model: bool, model_path: pathlib.Pa
         request=get_evaluate_model_request(valid_model),
         evaluation_id=evaluation_id,
         storage_address=storage_address,
-        metrics=[AccuracyMetric()],
+        metrics=[Accuracy(ACCURACY_METRIC_NAME, "", {})],
         model_path=model_path,
     )
 
@@ -109,7 +117,6 @@ def test_init(test_connect_to_model_storage):
         evaluator_server = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         assert evaluator_server._model_storage_address == "localhost:50051"
         assert evaluator_server._storage_address == "storage:50052"
-        assert evaluator_server._metric_manager
         test_connect_to_model_storage.assert_called_with("localhost:50051")
 
 
@@ -152,13 +159,27 @@ def test_setup_metrics(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
 
-        metrics = evaluator._setup_metrics(["AccuracyMetric"])
+        acc_metric_config = MetricConfiguration(
+            name="Accuracy",
+            config=JsonString(value=json.dumps({})),
+            evaluation_transform_function=PythonString(value=""),
+        )
+        metrics = evaluator._setup_metrics([acc_metric_config])
 
         assert len(metrics) == 1
-        assert isinstance(metrics[0], AccuracyMetric)
+        assert isinstance(metrics[0], Accuracy)
 
+        unkown_metric_config = MetricConfiguration(
+            name="UnknownMetric",
+            config=JsonString(value=json.dumps({})),
+            evaluation_transform_function=PythonString(value=""),
+        )
         with pytest.raises(NotImplementedError):
-            evaluator._setup_metrics(["UnknownMetric"])
+            evaluator._setup_metrics([unkown_metric_config])
+
+        metrics = evaluator._setup_metrics([acc_metric_config, acc_metric_config])
+        assert len(metrics) == 1
+        assert isinstance(metrics[0], Accuracy)
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -304,27 +325,27 @@ def test_check_for_evaluation_exception_found(test_connect_to_model_storage):
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_get_final_evaluation_model_not_registered(test_connect_to_model_storage):
+def test_get_evaluation_result_model_not_registered(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
-        response = evaluator.get_final_evaluation(FinalEvaluationRequest(evaluation_id=0), None)
+        response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=0), None)
         assert not response.valid
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-def test_get_final_evaluation_still_running(test_is_alive, test_connect_to_model_storage):
+def test_get_evaluation_result_still_running(test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluator._evaluation_process_dict[5] = get_evaluation_process_info()
-        response = evaluator.get_final_evaluation(FinalEvaluationRequest(evaluation_id=5), None)
+        response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=5), None)
         assert not response.valid
 
 
-@patch.object(AccuracyMetric, "get_evaluation_result", return_value=0.5)
+@patch.object(Accuracy, "get_evaluation_result", return_value=0.5)
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
-def test_get_final_evaluation(test_is_alive, test_connect_to_model_storage, test_metric: MagicMock):
+def test_get_evaluation_result(test_is_alive, test_connect_to_model_storage, test_metric: MagicMock):
     with tempfile.TemporaryDirectory() as temp:
         config = get_modyn_config()
         evaluator = EvaluatorGRPCServicer(config, pathlib.Path(temp))
@@ -332,13 +353,33 @@ def test_get_final_evaluation(test_is_alive, test_connect_to_model_storage, test
 
         assert len(evaluator._evaluation_dict[1].metrics) == 1
         metric = evaluator._evaluation_dict[1].metrics[0]
-        assert isinstance(metric, AccuracyMetric)
+        assert isinstance(metric, Accuracy)
 
-        evaluator._evaluation_process_dict[1] = get_evaluation_process_info()
-        response = evaluator.get_final_evaluation(FinalEvaluationRequest(evaluation_id=1), None)
+        evaluation_process_info = get_evaluation_process_info()
+        evaluator._evaluation_process_dict[1] = evaluation_process_info
+        for metric in evaluator._evaluation_dict[1].metrics:
+            evaluation_process_info.metric_result_queue.put((metric.name, metric.get_evaluation_result()))
 
+        timeout = 5
+        elapsed = 0
+
+        while True:
+            if not platform.system() == "Darwin":
+                if evaluation_process_info.metric_result_queue.qsize() == 1:
+                    break
+            else:
+                if not evaluation_process_info.metric_result_queue.empty():
+                    break
+
+            sleep(1)
+            elapsed += 1
+
+            if elapsed >= timeout:
+                raise AssertionError("Did not reach desired queue state after 5 seconds.")
+
+        response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=1), None)
         assert response.valid
         assert len(response.evaluation_data) == 1
-        assert response.evaluation_data[0].metric == "AccuracyMetric"
+        assert response.evaluation_data[0].metric == ACCURACY_METRIC_NAME
         assert response.evaluation_data[0].result == 0.5
         test_metric.assert_called_once()

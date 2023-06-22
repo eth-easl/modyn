@@ -37,7 +37,7 @@ def test_run():
 
 @patch("modyn.evaluator.evaluator.EvaluatorGRPCServer", MockGRPCServer)
 def test_cleanup_at_exit():
-    modyn_dir = pathlib.Path(tempfile.gettempdir()) / "modyn"
+    modyn_dir = pathlib.Path(tempfile.gettempdir()) / "modyn_evaluator"
     assert not modyn_dir.exists()
 
     evaluator = Evaluator(modyn_config)

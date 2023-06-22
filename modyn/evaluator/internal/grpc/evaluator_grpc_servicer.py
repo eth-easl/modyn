@@ -1,5 +1,5 @@
 """Evaluator GRPC servicer."""
-
+import json
 import logging
 import multiprocessing as mp
 import pathlib
@@ -15,13 +15,14 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluateModelResponse,
     EvaluationData,
+    EvaluationResultRequest,
+    EvaluationResultResponse,
     EvaluationStatusRequest,
     EvaluationStatusResponse,
-    FinalEvaluationRequest,
-    FinalEvaluationResponse,
+    MetricConfiguration,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorServicer
-from modyn.evaluator.internal.metric_manager import MetricManager
+from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import AbstractEvaluationMetric
 from modyn.evaluator.internal.pytorch_evaluator import evaluate
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
@@ -60,7 +61,6 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._model_storage_address = f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
-        self._metric_manager = MetricManager()
 
         self._model_storage_stub = EvaluatorGRPCServicer.connect_to_model_storage(self._model_storage_address)
 
@@ -95,6 +95,17 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             evaluation_id = self._next_evaluation_id
             self._next_evaluation_id += 1
 
+        local_model_path = self._download_trained_model(fetch_resp, evaluation_id)
+
+        metrics = self._setup_metrics(request.metrics)
+        evaluation_info = EvaluationInfo(request, evaluation_id, self._storage_address, metrics, local_model_path)
+        self._evaluation_dict[evaluation_id] = evaluation_info
+        self._run_evaluation(evaluation_id)
+
+        logger.info(f"Started evaluation {evaluation_id}.")
+        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id)
+
+    def _download_trained_model(self, fetch_resp: FetchModelResponse, evaluation_id: int) -> pathlib.Path:
         local_model_path = self._base_dir / f"trained_model_{evaluation_id}.modyn"
 
         download_file(
@@ -107,15 +118,32 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             callback=get_pretrained_model_callback(logger),
         )
 
-        logger.info(f"Successfully downloaded trained model {request.trained_model_id} to {local_model_path}.")
+        logger.info(f"Successfully downloaded trained model to {local_model_path}.")
 
-        metrics = self._setup_metrics(request.metrics)
-        evaluation_info = EvaluationInfo(request, evaluation_id, self._storage_address, metrics, local_model_path)
-        self._evaluation_dict[evaluation_id] = evaluation_info
+        return local_model_path
 
+    @staticmethod
+    def _setup_metrics(metric_configurations: list[MetricConfiguration]) -> list[AbstractEvaluationMetric]:
+        metrics = []
+        # need to make sure that the metric names are unique as they are used for identification.
+        metric_names = set()
+        for configuration in metric_configurations:
+            loaded_config = json.loads(configuration.config.value)
+            metric = MetricFactory.get_evaluation_metric(
+                configuration.name, configuration.evaluation_transform_function.value, loaded_config
+            )
+            if metric.name not in metric_names:
+                metrics.append(metric)
+                metric_names.add(metric.name)
+            else:
+                logger.warning(f"Metric {metric.name} is already registered.")
+        return metrics
+
+    def _run_evaluation(self, evaluation_id: int) -> None:
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
         status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
         status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        metric_result_queue: mp.Queue[tuple[str, float]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
         process = mp.Process(
             target=evaluate,
@@ -125,18 +153,13 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 exception_queue,
                 status_query_queue,
                 status_response_queue,
+                metric_result_queue,
             ),
         )
         process.start()
         self._evaluation_process_dict[evaluation_id] = EvaluationProcessInfo(
-            process, exception_queue, status_query_queue, status_response_queue
+            process, exception_queue, status_query_queue, status_response_queue, metric_result_queue
         )
-
-        logger.info(f"Started evaluation {evaluation_id}.")
-        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id)
-
-    def _setup_metrics(self, metrics: list[str]) -> list[AbstractEvaluationMetric]:
-        return list(map(self._metric_manager.get_evaluation_metric, set(metrics)))
 
     def get_evaluation_status(
         self, request: EvaluationStatusRequest, context: grpc.ServicerContext
@@ -200,24 +223,32 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         except queue.Empty:
             return None
 
-    def get_final_evaluation(
-        self, request: FinalEvaluationRequest, context: grpc.ServicerContext
-    ) -> FinalEvaluationResponse:
+    def get_evaluation_result(
+        self, request: EvaluationResultRequest, context: grpc.ServicerContext
+    ) -> EvaluationResultResponse:
         evaluation_id = request.evaluation_id
         logger.info(f"Received get final evaluation request for evaluation {evaluation_id}.")
 
         if evaluation_id not in self._evaluation_dict:
             logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
-            return FinalEvaluationResponse(valid=False)
+            return EvaluationResultResponse(valid=False)
 
         if self._evaluation_process_dict[evaluation_id].process_handler.is_alive():
             logger.error(f"Evaluation with id {evaluation_id} is still running.")
-            return FinalEvaluationResponse(valid=False)
+            return EvaluationResultResponse(valid=False)
 
         logger.error("Returning results of all metrics.")
         evaluation_data: list[EvaluationData] = []
-        for metric in self._evaluation_dict[evaluation_id].metrics:
-            evaluation_data.append(
-                EvaluationData(metric=metric.__class__.__name__, result=metric.get_evaluation_result())
-            )
-        return FinalEvaluationResponse(valid=True, evaluation_data=evaluation_data)
+
+        metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
+        metric_results: list[tuple[str, float]] = []
+        for _ in range(len(self._evaluation_dict[evaluation_id].metrics)):
+            try:
+                metric_results.append(metric_result_queue.get(timeout=0.1))
+            except queue.Empty:
+                logger.error(f"Evaluation with id {evaluation_id} did not return all metric results.")
+                break
+
+        for name, result in metric_results:
+            evaluation_data.append(EvaluationData(metric=name, result=result))
+        return EvaluationResultResponse(valid=True, evaluation_data=evaluation_data)

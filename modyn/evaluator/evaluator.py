@@ -17,7 +17,7 @@ class Evaluator:
         if not valid:
             raise ValueError(f"Invalid configuration: {errors}")
 
-        self.working_directory = pathlib.Path(tempfile.gettempdir()) / "modyn"
+        self.working_directory = pathlib.Path(tempfile.gettempdir()) / "modyn_evaluator"
 
         if self.working_directory.exists() and self.working_directory.is_dir():
             shutil.rmtree(self.working_directory)

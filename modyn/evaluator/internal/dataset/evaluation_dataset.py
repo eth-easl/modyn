@@ -1,6 +1,5 @@
 import logging
-from inspect import isfunction
-from typing import Any, Callable, Generator, Iterable, Optional
+from typing import Callable, Generator, Iterable, Optional
 
 import grpc
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
@@ -10,7 +9,12 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disab
     GetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils.utils import MAX_MESSAGE_SIZE, grpc_connection_established
+from modyn.utils.utils import (
+    BYTES_PARSER_FUNC_NAME,
+    MAX_MESSAGE_SIZE,
+    deserialize_function,
+    grpc_connection_established,
+)
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -31,7 +35,6 @@ class EvaluationDataset(IterableDataset):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
         self._first_call = True
-        self._mod_dict: dict[str, Any] = {}
 
         self._bytes_parser = bytes_parser
         self._serialized_transforms = serialized_transforms
@@ -44,10 +47,7 @@ class EvaluationDataset(IterableDataset):
         logger.debug("Initialized EvaluationDataset.")
 
     def _init_transforms(self) -> None:
-        exec(self._bytes_parser, self._mod_dict)  # pylint: disable=exec-used
-        if "bytes_parser_function" not in self._mod_dict or not isfunction(self._mod_dict["bytes_parser_function"]):
-            raise ValueError("Missing function bytes_parser_function from evaluation invocation")
-        self._bytes_parser_function = self._mod_dict["bytes_parser_function"]
+        self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
         self._deserialize_torchvision_transforms()
 
@@ -121,6 +121,7 @@ class EvaluationDataset(IterableDataset):
 
         assert self._transform is not None
 
+        # TODO(#175): we might want to do/accelerate prefetching here.
         for keys in self._get_keys_from_storage(worker_id, total_workers):
             for data in self._get_data_from_storage(keys):
                 for key, sample, label in data:

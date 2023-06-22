@@ -325,20 +325,6 @@ def test_get_data_in_interval_invalid_dataset():
     assert response.labels == []
 
 
-def test_get_data_subset():
-    server = StorageGRPCServicer(get_minimal_modyn_config())
-    expected = [(0, 3), (3, 3), (6, 3), (9, 2), (11, 2)]
-
-    for worker in range(5):
-        assert expected[worker] == server.get_data_subset(worker, 5, 13)
-
-    assert server.get_data_subset(0, 2, 1) == (0, 1)
-    assert server.get_data_subset(1, 2, 1) == (1, 0)
-
-    for worker in range(10):
-        assert server.get_data_subset(worker, 10, 100) == (worker * 10, 10)
-
-
 def test_get_data_per_worker():
     server = StorageGRPCServicer(get_minimal_modyn_config())
 

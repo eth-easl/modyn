@@ -28,7 +28,6 @@ class EvaluationInfo:
         self.device = request.device
         self.amp = request.amp
         self.batch_size = request.batch_size
-        self.evaluation_transformer = request.evaluation_transformer.value
         self.metrics = metrics
 
         self.model_id = request.model_id

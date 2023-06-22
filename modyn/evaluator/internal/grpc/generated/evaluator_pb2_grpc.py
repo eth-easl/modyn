@@ -23,10 +23,10 @@ class EvaluatorStub(object):
                 request_serializer=evaluator__pb2.EvaluationStatusRequest.SerializeToString,
                 response_deserializer=evaluator__pb2.EvaluationStatusResponse.FromString,
                 )
-        self.get_final_evaluation = channel.unary_unary(
-                '/modyn.evaluator.Evaluator/get_final_evaluation',
-                request_serializer=evaluator__pb2.FinalEvaluationRequest.SerializeToString,
-                response_deserializer=evaluator__pb2.FinalEvaluationResponse.FromString,
+        self.get_evaluation_result = channel.unary_unary(
+                '/modyn.evaluator.Evaluator/get_evaluation_result',
+                request_serializer=evaluator__pb2.EvaluationResultRequest.SerializeToString,
+                response_deserializer=evaluator__pb2.EvaluationResultResponse.FromString,
                 )
 
 
@@ -45,7 +45,7 @@ class EvaluatorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def get_final_evaluation(self, request, context):
+    def get_evaluation_result(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -64,10 +64,10 @@ def add_EvaluatorServicer_to_server(servicer, server):
                     request_deserializer=evaluator__pb2.EvaluationStatusRequest.FromString,
                     response_serializer=evaluator__pb2.EvaluationStatusResponse.SerializeToString,
             ),
-            'get_final_evaluation': grpc.unary_unary_rpc_method_handler(
-                    servicer.get_final_evaluation,
-                    request_deserializer=evaluator__pb2.FinalEvaluationRequest.FromString,
-                    response_serializer=evaluator__pb2.FinalEvaluationResponse.SerializeToString,
+            'get_evaluation_result': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_evaluation_result,
+                    request_deserializer=evaluator__pb2.EvaluationResultRequest.FromString,
+                    response_serializer=evaluator__pb2.EvaluationResultResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -114,7 +114,7 @@ class Evaluator(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def get_final_evaluation(request,
+    def get_evaluation_result(request,
             target,
             options=(),
             channel_credentials=None,
@@ -124,8 +124,8 @@ class Evaluator(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.evaluator.Evaluator/get_final_evaluation',
-            evaluator__pb2.FinalEvaluationRequest.SerializeToString,
-            evaluator__pb2.FinalEvaluationResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/modyn.evaluator.Evaluator/get_evaluation_result',
+            evaluator__pb2.EvaluationResultRequest.SerializeToString,
+            evaluator__pb2.EvaluationResultResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

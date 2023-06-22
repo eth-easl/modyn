@@ -40,7 +40,7 @@ class MockStorageStub:
 
 
 def test_invalid_bytes_parser():
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         EvaluationDataset(
             dataset_id="MNIST",
             bytes_parser="",

@@ -327,7 +327,7 @@ properties:
             dataset_id:
               type: string
               description: |
-                The id of the dataset
+                The id of the dataset.
             batch_size:
               type: number
               description: |
@@ -339,10 +339,28 @@ properties:
             metrics:
               type: array
               description: |
-                The metrics used to evaluate the model. We currently support AccuracyMetric.
-              items:
-                type: string
+                All metrics used to evaluate the model on the given dataset.
               minItems: 1
+              items:
+                type: object
+                description: |
+                  Confguration for the metric.
+                properties:
+                  name:
+                    type: string
+                    description: |
+                      The name of the evaluation metric. Currently we support F1-score, Accuracy and ROC-AUC.
+                  config:
+                    type: object
+                    description: |
+                      Optional configuration for the evaluation metric.
+                  evaluation_transformer_function:
+                    type: string
+                    description: |
+                      The (optional) function used to transform the labels and the model output before evaluation.
+                      This might for example include the application of the sigmoid-function on the model output.
+                required:
+                  - name
           required:
             - dataset_id
             - dataloader_workers
@@ -351,15 +369,12 @@ properties:
       device:
         type: string
         description: |
-          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu" and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
+          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
+          and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
       amp:
         type: boolean
         description: |
           If True, automatic mixed precision will be used.
-      evaluation_transformer:
-        type: string
-        description: |
-          Optional transformation to be applied to the output of the model before evaluation.
     required:
       - datasets
       - device

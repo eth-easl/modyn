@@ -28,7 +28,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     RegisterNewDatasetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
-from modyn.utils.utils import current_time_millis
+from modyn.utils import current_time_millis, get_partition_for_worker
 from sqlalchemy import asc, select
 from sqlalchemy.orm import Session
 
@@ -226,9 +226,7 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             total_keys = session.query(Sample.sample_id).filter(Sample.dataset_id == dataset.dataset_id).count()
-            start_index, limit = StorageGRPCServicer.get_data_subset(
-                request.worker_id, request.total_workers, total_keys
-            )
+            start_index, limit = get_partition_for_worker(request.worker_id, request.total_workers, total_keys)
 
             stmt = (
                 select(Sample.sample_id)
@@ -374,36 +372,3 @@ class StorageGRPCServicer(StorageServicer):
                 )
             session.query(File).filter(File.file_id == file.file_id).delete()
         session.commit()
-
-    @staticmethod
-    def get_data_subset(worker_id: int, total_workers: int, total_num_keys: int) -> tuple[int, int]:
-        """
-        Gets the subset of the data for a specific worker.
-        This method splits the range of keys evenly among all workers. If you e.g have 13 keys and want to split it
-        among 5 workers, then workers [0, 1, 2] get 3 keys whereas workers [3, 4] get two keys.
-
-        Args:
-            worker_id: the id of the worker.
-            total_workers: total amount of workers.
-            total_num_keys: total amount of keys to split among the workers.
-
-        Returns:
-            tuple[int, int]: the start index (offset) and the total subset size.
-        """
-        if worker_id < 0 or worker_id >= total_workers:
-            raise ValueError(f"Asked for worker id {worker_id}, but only have {total_workers} workers!")
-
-        subset_size = int(total_num_keys / total_workers)
-        worker_subset_size = subset_size
-
-        threshold = total_num_keys % total_workers
-        if threshold > 0:
-            if worker_id < threshold:
-                worker_subset_size += 1
-                start_index = worker_id * (subset_size + 1)
-            else:
-                start_index = threshold * (subset_size + 1) + (worker_id - threshold) * subset_size
-        else:
-            start_index = worker_id * subset_size
-
-        return start_index, worker_subset_size

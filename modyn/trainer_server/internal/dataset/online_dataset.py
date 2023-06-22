@@ -1,7 +1,6 @@
 import gc
 import logging
-from inspect import isfunction
-from typing import Any, Callable, Generator, Optional
+from typing import Callable, Generator, Optional
 
 import grpc
 
@@ -17,7 +16,13 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disab
     GetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
+from modyn.utils.utils import (
+    BYTES_PARSER_FUNC_NAME,
+    MAX_MESSAGE_SIZE,
+    deserialize_function,
+    flatten,
+    grpc_connection_established,
+)
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -43,7 +48,6 @@ class OnlineDataset(IterableDataset):
         self._training_id = training_id
         self._dataset_id = dataset_id
         self._first_call = True
-        self._mod_dict: dict[str, Any] = {}
 
         self._bytes_parser = bytes_parser
         self._serialized_transforms = serialized_transforms
@@ -95,10 +99,7 @@ class OnlineDataset(IterableDataset):
             self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:
-        exec(self._bytes_parser, self._mod_dict)  # pylint: disable=exec-used
-        if "bytes_parser_function" not in self._mod_dict or not isfunction(self._mod_dict["bytes_parser_function"]):
-            raise ValueError("Missing function bytes_parser_function from training invocation")
-        self._bytes_parser_function = self._mod_dict["bytes_parser_function"]
+        self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
         self._deserialize_torchvision_transforms()
 

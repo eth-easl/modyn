@@ -1,0 +1,48 @@
+import numpy as np
+import pytest
+import torch
+from modyn.evaluator.internal.metrics import AbstractHolisticMetric, RocAuc
+
+
+def get_evaluation_result(y_true: np.ndarray, y_score: np.ndarray):
+    roc_auc = RocAuc("ROC-AUC", evaluation_transform_func="", config={})
+    roc_auc.dataset_evaluated_callback(torch.from_numpy(y_true), torch.from_numpy(y_score))
+
+    return roc_auc.get_evaluation_result()
+
+
+def test_roc_auc_metric():
+    roc_auc = RocAuc("ROC-AUC", evaluation_transform_func="", config={})
+
+    assert isinstance(roc_auc, AbstractHolisticMetric)
+
+    y_true = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1])
+    y_score = np.arange(0.1, 1, 0.1)
+    assert get_evaluation_result(y_true, y_score) == pytest.approx(1)
+
+    y_true[4] = 1
+    assert get_evaluation_result(y_true, y_score) == pytest.approx(1)
+
+    y_true = np.array([1, 1, 1, 1, 1, 0, 0, 0, 0])
+    assert get_evaluation_result(y_true, y_score) == pytest.approx(0)
+
+    y_true = np.array([0, 1, 0, 1, 0, 1, 0, 1, 0])
+    assert get_evaluation_result(y_true, y_score) == pytest.approx(0.5)
+
+    y_true = np.array([0, 0, 0, 0, 0, 0, 1, 1, 1])
+    assert get_evaluation_result(y_true, y_score) == pytest.approx(1)
+
+    y_true = np.array([0, 1, 0, 1, 0])
+    y_score = np.array([0.1, 0.9, 0.7, 0.3, 0.4])
+
+    assert get_evaluation_result(y_true, y_score) == pytest.approx(2 / 3)
+
+
+def test_roc_auc_invalid():
+    with pytest.raises(TypeError):
+        get_evaluation_result(np.array([1, 1, 1]), np.array([0.2, 0.3]))
+
+    y_true = np.zeros(5)
+    y_score = np.array([0.1, 0.1, 0.2, 0.5, 0.4])
+
+    assert get_evaluation_result(y_true, y_score) == 0

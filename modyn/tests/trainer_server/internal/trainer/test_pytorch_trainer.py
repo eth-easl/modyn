@@ -238,8 +238,8 @@ def get_training_info(
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
 def get_mock_trainer(
-    query_queue: mp.Queue(),
-    response_queue: mp.Queue(),
+    query_queue: mp.Queue,
+    response_queue: mp.Queue,
     use_pretrained: bool,
     load_optimizer_state: bool,
     pretrained_model_path: pathlib.Path,
@@ -361,7 +361,7 @@ def test_trainer_init_with_label_transformer():
 def test_save_state_to_file():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
     with tempfile.NamedTemporaryFile() as temp:
-        trainer.save_state(temp.name, 10)
+        trainer.save_state(pathlib.Path(temp.name), 10)
         assert os.path.exists(temp.name)
         saved_dict = torch.load(temp.name)
 
@@ -626,6 +626,7 @@ def test_train(
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 2, "custom", False)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+    query_status_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
     timeout = 2
     elapsed = 0
 
@@ -657,7 +658,7 @@ def test_train(
     elapsed = 0
     while True:
         if not platform.system() == "Darwin":
-            if status_queue.qsize() == 1:
+            if status_queue.qsize() == 2:
                 break
         else:
             if not status_queue.empty():
@@ -669,71 +670,70 @@ def test_train(
         if elapsed >= timeout:
             raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
-        # TODO(@robin-oester & @MaxiBoether): this does not seem to be right...
-        status = status_queue.get()
-        assert status["num_batches"] == 0
-        assert status["num_samples"] == 0
-        status_state = torch.load(io.BytesIO(status["state"]))
-        checkpointed_state = {
-            "model": OrderedDict(
-                [
-                    ("moda._weight", torch.tensor([1.0])),
-                    ("modb._weight", torch.tensor([1.0])),
-                    ("modc._weight", torch.tensor([1.0])),
-                ]
-            ),
-            "optimizer-opt1": {
-                "state": {},
-                "param_groups": [
-                    {
-                        "lr": 0.1,
-                        "momentum": 0,
-                        "dampening": 0,
-                        "weight_decay": 0,
-                        "nesterov": False,
-                        "maximize": False,
-                        "foreach": None,
-                        "differentiable": False,
-                        "params": [0],
-                    }
-                ],
-            },
-            "optimizer-opt2": {
-                "state": {},
-                "param_groups": [
-                    {
-                        "lr": 0.5,
-                        "betas": (0.9, 0.999),
-                        "eps": 1e-08,
-                        "weight_decay": 0,
-                        "amsgrad": False,
-                        "maximize": False,
-                        "foreach": None,
-                        "capturable": False,
-                        "differentiable": False,
-                        "fused": False,
-                        "params": [0],
-                    },
-                    {
-                        "lr": 0.8,
-                        "betas": (0.9, 0.999),
-                        "eps": 1e-08,
-                        "weight_decay": 0,
-                        "amsgrad": False,
-                        "maximize": False,
-                        "foreach": None,
-                        "capturable": False,
-                        "differentiable": False,
-                        "fused": False,
-                        "params": [1],
-                    },
-                ],
-            },
-        }
-        assert status_state == checkpointed_state
-        assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
-        final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
-        assert final_state == checkpointed_state
+    status = status_queue.get()
+    assert status["num_batches"] == 0
+    assert status["num_samples"] == 0
+    status_state = torch.load(io.BytesIO(status_queue.get()))
+    checkpointed_state = {
+        "model": OrderedDict(
+            [
+                ("moda._weight", torch.tensor([1.0])),
+                ("modb._weight", torch.tensor([1.0])),
+                ("modc._weight", torch.tensor([1.0])),
+            ]
+        ),
+        "optimizer-opt1": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.1,
+                    "momentum": 0,
+                    "dampening": 0,
+                    "weight_decay": 0,
+                    "nesterov": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "differentiable": False,
+                    "params": [0],
+                }
+            ],
+        },
+        "optimizer-opt2": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.5,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": NoneOrFalse(),
+                    "params": [0],
+                },
+                {
+                    "lr": 0.8,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": NoneOrFalse(),
+                    "params": [1],
+                },
+            ],
+        },
+    }
+    assert status_state == checkpointed_state
+    assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
+    final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
+    assert final_state == checkpointed_state
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
@@ -770,7 +770,7 @@ def test_create_trainer_with_exception(
             raise TimeoutError("Did not reach desired queue state within timelimit.")
 
     with tempfile.NamedTemporaryFile() as temp:
-        train(training_info, "cpu", temp.name, exception_queue, query_status_queue, status_queue)
+        train(training_info, "cpu", pathlib.Path(temp.name), exception_queue, query_status_queue, status_queue)
         elapsed = 0
         while not (query_status_queue.empty() and status_queue.empty()):
             sleep(1)

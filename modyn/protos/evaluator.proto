@@ -5,7 +5,7 @@ package modyn.evaluator;
 service Evaluator {
   rpc evaluate_model(EvaluateModelRequest) returns (EvaluateModelResponse) {}
   rpc get_evaluation_status(EvaluationStatusRequest) returns (EvaluationStatusResponse) {}
-  rpc get_final_evaluation(FinalEvaluationRequest) returns (FinalEvaluationResponse) {}
+  rpc get_evaluation_result(EvaluationResultRequest) returns (EvaluationResultResponse) {}
 }
 
 message DatasetInfo {
@@ -17,19 +17,24 @@ message PythonString { string value = 1; }
 
 message JsonString { string value = 1; }
 
+message MetricConfiguration {
+  string name = 1;
+  JsonString config = 2;
+  PythonString evaluation_transform_function = 3;
+}
+
 message EvaluateModelRequest {
   int32 trained_model_id  = 1;
   DatasetInfo dataset_info = 2;
   string device = 3;
   bool amp = 4;
   int32 batch_size = 5;
-  PythonString evaluation_transformer = 6;
-  repeated string metrics = 7;
-  string model_id = 8;
-  JsonString model_configuration = 9;
-  repeated string transform_list = 10;
-  PythonString bytes_parser = 11;
-  PythonString label_transformer = 12;
+  repeated MetricConfiguration metrics = 6;
+  string model_id = 7;
+  JsonString model_configuration = 8;
+  repeated string transform_list = 9;
+  PythonString bytes_parser = 10;
+  PythonString label_transformer = 11;
 }
 
 message EvaluateModelResponse {
@@ -54,9 +59,9 @@ message EvaluationData {
   float result = 2;
 }
 
-message FinalEvaluationRequest { int32 evaluation_id = 1; }
+message EvaluationResultRequest { int32 evaluation_id = 1; }
 
-message FinalEvaluationResponse {
+message EvaluationResultResponse {
   bool valid = 1;
   repeated EvaluationData evaluation_data = 2;
 }

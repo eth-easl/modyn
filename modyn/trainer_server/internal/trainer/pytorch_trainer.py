@@ -7,8 +7,7 @@ import os
 import pathlib
 import queue
 import traceback
-from inspect import isfunction
-from typing import Any, Callable, Optional, Union
+from typing import Any, Optional, Union
 
 import grpc
 import torch
@@ -24,7 +23,13 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
-from modyn.utils import dynamic_module_import, grpc_connection_established, package_available_and_can_be_imported
+from modyn.utils import (
+    LABEL_TRANSFORMER_FUNC_NAME,
+    deserialize_function,
+    dynamic_module_import,
+    grpc_connection_established,
+    package_available_and_can_be_imported,
+)
 
 
 class PytorchTrainer:
@@ -77,15 +82,9 @@ class PytorchTrainer:
             training_info.training_id,
         )
 
-        self._mod_dict: dict[str, Any] = {}
-        self._label_tranformer_function: Optional[Callable] = None
-        if training_info.label_transformer != "":
-            exec(training_info.label_transformer, self._mod_dict)  # pylint: disable=exec-used
-            if "label_transformer_function" not in self._mod_dict or not isfunction(
-                self._mod_dict["label_transformer_function"]
-            ):
-                raise ValueError("Invalid label_transformer_function is provided")
-            self._label_tranformer_function = self._mod_dict["label_transformer_function"]
+        self._label_tranformer_function = deserialize_function(
+            training_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
+        )
 
         self._device = device
         self._device_type = "cuda" if "cuda" in self._device else "cpu"

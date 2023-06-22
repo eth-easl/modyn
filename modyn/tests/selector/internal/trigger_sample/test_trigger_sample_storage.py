@@ -154,42 +154,35 @@ def test_get_trigger_samples():
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 4, 16)
     assert len(result) == 4
-    assert result == [expected_order[0], expected_order[1], expected_order[2], expected_order[3]]
+    assert result == expected_order[0:4]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 4, 16)
     assert len(result) == 4
-    assert result == [expected_order[4], expected_order[5], expected_order[6], expected_order[7]]
+    assert result == expected_order[4:8]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 4, 16)
     assert len(result) == 4
-    assert result == [expected_order[8], expected_order[9], expected_order[10], expected_order[11]]
+    assert result == expected_order[8:12]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 3, 4, 16)
     assert len(result) == 4
-    assert result == [expected_order[12], expected_order[13], expected_order[14], expected_order[15]]
+    assert result == expected_order[12:16]
 
-    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 1, 3, 16)
+    result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 3, 16)
     assert len(result) == 6
-    assert result == [
-        expected_order[6],
-        expected_order[7],
-        expected_order[8],
-        expected_order[9],
-        expected_order[10],
-        expected_order[11],
-    ]
+    assert result == expected_order[0:6]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 3, 16)
-    assert len(result) == 4
-    assert result == [expected_order[12], expected_order[13], expected_order[14], expected_order[15]]
+    assert len(result) == 5
+    assert result == expected_order[11:16]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 1, 16)
     assert len(result) == 16
     assert result == expected_order
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 9, 10, 16)
-    assert len(result) == 0
-    assert not result
+    assert len(result) == 1
+    assert result == [expected_order[15]]
 
 
 def test_extended_get_trigger_samples():
@@ -243,16 +236,16 @@ def test_extended_get_trigger_samples():
     assert result == expected_order[3:6]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 2, 5, 12)
-    assert len(result) == 3
-    assert result == expected_order[6:9]
+    assert len(result) == 2
+    assert result == expected_order[6:8]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 3, 5, 12)
-    assert len(result) == 3
-    assert result == expected_order[9:12]
+    assert len(result) == 2
+    assert result == expected_order[8:10]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 4, 5, 12)
-    assert len(result) == 0
-    assert not result
+    assert len(result) == 2
+    assert result == expected_order[10:12]
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, -1, -1, 13)
     assert len(result) == 13
@@ -279,31 +272,6 @@ def test_get_trigger_samples_no_file():
 def test_get_trigger_samples_illegal_workers():
     with pytest.raises(AssertionError):
         TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, -1, 2)
-
-
-def test_get_training_set_partition():
-    training_samples = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(0, 3, len(training_samples)) == (0, 4)
-
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(1, 3, len(training_samples)) == (4, 4)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(2, 3, len(training_samples)) == (8, 2)
-
-    with pytest.raises(ValueError):
-        TriggerSampleStorage(TMP_DIR).get_training_set_partition(3, 3, len(training_samples))
-    with pytest.raises(ValueError):
-        TriggerSampleStorage(TMP_DIR).get_training_set_partition(-1, 3, len(training_samples))
-
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(0, 2, len(training_samples)) == (0, 5)
-
-    training_samples = [1, 2, 3]
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(0, 8, len(training_samples)) == (0, 1)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(1, 8, len(training_samples)) == (1, 1)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(2, 8, len(training_samples)) == (2, 1)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(3, 8, len(training_samples)) == (0, 0)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(4, 8, len(training_samples)) == (0, 0)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(5, 8, len(training_samples)) == (0, 0)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(6, 8, len(training_samples)) == (0, 0)
-    assert TriggerSampleStorage(TMP_DIR).get_training_set_partition(7, 8, len(training_samples)) == (0, 0)
 
 
 def test_init_directory():
