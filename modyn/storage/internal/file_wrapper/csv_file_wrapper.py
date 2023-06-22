@@ -17,15 +17,15 @@ class CsvFileWrapper(AbstractFileWrapper):
         else:
             self.separator = ";"
 
-        if "label_column" not in file_wrapper_config:
+        if "label_index" not in file_wrapper_config:
             raise ValueError(
                 "Please specify the index of the column that contains the label. "
                 "Use None if no column contains the label"
             )
-        self.label_index = file_wrapper_config["label_column"]
+        self.label_index = file_wrapper_config["label_index"]
 
         if "ignore_first_line" in file_wrapper_config:
-            self.ignore_first_line = file_wrapper_config["ignore_header"]
+            self.ignore_first_line = file_wrapper_config["ignore_first_line"]
         else:
             self.ignore_first_line = False
 
@@ -47,7 +47,9 @@ class CsvFileWrapper(AbstractFileWrapper):
 
     def get_sample(self, index: int) -> bytes:
         samples = self._filter_rows_samples([index])
-        assert len(samples) == 1
+
+        if len(samples) != 1:
+            raise IndexError("Invalid index")
 
         return samples[0]
 
@@ -57,7 +59,9 @@ class CsvFileWrapper(AbstractFileWrapper):
 
     def get_samples_from_indices(self, indices: list) -> list[bytes]:
         samples = self._filter_rows_samples(indices)
-        assert len(samples) == len(indices)
+
+        if len(samples) != len(indices):
+            raise IndexError("At least one index is invalid.")
 
         return samples
 
@@ -66,7 +70,10 @@ class CsvFileWrapper(AbstractFileWrapper):
             return None
 
         labels = self._filter_rows_labels([index])
-        assert len(labels) == 0
+
+        if len(labels) != 1:
+            raise IndexError("Invalid index.")
+
         return labels[0]
 
     def get_all_labels(self) -> list[Optional[int]]:
