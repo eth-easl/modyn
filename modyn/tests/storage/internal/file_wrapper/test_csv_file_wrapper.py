@@ -134,9 +134,9 @@ def test_get_samples_from_indices_with_invalid_indices():
     with pytest.raises(IndexError):
         file_wrapper.get_samples_from_indices([-2, 1])
 
-def write_to_file(wrong_data):
+def write_to_file(data):
     with open(WRONG_FILE_PATH, "wb") as file:
-        file.write(wrong_data)
+        file.write(data)
 
 def test_invalid_file_content():
     # extra field in one row
@@ -164,6 +164,35 @@ def test_invalid_file_content():
     write_to_file(wrong_data)
     with pytest.raises(ValueError):
         _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+
+def test_different_separator():
+    TSV_FILE_DATA = b"a\tb\tc\td\t12\ne\tf\tg\th\t76"
+
+    TSV_FILE_WRAPPER_CONFIG = {
+        "ignore_first_line": False,
+        "label_index": 4,
+        "separator": "\t",
+    }
+
+    write_to_file(TSV_FILE_DATA)
+    tsv_file_wrapper = CsvFileWrapper(WRONG_FILE_PATH, TSV_FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+    csv_file_wrapper = CsvFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
+
+    assert tsv_file_wrapper.get_number_of_samples() == csv_file_wrapper.get_number_of_samples()
+
+
+    assert tsv_file_wrapper.get_sample(0) == b'a\tb\tc\td'
+    assert tsv_file_wrapper.get_sample(1) == b'e\tf\tg\th'
+
+    tsv_samples = tsv_file_wrapper.get_samples(0,2)
+    csv_samples = csv_file_wrapper.get_samples(0,2)
+
+    tsv_samples = [ sample.decode("utf-8").split("\t") for sample in tsv_samples]
+    csv_samples = [ sample.decode("utf-8").split(";") for sample in csv_samples]
+    assert tsv_samples == csv_samples
+
+    assert tsv_file_wrapper.get_label(0) == csv_file_wrapper.get_label(0)
+    assert tsv_file_wrapper.get_label(1) == csv_file_wrapper.get_label(1)
 
 
 
