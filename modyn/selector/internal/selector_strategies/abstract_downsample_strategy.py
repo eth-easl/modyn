@@ -39,24 +39,24 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
 
         self.downsampling_period = config.get("downsampling_period", 1)
 
-        if "downsampled_batch_ratio" not in config:
-            raise ValueError("Please specify downsampled_batch_ratio to use downsampling methods")
+        if "downsampling_ratio" not in config:
+            raise ValueError("Please specify downsampling_ratio to use downsampling methods")
 
-        self.downsampled_batch_ratio = config["downsampled_batch_ratio"]
+        self.downsampling_ratio = config["downsampling_ratio"]
 
-        if not (0 < self.downsampled_batch_ratio < 100) or not isinstance(self.downsampled_batch_ratio, int):
-            raise ValueError("The downsampled batch ratio must be an integer in (0,100)")
+        if not (0 < self.downsampling_ratio < 100) or not isinstance(self.downsampling_ratio, int):
+            raise ValueError("The downsampling ratio must be an integer in (0,100)")
 
         self._requires_remote_computation = True
 
     def get_downsampling_scale(self) -> float:
         if self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
-            return self.downsampled_batch_ratio / 100
+            return self.downsampling_ratio / 100
         return 1
 
     def get_downsampler_config(self) -> dict:
         config = {
-            "downsampled_batch_ratio": self.downsampled_batch_ratio,
+            "downsampling_ratio": self.downsampling_ratio,
             "maximum_keys_in_memory": self._maximum_keys_in_memory,
             "sample_then_batch": self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH,
         }

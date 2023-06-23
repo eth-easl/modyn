@@ -120,14 +120,14 @@ properties:
                 type: boolean
                 description: |
                   [AbstractDownsampleStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
+              downsampling_ratio:
+                type: number
+                description: |
+                  [AbstractDownsampleStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Must be in (0,100).
               downsampling_period:
                 type: number
                 description: |
                   [AbstractDownsampleStrategy] In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
-              downsampled_batch_ratio:
-                type: number
-                description: |
-                  [AbstractDownsampleStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Requires sample_then_batch set to True and must be in (0,100)
           processor_type:
             type: string
             description: |

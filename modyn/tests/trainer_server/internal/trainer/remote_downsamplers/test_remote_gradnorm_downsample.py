@@ -10,10 +10,10 @@ from torch import nn
 
 def test_sample_shape_ce():
     model = torch.nn.Linear(10, 3)
-    downsampled_batch_ratio = 50
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -38,10 +38,10 @@ def test_sample_shape_ce():
 
 def test_sample_shape_other_losses():
     model = torch.nn.Linear(10, 1)
-    downsampled_batch_ratio = 50
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -67,7 +67,7 @@ def test_sample_shape_other_losses():
 
 def test_sampling_crossentropy():
     model = torch.nn.Linear(10, 3)
-    downsampled_batch_ratio = 100
+    downsampling_ratio = 100
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     data = torch.randn(8, 10)
@@ -75,7 +75,7 @@ def test_sampling_crossentropy():
     ids = list(range(8))
 
     params_from_selector = {
-        "downsampled_batch_ratio": downsampled_batch_ratio,
+        "downsampling_ratio": downsampling_ratio,
         "replacement": False,
         "sample_then_batch": False,
     }
@@ -124,7 +124,7 @@ def test_sample_dict_input():
     model = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_ratio": 50, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False}
     sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_outputs = model(data)

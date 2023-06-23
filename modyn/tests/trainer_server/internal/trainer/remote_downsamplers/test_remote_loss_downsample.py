@@ -8,10 +8,10 @@ from torch import nn
 
 def test_sample_shape():
     model = torch.nn.Linear(10, 2)
-    downsampled_batch_ratio = 50
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
     sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -33,10 +33,10 @@ def test_sample_shape():
 
 def test_sample_weights():
     model = torch.nn.Linear(10, 2)
-    downsampled_batch_ratio = 50
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
     sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
@@ -59,10 +59,10 @@ class AlwaysZeroModel(torch.nn.Module):
 
 def test_sample_loss_dependent_sampling():
     model = AlwaysZeroModel()
-    downsampled_batch_ratio = 50
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
     sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
@@ -109,7 +109,7 @@ def test_sample_dict_input():
     mymodel = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_ratio": 50, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False}
     sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_output = mymodel(data)

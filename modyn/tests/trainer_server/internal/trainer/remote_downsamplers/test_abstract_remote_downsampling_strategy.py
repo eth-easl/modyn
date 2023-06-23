@@ -8,10 +8,10 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 
 @patch.multiple(AbstractRemoteDownsamplingStrategy, __abstractmethods__=set())
 def test_batch_then_sample_general():
-    downsampled_batch_ratio = 50
+    downsampling_ratio = 50
 
-    params_from_selector = {"downsampled_batch_ratio": downsampled_batch_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
     sampler = AbstractRemoteDownsamplingStrategy(0, 0, 0, params_from_selector)
 
-    assert hasattr(sampler, "downsampled_batch_ratio")
+    assert hasattr(sampler, "downsampling_ratio")
     assert not hasattr(sampler, "sample_then_batch_handler")

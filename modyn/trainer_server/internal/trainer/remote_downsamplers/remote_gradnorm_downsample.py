@@ -54,7 +54,7 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         self.index_sampleid_map += sample_ids
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
-        target_size = int(self.downsampled_batch_ratio * self.number_of_points_seen / 100)
+        target_size = int(self.downsampling_ratio * self.number_of_points_seen / 100)
 
         probabilities = torch.cat(self.probabilities, dim=0)
         probabilities = probabilities / probabilities.sum()

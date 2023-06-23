@@ -30,15 +30,15 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         self.batch_size = batch_size
         self.trigger_id = trigger_id
 
-        assert "downsampled_batch_ratio" in params_from_selector
-        self.downsampled_batch_ratio = params_from_selector["downsampled_batch_ratio"]
+        assert "downsampling_ratio" in params_from_selector
+        self.downsampling_ratio = params_from_selector["downsampling_ratio"]
         self._sampling_concluded = False
 
         self.replacement = params_from_selector.get("replacement", True)
         self.index_sampleid_map: list[int] = []
 
-    def get_downsampled_batch_ratio(self) -> int:
-        return self.downsampled_batch_ratio
+    def get_downsampling_ratio(self) -> int:
+        return self.downsampling_ratio
 
     @abstractmethod
     def init_downsampler(self) -> None:

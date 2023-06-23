@@ -34,7 +34,7 @@ def get_config():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_ratio": 50,
+        "downsampling_ratio": 50,
         "sample_then_batch": False,
     }
 
@@ -55,7 +55,7 @@ def get_config_tail():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_ratio": 50,
+        "downsampling_ratio": 50,
         "tail_triggers": 1,
         "sample_then_batch": False,
     }
@@ -65,7 +65,7 @@ def test_constructor():
     strat = AbstractDownsampleStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     assert strat.presampling_ratio >= 0
     assert strat.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
-    assert strat.downsampled_batch_ratio == 50
+    assert strat.downsampling_ratio == 50
 
 
 def test_constructor_throws_on_invalid_config():
@@ -78,7 +78,7 @@ def test_constructor_throws_on_invalid_config():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_ratio": 0.10,
+        "downsampling_ratio": 0.10,
         "sample_then_batch": False,
     }
 
@@ -89,7 +89,7 @@ def test_constructor_throws_on_invalid_config():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_ratio": 50,
+        "downsampling_ratio": 50,
         "sample_then_batch": False,
     }
     ads = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
