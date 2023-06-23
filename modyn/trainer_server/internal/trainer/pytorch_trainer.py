@@ -292,7 +292,7 @@ class PytorchTrainer:
                 self.downsample_trigger_training_set()
 
             for batch_number, batch in enumerate(self._train_dataloader):
-                retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling()
+                retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
 
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
@@ -305,6 +305,7 @@ class PytorchTrainer:
                     weights = batch[3]
                     weights = weights.float()
 
+
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
 
@@ -316,16 +317,7 @@ class PytorchTrainer:
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
-                        # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
-                        assert self._downsampler is not None
-                        self._downsampler.init_downsampler()
-                        big_batch_output = self._model.model(data)
-                        self._downsampler.inform_samples(sample_ids, big_batch_output, target)
-                        selected_indexes, weights = self._downsampler.select_points()
-                        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
-
-                        sample_ids, data, target = selected_indexes, selected_data, selected_target
-                        # TODO(#219) Investigate if we can avoid 2 forward passes
+                        data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
 
                     output = self._model.model(data)
 
@@ -376,9 +368,22 @@ class PytorchTrainer:
 
         self._info("Training complete!")
 
-    def weights_handling(self) -> Tuple[bool, bool]:
-        # whether the dataloader returns the weights
-        retrieve_weights_from_dataloader = self._train_dataloader.dataset.retrieve_weights_from_dataloader()
+    def downsample_batch(self, data, sample_ids, target):
+        # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
+        assert self._downsampler is not None
+        self._downsampler.init_downsampler()
+        big_batch_output = self._model.model(data)
+        self._downsampler.inform_samples(sample_ids, big_batch_output, target)
+        selected_indexes, weights = self._downsampler.select_points()
+        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
+        sample_ids, data, target = selected_indexes, selected_data, selected_target
+        # TODO(#219) Investigate if we can avoid 2 forward passes
+        return data, sample_ids, target, weights
+
+    def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
+        # whether the dataloader returned the weights.
+        retrieve_weights_from_dataloader = batch_len == 4 # key, sample, label, weight
+
         # we want to use weighted optimization if we get weights from the dataloader or if we compute them in the
         # training loop (BATCH_THEN_SAMPLE downsampling mode)
         weighted_optimization = (

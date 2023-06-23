@@ -156,10 +156,6 @@ class OnlineDataset(IterableDataset):
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()
 
-    def retrieve_weights_from_dataloader(self) -> bool:
-        assert self._uses_weights is not None
-        return self._uses_weights
-
     # pylint: disable=too-many-locals, too-many-branches
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
