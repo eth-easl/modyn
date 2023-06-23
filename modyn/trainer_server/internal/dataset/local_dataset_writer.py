@@ -125,7 +125,14 @@ class LocalDatasetWriter(TriggerSampleStorage):
 
                     proc = mp.Process(
                         target=LocalDatasetWriter._store_triggersamples_impl,
-                        args=(self.current_file_index, self.trigger_id, self.pipeline_id, shared_proc_samples, i, self.trigger_sample_directory),
+                        args=(
+                            self.current_file_index,
+                            self.trigger_id,
+                            self.pipeline_id,
+                            shared_proc_samples,
+                            i,
+                            self.trigger_sample_directory,
+                        ),
                     )
                     proc.start()
                     processes.append(proc)
