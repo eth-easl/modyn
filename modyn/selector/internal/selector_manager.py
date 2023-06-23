@@ -136,7 +136,7 @@ class SelectorManager:
 
     def uses_weights(self, pipeline_id: int) -> bool:
         if pipeline_id not in self._selectors:
-            raise ValueError(f"Requested number of partitions from pipeline {pipeline_id} which does not exist!")
+            raise ValueError(f"Requested whether the pipeline {pipeline_id} uses weights but it does not exist!")
 
         return self._selectors[pipeline_id].uses_weights()
 

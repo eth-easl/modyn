@@ -79,6 +79,6 @@ message UsesWeightsRequest {
     int32 pipeline_id = 1;
 }
 
-message UsesWeightsResponse{
+message UsesWeightsResponse {
     bool uses_weights = 1;
 }

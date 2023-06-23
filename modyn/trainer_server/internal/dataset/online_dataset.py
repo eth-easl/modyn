@@ -30,7 +30,6 @@ class OnlineDataset(IterableDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
-        number_of_workers: int,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -49,7 +48,6 @@ class OnlineDataset(IterableDataset):
         self._storagestub: StorageStub = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
-        self._number_of_workers = number_of_workers
 
         # the default key source is the Selector. Then it can be changed using change_key_source
         self._key_source = SelectorKeySource(self._pipeline_id, self._trigger_id, self._selector_address)
@@ -131,7 +129,7 @@ class OnlineDataset(IterableDataset):
         # pylint: disable-next = unsubscriptable-object
         iterator: Union[zip[Tuple[int, bytes, int]], zip[Tuple[int, bytes, int, float]]]
         if self._uses_weights:
-            assert weights is not None
+            assert weights is not None and len(weights) == len(keys)
             iterator = zip(keys, data, labels, weights)
         else:
             iterator = zip(keys, data, labels)

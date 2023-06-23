@@ -257,7 +257,7 @@ class PytorchTrainer:
         return SelectorStub(selector_channel)
 
     def instantiate_downsampler(
-        self, strategy_name: str, downsampler_config: dict, per_sample_loss: Any
+        self, strategy_name: str, downsampler_config: dict, per_sample_loss: torch.nn.modules.loss
     ) -> AbstractRemoteDownsamplingStrategy:
         remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
         downsampler_class = getattr(remote_downsampling_module, strategy_name)

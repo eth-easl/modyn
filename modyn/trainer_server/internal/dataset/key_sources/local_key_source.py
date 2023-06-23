@@ -18,13 +18,9 @@ class LocalKeySource(AbstractKeySource):
         file = path.parent / (path.name + ".npy")
         tuples_list = self._trigger_sample_storage._parse_file(file)
 
-        keys = []
-        weights = []
-        for key, weight in tuples_list:
-            keys.append(key)
-            weights.append(weight)
+        keys, weights = zip(*tuples_list)
 
-        return keys, weights
+        return list(keys), list(weights)
 
     def get_num_data_partitions(self) -> int:
         # each file follows the structure {pipeline_id}_{trigger_id}_{partition_id}_{worker_id}
