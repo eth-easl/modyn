@@ -4,14 +4,13 @@ from typing import Optional
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
 
-LOCAL_STORAGE_FOLDER = "/tmp/.tmp_offline_dataset"
-
 
 class LocalKeySource(AbstractKeySource):
-    def __init__(self, pipeline_id: int, trigger_id: int) -> None:
+    def __init__(self, pipeline_id: int, trigger_id: int, offline_dataset_path: str) -> None:
         super().__init__(pipeline_id, trigger_id)
 
-        self._trigger_sample_storage = TriggerSampleStorage(LOCAL_STORAGE_FOLDER)
+        self._trigger_sample_storage = TriggerSampleStorage(offline_dataset_path)
+        self.offline_dataset_path = offline_dataset_path
 
     def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
         path = self._trigger_sample_storage._get_file_path(self._pipeline_id, self._trigger_id, partition_id, worker_id)
@@ -29,7 +28,7 @@ class LocalKeySource(AbstractKeySource):
         this_trigger_files = list(
             filter(
                 lambda file: file.startswith(f"{self._pipeline_id}_{self._trigger_id}_"),
-                os.listdir(LOCAL_STORAGE_FOLDER),
+                os.listdir(self.offline_dataset_path),
             )
         )
 
@@ -46,13 +45,13 @@ class LocalKeySource(AbstractKeySource):
     def end_of_trigger_cleaning(self) -> None:
         # remove all the files belonging to this pipeline and trigger
 
-        if os.path.isdir(LOCAL_STORAGE_FOLDER):
+        if os.path.isdir(self.offline_dataset_path):
             this_trigger_files = list(
                 filter(
                     lambda file: file.startswith(f"{self._pipeline_id}_{self._trigger_id}_"),
-                    os.listdir(LOCAL_STORAGE_FOLDER),
+                    os.listdir(self.offline_dataset_path),
                 )
             )
 
             for file in this_trigger_files:
-                os.remove(os.path.join(LOCAL_STORAGE_FOLDER, file))
+                os.remove(os.path.join(self.offline_dataset_path, file))

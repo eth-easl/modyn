@@ -6,10 +6,12 @@ import torch
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 
+OFFLINE_DATASET_PATH = "/tmp/offline_dataset"
+
 
 def clean_directory():
-    if ".tmp_offline_dataset" in os.listdir("/tmp"):
-        shutil.rmtree("/tmp/.tmp_offline_dataset")
+    if "offline_dataset" in os.listdir("/tmp"):
+        shutil.rmtree("/tmp/offline_dataset")
 
 
 def prepare_samples(start_index: int, size: int):
@@ -23,9 +25,9 @@ def prepare_samples(start_index: int, size: int):
 
 def test_init_writer():
     clean_directory()
-    handler = LocalDatasetWriter(12, 1, 1, 25)
-    assert ".tmp_offline_dataset" in os.listdir("/tmp/")
-    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
+    handler = LocalDatasetWriter(12, 1, 1, 25, OFFLINE_DATASET_PATH)
+    assert "offline_dataset" in os.listdir("/tmp/")
+    assert len(os.listdir("/tmp/offline_dataset")) == 0
     assert handler.current_file_index == 0
     assert handler.current_sample_index == 0
     assert handler.maximum_keys_in_memory == 25
@@ -34,9 +36,9 @@ def test_init_writer():
 
 def test_init_just_read():
     clean_directory()
-    handler = LocalKeySource(12, 1)
-    assert ".tmp_offline_dataset" in os.listdir("/tmp/")
-    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
+    handler = LocalKeySource(12, 1, OFFLINE_DATASET_PATH)
+    assert "offline_dataset" in os.listdir("/tmp/")
+    assert len(os.listdir("/tmp/offline_dataset")) == 0
     assert handler._pipeline_id == 12
     assert handler._trigger_id == 1
     clean_directory()
@@ -44,31 +46,37 @@ def test_init_just_read():
 
 def test_writes():
     clean_directory()
-    handler = LocalDatasetWriter(12, 1, 1, 25)
+    handler = LocalDatasetWriter(12, 1, 1, 25, OFFLINE_DATASET_PATH)
 
-    assert ".tmp_offline_dataset" in os.listdir("/tmp/")
-    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
+    assert "offline_dataset" in os.listdir("/tmp/")
+    assert len(os.listdir("/tmp/offline_dataset")) == 0
     assert handler.maximum_keys_in_memory == 25
 
     handler.inform_samples(*prepare_samples(1, 50))
-    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 2
+    assert len(os.listdir("/tmp/offline_dataset")) == 2
 
     handler.inform_samples(*prepare_samples(1, 49))
-    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 3
+    assert len(os.listdir("/tmp/offline_dataset")) == 3
 
     handler.finalize()
-    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 4
+    assert len(os.listdir("/tmp/offline_dataset")) == 4
 
     handler.clean_this_trigger_samples()
-    assert len(os.listdir("/tmp/.tmp_offline_dataset")) == 0
+    assert len(os.listdir("/tmp/offline_dataset")) == 0
 
     clean_directory()
 
 
 def test_reads_pro():
     clean_directory()
-    writer = LocalDatasetWriter(pipeline_id=0, trigger_id=0, number_of_workers=1, maximum_keys_in_memory=25)
-    reader = LocalKeySource(pipeline_id=0, trigger_id=0)
+    writer = LocalDatasetWriter(
+        pipeline_id=0,
+        trigger_id=0,
+        number_of_workers=1,
+        maximum_keys_in_memory=25,
+        offline_dataset_path=OFFLINE_DATASET_PATH,
+    )
+    reader = LocalKeySource(pipeline_id=0, trigger_id=0, offline_dataset_path=OFFLINE_DATASET_PATH)
     # We can just keep 25 keys in memory. So, after it we dup to 2 files (one for each worker)
 
     # 50 samples: we expect 4 files 1) p=0, w=0 containing [1,12], 2) p=0, w=1 containing [13,25]

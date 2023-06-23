@@ -7,8 +7,6 @@ import numpy as np
 import torch
 from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStorage
 
-LOCAL_STORAGE_FOLDER = "/tmp/.tmp_offline_dataset"
-
 
 class LocalDatasetWriter(TriggerSampleStorage):
     """
@@ -26,8 +24,9 @@ class LocalDatasetWriter(TriggerSampleStorage):
         trigger_id: int,
         number_of_workers: int,
         maximum_keys_in_memory: int,
+        offline_dataset_path: str,
     ) -> None:
-        super().__init__(LOCAL_STORAGE_FOLDER)
+        super().__init__(offline_dataset_path)
         # files are numbered from 0. Each file has a size of number_of_samples_per_file
         self.current_file_index = 0
         self.current_sample_index = 0
@@ -36,6 +35,8 @@ class LocalDatasetWriter(TriggerSampleStorage):
         self.trigger_id = trigger_id
         self.number_of_workers = number_of_workers
         self.output_samples_list = np.empty(self.maximum_keys_in_memory, dtype=np.dtype("i8,f8"))
+
+        self.offline_dataset_path = offline_dataset_path
 
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"
@@ -48,9 +49,10 @@ class LocalDatasetWriter(TriggerSampleStorage):
         pipeline_id: int,
         training_samples: np.ndarray,
         insertion_id: int,
+        offline_dataset_path: str,
     ) -> None:
         TriggerSampleStorage(
-            trigger_sample_directory=LOCAL_STORAGE_FOLDER,
+            trigger_sample_directory=offline_dataset_path,
         ).save_trigger_sample(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
@@ -97,6 +99,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
                 self.pipeline_id,
                 np.array(self.output_samples_list, dtype=np.dtype("i8,f8")),
                 0,
+                self.offline_dataset_path,
             )
             self._prepare_for_new_file()
             return
@@ -136,27 +139,27 @@ class LocalDatasetWriter(TriggerSampleStorage):
 
     def clean_working_directory(self) -> None:
         # remove all the files belonging to this pipeline
-        if os.path.isdir(LOCAL_STORAGE_FOLDER):
+        if os.path.isdir(self.offline_dataset_path):
             this_pipeline_files = list(
-                filter(lambda file: file.startswith(f"{self.pipeline_id}_"), os.listdir(LOCAL_STORAGE_FOLDER))
+                filter(lambda file: file.startswith(f"{self.pipeline_id}_"), os.listdir(self.offline_dataset_path))
             )
 
             for file in this_pipeline_files:
-                os.remove(os.path.join(LOCAL_STORAGE_FOLDER, file))
+                os.remove(os.path.join(self.offline_dataset_path, file))
 
     def clean_this_trigger_samples(self) -> None:
         # remove all the files belonging to this pipeline and trigger
 
-        if os.path.isdir(LOCAL_STORAGE_FOLDER):
+        if os.path.isdir(self.offline_dataset_path):
             this_trigger_files = list(
                 filter(
                     lambda file: file.startswith(f"{self.pipeline_id}_{self.trigger_id}_"),
-                    os.listdir(LOCAL_STORAGE_FOLDER),
+                    os.listdir(self.offline_dataset_path),
                 )
             )
 
             for file in this_trigger_files:
-                os.remove(os.path.join(LOCAL_STORAGE_FOLDER, file))
+                os.remove(os.path.join(self.offline_dataset_path, file))
 
     def get_number_of_partitions(self) -> int:
         # each file follows the structure {pipeline_id}_{trigger_id}_{partition_id}_{worker_id}
@@ -164,7 +167,8 @@ class LocalDatasetWriter(TriggerSampleStorage):
         # here we filter the files belonging to this pipeline and trigger
         this_trigger_files = list(
             filter(
-                lambda file: file.startswith(f"{self.pipeline_id}_{self.trigger_id}_"), os.listdir(LOCAL_STORAGE_FOLDER)
+                lambda file: file.startswith(f"{self.pipeline_id}_{self.trigger_id}_"),
+                os.listdir(self.offline_dataset_path),
             )
         )
 

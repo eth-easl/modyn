@@ -8,7 +8,11 @@ from modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer import Trai
 
 def get_modyn_config():
     return {
-        "trainer_server": {"hostname": "trainer_server", "port": "5001"},
+        "trainer_server": {
+            "hostname": "trainer_server",
+            "port": "5001",
+            "offline_dataset_directory": "/tmp/offline_dataset",
+        },
         "storage": {"hostname": "storage", "port": "5002"},
         "selector": {"hostname": "selector", "port": "5003"},
         "model_storage": {"hostname": "model_storage", "port": "5004"},

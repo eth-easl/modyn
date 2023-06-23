@@ -41,14 +41,24 @@ store_final_model_request = StoreFinalModelRequest(training_id=1)
 get_latest_model_request = GetLatestModelRequest(training_id=1)
 
 modyn_config = {
-    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
+    "trainer_server": {
+        "hostname": "trainer_server",
+        "port": "5001",
+        "ftp_port": "3001",
+        "offline_dataset_directory": "/tmp/offline_dataset",
+    },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
     "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
 
 modyn_download_file_config = {
-    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
+    "trainer_server": {
+        "hostname": "trainer_server",
+        "port": "5001",
+        "ftp_port": "3001",
+        "offline_dataset_directory": "/tmp/offline_dataset",
+    },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
     "model_storage": {"hostname": "localhost", "port": "5004", "ftp_port": "3002"},
@@ -130,7 +140,10 @@ def get_training_info(
     training_id, temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None
 ):
     request = get_start_training_request(temp)
-    training_info = TrainingInfo(request, training_id, storage_address, selector_address, pathlib.Path(final_temp))
+    offline_dataset_path = "/tmp/offline_dataset"
+    training_info = TrainingInfo(
+        request, training_id, storage_address, selector_address, offline_dataset_path, pathlib.Path(final_temp)
+    )
     return training_info
 
 

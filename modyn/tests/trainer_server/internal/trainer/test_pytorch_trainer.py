@@ -149,6 +149,7 @@ def get_training_info(
     num_optimizers: int,
     lr_scheduler: str,
     transform_label: bool,
+    offline_dataset_path: str,
     model_dynamic_module_patch: MagicMock,
 ):
     if num_optimizers == 1:
@@ -224,6 +225,7 @@ def get_training_info(
                 training_id,
                 storage_address,
                 selector_address,
+                offline_dataset_path,
                 pathlib.Path(final_tmpdirname),
                 pretrained_model_path,
             )
@@ -273,6 +275,7 @@ def get_mock_trainer(
         num_optimizers,
         lr_scheduler,
         transform_label,
+        "/tmp/offline_dataset",
     )
     trainer = PytorchTrainer(
         training_info, "cpu", query_queue, response_queue, mp.Queue(), mp.Queue(), logging.getLogger(__name__)
@@ -778,7 +781,18 @@ def test_create_trainer_with_exception(
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(0, False, False, None, "", "", 1, "", False)
+    training_info = get_training_info(
+        0,
+        False,
+        False,
+        None,
+        "",
+        "",
+        1,
+        "",
+        False,
+        "/tmp/offline_dataset",
+    )
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0

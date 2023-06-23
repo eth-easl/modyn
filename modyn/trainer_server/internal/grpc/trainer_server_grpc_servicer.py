@@ -66,7 +66,7 @@ class TrainerServerGRPCServicer:
         self.model_storage_stub = TrainerServerGRPCServicer.connect_to_model_storage(
             f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
         )
-
+        self._offline_dataset_directory = self._config["trainer_server"]["offline_dataset_directory"]
         logger.info("TrainerServer gRPC Servicer initialized.")
 
     @staticmethod
@@ -133,6 +133,7 @@ class TrainerServerGRPCServicer:
             training_id,
             self._storage_address,
             self._selector_address,
+            self._offline_dataset_directory,
             final_checkpoint_path,
             pretrained_model_path,
         )

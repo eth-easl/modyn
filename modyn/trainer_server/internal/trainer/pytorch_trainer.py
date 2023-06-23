@@ -124,6 +124,7 @@ class PytorchTrainer:
                 self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
                 assert "downsampling_period" in downsampler_config
                 self._downsampling_period = downsampler_config["downsampling_period"]
+                self.offline_dataset_path = training_info.offline_dataset_path
             else:
                 self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
         else:
@@ -305,7 +306,6 @@ class PytorchTrainer:
                     weights = batch[3]
                     weights = weights.float()
 
-
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
 
@@ -368,7 +368,9 @@ class PytorchTrainer:
 
         self._info("Training complete!")
 
-    def downsample_batch(self, data, sample_ids, target):
+    def downsample_batch(
+        self, data: torch.Tensor, sample_ids: list, target: torch.Tensor
+    ) -> Tuple[torch.Tensor, list, torch.Tensor, torch.Tensor]:
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         assert self._downsampler is not None
         self._downsampler.init_downsampler()
@@ -382,7 +384,7 @@ class PytorchTrainer:
 
     def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
         # whether the dataloader returned the weights.
-        retrieve_weights_from_dataloader = batch_len == 4 # key, sample, label, weight
+        retrieve_weights_from_dataloader = batch_len == 4  # key, sample, label, weight
 
         # we want to use weighted optimization if we get weights from the dataloader or if we compute them in the
         # training loop (BATCH_THEN_SAMPLE downsampling mode)
@@ -485,7 +487,9 @@ class PytorchTrainer:
 
         # to store all the selected (sample, weight).
         file_size = self._num_dataloaders * self._batch_size  # should we add it to the pipeline?
-        local_dataset = LocalDatasetWriter(self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size)
+        local_dataset = LocalDatasetWriter(
+            self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size, self.offline_dataset_path
+        )
 
         # store the selected samples (id and weight)
         local_dataset.inform_samples(sample_ids=selected_ids, sample_weights=weights)
@@ -495,7 +499,9 @@ class PytorchTrainer:
         local_dataset.finalize()
 
         # instead of getting keys from the selector, now are taken from the local storage
-        new_key_source = LocalKeySource(pipeline_id=self.pipeline_id, trigger_id=self.trigger_id)
+        new_key_source = LocalKeySource(
+            pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, offline_dataset_path=self.offline_dataset_path
+        )
         self._train_dataloader.dataset.change_key_source(new_key_source)
 
         self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
