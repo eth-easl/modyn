@@ -250,35 +250,71 @@ class TrainerServerGRPCServicer:
         self, training_id: int
     ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
         was_training = self._training_process_dict[training_id].was_training
-        if was_training:
-            training_num_batches, training_num_samples, is_training = self.get_status_training(training_id, timeout=15)
-            if not is_training:
-                # clean the training queue (epoch is finished)
-                self.clean_training_queue(training_id)
 
-            # read the second queue only if the first one is empty
-            if training_num_batches is None:
-                downsampling_num_batches, downsampling_num_samples, is_training = self.get_status_downsampling(
-                    training_id, timeout=15
-                )
-            else:
-                downsampling_num_batches, downsampling_num_samples = None, None
+        if was_training:
+            (
+                is_training,
+                downsampling_num_batches,
+                downsampling_num_samples,
+                training_num_batches,
+                training_num_samples,
+            ) = self._handle_was_training(training_id)
         else:
+            (
+                is_training,
+                downsampling_num_batches,
+                downsampling_num_samples,
+                training_num_batches,
+                training_num_samples,
+            ) = self._handle_was_not_training(training_id)
+
+        if is_training is not None:
+            self._training_process_dict[training_id].was_training = is_training
+
+        return (
+            is_training,
+            downsampling_num_batches,
+            downsampling_num_samples,
+            training_num_batches,
+            training_num_samples,
+        )
+
+    def _handle_was_not_training(
+        self, training_id: int
+    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+        downsampling_num_batches, downsampling_num_samples, is_training = self.get_status_downsampling(
+            training_id, timeout=15
+        )
+        if is_training:
+            # clean the downsampling queue (downsampling is ended)
+            self.clean_downsampling_queue(training_id)
+        # read the second queue only if the first one is empty
+        if downsampling_num_batches is None:
+            training_num_batches, training_num_samples, is_training = self.get_status_training(training_id, timeout=15)
+        else:
+            training_num_batches, training_num_samples = None, None
+        return (
+            is_training,
+            downsampling_num_batches,
+            downsampling_num_samples,
+            training_num_batches,
+            training_num_samples,
+        )
+
+    def _handle_was_training(
+        self, training_id: int
+    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+        training_num_batches, training_num_samples, is_training = self.get_status_training(training_id, timeout=15)
+        if not is_training:
+            # clean the training queue (epoch is finished)
+            self.clean_training_queue(training_id)
+        # read the second queue only if the first one is empty
+        if training_num_batches is None:
             downsampling_num_batches, downsampling_num_samples, is_training = self.get_status_downsampling(
                 training_id, timeout=15
             )
-            if is_training:
-                # clean the downsampling queue (downsampling is ended)
-                self.clean_downsampling_queue(training_id)
-
-            # read the second queue only if the first one is empty
-            if downsampling_num_batches is None:
-                training_num_batches, training_num_samples, is_training = self.get_status_training(
-                    training_id, timeout=15
-                )
-            else:
-                training_num_batches, training_num_samples = None, None
-        self._training_process_dict[training_id].was_training = is_training
+        else:
+            downsampling_num_batches, downsampling_num_samples = None, None
         return (
             is_training,
             downsampling_num_batches,
