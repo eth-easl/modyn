@@ -38,6 +38,11 @@ class SelectorStub(object):
                 request_serializer=selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
                 response_deserializer=selector__pb2.NumberOfSamplesResponse.FromString,
                 )
+        self.get_status_bar_scale = channel.unary_unary(
+                '/selector.Selector/get_status_bar_scale',
+                request_serializer=selector__pb2.GetStatusBarScaleRequest.SerializeToString,
+                response_deserializer=selector__pb2.StatusBarScaleResponse.FromString,
+                )
         self.get_number_of_partitions = channel.unary_unary(
                 '/selector.Selector/get_number_of_partitions',
                 request_serializer=selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
@@ -88,6 +93,12 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_status_bar_scale(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def get_number_of_partitions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -133,6 +144,11 @@ def add_SelectorServicer_to_server(servicer, server):
                     servicer.get_number_of_samples,
                     request_deserializer=selector__pb2.GetNumberOfSamplesRequest.FromString,
                     response_serializer=selector__pb2.NumberOfSamplesResponse.SerializeToString,
+            ),
+            'get_status_bar_scale': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_status_bar_scale,
+                    request_deserializer=selector__pb2.GetStatusBarScaleRequest.FromString,
+                    response_serializer=selector__pb2.StatusBarScaleResponse.SerializeToString,
             ),
             'get_number_of_partitions': grpc.unary_unary_rpc_method_handler(
                     servicer.get_number_of_partitions,
@@ -241,6 +257,23 @@ class Selector(object):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_samples',
             selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
             selector__pb2.NumberOfSamplesResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_status_bar_scale(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_status_bar_scale',
+            selector__pb2.GetStatusBarScaleRequest.SerializeToString,
+            selector__pb2.StatusBarScaleResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

@@ -8,7 +8,7 @@ CurrentEvent = Enum("CurrentEvent", ["IDLE", "TRAINING", "DOWNSAMPLING"])
 
 class SupervisorCounter:
     def __init__(
-        self, progress_mgr: enlighten.Manager, training_id: int, samples_per_epoch: int, downsampling_ratio: float
+        self, progress_mgr: enlighten.Manager, training_id: int, samples_per_epoch: int, status_bar_scale: float
     ) -> None:
         """
         Class to handle the progress bar in the supervisor panel.
@@ -16,15 +16,15 @@ class SupervisorCounter:
             progress_mgr: progress manager
             training_id: training id (shown in the progress bar)
             samples_per_epoch: total number of samples returned by the selector
-            downsampling_ratio: downsampling performed on samples_per_epoch samples, training on
-                            downsampling_ratio * samples_per_epoch samples
+            status_bar_scale: downsampling performed on samples_per_epoch samples, training on
+                            status_bar_scale * samples_per_epoch samples
         """
         self.last_samples_training = 0
         self.last_samples_downsampling = 0
         self.current_epoch = 0
 
         self.num_samples_downsampling = samples_per_epoch
-        self.num_samples_epoch_training = int(downsampling_ratio * samples_per_epoch)
+        self.num_samples_epoch_training = int(status_bar_scale * samples_per_epoch / 100)
 
         self.training_id = training_id
         self.current_event: CurrentEvent = CurrentEvent.IDLE

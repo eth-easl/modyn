@@ -49,10 +49,17 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
 
         self._requires_remote_computation = True
 
-    def get_downsampling_scale(self) -> float:
-        if self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
-            return self.downsampling_ratio / 100
-        return 1
+    def get_training_status_bar_scale(self) -> int:
+        """
+        This function is used to create the downsampling status bar and handle the training one accordingly.
+
+        For BTS, we return 100 since the training status bar sees all the samples
+        For STB, we return the downsampling_ratio since the training status bar sees only this fraction of points
+        (while the downsampling status bas sees all the points)
+        """
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            return 100
+        return self.downsampling_ratio
 
     def get_downsampler_config(self) -> dict:
         config = {

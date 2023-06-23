@@ -164,11 +164,10 @@ def test_get_number_of_samples(test_get_number_of_samples: MagicMock):
         mgr = SelectorManager(config)
         servicer = SelectorGRPCServicer(mgr, 8096)
         request = GetNumberOfSamplesRequest(pipeline_id=42, trigger_id=21)
-        test_get_number_of_samples.return_value = (12, 1)
+        test_get_number_of_samples.return_value = 12
 
         response: NumberOfSamplesResponse = servicer.get_number_of_samples(request, None)
         assert response.num_samples == 12
-        assert response.downsampling_ratio == 1
 
         test_get_number_of_samples.assert_called_once_with(42, 21)
 

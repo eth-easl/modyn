@@ -2,15 +2,20 @@
 import json
 import logging
 from time import sleep
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Optional
 
 import enlighten
 import grpc
-from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, GetNumberOfSamplesRequest
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    DataInformRequest,
+    GetNumberOfSamplesRequest,
+    GetStatusBarScaleRequest,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
+    StatusBarScaleResponse,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -320,11 +325,17 @@ class GRPCHandler:
 
         return training_id
 
-    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> Tuple[int, float]:
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
         request = GetNumberOfSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
         response: NumberOfSamplesResponse = self.selector.get_number_of_samples(request)
 
-        return response.num_samples, response.downsampling_ratio
+        return response.num_samples
+
+    def get_status_bar_scale(self, pipeline_id: int) -> int:
+        request = GetStatusBarScaleRequest(pipeline_id=pipeline_id)
+        response: StatusBarScaleResponse = self.selector.get_status_bar_scale(request)
+
+        return response.status_bar_scale
 
     # pylint: disable=too-many-nested-blocks
 
@@ -337,9 +348,10 @@ class GRPCHandler:
             )
         self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
-        total_samples, downsampling_ratio = self.get_number_of_samples(pipeline_id, trigger_id)
+        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
+        status_bar_scale = self.get_status_bar_scale(pipeline_id)
 
-        sample_pbar = SupervisorCounter(self.progress_mgr, training_id, total_samples, downsampling_ratio)
+        sample_pbar = SupervisorCounter(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 

@@ -185,18 +185,45 @@ class NumberOfSamplesResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     NUM_SAMPLES_FIELD_NUMBER: builtins.int
-    DOWNSAMPLING_RATIO_FIELD_NUMBER: builtins.int
     num_samples: builtins.int
-    downsampling_ratio: builtins.float
     def __init__(
         self,
         *,
         num_samples: builtins.int = ...,
-        downsampling_ratio: builtins.float = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["downsampling_ratio", b"downsampling_ratio", "num_samples", b"num_samples"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["num_samples", b"num_samples"]) -> None: ...
 
 global___NumberOfSamplesResponse = NumberOfSamplesResponse
+
+@typing_extensions.final
+class GetStatusBarScaleRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+
+global___GetStatusBarScaleRequest = GetStatusBarScaleRequest
+
+@typing_extensions.final
+class StatusBarScaleResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    STATUS_BAR_SCALE_FIELD_NUMBER: builtins.int
+    status_bar_scale: builtins.int
+    def __init__(
+        self,
+        *,
+        status_bar_scale: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["status_bar_scale", b"status_bar_scale"]) -> None: ...
+
+global___StatusBarScaleResponse = StatusBarScaleResponse
 
 @typing_extensions.final
 class GetNumberOfPartitionsRequest(google.protobuf.message.Message):

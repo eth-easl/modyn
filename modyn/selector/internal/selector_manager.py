@@ -6,7 +6,6 @@ import os
 import shutil
 from pathlib import Path
 from threading import Lock
-from typing import Tuple
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
@@ -122,11 +121,17 @@ class SelectorManager:
         with self._selector_locks[pipeline_id]:
             return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
-    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> Tuple[int, float]:
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested number of samples from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_number_of_samples(trigger_id)
+
+    def get_status_bar_scale(self, pipeline_id: int) -> int:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested downsampling scale from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_status_bar_scale()
 
     def get_number_of_partitions(self, pipeline_id: int, trigger_id: int) -> int:
         if pipeline_id not in self._selectors:

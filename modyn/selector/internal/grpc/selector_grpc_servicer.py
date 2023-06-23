@@ -12,6 +12,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
     GetSelectionStrategyRequest,
+    GetStatusBarScaleRequest,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString  # noqa: E402, E501
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -21,6 +22,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     RegisterPipelineRequest,
     SamplesResponse,
     SelectionStrategyResponse,
+    StatusBarScaleResponse,
     TriggerResponse,
     UsesWeightsRequest,
     UsesWeightsResponse,
@@ -96,9 +98,19 @@ class SelectorGRPCServicer(SelectorServicer):
         pipeline_id, trigger_id = request.pipeline_id, request.trigger_id
         logger.info(f"[Pipeline {pipeline_id}]: Received number of samples request for trigger id {trigger_id}")
 
-        num_samples, downsampling_ratio = self.selector_manager.get_number_of_samples(pipeline_id, trigger_id)
+        num_samples = self.selector_manager.get_number_of_samples(pipeline_id, trigger_id)
 
-        return NumberOfSamplesResponse(num_samples=num_samples, downsampling_ratio=downsampling_ratio)
+        return NumberOfSamplesResponse(num_samples=num_samples)
+
+    def get_status_bar_scale(  # pylint: disable-next=unused-argument
+        self, request: GetStatusBarScaleRequest, context: grpc.ServicerContext
+    ) -> StatusBarScaleResponse:
+        pipeline_id = request.pipeline_id
+        logger.info(f"[Pipeline {pipeline_id}]: Received downsampling ratio request")
+
+        downsampling_ratio = self.selector_manager.get_status_bar_scale(pipeline_id)
+
+        return StatusBarScaleResponse(status_bar_scale=downsampling_ratio)
 
     def get_number_of_partitions(  # pylint: disable-next=unused-argument
         self, request: GetNumberOfPartitionsRequest, context: grpc.ServicerContext

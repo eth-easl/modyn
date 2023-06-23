@@ -4,7 +4,7 @@ from modyn.supervisor.internal.supervisor_counter import CurrentEvent, Superviso
 
 def test_counter_training_one_epoch():
     mgr = enlighten.get_manager()
-    pbar = SupervisorCounter(mgr, 12, 50, 1)
+    pbar = SupervisorCounter(mgr, 12, 50, 100)
 
     assert pbar.current_epoch == 0
     assert pbar.last_samples_training == 0
@@ -30,7 +30,7 @@ def test_counter_training_one_epoch():
 
 def test_counter_training_several_epochs():
     mgr = enlighten.get_manager()
-    pbar = SupervisorCounter(mgr, 12, 50, 1)
+    pbar = SupervisorCounter(mgr, 12, 50, 100)
 
     assert pbar.current_epoch == 0
     assert pbar.last_samples_training == 0
@@ -88,7 +88,7 @@ def test_counter_training_several_epochs():
 
 def test_counter_downsampling():
     mgr = enlighten.get_manager()
-    pbar = SupervisorCounter(mgr, 12, 50, 1)
+    pbar = SupervisorCounter(mgr, 12, 50, 100)
 
     assert pbar.current_epoch == 0
     assert pbar.last_samples_training == 0
@@ -112,7 +112,7 @@ def test_counter_downsampling():
 
 def test_counter_alternating():
     mgr = enlighten.get_manager()
-    pbar = SupervisorCounter(mgr, 12, 50, 1)
+    pbar = SupervisorCounter(mgr, 12, 50, 100)
 
     assert pbar.current_epoch == 0
     assert pbar.last_samples_training == 0
