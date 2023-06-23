@@ -581,7 +581,8 @@ def test_send_status_to_server():
     "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
     mock_get_dataloaders,
 )
-def test_train_invalid_query_message():
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
+def test_train_invalid_query_message(test_weight_handling):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1, "", False)
@@ -623,7 +624,9 @@ def test_train_invalid_query_message():
 @patch.object(MetadataCollector, "cleanup", return_value=None)
 @patch.object(CustomLRScheduler, "step", return_value=None)
 @patch.object(PytorchTrainer, "end_of_trigger_cleaning", return_value=None)
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
 def test_train(
+    test_weights_handling,
     test_cleaning,
     test_step,
     test_cleanup,
@@ -762,7 +765,9 @@ def test_train(
 )
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
 def test_create_trainer_with_exception(
+    test_weighs_handling,
     test_selector_connection,
     test_election_strategy,
     test_dynamic_module_import,

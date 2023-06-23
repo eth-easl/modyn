@@ -9,7 +9,7 @@ import queue
 import traceback
 from enum import Enum
 from inspect import isfunction
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 import grpc
 import torch
@@ -126,10 +126,8 @@ class PytorchTrainer:
                 self._downsampling_period = downsampler_config["downsampling_period"]
             else:
                 self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
-            self._weighted_opt = True
         else:
             self._downsampling_mode = DownsamplingMode.DISABLED
-            self._weighted_opt = False
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -292,7 +290,10 @@ class PytorchTrainer:
             if self.sample_then_batch_this_epoch(epoch):
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
                 self.downsample_trigger_training_set()
+
             for batch_number, batch in enumerate(self._train_dataloader):
+                retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling()
+
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
 
@@ -300,7 +301,7 @@ class PytorchTrainer:
 
                 sample_ids, target, data = self.preprocess_batch(batch)
 
-                if self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
+                if retrieve_weights_from_dataloader:
                     weights = batch[3]
                     weights = weights.float()
 
@@ -328,7 +329,7 @@ class PytorchTrainer:
 
                     output = self._model.model(data)
 
-                    if self._weighted_opt:
+                    if weighted_optimization:
                         # weighted gradient descent
                         assert weights is not None
                         loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
@@ -374,6 +375,17 @@ class PytorchTrainer:
         self.end_of_trigger_cleaning()
 
         self._info("Training complete!")
+
+    def weights_handling(self) -> Tuple[bool, bool]:
+        # whether the dataloader returns the weights
+        retrieve_weights_from_dataloader = self._train_dataloader.dataset.retrieve_weights_from_dataloader()
+        # we want to use weighted optimization if we get weights from the dataloader or if we compute them in the
+        # training loop (BATCH_THEN_SAMPLE downsampling mode)
+        weighted_optimization = (
+            retrieve_weights_from_dataloader or self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
+        )
+
+        return retrieve_weights_from_dataloader, weighted_optimization
 
     def update_queue(
         self, queue_name: AvailableQueues, batch_number: int, number_of_samples: int, training_active: bool
