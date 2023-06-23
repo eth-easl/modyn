@@ -142,3 +142,4 @@ services:
 volumes:
   storage-data:
   selector-data:
+  downsampling-data:

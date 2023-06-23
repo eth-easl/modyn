@@ -36,8 +36,6 @@ class LocalDatasetWriter(TriggerSampleStorage):
         self.number_of_workers = number_of_workers
         self.output_samples_list = np.empty(self.maximum_keys_in_memory, dtype=np.dtype("i8,f8"))
 
-        self.offline_dataset_path = offline_dataset_path
-
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"
         self._disable_mt = self.number_of_workers <= 0
@@ -99,7 +97,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
                 self.pipeline_id,
                 np.array(self.output_samples_list, dtype=np.dtype("i8,f8")),
                 0,
-                self.offline_dataset_path,
+                self.trigger_sample_directory,
             )
             self._prepare_for_new_file()
             return
@@ -127,7 +125,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
 
                     proc = mp.Process(
                         target=LocalDatasetWriter._store_triggersamples_impl,
-                        args=(self.current_file_index, self.trigger_id, self.pipeline_id, shared_proc_samples, i),
+                        args=(self.current_file_index, self.trigger_id, self.pipeline_id, shared_proc_samples, i, self.trigger_sample_directory),
                     )
                     proc.start()
                     processes.append(proc)
@@ -139,27 +137,27 @@ class LocalDatasetWriter(TriggerSampleStorage):
 
     def clean_working_directory(self) -> None:
         # remove all the files belonging to this pipeline
-        if os.path.isdir(self.offline_dataset_path):
+        if os.path.isdir(self.trigger_sample_directory):
             this_pipeline_files = list(
-                filter(lambda file: file.startswith(f"{self.pipeline_id}_"), os.listdir(self.offline_dataset_path))
+                filter(lambda file: file.startswith(f"{self.pipeline_id}_"), os.listdir(self.trigger_sample_directory))
             )
 
             for file in this_pipeline_files:
-                os.remove(os.path.join(self.offline_dataset_path, file))
+                os.remove(os.path.join(self.trigger_sample_directory, file))
 
     def clean_this_trigger_samples(self) -> None:
         # remove all the files belonging to this pipeline and trigger
 
-        if os.path.isdir(self.offline_dataset_path):
+        if os.path.isdir(self.trigger_sample_directory):
             this_trigger_files = list(
                 filter(
                     lambda file: file.startswith(f"{self.pipeline_id}_{self.trigger_id}_"),
-                    os.listdir(self.offline_dataset_path),
+                    os.listdir(self.trigger_sample_directory),
                 )
             )
 
             for file in this_trigger_files:
-                os.remove(os.path.join(self.offline_dataset_path, file))
+                os.remove(os.path.join(self.trigger_sample_directory, file))
 
     def get_number_of_partitions(self) -> int:
         # each file follows the structure {pipeline_id}_{trigger_id}_{partition_id}_{worker_id}
@@ -168,7 +166,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
         this_trigger_files = list(
             filter(
                 lambda file: file.startswith(f"{self.pipeline_id}_{self.trigger_id}_"),
-                os.listdir(self.offline_dataset_path),
+                os.listdir(self.trigger_sample_directory),
             )
         )
 
