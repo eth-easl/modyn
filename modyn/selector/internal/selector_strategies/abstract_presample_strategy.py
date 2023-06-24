@@ -67,7 +67,7 @@ class AbstractPresampleStrategy(AbstractSelectionStrategy):
 
     def get_presampling_target_size(self) -> int:
         dataset_size = self._get_dataset_size()
-        target_presampling = (dataset_size * self.presampling_ratio) // 100
+        target_presampling = int(dataset_size * self.presampling_ratio / 100)
 
         if self.has_limit:
             target_size = min(self.training_set_size_limit, target_presampling)
