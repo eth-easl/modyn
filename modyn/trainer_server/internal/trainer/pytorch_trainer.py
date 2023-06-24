@@ -32,7 +32,7 @@ from modyn.utils import (
     dynamic_module_import,
     grpc_connection_established,
     package_available_and_can_be_imported,
-    seed_everything
+    seed_everything,
 )
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])

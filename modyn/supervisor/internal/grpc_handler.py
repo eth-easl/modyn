@@ -15,8 +15,8 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as Se
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
-    StatusBarScaleResponse,
     SeedSelectorRequest,
+    StatusBarScaleResponse,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
