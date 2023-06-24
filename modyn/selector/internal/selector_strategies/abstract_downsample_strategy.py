@@ -54,7 +54,7 @@ class AbstractDownsampleStrategy(AbstractPresampleStrategy):
         This function is used to create the downsampling status bar and handle the training one accordingly.
 
         For BTS, we return 100 since the training status bar sees all the samples
-        For STB, we return the downsampling_ratio since the training status bar sees only this fraction of points
+        For STB, we return the downsampling_ratio since the training status bar sees only a fraction of points
         (while the downsampling status bas sees all the points)
         """
         if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:

@@ -109,7 +109,7 @@ class Selector:
         return self._trigger_partition_cache[trigger_id]
 
     def uses_weights(self) -> bool:
-        return self._strategy._uses_weights
+        return self._strategy.get_uses_weights()
 
     def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
         assert not (

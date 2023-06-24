@@ -398,3 +398,6 @@ class AbstractSelectionStrategy(ABC):
 
         for proc in processes:
             proc.join()
+
+    def get_uses_weights(self) -> int:
+        return self._uses_weights

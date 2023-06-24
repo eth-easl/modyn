@@ -106,11 +106,11 @@ class SelectorGRPCServicer(SelectorServicer):
         self, request: GetStatusBarScaleRequest, context: grpc.ServicerContext
     ) -> StatusBarScaleResponse:
         pipeline_id = request.pipeline_id
-        logger.info(f"[Pipeline {pipeline_id}]: Received downsampling ratio request")
+        logger.info(f"[Pipeline {pipeline_id}]: Received status bar scale request")
 
-        downsampling_ratio = self.selector_manager.get_status_bar_scale(pipeline_id)
+        status_bar_scale = self.selector_manager.get_status_bar_scale(pipeline_id)
 
-        return StatusBarScaleResponse(status_bar_scale=downsampling_ratio)
+        return StatusBarScaleResponse(status_bar_scale=status_bar_scale)
 
     def get_number_of_partitions(  # pylint: disable-next=unused-argument
         self, request: GetNumberOfPartitionsRequest, context: grpc.ServicerContext

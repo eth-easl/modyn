@@ -129,7 +129,7 @@ class SelectorManager:
 
     def get_status_bar_scale(self, pipeline_id: int) -> int:
         if pipeline_id not in self._selectors:
-            raise ValueError(f"Requested downsampling scale from pipeline {pipeline_id} which does not exist!")
+            raise ValueError(f"Requested status bar scale from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_status_bar_scale()
 
