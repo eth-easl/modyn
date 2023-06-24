@@ -13,6 +13,7 @@ service Selector {
   rpc get_number_of_partitions(GetNumberOfPartitionsRequest)
       returns (NumberOfPartitionsResponse) {}
   rpc get_selection_strategy(GetSelectionStrategyRequest) returns (SelectionStrategyResponse) {}
+  rpc seed_selector(SeedSelectorRequest) returns (SeedSelectorResponse) {}
 }
 
 message Empty {}
@@ -69,4 +70,12 @@ message SelectionStrategyResponse {
     bool downsampling_enabled = 1;
     string strategy_name = 2;
     JsonString params = 3;
+}
+
+message SeedSelectorRequest {
+    int32 seed = 1;
+}
+
+message SeedSelectorResponse {
+    bool success = 1;
 }
