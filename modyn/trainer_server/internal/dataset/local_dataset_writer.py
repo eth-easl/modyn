@@ -81,7 +81,6 @@ class LocalDatasetWriter(TriggerSampleStorage):
         if self.current_sample_index > 0:
             self.output_samples_list = self.output_samples_list[: self.current_sample_index]  # remove empty elements
             self._samples_ready()
-            self._prepare_for_new_file()
 
     def _prepare_for_new_file(self) -> None:
         # reset counters and clean output list
