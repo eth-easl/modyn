@@ -94,7 +94,7 @@ properties:
               uses_weights:
                 type: boolean
                 description: |
-                  If set to true, weights are supplied and weighted SGD is used to train. By default, weights are ignored (uses_weights=False)
+                  If set to true, weights are supplied from the selector and weighted SGD is used to train. By default, weights are ignored (uses_weights=False). Please note that this option is not related to Downsampling strategy, where weights are computed during training.
               reset_after_trigger:
                 type: boolean
                 description: |
