@@ -142,41 +142,8 @@ class LocalDatasetWriter(TriggerSampleStorage):
 
         self._prepare_for_new_file()
 
-    def clean_working_directory(self) -> None:
-        # remove all the files belonging to this pipeline
-        if os.path.isdir(self.trigger_sample_directory):
-            this_pipeline_files = list(
-                filter(lambda file: file.startswith(f"{self.pipeline_id}_"), os.listdir(self.trigger_sample_directory))
-            )
-
-            for file in this_pipeline_files:
-                os.remove(os.path.join(self.trigger_sample_directory, file))
-
     def clean_this_trigger_samples(self) -> None:
-        # remove all the files belonging to this pipeline and trigger
-
-        if os.path.isdir(self.trigger_sample_directory):
-            this_trigger_files = list(
-                filter(
-                    lambda file: file.startswith(f"{self.pipeline_id}_{self.trigger_id}_"),
-                    os.listdir(self.trigger_sample_directory),
-                )
-            )
-
-            for file in this_trigger_files:
-                os.remove(os.path.join(self.trigger_sample_directory, file))
+        self.clean_trigger_data(self.pipeline_id, self.trigger_id)
 
     def get_number_of_partitions(self) -> int:
-        # each file follows the structure {pipeline_id}_{trigger_id}_{partition_id}_{worker_id}
-
-        # here we filter the files belonging to this pipeline and trigger
-        this_trigger_files = list(
-            filter(
-                lambda file: file.startswith(f"{self.pipeline_id}_{self.trigger_id}_"),
-                os.listdir(self.trigger_sample_directory),
-            )
-        )
-
-        # then we count how many partitions we have (not just len(this_trigger_partitions) since there could be
-        # multiple workers for each partition
-        return len(set(file.split("_")[2] for file in this_trigger_files))
+        return self.get_trigger_num_data_partitions(self.pipeline_id, self.trigger_id)
