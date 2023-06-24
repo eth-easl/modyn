@@ -21,10 +21,11 @@ class SelectorKeySource(AbstractKeySource):
 
         self._selector_address = selector_address
         self._selectorstub = None  # connection is made when the pytorch worker is started
-        self._uses_weights = False
+        self._uses_weights: Optional[bool] = None  # get via gRPC, so unavailable if the connection is not yet made.
 
     def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
         assert self._selectorstub is not None
+        assert self._uses_weights is not None
 
         req = GetSamplesRequest(
             pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id, partition_id=partition_id
@@ -36,6 +37,8 @@ class SelectorKeySource(AbstractKeySource):
 
     def _get_just_keys(self, req: GetSamplesRequest) -> tuple[list[int], Optional[list[float]]]:
         assert self._selectorstub is not None
+        assert not self._uses_weights
+
         keys = flatten(
             [response.training_samples_subset for response in self._selectorstub.get_sample_keys_and_weights(req)]
         )
@@ -45,10 +48,13 @@ class SelectorKeySource(AbstractKeySource):
 
     def _get_both_keys_and_weights(self, req: GetSamplesRequest) -> tuple[list[int], list[float]]:
         assert self._selectorstub is not None
+        assert self._uses_weights
+
         keys_and_weights = [
             (response.training_samples_subset, response.training_samples_weights)
             for response in self._selectorstub.get_sample_keys_and_weights(req)
         ]
+
         keys = flatten([element[0] for element in keys_and_weights])
         weights = flatten([element[1] for element in keys_and_weights])
 
@@ -67,12 +73,18 @@ class SelectorKeySource(AbstractKeySource):
 
     def uses_weights(self) -> bool:
         assert self._selectorstub is not None
+
+        if self._uses_weights is not None:
+            # we can cache the response
+            return self._uses_weights
+
         req = UsesWeightsRequest(pipeline_id=self._pipeline_id)
         response: UsesWeightsResponse = self._selectorstub.uses_weights(req)
         return response.uses_weights
 
     def init_worker(self) -> None:
         self._selectorstub = self._connect_to_selector()
+        self._uses_weights = self.uses_weights()
 
     def _connect_to_selector(self) -> SelectorStub:
         selector_channel = grpc.insecure_channel(

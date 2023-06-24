@@ -2,7 +2,6 @@ import math
 
 import pytest
 import torch
-
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 
@@ -31,39 +30,41 @@ def prepare_samples(start_index: int, size: int):
         weights[index] = 1.0 / tmp[index]
     return tmp, torch.Tensor(weights)
 
+
 def test_init():
-    ks = LocalKeySource(pipeline_id=12, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
-    assert ks.offline_dataset_path == TMP_PATH_TEST
-    assert ks._trigger_id == 1
-    assert ks._pipeline_id == 12
-    assert ks.uses_weights()
-    assert ks.get_num_data_partitions() == 0
+    keysource = LocalKeySource(pipeline_id=12, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
+    assert keysource.offline_dataset_path == TMP_PATH_TEST
+    assert keysource._trigger_id == 1
+    assert keysource._pipeline_id == 12
+    assert keysource.uses_weights()
+    assert keysource.get_num_data_partitions() == 0
 
 
 def test_read():
     maximum_keys_in_memory = 25
-    ks = LocalKeySource(pipeline_id=12, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
+    keysource = LocalKeySource(pipeline_id=12, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
     # to avoid wrong results from previously failed tests
-    ks.end_of_trigger_cleaning()
-    write_directory(12, 1, TMP_PATH_TEST, number_of_files=4, maximum_keys_in_memory = maximum_keys_in_memory)
-    assert ks.get_num_data_partitions() == 4
+    keysource.end_of_trigger_cleaning()
+    write_directory(12, 1, TMP_PATH_TEST, number_of_files=4, maximum_keys_in_memory=maximum_keys_in_memory)
+    assert keysource.get_num_data_partitions() == 4
 
-    for i in range(ks.get_num_data_partitions()):
-        keys, weights = ks.get_keys_and_weights(worker_id=0, partition_id=i)
-        assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i+1) * maximum_keys_in_memory))
+    for i in range(keysource.get_num_data_partitions()):
+        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i)
+        assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
     # now add 2 files
     write_directory(12, 1, TMP_PATH_TEST, number_of_files=6, maximum_keys_in_memory=maximum_keys_in_memory)
-    assert ks.get_num_data_partitions() == 6
+    assert keysource.get_num_data_partitions() == 6
 
-    for i in range(ks.get_num_data_partitions()):
-        keys, weights = ks.get_keys_and_weights(worker_id=0, partition_id=i)
-        assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i+1) * maximum_keys_in_memory))
+    for i in range(keysource.get_num_data_partitions()):
+        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i)
+        assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
-    ks.end_of_trigger_cleaning()
-    assert ks.get_num_data_partitions() == 0
+    keysource.end_of_trigger_cleaning()
+    assert keysource.get_num_data_partitions() == 0
+
 
 def test_read_dirty_directory():
     # read from a directory that has samples belonging to another pipeline_id
@@ -71,34 +72,37 @@ def test_read_dirty_directory():
     other_pipeline = 99
     maximum_keys_in_memory = 25
 
-    write_directory(other_pipeline, 1, TMP_PATH_TEST, number_of_files=10, maximum_keys_in_memory = maximum_keys_in_memory)
+    write_directory(other_pipeline, 1, TMP_PATH_TEST, number_of_files=10, maximum_keys_in_memory=maximum_keys_in_memory)
 
-    ks = LocalKeySource(pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
-    assert ks.get_num_data_partitions() == 0
+    keysource = LocalKeySource(pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
+    assert keysource.get_num_data_partitions() == 0
     with pytest.raises(FileNotFoundError):
-        ks.get_keys_and_weights(0,0)
+        keysource.get_keys_and_weights(0, 0)
 
-    write_directory(current_pipeline, 1, TMP_PATH_TEST, number_of_files=4, maximum_keys_in_memory = maximum_keys_in_memory)
+    write_directory(
+        current_pipeline, 1, TMP_PATH_TEST, number_of_files=4, maximum_keys_in_memory=maximum_keys_in_memory
+    )
 
-    assert ks.get_num_data_partitions() == 4
+    assert keysource.get_num_data_partitions() == 4
 
-    for i in range(ks.get_num_data_partitions()):
-        keys, weights = ks.get_keys_and_weights(worker_id=0, partition_id=i)
+    for i in range(keysource.get_num_data_partitions()):
+        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i)
         assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
-    ks.end_of_trigger_cleaning()
+    keysource.end_of_trigger_cleaning()
 
     # now check that the other pipeline wasn't affected
     ks_other = LocalKeySource(pipeline_id=other_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
     assert ks_other.get_num_data_partitions() == 10
 
-    for i in range(ks.get_num_data_partitions()):
+    for i in range(ks_other.get_num_data_partitions()):
         keys, weights = ks_other.get_keys_and_weights(worker_id=0, partition_id=i)
         assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
     ks_other.end_of_trigger_cleaning()
+
 
 def test_reads_pro():
     writer = LocalDatasetWriter(
