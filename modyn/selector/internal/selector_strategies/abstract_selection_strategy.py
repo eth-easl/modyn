@@ -185,6 +185,7 @@ class AbstractSelectionStrategy(ABC):
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
+        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         trigger_id = self._next_trigger_id
         total_keys_in_trigger = 0
 
@@ -196,6 +197,7 @@ class AbstractSelectionStrategy(ABC):
         partition_num_keys = {}
         partition: Optional[int] = None
         for partition, training_samples in enumerate(self._on_trigger()):
+
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
                 + f" {len(training_samples)} samples for new trigger {trigger_id}."

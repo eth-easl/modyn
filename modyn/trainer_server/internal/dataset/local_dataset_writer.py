@@ -90,6 +90,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
         self.current_file_index += 1
 
     def _samples_ready(self) -> None:
+        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         if (self._is_mac and self._is_test) or self._disable_mt:
             LocalDatasetWriter._store_triggersamples_impl(
                 self.current_file_index,
