@@ -14,6 +14,7 @@ service Selector {
   rpc get_number_of_partitions(GetNumberOfPartitionsRequest)
       returns (NumberOfPartitionsResponse) {}
   rpc get_selection_strategy(GetSelectionStrategyRequest) returns (SelectionStrategyResponse) {}
+  rpc seed_selector(SeedSelectorRequest) returns (SeedSelectorResponse) {}
   rpc uses_weights(UsesWeightsRequest) returns (UsesWeightsResponse) {}
 }
 
@@ -89,4 +90,12 @@ message UsesWeightsRequest {
 
 message UsesWeightsResponse {
     bool uses_weights = 1;
+}
+
+message SeedSelectorRequest {
+    int32 seed = 1;
+}
+
+message SeedSelectorResponse {
+    bool success = 1;
 }

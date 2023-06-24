@@ -21,6 +21,8 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     PipelineResponse,
     RegisterPipelineRequest,
     SamplesResponse,
+    SeedSelectorRequest,
+    SeedSelectorResponse,
     SelectionStrategyResponse,
     StatusBarScaleResponse,
     TriggerResponse,
@@ -29,6 +31,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer  # noqa: E402, E501
 from modyn.selector.internal.selector_manager import SelectorManager
+from modyn.utils import seed_everything
 
 logger = logging.getLogger(__name__)
 
@@ -151,3 +154,14 @@ class SelectorGRPCServicer(SelectorServicer):
             strategy_name=name,
             downsampler_config=SelectorJsonString(value=downsampler_config),
         )
+
+    def seed_selector(  # pylint: disable-next=unused-argument
+        self, request: SeedSelectorRequest, context: grpc.ServicerContext
+    ) -> SeedSelectorResponse:
+        seed = request.seed
+        assert 0 <= seed <= 100
+        logger.info(f"Received seed request with seed {seed}")
+
+        seed_everything(seed)
+
+        return SeedSelectorResponse(success=True)
