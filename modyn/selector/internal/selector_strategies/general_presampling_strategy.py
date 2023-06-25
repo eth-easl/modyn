@@ -14,9 +14,14 @@ class GeneralPresamplingStrategy(AbstractSelectionStrategy):
             "modyn.selector.internal.selector_strategies.presampling_strategies"
         )
 
-        if not hasattr(presampling_strategy_module, config["presampling_strategy"]):
+        if "presampling_strategy" not in config:
+            presampling_strategy = "AllDataPresamplingStrategy"
+        else:
+            presampling_strategy = config["presampling_strategy"]
+
+        if not hasattr(presampling_strategy_module, presampling_strategy):
             raise ValueError("Requested presampling strategy does not exist")
-        presampling_class = getattr(presampling_strategy_module, config["presampling_strategy"])
+        presampling_class = getattr(presampling_strategy_module, presampling_strategy)
         self._presampling_strategy = presampling_class(
             config,
             modyn_config,

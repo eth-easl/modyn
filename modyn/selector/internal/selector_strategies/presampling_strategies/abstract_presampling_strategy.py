@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from sqlalchemy import Select
 
 
-class AbstractPresamplingStragy(ABC):
+class AbstractPresamplingStrategy(ABC):
     def __init__(
         self,
         config: dict,

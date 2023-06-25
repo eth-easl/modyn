@@ -1,12 +1,12 @@
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
-    AbstractPresamplingStragy,
+    AbstractPresamplingStrategy,
 )
 from sqlalchemy import Select, asc, func, select
 
 
-class RandomPresamplingStrategy(AbstractPresamplingStragy):
+class RandomPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(
         self,
         config: dict,
