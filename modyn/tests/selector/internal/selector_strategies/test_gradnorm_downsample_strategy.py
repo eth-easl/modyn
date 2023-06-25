@@ -39,7 +39,13 @@ def setup_and_teardown():
 def test_init_gradnorm():
     # Test init works
     strat = GradNormDownsamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
+        {
+            "limit": -1,
+            "reset_after_trigger": False,
+            "presampling_ratio": 80,
+            "downsampled_batch_size": 10,
+            "presampling_strategy": "RandomPresamplingStrategy",
+        },
         get_minimal_modyn_config(),
         42,
         1000,
@@ -53,7 +59,13 @@ def test_init_gradnorm():
 def test_command_gradnorm():
     # Test init works
     strat = GradNormDownsamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
+        {
+            "limit": -1,
+            "reset_after_trigger": False,
+            "presampling_ratio": 80,
+            "downsampled_batch_size": 10,
+            "presampling_strategy": "RandomPresamplingStrategy",
+        },
         get_minimal_modyn_config(),
         42,
         1000,

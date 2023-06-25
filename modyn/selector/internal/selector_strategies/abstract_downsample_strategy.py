@@ -2,12 +2,12 @@
 # flake8: noqa: E712
 import logging
 
-from modyn.selector.internal.selector_strategies.abstract_presample_strategy import AbstractPresampleStrategy
+from modyn.selector.internal.selector_strategies.general_presampling_strategy import GeneralPresamplingStrategy
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractDownsampleStrategy(AbstractPresampleStrategy):
+class AbstractDownsampleStrategy(GeneralPresamplingStrategy):
     """
     This abstract strategy is used to represent the common behaviour of downsampling strategies
     like loss-based, importance downsampling (distribution-based methods) and craig&adacore (greedy-based methods)
