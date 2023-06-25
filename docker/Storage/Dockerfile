@@ -5,7 +5,9 @@ ENV CMAKE_VERSION=3.26.4
 RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=x86_64; fi \
     && wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-${ARCHITECTURE}.sh \
     -O ~/cmake-install.sh && \
-    /bin/bash ~/cmake-install.sh --skip-license -p /usr/local
+    /bin/bash ~/cmake-install.sh --skip-license -p /usr/local && \
+    rm ~/cmake-install.sh && \
+    cmake --version
 
 RUN mkdir -p ./modyn/storage/build \
     && cd ./modyn/storage/build \
