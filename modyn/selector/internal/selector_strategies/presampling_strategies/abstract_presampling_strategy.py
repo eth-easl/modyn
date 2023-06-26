@@ -11,6 +11,13 @@ class AbstractPresamplingStrategy(ABC):
         self.pipeline_id = pipeline_id
         self.maximum_keys_in_memory = maximum_keys_in_memory
 
+        if "presampling_ratio" not in config:
+            raise ValueError("Please specify the presampling ratio.")
+        self.presampling_ratio = config["presampling_ratio"]
+
+        if not (0 < self.presampling_ratio <= 100) or not isinstance(self.presampling_ratio, int):
+            raise ValueError("Presampling ratio must be an integer in range (0,100]")
+
     @abstractmethod
     def get_presampling_query(
         self,
@@ -26,3 +33,15 @@ class AbstractPresamplingStrategy(ABC):
         self,
     ) -> bool:
         raise NotImplementedError()
+
+    def get_target_size(self, trigger_dataset_size: int, limit: Optional[int]) -> int:
+        assert trigger_dataset_size >= 0
+        target_presampling = int(trigger_dataset_size * self.presampling_ratio / 100)
+
+        if limit is not None:
+            assert limit >= 0
+            target_size = min(limit, target_presampling)
+        else:
+            target_size = target_presampling
+
+        return target_size

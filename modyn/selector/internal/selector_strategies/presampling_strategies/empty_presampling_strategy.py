@@ -7,10 +7,10 @@ from sqlalchemy import Select, asc, select
 
 class EmptyPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
-
         if "presampling_ratio" in config and config["presampling_ratio"] != 100:
             raise ValueError("Using EmptyPresamplingStrategy, the presampling_ratio is implicitly 100%")
+        config["presampling_ratio"] = 100
+        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
     def get_presampling_query(
         self,
