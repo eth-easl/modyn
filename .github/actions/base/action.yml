@@ -14,11 +14,6 @@ runs:
         cache-from: type=gha
         cache-to: type=gha
 
-    - name: Clean cache
-      run: |
-        yes | docker system prune -a
-      shell: bash
-
     - name: Load base image locally
       run: |
         docker load --input /tmp/modyndependencies.tar
