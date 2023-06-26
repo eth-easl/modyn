@@ -15,13 +15,14 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
             raise ValueError(
                 "Please specify the presampling ratio. If you want to avoid presampling, set presampling_ratio to 100"
             )
-        self._presampling_ratio = config["presampling_ratio"]
+        self.presampling_ratio = config["presampling_ratio"]
 
-        if not (0 < self._presampling_ratio < 100) or not isinstance(self._presampling_ratio, int):
+        if not (0 < self.presampling_ratio < 100) or not isinstance(self.presampling_ratio, int):
             raise ValueError("Presampling ratio must be an integer in range (0,100)")
 
     def get_presampling_target_size(self, trigger_dataset_size: int) -> int:
-        target_presampling = (trigger_dataset_size * self._presampling_ratio) // 100
+        assert trigger_dataset_size >= 0
+        target_presampling = int(trigger_dataset_size * self.presampling_ratio / 100)
         return target_presampling
 
     def get_presampling_query(
@@ -33,9 +34,12 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
     ) -> Select:
         # TODO(#224) write an efficient query using TABLESAMPLE
         assert trigger_dataset_size is not None
+        assert trigger_dataset_size >= 0
+
         presampling_target_size = self.get_presampling_target_size(trigger_dataset_size)
 
         if limit is not None:
+            assert limit >= 0
             target_size = min(limit, presampling_target_size)
         else:
             target_size = presampling_target_size

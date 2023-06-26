@@ -122,12 +122,12 @@ def test_on_trigger():
     assert len(list(generator)[0]) == 3  # 50% presampling
 
     # adjust the presampling to 100%
-    strat.presampling_strategy._presampling_ratio = 100
+    strat.presampling_strategy.presampling_ratio = 100
     generator = strat._on_trigger()
     assert len(list(generator)[0]) == 6  # 100% presampling
 
     # adjust the presampling to 0%
-    strat.presampling_strategy._presampling_ratio = 0
+    strat.presampling_strategy.presampling_ratio = 0
     generator = strat._on_trigger()
     assert len(list(generator)) == 0  # 0% presampling (aka no data)
 
