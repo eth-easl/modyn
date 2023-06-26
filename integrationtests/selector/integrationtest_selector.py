@@ -165,7 +165,7 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
 
     # sampling every datapoint
     strategy_config = {
-        "name": "LossDownsamplingStrategy",
+        "name" : "CoresetStrategy",
         "maximum_keys_in_memory": 50000,
         "config": {
             "limit": -1,
@@ -173,6 +173,7 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
             "presampling_ratio": 20,
             "downsampled_batch_size": 10,
             "presampling_strategy": "RandomPresamplingStrategy",
+            "downsampling_strategy": "LossDownsamplingStrategy",
         },
     }
 
