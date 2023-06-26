@@ -1,4 +1,4 @@
-from modyn.selector.internal.selector_strategies.downsampling_strategy import AbstractDownsamplingStrategy
+from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 
 
 class EmptyDownsamplingStrategy(AbstractDownsamplingStrategy):

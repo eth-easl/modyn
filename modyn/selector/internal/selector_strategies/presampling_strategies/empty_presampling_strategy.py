@@ -23,9 +23,9 @@ class EmptyPresamplingStrategy(AbstractPresamplingStrategy):
             select(SelectorStateMetadata.sample_key)
             # Enables batching of results in chunks.
             # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-            .execution_options(yield_per=self._maximum_keys_in_memory)
+            .execution_options(yield_per=self.maximum_keys_in_memory)
             .filter(
-                SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
                 if tail_triggers is not None
                 else True,

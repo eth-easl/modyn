@@ -24,10 +24,10 @@ class AbstractDownsamplingStrategy(ABC):
         if not isinstance(self.downsampled_batch_size, int):
             raise ValueError("The downsampled batch size must be an integer")
 
-        self._requires_remote_computation = True
+        self.requires_remote_computation = True
 
     def get_requires_remote_computation(self) -> bool:
-        return self._requires_remote_computation
+        return self.requires_remote_computation
 
     @abstractmethod
     def get_downsampling_strategy(self) -> str:

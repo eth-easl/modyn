@@ -52,7 +52,7 @@ def test_init_gradnorm():
     )
 
     assert strat.downsampled_batch_size == 10
-    assert strat._pipeline_id == 42
+    assert strat.pipeline_id == 42
     assert isinstance(strat.get_downsampling_strategy(), str)
 
 

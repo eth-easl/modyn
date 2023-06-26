@@ -2,12 +2,11 @@ import os
 import pathlib
 import shutil
 import tempfile
+from unittest.mock import patch
 
 import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
-from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
-from modyn.selector.internal.selector_strategies.general_presampling_strategy import GeneralPresamplingStrategy
+from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -49,7 +48,10 @@ def setup_and_teardown():
     shutil.rmtree(TMP_DIR)
 
 
-def test_constructor_throws_on_invalid_config():
+@patch.multiple(AbstractDownsamplingStrategy, __abstractmethods__=set())
+def test_constructor_invalid_config():
+
+    # missing downsampling_ratio
     conf = {
         "reset_after_trigger": False,
         "presampling_ratio": 50,
@@ -57,8 +59,9 @@ def test_constructor_throws_on_invalid_config():
         "presampling_strategy": "RandomPresamplingStrategy",
     }
 
+
     with pytest.raises(ValueError):
-        AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+        AbstractDownsamplingStrategy(conf)
 
     conf = {
         "reset_after_trigger": False,
@@ -68,8 +71,9 @@ def test_constructor_throws_on_invalid_config():
         "presampling_strategy": "RandomPresamplingStrategy",
     }
 
+    # float downsampling_ratio
     with pytest.raises(ValueError):
-        AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+        AbstractDownsamplingStrategy(conf,)
 
     conf = {
         "reset_after_trigger": False,
@@ -78,8 +82,7 @@ def test_constructor_throws_on_invalid_config():
         "downsampled_batch_size": 10,
         "presampling_strategy": "RandomPresamplingStrategy",
     }
-    ads = AbstractDownsampleStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    ads = AbstractDownsamplingStrategy(conf)
 
-    assert ads._requires_remote_computation
-    assert isinstance(ads, GeneralPresamplingStrategy)
-    assert isinstance(ads, AbstractSelectionStrategy)
+    assert ads.requires_remote_computation
+    assert ads.downsampled_batch_size == 10

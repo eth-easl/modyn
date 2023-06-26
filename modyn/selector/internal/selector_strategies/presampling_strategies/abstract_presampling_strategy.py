@@ -7,9 +7,9 @@ from sqlalchemy import Select
 class AbstractPresamplingStrategy(ABC):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         self._config = config
-        self._modyn_config = modyn_config
-        self._pipeline_id = pipeline_id
-        self._maximum_keys_in_memory = maximum_keys_in_memory
+        self.modyn_config = modyn_config
+        self.pipeline_id = pipeline_id
+        self.maximum_keys_in_memory = maximum_keys_in_memory
 
     @abstractmethod
     def get_presampling_query(

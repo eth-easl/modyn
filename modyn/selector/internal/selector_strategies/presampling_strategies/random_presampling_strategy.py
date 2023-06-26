@@ -43,7 +43,7 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
         subq = (
             select(SelectorStateMetadata.sample_key)
             .filter(
-                SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
                 if tail_triggers is not None
                 else True,
@@ -54,9 +54,9 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
 
         stmt = (
             select(SelectorStateMetadata.sample_key)
-            .execution_options(yield_per=self._maximum_keys_in_memory)
+            .execution_options(yield_per=self.maximum_keys_in_memory)
             .filter(
-                SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.sample_key.in_(subq),
             )
             .order_by(asc(SelectorStateMetadata.timestamp))
