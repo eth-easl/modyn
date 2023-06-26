@@ -1,7 +1,7 @@
-from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
+from modyn.selector.internal.selector_strategies.downsampling_strategy import AbstractDownsamplingStrategy
 
 
-class GradNormDownsamplingStrategy(AbstractDownsampleStrategy):
+class GradNormDownsamplingStrategy(AbstractDownsamplingStrategy):
     def get_downsampling_strategy(self) -> str:
         return "RemoteGradNormDownsampling"
 
