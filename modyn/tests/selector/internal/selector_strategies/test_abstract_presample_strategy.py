@@ -6,7 +6,7 @@ import tempfile
 import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
-from modyn.selector.internal.selector_strategies.general_presampling_strategy import GeneralPresamplingStrategy
+from modyn.selector.internal.selector_strategies.coreset_strategy import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies.random_presampling_strategy import (
     RandomPresamplingStrategy,
 )
@@ -48,11 +48,12 @@ def get_config():
         "presampling_ratio": 50,
         "limit": -1,
         "presampling_strategy": "RandomPresamplingStrategy",
+        "downsampling_strategy": "EmptyDownsamplingStrategy"
     }
 
 
 def get_config_all():
-    return {"reset_after_trigger": False, "limit": -1}
+    return {"reset_after_trigger": False, "limit": -1, "downsampling_strategy": "Loss", "downsampled_batch_size": 10}
 
 
 def get_config_tail():
@@ -67,7 +68,7 @@ def get_config_tail():
 
 
 def test_constructor():
-    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 0, 1000, 1, False, -1)
+    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10, 1000)
     assert strat._presampling_ratio >= 0
 
 
@@ -76,16 +77,16 @@ def test_constructor_throws_on_invalid_config():
     conf["presampling_ratio"] = 0
 
     with pytest.raises(ValueError):
-        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 0, 1000, 1, False, -1)
+        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10, 1000)
 
     conf["presampling_ratio"] = 101
 
     with pytest.raises(ValueError):
-        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 0, 1000, 1, False, -1)
+        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10, 1000)
 
 
 def test_inform_data():
-    strat = GeneralPresamplingStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
@@ -111,40 +112,36 @@ def test_inform_data():
 
 
 def test_dataset_size():
-    strat = GeneralPresamplingStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._presampling_strategy._get_dataset_size(strat._next_trigger_id) == 3
+    assert strat._get_dataset_size() == 3
 
     strat.inform_data([110, 111, 112], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._presampling_strategy._get_dataset_size(strat._next_trigger_id) == 6
-
-
-class AbstractPresampleStrategy:
-    pass
+    assert strat._get_dataset_size() == 6
 
 
 def test_dataset_size_tail():
-    strat = GeneralPresamplingStrategy(get_config_tail(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config_tail(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._presampling_strategy._get_dataset_size(strat._next_trigger_id) == 3
+    assert strat._get_dataset_size() == 3
 
     strat.trigger()
     strat.inform_data([110, 111, 112], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._presampling_strategy._get_dataset_size(strat._next_trigger_id) == 6
+    assert strat._get_dataset_size() == 6
 
     strat.trigger()
     strat.inform_data([210, 211, 212], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._presampling_strategy._get_dataset_size(strat._next_trigger_id) == 6
+    assert strat._get_dataset_size() == 6
 
     # no trigger
     strat.inform_data([1210, 1211, 1212], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._presampling_strategy._get_dataset_size(strat._next_trigger_id) == 9
+    assert strat._get_dataset_size() == 9
 
 
 def test_dataset_size_various_scenarios():
@@ -161,66 +158,61 @@ def test_dataset_size_various_scenarios():
     conf["reset_after_trigger"] = True
 
     # first trigger
-    strat = GeneralPresamplingStrategy(conf, get_minimal_modyn_config(), 0, 100)
-    presampling_strat = strat._presampling_strategy
+    strat = CoresetStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    presampling_strat = strat.presampling_strategy
     strat.inform_data(data1, timestamps1, labels1)
-    assert strat._presampling_strategy.get_presampling_target_size(strat._next_trigger_id) == 5  # 50% of presampling
+    trigger_size = strat._get_dataset_size()
+    assert presampling_strat.get_presampling_target_size(trigger_size) == 5  # 50% of presampling
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
     # second trigger
     strat.inform_data(data2, timestamps2, labels2)
-    assert strat._presampling_strategy.get_presampling_target_size(strat._next_trigger_id) == 15  # 50% of presampling
+    trigger_size = strat._get_dataset_size()
+    assert presampling_strat.get_presampling_target_size(trigger_size) == 15  # 50% of presampling
 
     # limited capacity
-    presampling_strat._has_limit = True
-    presampling_strat._training_set_size_limit = 10
-    assert strat._presampling_strategy.get_presampling_target_size(strat._next_trigger_id) == 15
+    strat.has_limit = True
+    strat.training_set_size_limit = 10
+    trigger_size = strat._get_dataset_size()
+    assert presampling_strat.get_presampling_target_size(trigger_size) == 15  # 50% of presampling
 
     # only trigger data
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
     assert all(int(key) >= 10 for (key, _) in strat.get_trigger_partition_keys(trigger_id, 0))
 
     # remove the trigger
-    presampling_strat._reset_after_trigger = False
-    presampling_strat._tail_triggers = None
-    assert strat._presampling_strategy.get_presampling_target_size(strat._next_trigger_id) == 20
+    strat.reset_after_trigger = False
+    strat.tail_triggers = None
+    trigger_size = strat._get_dataset_size()
+    assert presampling_strat.get_presampling_target_size(trigger_size) == 20  # 50% of presampling
 
     # remove the limit
-    presampling_strat._has_limit = False
-    assert strat._presampling_strategy.get_presampling_target_size(strat._next_trigger_id) == 20
+    strat._has_limit = False
+    trigger_size = strat._get_dataset_size()
+    assert presampling_strat.get_presampling_target_size(trigger_size) == 20  # 50% of presampling
 
     # adjust the presampling
     presampling_strat._presampling_ratio = 75
-    assert strat._presampling_strategy.get_presampling_target_size(strat._next_trigger_id) == 30
+    trigger_size = strat._get_dataset_size()
+    assert presampling_strat.get_presampling_target_size(trigger_size) == 30  # 75% of presampling
 
     # set tail triggering
-    presampling_strat._presampling_ratio = 75
-    presampling_strat._tail_triggers = 1
-    assert strat._presampling_strategy.get_presampling_target_size(strat._next_trigger_id) == 22
-
-
-def test_stmt():
-    strat = GeneralPresamplingStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
-    strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
-    strat._presampling_strategy._has_limit = True
-    strat._presampling_strategy._training_set_size_limit = 10
-
-    stmt = strat._presampling_strategy.get_query_stmt(strat._next_trigger_id)
-    assert "LIMIT" in str(stmt)
-    assert "TABLESAMPLE" not in str(stmt)  # change this test when #224 is solved
+    strat.tail_triggers = 1
+    trigger_size = strat._get_dataset_size()
+    assert presampling_strat.get_presampling_target_size(trigger_size) == 22  # 75% of presampling
 
 
 def test_get_all_data():
-    strat = GeneralPresamplingStrategy(get_config_all(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config_all(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     generator = strat._get_data()
 
     assert list(generator) == [[10, 11, 12]]
 
-    strat._presampling_strategy._maximum_keys_in_memory = 2
+    strat.presampling_strategy.maximum_keys_in_memory = 2
 
     generator = strat._get_data()
 
@@ -228,7 +220,7 @@ def test_get_all_data():
 
 
 def test_on_trigger():
-    strat = GeneralPresamplingStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
 
     generator = strat._on_trigger()
@@ -239,7 +231,7 @@ def test_on_trigger():
 def test_on_trigger_multi_chunks():
     config = get_config()
     config["presampling_ratio"] = 40
-    strat = GeneralPresamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
     strat._maximum_keys_in_memory = 4
@@ -252,10 +244,10 @@ def test_on_trigger_multi_chunks():
 
 def test_on_trigger_multi_chunks_unbalanced():
     config = get_config()
-    strat = GeneralPresamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._presampling_strategy._maximum_keys_in_memory = 2
+    strat.presampling_strategy.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -267,10 +259,10 @@ def test_on_trigger_multi_chunks_unbalanced():
 def test_on_trigger_multi_chunks_bis():
     config = get_config()
     config["presampling_ratio"] = 70
-    strat = GeneralPresamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._presampling_strategy._maximum_keys_in_memory = 2
+    strat.presampling_strategy.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -280,10 +272,10 @@ def test_on_trigger_multi_chunks_bis():
 
 
 def test_no_presampling():
-    strat = GeneralPresamplingStrategy(get_config_all(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config_all(), get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._presampling_strategy._maximum_keys_in_memory = 5
+    strat.presampling_strategy.maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -297,10 +289,10 @@ def test_no_presampling():
 def test_chunking():
     config = get_config()
     config["presampling_ratio"] = 90
-    strat = GeneralPresamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._presampling_strategy._maximum_keys_in_memory = 2
+    strat.presampling_strategy.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -315,10 +307,10 @@ def test_chunking_with_stricter_limit():
     config = get_config()
     config["presampling_ratio"] = 90  # presampling should produce 5 points
     config["limit"] = 3  # but the limit is stricter so we get only 3
-    strat = GeneralPresamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._presampling_strategy._maximum_keys_in_memory = 2
+    strat.presampling_strategy.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -331,10 +323,10 @@ def test_chunking_with_stricter_presampling():
     config = get_config()
     config["presampling_ratio"] = 50
     config["limit"] = 4
-    strat = GeneralPresamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._presampling_strategy._maximum_keys_in_memory = 5
+    strat.presampling_strategy.maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -346,10 +338,10 @@ def test_no_presampling_with_limit():
     config = get_config_all()
     config["presampling_ratio"] = 100
     config["limit"] = 3
-    strat = GeneralPresamplingStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat._presampling_strategy._maximum_keys_in_memory = 5
+    strat.presampling_strategy.maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -359,7 +351,7 @@ def test_no_presampling_with_limit():
 
 def test_get_tail_triggers_data():
     conf = get_config_tail()
-    strat = GeneralPresamplingStrategy(conf, get_minimal_modyn_config(), 0, 1)
+    strat = CoresetStrategy(conf, get_minimal_modyn_config(), 0, 1)
 
     data1 = list(range(10))
     timestamps1 = list(range(10))
