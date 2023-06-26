@@ -74,7 +74,7 @@ class LabelBalancedPresamplingStrategy(AbstractPresamplingStrategy):
         smallest_class_size = min(samples_count)
         if smallest_class_size < fair_share:
             return (
-                select(subquery.c.label, subquery.c.sample_key)
+                select(subquery.c.sample_key)
                 .where(subquery.c.row_num <= smallest_class_size)
                 .order_by(asc(subquery.c.timestamp))
                 .limit(target_size)
@@ -88,7 +88,7 @@ class LabelBalancedPresamplingStrategy(AbstractPresamplingStrategy):
 
         """
         return (
-            select(subquery.c.label, subquery.c.sample_key)
+            select(subquery.c.sample_key)
             .execution_options(yield_per=self.maximum_keys_in_memory)
             .where(subquery.c.row_num <= fair_share)
             .order_by(asc(subquery.c.timestamp))
@@ -106,7 +106,7 @@ class LabelBalancedPresamplingStrategy(AbstractPresamplingStrategy):
         if predicted_number_of_samples < target_size:
             # if we are below the target, overshoot and then limit
             return (
-                select(subquery.c.label, subquery.c.sample_key)
+                select(subquery.c.sample_key)
                 .where(subquery.c.row_num <= fair_share + 1)
                 .order_by(asc(subquery.c.timestamp))
                 .limit(target_size)
