@@ -3,13 +3,13 @@ import json
 import multiprocessing as mp
 import pathlib
 import platform
+import shutil
 import tempfile
 from time import sleep
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
-from modyn.common.ftp import FTPServer
 from modyn.evaluator.internal.grpc.evaluator_grpc_servicer import EvaluatorGRPCServicer
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
@@ -21,7 +21,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     MetricConfiguration,
     PythonString,
 )
-from modyn.evaluator.internal.metrics import Accuracy
+from modyn.evaluator.internal.metrics import Accuracy, F1Score
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 
@@ -105,7 +105,7 @@ def get_evaluation_info(evaluation_id, valid_model: bool, model_path: pathlib.Pa
         request=get_evaluate_model_request(valid_model),
         evaluation_id=evaluation_id,
         storage_address=storage_address,
-        metrics=[Accuracy("", {})],
+        metrics=[Accuracy("", {}), F1Score("", {"num_classes": 2})],
         model_path=model_path,
     )
 
@@ -134,8 +134,9 @@ def test_start_evaluation_invalid(test_connect_to_model_storage):
         assert not resp.evaluation_started
 
 
+@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_file")
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_valid(test_connect_to_model_storage):
+def test_evaluate_model_valid(test_connect_to_model_storage, download_file_mock: MagicMock):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         with open(pathlib.Path(modyn_temp) / "trained_model.modyn", "wb") as file:
@@ -143,14 +144,20 @@ def test_evaluate_model_valid(test_connect_to_model_storage):
         mock_start = mock.Mock()
 
         with patch("multiprocessing.Process.start", mock_start):
-            with FTPServer(str(5223), pathlib.Path(modyn_temp)):
-                resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(True), None)
+            resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(True), None)
 
-                assert 0 in evaluator._evaluation_process_dict
-                assert evaluator._next_evaluation_id == 1
+            assert 0 in evaluator._evaluation_process_dict
+            assert evaluator._next_evaluation_id == 1
 
-                with open(evaluator._evaluation_dict[resp.evaluation_id].model_path, "rb") as file:
-                    assert file.read().decode("utf-8") == "Our trained model!"
+            download_file_mock.assert_called_once()
+            kwargs = download_file_mock.call_args.kwargs
+            remote_file_path = kwargs["remote_file_path"]
+            local_file_path = kwargs["local_file_path"]
+
+            shutil.copyfile(pathlib.Path(modyn_temp) / remote_file_path, local_file_path)
+
+            with open(evaluator._evaluation_dict[resp.evaluation_id].model_path, "rb") as file:
+                assert file.read().decode("utf-8") == "Our trained model!"
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -285,8 +292,8 @@ def test_get_evaluation_status(test_connect_to_model_storage):
                 if not evaluation_process_info.status_query_queue.empty():
                     break
 
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise AssertionError("Did not reach desired queue state after 5 seconds.")
@@ -356,17 +363,18 @@ def test_get_evaluation_result_missing_metric(test_is_alive, test_connect_to_mod
 
 
 @patch.object(Accuracy, "get_evaluation_result", return_value=0.5)
+@patch.object(F1Score, "get_evaluation_result", return_value=0.75)
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
-def test_get_evaluation_result(test_is_alive, test_connect_to_model_storage, test_metric: MagicMock):
+def test_get_evaluation_result(test_is_alive, test_connect_to_model_storage, test_f1: MagicMock, test_acc: MagicMock):
     with tempfile.TemporaryDirectory() as temp:
         config = get_modyn_config()
         evaluator = EvaluatorGRPCServicer(config, pathlib.Path(temp))
         evaluator._evaluation_dict[1] = get_evaluation_info(1, True, pathlib.Path(temp) / "trained_model.modyn", config)
 
-        assert len(evaluator._evaluation_dict[1].metrics) == 1
-        metric = evaluator._evaluation_dict[1].metrics[0]
-        assert isinstance(metric, Accuracy)
+        assert len(evaluator._evaluation_dict[1].metrics) == 2
+        assert isinstance(evaluator._evaluation_dict[1].metrics[0], Accuracy)
+        assert isinstance(evaluator._evaluation_dict[1].metrics[1], F1Score)
 
         evaluation_process_info = get_evaluation_process_info()
         evaluator._evaluation_process_dict[1] = evaluation_process_info
@@ -384,15 +392,18 @@ def test_get_evaluation_result(test_is_alive, test_connect_to_model_storage, tes
                 if not evaluation_process_info.metric_result_queue.empty():
                     break
 
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=1), None)
         assert response.valid
-        assert len(response.evaluation_data) == 1
+        assert len(response.evaluation_data) == 2
         assert response.evaluation_data[0].metric == Accuracy.get_name()
         assert response.evaluation_data[0].result == 0.5
-        test_metric.assert_called_once()
+        test_acc.assert_called_once()
+        assert response.evaluation_data[1].metric == F1Score.get_name()
+        assert response.evaluation_data[1].result == 0.75
+        test_f1.assert_called_once()

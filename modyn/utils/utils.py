@@ -156,10 +156,10 @@ def deserialize_function(serialized_function: str, func_name: str) -> Optional[C
 
     Args:
         serialized_function: the function in plaintext.
-        func_name: the function name to be returned
+        func_name: the function name to be returned.
 
     Returns:
-        Optional[Callable]: None if function name could not
+        Optional[Callable]: None if serialized_function is left empty.
     """
     if serialized_function == "":
         return None

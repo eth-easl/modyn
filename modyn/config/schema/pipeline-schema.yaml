@@ -328,6 +328,20 @@ properties:
               type: string
               description: |
                 The id of the dataset.
+            bytes_parser_function:
+              type: string
+              description: |
+                Function used to convert bytes received from the storage, to a format useful for further transformations
+                (e.g. Tensors). This function is called before any other transformations are performed on the data.
+            transformations:
+              type: array
+              description: |
+                Further (optional) transformations to be applied on the data after bytes_parser_function has been
+                applied. For example, this can be torchvision transformations.
+            label_transformer_function:
+              type: string
+              description: |
+                (Optional) function used to transform the label (which are tensors of integers).
             batch_size:
               type: number
               description: |
@@ -357,12 +371,13 @@ properties:
                   evaluation_transformer_function:
                     type: string
                     description: |
-                      The (optional) function used to transform the labels and the model output before evaluation.
-                      This might for example include the application of the sigmoid-function on the model output.
+                      The (optional) function used to transform the model output before evaluation.
+                      This might for example include the application of the sigmoid-function.
                 required:
                   - name
           required:
             - dataset_id
+            - bytes_parser_function
             - dataloader_workers
             - batch_size
             - metrics

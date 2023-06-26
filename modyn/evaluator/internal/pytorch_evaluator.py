@@ -136,11 +136,11 @@ class PytorchEvaluator:
 
                     for metric in self._metrics:
                         if isinstance(metric, AbstractDecomposableMetric):
-                            metric.batch_evaluated_callback(target, output, batch_size)
+                            metric.evaluate_batch(target, output, batch_size)
 
                     if self._contains_holistic_metric:
-                        y_true.append(target.cpu())
-                        y_score.append(output.cpu())
+                        y_true.append(target.detach().cpu())
+                        y_score.append(output.detach().cpu())
 
                 self._num_samples += batch_size
 
@@ -150,7 +150,7 @@ class PytorchEvaluator:
 
         for metric in self._metrics:
             if isinstance(metric, AbstractHolisticMetric):
-                metric.dataset_evaluated_callback(y_true, y_score)
+                metric.evaluate_dataset(y_true, y_score, self._num_samples)
 
             self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
         self._info(f"Finished evaluation: {self._num_samples} samples, {batch_number + 1} batches.")

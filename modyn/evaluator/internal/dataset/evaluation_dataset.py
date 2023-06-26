@@ -21,6 +21,7 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 
+# TODO(#275): inherit common abstraction of dataset
 class EvaluationDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 

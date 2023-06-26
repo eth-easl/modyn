@@ -10,7 +10,7 @@ class AbstractDecomposableMetric(AbstractEvaluationMetric):
     """
 
     @abstractmethod
-    def batch_evaluated_callback(self, y_true: torch.tensor, y_pred: torch.tensor, batch_size: int) -> None:
+    def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
         """
         Function that is called whenever a batch can be evaluated.
         Use it for bookkeeping and to store temporary results needed for the evaluation result.
@@ -22,12 +22,6 @@ class AbstractDecomposableMetric(AbstractEvaluationMetric):
         """
         raise NotImplementedError()
 
-    @abstractmethod
-    def get_evaluation_result(self) -> float:
-        """
-        Get the final evaluation result.
-
-        Returns:
-            float: the calculated value of the metric.
-        """
-        raise NotImplementedError()
+    def evaluate_batch(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
+        y_pred = self.transform_prediction(y_true, y_pred, batch_size)
+        self._batch_evaluated_callback(y_true, y_pred, batch_size)

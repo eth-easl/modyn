@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
+import torch
 from modyn.utils import EVALUATION_TRANSFORMER_FUNC_NAME, deserialize_function
 
 logger = logging.getLogger(__name__)
@@ -49,3 +50,24 @@ class AbstractEvaluationMetric(ABC):
             str: the metric name.
         """
         raise NotImplementedError()
+
+    def transform_prediction(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_elements: int) -> torch.Tensor:
+        """
+        Checks whether the label and prediction values match in dimensions and that they contain num_elements elements.
+        Additionally, transform the model output if needed
+
+        Args:
+            y_true: true labels.
+            y_pred: predicted labels/values.
+            num_elements: the number of elements expected to compare.
+
+        Returns:
+            torch.Tensor: the (possibly transformed) model output.
+        """
+        if self.evaluation_transformer_function:
+            y_pred = self.evaluation_transformer_function(y_pred)
+        if y_true.shape != y_pred.shape:
+            raise TypeError(f"Shape of y_true and y_pred must match. Got {y_true.shape} and {y_pred.shape}.")
+        assert y_pred.shape[0] == num_elements, "Batch size and target label amount is not equal."
+
+        return y_pred

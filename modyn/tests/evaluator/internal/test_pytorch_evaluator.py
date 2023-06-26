@@ -41,24 +41,11 @@ def get_mock_label_transformer():
     )
 
 
-def get_mock_evaluation_transformer():
+def get_mock_accuracy_transformer():
     return (
         "import torch\n"
-        "def evaluation_transformer_function(label: torch.Tensor, model_output: torch.Tensor)"
-        "-> tuple[torch.Tensor, torch.Tensor]:\n"
-        "\treturn label, model_output"
-    )
-
-
-def get_mock_roc_auc_transformer():
-    return (
-        "import torch\n"
-        "def evaluation_transformer_function(label: torch.Tensor, model_output: torch.Tensor) "
-        "-> tuple[torch.Tensor, torch.Tensor]:\n"
-        "\tmodel_output = label / 100.0\n"
-        "\tlabel = torch.ones_like(label)\n"
-        "\tlabel[0:50] = torch.zeros(50)\n"
-        "\treturn label, model_output"
+        "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+        "\treturn model_output"
     )
 
 
@@ -114,7 +101,7 @@ def get_evaluation_info(
             MetricConfiguration(
                 name="Accuracy",
                 config=JsonString(value=json.dumps({})),
-                evaluation_transform_function=PythonString(value=get_mock_evaluation_transformer()),
+                evaluation_transform_function=PythonString(value=get_mock_accuracy_transformer()),
             )
         ],
         model_id="model",
@@ -142,7 +129,7 @@ def get_mock_evaluator(
     evaluation_info = get_evaluation_info(
         1,
         "storage:5000",
-        [Accuracy(config={}, evaluation_transform_func=get_mock_evaluation_transformer())],
+        [Accuracy(config={}, evaluation_transform_func=get_mock_accuracy_transformer())],
         trained_model_path,
         label_transformer,
     )
@@ -163,8 +150,8 @@ def test_evaluator_init(load_state_mock: MagicMock):
     assert evaluator._dataloader is not None
     assert torch.all(
         torch.eq(
-            torch.cat(evaluator._metrics[0].evaluation_transformer_function(torch.ones(5), torch.ones(5))),
-            torch.ones(10),
+            evaluator._metrics[0].evaluation_transformer_function(torch.ones(5)),
+            torch.ones(5),
         )
     )
     assert torch.all(torch.eq(evaluator._label_tranformer_function(torch.ones(5) * 2) + 0.5, torch.ones(5) * 2 + 0.5))
@@ -222,7 +209,7 @@ def test_send_status_to_server(load_state_mock: MagicMock):
 
 @patch("modyn.evaluator.internal.pytorch_evaluator.EvaluationDataset", MockEvaluationDataset)
 @patch.object(PytorchEvaluator, "_load_state")
-def test_train_invalid_query_message(load_state_mock: MagicMock):
+def test_evaluate_invalid_query_message(load_state_mock: MagicMock):
     query_status_queue = mp.Queue()
     response_queue = mp.Queue()
     evaluator: PytorchEvaluator = get_mock_evaluator(
@@ -233,8 +220,8 @@ def test_train_invalid_query_message(load_state_mock: MagicMock):
     timeout = 5
     elapsed = 0
     while query_status_queue.empty():
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within time limit.")
@@ -244,8 +231,8 @@ def test_train_invalid_query_message(load_state_mock: MagicMock):
 
     elapsed = 0
     while not (query_status_queue.empty() and response_queue.empty()):
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within time limit.")
@@ -253,7 +240,7 @@ def test_train_invalid_query_message(load_state_mock: MagicMock):
 
 @patch("modyn.evaluator.internal.pytorch_evaluator.EvaluationDataset", MockEvaluationDataset)
 @patch.object(PytorchEvaluator, "_load_state")
-def test_train(load_state_mock: MagicMock):
+def test_evaluate(load_state_mock: MagicMock):
     query_status_queue = mp.Queue()
     response_queue = mp.Queue()
     metric_result_queue = mp.Queue()
@@ -301,7 +288,7 @@ def test_train(load_state_mock: MagicMock):
     assert status["num_batches"] == 0
     assert status["num_samples"] == 0
 
-    # accuracy metric
+    # accuracy
     metric_name, metric_result = metric_result_queue.get()
     assert metric_name == Accuracy.get_name()
     assert metric_result == pytest.approx(1)

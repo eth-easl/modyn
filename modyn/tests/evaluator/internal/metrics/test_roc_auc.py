@@ -6,7 +6,7 @@ from modyn.evaluator.internal.metrics import AbstractHolisticMetric, RocAuc
 
 def get_evaluation_result(y_true: np.ndarray, y_score: np.ndarray):
     roc_auc = RocAuc(evaluation_transform_func="", config={})
-    roc_auc.dataset_evaluated_callback(torch.from_numpy(y_true), torch.from_numpy(y_score))
+    roc_auc.evaluate_dataset(torch.from_numpy(y_true), torch.from_numpy(y_score), y_true.shape[0])
 
     return roc_auc.get_evaluation_result()
 

@@ -31,8 +31,8 @@ def test_init():
 
 @patch("modyn.evaluator.evaluator.EvaluatorGRPCServer", MockGRPCServer)
 def test_run():
-    trainer_server = Evaluator(modyn_config)
-    trainer_server.run()
+    evaluator = Evaluator(modyn_config)
+    evaluator.run()
 
 
 @patch("modyn.evaluator.evaluator.EvaluatorGRPCServer", MockGRPCServer)

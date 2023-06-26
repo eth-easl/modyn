@@ -17,7 +17,8 @@ class RocAuc(AbstractHolisticMetric):
 
     # Taken from
     # https://github.com/NVIDIA/DeepLearningExamples/blob/678b470fd78e0fdb84b3173bc25164d766e7821f/PyTorch/Recommendation/DLRM/dlrm/scripts/utils.py#L289
-    def dataset_evaluated_callback(self, y_true: torch.tensor, y_pred: torch.tensor) -> None:
+    # pylint: disable=unused-argument
+    def _dataset_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_samples: int) -> None:
         """
         Calculate the ROC-AUC score for the given model output and ground truth.
 
@@ -27,8 +28,6 @@ class RocAuc(AbstractHolisticMetric):
         """
         assert self.evaluation_result is None
 
-        if self.evaluation_transformer_function:
-            y_true, y_pred = self.evaluation_transformer_function(y_true, y_pred)
         y_true.squeeze_()
         y_pred.squeeze_()
         if y_true.shape != y_pred.shape:

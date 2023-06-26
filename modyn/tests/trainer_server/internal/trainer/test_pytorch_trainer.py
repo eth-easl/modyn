@@ -579,8 +579,8 @@ def test_train_invalid_query_message():
     timeout = 5
     elapsed = 0
     while query_status_queue.empty():
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -590,8 +590,8 @@ def test_train_invalid_query_message():
 
     elapsed = 0
     while not (query_status_queue.empty() and status_queue.empty()):
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -763,7 +763,7 @@ def test_create_trainer_with_exception(
     timeout = 5
     elapsed = 0
     while query_status_queue.empty():
-        sleep(1)
+        sleep(0.1)
         elapsed += 1
 
         if elapsed >= timeout:
@@ -773,8 +773,8 @@ def test_create_trainer_with_exception(
         train(training_info, "cpu", pathlib.Path(temp.name), exception_queue, query_status_queue, status_queue)
         elapsed = 0
         while not (query_status_queue.empty() and status_queue.empty()):
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -789,8 +789,8 @@ def test_create_trainer_with_exception(
                 if not exception_queue.empty():
                     break
 
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise AssertionError("Did not reach desired queue state after 5 seconds.")

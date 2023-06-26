@@ -242,7 +242,7 @@ class PytorchTrainer:
 
         self._info("Handled OnBegin Callbacks.")
 
-        batch_number = 0
+        batch_number = -1
         for _ in range(self.epochs_per_trigger):
             for batch_number, batch in enumerate(self._train_dataloader):
                 for _, callback in self._callbacks.items():
@@ -332,7 +332,7 @@ class PytorchTrainer:
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
 
-        self._info(f"Finished training: {self._num_samples} samples, {batch_number} batches.")
+        self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
 

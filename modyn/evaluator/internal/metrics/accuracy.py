@@ -11,33 +11,21 @@ class Accuracy(AbstractDecomposableMetric):
 
     def __init__(self, evaluation_transform_func: str, config: dict[str, Any]) -> None:
         super().__init__(evaluation_transform_func, config)
-        self.seen_samples = 0
+        self.samples_seen = 0
         self.total_correct = 0
 
-    def batch_evaluated_callback(self, y_true: torch.tensor, y_pred: torch.tensor, batch_size: int) -> None:
-        if self.evaluation_transformer_function:
-            y_true, y_pred = self.evaluation_transformer_function(y_true, y_pred)
-        if y_true.shape != y_pred.shape:
-            raise TypeError(f"Shape of y_true and y_pred must match. Got {y_true.shape} and {y_pred.shape}.")
-        assert y_true.shape[0] == batch_size, "Batch size and target label amount is not equal."
+    def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
+        labeled_correctly = torch.sum(torch.eq(y_pred, y_true)).item()
 
-        # in order to use the same approach for scalar and vector case.
-        if y_true.dim() < 2:
-            y_true = y_true.unsqueeze(1)
-            y_pred = y_pred.unsqueeze(1)
-
-        correct_labeled = torch.sum(torch.all(torch.eq(y_pred, y_true), dim=-1)).item()
-        assert correct_labeled <= batch_size, "Total correct amount is greater than batch size."
-
-        self.total_correct += correct_labeled
-        self.seen_samples += batch_size
+        self.total_correct += labeled_correctly
+        self.samples_seen += batch_size
 
     def get_evaluation_result(self) -> float:
-        if self.seen_samples == 0:
+        if self.samples_seen == 0:
             self.warning("Did not see any samples.")
             return 0
 
-        return float(self.total_correct) / self.seen_samples
+        return float(self.total_correct) / self.samples_seen
 
     @staticmethod
     def get_name() -> str:
