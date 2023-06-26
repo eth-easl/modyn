@@ -1,4 +1,5 @@
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from typing import Optional
+
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
     AbstractPresamplingStrategy,
@@ -7,19 +8,8 @@ from sqlalchemy import Select, asc, func, select
 
 
 class RandomPresamplingStrategy(AbstractPresamplingStrategy):
-    def __init__(
-        self,
-        config: dict,
-        modyn_config: dict,
-        pipeline_id: int,
-        maximum_keys_in_memory: int,
-        tail_triggers: int,
-        has_limit: bool,
-        training_set_size_limit: int,
-    ):
-        super().__init__(
-            config, modyn_config, pipeline_id, maximum_keys_in_memory, tail_triggers, has_limit, training_set_size_limit
-        )
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
         if "presampling_ratio" not in config:
             raise ValueError(
@@ -30,30 +20,23 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
         if not (0 < self._presampling_ratio < 100) or not isinstance(self._presampling_ratio, int):
             raise ValueError("Presampling ratio must be an integer in range (0,100)")
 
-    def get_presampling_target_size(self, next_trigger_id: int) -> int:
-        dataset_size = self._get_dataset_size(next_trigger_id)
-        target_presampling = (dataset_size * self._presampling_ratio) // 100
+    def get_presampling_target_size(self, trigger_dataset_size: int) -> int:
+        target_presampling = (trigger_dataset_size * self._presampling_ratio) // 100
         return target_presampling
 
-    def _get_dataset_size(self, next_trigger_id: int) -> int:
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            return (
-                database.session.query(SelectorStateMetadata.sample_key)
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - self._tail_triggers
-                    if self._tail_triggers is not None
-                    else True,
-                )
-                .count()
-            )
-
-    def get_query_stmt(self, next_trigger_id: int) -> Select:
+    def get_presampling_query(
+        self,
+        next_trigger_id: int,
+        tail_triggers: Optional[int],
+        limit: Optional[int],
+        trigger_dataset_size: Optional[int],
+    ) -> Select:
         # TODO(#224) write an efficient query using TABLESAMPLE
-        presampling_target_size = self.get_presampling_target_size(next_trigger_id)
+        assert trigger_dataset_size is not None
+        presampling_target_size = self.get_presampling_target_size(trigger_dataset_size)
 
-        if self._has_limit:
-            target_size = min(self._training_set_size_limit, presampling_target_size)
+        if limit is not None:
+            target_size = min(limit, presampling_target_size)
         else:
             target_size = presampling_target_size
 
@@ -61,8 +44,8 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
             select(SelectorStateMetadata.sample_key)
             .filter(
                 SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - self._tail_triggers
-                if self._tail_triggers is not None
+                SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
+                if tail_triggers is not None
                 else True,
             )
             .order_by(func.random())  # pylint: disable=E1102
@@ -80,3 +63,8 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
         )
 
         return stmt
+
+    def requires_trigger_dataset_size(
+        self,
+    ) -> bool:
+        return True
