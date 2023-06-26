@@ -20,9 +20,7 @@ class Supervisor:
     supported_strategies: list[str] = [
         "NewDataStrategy",
         "FreshnessSamplingStrategy",
-        "LossDownsamplingStrategy",
-        "GradNormDownsamplingStrategy",
-        "RandomPresamplingStrategy",
+        "CoresetStrategy",
     ]
 
     def __init__(
