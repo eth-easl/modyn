@@ -1,3 +1,4 @@
+# pylint: disable=no-value-for-parameter,redefined-outer-name,abstract-class-instantiated
 import os
 import pathlib
 import shutil
@@ -50,7 +51,6 @@ def setup_and_teardown():
 
 @patch.multiple(AbstractDownsamplingStrategy, __abstractmethods__=set())
 def test_constructor_invalid_config():
-
     # missing downsampling_ratio
     conf = {
         "reset_after_trigger": False,
@@ -58,7 +58,6 @@ def test_constructor_invalid_config():
         "limit": -1,
         "presampling_strategy": "RandomPresamplingStrategy",
     }
-
 
     with pytest.raises(ValueError):
         AbstractDownsamplingStrategy(conf)
@@ -73,7 +72,9 @@ def test_constructor_invalid_config():
 
     # float downsampling_ratio
     with pytest.raises(ValueError):
-        AbstractDownsamplingStrategy(conf,)
+        AbstractDownsamplingStrategy(
+            conf,
+        )
 
     conf = {
         "reset_after_trigger": False,

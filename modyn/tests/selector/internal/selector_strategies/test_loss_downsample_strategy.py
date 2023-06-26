@@ -5,7 +5,7 @@ import tempfile
 
 import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.selector.internal.selector_strategies.loss_downsampling_strategy import LossDownsamplingStrategy
+from modyn.selector.internal.selector_strategies.downsampling_strategies import LossDownsamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()
@@ -45,12 +45,8 @@ def test_init_loss():
             "presampling_ratio": 80,
             "downsampled_batch_size": 10,
             "presampling_strategy": "RandomPresamplingStrategy",
-        },
-        get_minimal_modyn_config(),
-        42,
-        1000,
+        }
     )
 
     assert strat.downsampled_batch_size == 10
-    assert strat.pipeline_id == 42
     assert isinstance(strat.get_downsampling_strategy(), str)

@@ -48,7 +48,7 @@ def get_config():
         "presampling_ratio": 50,
         "limit": -1,
         "presampling_strategy": "RandomPresamplingStrategy",
-        "downsampling_strategy": "EmptyDownsamplingStrategy"
+        "downsampling_strategy": "EmptyDownsamplingStrategy",
     }
 
 
