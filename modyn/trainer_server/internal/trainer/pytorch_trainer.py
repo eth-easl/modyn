@@ -7,7 +7,8 @@ import os
 import pathlib
 import queue
 import traceback
-from typing import Any, Optional, Union
+from inspect import isfunction
+from typing import Any, Callable, Optional, Union
 
 import grpc
 import torch
@@ -29,6 +30,7 @@ from modyn.utils import (
     dynamic_module_import,
     grpc_connection_established,
     package_available_and_can_be_imported,
+    seed_everything,
 )
 
 
@@ -44,8 +46,14 @@ class PytorchTrainer:
         logger: logging.Logger,
     ) -> None:
         self.logger = logger
-        self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id
+        self.pipeline_id = training_info.pipeline_id
+
+        self.selector_stub = self.connect_to_selector(training_info.selector_address)
+
+        if training_info.seed is not None:
+            self.seed_trainer_server(training_info.seed)
+            self._info("Everything seeded")
 
         self._info("Initializing Pytorch Trainer")
 
@@ -216,6 +224,12 @@ class PytorchTrainer:
         response: SelectionStrategyResponse = self.selector_stub.get_selection_strategy(req)
         params = json.loads(response.params.value)
         return response.downsampling_enabled, response.strategy_name, params
+
+    def seed_trainer_server(self, seed: int) -> None:
+        if not (0 <= seed <= 100 and isinstance(seed, int)):
+            raise ValueError("The seed must be an integer in the range [0,100]")
+        # seed the trainer server
+        seed_everything(seed)
 
     def connect_to_selector(self, selector_address: str) -> SelectorStub:
         selector_channel = grpc.insecure_channel(selector_address)

@@ -9,6 +9,7 @@ from modyn.metadata_database.metadata_base import MetadataBase
 from modyn.metadata_database.models import Pipeline
 from modyn.metadata_database.models.selector_state_metadata import SelectorStateMetadata
 from modyn.metadata_database.models.trained_models import TrainedModel
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,25 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             if "hash_partition_modulus" in self.modyn_config["metadata_database"]
             else 16
         )
+        self.seed: int = (
+            self.modyn_config["metadata_database"]["seed"] if "seed" in self.modyn_config["metadata_database"] else None
+        )
+        if self.seed is not None:
+            if not -1 <= self.seed <= 1:
+                raise ValueError("Postgres seed must be in [-1,1]")
+
+    def __enter__(self) -> MetadataDatabaseConnection:
+        """Create the engine and session. Then, if required, applies the seed.
+
+        Returns:
+            MetadataDatabaseConnection: MetadataDatabaseConnection.
+        """
+        super().__enter__()
+
+        if self.seed is not None:
+            self.session.execute(func.setseed(self.seed))
+
+        return self
 
     def create_tables(self) -> None:
         """

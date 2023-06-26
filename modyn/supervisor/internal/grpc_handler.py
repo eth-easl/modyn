@@ -11,6 +11,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as Se
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
+    SeedSelectorRequest,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -251,6 +252,11 @@ class GRPCHandler:
         else:
             epochs_per_trigger = 1
 
+        if "seed" in pipeline_config["training"]:
+            seed = pipeline_config["training"]["seed"]
+        else:
+            seed = None
+
         if "transformations" in pipeline_config["data"]:
             transform_list = pipeline_config["data"]["transformations"]
         else:
@@ -282,32 +288,37 @@ class GRPCHandler:
         else:
             grad_scaler_config = {}
 
-        req = StartTrainingRequest(
-            pipeline_id=pipeline_id,
-            trigger_id=trigger_id,
-            device=pipeline_config["training"]["device"],
-            amp=amp,
-            model_id=pipeline_config["model"]["id"],
-            model_configuration=TrainerServerJsonString(value=model_config),
-            use_pretrained_model=previous_model_id is not None,
-            pretrained_model_id=previous_model_id or -1,
-            load_optimizer_state=False,  # TODO(#137): Think about this.
-            batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
-            torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
-            criterion_parameters=TrainerServerJsonString(value=criterion_config),
-            data_info=Data(
+        start_training_kwargs = {
+            "pipeline_id": pipeline_id,
+            "trigger_id": trigger_id,
+            "device": pipeline_config["training"]["device"],
+            "amp": amp,
+            "model_id": pipeline_config["model"]["id"],
+            "model_configuration": TrainerServerJsonString(value=model_config),
+            "use_pretrained_model": previous_model_id is not None,
+            "pretrained_model_id": previous_model_id or -1,
+            "load_optimizer_state": False,  # TODO(#137): Think about this.
+            "batch_size": pipeline_config["training"]["batch_size"],
+            "torch_optimizers_configuration": TrainerServerJsonString(value=json.dumps(optimizers_config)),
+            "torch_criterion": pipeline_config["training"]["optimization_criterion"]["name"],
+            "criterion_parameters": TrainerServerJsonString(value=criterion_config),
+            "data_info": Data(
                 dataset_id=pipeline_config["data"]["dataset_id"],
                 num_dataloaders=pipeline_config["training"]["dataloader_workers"],
             ),
-            checkpoint_info=checkpoint_info,
-            transform_list=transform_list,
-            bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
-            label_transformer=PythonString(value=label_transformer),
-            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
-            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            epochs_per_trigger=epochs_per_trigger,
-        )
+            "checkpoint_info": checkpoint_info,
+            "transform_list": transform_list,
+            "bytes_parser": PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
+            "label_transformer": PythonString(value=label_transformer),
+            "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
+            "epochs_per_trigger": epochs_per_trigger,
+            "seed": seed,
+        }
+
+        cleaned_kwargs = {k: v for k, v in start_training_kwargs.items() if v is not None}
+
+        req = StartTrainingRequest(**cleaned_kwargs)
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)
 
@@ -446,3 +457,17 @@ class GRPCHandler:
         logger.info(f"Model {res.model_id} has been stored successfully")
 
         return res.model_id
+
+    def seed_selector(self, seed: int) -> None:
+        if not (0 <= seed <= 100 and isinstance(seed, int)):
+            raise ValueError("The seed must be an integer in [0,100]")
+        if not self.connected_to_selector:
+            raise ConnectionError("Tried to seed the selector, but no connection was made.")
+
+        success = self.selector.seed_selector(
+            SeedSelectorRequest(
+                seed=seed,
+            ),
+        ).success
+
+        assert success, "Something went wrong while seeding the selector"

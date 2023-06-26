@@ -88,7 +88,6 @@ services:
 #    volumes:
 #      - .:/modyn_host
 #    shm_size: 4gb
-# CUDASTART (ignore/delete if enabling cuda manually)
 #    runtime: nvidia
 #    deploy:
 #      resources:
@@ -97,7 +96,6 @@ services:
 #            - driver: nvidia
 #              count: 1
 #              capabilities: [gpu, utility, compute]
-# CUDAEND (ignore/delete if enabling cuda manually)
   selector:
     restart: on-failure
     depends_on:
@@ -105,11 +103,9 @@ services:
     build:
       context: .
       dockerfile: docker/Selector/Dockerfile
-    volumes:
-       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (line below)
-#      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
+#    volumes:
 #      - .:/modyn_host
-#    shm_size: 4gb
+#      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
   supervisor:
     depends_on:
     - storage
@@ -150,4 +146,3 @@ services:
       - storage-data:/app/storage
 volumes:
   storage-data:
-  selector-data:
