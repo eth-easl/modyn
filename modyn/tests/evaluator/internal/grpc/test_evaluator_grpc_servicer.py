@@ -386,7 +386,7 @@ def test_get_evaluation_result(test_is_alive, test_connect_to_model_storage, tes
 
         while True:
             if not platform.system() == "Darwin":
-                if evaluation_process_info.metric_result_queue.qsize() == 1:
+                if evaluation_process_info.metric_result_queue.qsize() == 2:
                     break
             else:
                 if not evaluation_process_info.metric_result_queue.empty():
