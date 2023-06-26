@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import grpc
 import numpy as np
-import torch
 import pytest
+import torch
 import yaml
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.utils import (

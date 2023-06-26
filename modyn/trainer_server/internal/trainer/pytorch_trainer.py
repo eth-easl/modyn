@@ -7,8 +7,7 @@ import os
 import pathlib
 import queue
 import traceback
-from inspect import isfunction
-from typing import Any, Callable, Optional, Union
+from typing import Any, Optional, Union
 
 import grpc
 import torch
@@ -112,7 +111,7 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
-        self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
+        self._metadata_collector = MetadataCollector(self.pipeline_id, training_info.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         self._downsampling_enabled, strategy_name, params_from_selector = self.get_selection_strategy()
