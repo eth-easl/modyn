@@ -86,4 +86,11 @@ def test_constructor_invalid_config():
     ads = AbstractDownsamplingStrategy(conf)
 
     assert ads.requires_remote_computation
+    assert ads.requires_remote_computation == ads.get_requires_remote_computation()
     assert ads.downsampled_batch_size == 10
+
+    with pytest.raises(NotImplementedError):
+        ads.get_downsampling_strategy()
+
+    with pytest.raises(NotImplementedError):
+        ads.get_downsampling_strategy()
