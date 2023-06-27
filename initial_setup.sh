@@ -31,7 +31,7 @@ if [[ ! -z "$CI" ]]; then
     mv $SCRIPT_DIR/docker/Dependencies/Dockerfile $SCRIPT_DIR/docker/Dependencies/Dockerfile.original
     echo "FROM ${CI_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
     echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
-    echo "Found CI server, exiting."
+    echo "Found CI server and set container to ${CI_CONTAINER}, exiting."
     touch ".modyn_configured"
     exit 0
 fi
