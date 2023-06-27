@@ -36,9 +36,9 @@ For running all integration tests, run
 ./run_integrationtests.sh
 ```
 
-> **_macOS Installation:_**: Make sure to run `./initial_setup.py` as outlined above. If not, installation might fail due to PyTorch not being found. Unfortunately, the PyTorch channel currently does not support macOS.
+> **_macOS Installation:_**: Make sure to run `./initial_setup.sh` as outlined above. If not, installation might fail due to PyTorch not being found. Unfortunately, the PyTorch channel currently does not support macOS.
 
-> **_GPU Installation:_**: If you want to use a GPU, make sure to install `nvidia-docker` and confirm to use CUDA on first run of `./initial_setup.py`. Optionally, if you want to use Apex (require, e.g., for DLRM model), make sure to confirm to install Apex. In this case, having the NVIDIA docker runtime as Docker default runtime is required. The script will try to enable this, if we have sudo priviliges on the system. The CUDA version can be adjusted in the `initial_setup.sh` file.
+> **_GPU Installation:_**: If you want to use a GPU, make sure to install `nvidia-docker` and confirm to use CUDA on first run of `./initial_setup.sh`. Optionally, if you want to use Apex (require, e.g., for DLRM model), make sure to confirm to install Apex. In this case, having the NVIDIA docker runtime as Docker default runtime is required. The script will try to enable this, if we have sudo priviliges on the system. The CUDA version can be adjusted in the `initial_setup.sh` file.
 
 **Next Steps**.
 Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.
