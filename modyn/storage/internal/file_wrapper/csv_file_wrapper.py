@@ -38,7 +38,11 @@ class CsvFileWrapper(AbstractFileWrapper):
         # check that the file is actually a CSV
         self._validate_file_extension()
 
-        self._validate_file_content()
+        # do not validate the content only if "validate_file_content" is explicitly set to False
+        if ("validate_file_content" not in file_wrapper_config) or (
+            "validate_file_content" in file_wrapper_config and file_wrapper_config["validate_file_content"]
+        ):
+            self._validate_file_content()
 
     def _validate_file_extension(self) -> None:
         """Validates the file extension as csv
