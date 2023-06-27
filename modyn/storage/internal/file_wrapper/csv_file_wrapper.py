@@ -1,5 +1,5 @@
 import csv
-from typing import Iterator, Optional
+from typing import Iterator
 
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
@@ -18,10 +18,9 @@ class CsvFileWrapper(AbstractFileWrapper):
             self.separator = ","
 
         if "label_index" not in file_wrapper_config:
-            raise ValueError(
-                "Please specify the index of the column that contains the label. "
-                "Use None if no column contains the label"
-            )
+            raise ValueError("Please specify the index of the column that contains the label. ")
+        if not isinstance(file_wrapper_config["label_index"], int) or file_wrapper_config["label_index"] < 0:
+            raise ValueError("The label_index must be a positive integer.")
         self.label_index = file_wrapper_config["label_index"]
 
         # the first line might contain the header, which is useless and must not be returned.
@@ -100,10 +99,7 @@ class CsvFileWrapper(AbstractFileWrapper):
 
         return samples
 
-    def get_label(self, index: int) -> Optional[int]:
-        if self.label_index is None:
-            return None
-
+    def get_label(self, index: int) -> int:
         labels = self._filter_rows_labels([index])
 
         if len(labels) != 1:
@@ -111,19 +107,9 @@ class CsvFileWrapper(AbstractFileWrapper):
 
         return labels[0]
 
-    def get_all_labels(self) -> list[Optional[int]]:
+    def get_all_labels(self) -> list[int]:
         reader = self._get_csv_reader()
-
-        labels: list[Optional[int]] = []
-
-        if self.label_index is None:
-            return [None] * self.get_number_of_samples()
-
-        for row in reader:
-            # labels are integer in modyn
-            int_label = int(row[self.label_index])
-            labels.append(int_label)
-
+        labels = [int(row[self.label_index]) for row in reader]
         return labels
 
     def get_number_of_samples(self) -> int:
