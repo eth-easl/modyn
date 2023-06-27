@@ -115,7 +115,7 @@ properties:
                 separator:
                   type: string
                   description: |
-                    [CsvFileWrapper] The separator used in the CSV file. The default is ";"
+                    [CsvFileWrapper] The separator used in the CSV file. The default is ",".
                 label_index:
                   type: number
                   description: |
@@ -129,7 +129,7 @@ properties:
                 encoding:
                   type: string
                   description: |
-                    [CsvFileWrapper] Encoding of your file. Default is utf-8
+                    [CsvFileWrapper] Encoding of the CSV file. Default is utf-8.
             ignore_last_timestamp:
               type: boolean
               description: |

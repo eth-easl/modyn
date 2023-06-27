@@ -15,7 +15,7 @@ class CsvFileWrapper(AbstractFileWrapper):
         if "separator" in file_wrapper_config:
             self.separator = file_wrapper_config["separator"]
         else:
-            self.separator = ";"
+            self.separator = ","
 
         if "label_index" not in file_wrapper_config:
             raise ValueError(
