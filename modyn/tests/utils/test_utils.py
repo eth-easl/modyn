@@ -3,6 +3,8 @@ import pathlib
 from unittest.mock import patch
 
 import grpc
+import numpy as np
+import torch
 import yaml
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.utils import (
@@ -13,6 +15,7 @@ from modyn.utils import (
     grpc_connection_established,
     model_available,
     package_available_and_can_be_imported,
+    seed_everything,
     trigger_available,
     validate_timestr,
     validate_yaml,
@@ -95,3 +98,18 @@ def test_flatten():
     assert flatten([[1, 2, 3, 4]]) == [1, 2, 3, 4]
     assert flatten([[1, 2], [3, 4]]) == [1, 2, 3, 4]
     assert flatten([[1, 2], [3, 4], [5, 6]]) == [1, 2, 3, 4, 5, 6]
+
+
+def test_seed():
+    seed_everything(12)
+    torch_master = torch.randn(10)
+    np_master = np.random.randn(10)
+
+    seed_everything(67)
+    assert not np.all(np.equal(np_master, np.random.randn(10)))
+    assert not torch.equal(torch_master, torch.randn(10))
+
+    for _ in range(23):
+        seed_everything(12)
+        assert torch.equal(torch_master, torch.randn(10))
+        assert np.all(np.equal(np_master, np.random.randn(10)))

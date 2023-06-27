@@ -194,6 +194,7 @@ properties:
       - database
       - sample_batch_size
       - insertion_threads
+
   model_storage:
     type: object
     properties:
@@ -213,6 +214,7 @@ properties:
       - hostname
       - port
       - ftp_port
+
   metadata_database:
     type: object
     properties:
@@ -244,6 +246,10 @@ properties:
         type: number
         description: |
           The modulus to use for the hash partitioning of the metadata.
+      seed:
+        type: number
+        description: |
+          If provided, this number is used to seed the database. Must be in [-1,1].
     required:
       - drivername
       - username
