@@ -10,6 +10,7 @@ python $SCRIPT_DIR/test_docker_compose.py
 python $SCRIPT_DIR/test_ftp_connections.py
 echo "Running storage integration tests"
 python $SCRIPT_DIR/storage/integrationtest_storage.py
+python $SCRIPT_DIR/storage/integrationtest_storage_csv.py
 echo "Running selector integration tests"
 python $SCRIPT_DIR/selector/integrationtest_selector.py
 echo "Running model storage integration tests"
