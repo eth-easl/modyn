@@ -8,7 +8,7 @@ from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperTyp
 
 TMP_DIR = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn")
 FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.csv")
-WRONG_FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "wrong_test.csv")
+CUSTOM_FILE_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "wrong_test.csv")
 FILE_DATA = b"a;b;c;d;12\ne;f;g;h;76"
 INVALID_FILE_EXTENSION_PATH = str(pathlib.Path(os.path.abspath(__file__)).parent / "test_tmp" / "modyn" / "test.txt")
 FILE_WRAPPER_CONFIG = {
@@ -136,7 +136,7 @@ def test_get_samples_from_indices_with_invalid_indices():
 
 
 def write_to_file(data):
-    with open(WRONG_FILE_PATH, "wb") as file:
+    with open(CUSTOM_FILE_PATH, "wb") as file:
         file.write(data)
 
 
@@ -146,26 +146,63 @@ def test_invalid_file_content():
     write_to_file(wrong_data)
 
     with pytest.raises(ValueError):
-        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+        _ = CsvFileWrapper(CUSTOM_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(CUSTOM_FILE_PATH))
 
     # label column outside boundary
     wrong_data = b"a;b;c;12\ne;f;g;76"
     write_to_file(wrong_data)
 
     with pytest.raises(ValueError):
-        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+        _ = CsvFileWrapper(CUSTOM_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(CUSTOM_FILE_PATH))
 
     # str label column
     wrong_data = b"a;b;c;d;e;12\ne;f;g;h;h;76"
     write_to_file(wrong_data)
     with pytest.raises(ValueError):
-        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+        _ = CsvFileWrapper(CUSTOM_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(CUSTOM_FILE_PATH))
 
     # just one str in label
     wrong_data = b"a;b;c;d;88;12\ne;f;g;h;h;76"
     write_to_file(wrong_data)
     with pytest.raises(ValueError):
-        _ = CsvFileWrapper(WRONG_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(WRONG_FILE_PATH))
+        _ = CsvFileWrapper(CUSTOM_FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(CUSTOM_FILE_PATH))
+
+
+def test_invalid_file_content_skip_validation():
+    # extra field in one row
+    wrong_data = b"a;b;c;d;12;e\ne;f;g;h;76"
+    write_to_file(wrong_data)
+
+    config = FILE_WRAPPER_CONFIG.copy()
+    config["validate_file_content"] = False
+
+    _ = CsvFileWrapper(CUSTOM_FILE_PATH, config, MockFileSystemWrapper(CUSTOM_FILE_PATH))
+
+    # label column outside boundary
+    wrong_data = b"a;b;c;12\ne;f;g;76"
+    write_to_file(wrong_data)
+
+    file_wrapper = CsvFileWrapper(CUSTOM_FILE_PATH, config, MockFileSystemWrapper(CUSTOM_FILE_PATH))
+
+    with pytest.raises(IndexError):  # fails since index > number of columns
+        file_wrapper.get_label(1)
+
+    # str label column
+    wrong_data = b"a;b;c;d;e;12\ne;f;g;h;h;76"
+    write_to_file(wrong_data)
+    CsvFileWrapper(CUSTOM_FILE_PATH, config, MockFileSystemWrapper(CUSTOM_FILE_PATH))
+
+    with pytest.raises(ValueError):  # fails to convert to integer
+        file_wrapper.get_label(1)
+
+    # just one str in label
+    wrong_data = b"a;b;c;d;88;12\ne;f;g;h;h;76"
+    write_to_file(wrong_data)
+    CsvFileWrapper(CUSTOM_FILE_PATH, config, MockFileSystemWrapper(CUSTOM_FILE_PATH))
+
+    file_wrapper.get_label(0)  # does not fail since row 0 is ok
+    with pytest.raises(ValueError):  # fails to convert to integer
+        file_wrapper.get_label(1)
 
 
 def test_different_separator():
@@ -178,7 +215,9 @@ def test_different_separator():
     }
 
     write_to_file(tsv_file_data)
-    tsv_file_wrapper = CsvFileWrapper(WRONG_FILE_PATH, tsv_file_wrapper_config, MockFileSystemWrapper(WRONG_FILE_PATH))
+    tsv_file_wrapper = CsvFileWrapper(
+        CUSTOM_FILE_PATH, tsv_file_wrapper_config, MockFileSystemWrapper(CUSTOM_FILE_PATH)
+    )
     csv_file_wrapper = CsvFileWrapper(FILE_PATH, FILE_WRAPPER_CONFIG, MockFileSystemWrapper(FILE_PATH))
 
     assert tsv_file_wrapper.get_number_of_samples() == csv_file_wrapper.get_number_of_samples()
@@ -195,3 +234,45 @@ def test_different_separator():
 
     assert tsv_file_wrapper.get_label(0) == csv_file_wrapper.get_label(0)
     assert tsv_file_wrapper.get_label(1) == csv_file_wrapper.get_label(1)
+
+
+def test_out_of_order_sequence():
+    content = b"A1;B1;C1;1\nA2;B2;C2;2\nA3;B3;C3;3\nA4;B4;C4;4\nA5;B5;C5;5"
+    converted = [b"A1;B1;C1", b"A2;B2;C2", b"A3;B3;C3", b"A4;B4;C4", b"A5;B5;C5"]
+    write_to_file(content)
+    config = {
+        "ignore_first_line": False,
+        "label_index": 3,
+        "separator": ";",
+    }
+    file_wrapper = CsvFileWrapper(CUSTOM_FILE_PATH, config, MockFileSystemWrapper(CUSTOM_FILE_PATH))
+
+    # samples
+    assert file_wrapper.get_samples_from_indices([2, 1]) == [converted[2], converted[1]]
+    assert file_wrapper.get_samples_from_indices([3, 2, 1]) == [converted[3], converted[2], converted[1]]
+    assert file_wrapper.get_samples_from_indices([3, 2, 4, 1]) == [
+        converted[3],
+        converted[2],
+        converted[4],
+        converted[1],
+    ]
+
+
+def test_duplicate_request():
+    content = b"A1;B1;C1;1\nA2;B2;C2;2\nA3;B3;C3;3\nA4;B4;C4;4\nA5;B5;C5;5"
+    write_to_file(content)
+    config = {
+        "ignore_first_line": False,
+        "label_index": 3,
+        "separator": ";",
+    }
+    file_wrapper = CsvFileWrapper(CUSTOM_FILE_PATH, config, MockFileSystemWrapper(CUSTOM_FILE_PATH))
+
+    with pytest.raises(AssertionError):
+        file_wrapper.get_samples_from_indices([1, 1])
+
+    with pytest.raises(AssertionError):
+        file_wrapper.get_samples_from_indices([1, 1, 3])
+
+    with pytest.raises(AssertionError):
+        file_wrapper.get_samples_from_indices([1, 1, 13])

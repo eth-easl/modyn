@@ -1,5 +1,5 @@
 import csv
-from typing import Iterator
+from typing import Iterator, Optional
 
 from modyn.storage.internal.file_wrapper.abstract_file_wrapper import AbstractFileWrapper
 from modyn.storage.internal.file_wrapper.file_wrapper_type import FileWrapperType
@@ -68,11 +68,10 @@ class CsvFileWrapper(AbstractFileWrapper):
 
         for row in reader:
             number_of_columns.append(len(row))
-            if self.label_index is not None:
-                if not 0 <= self.label_index < len(row):
-                    raise ValueError("Label index outside row boundary")
-                if not row[self.label_index].isnumeric():  # returns true iff all the characters are numbers
-                    raise ValueError("The label must be an integer")
+            if not 0 <= self.label_index < len(row):
+                raise ValueError("Label index outside row boundary")
+            if not row[self.label_index].isnumeric():  # returns true iff all the characters are numbers
+                raise ValueError("The label must be an integer")
 
         if len(set(number_of_columns)) != 1:
             raise ValueError(
@@ -92,12 +91,7 @@ class CsvFileWrapper(AbstractFileWrapper):
         return self.get_samples_from_indices(indices)
 
     def get_samples_from_indices(self, indices: list) -> list[bytes]:
-        samples = self._filter_rows_samples(indices)
-
-        if len(samples) != len(indices):
-            raise IndexError("At least one index is invalid.")
-
-        return samples
+        return self._filter_rows_samples(indices)
 
     def get_label(self, index: int) -> int:
         labels = self._filter_rows_labels([index])
@@ -114,7 +108,6 @@ class CsvFileWrapper(AbstractFileWrapper):
 
     def get_number_of_samples(self) -> int:
         reader = self._get_csv_reader()
-
         return sum(1 for _ in reader)
 
     def _get_csv_reader(self) -> Iterator:
@@ -149,18 +142,24 @@ class CsvFileWrapper(AbstractFileWrapper):
             list of byte-encoded rows
 
         """
+        assert len(indices) == len(set(indices)), "An index is required more than once."
         reader = self._get_csv_reader()
 
         # Iterate over the rows and keep the selected ones
-        filtered_rows = []
+        filtered_rows: list[Optional[bytes]] = [None] * len(indices)
         for i, row in enumerate(reader):
             if i in indices:
                 # Remove the label, convert the row to bytes and append to the list
                 row_without_label = [col for j, col in enumerate(row) if j != self.label_index]
                 # the row is transformed in a similar csv using the same separator and then transformed to bytes
-                filtered_rows.append(bytes(self.separator.join(row_without_label), self.encoding))
+                filtered_rows[indices.index(i)] = bytes(self.separator.join(row_without_label), self.encoding)
 
-        return filtered_rows
+        if sum(1 for el in filtered_rows if el is None) != 0:
+            raise IndexError("At least one index is invalid")
+
+        # Here mypy complains that filtered_rows is a list of list[Optional[bytes]],
+        # that can't happen given the above exception
+        return filtered_rows  # type: ignore
 
     def _filter_rows_labels(self, indices: list[int]) -> list[int]:
         """
@@ -172,17 +171,23 @@ class CsvFileWrapper(AbstractFileWrapper):
             list of labels
 
         """
+        assert len(indices) == len(set(indices)), "An index is required more than once."
         reader = self._get_csv_reader()
 
         # Iterate over the rows and keep the selected ones
-        filtered_rows = []
+        filtered_rows: list[Optional[int]] = [None] * len(indices)
         for i, row in enumerate(reader):
             if i in indices:
                 # labels are integer in modyn
                 int_label = int(row[self.label_index])
-                filtered_rows.append(int_label)
+                filtered_rows[indices.index(i)] = int_label
 
-        return filtered_rows
+        if sum(1 for el in filtered_rows if el is None) != 0:
+            raise IndexError("At least one index is invalid")
+
+        # Here mypy complains that filtered_rows is a list of list[Optional[bytes]],
+        # that can't happen given the above exception
+        return filtered_rows  # type: ignore
 
     def delete_samples(self, indices: list) -> None:
-        return
+        pass
