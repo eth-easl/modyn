@@ -7,7 +7,14 @@ import torch
 def get_tensors_subset(
     selected_indexes: list[int], data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
 ) -> tuple[Union[torch.Tensor, dict], torch.Tensor]:
-    # Starting from the batch, we want to keep only the selected samples
+    """
+    This function is used in Batch-then-sample.
+    The downsampler returns the selected sample ids. We have to work out which index the various sample_ids correspond
+    to and then extract the selected samples from the tensors.
+    For example, from the downsampling strategy we get that the selected ids are 132 and 154 and that all the ids are
+    [102, 132, 15, 154, 188]. As a result, we get that the corresponding ids are 1 and 3 (using in_batch_index),
+    and then we get the entries of data and target only for the selected samples
+    """
 
     # first of all we compute the position of each selected index within the batch
     in_batch_index = [sample_ids.index(selected_index) for selected_index in selected_indexes]
