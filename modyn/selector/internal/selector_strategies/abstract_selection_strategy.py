@@ -50,9 +50,9 @@ class AbstractSelectionStrategy(ABC):
 
         # weighted optimization (with weights supplied by the selector) is quite unusual, so the default us false
         if "uses_weights" in config:
-            self._uses_weights = config["uses_weights"]
+            self.uses_weights = config["uses_weights"]
         else:
-            self._uses_weights = False
+            self.uses_weights = False
 
         if "tail_triggers" in config:
             self.tail_triggers = config["tail_triggers"]
@@ -398,6 +398,3 @@ class AbstractSelectionStrategy(ABC):
 
         for proc in processes:
             proc.join()
-
-    def get_uses_weights(self) -> int:
-        return self._uses_weights
