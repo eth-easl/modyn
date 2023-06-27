@@ -33,7 +33,6 @@ def prepare_dataloaders(
         transform (list[str]): List of serialized torchvision transforms for the samples, before loading.
         storage_address (str): Address of the Storage endpoint that the OnlineDataset workers connect to.
         selector_address (str): Address of the Selector endpoint that the OnlineDataset workers connect to.
-        return_weights (bool): if the dataloader must return the weights
     Returns:
         tuple[Optional[torch.utils.data.DataLoader]]: Dataloaders for train and validation
 
