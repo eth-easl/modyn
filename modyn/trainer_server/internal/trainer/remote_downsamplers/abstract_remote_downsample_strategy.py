@@ -39,7 +39,6 @@ class AbstractRemoteDownsamplingStrategy(ABC):
 
         assert "downsampling_ratio" in params_from_selector
         self.downsampling_ratio = params_from_selector["downsampling_ratio"]
-        self._sampling_concluded = False
 
         self.replacement = params_from_selector.get("replacement", True)
 
@@ -51,9 +50,6 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         # policy selects the two points with highest score ([0, 2]) and we need to know that 0 is sample 124 and 2 is
         # sample 562.
         self.index_sampleid_map: list[int] = []
-
-    def get_downsampling_ratio(self) -> int:
-        return self.downsampling_ratio
 
     @abstractmethod
     def init_downsampler(self) -> None:
