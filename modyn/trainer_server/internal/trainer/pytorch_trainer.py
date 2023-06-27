@@ -120,20 +120,10 @@ class PytorchTrainer:
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         self.selector_address = training_info.selector_address
+
         downsampling_enabled, strategy_name, downsampler_config = self.get_selection_strategy()
-
         if downsampling_enabled:
-            self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
-            self._downsampler = self.instantiate_downsampler(strategy_name, downsampler_config, self._criterion_nored)
-
-            assert "sample_then_batch" in downsampler_config
-            if downsampler_config["sample_then_batch"]:
-                self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
-                assert "downsampling_period" in downsampler_config
-                self._downsampling_period = downsampler_config["downsampling_period"]
-                self.offline_dataset_path = training_info.offline_dataset_path
-            else:
-                self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
+            self._setup_downsampling(criterion_func, downsampler_config, strategy_name, training_info)
         else:
             self._downsampling_mode = DownsamplingMode.DISABLED
 
@@ -157,6 +147,24 @@ class PytorchTrainer:
         self._callbacks = {
             MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
+    def _setup_downsampling(
+        self,
+        criterion_func: torch.nn.modules.loss,
+        downsampler_config: dict,
+        strategy_name: str,
+        training_info: TrainingInfo,
+    ) -> None:
+        self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
+        self._downsampler = self.instantiate_downsampler(strategy_name, downsampler_config, self._criterion_nored)
+        assert "sample_then_batch" in downsampler_config
+        if downsampler_config["sample_then_batch"]:
+            self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
+            assert "downsampling_period" in downsampler_config
+            self._downsampling_period = downsampler_config["downsampling_period"]
+            self.offline_dataset_path = training_info.offline_dataset_path
+        else:
+            self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
     def _setup_optimizers(self, training_info: TrainingInfo) -> None:
         self._optimizers = {}
@@ -316,8 +324,9 @@ class PytorchTrainer:
                 sample_ids, target, data = self.preprocess_batch(batch)
 
                 if retrieve_weights_from_dataloader:
-                    weights = batch[3]
-                    weights = weights.float()
+                    # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
+                    # We need to cast to do the dot product
+                    weights = batch[3].float()
 
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
@@ -380,20 +389,6 @@ class PytorchTrainer:
         self.end_of_trigger_cleaning()
 
         self._info("Training complete!")
-
-    def downsample_batch(
-        self, data: torch.Tensor, sample_ids: list, target: torch.Tensor
-    ) -> Tuple[torch.Tensor, list, torch.Tensor, torch.Tensor]:
-        # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
-        assert self._downsampler is not None
-        self._downsampler.init_downsampler()
-        big_batch_output = self._model.model(data)
-        self._downsampler.inform_samples(sample_ids, big_batch_output, target)
-        selected_indexes, weights = self._downsampler.select_points()
-        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
-        sample_ids, data, target = selected_indexes, selected_data, selected_target
-        # TODO(#219) Investigate if we can avoid 2 forward passes
-        return data, sample_ids, target, weights
 
     def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
         # whether the dataloader returned the weights.
@@ -464,10 +459,34 @@ class PytorchTrainer:
 
         return sample_ids, target, data
 
+    def downsample_batch(
+        self, data: torch.Tensor, sample_ids: list, target: torch.Tensor
+    ) -> Tuple[torch.Tensor, list, torch.Tensor, torch.Tensor]:
+        """
+        Function to score every datapoint in the current BATCH and sample a fraction of it
+        Used for downsampling strategies in BATCH_THEN_SAMPLE mode
+
+        Receives the samples, the sample ids and the targets. Returns the selected subset of these
+        tensors and the weights for each sample.
+        """
+
+        assert self._downsampler is not None
+        assert self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
+
+        self._downsampler.init_downsampler()
+        big_batch_output = self._model.model(data)
+        self._downsampler.inform_samples(sample_ids, big_batch_output, target)
+        # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
+        selected_indexes, weights = self._downsampler.select_points()
+        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
+        sample_ids, data, target = selected_indexes, selected_data, selected_target
+        # TODO(#219) Investigate if we can avoid 2 forward passes
+        return data, sample_ids, target, weights
+
     def downsample_trigger_training_set(self) -> None:
         """
-        Function to score every datapoint in the current dataset and sample a fraction of it
-        Used for downsampling strategies in sample_then_batch mode
+        Function to score every datapoint in the current PRESAMPLED DATASET and sample a fraction of it
+        Used for downsampling strategies in SAMPLE_THEN_BATCH mode
 
         """
         assert self._downsampler is not None
