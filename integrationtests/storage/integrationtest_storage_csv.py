@@ -12,14 +12,19 @@ import time
 from typing import Tuple
 
 # unchanged functions are imported from the original test file
-from integrationtests.storage.integrationtest_storage import connect_to_storage, create_dataset_dir, \
-    check_get_current_timestamp, check_dataset_availability, get_new_data_since, \
-    get_data_in_interval, cleanup_dataset_dir, cleanup_storage_database, DATASET_PATH
-from modyn.storage.internal.grpc.generated.storage_pb2 import (
-    GetRequest, RegisterNewDatasetRequest,
+from integrationtests.storage.integrationtest_storage import (
+    DATASET_PATH,
+    check_dataset_availability,
+    check_get_current_timestamp,
+    cleanup_dataset_dir,
+    cleanup_storage_database,
+    connect_to_storage,
+    create_dataset_dir,
+    get_data_in_interval,
+    get_new_data_since,
 )
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, RegisterNewDatasetRequest
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-
 
 # Because we have no mapping of file to key (happens in the storage service), we have to keep
 # track of the samples we added to the dataset ourselves and compare them to the samples we get
@@ -27,6 +32,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 FIRST_ADDED_CSVS = []
 SECOND_ADDED_CSVS = []
 CSV_UPDATED_TIME_STAMPS = []
+
 
 def register_new_dataset() -> None:
     storage_channel = connect_to_storage()
@@ -47,14 +53,17 @@ def register_new_dataset() -> None:
 
     assert response.success, "Could not register new dataset."
 
+
 def add_file_to_dataset(csv_file_content: str, name: str) -> None:
     with open(DATASET_PATH / name, "w") as f:
         f.write(csv_file_content)
     CSV_UPDATED_TIME_STAMPS.append(int(round(os.path.getmtime(DATASET_PATH / name) * 1000)))
 
+
 def create_random_csv_row(file: int, counter: int) -> str:
     index = random.randint(1, 1000)
     return f"A{index}file{file},B{index}file{file},C{index}file{file},{counter}"
+
 
 def create_random_csv_file(file: int, counter: int) -> Tuple[str, list[str], int]:
     rows = []
@@ -63,10 +72,11 @@ def create_random_csv_file(file: int, counter: int) -> Tuple[str, list[str], int
         row = create_random_csv_row(file, counter)
         counter += 1
         rows.append(row)
-        sample = ",".join(row.split(",")[:3]) #remove the label
+        sample = ",".join(row.split(",")[:3])  # remove the label
         samples.append(sample)
 
     return "\n".join(rows), samples, counter
+
 
 def add_files_to_dataset(start_number: int, end_number: int, files_added: list[bytes], rows_added: list[bytes]) -> None:
     create_dataset_dir()
@@ -76,7 +86,6 @@ def add_files_to_dataset(start_number: int, end_number: int, files_added: list[b
         add_file_to_dataset(csv_file, f"csv_{i}.csv")
         files_added.append(bytes(csv_file, "utf-8"))
         [rows_added.append(bytes(row, "utf-8")) for row in samples_csv_file]
-
 
 
 def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
@@ -89,16 +98,21 @@ def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
         keys=keys,
     )
     samples_counter = 0
-    for _ , response in enumerate(storage.Get(request)):
+    for _, response in enumerate(storage.Get(request)):
         if len(response.samples) == 0:
             assert False, f"Could not get sample with key {keys[samples_counter]}."
         for sample in response.samples:
             if sample is None:
                 assert False, f"Could not get sample with key {keys[samples_counter]}."
             if sample not in expected_samples:
-                raise ValueError(f"Sample {sample} with key {keys[samples_counter]} is not present in the expected samples {expected_samples}. ")
+                raise ValueError(
+                    f"Sample {sample} with key {keys[samples_counter]} is not present in the "
+                    f"expected samples {expected_samples}. "
+                )
             samples_counter += 1
-    assert samples_counter == len(keys), f"Could not get all samples. Samples missing: keys: {sorted(keys)} i: {samples_counter}"
+    assert samples_counter == len(
+        keys
+    ), f"Could not get all samples. Samples missing: keys: {sorted(keys)} i: {samples_counter}"
 
 
 def test_storage() -> None:
@@ -114,7 +128,7 @@ def test_storage() -> None:
         assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
         if len(responses) == 1:
             response = responses[0]
-            if len(response.keys) == 250: #10 files, each one with 250 samples
+            if len(response.keys) == 250:  # 10 files, each one with 250 samples
                 break
         time.sleep(1)
 
