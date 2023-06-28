@@ -4,8 +4,10 @@ if [[ -f ".modyn_configured" ]]; then
 fi
 
 CUDA_VERSION=11.7
-CUDA_CONTAINER=nvidia/cuda:11.7.1-devel-ubuntu22.04
 # Make sure to use devel image!
+CUDA_CONTAINER=nvidia/cuda:11.7.1-devel-ubuntu22.04
+# container used in CI - cannot use cuda because it is too big.
+CI_CONTAINER=python:3.10-slim
 
 echo "This is the first time running Modyn, we're tweaking some nuts and bolts for your system."
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -23,9 +25,13 @@ if [ "$IS_MAC" = true ] || [ "$(dpkg --print-architecture)" = "arm64" ] || [ "$(
     sed -i '' -e 's/pytorch:://g' $SCRIPT_DIR/environment.yml # Do not use Pytorch Channel (broken)
 fi
 
-# On CI, we stop here
+# On CI, we change the base image from CUDA to Python and stop here
 if [[ ! -z "$CI" ]]; then
-    echo "Found CI server, exiting."
+    dockerContent=$(tail -n "+1" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
+    mv $SCRIPT_DIR/docker/Dependencies/Dockerfile $SCRIPT_DIR/docker/Dependencies/Dockerfile.original
+    echo "FROM ${CI_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
+    echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
+    echo "Found CI server and set container to ${CI_CONTAINER}, exiting."
     touch ".modyn_configured"
     exit 0
 fi

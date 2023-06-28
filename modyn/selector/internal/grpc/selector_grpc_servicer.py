@@ -12,6 +12,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
     GetSelectionStrategyRequest,
+    GetStatusBarScaleRequest,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString  # noqa: E402, E501
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -23,7 +24,10 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     SeedSelectorRequest,
     SeedSelectorResponse,
     SelectionStrategyResponse,
+    StatusBarScaleResponse,
     TriggerResponse,
+    UsesWeightsRequest,
+    UsesWeightsResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorServicer  # noqa: E402, E501
 from modyn.selector.internal.selector_manager import SelectorManager
@@ -101,6 +105,16 @@ class SelectorGRPCServicer(SelectorServicer):
 
         return NumberOfSamplesResponse(num_samples=num_samples)
 
+    def get_status_bar_scale(  # pylint: disable-next=unused-argument
+        self, request: GetStatusBarScaleRequest, context: grpc.ServicerContext
+    ) -> StatusBarScaleResponse:
+        pipeline_id = request.pipeline_id
+        logger.info(f"[Pipeline {pipeline_id}]: Received status bar scale request")
+
+        status_bar_scale = self.selector_manager.get_status_bar_scale(pipeline_id)
+
+        return StatusBarScaleResponse(status_bar_scale=status_bar_scale)
+
     def get_number_of_partitions(  # pylint: disable-next=unused-argument
         self, request: GetNumberOfPartitionsRequest, context: grpc.ServicerContext
     ) -> NumberOfPartitionsResponse:
@@ -111,18 +125,34 @@ class SelectorGRPCServicer(SelectorServicer):
 
         return NumberOfPartitionsResponse(num_partitions=num_partitions)
 
+    def uses_weights(  # pylint: disable-next=unused-argument
+        self, request: UsesWeightsRequest, context: grpc.ServicerContext
+    ) -> UsesWeightsResponse:
+        pipeline_id = request.pipeline_id
+        logger.info(f"[Pipeline {pipeline_id}]: Received is weighted request")
+
+        uses_weights = self.selector_manager.uses_weights(pipeline_id)
+
+        return UsesWeightsResponse(uses_weights=uses_weights)
+
     def get_selection_strategy(  # pylint: disable-next=unused-argument
         self, request: GetSelectionStrategyRequest, context: grpc.ServicerContext
     ) -> SelectionStrategyResponse:
         pipeline_id = request.pipeline_id
         logger.info(f"[Pipeline {pipeline_id}]: Received selection strategy request")
 
-        downsampling_enabled, name, params = self.selector_manager.get_selection_strategy_remote(pipeline_id)
+        (
+            downsampling_enabled,
+            name,
+            downsampler_config,
+        ) = self.selector_manager.get_selection_strategy_remote(pipeline_id)
 
-        params = json.dumps(params)
+        downsampler_config = json.dumps(downsampler_config)
 
         return SelectionStrategyResponse(
-            downsampling_enabled=downsampling_enabled, strategy_name=name, params=SelectorJsonString(value=params)
+            downsampling_enabled=downsampling_enabled,
+            strategy_name=name,
+            downsampler_config=SelectorJsonString(value=downsampler_config),
         )
 
     def seed_selector(  # pylint: disable-next=unused-argument

@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 from inspect import isfunction
+from enum import Enum
 from types import ModuleType
 from typing import Any, Callable, Optional
 
@@ -29,6 +30,8 @@ EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
 EVALUATION_TRANSFORMER_FUNC_NAME = "evaluation_transformer_function"
 LABEL_TRANSFORMER_FUNC_NAME = "label_transformer_function"
 BYTES_PARSER_FUNC_NAME = "bytes_parser_function"
+
+DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "SAMPLE_THEN_BATCH"])
 
 
 def dynamic_module_import(name: str) -> ModuleType:

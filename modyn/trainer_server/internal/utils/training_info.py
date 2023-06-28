@@ -19,6 +19,7 @@ class TrainingInfo:
         training_id: int,
         storage_address: str,
         selector_address: str,
+        offline_dataset_path: str,
         final_checkpoint_path: pathlib.Path,
         pretrained_model_path: Optional[pathlib.Path] = None,
     ) -> None:
@@ -69,3 +70,5 @@ class TrainingInfo:
             self.seed = request.seed
         else:
             self.seed = None
+
+        self.offline_dataset_path = offline_dataset_path
