@@ -67,9 +67,14 @@ class AbstractPresampleStrategy(AbstractSelectionStrategy):
 
     def get_presampling_target_size(self) -> int:
         dataset_size = self._get_dataset_size()
-        target_presampling = (dataset_size * self.presampling_ratio) // 100
+        target_presampling = int(dataset_size * self.presampling_ratio / 100)
 
-        return target_presampling
+        if self.has_limit:
+            target_size = min(self.training_set_size_limit, target_presampling)
+        else:
+            target_size = target_presampling
+
+        return target_size
 
     def _get_all_data(self) -> Iterable[list[int]]:
         """Returns all sample
@@ -121,12 +126,7 @@ class AbstractPresampleStrategy(AbstractSelectionStrategy):
         return self.get_general_stmt()
 
     def get_general_stmt(self) -> Union[Select[Any], Select[tuple[Any]]]:
-        presampling_target_size = self.get_presampling_target_size()
-
-        if self.has_limit:
-            target_size = min(self.training_set_size_limit, presampling_target_size)
-        else:
-            target_size = presampling_target_size
+        target_size = self.get_presampling_target_size()
 
         subq = (
             select(SelectorStateMetadata.sample_key)
@@ -167,15 +167,3 @@ class AbstractPresampleStrategy(AbstractSelectionStrategy):
                 )
                 .count()
             )
-
-    def get_downsampling_strategy(self) -> str:
-        """
-        Abstract method to get the downsampling strategy that is transfered from the selector to the pytorch trainer.
-        """
-        raise NotImplementedError()
-
-    def get_downsampling_params(self) -> dict:
-        """
-        Abstract method to get the downsampling parameters that are transfered from the selector to the pytorch trainer.
-        """
-        raise NotImplementedError()

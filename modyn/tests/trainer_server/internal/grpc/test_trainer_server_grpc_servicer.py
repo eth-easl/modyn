@@ -41,14 +41,24 @@ store_final_model_request = StoreFinalModelRequest(training_id=1)
 get_latest_model_request = GetLatestModelRequest(training_id=1)
 
 modyn_config = {
-    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
+    "trainer_server": {
+        "hostname": "trainer_server",
+        "port": "5001",
+        "ftp_port": "3001",
+        "offline_dataset_directory": "/tmp/offline_dataset",
+    },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
     "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
 
 modyn_download_file_config = {
-    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
+    "trainer_server": {
+        "hostname": "trainer_server",
+        "port": "5001",
+        "ftp_port": "3001",
+        "offline_dataset_directory": "/tmp/offline_dataset",
+    },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
     "model_storage": {"hostname": "localhost", "port": "5004", "ftp_port": "3002"},
@@ -77,12 +87,19 @@ def noop():
 
 
 def get_training_process_info():
-    status_query_queue = mp.Queue()
-    status_response_queue = mp.Queue()
+    status_query_queue_training = mp.Queue()
+    status_response_queue_training = mp.Queue()
+    status_query_queue_downsampling = mp.Queue()
+    status_response_queue_downsampling = mp.Queue()
     exception_queue = mp.Queue()
 
     training_process_info = TrainingProcessInfo(
-        mp.Process(), exception_queue, status_query_queue, status_response_queue
+        mp.Process(),
+        exception_queue,
+        status_query_queue_training,
+        status_response_queue_training,
+        status_query_queue_downsampling,
+        status_response_queue_downsampling,
     )
     return training_process_info
 
@@ -123,7 +140,10 @@ def get_training_info(
     training_id, temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None
 ):
     request = get_start_training_request(temp)
-    training_info = TrainingInfo(request, training_id, storage_address, selector_address, pathlib.Path(final_temp))
+    offline_dataset_path = "/tmp/offline_dataset"
+    training_info = TrainingInfo(
+        request, training_id, storage_address, selector_address, offline_dataset_path, pathlib.Path(final_temp)
+    )
     return training_info
 
 
@@ -150,7 +170,7 @@ def test_trainer_not_available(test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         trainer_server._training_process_dict[10] = TrainingProcessInfo(
-            mp.Process(), mp.Queue(), mp.Queue(), mp.Queue()
+            mp.Process(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue()
         )
         response = trainer_server.trainer_available(trainer_available_request, None)
         assert not response.available
@@ -218,7 +238,7 @@ def test_get_training_status_not_registered(test_connect_to_model_storage):
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(10, 100))
+@patch.object(TrainerServerGRPCServicer, "get_status_training", return_value=(10, 100, True))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive(
@@ -246,7 +266,7 @@ def test_get_training_status_alive(
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None))
+@patch.object(TrainerServerGRPCServicer, "get_status_training", return_value=(None, None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive_blocked(
@@ -274,7 +294,7 @@ def test_get_training_status_alive_blocked(
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
-@patch.object(TrainerServerGRPCServicer, "get_status")
+@patch.object(TrainerServerGRPCServicer, "get_status_training")
 def test_get_training_status_finished_with_exception(
     test_get_status,
     test_check_for_training_exception,
@@ -302,7 +322,7 @@ def test_get_training_status_finished_with_exception(
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
-@patch.object(TrainerServerGRPCServicer, "get_status")
+@patch.object(TrainerServerGRPCServicer, "get_status_training")
 def test_get_training_status_finished_no_checkpoint(
     test_get_status,
     test_check_for_training_exception,
@@ -327,12 +347,12 @@ def test_get_training_status_finished_no_checkpoint(
 def test_get_training_status(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
-        state_dict = {"state": {}, "num_batches": 10, "num_samples": 100}
+        state_dict = {"state": {}, "num_batches": 10, "num_samples": 100, "training_active": True}
 
         training_process_info = get_training_process_info()
         trainer_server._training_process_dict[1] = training_process_info
-        training_process_info.status_response_queue.put(state_dict)
-        num_batches, num_samples = trainer_server.get_status(1)
+        training_process_info.status_response_queue_training.put(state_dict)
+        num_batches, num_samples, _ = trainer_server.get_status_training(1)
         assert num_batches == state_dict["num_batches"]
         assert num_samples == state_dict["num_samples"]
 
@@ -341,10 +361,10 @@ def test_get_training_status(test_connect_to_model_storage):
 
         while True:
             if not platform.system() == "Darwin":
-                if training_process_info.status_query_queue.qsize() == 1:
+                if training_process_info.status_query_queue_training.qsize() == 1:
                     break
             else:
-                if not training_process_info.status_query_queue.empty():
+                if not training_process_info.status_query_queue_training.empty():
                     break
 
             sleep(1)
@@ -353,8 +373,8 @@ def test_get_training_status(test_connect_to_model_storage):
             if elapsed >= timeout:
                 raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
-        assert training_process_info.status_response_queue.empty()
-        query = training_process_info.status_query_queue.get()
+        assert training_process_info.status_response_queue_training.empty()
+        query = training_process_info.status_query_queue_training.get()
         assert query == TrainerMessages.STATUS_QUERY_MESSAGE
 
 

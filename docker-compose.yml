@@ -77,7 +77,9 @@ services:
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
-#    volumes:
+    volumes:
+    - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
+#      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
 #      - .:/modyn_host
 #    shm_size: 4gb
 # CUDASTART (ignore/delete if enabling cuda manually)
@@ -140,3 +142,4 @@ services:
 volumes:
   storage-data:
   selector-data:
+  downsampling-data:
