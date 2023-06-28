@@ -135,6 +135,7 @@ class AbstractSelectionStrategy(ABC):
         Args:
             keys (list[str]): A list of keys of the data
             timestamps (list[int]): A list of timestamps of the data.
+            labels list[int]: A list of labels
         """
         raise NotImplementedError
 
@@ -351,7 +352,6 @@ class AbstractSelectionStrategy(ABC):
             keys (list[str]): A list of keys of the data
             timestamps (list[int]): A list of timestamps of the data.
             labels (list[int]): A list of labels of the data.
-            database (MetadataDatabaseConnection): The database connection.
         """
         # TODO(#116): Right now we persist all datapoint into DB. We might want to
         # keep this partly in memory for performance.

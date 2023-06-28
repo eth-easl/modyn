@@ -27,3 +27,6 @@ class EmptyDownsamplingStrategy(AbstractDownsamplingStrategy):
     def get_downsampling_params(self) -> dict:
         # this parameter will never be used since requires_remote_computation is False
         return {}
+
+    def get_training_status_bar_scale(self) -> int:
+        return 100

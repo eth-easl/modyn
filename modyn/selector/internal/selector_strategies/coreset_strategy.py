@@ -7,23 +7,24 @@ from modyn.selector.internal.selector_strategies import AbstractSelectionStrateg
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     AbstractDownsamplingStrategy,
     EmptyDownsamplingStrategy,
+    instantiate_downsampler,
 )
 from modyn.selector.internal.selector_strategies.presampling_strategies import (
     AbstractPresamplingStrategy,
     EmptyPresamplingStrategy,
+    instantiate_presampler,
 )
-from modyn.utils import dynamic_module_import
 
 
 class CoresetStrategy(AbstractSelectionStrategy):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
-        self.presampling_strategy: AbstractPresamplingStrategy = self._instantiate_presampler(
+        self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
             config, modyn_config, pipeline_id, maximum_keys_in_memory
         )
 
-        self.downsampling_strategy: AbstractDownsamplingStrategy = self._instantiate_downsampler(
+        self.downsampling_strategy: AbstractDownsamplingStrategy = instantiate_downsampler(
             config, maximum_keys_in_memory
         )
 
@@ -36,50 +37,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
                 "To specify the presampling method add 'presampling_strategy to the pipeline. "
                 "You can use 'downsampling_strategies' to specify the downsampling method."
             )
-
-    def _instantiate_presampler(
-        self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
-    ) -> AbstractPresamplingStrategy:
-        presampling_strategy_module = dynamic_module_import(
-            "modyn.selector.internal.selector_strategies.presampling_strategies"
-        )
-        if "presampling_strategy" not in config:
-            presampling_strategy = "EmptyPresamplingStrategy"
-        else:
-            presampling_strategy = config["presampling_strategy"]
-
-        # for simplicity, you can just specify the short name (without PresamplingStrategy)
-        if not hasattr(presampling_strategy_module, presampling_strategy):
-            long_name = f"{presampling_strategy}PresamplingStrategy"
-            if not hasattr(presampling_strategy_module, long_name):
-                raise ValueError("Requested presampling strategy does not exist")
-            presampling_strategy = long_name
-        presampling_class = getattr(presampling_strategy_module, presampling_strategy)
-        return presampling_class(
-            config,
-            modyn_config,
-            pipeline_id,
-            maximum_keys_in_memory,
-        )
-
-    def _instantiate_downsampler(self, config: dict, maximum_keys_in_memory: int) -> AbstractDownsamplingStrategy:
-        downsampling_strategy_module = dynamic_module_import(
-            "modyn.selector.internal.selector_strategies.downsampling_strategies"
-        )
-        if "downsampling_strategy" not in config:
-            downsampling_strategy = "EmptyDownsamplingStrategy"
-        else:
-            downsampling_strategy = config["downsampling_strategy"]
-
-        # for simplicity, you can just specify the short name (without DownsamplingStrategy)
-        if not hasattr(downsampling_strategy_module, downsampling_strategy):
-            long_name = f"{downsampling_strategy}DownsamplingStrategy"
-            if not hasattr(downsampling_strategy_module, long_name):
-                raise ValueError("Requested presampling strategy does not exist")
-            downsampling_strategy = long_name
-
-        downsampling_class = getattr(downsampling_strategy_module, downsampling_strategy)
-        return downsampling_class(config, maximum_keys_in_memory)
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         assert len(keys) == len(timestamps)
@@ -140,3 +97,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
     def get_requires_remote_computation(self) -> bool:
         return self.downsampling_strategy.get_requires_remote_computation()
+
+    def get_training_status_bar_scale(self) -> int:
+        return self.downsampling_strategy.get_training_status_bar_scale()

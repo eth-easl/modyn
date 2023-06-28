@@ -138,4 +138,4 @@ class LabelBalancedPresamplingStrategy(AbstractPresamplingStrategy):
     def requires_trigger_dataset_size(
         self,
     ) -> bool:
-        return False  # a custom group by query must be executed and then we can retrieve the total from its result
+        return False  # a custom group by query must be executed, and then we can retrieve the total from its result

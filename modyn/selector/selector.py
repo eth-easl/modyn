@@ -100,7 +100,7 @@ class Selector:
         if not isinstance(self._strategy, CoresetStrategy):
             return 100
 
-        return self._strategy.downsampling_strategy.get_training_status_bar_scale()
+        return self._strategy.get_training_status_bar_scale()
 
     def get_number_of_partitions(self, trigger_id: int) -> int:
         if trigger_id not in self._trigger_partition_cache:
