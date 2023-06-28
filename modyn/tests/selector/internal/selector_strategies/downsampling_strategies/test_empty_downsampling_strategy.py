@@ -4,11 +4,7 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
 def test_init_empty():
     # Test init works
     strat = EmptyDownsamplingStrategy(
-        {
-            "limit": -1,
-            "reset_after_trigger": False,
-            "presampling_ratio": 80,
-        },
+        {},
         1000,
     )
 

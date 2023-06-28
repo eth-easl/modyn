@@ -5,15 +5,14 @@ from sqlalchemy import Select
 
 
 class AbstractPresamplingStrategy(ABC):
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        self._config = config
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
         self.maximum_keys_in_memory = maximum_keys_in_memory
 
-        if "presampling_ratio" not in config:
+        if "ratio" not in presampling_config:
             raise ValueError("Please specify the presampling ratio.")
-        self.presampling_ratio = config["presampling_ratio"]
+        self.presampling_ratio = presampling_config["ratio"]
 
         if not (0 < self.presampling_ratio <= 100) or not isinstance(self.presampling_ratio, int):
             raise ValueError("Presampling ratio must be an integer in range (0,100]")

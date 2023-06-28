@@ -52,39 +52,21 @@ def setup_and_teardown():
 @patch.multiple(AbstractDownsamplingStrategy, __abstractmethods__=set())
 def test_constructor_invalid_config():
     # missing downsampling_ratio
-    conf = {
-        "reset_after_trigger": False,
-        "presampling_ratio": 50,
-        "limit": -1,
-        "presampling_strategy": "RandomPresamplingStrategy",
+    downsampling_config = {
         "sample_then_batch": True,
     }
 
     with pytest.raises(ValueError):
-        AbstractDownsamplingStrategy(conf, 1000)
-
-    conf = {
-        "reset_after_trigger": False,
-        "presampling_ratio": 50,
-        "limit": -1,
-        "downsampling_ratio": 0.10,
-        "presampling_strategy": "RandomPresamplingStrategy",
-        "sample_then_batch": True,
-    }
+        AbstractDownsamplingStrategy(downsampling_config, 1000)
 
     # float downsampling_ratio
+    downsampling_config = {"sample_then_batch": True, "ratio": 0.18}
     with pytest.raises(ValueError):
-        AbstractDownsamplingStrategy(conf, 1000)
+        AbstractDownsamplingStrategy(downsampling_config, 1000)
 
-    conf = {
-        "reset_after_trigger": False,
-        "presampling_ratio": 50,
-        "limit": -1,
-        "downsampling_ratio": 10,
-        "presampling_strategy": "RandomPresamplingStrategy",
-        "sample_then_batch": True,
-    }
-    ads = AbstractDownsamplingStrategy(conf, 1000)
+    downsampling_config = {"sample_then_batch": True, "ratio": 10}
+
+    ads = AbstractDownsamplingStrategy(downsampling_config, 1000)
 
     assert ads.requires_remote_computation
     assert ads.requires_remote_computation == ads.get_requires_remote_computation()

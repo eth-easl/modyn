@@ -8,10 +8,12 @@ def instantiate_presampler(
     presampling_strategy_module = dynamic_module_import(
         "modyn.selector.internal.selector_strategies.presampling_strategies"
     )
-    if "presampling_strategy" not in config:
+    if "presampling_config" not in config or "strategy" not in config["presampling_config"]:
         presampling_strategy = "EmptyPresamplingStrategy"
+        presampling_config = {}
     else:
-        presampling_strategy = config["presampling_strategy"]
+        presampling_strategy = config["presampling_config"]["strategy"]
+        presampling_config = config["presampling_config"]
 
     # for simplicity, you can just specify the short name (without PresamplingStrategy)
     if not hasattr(presampling_strategy_module, presampling_strategy):
@@ -20,8 +22,9 @@ def instantiate_presampler(
             raise ValueError("Requested presampling strategy does not exist")
         presampling_strategy = long_name
     presampling_class = getattr(presampling_strategy_module, presampling_strategy)
+
     return presampling_class(
-        config,
+        presampling_config,
         modyn_config,
         pipeline_id,
         maximum_keys_in_memory,

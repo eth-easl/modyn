@@ -5,10 +5,7 @@ def test_init_gradnorm():
     # Test init works
     strat = GradNormDownsamplingStrategy(
         {
-            "limit": -1,
-            "reset_after_trigger": False,
-            "presampling_ratio": 80,
-            "downsampling_ratio": 10,
+            "ratio": 10,
             "sample_then_batch": True,
         },
         1000,
@@ -23,10 +20,7 @@ def test_command_gradnorm():
     # Test init works
     strat = GradNormDownsamplingStrategy(
         {
-            "limit": -1,
-            "reset_after_trigger": False,
-            "presampling_ratio": 80,
-            "downsampling_ratio": 10,
+            "ratio": 10,
             "sample_then_batch": True,
         },
         1000,

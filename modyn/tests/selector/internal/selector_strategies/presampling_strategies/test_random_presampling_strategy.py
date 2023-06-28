@@ -17,11 +17,8 @@ TMP_DIR = tempfile.mkdtemp()
 
 def get_config():
     return {
-        "reset_after_trigger": False,
-        "presampling_ratio": 50,
-        "limit": -1,
-        "presampling_strategy": "RandomPresamplingStrategy",
-        "downsampling_strategy": "EmptyDownsamplingStrategy",
+        "ratio": 50,
+        "strategy": "RandomPresamplingStrategy",
     }
 
 
@@ -90,12 +87,12 @@ def test_get_query_wrong():
 
 def test_constructor_throws_on_invalid_config():
     conf = get_config()
-    conf["presampling_ratio"] = 0
+    conf["ratio"] = 0
 
     with pytest.raises(ValueError):
         RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10, 1000)
 
-    conf["presampling_ratio"] = 101
+    conf["ratio"] = 101
 
     with pytest.raises(ValueError):
         RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10, 1000)
@@ -115,7 +112,9 @@ def test_dataset_size_various_scenarios():
     conf["reset_after_trigger"] = True
 
     # first trigger
-    strat = CoresetStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    strat = CoresetStrategy(
+        {"presampling_config": conf, "limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 0, 100
+    )
     presampling_strat: RandomPresamplingStrategy = strat.presampling_strategy
     strat.inform_data(data1, timestamps1, labels1)
     trigger_size = strat._get_dataset_size()

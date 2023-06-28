@@ -35,9 +35,8 @@ def get_minimal_modyn_config():
 def get_config():
     return {
         "reset_after_trigger": False,
-        "presampling_ratio": 50,
+        "presampling_config": {"ratio": 50, "strategy": "LabelBalanced"},
         "limit": -1,
-        "presampling_strategy": "LabelBalanced",
     }
 
 
@@ -211,7 +210,7 @@ def test_query_data_one_below_threshold():
 def test_query_data_one_below_threshold_balanced():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["force_label_balancing"] = True
+    config["presampling_config"]["force_label_balancing"] = True
     strat = CoresetStrategy(config, modyn_config, 0, 1000)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
@@ -234,7 +233,7 @@ def test_query_data_one_below_threshold_balanced():
 def test_query_data_below_target():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["presampling_ratio"] = 72  # to get 100 points as target
+    config["presampling_config"]["ratio"] = 72  # to get 100 points as target
     strat = CoresetStrategy(config, modyn_config, 0, 1000)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
@@ -259,8 +258,8 @@ def test_query_data_below_target():
 def test_query_data_below_target_forced():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["presampling_ratio"] = 72  # to get 100 points as target
-    config["force_required_target_size"] = True
+    config["presampling_config"]["ratio"] = 72  # to get 100 points as target
+    config["presampling_config"]["force_required_target_size"] = True
     strat = CoresetStrategy(config, modyn_config, 0, 1000)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
@@ -285,7 +284,7 @@ def test_query_data_below_target_forced():
 def test_query_data_one_below_threshold_force_size_but_already_ok():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["force_required_target_size"] = True
+    config["presampling_config"]["force_required_target_size"] = True
     strat = CoresetStrategy(config, modyn_config, 0, 1000)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy

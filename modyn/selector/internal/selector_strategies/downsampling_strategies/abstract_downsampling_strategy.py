@@ -14,31 +14,31 @@ class AbstractDownsamplingStrategy(ABC):
     forward pass.
 
     Args:
-        config (dict): The configuration for the selector.
+        downsampling_config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, maximum_keys_in_memory: int) -> None:
+    def __init__(self, downsampling_config: dict, maximum_keys_in_memory: int) -> None:
         super().__init__()
 
-        if "sample_then_batch" not in config:
+        if "sample_then_batch" not in downsampling_config:
             raise ValueError(
                 "Please specify if you want to sample and then batch or vice versa. "
                 "Use the sample_then_batch parameter"
             )
-        if config["sample_then_batch"]:
+        if downsampling_config["sample_then_batch"]:
             self.downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
         else:
             self.downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
-        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and "downsampling_period" in config:
-            raise ValueError("downsampling_period can be used only in sample-then-batch.")
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and "period" in downsampling_config:
+            raise ValueError("Downsampling period can be used only in sample-then-batch.")
 
-        self.downsampling_period = config.get("downsampling_period", 1)
+        self.downsampling_period = downsampling_config.get("period", 1)
 
-        if "downsampling_ratio" not in config:
-            raise ValueError("Please specify downsampling_ratio to use downsampling methods")
+        if "ratio" not in downsampling_config:
+            raise ValueError("Please specify downsampling ratio to use downsampling methods")
 
-        self.downsampling_ratio = config["downsampling_ratio"]
+        self.downsampling_ratio = downsampling_config["ratio"]
 
         if not (0 < self.downsampling_ratio <= 100) or not isinstance(self.downsampling_ratio, int):
             raise ValueError("The downsampling ratio must be an integer in (0,100)")
