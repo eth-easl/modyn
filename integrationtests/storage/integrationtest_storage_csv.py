@@ -1,7 +1,12 @@
-import io
+############
+# storage integration tests adapted to CSV input format.
+# Unchanged functions are imported from the original test
+# Instead of images, we have CSV files. Each file has 25 rows end each row has 5 columns.
+# f"A{index}file{file},B{index}file{file},C{index}file{file},{counter}"
+# where index is a random number, file is the fileindex and the label (last column) is a global counter
+
 import json
 import os
-import pathlib
 import random
 import time
 from typing import Tuple
@@ -9,19 +14,12 @@ from typing import Tuple
 # unchanged functions are imported from the original test file
 from integrationtests.storage.integrationtest_storage import connect_to_storage, create_dataset_dir, \
     check_get_current_timestamp, check_dataset_availability, get_new_data_since, \
-    get_data_in_interval, cleanup_dataset_dir, cleanup_storage_database
+    get_data_in_interval, cleanup_dataset_dir, cleanup_storage_database, DATASET_PATH
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetRequest, RegisterNewDatasetRequest,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 
-SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-
-TIMEOUT = 120  # seconds
-CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
-# The following path leads to a directory that is mounted into the docker container and shared with the
-# storage container.
-DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
 
 # Because we have no mapping of file to key (happens in the storage service), we have to keep
 # track of the samples we added to the dataset ourselves and compare them to the samples we get
@@ -53,7 +51,6 @@ def add_file_to_dataset(csv_file_content: str, name: str) -> None:
     with open(DATASET_PATH / name, "w") as f:
         f.write(csv_file_content)
     CSV_UPDATED_TIME_STAMPS.append(int(round(os.path.getmtime(DATASET_PATH / name) * 1000)))
-
 
 def create_random_csv_row(file: int, counter: int) -> str:
     index = random.randint(1, 1000)
