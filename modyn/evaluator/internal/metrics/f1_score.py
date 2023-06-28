@@ -18,7 +18,10 @@ VALID_SCORE_TYPES = {score_type.value for score_type in F1ScoreTypes}
 
 class F1Score(AbstractDecomposableMetric):
     """
-    F1-score implementation.
+    F1-score implementation. Configuration options:
+    - num_classes: the total number of classes.
+    - (optional) average: the method used to average f1-score in the multiclass setting (default macro).
+    - (optional) pos_label: the positive label used in binary classification (default 1), only its f1-score is returned.
     """
 
     def __init__(self, evaluation_transform_func: str, config: dict[str, Any]) -> None:

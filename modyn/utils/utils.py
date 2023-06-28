@@ -9,8 +9,8 @@ import random
 import sys
 import tempfile
 import time
-from inspect import isfunction
 from enum import Enum
+from inspect import isfunction
 from types import ModuleType
 from typing import Any, Callable, Optional
 

@@ -802,7 +802,14 @@ def test_create_trainer_with_exception(
 
     with tempfile.NamedTemporaryFile() as temp:
         train(
-            training_info, "cpu", pathlib.Path(temp.name), exception_queue, query_status_queue, status_queue, mp.Queue(), mp.Queue()
+            training_info,
+            "cpu",
+            pathlib.Path(temp.name),
+            exception_queue,
+            query_status_queue,
+            status_queue,
+            mp.Queue(),
+            mp.Queue(),
         )
         elapsed = 0
         while not (query_status_queue.empty() and status_queue.empty()):

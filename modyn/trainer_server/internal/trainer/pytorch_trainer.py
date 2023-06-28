@@ -7,8 +7,8 @@ import os
 import pathlib
 import queue
 import traceback
-from typing import Optional, Union, Tuple
 from enum import Enum
+from typing import Optional, Tuple, Union
 
 import grpc
 import torch
@@ -28,8 +28,8 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import (
     LABEL_TRANSFORMER_FUNC_NAME,
-    deserialize_function,
     DownsamplingMode,
+    deserialize_function,
     dynamic_module_import,
     grpc_connection_established,
     package_available_and_can_be_imported,
