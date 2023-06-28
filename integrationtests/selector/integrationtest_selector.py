@@ -170,11 +170,12 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         "config": {
             "limit": -1,
             "reset_after_trigger": reset_after_trigger,
-            "presampling_ratio": 20,
-            "downsampling_ratio": 10,
-            "presampling_strategy": "RandomPresamplingStrategy",
-            "downsampling_strategy": "LossDownsamplingStrategy",
-            "sample_then_batch": False,
+            "presampling_config": {"ratio": 20, "strategy": "Random"},
+            "downsampling_config": {
+                "ratio": 10,
+                "strategy": "Loss",
+                "sample_then_batch": False,
+            },
         },
     }
 

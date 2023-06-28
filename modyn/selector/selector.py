@@ -113,8 +113,9 @@ class Selector:
 
     def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
         if isinstance(self._strategy, CoresetStrategy):
+            requires_remote_computations = self._strategy.get_requires_remote_computation()
             return (
-                self._strategy.get_requires_remote_computation(),
+                requires_remote_computations,
                 self._strategy.get_downsampling_strategy(),
                 self._strategy.get_downsampling_params(),
             )

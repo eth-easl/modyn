@@ -117,30 +117,40 @@ properties:
                 type: string
                 description: |
                  [NewDataStrategy] Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true. Either "lastX" or "sampleUAR" are supported. See class description for further info.
-              presampling_strategy:
-                type: string
+              presampling_config:
+                type: object
                 description: |
-                  [CoresetStrategy] Strategy used to presample the data. Available strategies: Random, Empty (get all data)
-              downsampling_strategy:
-                type: string
+                  [CoresetStrategy] Config for the presampling strategy. If missing, no presampling is applied.
+                properties:
+                  strategy:
+                    type: string
+                    description: |
+                      Strategy used to presample the data. Available strategies: Random, Empty (get all data)
+                  ratio:
+                    type: number
+                    description: |
+                      Percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
+              downsampling_config:
+                type: object
                 description: |
-                  [CoresetStrategy] Strategy used to downsample the data. Available strategies: Loss, Gradnorm, Empty (no downsampling)
-              presampling_ratio:
-                type: number
-                description: |
-                  [CoresetStrategy] percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
-              sample_then_batch:
-                type: boolean
-                description: |
-                  [CoresetStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
-              downsampling_ratio:
-                type: number
-                description: |
-                  [CoresetStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Must be in (0,100).
-              downsampling_period:
-                type: number
-                description: |
-                  [CoresetStrategy] In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
+                  [CoresetStrategy] Config for the downsampling strategy. If missing, no downsampling is applied.
+                properties:
+                  strategy:
+                    type: string
+                    description: |
+                       Strategy used to downsample the data. Available strategies: Loss, Gradnorm, Empty (no downsampling)
+                  sample_then_batch:
+                    type: boolean
+                    description: |
+                      If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
+                  ratio:
+                    type: number
+                    description: |
+                      Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Must be in (0,100).
+                  period:
+                    type: number
+                    description: |
+                      In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
           processor_type:
             type: string
             description: |
