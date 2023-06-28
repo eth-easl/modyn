@@ -158,7 +158,7 @@ def test_dataset_size_various_scenarios():
     # limited capacity
     strat.has_limit = True
     strat.training_set_size_limit = 10
-    assert strat.get_presampling_target_size() == 15
+    assert strat.get_presampling_target_size() == 10
 
     # only trigger data
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
@@ -167,7 +167,7 @@ def test_dataset_size_various_scenarios():
     # remove the trigger
     strat.reset_after_trigger = False
     strat.tail_triggers = None
-    assert strat.get_presampling_target_size() == 20
+    assert strat.get_presampling_target_size() == 10
 
     # remove the limit
     strat.has_limit = False

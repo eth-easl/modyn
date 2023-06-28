@@ -294,3 +294,34 @@ class TriggerSampleStorage:
             file_path (str): File path to parse.
         """
         return np.load(file_path, allow_pickle=False, fix_imports=False, mmap_mode="r").shape[0]
+
+    def get_file_path(self, pipeline_id: int, trigger_id: int, partition_id: int, worker_id: int) -> Path:
+        return Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{worker_id}.npy"
+
+    def _get_files_for_trigger(self, pipeline_id: int, trigger_id: int) -> list[str]:
+        # here we filter the files belonging to the given pipeline and trigger
+
+        return list(
+            filter(
+                lambda file: file.startswith(f"{pipeline_id}_{trigger_id}_"),
+                os.listdir(self.trigger_sample_directory),
+            )
+        )
+
+    def get_trigger_num_data_partitions(self, pipeline_id: int, trigger_id: int) -> int:
+        # each file follows the structure {pipeline_id}_{trigger_id}_{partition_id}_{worker_id}
+
+        this_trigger_files = self._get_files_for_trigger(pipeline_id, trigger_id)
+
+        # then we count how many partitions we have (not just len(this_trigger_partitions) since there could be
+        # multiple workers for each partition
+        return len(set(file.split("_")[2] for file in this_trigger_files))
+
+    def clean_trigger_data(self, pipeline_id: int, trigger_id: int) -> None:
+        # remove all the files belonging to the given pipeline and trigger
+
+        if os.path.isdir(self.trigger_sample_directory):
+            this_trigger_files = self._get_files_for_trigger(pipeline_id, trigger_id)
+
+            for file in this_trigger_files:
+                os.remove(os.path.join(self.trigger_sample_directory, file))
