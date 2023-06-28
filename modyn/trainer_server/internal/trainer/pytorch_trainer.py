@@ -518,7 +518,7 @@ class PytorchTrainer:
         selected_ids, weights = self._downsampler.select_points()
 
         # to store all the selected (sample, weight).
-        file_size = self._num_dataloaders * self._batch_size  # should we add it to the pipeline?
+        file_size = self._num_dataloaders * self._batch_size  # TODO (283) investigate which size performs the best
         local_dataset = LocalDatasetWriter(
             self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size, self.offline_dataset_path
         )
