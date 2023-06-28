@@ -96,6 +96,10 @@ properties:
                 type: number
                 description: |
                   This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.
+              uses_weights:
+                type: boolean
+                description: |
+                  If set to true, weights are supplied from the selector and weighted SGD is used to train. By default, weights are ignored (uses_weights=False). Please note that this option is not related to Downsampling strategy, where weights are computed during training.
               reset_after_trigger:
                 type: boolean
                 description: |
@@ -125,10 +129,18 @@ properties:
                 type: number
                 description: |
                   [CoresetStrategy] percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
-              downsampled_batch_size:
+              sample_then_batch:
+                type: boolean
+                description: |
+                  [CoresetStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
+              downsampling_ratio:
                 type: number
                 description: |
-                  [CoresetStrategy] How many points are sampled after computing the metric. Ignored if Empty is used as downsampling_strategy
+                  [CoresetStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Must be in (0,100).
+              downsampling_period:
+                type: number
+                description: |
+                  [CoresetStrategy] In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
           processor_type:
             type: string
             description: |

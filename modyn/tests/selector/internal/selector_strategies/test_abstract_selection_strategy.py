@@ -7,10 +7,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.selector.internal.trigger_sample import TriggerSampleStorage
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()

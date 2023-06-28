@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from modyn.selector.internal.selector_strategies.abstract_presample_strategy import AbstractPresampleStrategy
+from modyn.utils import DownsamplingMode
 
 class AbstractDownsamplingStrategy(ABC):
 
@@ -15,14 +17,31 @@ class AbstractDownsamplingStrategy(ABC):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict):
-        if "downsampled_batch_size" not in config:
-            raise ValueError("To use downsampling strategies, you have to specify the downsampled_batch_size")
+    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
-        self.downsampled_batch_size = config["downsampled_batch_size"]
+        if "sample_then_batch" not in config:
+            raise ValueError(
+                "Please specify if you want to sample and then batch or vice versa. "
+                "Use the sample_then_batch parameter"
+            )
+        if config["sample_then_batch"]:
+            self.downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
+        else:
+            self.downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
-        if not isinstance(self.downsampled_batch_size, int):
-            raise ValueError("The downsampled batch size must be an integer")
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and "downsampling_period" in config:
+            raise ValueError("downsampling_period can be used only in sample-then-batch.")
+
+        self.downsampling_period = config.get("downsampling_period", 1)
+
+        if "downsampling_ratio" not in config:
+            raise ValueError("Please specify downsampling_ratio to use downsampling methods")
+
+        self.downsampling_ratio = config["downsampling_ratio"]
+
+        if not (0 < self.downsampling_ratio < 100) or not isinstance(self.downsampling_ratio, int):
+            raise ValueError("The downsampling ratio must be an integer in (0,100)")
 
         self.requires_remote_computation = True
 
@@ -33,6 +52,26 @@ class AbstractDownsamplingStrategy(ABC):
     def get_downsampling_strategy(self) -> str:
         raise NotImplementedError()
 
-    @abstractmethod
+    def get_training_status_bar_scale(self) -> int:
+        """
+        This function is used to create the downsampling status bar and handle the training one accordingly.
+
+        For BTS, we return 100 since the training status bar sees all the samples
+        For STB, we return the downsampling_ratio since the training status bar sees only a fraction of points
+        (while the downsampling status bas sees all the points)
+        """
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            return 100
+        return self.downsampling_ratio
+
     def get_downsampling_params(self) -> dict:
-        raise NotImplementedError
+        config = {
+            "downsampling_ratio": self.downsampling_ratio,
+            "maximum_keys_in_memory": self._maximum_keys_in_memory,
+            "sample_then_batch": self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH,
+        }
+
+        if self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
+            config["downsampling_period"] = self.downsampling_period
+
+        return config

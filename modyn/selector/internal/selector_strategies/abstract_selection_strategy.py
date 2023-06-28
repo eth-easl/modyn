@@ -7,9 +7,9 @@ from multiprocessing.managers import SharedMemoryManager
 from typing import Iterable, Optional
 
 import numpy as np
+from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
-from modyn.selector.internal.trigger_sample import TriggerSampleStorage
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ class AbstractSelectionStrategy(ABC):
         modyn_config (dict): the configurations for the modyn module
     """
 
+    # pylint: disable-next=too-many-branches
     def __init__(
         self,
         config: dict,
@@ -46,6 +47,12 @@ class AbstractSelectionStrategy(ABC):
         self.training_set_size_limit: int = config["limit"]
         self.has_limit = self.training_set_size_limit > 0
         self.reset_after_trigger: bool = config["reset_after_trigger"]
+
+        # weighted optimization (with weights supplied by the selector) is quite unusual, so the default us false
+        if "uses_weights" in config:
+            self.uses_weights = config["uses_weights"]
+        else:
+            self.uses_weights = False
 
         if "tail_triggers" in config:
             self.tail_triggers = config["tail_triggers"]
@@ -177,6 +184,7 @@ class AbstractSelectionStrategy(ABC):
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
+        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         trigger_id = self._next_trigger_id
         total_keys_in_trigger = 0
 

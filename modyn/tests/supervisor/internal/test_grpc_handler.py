@@ -382,7 +382,7 @@ def test_trainer_server_available(test_connection_established):
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def get_number_of_samples(test_connection_established):
+def test_get_number_of_samples(test_connection_established):
     mgr = enlighten.get_manager()
     pbar = mgr.status_bar(
         status_format="Test",
@@ -438,18 +438,19 @@ def test_wait_for_training_completion(test_connection_established):
     )
 
     with patch.object(GRPCHandler, "get_number_of_samples", return_value=22):
-        handler = GRPCHandler(get_simple_config(), mgr, pbar)
-        assert handler.trainer_server is not None
+        with patch.object(GRPCHandler, "get_status_bar_scale", return_value=100):
+            handler = GRPCHandler(get_simple_config(), mgr, pbar)
+            assert handler.trainer_server is not None
 
-        with patch.object(
-            handler.trainer_server,
-            "get_training_status",
-            return_value=TrainingStatusResponse(
-                valid=True, blocked=False, exception=None, state_available=False, is_running=False
-            ),
-        ) as avail_method:
-            handler.wait_for_training_completion(42, 21, 22)
-            avail_method.assert_called_once()
+            with patch.object(
+                handler.trainer_server,
+                "get_training_status",
+                return_value=TrainingStatusResponse(
+                    valid=True, blocked=False, exception=None, state_available=False, is_running=False
+                ),
+            ) as avail_method:
+                handler.wait_for_training_completion(42, 21, 22)
+                avail_method.assert_called_once()
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

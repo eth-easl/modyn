@@ -50,9 +50,10 @@ def get_config():
         "downsampling_strategy": "EmptyDownsamplingStrategy",
     }
 
-
 def get_config_all():
     return {"reset_after_trigger": False, "limit": -1, "downsampling_strategy": "Loss", "downsampled_batch_size": 10}
+
+
 
 
 def test_init():

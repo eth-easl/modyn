@@ -196,6 +196,36 @@ class NumberOfSamplesResponse(google.protobuf.message.Message):
 global___NumberOfSamplesResponse = NumberOfSamplesResponse
 
 @typing_extensions.final
+class GetStatusBarScaleRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+
+global___GetStatusBarScaleRequest = GetStatusBarScaleRequest
+
+@typing_extensions.final
+class StatusBarScaleResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    STATUS_BAR_SCALE_FIELD_NUMBER: builtins.int
+    status_bar_scale: builtins.int
+    def __init__(
+        self,
+        *,
+        status_bar_scale: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["status_bar_scale", b"status_bar_scale"]) -> None: ...
+
+global___StatusBarScaleResponse = StatusBarScaleResponse
+
+@typing_extensions.final
 class GetNumberOfPartitionsRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -249,22 +279,52 @@ class SelectionStrategyResponse(google.protobuf.message.Message):
 
     DOWNSAMPLING_ENABLED_FIELD_NUMBER: builtins.int
     STRATEGY_NAME_FIELD_NUMBER: builtins.int
-    PARAMS_FIELD_NUMBER: builtins.int
+    DOWNSAMPLER_CONFIG_FIELD_NUMBER: builtins.int
     downsampling_enabled: builtins.bool
     strategy_name: builtins.str
     @property
-    def params(self) -> global___JsonString: ...
+    def downsampler_config(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
         downsampling_enabled: builtins.bool = ...,
         strategy_name: builtins.str = ...,
-        params: global___JsonString | None = ...,
+        downsampler_config: global___JsonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["params", b"params"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["downsampling_enabled", b"downsampling_enabled", "params", b"params", "strategy_name", b"strategy_name"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["downsampler_config", b"downsampler_config"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["downsampler_config", b"downsampler_config", "downsampling_enabled", b"downsampling_enabled", "strategy_name", b"strategy_name"]) -> None: ...
 
 global___SelectionStrategyResponse = SelectionStrategyResponse
+
+@typing_extensions.final
+class UsesWeightsRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+
+global___UsesWeightsRequest = UsesWeightsRequest
+
+@typing_extensions.final
+class UsesWeightsResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    USES_WEIGHTS_FIELD_NUMBER: builtins.int
+    uses_weights: builtins.bool
+    def __init__(
+        self,
+        *,
+        uses_weights: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["uses_weights", b"uses_weights"]) -> None: ...
+
+global___UsesWeightsResponse = UsesWeightsResponse
 
 @typing_extensions.final
 class SeedSelectorRequest(google.protobuf.message.Message):
