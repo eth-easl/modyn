@@ -53,7 +53,6 @@ class SchedulerDownsamplingStrategy(AbstractDownsamplingStrategy):
         self._supervisor_counter = 0
 
     def get_requires_remote_computation(self) -> bool:
-        print(f"REQUIRES. Counter: {self.counter}, Sup: {self._supervisor_counter}, Tra: {self._trainer_counter}")
 
         if self._trainer_counter == self._supervisor_counter == self.counter:
             # increment the counters
@@ -70,7 +69,6 @@ class SchedulerDownsamplingStrategy(AbstractDownsamplingStrategy):
         return self.second_downsampler.get_requires_remote_computation()
 
     def get_training_status_bar_scale(self) -> int:
-        print(f"SCALE. Counter: {self.counter}, Sup: {self._supervisor_counter}, Tra: {self._trainer_counter}")
 
         if self._trainer_counter == self._supervisor_counter == self.counter:
             # increment the counters
@@ -87,14 +85,12 @@ class SchedulerDownsamplingStrategy(AbstractDownsamplingStrategy):
         return self.second_downsampler.get_training_status_bar_scale()
 
     def get_downsampling_strategy(self) -> str:
-        print(f"STRATEGY. Counter: {self.counter}, Sup: {self._supervisor_counter}, Tra: {self._trainer_counter}")
 
         if self.counter <= self.threshold:
             return self.first_downsampler.get_downsampling_strategy()
         return self.second_downsampler.get_downsampling_strategy()
 
     def get_downsampling_params(self) -> dict:
-        print(f"PARAMS. Counter: {self.counter}, Sup: {self._supervisor_counter}, Tra: {self._trainer_counter}")
 
         if self.counter <= self.threshold:
             return self.first_downsampler.get_downsampling_params()
