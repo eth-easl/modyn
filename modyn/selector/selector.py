@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Dict
 
-from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.common.trigger_sample import TriggerSampleStorage
+from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.utils.utils import flatten
 
@@ -97,10 +97,10 @@ class Selector:
 
     def get_status_bar_scale(self) -> int:
         # the status bar scale is only meaningful if we are using a Downsampling strategy. Otherwise, it's always 100%
-        if not isinstance(self._strategy, AbstractDownsampleStrategy):
+        if not isinstance(self._strategy, CoresetStrategy):
             return 100
 
-        return self._strategy.get_training_status_bar_scale()
+        return self._strategy.downsampling_strategy.get_training_status_bar_scale()
 
     def get_number_of_partitions(self, trigger_id: int) -> int:
         if trigger_id not in self._trigger_partition_cache:
@@ -112,8 +112,6 @@ class Selector:
         return self._strategy.uses_weights
 
     def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
-        assert not (self._strategy.requires_remote_computation and not isinstance(self._strategy, CoresetStrategy))
-
         if isinstance(self._strategy, CoresetStrategy):
             return (
                 self._strategy.get_requires_remote_computation(),

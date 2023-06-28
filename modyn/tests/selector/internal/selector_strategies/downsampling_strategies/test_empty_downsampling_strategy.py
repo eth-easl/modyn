@@ -8,7 +8,8 @@ def test_init_empty():
             "limit": -1,
             "reset_after_trigger": False,
             "presampling_ratio": 80,
-        }
+        },
+        1000,
     )
 
     assert not strat.requires_remote_computation

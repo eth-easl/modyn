@@ -23,7 +23,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
             config, modyn_config, pipeline_id, maximum_keys_in_memory
         )
 
-        self.downsampling_strategy: AbstractDownsamplingStrategy = self._instantiate_downsampler(config)
+        self.downsampling_strategy: AbstractDownsamplingStrategy = self._instantiate_downsampler(
+            config, maximum_keys_in_memory
+        )
 
         if isinstance(self.presampling_strategy, EmptyPresamplingStrategy) and isinstance(
             self.downsampling_strategy, EmptyDownsamplingStrategy
@@ -60,10 +62,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
             maximum_keys_in_memory,
         )
 
-    def _instantiate_downsampler(
-        self,
-        config: dict,
-    ) -> AbstractDownsamplingStrategy:
+    def _instantiate_downsampler(self, config: dict, maximum_keys_in_memory: int) -> AbstractDownsamplingStrategy:
         downsampling_strategy_module = dynamic_module_import(
             "modyn.selector.internal.selector_strategies.downsampling_strategies"
         )
@@ -80,9 +79,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
             downsampling_strategy = long_name
 
         downsampling_class = getattr(downsampling_strategy_module, downsampling_strategy)
-        return downsampling_class(
-            config,
-        )
+        return downsampling_class(config, maximum_keys_in_memory)
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         assert len(keys) == len(timestamps)

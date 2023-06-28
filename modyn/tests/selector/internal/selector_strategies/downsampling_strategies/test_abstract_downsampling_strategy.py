@@ -33,7 +33,7 @@ def get_config():
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_size": 10,
+        "downsampling_ratio": 10,
         "presampling_strategy": "RandomPresamplingStrategy",
     }
 
@@ -57,37 +57,38 @@ def test_constructor_invalid_config():
         "presampling_ratio": 50,
         "limit": -1,
         "presampling_strategy": "RandomPresamplingStrategy",
+        "sample_then_batch": True,
     }
 
     with pytest.raises(ValueError):
-        AbstractDownsamplingStrategy(conf)
+        AbstractDownsamplingStrategy(conf, 1000)
 
     conf = {
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_size": 0.10,
+        "downsampling_ratio": 0.10,
         "presampling_strategy": "RandomPresamplingStrategy",
+        "sample_then_batch": True,
     }
 
     # float downsampling_ratio
     with pytest.raises(ValueError):
-        AbstractDownsamplingStrategy(
-            conf,
-        )
+        AbstractDownsamplingStrategy(conf, 1000)
 
     conf = {
         "reset_after_trigger": False,
         "presampling_ratio": 50,
         "limit": -1,
-        "downsampled_batch_size": 10,
+        "downsampling_ratio": 10,
         "presampling_strategy": "RandomPresamplingStrategy",
+        "sample_then_batch": True,
     }
-    ads = AbstractDownsamplingStrategy(conf)
+    ads = AbstractDownsamplingStrategy(conf, 1000)
 
     assert ads.requires_remote_computation
     assert ads.requires_remote_computation == ads.get_requires_remote_computation()
-    assert ads.downsampled_batch_size == 10
+    assert ads.downsampling_ratio == 10
 
     with pytest.raises(NotImplementedError):
         ads.get_downsampling_strategy()

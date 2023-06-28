@@ -7,12 +7,17 @@ class EmptyDownsamplingStrategy(AbstractDownsamplingStrategy):
 
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, maximum_keys_in_memory: int) -> None:
         # just to deal with exceptions in parent class
-        if "downsampled_batch_size" not in config:
-            config["downsampled_batch_size"] = 0
+        if "downsampling_ratio" in config:
+            raise ValueError("EmptyDownsamplingStrategy has no downsampling ratio.")
+        config["downsampling_ratio"] = 100
 
-        super().__init__(config)
+        if "sample_then_batch" in config:
+            raise ValueError("EmptyDownsamplingStrategy has no downsampling mode (sample_then_batch.")
+        config["sample_then_batch"] = True
+
+        super().__init__(config, maximum_keys_in_memory)
         self.requires_remote_computation = False
 
     def get_downsampling_strategy(self) -> str:

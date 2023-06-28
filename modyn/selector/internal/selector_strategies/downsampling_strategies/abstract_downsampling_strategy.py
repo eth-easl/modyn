@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from modyn.selector.internal.selector_strategies.abstract_presample_strategy import AbstractPresampleStrategy
 from modyn.utils import DownsamplingMode
+
 
 class AbstractDownsamplingStrategy(ABC):
 
@@ -17,8 +17,8 @@ class AbstractDownsamplingStrategy(ABC):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    def __init__(self, config: dict, maximum_keys_in_memory: int) -> None:
+        super().__init__()
 
         if "sample_then_batch" not in config:
             raise ValueError(
@@ -40,10 +40,11 @@ class AbstractDownsamplingStrategy(ABC):
 
         self.downsampling_ratio = config["downsampling_ratio"]
 
-        if not (0 < self.downsampling_ratio < 100) or not isinstance(self.downsampling_ratio, int):
+        if not (0 < self.downsampling_ratio <= 100) or not isinstance(self.downsampling_ratio, int):
             raise ValueError("The downsampling ratio must be an integer in (0,100)")
 
         self.requires_remote_computation = True
+        self.maximum_keys_in_memory = maximum_keys_in_memory
 
     def get_requires_remote_computation(self) -> bool:
         return self.requires_remote_computation
@@ -67,7 +68,7 @@ class AbstractDownsamplingStrategy(ABC):
     def get_downsampling_params(self) -> dict:
         config = {
             "downsampling_ratio": self.downsampling_ratio,
-            "maximum_keys_in_memory": self._maximum_keys_in_memory,
+            "maximum_keys_in_memory": self.maximum_keys_in_memory,
             "sample_then_batch": self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH,
         }
 

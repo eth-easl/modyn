@@ -50,10 +50,15 @@ def get_config():
         "downsampling_strategy": "EmptyDownsamplingStrategy",
     }
 
+
 def get_config_all():
-    return {"reset_after_trigger": False, "limit": -1, "downsampling_strategy": "Loss", "downsampled_batch_size": 10}
-
-
+    return {
+        "reset_after_trigger": False,
+        "limit": -1,
+        "downsampling_strategy": "Loss",
+        "downsampling_ratio": 10,
+        "sample_then_batch": True,
+    }
 
 
 def test_init():
@@ -181,7 +186,8 @@ def test_no_presampling():
     config["presampling_strategy"] = "Empty"
     config["presampling_ratio"] = 100
     config["downsampling_strategy"] = "Loss"
-    config["downsampled_batch_size"] = 10
+    config["downsampling_ratio"] = 10
+    config["sample_then_batch"] = True
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
