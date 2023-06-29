@@ -1,14 +1,14 @@
 pipeline:
-  name: ArXiv dataset Test Pipeline
+  name: Huffpost dataset Test Pipeline
   description: Example pipeline
   version: 1.0.0
 model:
   id: DistilBertNet
   config:
-    num_classes: 172
+    num_classes: 55
 training:
   gpus: 1
-  device: "cuda:0"
+  device: "cpu"
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
@@ -35,12 +35,15 @@ training:
       limit: -1
       reset_after_trigger: True
 data:
-  dataset_id: arxiv
+  dataset_id: huffpost
+  transformations: ["DistilBertTokenizerTransform(300)"]
   bytes_parser_function: |
     import numpy as np
     import io
-    def bytes_parser_function(data: bytes) -> str:
-      return data.decode("utf-8")
+    
+    def bytes_parser_function(data: bytes) -> np.ndarray:
+      return np.load(io.BytesIO(data)).item()
+    
 
 trigger:
   id: TimeTrigger
