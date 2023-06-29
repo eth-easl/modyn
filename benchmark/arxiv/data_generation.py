@@ -92,7 +92,7 @@ class ArXivDownloader(Dataset):
             for i in range(len(self._dataset[year][0]["title"])):
                 text = self._dataset[year][0]["title"][i].replace("\n", " ")
                 label = self._dataset[year][0]["category"][i]
-                csv_row = f"{text};{label}"
+                csv_row = f"{text}\t{label}"
                 year_rows.append(csv_row)
 
             #store the year file
