@@ -4,7 +4,7 @@ import os
 import pathlib
 import queue
 from threading import Lock
-from typing import Any, Optional, Union
+from typing import Any, Optional, Tuple, Union
 
 import grpc
 import torch
@@ -61,7 +61,7 @@ class TrainerServerGRPCServicer:
         self.model_storage_stub = TrainerServerGRPCServicer.connect_to_model_storage(
             f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
         )
-
+        self._offline_dataset_directory = self._config["trainer_server"]["offline_dataset_directory"]
         logger.info("TrainerServer gRPC Servicer initialized.")
 
     @staticmethod
@@ -137,14 +137,19 @@ class TrainerServerGRPCServicer:
             training_id,
             self._storage_address,
             self._selector_address,
+            self._offline_dataset_directory,
             final_checkpoint_path,
             pretrained_model_path,
         )
         self._training_dict[training_id] = training_info
 
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        status_query_queue_training: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        status_response_queue_training: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+
+        status_query_queue_downsampling: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        # pylint: disable-next=unsubscriptable-object
+        status_response_queue_downsampling: mp.Queue[dict[str, Any]] = mp.Queue()
 
         process = mp.Process(
             target=train,
@@ -153,18 +158,26 @@ class TrainerServerGRPCServicer:
                 request.device,
                 self._modyn_base_dir / f"log-{training_id}.txt",
                 exception_queue,
-                status_query_queue,
-                status_response_queue,
+                status_query_queue_training,
+                status_response_queue_training,
+                status_query_queue_downsampling,
+                status_response_queue_downsampling,
             ),
         )
         process.start()
         self._training_process_dict[training_id] = TrainingProcessInfo(
-            process, exception_queue, status_query_queue, status_response_queue
+            process,
+            exception_queue,
+            status_query_queue_training,
+            status_response_queue_training,
+            status_query_queue_downsampling,
+            status_response_queue_downsampling,
         )
 
         logger.info(f"Started training {training_id}")
         return StartTrainingResponse(training_started=True, training_id=training_id)
 
+    # pylint: disable-next=too-many-locals
     def get_training_status(
         self,
         request: TrainingStatusRequest,
@@ -180,14 +193,25 @@ class TrainerServerGRPCServicer:
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
             logger.info(f"Training {training_id} is still running, obtaining info from running process.")
-            num_batches, num_samples = self.get_status(training_id)
+            (
+                is_training,
+                downsampling_num_batches,
+                downsampling_num_samples,
+                training_num_batches,
+                training_num_samples,
+            ) = self.get_values_from_queues(training_id)
+
             response_kwargs_running: dict[str, Any] = {
                 "valid": True,
                 "is_running": True,
-                "blocked": num_batches is None,
-                "state_available": num_batches is not None and num_samples is not None,
-                "batches_seen": num_batches,
-                "samples_seen": num_samples,
+                "is_training": is_training,
+                "blocked": training_num_batches is None and downsampling_num_batches is None,
+                "state_available": (training_num_batches is not None and training_num_samples is not None)
+                or (downsampling_num_batches is not None and downsampling_num_samples is not None),
+                "batches_seen": training_num_batches,
+                "samples_seen": training_num_samples,
+                "downsampling_batches_seen": downsampling_num_batches,
+                "downsampling_samples_seen": downsampling_num_samples,
             }
             cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v is not None}
             return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
@@ -197,6 +221,7 @@ class TrainerServerGRPCServicer:
         response_kwargs_finished: dict[str, Any] = {
             "valid": True,
             "is_running": False,
+            "is_training": False,
             "blocked": False,
             "state_available": num_batches is not None and num_samples is not None,
             "exception": exception,
@@ -205,6 +230,83 @@ class TrainerServerGRPCServicer:
         }
         cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v is not None}
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
+
+    def get_values_from_queues(
+        self, training_id: int
+    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+        was_training = self._training_process_dict[training_id].was_training
+
+        if was_training:
+            (
+                is_training,
+                downsampling_num_batches,
+                downsampling_num_samples,
+                training_num_batches,
+                training_num_samples,
+            ) = self._handle_was_training(training_id)
+        else:
+            (
+                is_training,
+                downsampling_num_batches,
+                downsampling_num_samples,
+                training_num_batches,
+                training_num_samples,
+            ) = self._handle_was_not_training(training_id)
+
+        if is_training is not None:
+            self._training_process_dict[training_id].was_training = is_training
+
+        return (
+            is_training,
+            downsampling_num_batches,
+            downsampling_num_samples,
+            training_num_batches,
+            training_num_samples,
+        )
+
+    def _handle_was_not_training(
+        self, training_id: int
+    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+        downsampling_num_batches, downsampling_num_samples, is_training = self.get_status_downsampling(
+            training_id, timeout=15
+        )
+        if is_training:
+            # clean the downsampling queue (downsampling is ended)
+            self.clean_downsampling_queue(training_id)
+        # read the second queue only if the first one is empty
+        if downsampling_num_batches is None:
+            training_num_batches, training_num_samples, is_training = self.get_status_training(training_id, timeout=15)
+        else:
+            training_num_batches, training_num_samples = None, None
+        return (
+            is_training,
+            downsampling_num_batches,
+            downsampling_num_samples,
+            training_num_batches,
+            training_num_samples,
+        )
+
+    def _handle_was_training(
+        self, training_id: int
+    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+        training_num_batches, training_num_samples, is_training = self.get_status_training(training_id, timeout=15)
+        if not is_training:
+            # clean the training queue (epoch is finished)
+            self.clean_training_queue(training_id)
+        # read the second queue only if the first one is empty
+        if training_num_batches is None:
+            downsampling_num_batches, downsampling_num_samples, is_training = self.get_status_downsampling(
+                training_id, timeout=15
+            )
+        else:
+            downsampling_num_batches, downsampling_num_samples = None, None
+        return (
+            is_training,
+            downsampling_num_batches,
+            downsampling_num_samples,
+            training_num_batches,
+            training_num_samples,
+        )
 
     def store_final_model(
         self,
@@ -280,22 +382,48 @@ class TrainerServerGRPCServicer:
             return GetLatestModelResponse(valid_state=True, model_path=prefix_path)
         return GetLatestModelResponse(valid_state=False)
 
-    def get_status(self, training_id: int) -> tuple[Optional[int], Optional[int]]:
-        status_query_queue = self._training_process_dict[training_id].status_query_queue
+    def get_status_training(
+        self, training_id: int, timeout: float = 30
+    ) -> tuple[Optional[int], Optional[int], Optional[bool]]:
+        status_query_queue = self._training_process_dict[training_id].status_query_queue_training
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
-            # blocks for 30 seconds
-            response = self._training_process_dict[training_id].status_response_queue.get(timeout=30)
-            return response["num_batches"], response["num_samples"]
+            # blocks for timeout seconds
+            response = self._training_process_dict[training_id].status_response_queue_training.get(timeout=timeout)
+            return response["num_batches"], response["num_samples"], response["training_active"]
         except queue.Empty:
-            return None, None
+            return None, None, None
+
+    def clean_training_queue(self, training_id: int) -> None:
+        training_queue = self._training_process_dict[training_id].status_response_queue_training
+        while not training_queue.empty():
+            # blocks for 30 seconds
+            _ = training_queue.get()
+
+    def clean_downsampling_queue(self, training_id: int) -> None:
+        downsampling_queue = self._training_process_dict[training_id].status_response_queue_downsampling
+        while not downsampling_queue.empty():
+            # blocks for 30 seconds
+            _ = downsampling_queue.get()
+
+    def get_status_downsampling(
+        self, training_id: int, timeout: float
+    ) -> tuple[Optional[int], Optional[int], Optional[bool]]:
+        status_query_queue = self._training_process_dict[training_id].status_query_queue_downsampling
+        status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+        try:
+            # blocks for timeout seconds
+            response = self._training_process_dict[training_id].status_response_queue_downsampling.get(timeout=timeout)
+            return response["num_batches"], response["num_samples"], response["training_active"]
+        except queue.Empty:
+            return None, None, None
 
     def get_model_state(self, training_id: int) -> Optional[bytes]:
-        status_query_queue = self._training_process_dict[training_id].status_query_queue
+        status_query_queue = self._training_process_dict[training_id].status_query_queue_training
         status_query_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
         try:
-            # blocks for 30 seconds
-            response = self._training_process_dict[training_id].status_response_queue.get(timeout=30)
+            # blocks for timeout seconds
+            response = self._training_process_dict[training_id].status_response_queue_training.get(timeout=30)
             return response
         except queue.Empty:
             return None

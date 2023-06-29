@@ -3,9 +3,9 @@
 $schema: "http://json-schema.org/draft-04/schema"
 id: "http://stsci.edu/schemas/yaml-schema/draft-01"
 title:
-  Dynamic Datasets DSL Project Configuration
+  Modyn Configuration
 description: |
-  This is the configuration file for the Dynamic Datasets DSL Project.
+  This is the configuration file for the Modyn.
   It contains the configuration for the system, adapt as required.
 properties:
   project:
@@ -37,7 +37,8 @@ properties:
       sample_batch_size:
         type: number
         description: |
-          The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce the size of a single answer the keys are batched in sizes of `sample_batch_size`.
+          The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce 
+          the size of a single answer the keys are batched in sizes of `sample_batch_size`.
       sample_dbinsertion_batchsize:
         type: number
         description: |
@@ -49,7 +50,9 @@ properties:
       sample_table_unlogged:
         type: boolean
         description: |
-          This configures whether the table storing all samples is UNLOGGED (= high performance) or crash resilient. Defaults to True. For datasets with many samples (such as Criteo), this is recommended for highest insertion performance. In other scenarios, this might not be necessary.
+          This configures whether the table storing all samples is UNLOGGED (= high performance) or crash resilient. 
+          Defaults to True. For datasets with many samples (such as Criteo), this is recommended for highest insertion performance. 
+          In other scenarios, this might not be necessary.
       force_fallback_insert:
         type: boolean
         description: |
@@ -99,15 +102,39 @@ properties:
                 record_size:
                   type: number
                   description: |
-                    The size of each full record in bytes (label + features) for a binary file wrapper.
+                    [BinaryFileWrapper] The size of each full record in bytes (label + features).
                 label_size:
                   type: number
                   description: |
-                    The size of the label field in bytes for a binary file wrapper.
+                    [BinaryFileWrapper] The size of the label field in bytes for a binary file wrapper.
                 byteorder:
                   type: string
                   description: |
-                    The byteorder when reading an integer from multibyte data in a binary file. Should either be "big" or "little".
+                    [BinaryFileWrapper] The byteorder when reading an integer from multibyte data in a binary file. 
+                    Should either be "big" or "little".
+                separator:
+                  type: string
+                  description: |
+                    [CsvFileWrapper] The separator used in the CSV file. The default is ",".
+                label_index:
+                  type: number
+                  description: |
+                    [CsvFileWrapper] Column index of the label.
+                    For example, if the columns are "width", "height", "age", "label" you should set label_index to 3.
+                ignore_first_line:
+                  type: boolean
+                  description: |
+                    [CsvFileWrapper] If the first line is the table header, you can skip it setting this parameter to True. 
+                    Default is False.
+                encoding:
+                  type: string
+                  description: |
+                    [CsvFileWrapper] Encoding of the CSV file. Default is utf-8.
+                validate_file_content:
+                  type: boolean
+                  description: |
+                    [CsvFileWrapper] Whether to validate the file content before inserting the data. It checks that it 
+                    is a csv, that all rows are the same size and that the 'label' column exists. Default is True
             ignore_last_timestamp:
               type: boolean
               description: |
@@ -303,14 +330,27 @@ properties:
     trainer_server:
       type: object
       properties:
-      port:
-        type: string
-        description: |
-          The port to use for the trainer_server grpc service.
-      hostname:
-        type: string
-        description: |
-          The hostname to use for the trainer_server grpc service.
+        hostname:
+          type: string
+          description: |
+            The hostname to use for the trainer_server grpc service.
+        port:
+          type: string
+          description: |
+            The port to use for the trainer_server grpc service.
+        ftp_port:
+          type: string
+          description: |
+            The port of the FDP server used by the trainer_server component.
+        offline_dataset_directory:
+          type: string
+          description: |
+            The directory where the selected samples are stored when downsampling in Sample-then-batch mode is used.
+      required:
+        - hostname
+        - port
+        - ftp_port
+        - offline_dataset_directory
 required:
   - project
   - storage

@@ -11,6 +11,7 @@ from .utils import (  # noqa: F401
     EVALUATION_TRANSFORMER_FUNC_NAME,
     LABEL_TRANSFORMER_FUNC_NAME,
     MAX_MESSAGE_SIZE,
+    DownsamplingMode,
     convert_timestr_to_seconds,
     current_time_millis,
     deserialize_function,

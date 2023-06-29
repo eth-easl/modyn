@@ -83,6 +83,7 @@ trainer_server:
   hostname: "trainer_server"
   port: "50057"
   ftp_port: "50058"
+  offline_dataset_directory: "/tmp/offline_dataset"
 
 model_storage:
   hostname: "model_storage"
