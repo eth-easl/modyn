@@ -1,55 +1,26 @@
-import argparse
-import logging
 import os
-import pathlib
 import pickle
 
-import gdown
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from benchmark.utils import setup_argparser_wildtime, maybe_download, setup_logger, create_binary_file, create_fake_timestamp
 
-def maybe_download(drive_id, destination_dir, destination_file_name):
-    """
-    Function to download data from Google Drive. Used for Wild-time based benchmarks.
-    This function is adapted from wild-time-data
-    """
-    destination_dir = pathlib.Path(destination_dir)
-    destination = destination_dir / destination_file_name
-    if destination.exists():
-        return
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    gdown.download(
-        url=f"https://drive.google.com/u/0/uc?id={drive_id}&export=download&confirm=pbef",
-        output=str(destination),
-        quiet=False,
-    )
+logger = setup_logger()
 
-logging.basicConfig(
-    level=logging.NOTSET,
-    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d:%H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
-def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description="FMoW Benchmark Storage Script")
-    parser_.add_argument(
-        "--dir", type=pathlib.Path, action="store", help="Path to data directory"
-    )
-
-    return parser_
+DAY_LENGTH_SECONDS = 24 * 60 * 60
 
 
 def main():
-    parser = setup_argparser()
+    parser = setup_argparser_wildtime("Yearbook")
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = YearbookDownloader(args.dir)
     downloader.store_data()
+
 
 class YearbookDownloader(Dataset):
     time_steps = [i for i in range(1930, 2014)]
@@ -84,30 +55,6 @@ class YearbookDownloader(Dataset):
     def __len__(self):
         return len(self._dataset["labels"])
 
-    def _get_timestamp(self, year: int) -> int:
-        """Yearbook data spans from 1930 to 2013. Since we use os timestamps, each year is mapped to a day starting from
-        1/1/1970"""
-        DAY_LENGTH_SECONDS = 24 * 60 * 60
-        timestamp = ((year - 1930) * DAY_LENGTH_SECONDS) + 1
-        return timestamp
-
-    def _create_binary_file(self, data, output_file_name: str, year: int):
-
-        with open(output_file_name, "wb") as f:
-            for tensor1, tensor2 in data:
-
-                features_bytes = tensor1.numpy().tobytes()
-                label_integer = tensor2.item()
-
-                features_size = len(features_bytes)
-                assert features_size == 4096
-
-                f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
-                f.write(features_bytes)
-
-        timestamp = self._get_timestamp(year)
-        os.utime(output_file_name, (timestamp, timestamp))
-
     def store_data(self):
         # create directories
         if not os.path.exists(self.data_dir):
@@ -116,9 +63,12 @@ class YearbookDownloader(Dataset):
         for year in self.time_steps:
             print(f"Saving data for year {year}")
             ds = self._get_year_data(year)
-            self._create_binary_file(ds, os.path.join(self.data_dir, f"{year}.bin"), year)
+            create_binary_file(ds,
+                               os.path.join(self.data_dir, f"{year}.bin"),
+                               create_fake_timestamp(year, base_year=1930))
 
         os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
+
 
 if __name__ == "__main__":
     main()
