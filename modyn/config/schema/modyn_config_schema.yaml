@@ -3,9 +3,9 @@
 $schema: "http://json-schema.org/draft-04/schema"
 id: "http://stsci.edu/schemas/yaml-schema/draft-01"
 title:
-  Dynamic Datasets DSL Project Configuration
+  Modyn Configuration
 description: |
-  This is the configuration file for the Dynamic Datasets DSL Project.
+  This is the configuration file for the Modyn.
   It contains the configuration for the system, adapt as required.
 properties:
   project:
@@ -173,6 +173,26 @@ properties:
       - sample_batch_size
       - insertion_threads
 
+  model_storage:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the model_storage grpc service.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the model_storage grpc service.
+      ftp_port:
+        type: string
+        description: |
+          The port of the FDP server used by the model_storage component.
+    required:
+      - hostname
+      - port
+      - ftp_port
+
   metadata_database:
     type: object
     properties:
@@ -204,6 +224,10 @@ properties:
         type: number
         description: |
           The modulus to use for the hash partitioning of the metadata.
+      seed:
+        type: number
+        description: |
+          If provided, this number is used to seed the database. Must be in [-1,1].
     required:
       - drivername
       - username
@@ -267,14 +291,27 @@ properties:
     trainer_server:
       type: object
       properties:
-      port:
-        type: string
-        description: |
-          The port to use for the trainer_server grpc service.
-      hostname:
-        type: string
-        description: |
-          The hostname to use for the trainer_server grpc service.
+        hostname:
+          type: string
+          description: |
+            The hostname to use for the trainer_server grpc service.
+        port:
+          type: string
+          description: |
+            The port to use for the trainer_server grpc service.
+        ftp_port:
+          type: string
+          description: |
+            The port of the FDP server used by the trainer_server component.
+        offline_dataset_directory:
+          type: string
+          description: |
+            The directory where the selected samples are stored when downsampling in Sample-then-batch mode is used.
+      required:
+        - hostname
+        - port
+        - ftp_port
+        - offline_dataset_directory
 required:
   - project
   - storage

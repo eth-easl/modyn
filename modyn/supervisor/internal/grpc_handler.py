@@ -1,19 +1,22 @@
 # pylint: disable=no-name-in-module
 import json
 import logging
-import os
-import pathlib
-from ftplib import FTP
 from time import sleep
-from typing import Any, Iterable, Optional
+from typing import Iterable, Optional
 
 import enlighten
 import grpc
-from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, GetNumberOfSamplesRequest
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    DataInformRequest,
+    GetNumberOfSamplesRequest,
+    GetStatusBarScaleRequest,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
+    SeedSelectorRequest,
+    StatusBarScaleResponse,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -27,24 +30,22 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    CheckpointInfo,
-    Data,
-    GetFinalModelRequest,
-    GetFinalModelResponse,
-)
+from modyn.supervisor.internal.supervisor_counter import SupervisorCounter
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     PythonString,
     StartTrainingRequest,
     StartTrainingResponse,
+    StoreFinalModelRequest,
+    StoreFinalModelResponse,
     TrainerAvailableRequest,
     TrainerAvailableResponse,
     TrainingStatusRequest,
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.utils import MAX_MESSAGE_SIZE, current_time_millis, grpc_connection_established
+from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -218,44 +219,9 @@ class GRPCHandler:
         # TODO(#130): Implement this at trainer server.
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
 
-    def upload_model(self, pipeline_id: int, trigger_id: int, model: pathlib.Path) -> str:
-        assert model.exists(), "Cannot upload non-existing model"
-        # TODO(#167): This function can be removed again when we have a model storage component.
-        remote_path = f"{pipeline_id}-{trigger_id}-{current_time_millis()}.modyn"
-        ftp = FTP()
-        ftp.connect(
-            self.config["trainer_server"]["hostname"], int(self.config["trainer_server"]["ftp_port"]), timeout=3
-        )
-        ftp.login("modyn", "modyn")
-        ftp.sendcmd("TYPE i")  # Switch to binary mode
-
-        size = os.stat(model).st_size
-
-        self.status_bar.update(demo="Uploading model")
-        pbar = self.progress_mgr.counter(
-            total=size, desc=f"[Pipeline {pipeline_id}][Trigger {trigger_id}] Uploading Previous Model", unit="bytes"
-        )
-
-        logger.info(f"Uploading previous model to trainer server. Total size = {size} bytes.")
-
-        with open(model, "rb") as local_file:
-
-            def upload_callback(data: Any) -> None:
-                pbar.update(min(len(data), pbar.total - pbar.count))
-
-            ftp.storbinary(f"STOR {remote_path}", local_file, callback=upload_callback)
-
-        logger.info("Model uploaded.")
-        ftp.close()
-        pbar.update(pbar.total - pbar.count)
-        pbar.clear(flush=True)
-        pbar.close(clear=True)
-
-        return remote_path
-
     # pylint: disable=too-many-branches,too-many-locals,too-many-statements
     def start_training(
-        self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model: Optional[pathlib.Path]
+        self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model_id: Optional[int]
     ) -> int:
         if not self.connected_to_trainer_server:
             raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
@@ -264,13 +230,6 @@ class GRPCHandler:
             model_config = json.dumps(pipeline_config["model"]["config"])
         else:
             model_config = "{}"
-
-        if previous_model is not None:
-            use_pretrained_model = True
-            pretrained_model_path = self.upload_model(pipeline_id, trigger_id, previous_model)
-        else:
-            use_pretrained_model = False
-            pretrained_model_path = ""
 
         optimizers_config = {}
         for optimizer in pipeline_config["training"]["optimizers"]:
@@ -293,6 +252,16 @@ class GRPCHandler:
             criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"]["config"])
         else:
             criterion_config = "{}"
+
+        if "epochs_per_trigger" in pipeline_config["training"]:
+            epochs_per_trigger = pipeline_config["training"]["epochs_per_trigger"]
+        else:
+            epochs_per_trigger = 1
+
+        if "seed" in pipeline_config["training"]:
+            seed = pipeline_config["training"]["seed"]
+        else:
+            seed = None
 
         if "transformations" in pipeline_config["data"]:
             transform_list = pipeline_config["data"]["transformations"]
@@ -325,31 +294,37 @@ class GRPCHandler:
         else:
             grad_scaler_config = {}
 
-        req = StartTrainingRequest(
-            pipeline_id=pipeline_id,
-            trigger_id=trigger_id,
-            device=pipeline_config["training"]["device"],
-            amp=amp,
-            model_id=pipeline_config["model"]["id"],
-            model_configuration=TrainerServerJsonString(value=model_config),
-            use_pretrained_model=use_pretrained_model,
-            pretrained_model_path=pretrained_model_path,
-            load_optimizer_state=False,  # TODO(#137): Think about this.
-            batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
-            torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
-            criterion_parameters=TrainerServerJsonString(value=criterion_config),
-            data_info=Data(
+        start_training_kwargs = {
+            "pipeline_id": pipeline_id,
+            "trigger_id": trigger_id,
+            "device": pipeline_config["training"]["device"],
+            "amp": amp,
+            "model_id": pipeline_config["model"]["id"],
+            "model_configuration": TrainerServerJsonString(value=model_config),
+            "use_pretrained_model": previous_model_id is not None,
+            "pretrained_model_id": previous_model_id or -1,
+            "load_optimizer_state": False,  # TODO(#137): Think about this.
+            "batch_size": pipeline_config["training"]["batch_size"],
+            "torch_optimizers_configuration": TrainerServerJsonString(value=json.dumps(optimizers_config)),
+            "torch_criterion": pipeline_config["training"]["optimization_criterion"]["name"],
+            "criterion_parameters": TrainerServerJsonString(value=criterion_config),
+            "data_info": Data(
                 dataset_id=pipeline_config["data"]["dataset_id"],
                 num_dataloaders=pipeline_config["training"]["dataloader_workers"],
             ),
-            checkpoint_info=checkpoint_info,
-            transform_list=transform_list,
-            bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
-            label_transformer=PythonString(value=label_transformer),
-            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
-            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-        )
+            "checkpoint_info": checkpoint_info,
+            "transform_list": transform_list,
+            "bytes_parser": PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
+            "label_transformer": PythonString(value=label_transformer),
+            "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
+            "epochs_per_trigger": epochs_per_trigger,
+            "seed": seed,
+        }
+
+        cleaned_kwargs = {k: v for k, v in start_training_kwargs.items() if v is not None}
+
+        req = StartTrainingRequest(**cleaned_kwargs)
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)
 
@@ -367,6 +342,14 @@ class GRPCHandler:
 
         return response.num_samples
 
+    def get_status_bar_scale(self, pipeline_id: int) -> int:
+        request = GetStatusBarScaleRequest(pipeline_id=pipeline_id)
+        response: StatusBarScaleResponse = self.selector.get_status_bar_scale(request)
+
+        return response.status_bar_scale
+
+    # pylint: disable=too-many-nested-blocks
+
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> None:  # pragma: no cover
@@ -377,10 +360,9 @@ class GRPCHandler:
         self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        last_samples = 0
-        sample_pbar = self.progress_mgr.counter(
-            total=total_samples, desc=f"[Training {training_id}] Training on Samples", unit="samples"
-        )
+        status_bar_scale = self.get_status_bar_scale(pipeline_id)
+
+        sample_pbar = SupervisorCounter(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -406,14 +388,11 @@ class GRPCHandler:
                 blocked_in_a_row = 0
 
                 if res.state_available:
-                    assert res.HasField("samples_seen") and res.HasField(
-                        "batches_seen"
+                    assert (res.HasField("samples_seen") and res.HasField("batches_seen")) or (
+                        res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
 
-                    new_samples = res.samples_seen - last_samples
-                    if new_samples > 0:
-                        sample_pbar.update(new_samples)
-                        last_samples = res.samples_seen
+                    sample_pbar.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -423,17 +402,14 @@ class GRPCHandler:
             else:
                 break
 
-        sample_pbar.update(sample_pbar.total - sample_pbar.count)
-        sample_pbar.clear(flush=True)
-        sample_pbar.close(clear=True)
+        sample_pbar.close_counter()
         logger.info("Training completed 🚀")
 
-    def fetch_trained_model(self, training_id: int, storage_dir: pathlib.Path) -> pathlib.Path:
-        logger.info(f"Fetching trained model for training {training_id}")
-        self.status_bar.update(demo=f"Fetching model from server (id = {training_id})")
+    def store_trained_model(self, training_id: int) -> int:
+        logger.info(f"Storing trained model for training {training_id}")
 
-        req = GetFinalModelRequest(training_id=training_id)
-        res: GetFinalModelResponse = self.trainer_server.get_final_model(req)
+        req = StoreFinalModelRequest(training_id=training_id)
+        res: StoreFinalModelResponse = self.trainer_server.store_final_model(req)
 
         if not res.valid_state:
             raise RuntimeError(
@@ -441,39 +417,20 @@ class GRPCHandler:
                 + " since training is invalid or training still running"
             )
 
-        remote_model_path = f"/{res.model_path}"
-        local_model_path = storage_dir / f"{training_id}.modyn"
+        logger.info(f"Model {res.model_id} has been stored successfully")
 
-        ftp = FTP()
-        ftp.connect(
-            self.config["trainer_server"]["hostname"], int(self.config["trainer_server"]["ftp_port"]), timeout=3
-        )
+        return res.model_id
 
-        ftp.login("modyn", "modyn")
-        ftp.sendcmd("TYPE i")  # Switch to binary mode
-        size = ftp.size(remote_model_path)
+    def seed_selector(self, seed: int) -> None:
+        if not (0 <= seed <= 100 and isinstance(seed, int)):
+            raise ValueError("The seed must be an integer in [0,100]")
+        if not self.connected_to_selector:
+            raise ConnectionError("Tried to seed the selector, but no connection was made.")
 
-        self.status_bar.update(demo="Downloading model")
-        pbar = self.progress_mgr.counter(total=size, desc=f"[Training {training_id}] Downloading Model", unit="bytes")
+        success = self.selector.seed_selector(
+            SeedSelectorRequest(
+                seed=seed,
+            ),
+        ).success
 
-        logger.info(
-            f"Remote model path is {remote_model_path}, storing at {local_model_path}."
-            + f"Fetching via FTP! Total size = {size} bytes."
-        )
-
-        with open(local_model_path, "wb") as local_file:
-
-            def write_callback(data: Any) -> None:
-                local_file.write(data)
-                pbar.update(min(len(data), pbar.total - pbar.count))
-
-            ftp.retrbinary(f"RETR {remote_model_path}", write_callback)
-
-        ftp.close()
-        pbar.update(pbar.total - pbar.count)
-        pbar.clear(flush=True)
-        pbar.close(clear=True)
-
-        logger.info("Wrote model to disk.")
-
-        return local_model_path
+        assert success, "Something went wrong while seeding the selector"

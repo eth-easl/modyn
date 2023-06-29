@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from pathlib import Path
 from threading import Lock
@@ -9,7 +10,7 @@ from threading import Lock
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
-from modyn.utils.utils import dynamic_module_import
+from modyn.utils.utils import dynamic_module_import, is_directory_writable
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class SelectorManager:
             else False
         )
         trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+
         if (
             Path(trigger_sample_directory).exists()
             and any(Path(trigger_sample_directory).iterdir())
@@ -44,6 +46,19 @@ class SelectorManager:
             raise ValueError(
                 f"The trigger sample directory {trigger_sample_directory} is not empty. \
                   Please delete the directory or set the ignore_existing_trigger_samples flag to True."
+            )
+
+        if not Path(trigger_sample_directory).exists():
+            raise ValueError(
+                f"The trigger sample directory {trigger_sample_directory} does not exist. \
+                  Please create the directory or mount another, existing directory."
+            )
+
+        if not is_directory_writable(Path(trigger_sample_directory)):
+            raise ValueError(
+                f"The trigger sample directory {trigger_sample_directory} is not writable. \
+                  Please check the directory permissions and try again.\n"
+                + f"Directory info: {os.stat(trigger_sample_directory)}"
             )
 
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
@@ -112,11 +127,23 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_number_of_samples(trigger_id)
 
+    def get_status_bar_scale(self, pipeline_id: int) -> int:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested status bar scale from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_status_bar_scale()
+
     def get_number_of_partitions(self, pipeline_id: int, trigger_id: int) -> int:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested number of partitions from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_number_of_partitions(trigger_id)
+
+    def uses_weights(self, pipeline_id: int) -> bool:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested whether the pipeline {pipeline_id} uses weights but it does not exist!")
+
+        return self._selectors[pipeline_id].uses_weights()
 
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]

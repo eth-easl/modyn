@@ -3,13 +3,13 @@ import multiprocessing as mp
 import os
 import platform
 from abc import ABC, abstractmethod
-from multiprocessing import shared_memory
+from multiprocessing.managers import SharedMemoryManager
 from typing import Iterable, Optional
 
 import numpy as np
+from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata, Trigger
-from modyn.selector.internal.trigger_sample import TriggerSampleStorage
+from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ class AbstractSelectionStrategy(ABC):
         modyn_config (dict): the configurations for the modyn module
     """
 
+    # pylint: disable-next=too-many-branches
     def __init__(
         self,
         config: dict,
@@ -46,6 +47,27 @@ class AbstractSelectionStrategy(ABC):
         self.training_set_size_limit: int = config["limit"]
         self.has_limit = self.training_set_size_limit > 0
         self.reset_after_trigger: bool = config["reset_after_trigger"]
+
+        # weighted optimization (with weights supplied by the selector) is quite unusual, so the default us false
+        if "uses_weights" in config:
+            self.uses_weights = config["uses_weights"]
+        else:
+            self.uses_weights = False
+
+        if "tail_triggers" in config:
+            self.tail_triggers = config["tail_triggers"]
+            if self.tail_triggers < 0 or not isinstance(config["tail_triggers"], int):
+                raise ValueError("Tail trigger must be an integer greater than 0")
+            if (self.reset_after_trigger and self.tail_triggers > 0) or (
+                (not self.reset_after_trigger) and self.tail_triggers == 0
+            ):
+                raise ValueError("Reset after trigger is equivalent to setting tail triggers to 0.")
+        else:
+            if self.reset_after_trigger:
+                self.tail_triggers = 0  # consider only the current trigger
+            else:
+                self.tail_triggers = None  # consider every datapoint
+
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
         self._maximum_keys_in_memory = maximum_keys_in_memory
@@ -136,6 +158,25 @@ class AbstractSelectionStrategy(ABC):
             insertion_id=insertion_id,
         )
 
+    @staticmethod
+    def _store_trigger_num_keys(
+        modyn_config: dict,
+        pipeline_id: int,
+        trigger_id: int,
+        partition_id: int,
+        num_keys: int,
+    ) -> None:
+        with MetadataDatabaseConnection(modyn_config) as database:
+            trigger_partition = TriggerPartition(
+                pipeline_id=pipeline_id,
+                trigger_id=trigger_id,
+                partition_id=partition_id,
+                num_keys=num_keys,
+            )
+            # TODO(#246): Maybe clean this up after some time.
+            database.session.add(trigger_partition)
+            database.session.commit()
+
     # pylint: disable=too-many-locals
     def trigger(self) -> tuple[int, int, int]:
         """
@@ -144,6 +185,7 @@ class AbstractSelectionStrategy(ABC):
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
+        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         trigger_id = self._next_trigger_id
         total_keys_in_trigger = 0
 
@@ -152,12 +194,15 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger)
             database.session.commit()
 
+        partition_num_keys = {}
         partition: Optional[int] = None
         for partition, training_samples in enumerate(self._on_trigger()):
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
                 + f" {len(training_samples)} samples for new trigger {trigger_id}."
             )
+
+            partition_num_keys[partition] = len(training_samples)
 
             total_keys_in_trigger += len(training_samples)
 
@@ -175,31 +220,30 @@ class AbstractSelectionStrategy(ABC):
             samples_per_proc = int(len(training_samples) / self._insertion_threads)
             processes: list[mp.Process] = []
 
-            for i in range(self._insertion_threads):
-                start_idx = i * samples_per_proc
-                end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
-                proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
-                if len(proc_samples) > 0:
-                    shm = shared_memory.SharedMemory(
-                        create=True,
-                        size=proc_samples.nbytes,
-                    )
-                    shared_proc_samples: np.ndarray = np.ndarray(
-                        proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
-                    )
-                    shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
-                    assert proc_samples.shape == shared_proc_samples.shape
+            with SharedMemoryManager() as smm:
+                for i in range(self._insertion_threads):
+                    start_idx = i * samples_per_proc
+                    end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
+                    proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
+                    if len(proc_samples) > 0:
+                        shm = smm.SharedMemory(proc_samples.nbytes)
 
-                    logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
-                    proc = mp.Process(
-                        target=AbstractSelectionStrategy._store_triggersamples_impl,
-                        args=(partition, trigger_id, self._pipeline_id, shared_proc_samples, self._modyn_config, i),
-                    )
-                    proc.start()
-                    processes.append(proc)
+                        shared_proc_samples: np.ndarray = np.ndarray(
+                            proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
+                        )
+                        shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
+                        assert proc_samples.shape == shared_proc_samples.shape
 
-            for proc in processes:
-                proc.join()
+                        logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
+                        proc = mp.Process(
+                            target=AbstractSelectionStrategy._store_triggersamples_impl,
+                            args=(partition, trigger_id, self._pipeline_id, shared_proc_samples, self._modyn_config, i),
+                        )
+                        proc.start()
+                        processes.append(proc)
+
+                for proc in processes:
+                    proc.join()
 
         num_partitions = partition + 1 if partition is not None else 0
 
@@ -213,6 +257,16 @@ class AbstractSelectionStrategy(ABC):
             trigger.num_keys = total_keys_in_trigger
             trigger.num_partitions = num_partitions
             database.session.commit()
+
+        # Insert all partition lengths into DB
+        for partition, partition_keys in partition_num_keys.items():
+            AbstractSelectionStrategy._store_trigger_num_keys(
+                modyn_config=self._modyn_config,
+                pipeline_id=self._pipeline_id,
+                trigger_id=trigger_id,
+                partition_id=partition,
+                num_keys=partition_keys,
+            )
 
         if self.reset_after_trigger:
             self._reset_state()
@@ -239,11 +293,17 @@ class AbstractSelectionStrategy(ABC):
         """
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            num_samples_trigger = (
-                database.session.query(Trigger.num_keys)
-                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
-                .first()[0]
+            num_samples_trigger_partition = (
+                database.session.query(TriggerPartition.num_keys)
+                .filter(
+                    TriggerPartition.pipeline_id == self._pipeline_id,
+                    TriggerPartition.trigger_id == trigger_id,
+                    TriggerPartition.partition_id == partition_id,
+                )
+                .first()
             )
+            assert num_samples_trigger_partition is not None, f"Could not find TriggerPartition {partition_id} in DB"
+            num_samples_trigger_partition = num_samples_trigger_partition[0]
 
         data = TriggerSampleStorage(
             self._trigger_sample_directory,
@@ -253,7 +313,7 @@ class AbstractSelectionStrategy(ABC):
             partition_id=partition_id,
             retrieval_worker_id=worker_id,
             total_retrieval_workers=num_workers,
-            num_samples_trigger=num_samples_trigger,
+            num_samples_trigger_partition=num_samples_trigger_partition,
         )
 
         assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"

@@ -44,6 +44,10 @@ properties:
         type: number
         description: |
           The number of GPUs that should be used for training.
+      epochs_per_trigger:
+        type: number
+        description: |
+          The number of epochs per trigger. Defaults to 1, if not given.
       device:
         type: string
         description: |
@@ -65,6 +69,11 @@ properties:
         description: |
           If True, on trigger, we continue training on the model outputted by the previous trigger. If False, we start with random weights.
           If `initial_model` is "pretrained", cannot be False.
+      seed:
+        type: number
+        description: |
+          If provided, every random python function (torch, numpy..) is seeded with this number. Must be in the range [0,100].
+          Please be aware that if you want to seed postgres you must specify its seed in the modyn_config.
       selection_strategy:
         type: object
         description: |
@@ -87,10 +96,19 @@ properties:
                 type: number
                 description: |
                   This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.
+              uses_weights:
+                type: boolean
+                description: |
+                  If set to true, weights are supplied from the selector and weighted SGD is used to train. By default, weights are ignored (uses_weights=False). Please note that this option is not related to Downsampling strategy, where weights are computed during training.
               reset_after_trigger:
                 type: boolean
                 description: |
                   If set to true, the selection strategy resets its internal state after a trigger.
+              tail_triggers:
+                type: number
+                description: |
+                  For the training iteration, just use data from this trigger and the previous tail_triggers. 
+                  reset_after_trigger is equivalent to tail_triggers = 0. Omit this parameter if you want to use every previous datapoint.
               unused_data_ratio:
                 type: number
                 description: |
@@ -103,10 +121,18 @@ properties:
                 type: number
                 description: |
                   [AbstractDownsampleStrategy] percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
-              downsampled_batch_size:
+              sample_then_batch:
+                type: boolean
+                description: |
+                  [AbstractDownsampleStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
+              downsampling_ratio:
                 type: number
                 description: |
-                  [AbstractDownsampleStrategy] How many points are sampled after computing the metric
+                  [AbstractDownsampleStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Must be in (0,100).
+              downsampling_period:
+                type: number
+                description: |
+                  [AbstractDownsampleStrategy] In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
           processor_type:
             type: string
             description: |
@@ -118,10 +144,10 @@ properties:
         type: string
         description: |
           What type of initial model should be used (random or pretrained).
-      initial_model_path:
-        type: string
+      initial_model_id:
+        type: number
         description: |
-          In case of pretrained initial model, provide path (local on supervisor) to initial model
+          In case of pretrained initial model, provide the model id of the initial model
       initial_pass:
         type: object
         description: |

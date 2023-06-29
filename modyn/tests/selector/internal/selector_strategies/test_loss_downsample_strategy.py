@@ -36,32 +36,21 @@ def setup_and_teardown():
     shutil.rmtree(TMP_DIR)
 
 
-def test_init():
+def test_init_loss():
     # Test init works
     strat = LossDownsamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
+        {
+            "limit": -1,
+            "reset_after_trigger": False,
+            "presampling_ratio": 80,
+            "downsampling_ratio": 10,
+            "sample_then_batch": False,
+        },
         get_minimal_modyn_config(),
         42,
         1000,
     )
 
-    assert strat.downsampled_batch_size == 10
+    assert strat.downsampling_ratio == 10
     assert strat._pipeline_id == 42
     assert isinstance(strat.get_downsampling_strategy(), str)
-
-
-def test_command():
-    # Test init works
-    strat = LossDownsamplingStrategy(
-        {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
-
-    name = strat.get_downsampling_strategy()
-    params = strat.get_downsampling_params()
-    assert isinstance(name, str)
-    assert name == "RemoteLossDownsampling"
-    assert "downsampled_batch_size" in params
-    assert params["downsampled_batch_size"] == 10

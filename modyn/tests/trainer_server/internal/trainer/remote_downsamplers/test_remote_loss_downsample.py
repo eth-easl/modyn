@@ -8,44 +8,47 @@ from torch import nn
 
 def test_sample_shape():
     model = torch.nn.Linear(10, 2)
-    downsampled_batch_size = 5
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
 
     forward_output = model(data)
-    indexes, weights = sampler.sample(forward_output, target)
-    sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, ids)
+    sampler.inform_samples(ids, forward_output, target)
+    indexes, weights = sampler.select_points()
 
-    assert sampled_data.shape[0] == downsampled_batch_size
+    sampled_data, sampled_target = get_tensors_subset(indexes, data, target, ids)
+
+    assert sampled_data.shape[0] == 4  # (50% of 8)
     assert sampled_data.shape[1] == data.shape[1]
-    assert weights.shape[0] == downsampled_batch_size
-    assert sampled_target.shape[0] == downsampled_batch_size
-    assert len(sampled_ids) == 5
+    assert weights.shape[0] == 4
+    assert sampled_target.shape[0] == 4
+    assert len(indexes) == 4
 
 
 def test_sample_weights():
     model = torch.nn.Linear(10, 2)
-    downsampled_batch_size = 5
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
     ids = list(range(8))
 
     forward_output = model(data)
-    _, weights = sampler.sample(forward_output, target)
+    sampler.inform_samples(ids, forward_output, target)
+    selected_ids, weights = sampler.select_points()
 
     assert weights.sum() > 0
-    assert set(ids) <= set(list(range(8)))
+    assert set(selected_ids) <= set(list(range(8)))
 
 
 # Create a model that always predicts the same class
@@ -56,11 +59,11 @@ class AlwaysZeroModel(torch.nn.Module):
 
 def test_sample_loss_dependent_sampling():
     model = AlwaysZeroModel()
-    downsampled_batch_size = 5
+    downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": downsampled_batch_size}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
     target = torch.cat([torch.zeros(4), torch.ones(4)])
@@ -71,8 +74,10 @@ def test_sample_loss_dependent_sampling():
     ids = list(range(8))
 
     forward_output = model(data)
-    indexes, _ = sampler.sample(forward_output, target)
-    _, sampled_target, _ = get_tensors_subset(indexes, data, target, ids)
+    sampler.inform_samples(ids, forward_output, target)
+    indexes, _ = sampler.select_points()
+
+    _, sampled_target = get_tensors_subset(indexes, data, target, ids)
 
     # Assert that no points with a loss of zero were selected
     assert (sampled_target == 0).sum() == 0
@@ -98,18 +103,19 @@ def test_sample_dict_input():
         "tensor2": torch.randn(6, 10),
     }
     target = torch.randint(0, 2, size=(6, 8)).float()
-    sample_ids = list(range(10))
+    sample_ids = list(range(6))
 
     # call the sample method with dictionary input
     mymodel = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampled_batch_size": 3}
-    sampler = RemoteLossDownsampling(params_from_selector, per_sample_loss_fct)
+    params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False}
+    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
 
     forward_output = mymodel(data)
-    indexes, weights = sampler.sample(forward_output, target)
-    sampled_data, sampled_target, sampled_ids = get_tensors_subset(indexes, data, target, sample_ids)
+    sampler.inform_samples(sample_ids, forward_output, target)
+    indexes, weights = sampler.select_points()
+    sampled_data, sampled_target = get_tensors_subset(indexes, data, target, sample_ids)
 
     # check that the output has the correct shape and type
     assert isinstance(sampled_data, dict)
@@ -118,5 +124,5 @@ def test_sample_dict_input():
 
     assert weights.shape == (3,)
     assert sampled_target.shape == (3, 8)
-    assert len(sampled_ids) == 3
-    assert set(sampled_ids) <= set(sample_ids)
+    assert len(indexes) == 3
+    assert set(indexes) <= set(sample_ids)

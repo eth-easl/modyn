@@ -120,7 +120,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     USE_PRETRAINED_MODEL_FIELD_NUMBER: builtins.int
     LOAD_OPTIMIZER_STATE_FIELD_NUMBER: builtins.int
-    PRETRAINED_MODEL_PATH_FIELD_NUMBER: builtins.int
+    PRETRAINED_MODEL_ID_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
     TORCH_OPTIMIZERS_CONFIGURATION_FIELD_NUMBER: builtins.int
     TORCH_CRITERION_FIELD_NUMBER: builtins.int
@@ -132,6 +132,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     LR_SCHEDULER_FIELD_NUMBER: builtins.int
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
     GRAD_SCALER_CONFIGURATION_FIELD_NUMBER: builtins.int
+    EPOCHS_PER_TRIGGER_FIELD_NUMBER: builtins.int
+    SEED_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -141,7 +143,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def model_configuration(self) -> global___JsonString: ...
     use_pretrained_model: builtins.bool
     load_optimizer_state: builtins.bool
-    pretrained_model_path: builtins.str
+    pretrained_model_id: builtins.int
     batch_size: builtins.int
     @property
     def torch_optimizers_configuration(self) -> global___JsonString: ...
@@ -162,6 +164,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def label_transformer(self) -> global___PythonString: ...
     @property
     def grad_scaler_configuration(self) -> global___JsonString: ...
+    epochs_per_trigger: builtins.int
+    seed: builtins.int
     def __init__(
         self,
         *,
@@ -173,7 +177,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
         model_configuration: global___JsonString | None = ...,
         use_pretrained_model: builtins.bool = ...,
         load_optimizer_state: builtins.bool = ...,
-        pretrained_model_path: builtins.str = ...,
+        pretrained_model_id: builtins.int = ...,
         batch_size: builtins.int = ...,
         torch_optimizers_configuration: global___JsonString | None = ...,
         torch_criterion: builtins.str = ...,
@@ -185,9 +189,12 @@ class StartTrainingRequest(google.protobuf.message.Message):
         lr_scheduler: global___JsonString | None = ...,
         label_transformer: global___PythonString | None = ...,
         grad_scaler_configuration: global___JsonString | None = ...,
+        epochs_per_trigger: builtins.int = ...,
+        seed: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["amp", b"amp", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "model_id", b"model_id", "pipeline_id", b"pipeline_id", "pretrained_model_path", b"pretrained_model_path", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "seed", b"seed", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "amp", b"amp", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "epochs_per_trigger", b"epochs_per_trigger", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "model_id", b"model_id", "pipeline_id", b"pipeline_id", "pretrained_model_id", b"pretrained_model_id", "seed", b"seed", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_seed", b"_seed"]) -> typing_extensions.Literal["seed"] | None: ...
 
 global___StartTrainingRequest = StartTrainingRequest
 
@@ -230,33 +237,46 @@ class TrainingStatusResponse(google.protobuf.message.Message):
 
     VALID_FIELD_NUMBER: builtins.int
     IS_RUNNING_FIELD_NUMBER: builtins.int
+    IS_TRAINING_FIELD_NUMBER: builtins.int
     STATE_AVAILABLE_FIELD_NUMBER: builtins.int
     BLOCKED_FIELD_NUMBER: builtins.int
     EXCEPTION_FIELD_NUMBER: builtins.int
     BATCHES_SEEN_FIELD_NUMBER: builtins.int
     SAMPLES_SEEN_FIELD_NUMBER: builtins.int
+    DOWNSAMPLING_BATCHES_SEEN_FIELD_NUMBER: builtins.int
+    DOWNSAMPLING_SAMPLES_SEEN_FIELD_NUMBER: builtins.int
     valid: builtins.bool
     is_running: builtins.bool
+    is_training: builtins.bool
     state_available: builtins.bool
     blocked: builtins.bool
     exception: builtins.str
     batches_seen: builtins.int
     samples_seen: builtins.int
+    downsampling_batches_seen: builtins.int
+    downsampling_samples_seen: builtins.int
     def __init__(
         self,
         *,
         valid: builtins.bool = ...,
         is_running: builtins.bool = ...,
+        is_training: builtins.bool = ...,
         state_available: builtins.bool = ...,
         blocked: builtins.bool = ...,
         exception: builtins.str | None = ...,
         batches_seen: builtins.int | None = ...,
         samples_seen: builtins.int | None = ...,
+        downsampling_batches_seen: builtins.int | None = ...,
+        downsampling_samples_seen: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "exception", b"exception", "samples_seen", b"samples_seen"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "blocked", b"blocked", "exception", b"exception", "is_running", b"is_running", "samples_seen", b"samples_seen", "state_available", b"state_available", "valid", b"valid"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_downsampling_batches_seen", b"_downsampling_batches_seen", "_downsampling_samples_seen", b"_downsampling_samples_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "downsampling_batches_seen", b"downsampling_batches_seen", "downsampling_samples_seen", b"downsampling_samples_seen", "exception", b"exception", "samples_seen", b"samples_seen"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_downsampling_batches_seen", b"_downsampling_batches_seen", "_downsampling_samples_seen", b"_downsampling_samples_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "blocked", b"blocked", "downsampling_batches_seen", b"downsampling_batches_seen", "downsampling_samples_seen", b"downsampling_samples_seen", "exception", b"exception", "is_running", b"is_running", "is_training", b"is_training", "samples_seen", b"samples_seen", "state_available", b"state_available", "valid", b"valid"]) -> None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_batches_seen", b"_batches_seen"]) -> typing_extensions.Literal["batches_seen"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_downsampling_batches_seen", b"_downsampling_batches_seen"]) -> typing_extensions.Literal["downsampling_batches_seen"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_downsampling_samples_seen", b"_downsampling_samples_seen"]) -> typing_extensions.Literal["downsampling_samples_seen"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_exception", b"_exception"]) -> typing_extensions.Literal["exception"] | None: ...
     @typing.overload
@@ -265,7 +285,7 @@ class TrainingStatusResponse(google.protobuf.message.Message):
 global___TrainingStatusResponse = TrainingStatusResponse
 
 @typing_extensions.final
-class GetFinalModelRequest(google.protobuf.message.Message):
+class StoreFinalModelRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     TRAINING_ID_FIELD_NUMBER: builtins.int
@@ -277,25 +297,25 @@ class GetFinalModelRequest(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
 
-global___GetFinalModelRequest = GetFinalModelRequest
+global___StoreFinalModelRequest = StoreFinalModelRequest
 
 @typing_extensions.final
-class GetFinalModelResponse(google.protobuf.message.Message):
+class StoreFinalModelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     VALID_STATE_FIELD_NUMBER: builtins.int
-    MODEL_PATH_FIELD_NUMBER: builtins.int
+    MODEL_ID_FIELD_NUMBER: builtins.int
     valid_state: builtins.bool
-    model_path: builtins.str
+    model_id: builtins.int
     def __init__(
         self,
         *,
         valid_state: builtins.bool = ...,
-        model_path: builtins.str = ...,
+        model_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "valid_state", b"valid_state"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_id", b"model_id", "valid_state", b"valid_state"]) -> None: ...
 
-global___GetFinalModelResponse = GetFinalModelResponse
+global___StoreFinalModelResponse = StoreFinalModelResponse
 
 @typing_extensions.final
 class GetLatestModelRequest(google.protobuf.message.Message):

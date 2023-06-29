@@ -1,7 +1,4 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
-import pathlib
-import platform
-import tempfile
 from unittest.mock import patch
 
 import enlighten
@@ -26,11 +23,10 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.trainer_server.internal.ftp.ftp_server import FTPServer
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    GetFinalModelRequest,
-    GetFinalModelResponse,
     StartTrainingResponse,
+    StoreFinalModelRequest,
+    StoreFinalModelResponse,
     TrainerAvailableResponse,
     TrainingStatusResponse,
 )
@@ -386,7 +382,7 @@ def test_trainer_server_available(test_connection_established):
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def get_number_of_samples(test_connection_established):
+def test_get_number_of_samples(test_connection_established):
     mgr = enlighten.get_manager()
     pbar = mgr.status_bar(
         status_format="Test",
@@ -442,26 +438,23 @@ def test_wait_for_training_completion(test_connection_established):
     )
 
     with patch.object(GRPCHandler, "get_number_of_samples", return_value=22):
-        handler = GRPCHandler(get_simple_config(), mgr, pbar)
-        assert handler.trainer_server is not None
+        with patch.object(GRPCHandler, "get_status_bar_scale", return_value=100):
+            handler = GRPCHandler(get_simple_config(), mgr, pbar)
+            assert handler.trainer_server is not None
 
-        with patch.object(
-            handler.trainer_server,
-            "get_training_status",
-            return_value=TrainingStatusResponse(
-                valid=True, blocked=False, exception=None, state_available=False, is_running=False
-            ),
-        ) as avail_method:
-            handler.wait_for_training_completion(42, 21, 22)
-            avail_method.assert_called_once()
+            with patch.object(
+                handler.trainer_server,
+                "get_training_status",
+                return_value=TrainingStatusResponse(
+                    valid=True, blocked=False, exception=None, state_available=False, is_running=False
+                ),
+            ) as avail_method:
+                handler.wait_for_training_completion(42, 21, 22)
+                avail_method.assert_called_once()
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def test_fetch_trained_model(test_connection_established):
-    if platform.system() == "Darwin":
-        # On macOS, the ftpserver works but throws a file descriptor error upon termination in tests
-        return
-
+def test_store_trained_model(test_connection_established):
     mgr = enlighten.get_manager()
     pbar = mgr.status_bar(
         status_format="Test",
@@ -470,27 +463,9 @@ def test_fetch_trained_model(test_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
     assert handler.trainer_server is not None
 
-    with tempfile.TemporaryDirectory() as ftp_root:
-        ftp_root_path = pathlib.Path(ftp_root)
-        with FTPServer({"trainer_server": {"ftp_port": 1337}}, ftp_root_path):
-            payload = b"\xe7\xb7\x91\xe8\x8c\xb6\xe3\x81\x8c\xe5\xa5\xbd\xe3\x81\x8d"
-            with open(ftp_root_path / "test.bin", "wb") as file:
-                file.write(payload)
+    res = StoreFinalModelResponse(valid_state=True, model_id=42)
 
-            res: GetFinalModelResponse = GetFinalModelResponse(valid_state=True, model_path="test.bin")
-
-            with tempfile.TemporaryDirectory() as temp:
-                with patch.object(handler.trainer_server, "get_final_model", return_value=res) as get_method:
-                    temp_path = pathlib.Path(temp)
-
-                    handler.fetch_trained_model(21, temp_path)
-                    get_method.assert_called_once_with(GetFinalModelRequest(training_id=21))
-
-                    model_path = temp_path / "21.modyn"
-                    assert model_path.exists()
-
-                    with open(model_path, "rb") as file:
-                        data = file.read()
-
-                    assert data == payload
-                    assert data.decode("utf-8") == "緑茶が好き"
+    with patch.object(handler.trainer_server, "store_final_model", return_value=res) as get_method:
+        model_id = handler.store_trained_model(21)
+        get_method.assert_called_once_with(StoreFinalModelRequest(training_id=21))
+        assert model_id == 42

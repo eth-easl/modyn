@@ -5,39 +5,60 @@ import torch
 
 
 def get_tensors_subset(
-    indexes: torch.Tensor, data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
-) -> tuple[Union[torch.Tensor, dict], torch.Tensor, list]:
+    selected_indexes: list[int], data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
+) -> tuple[Union[torch.Tensor, dict], torch.Tensor]:
+    """
+    This function is used in Batch-then-sample.
+    The downsampler returns the selected sample ids. We have to work out which index the various sample_ids correspond
+    to and then extract the selected samples from the tensors.
+    For example, from the downsampling strategy we get that the selected ids are 132 and 154 and that all the ids are
+    [102, 132, 15, 154, 188]. As a result, we get that the corresponding ids are 1 and 3 (using in_batch_index),
+    and then we get the entries of data and target only for the selected samples
+    """
+
+    # first of all we compute the position of each selected index within the batch
+    in_batch_index = [sample_ids.index(selected_index) for selected_index in selected_indexes]
+
+    # then we extract the data
     if isinstance(data, torch.Tensor):
-        sub_data = data[indexes]
+        sub_data = data[in_batch_index]
     elif isinstance(data, dict):
-        sub_data = {key: tensor[indexes] for key, tensor in data.items()}
+        sub_data = {key: tensor[in_batch_index] for key, tensor in data.items()}
 
-    sub_target = target[indexes]
-    sub_sample_ids = [sample_ids[i] for i in indexes]
+    # and the targets
+    sub_target = target[in_batch_index]
 
-    return sub_data, sub_target, sub_sample_ids
+    return sub_data, sub_target
 
 
 class AbstractRemoteDownsamplingStrategy(ABC):
-    def __init__(self, params_from_selector: dict) -> None:
-        assert "downsampled_batch_size" in params_from_selector
-        self.downsampled_batch_size = params_from_selector["downsampled_batch_size"]
+    def __init__(self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict) -> None:
+        self.pipeline_id = pipeline_id
+        self.batch_size = batch_size
+        self.trigger_id = trigger_id
+
+        assert "downsampling_ratio" in params_from_selector
+        self.downsampling_ratio = params_from_selector["downsampling_ratio"]
 
         self.replacement = params_from_selector.get("replacement", True)
 
-    def sample(
-        self,
-        forward_output: torch.Tensor,
-        target: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        probabilities = self.get_probabilities(forward_output, target)
-        downsampled_idxs = torch.multinomial(probabilities, self.downsampled_batch_size, replacement=self.replacement)
-
-        # lower probability, higher weight to reducce the variance
-        weights = 1.0 / (forward_output.shape[0] * probabilities[downsampled_idxs])
-
-        return downsampled_idxs, weights
+        # The next variable is used to keep a mapping index <-> sample_id
+        # This is needed since the data selection policy works on indexes (the policy does not care what the sample_id
+        # is, it simply stores its score in a vector/matrix) but for retrieving again the data we need somehow to
+        # remember the sample_id. So, index_sampleid_map might cantain something like [124, 156, 562, 18] and the
+        # per-sample score (whatever it is, Gradnom/loss/CRAIG..) be [1.23, 0.31, 14.3, 0.09]. So, for example, the
+        # policy selects the two points with highest score ([0, 2]) and we need to know that 0 is sample 124 and 2 is
+        # sample 562.
+        self.index_sampleid_map: list[int] = []
 
     @abstractmethod
-    def get_probabilities(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError()
+    def init_downsampler(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def inform_samples(self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def select_points(self) -> tuple[list[int], torch.Tensor]:
+        raise NotImplementedError

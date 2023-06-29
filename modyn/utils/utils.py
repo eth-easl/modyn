@@ -1,14 +1,21 @@
+import errno
 import importlib
 import importlib.util
 import inspect
 import logging
+import os
 import pathlib
+import random
 import sys
+import tempfile
 import time
+from enum import Enum
 from types import ModuleType
 from typing import Any, Optional
 
 import grpc
+import numpy as np
+import torch
 import yaml
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
@@ -17,6 +24,9 @@ logger = logging.getLogger(__name__)
 UNAVAILABLE_PKGS = []
 SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
 MAX_MESSAGE_SIZE = 1024 * 1024 * 128  # 128 MB
+EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
+
+DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "SAMPLE_THEN_BATCH"])
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -123,3 +133,30 @@ def package_available_and_can_be_imported(package: str) -> bool:
 
 def flatten(non_flat_list: list[list[Any]]) -> list[Any]:
     return [item for sublist in non_flat_list for item in sublist]
+
+
+def seed_everything(seed: int) -> None:
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+def is_directory_writable(path: pathlib.Path) -> bool:
+    # We do not check for permission bits but just try
+    # since that is the most reliable solution
+    # See: https://stackoverflow.com/a/25868839/1625689
+
+    try:
+        testfile = tempfile.TemporaryFile(dir=path)
+        testfile.close()
+    except OSError as error:
+        if error.errno == errno.EACCES:  # 13
+            return False
+        error.filename = path
+        raise
+
+    return True

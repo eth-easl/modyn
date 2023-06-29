@@ -73,4 +73,4 @@ else
     exit 1
 fi
 
-echo "Successfull compilance check"
+echo "Successful compliance check"

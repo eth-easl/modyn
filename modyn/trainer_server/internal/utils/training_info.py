@@ -19,6 +19,7 @@ class TrainingInfo:
         training_id: int,
         storage_address: str,
         selector_address: str,
+        offline_dataset_path: str,
         final_checkpoint_path: pathlib.Path,
         pretrained_model_path: Optional[pathlib.Path] = None,
     ) -> None:
@@ -28,6 +29,7 @@ class TrainingInfo:
 
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders
+        self.epochs_per_trigger = request.epochs_per_trigger
 
         self.torch_optimizers_configuration = json.loads(request.torch_optimizers_configuration.value)
         self.model_configuration_dict = json.loads(request.model_configuration.value)
@@ -62,3 +64,11 @@ class TrainingInfo:
         self.selector_address = selector_address
 
         self.final_checkpoint_path = final_checkpoint_path
+
+        self.seed: Optional[int]
+        if request.HasField("seed"):
+            self.seed = request.seed
+        else:
+            self.seed = None
+
+        self.offline_dataset_path = offline_dataset_path
