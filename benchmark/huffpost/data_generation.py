@@ -3,10 +3,9 @@ import pickle
 from datetime import datetime
 
 import torch
+from benchmark.utils import maybe_download, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
-from benchmark.utils import maybe_download, setup_argparser_wildtime, setup_logger
 
 logger = setup_logger()
 

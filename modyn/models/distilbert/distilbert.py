@@ -13,9 +13,6 @@ class DistilBertNet:
 
 
 class DistilBertClassifier(DistilBertForSequenceClassification):
-    def __init__(self, config: Any) -> None:
-        super().__init__(config)
-
     def __call__(self, data: torch.Tensor) -> torch.Tensor:
         input_ids = data[:, :, 0]
         attention_mask = data[:, :, 1]

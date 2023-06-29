@@ -23,6 +23,7 @@ def maybe_download(drive_id: str, destination_dir: str, destination_file_name: s
         quiet=False,
     )
 
+
 def setup_argparser_wildtime(dataset: str) -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description=f"{dataset} Benchmark Storage Script")
     parser_.add_argument(
@@ -30,6 +31,7 @@ def setup_argparser_wildtime(dataset: str) -> argparse.ArgumentParser:
     )
 
     return parser_
+
 
 def setup_logger():
     logging.basicConfig(
@@ -41,7 +43,6 @@ def setup_logger():
 
 
 def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
-
     with open(output_file_name, "wb") as f:
         for tensor1, tensor2 in data:
             features_bytes = tensor1.numpy().tobytes()
@@ -57,9 +58,12 @@ def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
 
 
 DAY_LENGTH_SECONDS = 24 * 60 * 60
+
+
 def create_fake_timestamp(year: int, base_year: int) -> int:
     timestamp = ((year - base_year) * DAY_LENGTH_SECONDS) + 1
     return timestamp
+
 
 def create_timestamp(year: int, month: int = 1, day: int = 1) -> int:
     return int(datetime(year=year, month=month, day=day).timestamp())

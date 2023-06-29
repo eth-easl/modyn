@@ -3,9 +3,14 @@ import pickle
 
 import numpy as np
 import torch
+from benchmark.utils import (
+    create_binary_file,
+    create_fake_timestamp,
+    maybe_download,
+    setup_argparser_wildtime,
+    setup_logger,
+)
 from torch.utils.data import Dataset
-
-from benchmark.utils import setup_argparser_wildtime, maybe_download, setup_logger, create_binary_file, create_fake_timestamp
 
 logger = setup_logger()
 
