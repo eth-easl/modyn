@@ -6,7 +6,6 @@ import pickle
 from datetime import datetime
 
 import gdown
-import numpy as np
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -87,29 +86,23 @@ class ArXivDownloader(Dataset):
         self.path = data_dir
 
     def store_data(self):
-        counter = 0
         for year in tqdm(self._dataset):
             year_timestamp = get_fake_timestamp(year)
+            year_rows = []
             for i in range(len(self._dataset[year][0]["title"])):
-                text = self._dataset[year][0]["title"][i]
+                text = self._dataset[year][0]["title"][i].replace("\n", " ")
                 label = self._dataset[year][0]["category"][i]
+                csv_row = f"{text};{label}"
+                year_rows.append(csv_row)
 
-                #store the sentence
-                text_file = os.path.join(self.path, f"{counter}.txt")
-                with open(text_file, "wb") as f:
-                    np.save(f, text)
+            #store the year file
+            text_file = os.path.join(self.path, f"{year}.csv")
+            with open(text_file, "w") as f:
+                f.write("\n".join(year_rows))
 
-                #set timestamp
-                os.utime(text_file, (year_timestamp, year_timestamp))
+            #set timestamp
+            os.utime(text_file, (year_timestamp, year_timestamp))
 
-                #store the labels
-                label_file = os.path.join(self.path, f"{counter}.label")
-                with open(label_file, "w", encoding="utf-8") as f:
-                    f.write(str(int(label)))
-
-                #set timestamp
-                os.utime(label_file, (year_timestamp, year_timestamp))
-                counter+=1
         os.remove(os.path.join(self.path, "arxiv.pkl"))
 
 

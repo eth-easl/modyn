@@ -111,6 +111,23 @@ storage:
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 4096,
+      },
+      {
+        name: "arxiv",
+        description: "Arxiv Dataset (from Wild-time)",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".csv",
+            separator: ";",
+            label_index: 1
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
       }
     ]
   database:
@@ -143,7 +160,7 @@ selector:
   insertion_threads: 16
   trigger_sample_directory: "/tmp/trigger_samples"
   cleanup_trigger_samples_after_shutdown: true
-  ignore_existing_trigger_samples: false
+  ignore_existing_trigger_samples: true
 
 trainer_server:
   hostname: "trainer_server"
