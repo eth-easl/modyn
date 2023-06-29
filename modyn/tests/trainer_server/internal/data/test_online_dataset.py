@@ -55,7 +55,7 @@ class MockStorageStub:
 )
 @patch.object(SelectorKeySource, "uses_weights", return_value=False)
 def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
-    with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
+    with pytest.raises(AssertionError):
         OnlineDataset(
             pipeline_id=1,
             trigger_id=1,
@@ -67,7 +67,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
         )._init_transforms()
 
-    with pytest.raises(ValueError, match="Missing function bytes_parser_function from training invocation"):
+    with pytest.raises(ValueError):
         OnlineDataset(
             pipeline_id=1,
             trigger_id=1,
@@ -102,7 +102,6 @@ def test_init(test_insecure_channel, test_grpc_connection_established, test_grpc
     assert online_dataset._pipeline_id == 1
     assert online_dataset._trigger_id == 1
     assert online_dataset._dataset_id == "MNIST"
-    assert online_dataset._dataset_len == 0
     assert online_dataset._first_call
     assert online_dataset._bytes_parser_function is None
     assert online_dataset._storagestub is None

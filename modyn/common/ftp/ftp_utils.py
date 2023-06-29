@@ -1,7 +1,10 @@
 # Utils file containing functions in order to simplify FTP server interactions.
 import pathlib
 from ftplib import FTP
+from logging import Logger
 from typing import Any, Callable, Optional
+
+from modyn.utils import EMIT_MESSAGE_PERCENTAGES
 
 
 def download_file(
@@ -97,3 +100,24 @@ def delete_file(hostname: str, port: int, user: str, password: str, remote_file_
     ftp.login(user, password)
     ftp.delete(str(remote_file_path))
     ftp.close()
+
+
+def get_pretrained_model_callback(logger: Logger) -> Callable[[float], None]:
+    """Creates the standard callback used to download a pretrained model.
+
+    Args:
+        logger: to log the events.
+
+    Returns:
+        Callable[[float], None]: the callback function.
+    """
+    last_progress = 0.0
+
+    def download_callback(current_progress: float) -> None:
+        nonlocal last_progress
+        for emit_perc in EMIT_MESSAGE_PERCENTAGES:
+            if last_progress <= emit_perc < current_progress:
+                logger.info(f"Completed {emit_perc * 100}% of the pretrained model download.")
+        last_progress = current_progress
+
+    return download_callback

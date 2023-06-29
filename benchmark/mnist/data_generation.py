@@ -6,7 +6,6 @@ import random
 import shutil
 import time
 
-import torch
 from PIL import Image
 from torchvision.datasets import MNIST
 
@@ -22,6 +21,11 @@ def setup_argparser() -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description="MNIST Benchmark Storage Script")
     parser_.add_argument(
         "--dir", type=pathlib.Path, action="store", help="Path to data directory"
+    )
+    parser_.add_argument(
+        "--evaluation",
+        action="store_true",
+        help="Whether to handle training (not present) or evaluation (present) dataset."
     )
     parser_.add_argument(
         "--timestamps",
@@ -54,35 +58,37 @@ def main():
 
     if args.action == "DOWNLOAD":
         logger.info(f"Downloading data to {args.dir}")
-        _store_data(args.dir, args.timestamps)
+        _store_data(args.dir, not args.evaluation, args.timestamps)
     if args.action == "REMOVE":
         logger.info(f"Removing data in {args.dir}")
         _remove_data(args.dir)
 
 
-def _store_data(data_dir: pathlib.Path, timestamp_option: str):
+def _store_data(data_dir: pathlib.Path, train: bool, timestamp_option: str):
     # create directories
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
 
     # The following line forces a download of the mnist dataset.
-    mnist = MNIST(str(data_dir), train=True, download=True)
-    # TODO(vGsteiger): Currently leaving out validation set, if #49 is implemented, this should be changed
-    x_train = mnist.data.numpy()
-    y_train = mnist.targets.numpy()
+    mnist = MNIST(str(data_dir), train=train, download=True)
+
+    samples = mnist.data.numpy()
+    labels = mnist.targets.numpy()
 
     # store mnist dataset in png format
-    for i, data in enumerate(x_train):
+    for i, data in enumerate(samples):
         image = Image.fromarray(data)
         image.save(data_dir / f"{i}.png")
-        _set_file_timestamp(data_dir / f"{i}.png", timestamp_option, i)
-    for i, label in enumerate(y_train):
+        if train:
+            _set_file_timestamp(data_dir / f"{i}.png", timestamp_option, i)
+    for i, label in enumerate(labels):
         with open(data_dir / f"{i}.label", "w", encoding="utf-8") as file:
             file.write(str(int(label)))
-        _set_file_timestamp(data_dir / f"{i}.label", timestamp_option, i)
+        if train:
+            _set_file_timestamp(data_dir / f"{i}.label", timestamp_option, i)
 
 
-def _set_file_timestamp(file: str, timestamp_option: str, current: int):
+def _set_file_timestamp(file: pathlib.Path, timestamp_option: str, current: int):
     if timestamp_option == "ALLZERO":
         os.utime(file, (0, 0))
     elif timestamp_option == "INCREASING":
@@ -98,4 +104,3 @@ def _remove_data(data_dir: pathlib.Path):
 
 if __name__ == "__main__":
     main()
-

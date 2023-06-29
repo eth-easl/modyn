@@ -199,7 +199,6 @@ properties:
       - database
       - sample_batch_size
       - insertion_threads
-
   model_storage:
     type: object
     properties:
@@ -219,7 +218,20 @@ properties:
       - hostname
       - port
       - ftp_port
-
+  evaluator:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port to use for the evaluator grpc service.
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the evaluator grpc service.
+    required:
+      - hostname
+      - port
   metadata_database:
     type: object
     properties:

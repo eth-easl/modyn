@@ -18,6 +18,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetCurrentTimestampResponse,
     GetDataInIntervalRequest,
     GetDataInIntervalResponse,
+    GetDataPerWorkerRequest,
+    GetDataPerWorkerResponse,
     GetNewDataSinceRequest,
     GetNewDataSinceResponse,
     GetRequest,
@@ -26,7 +28,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     RegisterNewDatasetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
-from modyn.utils.utils import current_time_millis
+from modyn.utils import current_time_millis, get_partition_for_worker
 from sqlalchemy import asc, select
 from sqlalchemy.orm import Session
 
@@ -203,6 +205,43 @@ class StorageGRPCServicer(StorageServicer):
                         timestamps=[value[1] for value in batch],
                         labels=[value[2] for value in batch],
                     )
+
+    # pylint: disable-next=unused-argument,invalid-name
+    def GetDataPerWorker(
+        self, request: GetDataPerWorkerRequest, context: grpc.ServicerContext
+    ) -> Iterable[GetDataPerWorkerResponse]:
+        """Get keys from the given dataset for a worker.
+
+        Returns:
+            GetDataPerWorkerResponse: A response containing external keys from the dataset for the worker.
+        """
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
+
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
+
+            if dataset is None:
+                logger.error(f"Dataset with name {request.dataset_id} does not exist.")
+                yield GetNewDataSinceResponse()
+                return
+
+            total_keys = session.query(Sample.sample_id).filter(Sample.dataset_id == dataset.dataset_id).count()
+            start_index, limit = get_partition_for_worker(request.worker_id, request.total_workers, total_keys)
+
+            stmt = (
+                select(Sample.sample_id)
+                # Enables batching of results in chunks.
+                # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
+                .execution_options(yield_per=self._sample_batch_size)
+                .filter(Sample.dataset_id == dataset.dataset_id)
+                .order_by(Sample.sample_id)
+                .offset(start_index)
+                .limit(limit)
+            )
+
+            for batch in database.session.execute(stmt).partitions():
+                if len(batch) > 0:
+                    yield GetDataPerWorkerResponse(keys=[value[0] for value in batch])
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(

@@ -10,7 +10,7 @@ import grpc
 import torch
 
 # pylint: disable=no-name-in-module
-from modyn.common.ftp import download_file
+from modyn.common.ftp import download_file, get_pretrained_model_callback
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     FetchModelRequest,
     FetchModelResponse,
@@ -34,12 +34,7 @@ from modyn.trainer_server.internal.trainer.pytorch_trainer import train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
-from modyn.utils import (
-    EMIT_MESSAGE_PERCENTAGES,
-    current_time_millis,
-    dynamic_module_import,
-    grpc_connection_established,
-)
+from modyn.utils import current_time_millis, dynamic_module_import, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +114,16 @@ class TrainerServerGRPCServicer:
                 self._next_training_id += 1
 
             pretrained_model_path = self._modyn_base_dir / pathlib.Path(f"pretrained_model_{training_id}.modyn")
-            self._download_pretrained_model(pretrained_model_path, pathlib.Path(fetch_resp.model_path))
+
+            download_file(
+                hostname=self._config["model_storage"]["hostname"],
+                port=int(self._config["model_storage"]["ftp_port"]),
+                user="modyn",
+                password="modyn",
+                remote_file_path=pathlib.Path(fetch_resp.model_path),
+                local_file_path=pretrained_model_path,
+                callback=get_pretrained_model_callback(logger),
+            )
 
             logger.info(f"Completed pretrained model download. Local path: {pretrained_model_path}")
         else:
@@ -172,26 +176,6 @@ class TrainerServerGRPCServicer:
 
         logger.info(f"Started training {training_id}")
         return StartTrainingResponse(training_started=True, training_id=training_id)
-
-    def _download_pretrained_model(self, local_model_path: pathlib.Path, remote_model_path: pathlib.Path) -> None:
-        last_progress = 0.0
-
-        def download_callback(current_progress: float) -> None:
-            nonlocal last_progress
-            for emit_perc in EMIT_MESSAGE_PERCENTAGES:
-                if last_progress <= emit_perc < current_progress:
-                    logger.info(f"Completed {emit_perc * 100}% of the pretrained model download.")
-            last_progress = current_progress
-
-        download_file(
-            hostname=self._config["model_storage"]["hostname"],
-            port=int(self._config["model_storage"]["ftp_port"]),
-            user="modyn",
-            password="modyn",
-            remote_file_path=remote_model_path,
-            local_file_path=local_model_path,
-            callback=download_callback,
-        )
 
     # pylint: disable-next=too-many-locals
     def get_training_status(

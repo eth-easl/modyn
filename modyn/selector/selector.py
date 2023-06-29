@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Dict
 
-from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.selector.internal.selector_strategies.abstract_downsample_strategy import AbstractDownsampleStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from modyn.utils.utils import flatten
+from modyn.utils.utils import flatten, get_partition_for_worker
 
 
 class Selector:
@@ -47,7 +46,7 @@ class Selector:
             raise ValueError(f"Asked for worker id {worker_id}, but only have {self._num_workers} workers!")
 
         if trigger_id in self._trigger_cache:
-            start_index, worker_subset_size = TriggerSampleStorage.get_training_set_partition(
+            start_index, worker_subset_size = get_partition_for_worker(
                 worker_id, self._num_workers, len(self._trigger_cache[trigger_id][partition_id])
             )
             training_samples_subset = self._trigger_cache[trigger_id][partition_id][
