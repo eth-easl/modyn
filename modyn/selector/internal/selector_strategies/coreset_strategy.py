@@ -32,7 +32,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
             self.downsampling_strategy, EmptyDownsamplingStrategy
         ):
             raise ValueError(
-                "Using a Coreset Method without presampling and downsampling is useless. "
+                "You did not specify any presampling and downsampling strategy for the CoresetStrategy. "
                 "You can use NewDataStrategy instead. "
                 "To specify the presampling method add 'presampling_strategy to the pipeline. "
                 "You can use 'downsampling_strategies' to specify the downsampling method."
@@ -56,10 +56,11 @@ class CoresetStrategy(AbstractSelectionStrategy):
             list[str]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
+
+            target_size = None
             if self.presampling_strategy.requires_trigger_dataset_size():
                 target_size = self._get_dataset_size()
-            else:
-                target_size = None
+
             stmt = self.presampling_strategy.get_presampling_query(
                 self._next_trigger_id,
                 self.tail_triggers,
