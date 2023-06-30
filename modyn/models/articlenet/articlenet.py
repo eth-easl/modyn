@@ -5,7 +5,7 @@ from torch import nn
 from transformers import DistilBertForSequenceClassification, DistilBertModel
 
 
-class DistilBertNet:
+class ArticleNet:
     # pylint: disable-next=unused-argument
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         self.model = ArticleNetwork(**model_configuration)

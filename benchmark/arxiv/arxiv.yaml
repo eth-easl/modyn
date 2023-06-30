@@ -3,7 +3,7 @@ pipeline:
   description: Example pipeline
   version: 1.0.0
 model:
-  id: DistilBertNet
+  id: ArticleNet
   config:
     num_classes: 172
 training:
@@ -37,10 +37,9 @@ training:
 data:
   dataset_id: arxiv
   bytes_parser_function: |
-    import numpy as np
-    import io
+    from modyn.models import DistilBertTokenizerTransform
     def bytes_parser_function(data: bytes) -> str:
-      return data.decode("utf-8")
+      return DistilBertTokenizerTransform()(data.decode("utf-8"))
 
 trigger:
   id: TimeTrigger
