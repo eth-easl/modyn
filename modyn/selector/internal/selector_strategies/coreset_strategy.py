@@ -4,24 +4,12 @@ from typing import Iterable
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
-from modyn.selector.internal.selector_strategies.downsampling_strategies import DownsamplingScheduler
-from modyn.selector.internal.selector_strategies.presampling_strategies import (
-    AbstractPresamplingStrategy,
-    instantiate_presampler,
+from modyn.selector.internal.selector_strategies.downsampling_strategies import (
+    DownsamplingScheduler,
+    instantiate_scheduler,
 )
-
-
-def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> DownsamplingScheduler:
-    if "downsampling_configs" not in config:
-        # just use one strategy, so fake scheduler
-        downsampling_configs = [config]
-        downsampling_thresholds = []
-    else:
-        # real scheduler
-        downsampling_configs = config["downsampling_configs"]
-        downsampling_thresholds = config["downsampling_thresholds"]
-
-    return DownsamplingScheduler(downsampling_configs, downsampling_thresholds, maximum_keys_in_memory)
+from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
+from modyn.selector.internal.selector_strategies.presampling_strategies.utils import instantiate_presampler
 
 
 class CoresetStrategy(AbstractSelectionStrategy):

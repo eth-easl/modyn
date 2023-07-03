@@ -60,3 +60,20 @@ class DownsamplingScheduler:
     def get_training_status_bar_scale(self, next_trigger_id: int) -> int:
         self._update_downsampler_if_needed(next_trigger_id)
         return self.current_downsampler.status_bar_scale
+
+
+def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> DownsamplingScheduler:
+    if "downsampling_config" not in config:
+        # missing downsampler, use Empty
+        list_of_downsamplers = [{"strategy": "EmptyDownsamplingStrategy"}]
+        list_of_thresholds : list[int] = []
+    elif "downsampling_list" not in config["downsampling_config"]:
+        # just use one strategy, so fake scheduler
+        list_of_downsamplers = [config["downsampling_config"]]
+        list_of_thresholds = []
+    else:
+        # real scheduler
+        list_of_downsamplers = config["downsampling_config"]["downsampling_list"]
+        list_of_thresholds = config["downsampling_config"]["downsampling_thresholds"]
+
+    return DownsamplingScheduler(list_of_downsamplers, list_of_thresholds, maximum_keys_in_memory)

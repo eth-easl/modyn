@@ -70,14 +70,6 @@ def test_init():
     assert isinstance(coreset_strategy.downsampling_scheduler.current_downsampler, EmptyDownsamplingStrategy)
 
 
-def test_init_error():
-    config = get_config()
-    CoresetStrategy(config, get_minimal_modyn_config(), 12, 20)
-    del config["presampling_config"]["strategy"]
-    with pytest.raises(ValueError):
-        CoresetStrategy(config, get_minimal_modyn_config(), 12, 20)
-
-
 def test_inform_data():
     strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])

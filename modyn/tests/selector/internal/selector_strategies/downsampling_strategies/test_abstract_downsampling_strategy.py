@@ -28,16 +28,6 @@ def get_minimal_modyn_config():
     }
 
 
-def get_config():
-    return {
-        "reset_after_trigger": False,
-        "presampling_ratio": 50,
-        "limit": -1,
-        "downsampling_ratio": 10,
-        "presampling_strategy": "RandomPresamplingStrategy",
-    }
-
-
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     pathlib.Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
