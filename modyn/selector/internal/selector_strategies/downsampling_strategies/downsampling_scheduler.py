@@ -13,17 +13,19 @@ class DownsamplingScheduler:
         self.downsampler_index = 0
         # transition from downsampler[i] to downsampler[i+1] happens before the thresholds[i]-th trigger
 
-        assert (
-            len(self.dowsampling_configs) == len(self.dowsampling_thresholds) + 1
-        ), "You must specify a threshold for each transition"
-
-        assert (
-            sorted(self.dowsampling_thresholds) == self.dowsampling_thresholds
-        ), "Thresholds must be monotonically increasing"
+        self._validate_threshold()
 
         self.maximum_keys_in_memory = maximum_keys_in_memory
 
         self.current_downsampler, self.next_threshold = self._get_new_downsampler_and_threshold()
+
+    def _validate_threshold(self) -> None:
+        if not len(self.dowsampling_configs) == len(self.dowsampling_thresholds) + 1:
+            raise ValueError("You must specify a threshold for each transition")
+        if not sorted(self.dowsampling_thresholds) == self.dowsampling_thresholds:
+            raise ValueError("Thresholds must be monotonically increasing")
+        if not len(self.dowsampling_thresholds) == len(set(self.dowsampling_thresholds)):
+            raise ValueError("Thresholds must be unique")
 
     def _get_new_downsampler_and_threshold(self) -> Tuple[AbstractDownsamplingStrategy, Optional[int]]:
         next_downsampler = instantiate_downsampler(
@@ -32,7 +34,7 @@ class DownsamplingScheduler:
         # after instantiating the last downsampler, we simply set to none the next threshold
         next_threshold = (
             self.dowsampling_thresholds[self.downsampler_index]
-            if len(self.dowsampling_thresholds) < self.downsampler_index
+            if self.downsampler_index < len(self.dowsampling_thresholds)
             else None
         )
         return next_downsampler, next_threshold
@@ -66,7 +68,7 @@ def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> Downsamp
     if "downsampling_config" not in config:
         # missing downsampler, use Empty
         list_of_downsamplers = [{"strategy": "EmptyDownsamplingStrategy"}]
-        list_of_thresholds : list[int] = []
+        list_of_thresholds: list[int] = []
     elif "downsampling_list" not in config["downsampling_config"]:
         # just use one strategy, so fake scheduler
         list_of_downsamplers = [config["downsampling_config"]]
@@ -74,6 +76,14 @@ def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> Downsamp
     else:
         # real scheduler
         list_of_downsamplers = config["downsampling_config"]["downsampling_list"]
+        if "downsampling_thresholds" not in config["downsampling_config"]:
+            raise ValueError(
+                "You should specify the thresholds to switch from a downsampler to another. "
+                "Use downsampling_thresholds"
+            )
         list_of_thresholds = config["downsampling_config"]["downsampling_thresholds"]
+
+        if isinstance(list_of_thresholds, int):
+            list_of_thresholds = [list_of_thresholds]
 
     return DownsamplingScheduler(list_of_downsamplers, list_of_thresholds, maximum_keys_in_memory)
