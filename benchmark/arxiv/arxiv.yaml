@@ -44,4 +44,4 @@ data:
 trigger:
   id: TimeTrigger
   trigger_config:
-    trigger_every: "1d"
+    trigger_every: "2d"
