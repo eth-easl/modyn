@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os
 import pathlib
 import platform
+import shutil
 import tempfile
 from io import BytesIO
 from time import sleep
@@ -11,7 +12,6 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import torch
-from modyn.common.ftp import FTPServer
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     FetchModelRequest,
     FetchModelResponse,
@@ -186,6 +186,12 @@ def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
         assert not trainer_server._training_dict
         assert trainer_server._next_training_id == 0
 
+
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
+def test_start_training_invalid_id(test_hasattr, test_connect_to_model_storage):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         req = get_start_training_request(valid_model=True)
         req.use_pretrained_model = True
         req.pretrained_model_id = 15
@@ -193,13 +199,14 @@ def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
         assert not resp.training_started
 
 
+@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.download_file")
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
 @patch(
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,
 )
-def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storage):
+def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storage, download_file_mock: MagicMock):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_download_file_config, modyn_temp)
         with open(pathlib.Path(modyn_temp) / "testpath.modyn", "wb") as file:
@@ -217,15 +224,22 @@ def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storag
             assert 1 in trainer_server._training_process_dict
             assert trainer_server._next_training_id == 2
 
-            with FTPServer(str(3002), pathlib.Path(modyn_temp)):
-                request = get_start_training_request(valid_model=True)
-                request.use_pretrained_model = True
-                request.pretrained_model_id = 10
+            request = get_start_training_request(valid_model=True)
+            request.use_pretrained_model = True
+            request.pretrained_model_id = 10
 
-                resp = trainer_server.start_training(request, None)
-                assert resp.training_id == 2
-                with open(trainer_server._training_dict[resp.training_id].pretrained_model_path, "rb") as file:
-                    assert file.read().decode("utf-8") == "Our pretrained model!"
+            resp = trainer_server.start_training(request, None)
+
+            download_file_mock.assert_called_once()
+            kwargs = download_file_mock.call_args.kwargs
+            remote_file_path = kwargs["remote_file_path"]
+            local_file_path = kwargs["local_file_path"]
+
+            shutil.copyfile(pathlib.Path(modyn_temp) / remote_file_path, local_file_path)
+
+            assert resp.training_id == 2
+            with open(trainer_server._training_dict[resp.training_id].pretrained_model_path, "rb") as file:
+                assert file.read().decode("utf-8") == "Our pretrained model!"
 
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())

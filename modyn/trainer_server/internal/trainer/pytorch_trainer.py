@@ -8,8 +8,7 @@ import pathlib
 import queue
 import traceback
 from enum import Enum
-from inspect import isfunction
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import grpc
 import torch
@@ -28,7 +27,9 @@ from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import (
+    LABEL_TRANSFORMER_FUNC_NAME,
     DownsamplingMode,
+    deserialize_function,
     dynamic_module_import,
     grpc_connection_established,
     package_available_and_can_be_imported,
@@ -85,15 +86,9 @@ class PytorchTrainer:
         self._batch_size = training_info.batch_size
         self._num_dataloaders = training_info.num_dataloaders
 
-        self._mod_dict: dict[str, Any] = {}
-        self._label_tranformer_function: Optional[Callable] = None
-        if training_info.label_transformer != "":
-            exec(training_info.label_transformer, self._mod_dict)  # pylint: disable=exec-used
-            if "label_transformer_function" not in self._mod_dict or not isfunction(
-                self._mod_dict["label_transformer_function"]
-            ):
-                raise ValueError("Invalid label_transformer_function is provided")
-            self._label_tranformer_function = self._mod_dict["label_transformer_function"]
+        self._label_tranformer_function = deserialize_function(
+            training_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
+        )
 
         self._device = device
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
@@ -116,7 +111,7 @@ class PytorchTrainer:
 
         self._num_samples = 0
 
-        self._metadata_collector = MetadataCollector(training_info.pipeline_id, training_info.trigger_id)
+        self._metadata_collector = MetadataCollector(self.pipeline_id, self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         self.selector_address = training_info.selector_address
@@ -307,7 +302,7 @@ class PytorchTrainer:
 
         self._info("Handled OnBegin Callbacks.")
 
-        batch_number = 0
+        batch_number = -1
         for epoch in range(self.epochs_per_trigger):
             if self.sample_then_batch_this_epoch(epoch):
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
@@ -373,7 +368,7 @@ class PytorchTrainer:
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
 
-        self._info(f"Finished training: {self._num_samples} samples, {batch_number} batches.")
+        self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
 
