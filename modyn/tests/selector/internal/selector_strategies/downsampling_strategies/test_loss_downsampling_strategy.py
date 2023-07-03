@@ -19,8 +19,8 @@ def test_init_loss():
     )
 
     assert strat.downsampling_ratio == 10
-    assert isinstance(strat.get_downsampling_strategy(), str)
-    assert strat.get_requires_remote_computation()
+    assert isinstance(strat.remote_downsampling_strategy_name, str)
+    assert strat.requires_remote_computation
     assert strat.maximum_keys_in_memory == 1000
 
 
@@ -34,10 +34,10 @@ def test_command_loss():
         1000,
     )
 
-    name = strat.get_downsampling_strategy()
-    params = strat.get_downsampling_params()
+    name = strat.remote_downsampling_strategy_name
+    params = strat.downsampling_params
     assert isinstance(name, str)
     assert name == "RemoteLossDownsampling"
     assert "downsampling_ratio" in params
     assert params["downsampling_ratio"] == 10
-    assert strat.get_requires_remote_computation()
+    assert strat.requires_remote_computation

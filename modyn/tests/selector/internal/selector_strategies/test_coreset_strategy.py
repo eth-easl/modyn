@@ -67,7 +67,7 @@ def test_init():
 
     assert isinstance(coreset_strategy, AbstractSelectionStrategy)
     assert isinstance(coreset_strategy.presampling_strategy, RandomPresamplingStrategy)
-    assert isinstance(coreset_strategy.downsampling_strategy, EmptyDownsamplingStrategy)
+    assert isinstance(coreset_strategy.downsampling_scheduler.current_downsampler, EmptyDownsamplingStrategy)
 
 
 def test_init_error():

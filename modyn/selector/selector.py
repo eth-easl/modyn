@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Dict
 
-from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.utils.utils import flatten, get_partition_for_worker

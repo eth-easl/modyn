@@ -9,7 +9,5 @@ def test_init_empty():
     )
 
     assert not strat.requires_remote_computation
-    assert not strat.get_requires_remote_computation()
 
-    assert strat.get_downsampling_strategy() == ""
-    assert not strat.get_downsampling_params()  # strat.get_downsampling_params() == {} for pylint :(
+    assert strat.remote_downsampling_strategy_name == ""

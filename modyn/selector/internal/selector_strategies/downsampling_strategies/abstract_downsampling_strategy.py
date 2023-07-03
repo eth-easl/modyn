@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from modyn.utils import DownsamplingMode
 
@@ -45,15 +45,10 @@ class AbstractDownsamplingStrategy(ABC):
 
         self.requires_remote_computation = True
         self.maximum_keys_in_memory = maximum_keys_in_memory
+        self.downsampling_params = self._build_downsampling_params()
+        self.status_bar_scale = self._compute_status_bar_scale()
 
-    def get_requires_remote_computation(self) -> bool:
-        return self.requires_remote_computation
-
-    @abstractmethod
-    def get_downsampling_strategy(self) -> str:
-        raise NotImplementedError()
-
-    def get_training_status_bar_scale(self) -> int:
+    def _compute_status_bar_scale(self) -> int:
         """
         This function is used to create the downsampling status bar and handle the training one accordingly.
 
@@ -65,7 +60,7 @@ class AbstractDownsamplingStrategy(ABC):
             return 100
         return self.downsampling_ratio
 
-    def get_downsampling_params(self) -> dict:
+    def _build_downsampling_params(self) -> dict:
         config = {
             "downsampling_ratio": self.downsampling_ratio,
             "maximum_keys_in_memory": self.maximum_keys_in_memory,

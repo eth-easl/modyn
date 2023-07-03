@@ -4,16 +4,24 @@ from typing import Iterable
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
-from modyn.selector.internal.selector_strategies.downsampling_strategies import (
-    AbstractDownsamplingStrategy,
-    EmptyDownsamplingStrategy,
-    instantiate_downsampler,
-)
+from modyn.selector.internal.selector_strategies.downsampling_strategies import DownsamplingScheduler
 from modyn.selector.internal.selector_strategies.presampling_strategies import (
     AbstractPresamplingStrategy,
-    EmptyPresamplingStrategy,
     instantiate_presampler,
 )
+
+
+def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> DownsamplingScheduler:
+    if "downsampling_configs" not in config:
+        # just use one strategy, so fake scheduler
+        downsampling_configs = [config]
+        downsampling_thresholds = []
+    else:
+        # real scheduler
+        downsampling_configs = config["downsampling_configs"]
+        downsampling_thresholds = config["downsampling_thresholds"]
+
+    return DownsamplingScheduler(downsampling_configs, downsampling_thresholds, maximum_keys_in_memory)
 
 
 class CoresetStrategy(AbstractSelectionStrategy):
@@ -24,19 +32,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
             config, modyn_config, pipeline_id, maximum_keys_in_memory
         )
 
-        self.downsampling_strategy: AbstractDownsamplingStrategy = instantiate_downsampler(
-            config, maximum_keys_in_memory
-        )
-
-        if isinstance(self.presampling_strategy, EmptyPresamplingStrategy) and isinstance(
-            self.downsampling_strategy, EmptyDownsamplingStrategy
-        ):
-            raise ValueError(
-                "You did not specify any presampling and downsampling strategy for the CoresetStrategy. "
-                "You can use NewDataStrategy instead. "
-                "To specify the presampling method add 'presampling_strategy to the pipeline. "
-                "You can use 'downsampling_strategies' to specify the downsampling method."
-            )
+        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, maximum_keys_in_memory)
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
         assert len(keys) == len(timestamps)
@@ -56,7 +52,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
             list[str]: Keys of used samples
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-
             target_size = None
             if self.presampling_strategy.requires_trigger_dataset_size():
                 target_size = self._get_dataset_size()
@@ -91,13 +86,13 @@ class CoresetStrategy(AbstractSelectionStrategy):
             )
 
     def get_downsampling_strategy(self) -> str:
-        return self.downsampling_strategy.get_downsampling_strategy()
+        return self.downsampling_scheduler.get_downsampling_strategy(self._next_trigger_id)
 
     def get_downsampling_params(self) -> dict:
-        return self.downsampling_strategy.get_downsampling_params()
+        return self.downsampling_scheduler.get_downsampling_params(self._next_trigger_id)
 
     def get_requires_remote_computation(self) -> bool:
-        return self.downsampling_strategy.get_requires_remote_computation()
+        return self.downsampling_scheduler.get_requires_remote_computation(self._next_trigger_id)
 
     def get_training_status_bar_scale(self) -> int:
-        return self.downsampling_strategy.get_training_status_bar_scale()
+        return self.downsampling_scheduler.get_training_status_bar_scale(self._next_trigger_id)
