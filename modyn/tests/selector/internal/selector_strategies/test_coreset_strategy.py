@@ -7,7 +7,7 @@ import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy, CoresetStrategy
-from modyn.selector.internal.selector_strategies.downsampling_strategies import EmptyDownsamplingStrategy
+from modyn.selector.internal.selector_strategies.downsampling_strategies import NoDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies import RandomPresamplingStrategy
 from modyn.utils import flatten
 
@@ -46,7 +46,7 @@ def get_config():
         "reset_after_trigger": False,
         "limit": -1,
         "presampling_config": {"ratio": 50, "strategy": "Random"},
-        "downsampling_config": {"strategy": "Empty"},
+        "downsampling_config": {"strategy": "No"},
     }
 
 
@@ -67,7 +67,7 @@ def test_init():
 
     assert isinstance(coreset_strategy, AbstractSelectionStrategy)
     assert isinstance(coreset_strategy.presampling_strategy, RandomPresamplingStrategy)
-    assert isinstance(coreset_strategy.downsampling_scheduler.current_downsampler, EmptyDownsamplingStrategy)
+    assert isinstance(coreset_strategy.downsampling_scheduler.current_downsampler, NoDownsamplingStrategy)
 
 
 def test_inform_data():
@@ -176,7 +176,7 @@ def test_on_trigger_multi_chunks_bis():
 
 def test_no_presampling():
     config = get_config()
-    config["presampling_config"]["strategy"] = "Empty"
+    config["presampling_config"]["strategy"] = "No"
     config["presampling_config"]["ratio"] = 100
     config["downsampling_config"]["strategy"] = "Loss"
     config["downsampling_config"]["ratio"] = 10

@@ -6,7 +6,7 @@ def instantiate_presampler(
     config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
 ) -> AbstractPresamplingStrategy:
     if "presampling_config" not in config or "strategy" not in config["presampling_config"]:
-        presampling_strategy = "EmptyPresamplingStrategy"
+        presampling_strategy = "NoPresamplingStrategy"
         presampling_config = {}
     else:
         presampling_strategy = config["presampling_config"]["strategy"]

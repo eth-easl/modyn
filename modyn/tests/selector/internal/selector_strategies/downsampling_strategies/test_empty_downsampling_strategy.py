@@ -1,9 +1,9 @@
-from modyn.selector.internal.selector_strategies.downsampling_strategies import EmptyDownsamplingStrategy
+from modyn.selector.internal.selector_strategies.downsampling_strategies import NoDownsamplingStrategy
 
 
 def test_init_empty():
     # Test init works
-    strat = EmptyDownsamplingStrategy(
+    strat = NoDownsamplingStrategy(
         {},
         1000,
     )

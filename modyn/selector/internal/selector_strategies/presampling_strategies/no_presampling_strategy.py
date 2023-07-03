@@ -5,10 +5,10 @@ from modyn.selector.internal.selector_strategies.presampling_strategies import A
 from sqlalchemy import Select, asc, select
 
 
-class EmptyPresamplingStrategy(AbstractPresamplingStrategy):
+class NoPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         if "ratio" in presampling_config and presampling_config["ratio"] != 100:
-            raise ValueError("Using EmptyPresamplingStrategy, the presampling_ratio is implicitly 100%")
+            raise ValueError("Using NoPresamplingStrategy, the presampling_ratio is implicitly 100%")
         presampling_config["ratio"] = 100
         super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
 

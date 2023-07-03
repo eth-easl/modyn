@@ -1,9 +1,9 @@
 import pytest
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
-    EmptyDownsamplingStrategy,
     GradNormDownsamplingStrategy,
     LossDownsamplingStrategy,
+    NoDownsamplingStrategy,
     instantiate_scheduler,
 )
 from modyn.utils import DownsamplingMode
@@ -21,7 +21,7 @@ def get_configs_triple():
         {"strategy": "Loss", "sample_then_batch": True, "ratio": 50},
         {"strategy": "GradNorm", "sample_then_batch": False, "ratio": 25},
         {
-            "strategy": "Empty",
+            "strategy": "No",
         },
     ]
 
@@ -176,7 +176,7 @@ def test_wrong_trigger():
 
 def test_instantiate_scheduler_empty():
     scheduler = instantiate_scheduler({}, 100)
-    assert isinstance(scheduler.current_downsampler, EmptyDownsamplingStrategy)
+    assert isinstance(scheduler.current_downsampler, NoDownsamplingStrategy)
     assert scheduler.next_threshold is None
 
 
