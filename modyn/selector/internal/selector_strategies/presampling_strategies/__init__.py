@@ -1,5 +1,6 @@
 import os
 
+from .abstract_balanced_strategy import AbstractBalancedPresamplingStrategy  # noqa: F401
 from .abstract_presampling_strategy import AbstractPresamplingStrategy  # noqa: F401
 from .label_balanced_presampling_strategy import LabelBalancedPresamplingStrategy  # noqa: F401
 from .no_presampling_strategy import NoPresamplingStrategy  # noqa: F401

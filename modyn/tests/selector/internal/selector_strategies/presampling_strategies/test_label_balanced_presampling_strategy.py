@@ -8,7 +8,7 @@ import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.coreset_strategy import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies import LabelBalancedPresamplingStrategy
-from modyn.selector.internal.selector_strategies.presampling_strategies.label_balanced_presampling_strategy import (
+from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_balanced_strategy import (
     get_fair_share,
     get_fair_share_predicted_total,
 )
