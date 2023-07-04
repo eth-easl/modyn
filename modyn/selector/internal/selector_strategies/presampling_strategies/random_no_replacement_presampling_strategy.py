@@ -36,7 +36,6 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
 
         # count how many samples are retrieved
         number_of_sampled_points = self._count_number_of_sampled_points(next_trigger_id)
-
         if number_of_sampled_points < target_size:
             # we have used all the available samples so we have to update the last_complete_trigger
             self.last_complete_trigger = next_trigger_id
@@ -82,6 +81,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.sample_key.in_(subq),
             ).update({"last_used_in_trigger": next_trigger_id})
+            database.session.commit()
 
     def _count_number_of_sampled_points(self, next_trigger_id: int) -> int:
         with MetadataDatabaseConnection(self.modyn_config) as database:
