@@ -34,7 +34,7 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
         super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
         self.force_required_target_size = presampling_config.get("force_required_target_size", False)
-        self.force_label_balancing = presampling_config.get("force_label_balancing", False)
+        self.force_column_balancing = presampling_config.get("force_column_balancing", False)
         self.balanced_column = None
 
     def get_presampling_query(
@@ -45,11 +45,11 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
         trigger_dataset_size: Optional[int],
     ) -> Select:
         assert self.balanced_column is not None
-        samples_count = self._get_samples_count_per_label(next_trigger_id, tail_triggers)
+        samples_count = self._get_samples_count_per_balanced_column(next_trigger_id, tail_triggers)
         target_size = self.get_target_size(sum(samples_count), limit)
         fair_share = get_fair_share(target_size, samples_count)
 
-        # randomly permute samples class by class/trigger.
+        # randomly permute samples class by class or trigger by trigger.
         # Then use row_number (in the next query) to get N random samples for each class/trigger
         subquery = select(
             SelectorStateMetadata,
@@ -65,22 +65,22 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
 
         if self.force_required_target_size:
             return self._get_force_required_target_size_query(fair_share, samples_count, subquery, target_size)
-        if self.force_label_balancing:
-            return self._get_force_label_balancing_query(fair_share, samples_count, subquery, target_size)
+        if self.force_column_balancing:
+            return self._get_force_column_balancing_query(fair_share, samples_count, subquery, target_size)
 
         return self._get_base_query(fair_share, subquery)
 
-    def _get_force_label_balancing_query(
+    def _get_force_column_balancing_query(
         self, fair_share: int, samples_count: list[int], subquery: Select, target_size: int
     ) -> Select:
         """
         Each class/trigger has exactly the same number of samples
         """
-        smallest_class_size = min(samples_count)
-        if smallest_class_size < fair_share:
+        smallest_size = min(samples_count)
+        if smallest_size < fair_share:
             return (
                 select(subquery.c.sample_key)
-                .where(subquery.c.row_num <= smallest_class_size)
+                .where(subquery.c.row_num <= smallest_size)
                 .order_by(asc(subquery.c.timestamp))
                 .limit(target_size)
             )
@@ -89,7 +89,7 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
     def _get_base_query(self, fair_share: int, subquery: Select) -> Select:
         """
 
-        Class j gets min(fair_share, number_samples[j]) samples
+        Class/Trigger j gets min(fair_share, number_samples[j]) samples
 
         """
         return (
@@ -118,7 +118,7 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
             )
         return self._get_base_query(fair_share, subquery)
 
-    def _get_samples_count_per_label(self, next_trigger_id: int, tail_triggers: Optional[int]) -> list[int]:
+    def _get_samples_count_per_balanced_column(self, next_trigger_id: int, tail_triggers: Optional[int]) -> list[int]:
         """
 
         Performs a group_by query and returns a list with the number of samples for each group

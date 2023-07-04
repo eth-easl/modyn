@@ -5,6 +5,7 @@ from .abstract_presampling_strategy import AbstractPresamplingStrategy  # noqa: 
 from .label_balanced_presampling_strategy import LabelBalancedPresamplingStrategy  # noqa: F401
 from .no_presampling_strategy import NoPresamplingStrategy  # noqa: F401
 from .random_presampling_strategy import RandomPresamplingStrategy  # noqa: F401
+from .trigger_balanced_presampling_strategy import TriggerBalancedPresamplingStrategy  # noqa: F401
 from .utils import instantiate_presampler  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
