@@ -37,8 +37,3 @@ class NoPresamplingStrategy(AbstractPresamplingStrategy):
             stmt = stmt.limit(limit)
 
         return stmt
-
-    def requires_trigger_dataset_size(
-        self,
-    ) -> bool:
-        return False

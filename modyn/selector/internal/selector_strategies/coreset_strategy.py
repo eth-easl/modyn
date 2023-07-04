@@ -41,7 +41,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             target_size = None
-            if self.presampling_strategy.requires_trigger_dataset_size():
+            if self.presampling_strategy.requires_trigger_dataset_size:
                 target_size = self._get_dataset_size()
 
             stmt = self.presampling_strategy.get_presampling_query(

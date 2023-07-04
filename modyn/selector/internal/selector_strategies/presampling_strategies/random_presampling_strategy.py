@@ -8,6 +8,10 @@ from sqlalchemy import Select, asc, func, select
 
 
 class RandomPresamplingStrategy(AbstractPresamplingStrategy):
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+        super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+        self.requires_trigger_dataset_size = True
+
     def get_presampling_query(
         self,
         next_trigger_id: int,
@@ -44,8 +48,3 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
         )
 
         return stmt
-
-    def requires_trigger_dataset_size(
-        self,
-    ) -> bool:
-        return True

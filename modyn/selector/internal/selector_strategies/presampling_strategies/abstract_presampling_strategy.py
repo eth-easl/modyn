@@ -17,6 +17,8 @@ class AbstractPresamplingStrategy(ABC):
         if not (0 < self.presampling_ratio <= 100) or not isinstance(self.presampling_ratio, int):
             raise ValueError("Presampling ratio must be an integer in range (0,100]")
 
+        self.requires_trigger_dataset_size = False
+
     @abstractmethod
     def get_presampling_query(
         self,
@@ -25,12 +27,6 @@ class AbstractPresamplingStrategy(ABC):
         limit: Optional[int],
         trigger_dataset_size: Optional[int],
     ) -> Select:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def requires_trigger_dataset_size(
-        self,
-    ) -> bool:
         raise NotImplementedError()
 
     def get_target_size(self, trigger_dataset_size: int, limit: Optional[int]) -> int:

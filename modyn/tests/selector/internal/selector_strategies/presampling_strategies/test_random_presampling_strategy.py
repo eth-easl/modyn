@@ -50,7 +50,7 @@ def setup_and_teardown():
 def test_constructor():
     strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10, 1000)
     assert strat.presampling_ratio == 50
-    assert strat.requires_trigger_dataset_size()
+    assert strat.requires_trigger_dataset_size
 
 
 def test_target_size():

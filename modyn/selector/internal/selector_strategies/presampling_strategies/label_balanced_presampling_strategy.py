@@ -134,8 +134,3 @@ class LabelBalancedPresamplingStrategy(AbstractPresamplingStrategy):
 
         # el[0] is the class, el[1] is the count
         return [el[1] for el in samples_count]
-
-    def requires_trigger_dataset_size(
-        self,
-    ) -> bool:
-        return False  # a custom group by query must be executed, and then we can retrieve the total from its result
