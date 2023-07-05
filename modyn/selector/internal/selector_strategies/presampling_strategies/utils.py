@@ -2,9 +2,7 @@ from modyn.selector.internal.selector_strategies.presampling_strategies import A
 from modyn.utils.utils import instantiate_class
 
 
-def instantiate_presampler(
-    config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
-) -> AbstractPresamplingStrategy:
+def instantiate_presampler(config: dict, modyn_config: dict, pipeline_id: int) -> AbstractPresamplingStrategy:
     if "presampling_config" not in config or "strategy" not in config["presampling_config"]:
         presampling_strategy = "NoPresamplingStrategy"
         presampling_config = {}
@@ -19,7 +17,6 @@ def instantiate_presampler(
             presampling_config,
             modyn_config,
             pipeline_id,
-            maximum_keys_in_memory,
         )
     except ValueError:
         # Try to instantiate the class even if the short name is used
@@ -29,6 +26,5 @@ def instantiate_presampler(
             presampling_config,
             modyn_config,
             pipeline_id,
-            maximum_keys_in_memory,
         )
     return presampling_class

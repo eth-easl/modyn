@@ -150,7 +150,7 @@ def test_on_trigger_multi_chunks_unbalanced():
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat.presampling_strategy.maximum_keys_in_memory = 2
+    strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -165,7 +165,7 @@ def test_on_trigger_multi_chunks_bis():
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat.presampling_strategy.maximum_keys_in_memory = 2
+    strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -184,7 +184,7 @@ def test_no_presampling():
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat.presampling_strategy.maximum_keys_in_memory = 5
+    strat._maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -201,7 +201,7 @@ def test_chunking():
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat.presampling_strategy.maximum_keys_in_memory = 2
+    strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -219,7 +219,7 @@ def test_chunking_with_stricter_limit():
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat.presampling_strategy.maximum_keys_in_memory = 2
+    strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -235,7 +235,7 @@ def test_chunking_with_stricter_presampling():
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat.presampling_strategy.maximum_keys_in_memory = 5
+    strat._maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -316,7 +316,7 @@ def test_no_presampling_with_limit():
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
-    strat.presampling_strategy.maximum_keys_in_memory = 5
+    strat._maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
     indexes = list(generator)
@@ -332,7 +332,7 @@ def test_get_all_data():
 
     assert list(generator) == [[10, 11, 12]]
 
-    strat.presampling_strategy.maximum_keys_in_memory = 2
+    strat._maximum_keys_in_memory = 2
 
     generator = strat._get_data()
 

@@ -5,10 +5,9 @@ from sqlalchemy import Select
 
 
 class AbstractPresamplingStrategy(ABC):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
-        self.maximum_keys_in_memory = maximum_keys_in_memory
 
         if "ratio" not in presampling_config:
             raise ValueError("Please specify the presampling ratio.")
@@ -28,6 +27,10 @@ class AbstractPresamplingStrategy(ABC):
         trigger_dataset_size: Optional[int],
         requires_samples_ordered_by_label: bool,
     ) -> Select:
+        """
+        This abstract class should return the query to get the presampled samples. The query should have only
+        SelectorStateMetadata.sample_key in the SELECT clause.
+        """
         raise NotImplementedError()
 
     def get_target_size(self, trigger_dataset_size: int, limit: Optional[int]) -> int:

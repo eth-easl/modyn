@@ -48,13 +48,13 @@ def setup_and_teardown():
 
 
 def test_constructor():
-    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10, 1000)
+    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10)
     assert strat.presampling_ratio == 50
     assert strat.requires_trigger_dataset_size
 
 
 def test_target_size():
-    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10, 1000)
+    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10)
     assert strat.get_target_size(100, None) == 50
     assert strat.get_target_size(20, None) == 10
     assert strat.get_target_size(19, None) == 9
@@ -70,7 +70,7 @@ def test_target_size():
 
 
 def test_get_query_wrong():
-    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10, 1000)
+    strat = RandomPresamplingStrategy(get_config(), get_minimal_modyn_config(), 10)
 
     # missing size
     with pytest.raises(AssertionError):
@@ -90,12 +90,12 @@ def test_constructor_throws_on_invalid_config():
     conf["ratio"] = 0
 
     with pytest.raises(ValueError):
-        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10, 1000)
+        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10)
 
     conf["ratio"] = 101
 
     with pytest.raises(ValueError):
-        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10, 1000)
+        RandomPresamplingStrategy(conf, get_minimal_modyn_config(), 10)
 
 
 def test_dataset_size_various_scenarios():

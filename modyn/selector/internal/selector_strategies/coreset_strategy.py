@@ -18,7 +18,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
         # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
-            config, modyn_config, pipeline_id, maximum_keys_in_memory
+            config, modyn_config, pipeline_id
         )
         # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
@@ -43,7 +43,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
             yield [(sample, 1.0) for sample in samples]
 
     def _get_data(self) -> Iterable[list[int]]:
-
         with MetadataDatabaseConnection(self._modyn_config) as database:
             trigger_dataset_size = None
             if self.presampling_strategy.requires_trigger_dataset_size:
@@ -61,7 +60,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
                 limit=self.training_set_size_limit if self.has_limit else None,
                 trigger_dataset_size=trigger_dataset_size,
                 requires_samples_ordered_by_label=downsampler_requires_samples_ordered_by_label,
-            )
+            ).execution_options(yield_per=self._maximum_keys_in_memory)
 
             for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:

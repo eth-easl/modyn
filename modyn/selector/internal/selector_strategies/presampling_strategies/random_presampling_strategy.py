@@ -8,8 +8,8 @@ from sqlalchemy import Select, asc, func, select
 
 
 class RandomPresamplingStrategy(AbstractPresamplingStrategy):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
+        super().__init__(presampling_config, modyn_config, pipeline_id)
         self.requires_trigger_dataset_size = True
 
     def get_presampling_query(
@@ -38,13 +38,9 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
             .limit(target_size)
         )
 
-        stmt = (
-            select(SelectorStateMetadata.sample_key)
-            .execution_options(yield_per=self.maximum_keys_in_memory)
-            .filter(
-                SelectorStateMetadata.pipeline_id == self.pipeline_id,
-                SelectorStateMetadata.sample_key.in_(subq),
-            )
+        stmt = select(SelectorStateMetadata.sample_key).filter(
+            SelectorStateMetadata.pipeline_id == self.pipeline_id,
+            SelectorStateMetadata.sample_key.in_(subq),
         )
 
         if requires_samples_ordered_by_label:

@@ -6,11 +6,11 @@ from sqlalchemy import Select, asc, select
 
 
 class NoPresamplingStrategy(AbstractPresamplingStrategy):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
         if "ratio" in presampling_config and presampling_config["ratio"] != 100:
             raise ValueError("Using NoPresamplingStrategy, the presampling_ratio is implicitly 100%")
         presampling_config["ratio"] = 100
-        super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+        super().__init__(presampling_config, modyn_config, pipeline_id)
 
     def get_presampling_query(
         self,
@@ -20,16 +20,11 @@ class NoPresamplingStrategy(AbstractPresamplingStrategy):
         trigger_dataset_size: Optional[int],
         requires_samples_ordered_by_label: bool,
     ) -> Select:
-        stmt = (
-            select(SelectorStateMetadata.sample_key)
-            # Enables batching of results in chunks.
-            # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-            .execution_options(yield_per=self.maximum_keys_in_memory).filter(
-                SelectorStateMetadata.pipeline_id == self.pipeline_id,
-                SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
-                if tail_triggers is not None
-                else True,
-            )
+        stmt = select(SelectorStateMetadata.sample_key).filter(
+            SelectorStateMetadata.pipeline_id == self.pipeline_id,
+            SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
+            if tail_triggers is not None
+            else True,
         )
 
         if requires_samples_ordered_by_label:

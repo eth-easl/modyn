@@ -30,8 +30,8 @@ def get_fair_share_predicted_total(fair_share: int, requests: list[int]) -> int:
 
 
 class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
+        super().__init__(presampling_config, modyn_config, pipeline_id)
 
         self.force_required_target_size = presampling_config.get("force_required_target_size", False)
         self.force_column_balancing = presampling_config.get("force_column_balancing", False)
@@ -110,7 +110,6 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
         """
         return (
             select(subquery.c.sample_key)
-            .execution_options(yield_per=self.maximum_keys_in_memory)
             .where(subquery.c.row_num <= fair_share)
             .order_by(subquery.c.label if requires_samples_ordered_by_label else subquery.c.timestamp)
         )

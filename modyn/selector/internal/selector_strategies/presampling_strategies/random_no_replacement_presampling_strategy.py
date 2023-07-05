@@ -9,8 +9,8 @@ from sqlalchemy import Select, asc, func, select
 
 
 class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
+        super().__init__(presampling_config, modyn_config, pipeline_id)
         self.requires_trigger_dataset_size = True
 
         # a complete_trigger is the last time when all the datapoints (in the db at that time) have been seen
@@ -48,13 +48,9 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
             self._update_last_used_in_trigger(next_trigger_id, subq)
 
         # then the query to select the samples is straightforward, just a filter on last_used_in_trigger
-        stmt = (
-            select(SelectorStateMetadata.sample_key)
-            .execution_options(yield_per=self.maximum_keys_in_memory)
-            .filter(
-                SelectorStateMetadata.pipeline_id == self.pipeline_id,
-                SelectorStateMetadata.last_used_in_trigger == next_trigger_id,
-            )
+        stmt = select(SelectorStateMetadata.sample_key).filter(
+            SelectorStateMetadata.pipeline_id == self.pipeline_id,
+            SelectorStateMetadata.last_used_in_trigger == next_trigger_id,
         )
 
         if requires_samples_ordered_by_label:
