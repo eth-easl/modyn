@@ -20,6 +20,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetDataInIntervalResponse,
     GetDataPerWorkerRequest,
     GetDataPerWorkerResponse,
+    GetDatasetSizeRequest,
+    GetDatasetSizeResponse,
     GetNewDataSinceRequest,
     GetNewDataSinceResponse,
     GetRequest,
@@ -242,6 +244,25 @@ class StorageGRPCServicer(StorageServicer):
             for batch in database.session.execute(stmt).partitions():
                 if len(batch) > 0:
                     yield GetDataPerWorkerResponse(keys=[value[0] for value in batch])
+
+    # pylint: disable-next=unused-argument,invalid-name
+    def GetDatasetSize(self, request: GetDatasetSizeRequest, context: grpc.ServicerContext) -> GetDatasetSizeResponse:
+        """Get the total amount of keys for a given dataset (-1 if dataset cannot be found).
+
+        Returns:
+            GetDatasetSizeResponse: A response containing the amount of keys for a given dataset.
+        """
+        with StorageDatabaseConnection(self.modyn_config) as database:
+            session = database.session
+
+            dataset: Dataset = session.query(Dataset).filter(Dataset.name == request.dataset_id).first()
+
+            if dataset is None:
+                logger.error(f"Dataset with name {request.dataset_id} does not exist.")
+                return GetDatasetSizeResponse(num_keys=-1)
+
+            total_keys = session.query(Sample.sample_id).filter(Sample.dataset_id == dataset.dataset_id).count()
+            return GetDatasetSizeResponse(num_keys=total_keys)
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(

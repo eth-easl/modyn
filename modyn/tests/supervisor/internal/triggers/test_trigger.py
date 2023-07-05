@@ -1,7 +1,7 @@
 # pylint: disable=abstract-class-instantiated,unused-argument
 from unittest.mock import patch
 
-from modyn.supervisor.internal.trigger import Trigger
+from modyn.supervisor.internal.triggers.trigger import Trigger
 
 
 @patch.multiple(Trigger, __abstractmethods__=set())

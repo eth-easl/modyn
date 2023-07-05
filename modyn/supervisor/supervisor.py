@@ -6,8 +6,8 @@ from typing import Optional
 
 import enlighten
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.trigger import Trigger
-from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
+from modyn.supervisor.internal.triggers.trigger import Trigger
+from modyn.utils import dynamic_module_import, is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,13 @@ class Supervisor:
         self,
         pipeline_config: dict,
         modyn_config: dict,
+        eval_directory: pathlib.Path,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
+        self.eval_directory = eval_directory
         self.current_training_id: Optional[int] = None
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
@@ -50,6 +52,9 @@ class Supervisor:
 
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
+
+        if not is_directory_writable(self.eval_directory):
+            raise ValueError("No permission to write to the evaluation results directory.")
 
         logging.info("Setting up connections to cluster components.")
         self.grpc = GRPCHandler(modyn_config, self.progress_mgr, self.status_bar)
@@ -321,6 +326,12 @@ class Supervisor:
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
         if self.pipeline_config["training"]["use_previous_model"]:
             self.previous_model_id = trained_model_id
+
+        # Start evaluation
+        if "evaluation" in self.pipeline_config:
+            evaluations = self.grpc.start_evaluation(trained_model_id, self.pipeline_config)
+            self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+            self.grpc.store_evaluation_results(self.eval_directory, self.pipeline_id, trigger_id, evaluations)
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.

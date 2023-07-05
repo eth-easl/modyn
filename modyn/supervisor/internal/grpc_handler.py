@@ -1,11 +1,26 @@
 # pylint: disable=no-name-in-module
 import json
 import logging
+import pathlib
+from collections import deque
 from time import sleep
 from typing import Iterable, Optional
 
 import enlighten
 import grpc
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    DatasetInfo,
+    EvaluateModelRequest,
+    EvaluateModelResponse,
+    EvaluationResultRequest,
+    EvaluationResultResponse,
+    EvaluationStatusRequest,
+    EvaluationStatusResponse,
+)
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetNumberOfSamplesRequest,
@@ -30,7 +45,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.supervisor.internal.supervisor_counter import SupervisorCounter
+from modyn.supervisor.internal.utils import EvaluationStatusTracker, SupervisorCounter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -58,12 +73,14 @@ class GRPCHandler:
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
         self.connected_to_selector = False
+        self.connected_to_evaluator = False
         self.progress_mgr = progress_mgr
         self.status_bar = status_bar
 
         self.init_storage()
         self.init_selector()
         self.init_trainer_server()
+        self.init_evaluator()
 
     def init_storage(self) -> None:
         assert self.config is not None
@@ -112,6 +129,18 @@ class GRPCHandler:
         self.trainer_server = TrainerServerStub(self.trainer_server_channel)
         logger.info("Successfully connected to trainer server.")
         self.connected_to_trainer_server = True
+
+    def init_evaluator(self) -> None:
+        assert self.config is not None
+        evaluator_address = f"{self.config['evaluator']['hostname']}:{self.config['evaluator']['port']}"
+        self.evaluator_channel = grpc.insecure_channel(evaluator_address)
+
+        if not grpc_connection_established(self.evaluator_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to evaluator at {evaluator_address}.")
+
+        self.evaluator = EvaluatorStub(self.evaluator_channel)
+        logger.info("Successfully connected to evaluator.")
+        self.connected_to_evaluator = True
 
     def dataset_available(self, dataset_id: str) -> bool:
         assert self.connected_to_storage, "Tried to check for dataset availability, but no storage connection."
@@ -349,7 +378,6 @@ class GRPCHandler:
         return response.status_bar_scale
 
     # pylint: disable=too-many-nested-blocks
-
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> None:  # pragma: no cover
@@ -383,7 +411,7 @@ class GRPCHandler:
 
             else:
                 if res.HasField("exception") and res.exception is not None:
-                    raise RuntimeError(f"Exception at trainer server occured during training:\n{res.exception}\n\n")
+                    raise RuntimeError(f"Exception at trainer server occurred during training:\n{res.exception}\n\n")
 
                 blocked_in_a_row = 0
 
@@ -434,3 +462,173 @@ class GRPCHandler:
         ).success
 
         assert success, "Something went wrong while seeding the selector"
+
+    def start_evaluation(self, trained_model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusTracker]:
+        if not self.connected_to_evaluator:
+            raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
+
+        model_id = pipeline_config["model"]["id"]
+        if "config" in pipeline_config["model"]:
+            model_config = json.dumps(pipeline_config["model"]["config"])
+        else:
+            model_config = "{}"
+
+        device = pipeline_config["evaluation"]["device"]
+        amp = pipeline_config["evaluation"]["amp"] if "amp" in pipeline_config["evaluation"] else False
+
+        evaluations: dict[int, EvaluationStatusTracker] = {}
+
+        # enforce unique dataset_ids
+        dataset_ids_seen = set()
+        for dataset in pipeline_config["evaluation"]["datasets"]:
+            dataset_id = dataset["dataset_id"]
+            if dataset_id in dataset_ids_seen:
+                raise ValueError("Dataset id should be unique among evaluated datasets.")
+            dataset_ids_seen.add(dataset_id)
+            if "transformations" in dataset:
+                transform_list = dataset["transformations"]
+            else:
+                transform_list = []
+
+            if "label_transformer_function" in dataset:
+                label_transformer = dataset["label_transformer_function"]
+            else:
+                label_transformer = ""
+
+            bytes_parser_function = dataset["bytes_parser_function"]
+            batch_size = dataset["batch_size"]
+            dataloader_workers = dataset["dataloader_workers"]
+            metrics = []
+            for metric in dataset["metrics"]:
+                name = metric["name"]
+                if "config" in metric:
+                    metric_config = json.dumps(metric["config"])
+                else:
+                    metric_config = "{}"
+
+                if "evaluation_transformer_function" in metric:
+                    evaluation_transformer = metric["evaluation_transformer_function"]
+                else:
+                    evaluation_transformer = ""
+
+                metrics.append(
+                    MetricConfiguration(
+                        name=name,
+                        config=EvaluatorJsonString(value=metric_config),
+                        evaluation_transformer=EvaluatorPythonString(value=evaluation_transformer),
+                    )
+                )
+
+            start_evaluation_kwargs = {
+                "trained_model_id": trained_model_id,
+                "dataset_info": DatasetInfo(dataset_id=dataset_id, num_dataloaders=dataloader_workers),
+                "device": device,
+                "amp": amp,
+                "batch_size": batch_size,
+                "metrics": metrics,
+                "model_id": model_id,
+                "model_configuration": EvaluatorJsonString(value=model_config),
+                "transform_list": transform_list,
+                "bytes_parser": EvaluatorPythonString(value=bytes_parser_function),
+                "label_transformer": EvaluatorPythonString(value=label_transformer),
+            }
+
+            cleaned_kwargs = {k: v for k, v in start_evaluation_kwargs.items() if v is not None}
+
+            req = EvaluateModelRequest(**cleaned_kwargs)
+
+            response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
+
+            if not response.evaluation_started:
+                logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {response}")
+            else:
+                evaluation_id = response.evaluation_id
+                logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
+                evaluations[evaluation_id] = EvaluationStatusTracker(dataset_id, response.dataset_size)
+
+        return evaluations
+
+    def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
+        if not self.connected_to_evaluator:
+            raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
+
+        self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
+
+        working_queue: deque[int] = deque()
+        for evaluation_id, dataset_info in evaluations.items():
+            dataset_info.create_counter(self.progress_mgr, training_id, evaluation_id)
+            working_queue.append(evaluation_id)
+
+        blocked_in_a_row = 0
+        while working_queue:
+            current_evaluation_id = working_queue.popleft()
+            current_dataset_info = evaluations[current_evaluation_id]
+            req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
+            res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
+
+            if not res.valid:
+                logger.warning(f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n")
+                current_dataset_info.end_counter(True)
+                continue
+
+            if res.blocked:
+                blocked_in_a_row += 1
+                if blocked_in_a_row >= 3:
+                    logger.warning(
+                        f"Evaluator returned {blocked_in_a_row} blocked responses in a row, cannot update status."
+                    )
+                    blocked_in_a_row = 0
+                    current_dataset_info.end_counter(True)
+                else:
+                    working_queue.appendleft(current_evaluation_id)
+                continue
+            blocked_in_a_row = 0
+
+            if res.exception:
+                logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
+                current_dataset_info.end_counter(True)
+                continue
+            if not res.is_running:
+                current_dataset_info.end_counter(False)
+                continue
+            if res.state_available:
+                assert res.samples_seen, f"Inconsistent server response:\n{res}"
+
+                current_dataset_info.progress_counter(res.samples_seen)
+            if res.is_running:
+                logger.warning("Evaluator is not blocked and is running, but no state is available.")
+
+            working_queue.append(current_evaluation_id)
+            sleep(1)
+
+        logger.info("Evaluation completed ✅")
+        self.status_bar.update(demo="Evaluation completed")
+
+    def store_evaluation_results(
+        self,
+        eval_directory: pathlib.Path,
+        pipeline_id: int,
+        trigger_id: int,
+        evaluations: dict[int, EvaluationStatusTracker],
+    ) -> None:
+        if not self.connected_to_evaluator:
+            raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
+
+        # TODO(#281): store results in a framework-specific format
+        for evaluation_id in evaluations:
+            dataset_id = evaluations[evaluation_id].dataset_id
+            file_name = f"{pipeline_id}_{trigger_id}_{dataset_id}.eval"
+
+            req = EvaluationResultRequest(evaluation_id=evaluation_id)
+            res: EvaluationResultResponse = self.evaluator.get_evaluation_result(req)
+
+            if not res.valid:
+                logger.warning(f"Cannot get the evaluation result for evaluation {evaluation_id}")
+                continue
+
+            with open(eval_directory / file_name, "w+", encoding="utf-8") as file:
+                file.write(f"evaluation_id: {evaluation_id}\n")
+                file.write(f"dataset_size: {evaluations[evaluation_id].dataset_size}\n")
+                file.write("metrics:\n")
+                for metric in res.evaluation_data:
+                    file.write(f"- {metric.metric}: {metric.result}\n")

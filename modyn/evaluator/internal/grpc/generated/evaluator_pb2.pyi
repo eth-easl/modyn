@@ -70,21 +70,21 @@ class MetricConfiguration(google.protobuf.message.Message):
 
     NAME_FIELD_NUMBER: builtins.int
     CONFIG_FIELD_NUMBER: builtins.int
-    EVALUATION_TRANSFORM_FUNCTION_FIELD_NUMBER: builtins.int
+    EVALUATION_TRANSFORMER_FIELD_NUMBER: builtins.int
     name: builtins.str
     @property
     def config(self) -> global___JsonString: ...
     @property
-    def evaluation_transform_function(self) -> global___PythonString: ...
+    def evaluation_transformer(self) -> global___PythonString: ...
     def __init__(
         self,
         *,
         name: builtins.str = ...,
         config: global___JsonString | None = ...,
-        evaluation_transform_function: global___PythonString | None = ...,
+        evaluation_transformer: global___PythonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer_function", b"evaluation_transformer_function"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer_function", b"evaluation_transformer_function", "name", b"name"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer", b"evaluation_transformer"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer", b"evaluation_transformer", "name", b"name"]) -> None: ...
 
 global___MetricConfiguration = MetricConfiguration
 
@@ -146,15 +146,18 @@ class EvaluateModelResponse(google.protobuf.message.Message):
 
     EVALUATION_STARTED_FIELD_NUMBER: builtins.int
     EVALUATION_ID_FIELD_NUMBER: builtins.int
+    DATASET_SIZE_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
     evaluation_id: builtins.int
+    dataset_size: builtins.int
     def __init__(
         self,
         *,
         evaluation_started: builtins.bool = ...,
         evaluation_id: builtins.int = ...,
+        dataset_size: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_size", b"dataset_size", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
 
 global___EvaluateModelResponse = EvaluateModelResponse
 

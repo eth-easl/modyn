@@ -1,5 +1,5 @@
 import enlighten
-from modyn.supervisor.internal.supervisor_counter import CurrentEvent, SupervisorCounter
+from modyn.supervisor.internal.utils.supervisor_counter import CurrentEvent, SupervisorCounter
 
 
 def test_counter_training_one_epoch():

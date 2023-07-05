@@ -1,10 +1,16 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import os
+import pathlib
+import shutil
 import typing
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from modyn.supervisor import Supervisor
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
+from modyn.supervisor.internal.utils.evaluation_status_tracker import EvaluationStatusTracker
+
+EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 
 
 def get_minimal_pipeline_config() -> dict:
@@ -32,11 +38,28 @@ def get_minimal_pipeline_config() -> dict:
     }
 
 
+def get_minimal_evaluation_config() -> dict:
+    return {
+        "device": "cpu",
+        "datasets": [
+            {
+                "dataset_id": "MNIST_eval",
+                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+                "dataloader_workers": 2,
+                "batch_size": 64,
+                "metrics": [{"name": "Accuracy"}],
+            }
+        ],
+    }
+
+
 def get_minimal_system_config() -> dict:
     return {}
 
 
-def noop_constructor_mock(self, pipeline_config: dict, modyn_config: dict, replay_at: typing.Optional[int]) -> None:
+def noop_constructor_mock(
+    self, pipeline_config: dict, modyn_config: dict, eval_dir: pathlib.Path, replay_at: typing.Optional[int]
+) -> None:
     pass
 
 
@@ -44,9 +67,20 @@ def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
 
+def setup():
+    if EVALUATION_DIRECTORY.is_dir():
+        shutil.rmtree(EVALUATION_DIRECTORY)
+    EVALUATION_DIRECTORY.mkdir(0o777)
+
+
+def teardown():
+    shutil.rmtree(EVALUATION_DIRECTORY)
+
+
 @patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
+@patch.object(GRPCHandler, "init_evaluator", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
@@ -54,11 +88,12 @@ def get_non_connecting_supervisor(
     test_trainer_server_available,
     test_dataset_available,
     test_connection_established,
+    test_init_evaluator,
     test_init_trainer_server,
     test_init_storage,
     test_init_selector,
 ) -> Supervisor:
-    supervisor = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
+    supervisor = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
     return supervisor
 
@@ -70,6 +105,7 @@ def test_initialization() -> None:
 @patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
+@patch.object(GRPCHandler, "init_evaluator", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=False)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
@@ -77,17 +113,19 @@ def test_constructor_throws_on_invalid_system_config(
     test_trainer_server_available,
     test_dataset_available,
     test_connection_established,
+    test_init_evaluator,
     test_init_storage,
     test_init_trainer_server,
     test_init_selector,
 ) -> None:
     with pytest.raises(ValueError, match="Invalid system configuration"):
-        Supervisor(get_minimal_pipeline_config(), {}, None)
+        Supervisor(get_minimal_pipeline_config(), {}, EVALUATION_DIRECTORY, None)
 
 
 @patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
+@patch.object(GRPCHandler, "init_evaluator", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
@@ -95,17 +133,18 @@ def test_constructor_throws_on_invalid_pipeline_config(
     test_trainer_server_available,
     test_dataset_available,
     test_connection_established,
+    test_init_evaluator,
     test_init_storage,
     test_init_trainer_server,
     test_init_selector,
 ) -> None:
     with pytest.raises(ValueError, match="Invalid pipeline configuration"):
-        Supervisor({}, get_minimal_system_config(), None)
+        Supervisor({}, get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_validate_pipeline_config_schema():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
+    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
     # Check that our minimal pipeline config gets accepted
     sup.pipeline_config = get_minimal_pipeline_config()
@@ -124,7 +163,7 @@ def test_validate_pipeline_config_schema():
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test__validate_training_options():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
+    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
     # Check that our minimal pipeline config gets accepted
     sup.pipeline_config = get_minimal_pipeline_config()
@@ -173,7 +212,7 @@ def test__validate_training_options():
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_validate_pipeline_config_content():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
+    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
     # Check that our minimal pipeline config gets accepted
     sup.pipeline_config = get_minimal_pipeline_config()
@@ -204,7 +243,7 @@ def test_validate_pipeline_config_content():
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_validate_pipeline_config():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
+    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
     # Check that our minimal pipeline config gets accepted
     sup.pipeline_config = get_minimal_pipeline_config()
@@ -490,9 +529,13 @@ def test__handle_triggers_within_batch_empty_triggers(
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
 @patch.object(GRPCHandler, "start_training", return_value=1337)
+@patch.object(GRPCHandler, "start_evaluation")
 @patch.object(GRPCHandler, "wait_for_training_completion")
 def test__run_training(
-    test_wait_for_training_completion: MagicMock, test_start_training: MagicMock, test_store_trained_model: MagicMock
+    test_wait_for_training_completion: MagicMock,
+    test_start_evaluation: MagicMock,
+    test_start_training: MagicMock,
+    test_store_trained_model: MagicMock,
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     sup.pipeline_id = 42
@@ -504,11 +547,49 @@ def test__run_training(
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
     test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None)
     test_store_trained_model.assert_called_once()
+    test_start_evaluation.assert_not_called()
+
+
+@patch.object(GRPCHandler, "store_trained_model", return_value=101)
+@patch.object(GRPCHandler, "start_training", return_value=1337)
+@patch.object(GRPCHandler, "store_evaluation_results")
+@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "start_evaluation")
+@patch.object(GRPCHandler, "wait_for_training_completion")
+def test__run_training_with_evaluation(
+    test_wait_for_training_completion: MagicMock,
+    test_start_evaluation: MagicMock,
+    test_wait_for_evaluation_completion: MagicMock,
+    test_store_evaluation_results: MagicMock,
+    test_start_training: MagicMock,
+    test_store_trained_model: MagicMock,
+):
+    evaluations = {1: EvaluationStatusTracker("MNIST_eval", 1000)}
+    test_start_evaluation.return_value = evaluations
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    evaluation_pipeline_config = get_minimal_pipeline_config()
+    evaluation_pipeline_config["evaluation"] = get_minimal_evaluation_config()
+    sup.pipeline_config = evaluation_pipeline_config
+
+    assert sup.validate_pipeline_config_schema()
+    sup.pipeline_id = 42
+
+    sup._run_training(21)
+    assert sup.previous_model_id == 101
+    assert sup.current_training_id == 1337
+
+    test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
+    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None)
+    test_store_trained_model.assert_called_once()
+
+    test_start_evaluation.assert_called_once_with(101, evaluation_pipeline_config)
+    test_wait_for_evaluation_completion.assert_called_once_with(1337, evaluations)
+    test_store_evaluation_results.assert_called_once_with(EVALUATION_DIRECTORY, 42, 21, evaluations)
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_initial_pass():
-    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), None)
+    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
     # TODO(#10): implement a real test when func is implemented.
     sup.initial_pass()

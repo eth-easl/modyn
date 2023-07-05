@@ -15,6 +15,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetDataInIntervalRequest,
     GetDataPerWorkerRequest,
     GetDataPerWorkerResponse,
+    GetDatasetSizeRequest,
+    GetDatasetSizeResponse,
     GetNewDataSinceRequest,
     GetRequest,
     RegisterNewDatasetRequest,
@@ -350,6 +352,24 @@ def test_get_data_per_worker():
     request = GetDataPerWorkerRequest(dataset_id="test", worker_id=2, total_workers=2)
     with pytest.raises(ValueError):
         list(server.GetDataPerWorker(request, None))
+
+
+def test_get_dataset_size():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+    request = GetDatasetSizeRequest(dataset_id="test")
+    response: [GetDatasetSizeResponse] = server.GetDatasetSize(request, None)
+
+    assert response is not None
+    assert response.num_keys == 3
+
+
+def test_get_dataset_size_invalid():
+    server = StorageGRPCServicer(get_minimal_modyn_config())
+    request = GetDatasetSizeRequest(dataset_id="unknown")
+    response: [GetDatasetSizeResponse] = server.GetDatasetSize(request, None)
+
+    assert response is not None
+    assert response.num_keys == -1
 
 
 def test_check_availability():
