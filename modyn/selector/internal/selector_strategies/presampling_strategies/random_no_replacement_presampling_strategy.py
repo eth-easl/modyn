@@ -16,13 +16,8 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
         # a complete_trigger is the last time when all the datapoints (in the db at that time) have been seen
         self.last_complete_trigger = 0
 
-    def get_presampling_query(
-        self,
-        next_trigger_id: int,
-        tail_triggers: Optional[int],
-        limit: Optional[int],
-        trigger_dataset_size: Optional[int],
-    ) -> Select:
+    def get_presampling_query(self, next_trigger_id: int, tail_triggers: Optional[int], limit: Optional[int],
+                              trigger_dataset_size: Optional[int], requires_samples_ordered_by_label) -> Select:
         assert trigger_dataset_size is not None
         assert trigger_dataset_size >= 0
 

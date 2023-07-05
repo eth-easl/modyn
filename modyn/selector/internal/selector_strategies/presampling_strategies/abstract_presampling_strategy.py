@@ -20,13 +20,8 @@ class AbstractPresamplingStrategy(ABC):
         self.requires_trigger_dataset_size = False
 
     @abstractmethod
-    def get_presampling_query(
-        self,
-        next_trigger_id: int,
-        tail_triggers: Optional[int],
-        limit: Optional[int],
-        trigger_dataset_size: Optional[int],
-    ) -> Select:
+    def get_presampling_query(self, next_trigger_id: int, tail_triggers: Optional[int], limit: Optional[int],
+                              trigger_dataset_size: Optional[int], requires_samples_ordered_by_label: bool) -> Select:
         raise NotImplementedError()
 
     def get_target_size(self, trigger_dataset_size: int, limit: Optional[int]) -> int:

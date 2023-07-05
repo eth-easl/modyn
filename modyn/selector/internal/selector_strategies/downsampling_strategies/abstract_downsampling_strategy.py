@@ -44,6 +44,7 @@ class AbstractDownsamplingStrategy(ABC):
             raise ValueError("The downsampling ratio must be an integer in (0,100)")
 
         self.requires_remote_computation = True
+        self.requires_samples_ordered_by_label = False
         self.maximum_keys_in_memory = maximum_keys_in_memory
         self.downsampling_params = self._build_downsampling_params()
         self.status_bar_scale = self._compute_status_bar_scale()

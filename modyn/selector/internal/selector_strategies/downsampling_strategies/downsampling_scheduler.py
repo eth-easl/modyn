@@ -48,6 +48,10 @@ class DownsamplingScheduler:
         self._update_downsampler_if_needed(next_trigger_id)
         return self.current_downsampler.requires_remote_computation
 
+    def get_requires_samples_ordered_by_label(self, next_trigger_id: int) -> bool:
+        self._update_downsampler_if_needed(next_trigger_id)
+        return self.current_downsampler.requires_samples_ordered_by_label
+
     def get_downsampling_strategy(self, next_trigger_id: int) -> str:
         self._update_downsampler_if_needed(next_trigger_id)
         assert hasattr(

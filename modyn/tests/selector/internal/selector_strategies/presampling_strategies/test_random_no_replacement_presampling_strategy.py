@@ -64,7 +64,7 @@ def test_sampling():
     all_the_samples = []
 
     for i in range(4):
-        query = presampler.get_presampling_query(i, None, None, 200)
+        query = presampler.get_presampling_query(i, None, None, 200, False)
 
         with MetadataDatabaseConnection(modyn_config) as database:
             result = database.session.execute(query).all()
@@ -82,7 +82,7 @@ def test_sampling():
     # so we expect to have 20 new samples and 30 samples from before
 
     insert_data(strat, 1000, size=20)
-    query = presampler.get_presampling_query(5, None, None, 200)
+    query = presampler.get_presampling_query(5, None, None, 200, False)
 
     with MetadataDatabaseConnection(modyn_config) as database:
         result = database.session.execute(query).all()

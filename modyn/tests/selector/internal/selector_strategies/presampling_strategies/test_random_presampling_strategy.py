@@ -74,15 +74,15 @@ def test_get_query_wrong():
 
     # missing size
     with pytest.raises(AssertionError):
-        strat.get_presampling_query(120, None, None, None)
+        strat.get_presampling_query(120, None, None, None, False)
 
     # negative size
     with pytest.raises(AssertionError):
-        strat.get_presampling_query(120, None, None, -1)
+        strat.get_presampling_query(120, None, None, -1, False)
 
     # negative limit
     with pytest.raises(AssertionError):
-        strat.get_presampling_query(120, None, -18, 120)
+        strat.get_presampling_query(120, None, -18, 120, False)
 
 
 def test_constructor_throws_on_invalid_config():

@@ -29,8 +29,15 @@ class CoresetStrategy(AbstractSelectionStrategy):
         self._persist_samples(keys, timestamps, labels)
 
     def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
+
+        # we don't want to shuffle if the downsampler needs the samples ordered by label. THe downsampler will take care
+        # of shuffling the samples.
+        downsampler_requires_samples_ordered_by_label = self.downsampling_scheduler.get_requires_samples_ordered_by_label(
+            next_trigger_id=self._next_trigger_id)
+
         for samples in self._get_data():
-            random.shuffle(samples)
+            if not downsampler_requires_samples_ordered_by_label:
+                random.shuffle(samples)
             yield [(sample, 1.0) for sample in samples]
 
     def _get_data(self) -> Iterable[list[int]]:
@@ -44,12 +51,13 @@ class CoresetStrategy(AbstractSelectionStrategy):
             if self.presampling_strategy.requires_trigger_dataset_size:
                 target_size = self._get_dataset_size()
 
-            stmt = self.presampling_strategy.get_presampling_query(
-                self._next_trigger_id,
-                self.tail_triggers,
-                self.training_set_size_limit if self.has_limit else None,
-                target_size,
-            )
+            # some downsampling strategies require to work label by label (like CRAIG). If so, we can suplly samples sorted
+            # by label adding a simple ORDER BY at the end of the query
+            downsampler_requires_samples_ordered_by_label = self.downsampling_scheduler.get_requires_samples_ordered_by_label(next_trigger_id=self._next_trigger_id)
+
+            stmt = self.presampling_strategy.get_presampling_query(self._next_trigger_id, self.tail_triggers,
+                                                                   self.training_set_size_limit if self.has_limit else None,
+                                                                   target_size, downsampler_requires_samples_ordered_by_label)
 
             for chunk in database.session.execute(stmt).partitions():
                 if len(chunk) > 0:

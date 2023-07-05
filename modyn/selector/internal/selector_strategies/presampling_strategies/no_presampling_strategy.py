@@ -12,13 +12,8 @@ class NoPresamplingStrategy(AbstractPresamplingStrategy):
         presampling_config["ratio"] = 100
         super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
-    def get_presampling_query(
-        self,
-        next_trigger_id: int,
-        tail_triggers: Optional[int],
-        limit: Optional[int],
-        trigger_dataset_size: Optional[int],
-    ) -> Select:
+    def get_presampling_query(self, next_trigger_id: int, tail_triggers: Optional[int], limit: Optional[int],
+                              trigger_dataset_size: Optional[int], requires_samples_ordered_by_label) -> Select:
         stmt = (
             select(SelectorStateMetadata.sample_key)
             # Enables batching of results in chunks.
