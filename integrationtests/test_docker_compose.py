@@ -45,6 +45,19 @@ def model_storage_running() -> bool:
     return True
 
 
+def evaluator_running() -> bool:
+    config = get_modyn_config()
+
+    evaluator_address = f"{config['evaluator']['hostname']}:{config['evaluator']['port']}"
+    evaluator_channel = grpc.insecure_channel(evaluator_address)
+
+    if not grpc_connection_established(evaluator_channel):
+        print(f"Could not establish gRPC connection to evaluator at {evaluator_address}. Retrying.")
+        return False
+
+    return True
+
+
 def trainer_server_running() -> bool:
     config = get_modyn_config()
 
@@ -114,6 +127,7 @@ def system_running() -> bool:
         and selector_running()
         and metadata_db_running()
         and model_storage_running()
+        and evaluator_running()
         and trainer_server_running()
     )
 

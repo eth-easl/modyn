@@ -8,6 +8,8 @@ class RandomPresamplingStrategy(AbstractPresampleStrategy):
 
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
-        if "downsampled_batch_size" in config:
-            raise ValueError("RandomPresamplingStrategy is just a presampling method.")
+        if "downsampling_ratio" in config:
+            raise ValueError(
+                "RandomPresamplingStrategy is just a presampling method. Please do not specify the downsampling_ratio"
+            )
         self._requires_remote_computation = False

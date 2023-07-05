@@ -9,8 +9,10 @@ import random
 import sys
 import tempfile
 import time
+from enum import Enum
+from inspect import isfunction
 from types import ModuleType
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import grpc
 import numpy as np
@@ -24,6 +26,12 @@ UNAVAILABLE_PKGS = []
 SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
 MAX_MESSAGE_SIZE = 1024 * 1024 * 128  # 128 MB
 EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
+
+EVALUATION_TRANSFORMER_FUNC_NAME = "evaluation_transformer_function"
+LABEL_TRANSFORMER_FUNC_NAME = "label_transformer_function"
+BYTES_PARSER_FUNC_NAME = "bytes_parser_function"
+
+DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "SAMPLE_THEN_BATCH"])
 
 
 def dynamic_module_import(name: str) -> ModuleType:
@@ -157,3 +165,58 @@ def is_directory_writable(path: pathlib.Path) -> bool:
         raise
 
     return True
+
+
+def deserialize_function(serialized_function: str, func_name: str) -> Optional[Callable]:
+    """
+    Use this method to deserialize a particular python function given its string representation.
+
+    Args:
+        serialized_function: the function in plaintext.
+        func_name: the function name to be returned.
+
+    Returns:
+        Optional[Callable]: None if serialized_function is left empty.
+    """
+    if serialized_function == "":
+        return None
+    mod_dict: dict[str, Any] = {}
+    exec(serialized_function, mod_dict)  # pylint: disable=exec-used
+    if func_name not in mod_dict or not isfunction(mod_dict[func_name]):
+        raise ValueError(f"Invalid function is provided. Expected a function with name {func_name}.")
+    return mod_dict[func_name]
+
+
+def get_partition_for_worker(worker_id: int, total_workers: int, total_num_elements: int) -> tuple[int, int]:
+    """
+    Returns the subset of data for a specific worker.
+    This method splits the range of all elements evenly among all workers. If you e.g have 13 elements and want to split
+    it among 5 workers, then workers [0, 1, 2] get 3 keys whereas workers [3, 4] get two keys.
+
+    Args:
+        worker_id: the id of the worker.
+        total_workers: total amount of workers.
+        total_num_elements: total amount of elements to split among the workers.
+
+    Returns:
+        tuple[int, int]: the start index (offset) and the total subset size.
+    """
+    if worker_id < 0 or worker_id >= total_workers:
+        raise ValueError(f"Asked for worker id {worker_id}, but only have {total_workers} workers!")
+
+    subset_size = int(total_num_elements / total_workers)
+    worker_subset_size = subset_size
+
+    threshold = total_num_elements % total_workers
+    if threshold > 0:
+        if worker_id < threshold:
+            worker_subset_size += 1
+            start_index = worker_id * (subset_size + 1)
+        else:
+            start_index = threshold * (subset_size + 1) + (worker_id - threshold) * subset_size
+    else:
+        start_index = worker_id * subset_size
+    if start_index >= total_num_elements:
+        start_index = 0
+
+    return start_index, worker_subset_size

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from modyn.utils import flatten
+from modyn.utils import flatten, get_partition_for_worker
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class TriggerSampleStorage:
         :param num_samples_trigger_partition: the total number of samples per trigger and partition
         :return: the trigger samples
         """
-        start_index, worker_subset_size = self.get_training_set_partition(
+        start_index, worker_subset_size = get_partition_for_worker(
             retrieval_worker_id, total_retrieval_workers, num_samples_trigger_partition
         )
 
@@ -184,44 +184,6 @@ class TriggerSampleStorage:
             )
         ]
 
-    @staticmethod
-    def get_training_set_partition(
-        worker_id: int, total_workers: int, num_samples_trigger_partition: int
-    ) -> tuple[int, int]:
-        """
-        Return the required subset of training samples for the particular worker id
-        The subset is calculated by taking an offset from the start based on the given worker id.
-
-        If there is excess data (say there are 14 data points and 5 workers), there are at most
-        num_workers extra samples. As such, we make each worker take on one extra, and the final
-        worker takes on (probably less) the rest of the data. So we would have the first 4 take
-        3 each and the last one takes 2.
-
-        Returns:
-            start_index: The index of the first sample to be used by the worker
-            worker_subset_size: The number of samples to be used by the worker
-            num_samples_trigger_partition: The total number of samples for the trigger and partition
-        """
-        if worker_id < 0 or worker_id >= total_workers:
-            raise ValueError(f"Asked for worker id {worker_id}, but only have {total_workers} workers!")
-
-        training_set_size = num_samples_trigger_partition
-        worker_subset_size = int(training_set_size / total_workers)
-
-        if training_set_size % total_workers > 0:
-            worker_subset_size += 1
-            start_index = worker_id * worker_subset_size
-            if worker_id == total_workers - 1:
-                worker_subset_size = training_set_size - (worker_subset_size * (total_workers - 1))
-        else:
-            start_index = worker_id * worker_subset_size
-
-        if start_index >= training_set_size:
-            start_index = 0
-            worker_subset_size = 0
-
-        return start_index, worker_subset_size
-
     def save_trigger_sample(
         self,
         pipeline_id: int,
@@ -294,3 +256,34 @@ class TriggerSampleStorage:
             file_path (str): File path to parse.
         """
         return np.load(file_path, allow_pickle=False, fix_imports=False, mmap_mode="r").shape[0]
+
+    def get_file_path(self, pipeline_id: int, trigger_id: int, partition_id: int, worker_id: int) -> Path:
+        return Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{worker_id}.npy"
+
+    def _get_files_for_trigger(self, pipeline_id: int, trigger_id: int) -> list[str]:
+        # here we filter the files belonging to the given pipeline and trigger
+
+        return list(
+            filter(
+                lambda file: file.startswith(f"{pipeline_id}_{trigger_id}_"),
+                os.listdir(self.trigger_sample_directory),
+            )
+        )
+
+    def get_trigger_num_data_partitions(self, pipeline_id: int, trigger_id: int) -> int:
+        # each file follows the structure {pipeline_id}_{trigger_id}_{partition_id}_{worker_id}
+
+        this_trigger_files = self._get_files_for_trigger(pipeline_id, trigger_id)
+
+        # then we count how many partitions we have (not just len(this_trigger_partitions) since there could be
+        # multiple workers for each partition
+        return len(set(file.split("_")[2] for file in this_trigger_files))
+
+    def clean_trigger_data(self, pipeline_id: int, trigger_id: int) -> None:
+        # remove all the files belonging to the given pipeline and trigger
+
+        if os.path.isdir(self.trigger_sample_directory):
+            this_trigger_files = self._get_files_for_trigger(pipeline_id, trigger_id)
+
+            for file in this_trigger_files:
+                os.remove(os.path.join(self.trigger_sample_directory, file))

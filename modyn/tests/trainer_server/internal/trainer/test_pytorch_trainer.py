@@ -17,6 +17,7 @@ import pytest
 import torch
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
@@ -148,6 +149,7 @@ def get_training_info(
     num_optimizers: int,
     lr_scheduler: str,
     transform_label: bool,
+    offline_dataset_path: str,
     model_dynamic_module_patch: MagicMock,
 ):
     if num_optimizers == 1:
@@ -223,6 +225,7 @@ def get_training_info(
                 training_id,
                 storage_address,
                 selector_address,
+                offline_dataset_path,
                 pathlib.Path(final_tmpdirname),
                 pretrained_model_path,
             )
@@ -232,25 +235,32 @@ def get_training_info(
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.trainer_server.internal.dataset.key_sources.selector_key_source.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.dynamic_module_import")
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(SelectorKeySource, "uses_weights", return_value=False)
 def get_mock_trainer(
-    query_queue: mp.Queue(),
-    response_queue: mp.Queue(),
+    query_queue: mp.Queue,
+    response_queue: mp.Queue,
     use_pretrained: bool,
     load_optimizer_state: bool,
     pretrained_model_path: pathlib.Path,
     num_optimizers: int,
     lr_scheduler: str,
     transform_label: bool,
+    mock_weights: MagicMock,
     mock_selection_strategy: MagicMock,
     mock_selector_connection: MagicMock,
     lr_scheduler_dynamic_module_patch: MagicMock,
     model_dynamic_module_patch: MagicMock,
     test_insecure_channel: MagicMock,
+    test_grpc_connection_established_selector: MagicMock,
     test_grpc_connection_established: MagicMock,
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
@@ -265,8 +275,11 @@ def get_mock_trainer(
         num_optimizers,
         lr_scheduler,
         transform_label,
+        "/tmp/offline_dataset",
     )
-    trainer = PytorchTrainer(training_info, "cpu", query_queue, response_queue, logging.getLogger(__name__))
+    trainer = PytorchTrainer(
+        training_info, "cpu", query_queue, response_queue, mp.Queue(), mp.Queue(), logging.getLogger(__name__)
+    )
     return trainer
 
 
@@ -361,7 +374,7 @@ def test_trainer_init_with_label_transformer():
 def test_save_state_to_file():
     trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
     with tempfile.NamedTemporaryFile() as temp:
-        trainer.save_state(temp.name, 10)
+        trainer.save_state(pathlib.Path(temp.name), 10)
         assert os.path.exists(temp.name)
         saved_dict = torch.load(temp.name)
 
@@ -561,7 +574,7 @@ def test_send_status_to_server():
     response_queue = mp.Queue()
     query_queue = mp.Queue()
     trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "", False)
-    trainer.send_status_to_server(20)
+    trainer.send_status_to_server_training(20)
     response = response_queue.get()
     assert response["num_batches"] == 20
     assert response["num_samples"] == 0
@@ -571,7 +584,8 @@ def test_send_status_to_server():
     "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
     mock_get_dataloaders,
 )
-def test_train_invalid_query_message():
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
+def test_train_invalid_query_message(test_weight_handling):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1, "", False)
@@ -579,8 +593,8 @@ def test_train_invalid_query_message():
     timeout = 5
     elapsed = 0
     while query_status_queue.empty():
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -590,8 +604,8 @@ def test_train_invalid_query_message():
 
     elapsed = 0
     while not (query_status_queue.empty() and status_queue.empty()):
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -612,7 +626,11 @@ def test_train_invalid_query_message():
 @patch.object(MetadataCollector, "send_metadata", return_value=None)
 @patch.object(MetadataCollector, "cleanup", return_value=None)
 @patch.object(CustomLRScheduler, "step", return_value=None)
+@patch.object(PytorchTrainer, "end_of_trigger_cleaning", return_value=None)
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
 def test_train(
+    test_weights_handling,
+    test_cleaning,
     test_step,
     test_cleanup,
     test_send_metadata,
@@ -626,6 +644,7 @@ def test_train(
     status_queue = mp.Queue()
     trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 2, "custom", False)
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+    query_status_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
     timeout = 2
     elapsed = 0
 
@@ -654,14 +673,10 @@ def test_train(
     assert test_send_metadata.call_count == len(trainer._callbacks)
     test_cleanup.assert_called_once()
 
-    if not platform.system() == "Darwin":
-        assert status_queue.qsize() == 1
-    else:
-        assert not status_queue.empty()
     elapsed = 0
     while True:
         if not platform.system() == "Darwin":
-            if status_queue.qsize() == 1:
+            if status_queue.qsize() == 2:
                 break
         else:
             if not status_queue.empty():
@@ -673,70 +688,70 @@ def test_train(
         if elapsed >= timeout:
             raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
-        status = status_queue.get()
-        assert status["num_batches"] == 0
-        assert status["num_samples"] == 0
-        status_state = torch.load(io.BytesIO(status["state"]))
-        checkpointed_state = {
-            "model": OrderedDict(
-                [
-                    ("moda._weight", torch.tensor([1.0])),
-                    ("modb._weight", torch.tensor([1.0])),
-                    ("modc._weight", torch.tensor([1.0])),
-                ]
-            ),
-            "optimizer-opt1": {
-                "state": {},
-                "param_groups": [
-                    {
-                        "lr": 0.1,
-                        "momentum": 0,
-                        "dampening": 0,
-                        "weight_decay": 0,
-                        "nesterov": False,
-                        "maximize": False,
-                        "foreach": None,
-                        "differentiable": False,
-                        "params": [0],
-                    }
-                ],
-            },
-            "optimizer-opt2": {
-                "state": {},
-                "param_groups": [
-                    {
-                        "lr": 0.5,
-                        "betas": (0.9, 0.999),
-                        "eps": 1e-08,
-                        "weight_decay": 0,
-                        "amsgrad": False,
-                        "maximize": False,
-                        "foreach": None,
-                        "capturable": False,
-                        "differentiable": False,
-                        "fused": False,
-                        "params": [0],
-                    },
-                    {
-                        "lr": 0.8,
-                        "betas": (0.9, 0.999),
-                        "eps": 1e-08,
-                        "weight_decay": 0,
-                        "amsgrad": False,
-                        "maximize": False,
-                        "foreach": None,
-                        "capturable": False,
-                        "differentiable": False,
-                        "fused": False,
-                        "params": [1],
-                    },
-                ],
-            },
-        }
-        assert status_state == checkpointed_state
-        assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
-        final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
-        assert final_state == checkpointed_state
+    status = status_queue.get()
+    assert status["num_batches"] == 0
+    assert status["num_samples"] == 0
+    status_state = torch.load(io.BytesIO(status_queue.get()))
+    checkpointed_state = {
+        "model": OrderedDict(
+            [
+                ("moda._weight", torch.tensor([1.0])),
+                ("modb._weight", torch.tensor([1.0])),
+                ("modc._weight", torch.tensor([1.0])),
+            ]
+        ),
+        "optimizer-opt1": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.1,
+                    "momentum": 0,
+                    "dampening": 0,
+                    "weight_decay": 0,
+                    "nesterov": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "differentiable": False,
+                    "params": [0],
+                }
+            ],
+        },
+        "optimizer-opt2": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.5,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": NoneOrFalse(),
+                    "params": [0],
+                },
+                {
+                    "lr": 0.8,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-08,
+                    "weight_decay": 0,
+                    "amsgrad": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "capturable": False,
+                    "differentiable": False,
+                    "fused": NoneOrFalse(),
+                    "params": [1],
+                },
+            ],
+        },
+    }
+    assert status_state == checkpointed_state
+    assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
+    final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
+    assert final_state == checkpointed_state
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
@@ -750,7 +765,9 @@ def test_train(
 )
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
 def test_create_trainer_with_exception(
+    test_weighs_handling,
     test_selector_connection,
     test_election_strategy,
     test_dynamic_module_import,
@@ -761,23 +778,43 @@ def test_create_trainer_with_exception(
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(0, False, False, None, "", "", 1, "", False)
+    training_info = get_training_info(
+        0,
+        False,
+        False,
+        None,
+        "",
+        "",
+        1,
+        "",
+        False,
+        "/tmp/offline_dataset",
+    )
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
     while query_status_queue.empty():
-        sleep(1)
-        elapsed += 1
+        sleep(0.1)
+        elapsed += 0.1
 
         if elapsed >= timeout:
             raise TimeoutError("Did not reach desired queue state within timelimit.")
 
     with tempfile.NamedTemporaryFile() as temp:
-        train(training_info, "cpu", temp.name, exception_queue, query_status_queue, status_queue)
+        train(
+            training_info,
+            "cpu",
+            pathlib.Path(temp.name),
+            exception_queue,
+            query_status_queue,
+            status_queue,
+            mp.Queue(),
+            mp.Queue(),
+        )
         elapsed = 0
         while not (query_status_queue.empty() and status_queue.empty()):
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise TimeoutError("Did not reach desired queue state within timelimit.")
@@ -792,8 +829,8 @@ def test_create_trainer_with_exception(
                 if not exception_queue.empty():
                     break
 
-            sleep(1)
-            elapsed += 1
+            sleep(0.1)
+            elapsed += 0.1
 
             if elapsed >= timeout:
                 raise AssertionError("Did not reach desired queue state after 5 seconds.")

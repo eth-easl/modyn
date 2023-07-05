@@ -38,6 +38,11 @@ class SelectorStub(object):
                 request_serializer=selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
                 response_deserializer=selector__pb2.NumberOfSamplesResponse.FromString,
                 )
+        self.get_status_bar_scale = channel.unary_unary(
+                '/selector.Selector/get_status_bar_scale',
+                request_serializer=selector__pb2.GetStatusBarScaleRequest.SerializeToString,
+                response_deserializer=selector__pb2.StatusBarScaleResponse.FromString,
+                )
         self.get_number_of_partitions = channel.unary_unary(
                 '/selector.Selector/get_number_of_partitions',
                 request_serializer=selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
@@ -52,6 +57,11 @@ class SelectorStub(object):
                 '/selector.Selector/seed_selector',
                 request_serializer=selector__pb2.SeedSelectorRequest.SerializeToString,
                 response_deserializer=selector__pb2.SeedSelectorResponse.FromString,
+                )
+        self.uses_weights = channel.unary_unary(
+                '/selector.Selector/uses_weights',
+                request_serializer=selector__pb2.UsesWeightsRequest.SerializeToString,
+                response_deserializer=selector__pb2.UsesWeightsResponse.FromString,
                 )
 
 
@@ -88,6 +98,12 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_status_bar_scale(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def get_number_of_partitions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -101,6 +117,12 @@ class SelectorServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def seed_selector(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def uses_weights(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -134,6 +156,11 @@ def add_SelectorServicer_to_server(servicer, server):
                     request_deserializer=selector__pb2.GetNumberOfSamplesRequest.FromString,
                     response_serializer=selector__pb2.NumberOfSamplesResponse.SerializeToString,
             ),
+            'get_status_bar_scale': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_status_bar_scale,
+                    request_deserializer=selector__pb2.GetStatusBarScaleRequest.FromString,
+                    response_serializer=selector__pb2.StatusBarScaleResponse.SerializeToString,
+            ),
             'get_number_of_partitions': grpc.unary_unary_rpc_method_handler(
                     servicer.get_number_of_partitions,
                     request_deserializer=selector__pb2.GetNumberOfPartitionsRequest.FromString,
@@ -148,6 +175,11 @@ def add_SelectorServicer_to_server(servicer, server):
                     servicer.seed_selector,
                     request_deserializer=selector__pb2.SeedSelectorRequest.FromString,
                     response_serializer=selector__pb2.SeedSelectorResponse.SerializeToString,
+            ),
+            'uses_weights': grpc.unary_unary_rpc_method_handler(
+                    servicer.uses_weights,
+                    request_deserializer=selector__pb2.UsesWeightsRequest.FromString,
+                    response_serializer=selector__pb2.UsesWeightsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -245,6 +277,23 @@ class Selector(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
+    def get_status_bar_scale(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_status_bar_scale',
+            selector__pb2.GetStatusBarScaleRequest.SerializeToString,
+            selector__pb2.StatusBarScaleResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
     def get_number_of_partitions(request,
             target,
             options=(),
@@ -292,5 +341,22 @@ class Selector(object):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/seed_selector',
             selector__pb2.SeedSelectorRequest.SerializeToString,
             selector__pb2.SeedSelectorResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def uses_weights(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/uses_weights',
+            selector__pb2.UsesWeightsRequest.SerializeToString,
+            selector__pb2.UsesWeightsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
