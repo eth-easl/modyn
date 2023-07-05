@@ -100,17 +100,17 @@ def test_dataset_size():
     strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._get_dataset_size() == 3
+    assert strat._get_trigger_dataset_size() == 3
 
     strat.inform_data([110, 111, 112], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._get_dataset_size() == 6
+    assert strat._get_trigger_dataset_size() == 6
 
     strat.inform_data(
         [1110, 1111, 1112, 2110, 2111, 2112], [0, 1, 2, 0, 1, 2], ["dog", "dog", "cat", "dog", "dog", "cat"]
     )
 
-    assert strat._get_dataset_size() == 12
+    assert strat._get_trigger_dataset_size() == 12
 
 
 def test_on_trigger():
@@ -343,19 +343,19 @@ def test_dataset_size_tail():
     strat = CoresetStrategy(get_config_tail(), get_minimal_modyn_config(), 0, 1000)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._get_dataset_size() == 3
+    assert strat._get_trigger_dataset_size() == 3
 
     strat.trigger()
     strat.inform_data([110, 111, 112], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._get_dataset_size() == 6
+    assert strat._get_trigger_dataset_size() == 6
 
     strat.trigger()
     strat.inform_data([210, 211, 212], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._get_dataset_size() == 6
+    assert strat._get_trigger_dataset_size() == 6
 
     # no trigger
     strat.inform_data([1210, 1211, 1212], [0, 1, 2], ["dog", "dog", "cat"])
 
-    assert strat._get_dataset_size() == 9
+    assert strat._get_trigger_dataset_size() == 9

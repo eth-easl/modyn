@@ -183,7 +183,7 @@ def test_query_data_above_threshold():
 
     insert_data_clustered(strat, [15, 15, 30])
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 60
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 30
@@ -225,7 +225,7 @@ def test_query_data_above_threshold_order_by_class():
 
     insert_data_periodic(strat)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 300
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150
@@ -244,7 +244,7 @@ def test_query_data_one_below_threshold():
     count = [40, 160, 100]
     insert_data_clustered(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 300
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150
@@ -267,7 +267,7 @@ def test_query_data_one_below_threshold_balanced():
     count = [40, 160, 100]
     insert_data_clustered(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 300
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150
@@ -290,7 +290,7 @@ def test_query_data_below_target():
     count = [30, 50, 40, 20]
     insert_data_clustered(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 140
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 100
@@ -316,7 +316,7 @@ def test_query_data_below_target_forced():
     count = [30, 50, 40, 20]
     insert_data_clustered(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 140
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 100
@@ -341,7 +341,7 @@ def test_query_data_one_below_threshold_force_size_but_already_ok():
     count = [40, 160, 100]
     insert_data_clustered(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 300
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150

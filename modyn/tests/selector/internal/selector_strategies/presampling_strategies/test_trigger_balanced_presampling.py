@@ -107,7 +107,7 @@ def test_query_data_above_threshold():
         60,
     ]
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 320
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 160
@@ -128,7 +128,7 @@ def test_query_data_one_below_threshold():
     count = [40, 160, 100]
     insert_data_several_triggers(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 300
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150
@@ -151,7 +151,7 @@ def test_query_data_one_below_threshold_balanced():
     count = [40, 160, 100]
     insert_data_several_triggers(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 300
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150
@@ -174,7 +174,7 @@ def test_query_data_below_target():
     count = [30, 50, 40, 20]
     insert_data_several_triggers(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 140
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 100
@@ -200,7 +200,7 @@ def test_query_data_below_target_forced():
     count = [30, 50, 40, 20]
     insert_data_several_triggers(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 140
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 100
@@ -225,7 +225,7 @@ def test_query_data_one_below_threshold_force_size_but_already_ok():
     count = [40, 160, 100]
     insert_data_several_triggers(strat, count)
 
-    this_trigger_size = strat._get_dataset_size()
+    this_trigger_size = strat._get_trigger_dataset_size()
     assert this_trigger_size == 300
 
     assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150

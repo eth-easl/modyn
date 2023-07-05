@@ -16,10 +16,12 @@ class CoresetStrategy(AbstractSelectionStrategy):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
+        # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
             config, modyn_config, pipeline_id, maximum_keys_in_memory
         )
-
+        # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
+        # strategy.
         self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, maximum_keys_in_memory)
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
@@ -41,28 +43,24 @@ class CoresetStrategy(AbstractSelectionStrategy):
             yield [(sample, 1.0) for sample in samples]
 
     def _get_data(self) -> Iterable[list[int]]:
-        """Returns all sample
 
-        Returns:
-            list[str]: Keys of used samples
-        """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            target_size = None
+            trigger_dataset_size = None
             if self.presampling_strategy.requires_trigger_dataset_size:
-                target_size = self._get_dataset_size()
+                trigger_dataset_size = self._get_trigger_dataset_size()
 
-            # some downsampling strategies require to work label by label (like CRAIG).
+            # Some downsampling strategies require to work label by label (like CRAIG).
             # If so, we can supply samples sorted by label adding a simple ORDER BY at the end of the query
             downsampler_requires_samples_ordered_by_label = (
-                self.downsampling_scheduler.get_requires_samples_ordered_by_label(next_trigger_id=self._next_trigger_id)
+                self.downsampling_scheduler.get_requires_samples_ordered_by_label(self._next_trigger_id)
             )
 
             stmt = self.presampling_strategy.get_presampling_query(
-                self._next_trigger_id,
-                self.tail_triggers,
-                self.training_set_size_limit if self.has_limit else None,
-                target_size,
-                downsampler_requires_samples_ordered_by_label,
+                next_trigger_id=self._next_trigger_id,
+                tail_triggers=self.tail_triggers,
+                limit=self.training_set_size_limit if self.has_limit else None,
+                trigger_dataset_size=trigger_dataset_size,
+                requires_samples_ordered_by_label=downsampler_requires_samples_ordered_by_label,
             )
 
             for chunk in database.session.execute(stmt).partitions():
@@ -74,7 +72,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
     def _reset_state(self) -> None:
         pass  # As we currently hold everything in database (#116), this currently is a noop.
 
-    def _get_dataset_size(self) -> int:
+    def _get_trigger_dataset_size(self) -> int:
+        # Count the number of samples that might be sampled during the next trigger. Typically used to compute the
+        # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return (
                 database.session.query(SelectorStateMetadata.sample_key)

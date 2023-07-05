@@ -117,7 +117,7 @@ def test_dataset_size_various_scenarios():
     )
     presampling_strat: RandomPresamplingStrategy = strat.presampling_strategy
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_size = strat._get_dataset_size()
+    trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 5  # 50% of presampling
     trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
     assert trigger_num_keys == 5
@@ -125,13 +125,13 @@ def test_dataset_size_various_scenarios():
 
     # second trigger
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_size = strat._get_dataset_size()
+    trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 15  # 50% of presampling
 
     # limited capacity
     strat.has_limit = True
     strat.training_set_size_limit = 10
-    trigger_size = strat._get_dataset_size()
+    trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 15  # 50% of presampling
 
     # only trigger data
@@ -141,22 +141,22 @@ def test_dataset_size_various_scenarios():
     # remove the trigger
     strat.reset_after_trigger = False
     strat.tail_triggers = None
-    trigger_size = strat._get_dataset_size()
+    trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 20  # 50% of presampling
 
     # remove the limit
     strat._has_limit = False
-    trigger_size = strat._get_dataset_size()
+    trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 20  # 50% of presampling
 
     # adjust the presampling
     presampling_strat.presampling_ratio = 75
-    trigger_size = strat._get_dataset_size()
+    trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 30  # 75% of presampling
 
     # set tail triggering
     strat.tail_triggers = 1
-    trigger_size = strat._get_dataset_size()
+    trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 22  # 75% of presampling
 
 
