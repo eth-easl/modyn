@@ -117,7 +117,7 @@ def test_label_balanced_force_same_size():
             "presampling_config": {
                 "strategy": "LabelBalancedPresamplingStrategy",
                 "ratio": 90,
-                "force_label_balancing": True,
+                "force_column_balancing": True,
             },
         },
     }
@@ -155,9 +155,9 @@ def test_label_balanced_force_same_size():
     total_samples = _get_samples(pipeline_id, selector, trigger_id, 0, [3, 3])
 
     assert len(total_samples) == 6
-    # 2 samples with label 0
+    # 3 samples with label 0
     assert len(set(total_samples).intersection({1, 3, 5, 7})) == 3
-    # 2 samples with label 1
+    # 3 samples with label 1
     assert len(set(total_samples).intersection({0, 2, 4, 6})) == 3
 
     # now let's add a third, smaller class with just two samples
@@ -280,6 +280,7 @@ def _get_samples(pipeline_id, selector, trigger_id, partition_id, expected_len):
         len(worker_2_samples) == expected_len[1]
     ), f"Received {len(worker_1_samples)} samples instead of {expected_len[1]}."
     total_samples = worker_1_samples + worker_2_samples
+    assert len(total_samples) == sum(expected_len), f"Expected {sum(expected_len)} samples, got {len(total_samples)}"
     return total_samples
 
 
