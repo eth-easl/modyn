@@ -37,8 +37,14 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
         self.force_column_balancing = presampling_config.get("force_column_balancing", False)
         self.balanced_column = None
 
-    def get_presampling_query(self, next_trigger_id: int, tail_triggers: Optional[int], limit: Optional[int],
-                              trigger_dataset_size: Optional[int], requires_samples_ordered_by_label) -> Select:
+    def get_presampling_query(
+        self,
+        next_trigger_id: int,
+        tail_triggers: Optional[int],
+        limit: Optional[int],
+        trigger_dataset_size: Optional[int],
+        requires_samples_ordered_by_label: bool,
+    ) -> Select:
         assert self.balanced_column is not None
         samples_count = self._get_samples_count_per_balanced_column(next_trigger_id, tail_triggers)
         target_size = self.get_target_size(sum(samples_count), limit)

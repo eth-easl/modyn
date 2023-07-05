@@ -12,8 +12,14 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
         super().__init__(presampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
         self.requires_trigger_dataset_size = True
 
-    def get_presampling_query(self, next_trigger_id: int, tail_triggers: Optional[int], limit: Optional[int],
-                              trigger_dataset_size: Optional[int], requires_samples_ordered_by_label) -> Select:
+    def get_presampling_query(
+        self,
+        next_trigger_id: int,
+        tail_triggers: Optional[int],
+        limit: Optional[int],
+        trigger_dataset_size: Optional[int],
+        requires_samples_ordered_by_label: bool,
+    ) -> Select:
         # TODO(#224) write an efficient query using TABLESAMPLE
         assert trigger_dataset_size is not None
         assert trigger_dataset_size >= 0
