@@ -65,47 +65,70 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
         )
 
         if self.force_required_target_size:
-            return self._get_force_required_target_size_query(fair_share, samples_count, subquery, target_size)
+            return self._get_force_required_target_size_query(
+                fair_share, samples_count, subquery, target_size, requires_samples_ordered_by_label
+            )
         if self.force_column_balancing:
-            return self._get_force_column_balancing_query(fair_share, samples_count, subquery, target_size)
+            return self._get_force_column_balancing_query(
+                fair_share, samples_count, subquery, target_size, requires_samples_ordered_by_label
+            )
 
-        return self._get_base_query(fair_share, subquery)
+        return self._get_base_query(fair_share, subquery, requires_samples_ordered_by_label)
 
     def _get_force_column_balancing_query(
-        self, fair_share: int, samples_count: list[int], subquery: Select, target_size: int
+        self,
+        fair_share: int,
+        samples_count: list[int],
+        subquery: Select,
+        target_size: int,
+        requires_samples_ordered_by_label: bool,
     ) -> Select:
         """
         Each class/trigger has exactly the same number of samples
+
+        Args:
+            requires_samples_ordered_by_label:
         """
         smallest_size = min(samples_count)
         if smallest_size < fair_share:
             return (
                 select(subquery.c.sample_key)
                 .where(subquery.c.row_num <= smallest_size)
-                .order_by(asc(subquery.c.timestamp))
+                .order_by(subquery.c.label if requires_samples_ordered_by_label else asc(subquery.c.timestamp))
                 .limit(target_size)
             )
-        return self._get_base_query(fair_share, subquery)
+        return self._get_base_query(fair_share, subquery, requires_samples_ordered_by_label)
 
-    def _get_base_query(self, fair_share: int, subquery: Select) -> Select:
+    def _get_base_query(self, fair_share: int, subquery: Select, requires_samples_ordered_by_label: bool) -> Select:
         """
 
         Class/Trigger j gets min(fair_share, number_samples[j]) samples
+
+        Args:
+            requires_samples_ordered_by_label:
 
         """
         return (
             select(subquery.c.sample_key)
             .execution_options(yield_per=self.maximum_keys_in_memory)
             .where(subquery.c.row_num <= fair_share)
-            .order_by(asc(subquery.c.timestamp))
+            .order_by(subquery.c.label if requires_samples_ordered_by_label else subquery.c.timestamp)
         )
 
     def _get_force_required_target_size_query(
-        self, fair_share: int, samples_count: list[int], subquery: Select, target_size: int
+        self,
+        fair_share: int,
+        samples_count: list[int],
+        subquery: Select,
+        target_size: int,
+        requires_samples_ordered_by_label: bool,
     ) -> Select:
         """
 
         The returned number of samples is exactly target_size. Some classes/triggers might get more samples than others
+
+        Args:
+            requires_samples_ordered_by_label:
 
         """
         predicted_number_of_samples = get_fair_share_predicted_total(fair_share, samples_count)
@@ -114,10 +137,10 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
             return (
                 select(subquery.c.sample_key)
                 .where(subquery.c.row_num <= fair_share + 1)
-                .order_by(asc(subquery.c.timestamp))
+                .order_by(subquery.c.label if requires_samples_ordered_by_label else asc(subquery.c.timestamp))
                 .limit(target_size)
             )
-        return self._get_base_query(fair_share, subquery)
+        return self._get_base_query(fair_share, subquery, requires_samples_ordered_by_label)
 
     def _get_samples_count_per_balanced_column(self, next_trigger_id: int, tail_triggers: Optional[int]) -> list[int]:
         """
