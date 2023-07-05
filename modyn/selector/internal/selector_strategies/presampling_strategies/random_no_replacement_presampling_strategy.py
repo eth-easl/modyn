@@ -55,8 +55,12 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.last_used_in_trigger == next_trigger_id,
             )
-            .order_by(asc(SelectorStateMetadata.timestamp))
         )
+
+        if requires_samples_ordered_by_label:
+            stmt = stmt.order_by(SelectorStateMetadata.label)
+        else:
+            stmt = stmt.order_by(asc(SelectorStateMetadata.timestamp))
 
         return stmt
 

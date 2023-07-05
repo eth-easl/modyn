@@ -45,7 +45,11 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.sample_key.in_(subq),
             )
-            .order_by(asc(SelectorStateMetadata.timestamp))
         )
+
+        if requires_samples_ordered_by_label:
+            stmt = stmt.order_by(SelectorStateMetadata.label)
+        else:
+            stmt = stmt.order_by(asc(SelectorStateMetadata.timestamp))
 
         return stmt

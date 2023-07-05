@@ -24,15 +24,18 @@ class NoPresamplingStrategy(AbstractPresamplingStrategy):
             select(SelectorStateMetadata.sample_key)
             # Enables batching of results in chunks.
             # See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-            .execution_options(yield_per=self.maximum_keys_in_memory)
-            .filter(
+            .execution_options(yield_per=self.maximum_keys_in_memory).filter(
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
                 if tail_triggers is not None
                 else True,
             )
-            .order_by(asc(SelectorStateMetadata.timestamp))
         )
+
+        if requires_samples_ordered_by_label:
+            stmt = stmt.order_by(SelectorStateMetadata.label)
+        else:
+            stmt = stmt.order_by(asc(SelectorStateMetadata.timestamp))
 
         if limit is not None:
             stmt = stmt.limit(limit)
