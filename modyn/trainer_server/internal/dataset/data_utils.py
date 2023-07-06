@@ -3,6 +3,7 @@ from typing import Optional
 
 import torch
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
+from modyn.trainer_server.internal.dataset.per_class_online_dataset import PerClassOnlineDataset
 
 logger = logging.getLogger(__name__)
 
@@ -47,3 +48,19 @@ def prepare_dataloaders(
     # TODO(#50): what to do with the val set in the general case?
     val_dataloader = None
     return train_dataloader, val_dataloader
+
+
+def prepare_per_class_dataloader_from_online_dataset(
+    online_dataset: OnlineDataset, batch_size: int, num_workers: int
+) -> torch.utils.data.DataLoader:
+    dataset = PerClassOnlineDataset(
+        online_dataset._pipeline_id,
+        online_dataset._trigger_id,
+        online_dataset._dataset_id,
+        online_dataset._bytes_parser,
+        online_dataset._serialized_transforms,
+        online_dataset._storage_address,
+        online_dataset._selector_address,
+        online_dataset._training_id,
+    )
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)

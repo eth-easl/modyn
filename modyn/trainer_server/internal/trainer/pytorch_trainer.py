@@ -12,9 +12,17 @@ from typing import Optional, Tuple, Union
 
 import grpc
 import torch
-from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    AvailableLabelsResponse,
+    GetAvailableLabelsRequest,
+    GetSelectionStrategyRequest,
+    SelectionStrategyResponse,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
+from modyn.trainer_server.internal.dataset.data_utils import (
+    prepare_dataloaders,
+    prepare_per_class_dataloader_from_online_dataset,
+)
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
@@ -493,22 +501,24 @@ class PytorchTrainer:
             pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, selector_address=self.selector_address
         )
         self._train_dataloader.dataset.change_key_source(selector_key_source)
-
-        number_of_samples = 0
-
         self._downsampler.init_downsampler()
-
-        batch_number = 0
-        for batch_number, batch in enumerate(self._train_dataloader):
-            self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
-
-            sample_ids, target, data = self.preprocess_batch(batch)
-            number_of_samples += len(sample_ids)
-
-            with torch.autocast(self._device_type, enabled=self._amp):
-                # compute the scores and accumulate them
-                model_output = self._model.model(data)
-                self._downsampler.inform_samples(sample_ids, model_output, target)
+        if self._downsampler.requires_data_label_by_label:
+            available_labels = self._get_available_labels_from_selector()
+            per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
+                self._train_dataloader.dataset, self._batch_size, self._num_dataloaders
+            )
+            number_of_samples = 0
+            batch_number = 0
+            for label in available_labels:
+                per_class_dataloader.dataset._filtered_label = label
+                class_batch_number, class_number_of_samples = self._iterate_dataloader_and_compute_scores(
+                    per_class_dataloader
+                )
+                batch_number += class_batch_number
+                number_of_samples += class_number_of_samples
+                self._downsampler.inform_end_of_current_label()
+        else:
+            batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(self._train_dataloader)
 
         selected_ids, weights = self._downsampler.select_points()
 
@@ -534,8 +544,30 @@ class PytorchTrainer:
 
         self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
 
+    def _iterate_dataloader_and_compute_scores(self, dataloader: torch.utils.data.DataLoader) -> Tuple[int, int]:
+        number_of_samples = 0
+        batch_number = 0
+        for batch_number, batch in enumerate(dataloader):
+            self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
+
+            sample_ids, target, data = self.preprocess_batch(batch)
+            number_of_samples += len(sample_ids)
+
+            with torch.autocast(self._device_type, enabled=self._amp):
+                # compute the scores and accumulate them
+                model_output = self._model.model(data)
+                self._downsampler.inform_samples(sample_ids, model_output, target)
+        return batch_number, number_of_samples
+
     def end_of_trigger_cleaning(self) -> None:
         self._train_dataloader.dataset.end_of_trigger_cleaning()
+
+    def _get_available_labels_from_selector(self) -> list[int]:
+        req = GetAvailableLabelsRequest(pipeline_id=self.pipeline_id)
+
+        response: AvailableLabelsResponse = self.selector_stub.get_available_labels(req)
+
+        return response.available_labels
 
 
 def train(

@@ -51,6 +51,10 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         # sample 562.
         self.index_sampleid_map: list[int] = []
 
+        # For some strategies, data needs to be supplied class by class in order to get the desired result. If so, you
+        # can use the following parameter
+        self.requires_data_label_by_label = False
+
     @abstractmethod
     def init_downsampler(self) -> None:
         raise NotImplementedError
@@ -62,3 +66,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     @abstractmethod
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         raise NotImplementedError
+
+    def inform_end_of_current_label(self) -> None:
+        if self.requires_data_label_by_label:
+            raise NotImplementedError
