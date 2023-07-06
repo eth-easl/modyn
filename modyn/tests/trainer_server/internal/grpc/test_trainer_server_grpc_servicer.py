@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os
 import pathlib
 import platform
+import shutil
 import tempfile
 from io import BytesIO
 from time import sleep
@@ -11,7 +12,6 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import torch
-from modyn.common.ftp import FTPServer
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     FetchModelRequest,
     FetchModelResponse,
@@ -41,14 +41,24 @@ store_final_model_request = StoreFinalModelRequest(training_id=1)
 get_latest_model_request = GetLatestModelRequest(training_id=1)
 
 modyn_config = {
-    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
+    "trainer_server": {
+        "hostname": "trainer_server",
+        "port": "5001",
+        "ftp_port": "3001",
+        "offline_dataset_directory": "/tmp/offline_dataset",
+    },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
     "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
 
 modyn_download_file_config = {
-    "trainer_server": {"hostname": "trainer_server", "port": "5001", "ftp_port": "3001"},
+    "trainer_server": {
+        "hostname": "trainer_server",
+        "port": "5001",
+        "ftp_port": "3001",
+        "offline_dataset_directory": "/tmp/offline_dataset",
+    },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
     "model_storage": {"hostname": "localhost", "port": "5004", "ftp_port": "3002"},
@@ -77,12 +87,19 @@ def noop():
 
 
 def get_training_process_info():
-    status_query_queue = mp.Queue()
-    status_response_queue = mp.Queue()
+    status_query_queue_training = mp.Queue()
+    status_response_queue_training = mp.Queue()
+    status_query_queue_downsampling = mp.Queue()
+    status_response_queue_downsampling = mp.Queue()
     exception_queue = mp.Queue()
 
     training_process_info = TrainingProcessInfo(
-        mp.Process(), exception_queue, status_query_queue, status_response_queue
+        mp.Process(),
+        exception_queue,
+        status_query_queue_training,
+        status_response_queue_training,
+        status_query_queue_downsampling,
+        status_response_queue_downsampling,
     )
     return training_process_info
 
@@ -123,7 +140,10 @@ def get_training_info(
     training_id, temp, final_temp, storage_address, selector_address, test_getattr=None, test_hasattr=None
 ):
     request = get_start_training_request(temp)
-    training_info = TrainingInfo(request, training_id, storage_address, selector_address, pathlib.Path(final_temp))
+    offline_dataset_path = "/tmp/offline_dataset"
+    training_info = TrainingInfo(
+        request, training_id, storage_address, selector_address, offline_dataset_path, pathlib.Path(final_temp)
+    )
     return training_info
 
 
@@ -150,7 +170,7 @@ def test_trainer_not_available(test_is_alive, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         trainer_server._training_process_dict[10] = TrainingProcessInfo(
-            mp.Process(), mp.Queue(), mp.Queue(), mp.Queue()
+            mp.Process(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue()
         )
         response = trainer_server.trainer_available(trainer_available_request, None)
         assert not response.available
@@ -166,6 +186,12 @@ def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
         assert not trainer_server._training_dict
         assert trainer_server._next_training_id == 0
 
+
+@patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
+def test_start_training_invalid_id(test_hasattr, test_connect_to_model_storage):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         req = get_start_training_request(valid_model=True)
         req.use_pretrained_model = True
         req.pretrained_model_id = 15
@@ -173,13 +199,14 @@ def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
         assert not resp.training_started
 
 
+@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.download_file")
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
 @patch(
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,
 )
-def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storage):
+def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storage, download_file_mock: MagicMock):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_download_file_config, modyn_temp)
         with open(pathlib.Path(modyn_temp) / "testpath.modyn", "wb") as file:
@@ -197,15 +224,22 @@ def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storag
             assert 1 in trainer_server._training_process_dict
             assert trainer_server._next_training_id == 2
 
-            with FTPServer(str(3002), pathlib.Path(modyn_temp)):
-                request = get_start_training_request(valid_model=True)
-                request.use_pretrained_model = True
-                request.pretrained_model_id = 10
+            request = get_start_training_request(valid_model=True)
+            request.use_pretrained_model = True
+            request.pretrained_model_id = 10
 
-                resp = trainer_server.start_training(request, None)
-                assert resp.training_id == 2
-                with open(trainer_server._training_dict[resp.training_id].pretrained_model_path, "rb") as file:
-                    assert file.read().decode("utf-8") == "Our pretrained model!"
+            resp = trainer_server.start_training(request, None)
+
+            download_file_mock.assert_called_once()
+            kwargs = download_file_mock.call_args.kwargs
+            remote_file_path = kwargs["remote_file_path"]
+            local_file_path = kwargs["local_file_path"]
+
+            shutil.copyfile(pathlib.Path(modyn_temp) / remote_file_path, local_file_path)
+
+            assert resp.training_id == 2
+            with open(trainer_server._training_dict[resp.training_id].pretrained_model_path, "rb") as file:
+                assert file.read().decode("utf-8") == "Our pretrained model!"
 
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -218,7 +252,7 @@ def test_get_training_status_not_registered(test_connect_to_model_storage):
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(10, 100))
+@patch.object(TrainerServerGRPCServicer, "get_status_training", return_value=(10, 100, True))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive(
@@ -246,7 +280,7 @@ def test_get_training_status_alive(
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-@patch.object(TrainerServerGRPCServicer, "get_status", return_value=(None, None))
+@patch.object(TrainerServerGRPCServicer, "get_status_training", return_value=(None, None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception")
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint")
 def test_get_training_status_alive_blocked(
@@ -274,7 +308,7 @@ def test_get_training_status_alive_blocked(
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(b"state", 10, 100))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
-@patch.object(TrainerServerGRPCServicer, "get_status")
+@patch.object(TrainerServerGRPCServicer, "get_status_training")
 def test_get_training_status_finished_with_exception(
     test_get_status,
     test_check_for_training_exception,
@@ -302,7 +336,7 @@ def test_get_training_status_finished_with_exception(
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(TrainerServerGRPCServicer, "get_latest_checkpoint", return_value=(None, None, None))
 @patch.object(TrainerServerGRPCServicer, "check_for_training_exception", return_value="exception")
-@patch.object(TrainerServerGRPCServicer, "get_status")
+@patch.object(TrainerServerGRPCServicer, "get_status_training")
 def test_get_training_status_finished_no_checkpoint(
     test_get_status,
     test_check_for_training_exception,
@@ -327,12 +361,12 @@ def test_get_training_status_finished_no_checkpoint(
 def test_get_training_status(test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
-        state_dict = {"state": {}, "num_batches": 10, "num_samples": 100}
+        state_dict = {"state": {}, "num_batches": 10, "num_samples": 100, "training_active": True}
 
         training_process_info = get_training_process_info()
         trainer_server._training_process_dict[1] = training_process_info
-        training_process_info.status_response_queue.put(state_dict)
-        num_batches, num_samples = trainer_server.get_status(1)
+        training_process_info.status_response_queue_training.put(state_dict)
+        num_batches, num_samples, _ = trainer_server.get_status_training(1)
         assert num_batches == state_dict["num_batches"]
         assert num_samples == state_dict["num_samples"]
 
@@ -341,10 +375,10 @@ def test_get_training_status(test_connect_to_model_storage):
 
         while True:
             if not platform.system() == "Darwin":
-                if training_process_info.status_query_queue.qsize() == 1:
+                if training_process_info.status_query_queue_training.qsize() == 1:
                     break
             else:
-                if not training_process_info.status_query_queue.empty():
+                if not training_process_info.status_query_queue_training.empty():
                     break
 
             sleep(1)
@@ -353,8 +387,8 @@ def test_get_training_status(test_connect_to_model_storage):
             if elapsed >= timeout:
                 raise AssertionError("Did not reach desired queue state after 5 seconds.")
 
-        assert training_process_info.status_response_queue.empty()
-        query = training_process_info.status_query_queue.get()
+        assert training_process_info.status_response_queue_training.empty()
+        query = training_process_info.status_query_queue_training.get()
         assert query == TrainerMessages.STATUS_QUERY_MESSAGE
 
 

@@ -6,11 +6,17 @@ from typing import Iterable, Optional
 
 import enlighten
 import grpc
-from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, GetNumberOfSamplesRequest
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    DataInformRequest,
+    GetNumberOfSamplesRequest,
+    GetStatusBarScaleRequest,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
+    SeedSelectorRequest,
+    StatusBarScaleResponse,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -24,6 +30,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.supervisor.internal.supervisor_counter import SupervisorCounter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -251,6 +258,11 @@ class GRPCHandler:
         else:
             epochs_per_trigger = 1
 
+        if "seed" in pipeline_config["training"]:
+            seed = pipeline_config["training"]["seed"]
+        else:
+            seed = None
+
         if "transformations" in pipeline_config["data"]:
             transform_list = pipeline_config["data"]["transformations"]
         else:
@@ -282,32 +294,37 @@ class GRPCHandler:
         else:
             grad_scaler_config = {}
 
-        req = StartTrainingRequest(
-            pipeline_id=pipeline_id,
-            trigger_id=trigger_id,
-            device=pipeline_config["training"]["device"],
-            amp=amp,
-            model_id=pipeline_config["model"]["id"],
-            model_configuration=TrainerServerJsonString(value=model_config),
-            use_pretrained_model=previous_model_id is not None,
-            pretrained_model_id=previous_model_id or -1,
-            load_optimizer_state=False,  # TODO(#137): Think about this.
-            batch_size=pipeline_config["training"]["batch_size"],
-            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
-            torch_criterion=pipeline_config["training"]["optimization_criterion"]["name"],
-            criterion_parameters=TrainerServerJsonString(value=criterion_config),
-            data_info=Data(
+        start_training_kwargs = {
+            "pipeline_id": pipeline_id,
+            "trigger_id": trigger_id,
+            "device": pipeline_config["training"]["device"],
+            "amp": amp,
+            "model_id": pipeline_config["model"]["id"],
+            "model_configuration": TrainerServerJsonString(value=model_config),
+            "use_pretrained_model": previous_model_id is not None,
+            "pretrained_model_id": previous_model_id or -1,
+            "load_optimizer_state": False,  # TODO(#137): Think about this.
+            "batch_size": pipeline_config["training"]["batch_size"],
+            "torch_optimizers_configuration": TrainerServerJsonString(value=json.dumps(optimizers_config)),
+            "torch_criterion": pipeline_config["training"]["optimization_criterion"]["name"],
+            "criterion_parameters": TrainerServerJsonString(value=criterion_config),
+            "data_info": Data(
                 dataset_id=pipeline_config["data"]["dataset_id"],
                 num_dataloaders=pipeline_config["training"]["dataloader_workers"],
             ),
-            checkpoint_info=checkpoint_info,
-            transform_list=transform_list,
-            bytes_parser=PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
-            label_transformer=PythonString(value=label_transformer),
-            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
-            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            epochs_per_trigger=epochs_per_trigger,
-        )
+            "checkpoint_info": checkpoint_info,
+            "transform_list": transform_list,
+            "bytes_parser": PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
+            "label_transformer": PythonString(value=label_transformer),
+            "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
+            "epochs_per_trigger": epochs_per_trigger,
+            "seed": seed,
+        }
+
+        cleaned_kwargs = {k: v for k, v in start_training_kwargs.items() if v is not None}
+
+        req = StartTrainingRequest(**cleaned_kwargs)
 
         response: StartTrainingResponse = self.trainer_server.start_training(req)
 
@@ -325,7 +342,14 @@ class GRPCHandler:
 
         return response.num_samples
 
+    def get_status_bar_scale(self, pipeline_id: int) -> int:
+        request = GetStatusBarScaleRequest(pipeline_id=pipeline_id)
+        response: StatusBarScaleResponse = self.selector.get_status_bar_scale(request)
+
+        return response.status_bar_scale
+
     # pylint: disable=too-many-nested-blocks
+
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> None:  # pragma: no cover
@@ -336,13 +360,9 @@ class GRPCHandler:
         self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        last_samples = 0
-        current_epoch = 0
-        sample_pbar = self.progress_mgr.counter(
-            total=total_samples,
-            desc=f"[Training {training_id} Epoch {current_epoch}] Training on Samples",
-            unit="samples",
-        )
+        status_bar_scale = self.get_status_bar_scale(pipeline_id)
+
+        sample_pbar = SupervisorCounter(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -368,55 +388,11 @@ class GRPCHandler:
                 blocked_in_a_row = 0
 
                 if res.state_available:
-                    assert res.HasField("samples_seen") and res.HasField(
-                        "batches_seen"
+                    assert (res.HasField("samples_seen") and res.HasField("batches_seen")) or (
+                        res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
 
-                    new_samples = res.samples_seen - last_samples
-
-                    increment_epoch = 0
-
-                    # conclude/progress the current epoch
-                    if new_samples > 0 and res.samples_seen <= total_samples * (current_epoch + 1):
-                        sample_pbar.update(new_samples)
-                        last_samples = res.samples_seen
-
-                    # start a new epoch
-                    elif res.samples_seen == total_samples * (current_epoch + 1):
-                        increment_epoch = 1
-                        sample_pbar = self.progress_mgr.counter(
-                            total=total_samples,
-                            desc=f"[Training {training_id} Epoch {current_epoch + 1}] Training on Samples",
-                            unit="samples",
-                        )
-
-                    # handle corner cases
-                    elif res.samples_seen > total_samples * (current_epoch + 1):
-                        increment_epoch = 0
-
-                        # we have to distribute new_samples across several epochs
-                        this_epoch_samples = sample_pbar.total - sample_pbar.count
-                        sample_pbar.update(this_epoch_samples)
-                        remaining_samples = new_samples - this_epoch_samples
-
-                        while True:
-                            sample_pbar = self.progress_mgr.counter(
-                                total=total_samples,
-                                desc=f"[Training {training_id} Epoch {current_epoch + increment_epoch + 1}] "
-                                f"Training on Samples",
-                                unit="samples",
-                            )
-                            if remaining_samples > total_samples:
-                                # epoch started before the last update and already finished
-                                sample_pbar.update(total_samples)
-                                remaining_samples -= total_samples
-                                increment_epoch += 1
-                            else:
-                                # just one new epoch
-                                sample_pbar.update(remaining_samples)
-                                break
-
-                    current_epoch += increment_epoch
+                    sample_pbar.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -426,9 +402,7 @@ class GRPCHandler:
             else:
                 break
 
-        sample_pbar.update(sample_pbar.total - sample_pbar.count)
-        sample_pbar.clear(flush=True)
-        sample_pbar.close(clear=True)
+        sample_pbar.close_counter()
         logger.info("Training completed 🚀")
 
     def store_trained_model(self, training_id: int) -> int:
@@ -446,3 +420,17 @@ class GRPCHandler:
         logger.info(f"Model {res.model_id} has been stored successfully")
 
         return res.model_id
+
+    def seed_selector(self, seed: int) -> None:
+        if not (0 <= seed <= 100 and isinstance(seed, int)):
+            raise ValueError("The seed must be an integer in [0,100]")
+        if not self.connected_to_selector:
+            raise ConnectionError("Tried to seed the selector, but no connection was made.")
+
+        success = self.selector.seed_selector(
+            SeedSelectorRequest(
+                seed=seed,
+            ),
+        ).success
+
+        assert success, "Something went wrong while seeding the selector"

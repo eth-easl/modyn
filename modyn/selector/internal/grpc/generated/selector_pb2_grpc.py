@@ -34,20 +34,35 @@ class SelectorStub(object):
             response_deserializer=selector__pb2.TriggerResponse.FromString,
         )
         self.get_number_of_samples = channel.unary_unary(
-            '/selector.Selector/get_number_of_samples',
-            request_serializer=selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
-            response_deserializer=selector__pb2.NumberOfSamplesResponse.FromString,
-        )
+                '/selector.Selector/get_number_of_samples',
+                request_serializer=selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
+                response_deserializer=selector__pb2.NumberOfSamplesResponse.FromString,
+                )
+        self.get_status_bar_scale = channel.unary_unary(
+                '/selector.Selector/get_status_bar_scale',
+                request_serializer=selector__pb2.GetStatusBarScaleRequest.SerializeToString,
+                response_deserializer=selector__pb2.StatusBarScaleResponse.FromString,
+                )
         self.get_number_of_partitions = channel.unary_unary(
             '/selector.Selector/get_number_of_partitions',
             request_serializer=selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
             response_deserializer=selector__pb2.NumberOfPartitionsResponse.FromString,
         )
         self.get_selection_strategy = channel.unary_unary(
-            '/selector.Selector/get_selection_strategy',
-            request_serializer=selector__pb2.GetSelectionStrategyRequest.SerializeToString,
-            response_deserializer=selector__pb2.SelectionStrategyResponse.FromString,
-        )
+                '/selector.Selector/get_selection_strategy',
+                request_serializer=selector__pb2.GetSelectionStrategyRequest.SerializeToString,
+                response_deserializer=selector__pb2.SelectionStrategyResponse.FromString,
+                )
+        self.seed_selector = channel.unary_unary(
+                '/selector.Selector/seed_selector',
+                request_serializer=selector__pb2.SeedSelectorRequest.SerializeToString,
+                response_deserializer=selector__pb2.SeedSelectorResponse.FromString,
+                )
+        self.uses_weights = channel.unary_unary(
+                '/selector.Selector/uses_weights',
+                request_serializer=selector__pb2.UsesWeightsRequest.SerializeToString,
+                response_deserializer=selector__pb2.UsesWeightsResponse.FromString,
+                )
 
 
 class SelectorServicer(object):
@@ -83,6 +98,12 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_status_bar_scale(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def get_number_of_partitions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -95,44 +116,71 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def seed_selector(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def uses_weights(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SelectorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        'register_pipeline': grpc.unary_unary_rpc_method_handler(
-            servicer.register_pipeline,
-            request_deserializer=selector__pb2.RegisterPipelineRequest.FromString,
-            response_serializer=selector__pb2.PipelineResponse.SerializeToString,
-        ),
-        'get_sample_keys_and_weights': grpc.unary_stream_rpc_method_handler(
-            servicer.get_sample_keys_and_weights,
-            request_deserializer=selector__pb2.GetSamplesRequest.FromString,
-            response_serializer=selector__pb2.SamplesResponse.SerializeToString,
-        ),
-        'inform_data': grpc.unary_unary_rpc_method_handler(
-            servicer.inform_data,
-            request_deserializer=selector__pb2.DataInformRequest.FromString,
-            response_serializer=selector__pb2.Empty.SerializeToString,
-        ),
-        'inform_data_and_trigger': grpc.unary_unary_rpc_method_handler(
-            servicer.inform_data_and_trigger,
-            request_deserializer=selector__pb2.DataInformRequest.FromString,
-            response_serializer=selector__pb2.TriggerResponse.SerializeToString,
-        ),
-        'get_number_of_samples': grpc.unary_unary_rpc_method_handler(
-            servicer.get_number_of_samples,
-            request_deserializer=selector__pb2.GetNumberOfSamplesRequest.FromString,
-            response_serializer=selector__pb2.NumberOfSamplesResponse.SerializeToString,
-        ),
-        'get_number_of_partitions': grpc.unary_unary_rpc_method_handler(
-            servicer.get_number_of_partitions,
-            request_deserializer=selector__pb2.GetNumberOfPartitionsRequest.FromString,
-            response_serializer=selector__pb2.NumberOfPartitionsResponse.SerializeToString,
-        ),
-        'get_selection_strategy': grpc.unary_unary_rpc_method_handler(
-            servicer.get_selection_strategy,
-            request_deserializer=selector__pb2.GetSelectionStrategyRequest.FromString,
-            response_serializer=selector__pb2.SelectionStrategyResponse.SerializeToString,
-        ),
+            'register_pipeline': grpc.unary_unary_rpc_method_handler(
+                    servicer.register_pipeline,
+                    request_deserializer=selector__pb2.RegisterPipelineRequest.FromString,
+                    response_serializer=selector__pb2.PipelineResponse.SerializeToString,
+            ),
+            'get_sample_keys_and_weights': grpc.unary_stream_rpc_method_handler(
+                    servicer.get_sample_keys_and_weights,
+                    request_deserializer=selector__pb2.GetSamplesRequest.FromString,
+                    response_serializer=selector__pb2.SamplesResponse.SerializeToString,
+            ),
+            'inform_data': grpc.unary_unary_rpc_method_handler(
+                    servicer.inform_data,
+                    request_deserializer=selector__pb2.DataInformRequest.FromString,
+                    response_serializer=selector__pb2.Empty.SerializeToString,
+            ),
+            'inform_data_and_trigger': grpc.unary_unary_rpc_method_handler(
+                    servicer.inform_data_and_trigger,
+                    request_deserializer=selector__pb2.DataInformRequest.FromString,
+                    response_serializer=selector__pb2.TriggerResponse.SerializeToString,
+            ),
+            'get_number_of_samples': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_number_of_samples,
+                    request_deserializer=selector__pb2.GetNumberOfSamplesRequest.FromString,
+                    response_serializer=selector__pb2.NumberOfSamplesResponse.SerializeToString,
+            ),
+            'get_status_bar_scale': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_status_bar_scale,
+                    request_deserializer=selector__pb2.GetStatusBarScaleRequest.FromString,
+                    response_serializer=selector__pb2.StatusBarScaleResponse.SerializeToString,
+            ),
+            'get_number_of_partitions': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_number_of_partitions,
+                    request_deserializer=selector__pb2.GetNumberOfPartitionsRequest.FromString,
+                    response_serializer=selector__pb2.NumberOfPartitionsResponse.SerializeToString,
+            ),
+            'get_selection_strategy': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_selection_strategy,
+                    request_deserializer=selector__pb2.GetSelectionStrategyRequest.FromString,
+                    response_serializer=selector__pb2.SelectionStrategyResponse.SerializeToString,
+            ),
+            'seed_selector': grpc.unary_unary_rpc_method_handler(
+                    servicer.seed_selector,
+                    request_deserializer=selector__pb2.SeedSelectorRequest.FromString,
+                    response_serializer=selector__pb2.SeedSelectorResponse.SerializeToString,
+            ),
+            'uses_weights': grpc.unary_unary_rpc_method_handler(
+                    servicer.uses_weights,
+                    request_deserializer=selector__pb2.UsesWeightsRequest.FromString,
+                    response_serializer=selector__pb2.UsesWeightsResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
         'selector.Selector', rpc_method_handlers)
@@ -230,6 +278,23 @@ class Selector(object):
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
+    def get_status_bar_scale(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_status_bar_scale',
+            selector__pb2.GetStatusBarScaleRequest.SerializeToString,
+            selector__pb2.StatusBarScaleResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
     def get_number_of_partitions(request,
                                  target,
                                  options=(),
@@ -258,7 +323,41 @@ class Selector(object):
                                timeout=None,
                                metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_selection_strategy',
-                                             selector__pb2.GetSelectionStrategyRequest.SerializeToString,
-                                             selector__pb2.SelectionStrategyResponse.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            selector__pb2.GetSelectionStrategyRequest.SerializeToString,
+            selector__pb2.SelectionStrategyResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def seed_selector(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/seed_selector',
+            selector__pb2.SeedSelectorRequest.SerializeToString,
+            selector__pb2.SeedSelectorResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def uses_weights(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/uses_weights',
+            selector__pb2.UsesWeightsRequest.SerializeToString,
+            selector__pb2.UsesWeightsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

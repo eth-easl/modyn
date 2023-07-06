@@ -3,16 +3,22 @@ import pathlib
 from unittest.mock import patch
 
 import grpc
+import numpy as np
+import pytest
+import torch
 import yaml
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.utils import (
     convert_timestr_to_seconds,
     current_time_millis,
+    deserialize_function,
     dynamic_module_import,
     flatten,
+    get_partition_for_worker,
     grpc_connection_established,
     model_available,
     package_available_and_can_be_imported,
+    seed_everything,
     trigger_available,
     validate_timestr,
     validate_yaml,
@@ -95,3 +101,68 @@ def test_flatten():
     assert flatten([[1, 2, 3, 4]]) == [1, 2, 3, 4]
     assert flatten([[1, 2], [3, 4]]) == [1, 2, 3, 4]
     assert flatten([[1, 2], [3, 4], [5, 6]]) == [1, 2, 3, 4, 5, 6]
+
+
+def test_get_partition_for_worker():
+    samples = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+
+    assert get_partition_for_worker(0, 3, len(samples)) == (0, 4)
+    assert get_partition_for_worker(1, 3, len(samples)) == (4, 3)
+    assert get_partition_for_worker(2, 3, len(samples)) == (7, 3)
+
+    with pytest.raises(ValueError):
+        get_partition_for_worker(3, 3, len(samples))
+    with pytest.raises(ValueError):
+        get_partition_for_worker(-1, 3, len(samples))
+
+    assert get_partition_for_worker(0, 2, len(samples)) == (0, 5)
+
+    samples = [1, 2, 3]
+    assert get_partition_for_worker(0, 8, len(samples)) == (0, 1)
+    assert get_partition_for_worker(1, 8, len(samples)) == (1, 1)
+    assert get_partition_for_worker(2, 8, len(samples)) == (2, 1)
+    assert get_partition_for_worker(3, 8, len(samples)) == (0, 0)
+    assert get_partition_for_worker(4, 8, len(samples)) == (0, 0)
+    assert get_partition_for_worker(5, 8, len(samples)) == (0, 0)
+    assert get_partition_for_worker(6, 8, len(samples)) == (0, 0)
+    assert get_partition_for_worker(7, 8, len(samples)) == (0, 0)
+
+
+def test_deserialize_function():
+    test_func = "def test_func(x: int, y: int) -> int:\n\treturn x + y"
+    assert deserialize_function(test_func, "test_func")(5, 3) == 8
+
+    test_func_import = "import torch\ndef test_func(x: torch.Tensor):\n\treturn x * 3"
+
+    assert torch.all(torch.eq(deserialize_function(test_func_import, "test_func")(torch.ones(4)), torch.ones(4) * 3))
+
+
+def test_deserialize_function_invalid():
+    test_func = "def test_func():\n\treturn 0"
+
+    with pytest.raises(ValueError):
+        deserialize_function(test_func, "test")
+    deserialized_test_func = deserialize_function(test_func, "test_func")
+    assert deserialized_test_func() == 0
+
+    invalid_func = "test_func=1"
+    with pytest.raises(ValueError):
+        deserialize_function(invalid_func, "test_func")
+
+    empty_func = ""
+    assert deserialize_function(empty_func, "test_func") is None
+
+
+def test_seed():
+    seed_everything(12)
+    torch_master = torch.randn(10)
+    np_master = np.random.randn(10)
+
+    seed_everything(67)
+    assert not np.all(np.equal(np_master, np.random.randn(10)))
+    assert not torch.equal(torch_master, torch.randn(10))
+
+    for _ in range(23):
+        seed_everything(12)
+        assert torch.equal(torch_master, torch.randn(10))
+        assert np.all(np.equal(np_master, np.random.randn(10)))

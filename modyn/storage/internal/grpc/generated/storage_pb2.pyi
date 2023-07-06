@@ -147,6 +147,43 @@ class GetDataInIntervalResponse(google.protobuf.message.Message):
 global___GetDataInIntervalResponse = GetDataInIntervalResponse
 
 @typing_extensions.final
+class GetDataPerWorkerRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    DATASET_ID_FIELD_NUMBER: builtins.int
+    WORKER_ID_FIELD_NUMBER: builtins.int
+    TOTAL_WORKERS_FIELD_NUMBER: builtins.int
+    dataset_id: builtins.str
+    worker_id: builtins.int
+    total_workers: builtins.int
+    def __init__(
+        self,
+        *,
+        dataset_id: builtins.str = ...,
+        worker_id: builtins.int = ...,
+        total_workers: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "total_workers", b"total_workers", "worker_id", b"worker_id"]) -> None: ...
+
+global___GetDataPerWorkerRequest = GetDataPerWorkerRequest
+
+@typing_extensions.final
+class GetDataPerWorkerResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    KEYS_FIELD_NUMBER: builtins.int
+    @property
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def __init__(
+        self,
+        *,
+        keys: collections.abc.Iterable[builtins.int] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["keys", b"keys"]) -> None: ...
+
+global___GetDataPerWorkerResponse = GetDataPerWorkerResponse
+
+@typing_extensions.final
 class DatasetAvailableRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 

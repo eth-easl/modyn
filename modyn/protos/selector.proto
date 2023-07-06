@@ -10,9 +10,12 @@ service Selector {
   rpc inform_data_and_trigger(DataInformRequest) returns (TriggerResponse) {}
   rpc get_number_of_samples(GetNumberOfSamplesRequest)
       returns (NumberOfSamplesResponse) {}
+  rpc get_status_bar_scale(GetStatusBarScaleRequest) returns (StatusBarScaleResponse) {}
   rpc get_number_of_partitions(GetNumberOfPartitionsRequest)
       returns (NumberOfPartitionsResponse) {}
   rpc get_selection_strategy(GetSelectionStrategyRequest) returns (SelectionStrategyResponse) {}
+  rpc seed_selector(SeedSelectorRequest) returns (SeedSelectorResponse) {}
+  rpc uses_weights(UsesWeightsRequest) returns (UsesWeightsResponse) {}
 }
 
 message Empty {}
@@ -52,7 +55,17 @@ message GetNumberOfSamplesRequest {
   int32 trigger_id = 2;
 }
 
-message NumberOfSamplesResponse { int32 num_samples = 1; }
+message NumberOfSamplesResponse {
+  int32 num_samples = 1;
+}
+
+message GetStatusBarScaleRequest {
+  int32 pipeline_id = 1;
+}
+
+message StatusBarScaleResponse {
+  int32 status_bar_scale = 1;
+}
 
 message GetNumberOfPartitionsRequest {
   int32 pipeline_id = 1;
@@ -68,5 +81,21 @@ message GetSelectionStrategyRequest {
 message SelectionStrategyResponse {
     bool downsampling_enabled = 1;
     string strategy_name = 2;
-    JsonString params = 3;
+    JsonString downsampler_config = 3;
+}
+
+message UsesWeightsRequest {
+    int32 pipeline_id = 1;
+}
+
+message UsesWeightsResponse {
+    bool uses_weights = 1;
+}
+
+message SeedSelectorRequest {
+    int32 seed = 1;
+}
+
+message SeedSelectorResponse {
+    bool success = 1;
 }

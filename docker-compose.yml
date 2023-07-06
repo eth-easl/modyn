@@ -68,6 +68,14 @@ services:
     build:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
+  evaluator:
+    restart: on-failure
+    depends_on:
+      - model_storage
+      - storage
+    build:
+      context: .
+      dockerfile: docker/Evaluator/Dockerfile
   trainer_server:
     restart: on-failure
     depends_on:
@@ -77,7 +85,9 @@ services:
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
-#    volumes:
+    volumes:
+    - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
+#      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
 #      - .:/modyn_host
 #    shm_size: 4gb
 # CUDASTART (ignore/delete if enabling cuda manually)
@@ -110,6 +120,7 @@ services:
     - selector
     - metadata_processor
     - trainer_server
+    - evaluator
     build:
       context: .
       dockerfile: docker/Supervisor/Dockerfile
@@ -126,6 +137,8 @@ services:
         condition: service_started
       model_storage:
         condition: service_started
+      evaluator:
+        condition: service_started
       trainer_server:
         condition: service_started
       metadata-db:
@@ -140,3 +153,4 @@ services:
 volumes:
   storage-data:
   selector-data:
+  downsampling-data:

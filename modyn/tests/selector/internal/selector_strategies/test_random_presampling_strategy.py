@@ -41,7 +41,7 @@ def test_init_random():
 
     with pytest.raises(ValueError):
         RandomPresamplingStrategy(
-            {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampled_batch_size": 10},
+            {"limit": -1, "reset_after_trigger": False, "presampling_ratio": 80, "downsampling_ratio": 10},
             get_minimal_modyn_config(),
             42,
             1000,
@@ -56,9 +56,3 @@ def test_init_random():
 
     assert strat._pipeline_id == 42
     assert not hasattr(strat, "downsampled_batch_size")
-
-    with pytest.raises(NotImplementedError):
-        strat.get_downsampling_strategy()
-
-    with pytest.raises(NotImplementedError):
-        strat.get_downsampling_params()
