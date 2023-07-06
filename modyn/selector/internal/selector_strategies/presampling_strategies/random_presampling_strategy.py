@@ -18,7 +18,6 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
         tail_triggers: Optional[int],
         limit: Optional[int],
         trigger_dataset_size: Optional[int],
-        requires_samples_ordered_by_label: bool,
     ) -> Select:
         # TODO(#224) write an efficient query using TABLESAMPLE
         assert trigger_dataset_size is not None
@@ -38,14 +37,13 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
             .limit(target_size)
         )
 
-        stmt = select(SelectorStateMetadata.sample_key).filter(
-            SelectorStateMetadata.pipeline_id == self.pipeline_id,
-            SelectorStateMetadata.sample_key.in_(subq),
+        stmt = (
+            select(SelectorStateMetadata.sample_key)
+            .filter(
+                SelectorStateMetadata.pipeline_id == self.pipeline_id,
+                SelectorStateMetadata.sample_key.in_(subq),
+            )
+            .order_by(asc(SelectorStateMetadata.timestamp))
         )
-
-        if requires_samples_ordered_by_label:
-            stmt = stmt.order_by(SelectorStateMetadata.label)
-        else:
-            stmt = stmt.order_by(asc(SelectorStateMetadata.timestamp))
 
         return stmt

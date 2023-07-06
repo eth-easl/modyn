@@ -33,13 +33,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
     def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         # we don't want to shuffle if the downsampler needs the samples ordered by label. THe downsampler will take care
         # of shuffling the samples.
-        downsampler_requires_samples_ordered_by_label = (
-            self.downsampling_scheduler.get_requires_samples_ordered_by_label(next_trigger_id=self._next_trigger_id)
-        )
 
         for samples in self._get_data():
-            if not downsampler_requires_samples_ordered_by_label:
-                random.shuffle(samples)
+            random.shuffle(samples)
             yield [(sample, 1.0) for sample in samples]
 
     def _get_data(self) -> Iterable[list[int]]:
@@ -48,18 +44,11 @@ class CoresetStrategy(AbstractSelectionStrategy):
             if self.presampling_strategy.requires_trigger_dataset_size:
                 trigger_dataset_size = self._get_trigger_dataset_size()
 
-            # Some downsampling strategies require to work label by label (like CRAIG).
-            # If so, we can supply samples sorted by label adding a simple ORDER BY at the end of the query
-            downsampler_requires_samples_ordered_by_label = (
-                self.downsampling_scheduler.get_requires_samples_ordered_by_label(self._next_trigger_id)
-            )
-
             stmt = self.presampling_strategy.get_presampling_query(
                 next_trigger_id=self._next_trigger_id,
                 tail_triggers=self.tail_triggers,
                 limit=self.training_set_size_limit if self.has_limit else None,
                 trigger_dataset_size=trigger_dataset_size,
-                requires_samples_ordered_by_label=downsampler_requires_samples_ordered_by_label,
             ).execution_options(yield_per=self._maximum_keys_in_memory)
 
             for chunk in database.session.execute(stmt).partitions():

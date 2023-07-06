@@ -74,15 +74,15 @@ def test_get_query_wrong():
 
     # missing size
     with pytest.raises(AssertionError):
-        strat.get_presampling_query(120, None, None, None, False)
+        strat.get_presampling_query(120, None, None, None)
 
     # negative size
     with pytest.raises(AssertionError):
-        strat.get_presampling_query(120, None, None, -1, False)
+        strat.get_presampling_query(120, None, None, -1)
 
     # negative limit
     with pytest.raises(AssertionError):
-        strat.get_presampling_query(120, None, -18, 120, False)
+        strat.get_presampling_query(120, None, -18, 120)
 
 
 def test_constructor_throws_on_invalid_config():
@@ -158,50 +158,3 @@ def test_dataset_size_various_scenarios():
     strat.tail_triggers = 1
     trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 22  # 75% of presampling
-
-
-def insert_data(strat, base_index=0, size=200):
-    strat.inform_data(
-        range(base_index, base_index + size), range(base_index, base_index + size), [0, 1] * int((size / 2))
-    )
-
-
-def check_ordered_by_label(result):
-    first_odd_index = min(i if result[i][0] % 2 == 1 else len(result) for i in range(len(result)))
-
-    for i, element in enumerate(result):
-        if i < first_odd_index:
-            assert element[0] % 2 == 0
-        else:
-            assert element[0] % 2 == 1
-
-
-def test_ordered_sampling():
-    modyn_config = get_minimal_modyn_config()
-    config = {
-        "reset_after_trigger": False,
-        "presampling_config": {"ratio": 25, "strategy": "Random"},
-        "limit": -1,
-    }
-    strat = CoresetStrategy(config, modyn_config, 0, 1000)
-
-    strat.presampling_strategy: RandomPresamplingStrategy
-
-    insert_data(strat, 0)
-
-    presampler = strat.presampling_strategy
-
-    samples_per_trigger = [None] * 6
-    all_the_samples = []
-
-    for trigger in range(4):
-        query = presampler.get_presampling_query(trigger, None, None, 200, True)
-
-        with MetadataDatabaseConnection(modyn_config) as database:
-            result = database.session.execute(query).all()
-            assert len(result) == 50
-            print(result)
-            check_ordered_by_label(result)
-            selected_keys = [el[0] for el in result]
-            samples_per_trigger[trigger] = selected_keys.copy()
-            all_the_samples += selected_keys

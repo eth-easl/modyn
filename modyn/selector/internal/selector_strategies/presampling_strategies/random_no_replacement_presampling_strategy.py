@@ -22,7 +22,6 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
         tail_triggers: Optional[int],
         limit: Optional[int],
         trigger_dataset_size: Optional[int],
-        requires_samples_ordered_by_label: bool,
     ) -> Select:
         assert trigger_dataset_size is not None
         assert trigger_dataset_size >= 0
@@ -48,15 +47,14 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
             self._update_last_used_in_trigger(next_trigger_id, subq)
 
         # then the query to select the samples is straightforward, just a filter on last_used_in_trigger
-        stmt = select(SelectorStateMetadata.sample_key).filter(
-            SelectorStateMetadata.pipeline_id == self.pipeline_id,
-            SelectorStateMetadata.last_used_in_trigger == next_trigger_id,
+        stmt = (
+            select(SelectorStateMetadata.sample_key)
+            .filter(
+                SelectorStateMetadata.pipeline_id == self.pipeline_id,
+                SelectorStateMetadata.last_used_in_trigger == next_trigger_id,
+            )
+            .order_by(asc(SelectorStateMetadata.timestamp))
         )
-
-        if requires_samples_ordered_by_label:
-            stmt = stmt.order_by(SelectorStateMetadata.label)
-        else:
-            stmt = stmt.order_by(asc(SelectorStateMetadata.timestamp))
 
         return stmt
 

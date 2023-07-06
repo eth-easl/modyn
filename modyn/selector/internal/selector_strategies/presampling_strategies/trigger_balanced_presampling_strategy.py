@@ -17,10 +17,7 @@ class TriggerBalancedPresamplingStrategy(AbstractBalancedPresamplingStrategy):
         tail_triggers: Optional[int],
         limit: Optional[int],
         trigger_dataset_size: Optional[int],
-        requires_samples_ordered_by_label: bool,
     ) -> Select:
         if tail_triggers == 0:
             raise ValueError("You cannot balance across triggers if you use reset_after_trigger")
-        return super().get_presampling_query(
-            next_trigger_id, tail_triggers, limit, trigger_dataset_size, requires_samples_ordered_by_label
-        )
+        return super().get_presampling_query(next_trigger_id, tail_triggers, limit, trigger_dataset_size)

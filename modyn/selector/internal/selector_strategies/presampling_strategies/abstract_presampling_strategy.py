@@ -25,7 +25,6 @@ class AbstractPresamplingStrategy(ABC):
         tail_triggers: Optional[int],
         limit: Optional[int],
         trigger_dataset_size: Optional[int],
-        requires_samples_ordered_by_label: bool,
     ) -> Select:
         """
         This abstract class should return the query to get the presampled samples. The query should have only

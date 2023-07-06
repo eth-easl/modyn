@@ -55,15 +55,6 @@ def insert_data_clustered(strat, per_class):
         )
 
 
-def insert_data_periodic(strat, base_index=0, number_of_samples=300):
-    assert number_of_samples % 3 == 0
-    strat.inform_data(
-        range(base_index, base_index + number_of_samples),
-        range(base_index, base_index + number_of_samples),
-        [0, 1, 2] * int(number_of_samples / 3),
-    )
-
-
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     pathlib.Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
@@ -193,47 +184,6 @@ def test_query_data_above_threshold():
     for index in range(3):
         label_index = [el for el in selected if index * 1000 <= el < (index + 1) * 1000]
         assert len(label_index) == 10
-
-
-def check_is_balanced(selected):
-    class0 = sum(1 if el % 3 == 0 else 0 for el in selected)
-    class1 = sum(1 if el % 3 == 1 else 0 for el in selected)
-    class2 = sum(1 if el % 3 == 2 else 0 for el in selected)
-
-    assert class0 == class1 == class2
-
-
-def check_is_ordered(selected):
-    first_class_1 = min(i if el % 3 == 1 else len(selected) for i, el in enumerate(selected))
-    first_class_2 = min(i if el % 3 == 2 else len(selected) for i, el in enumerate(selected))
-
-    for i, element in enumerate(selected):
-        if i < first_class_1:
-            assert element % 3 == 0
-        elif first_class_1 <= i < first_class_2:
-            assert element % 3 == 1
-        else:
-            assert element % 3 == 2
-
-
-def test_query_data_above_threshold_order_by_class():
-    modyn_config = get_minimal_modyn_config()
-    strat = CoresetStrategy(get_config(), modyn_config, 0, 1000)
-    strat.downsampling_scheduler.current_downsampler.requires_samples_ordered_by_label = True
-
-    strat.presampling_strategy: LabelBalancedPresamplingStrategy
-
-    insert_data_periodic(strat)
-
-    this_trigger_size = strat._get_trigger_dataset_size()
-    assert this_trigger_size == 300
-
-    assert strat.presampling_strategy.get_target_size(this_trigger_size, None) == 150
-
-    selected = list(strat._get_data())[0]
-
-    check_is_ordered(selected)
-    check_is_balanced(selected)
 
 
 def test_query_data_one_below_threshold():
