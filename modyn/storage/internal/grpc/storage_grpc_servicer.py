@@ -29,7 +29,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageServicer
 from modyn.utils.utils import current_time_millis, get_partition_for_worker
-from sqlalchemy import asc, select, and_
+from sqlalchemy import and_, asc, select
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,10 @@ class StorageGRPCServicer(StorageServicer):
                 return
 
             samples: list[Sample] = (
-                session.query(Sample).filter(and_(Sample.sample_id.in_(request.keys), Sample.dataset_id == dataset.dataset_id)).order_by(Sample.file_id).all()
+                session.query(Sample)
+                .filter(and_(Sample.sample_id.in_(request.keys), Sample.dataset_id == dataset.dataset_id))
+                .order_by(Sample.file_id)
+                .all()
             )
 
             if len(samples) == 0:
