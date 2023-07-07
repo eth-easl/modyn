@@ -512,7 +512,7 @@ class PytorchTrainer:
             number_of_samples = 0
             batch_number = 0
             for label in available_labels:
-                per_class_dataloader.dataset._filtered_label = label
+                per_class_dataloader.dataset.filtered_label = label
                 batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(
                     per_class_dataloader,
                     previous_batch_number=batch_number,

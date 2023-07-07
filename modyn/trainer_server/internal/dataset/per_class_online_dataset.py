@@ -33,11 +33,11 @@ class PerClassOnlineDataset(OnlineDataset):
             training_id,
         )
 
-        self._filtered_label = None
+        self.filtered_label = None
 
     # pylint: disable=too-many-locals, too-many-branches
     def __iter__(self) -> Generator:
-        assert self._filtered_label is not None
+        assert self.filtered_label is not None
         worker_info = get_worker_info()
         if worker_info is None:
             # Non-multithreaded data loading. We use worker_id 0.
@@ -77,7 +77,7 @@ class PerClassOnlineDataset(OnlineDataset):
                     new_keys, new_data, new_labels, new_weights = self._get_data(
                         worker_id=worker_id, partition_id=partition + 1
                     )
-                if label == self._filtered_label:
+                if label == self.filtered_label:
                     yield self._yield_samples(key, sample, label, weight)
 
             # this should mean we keep only two partitions in mem
