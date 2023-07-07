@@ -4,7 +4,7 @@ import pickle
 import shutil
 from datetime import datetime
 
-from benchmark.utils import maybe_download, setup_argparser_wildtime, setup_logger
+from benchmark_utils import maybe_download, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from wilds import get_dataset

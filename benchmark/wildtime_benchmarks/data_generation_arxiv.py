@@ -1,33 +1,28 @@
 import os
 import pickle
-from datetime import datetime
 
 import torch
-from benchmark.utils import maybe_download, setup_argparser_wildtime, setup_logger
+from benchmark_utils import create_timestamp, maybe_download, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
 logger = setup_logger()
 
 
-def get_timestamp(year) -> int:
-    return int(datetime(year=year, month=1, day=1).timestamp())
-
-
 def main():
-    parser = setup_argparser_wildtime("Huffpost")
+    parser = setup_argparser_wildtime("Arxiv")
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
-    HuffpostDownloader(args.dir).store_data()
+    ArXivDownloader(args.dir).store_data()
 
 
-class HuffpostDownloader(Dataset):
-    time_steps = [i for i in range(2012, 2019)]
-    input_dim = 44
-    num_classes = 11
-    drive_id = "1jKqbfPx69EPK_fjgU9RLuExToUg7rwIY"
-    file_name = "huffpost.pkl"
+class ArXivDownloader(Dataset):
+    time_steps = [i for i in range(2007, 2023)]
+    input_dim = 55
+    num_classes = 172
+    drive_id = "1H5xzHHgXl8GOMonkb6ojye-Y2yIp436V"
+    file_name = "arxiv.pkl"
 
     def __getitem__(self, idx):
         return self._dataset["title"][idx], torch.LongTensor([self._dataset["category"][idx]])[0]
@@ -35,7 +30,7 @@ class HuffpostDownloader(Dataset):
     def __len__(self):
         return len(self._dataset["category"])
 
-    def __init__(self, data_dir):
+    def __init__(self,  data_dir):
         super().__init__()
 
         maybe_download(
@@ -50,15 +45,15 @@ class HuffpostDownloader(Dataset):
 
     def store_data(self):
         for year in tqdm(self._dataset):
-            year_timestamp = get_timestamp(year)
+            year_timestamp = create_timestamp(year)
             year_rows = []
-            for i in range(len(self._dataset[year][0]["headline"])):
-                text = self._dataset[year][0]["headline"][i]
+            for i in range(len(self._dataset[year][0]["title"])):
+                text = self._dataset[year][0]["title"][i].replace("\n", " ")
                 label = self._dataset[year][0]["category"][i]
                 csv_row = f"{text}\t{label}"
                 year_rows.append(csv_row)
 
-            # store the sentences
+            # store the year file
             text_file = os.path.join(self.path, f"{year}.csv")
             with open(text_file, "w") as f:
                 f.write("\n".join(year_rows))
@@ -66,7 +61,7 @@ class HuffpostDownloader(Dataset):
             # set timestamp
             os.utime(text_file, (year_timestamp, year_timestamp))
 
-        os.remove(os.path.join(self.path, "huffpost.pkl"))
+        os.remove(os.path.join(self.path, "arxiv.pkl"))
 
 
 if __name__ == "__main__":

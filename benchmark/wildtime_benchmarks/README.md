@@ -1,0 +1,30 @@
+# Wild-time datasets
+
+In this directory, you can find the files necessary to run experiments using benchmarks from Wild-time. There are 4 available
+datasets: arxiv, huffpost, FMoW and Yearbook. You can find more details in the [wild time repo](https://github.com/huaxiuyao/Wild-Time)
+
+## Data Generation
+To run the downloading script you need to install the `gdown` library and, just for FMoW, also the `wilds` library. 
+
+The downloading scripts are adapted from `wild-time-data`. 
+There is a `data_generation_[benchmark].py` script for each available dataset. 
+Use the `-h` flag to find out more.
+
+## Datasets description
+
+### Yearbook
+The goal is to predict the sex given a  yearbook picture. The dataset contains 37189 samples collected from 1930 to 2013. Since timestamps in Modyn are based on 
+Unix Timestamps (so 0 is 1/1/1970) we have to remap the years to days. Precisely, the timestamp for pictures from 1930 is
+1/1/1970, then 2/1/1970 for the ones taken in 1931 and so forth. 
+
+### FMoW
+The goal is to predict land use (62 classes) given a satellite image . The dataset contains more than 100.000 samples collected from 2002 to 2017. Every picture is stored
+separately (in png format) and the os timestamp is set accordingly.
+
+### HuffPost
+The goal is to predict tag of news given headlines. The dataset contains more than 60k samples collected from 2012 to 2018. Titles belonging to the same year are grouped 
+into the same CSV file and stored together.
+
+### Arxiv
+The goal is to predict paper category (55 classes) given paper title. The dataset contains more than 2 million samples collected from 2002 to 2017. Titles belonging to the same year are grouped 
+into the same CSV file and stored together.

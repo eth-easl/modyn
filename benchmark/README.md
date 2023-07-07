@@ -11,3 +11,6 @@ In the `mnist` directory, you find files to running experiments on a dynamic ver
 ### Criteo 1TB Dataset
 We provide scripts and guidelines for using the Criteo 1TB benchmark data set.
 The README in the subfolder contains information on how data is downloaded and preprocessed. 
+
+### Wildtime benchmarks
+In the `wildtime_benchmarks` directory, you find files to running experiments on datasets belonging to the WildTime suite.

@@ -3,7 +3,7 @@ import pickle
 
 import numpy as np
 import torch
-from benchmark.utils import (
+from benchmark_utils import (
     create_binary_file,
     create_fake_timestamp,
     maybe_download,
@@ -13,8 +13,6 @@ from benchmark.utils import (
 from torch.utils.data import Dataset
 
 logger = setup_logger()
-
-DAY_LENGTH_SECONDS = 24 * 60 * 60
 
 
 def main():

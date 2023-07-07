@@ -1,14 +1,14 @@
 pipeline:
-  name: ArXiv dataset Test Pipeline
+  name: Huffpost dataset Test Pipeline
   description: Example pipeline
   version: 1.0.0
 model:
-  id: ArticleNet
+  id: DistilBertNet
   config:
-    num_classes: 172
+    num_classes: 55
 training:
   gpus: 1
-  device: "cuda:0"
+  device: "cpu"
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
@@ -35,13 +35,15 @@ training:
       limit: -1
       reset_after_trigger: True
 data:
-  dataset_id: arxiv
+  dataset_id: huffpost
+  transformations: ["DistilBertTokenizerTransform(300)"]
   bytes_parser_function: |
     from modyn.models import DistilBertTokenizerTransform
-    def bytes_parser_function(data: bytes) -> str:
+    import torch
+    def bytes_parser_function(data: bytes) -> torch.Tensor:
       return DistilBertTokenizerTransform()(data.decode("utf-8"))
 
 trigger:
   id: TimeTrigger
   trigger_config:
-    trigger_every: "2d"
+    trigger_every: "1d"
