@@ -68,6 +68,14 @@ services:
     build:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
+  evaluator:
+    restart: on-failure
+    depends_on:
+      - model_storage
+      - storage
+    build:
+      context: .
+      dockerfile: docker/Evaluator/Dockerfile
   trainer_server:
     restart: on-failure
     depends_on:
@@ -112,6 +120,7 @@ services:
     - selector
     - metadata_processor
     - trainer_server
+    - evaluator
     build:
       context: .
       dockerfile: docker/Supervisor/Dockerfile
@@ -127,6 +136,8 @@ services:
       metadata_processor:
         condition: service_started
       model_storage:
+        condition: service_started
+      evaluator:
         condition: service_started
       trainer_server:
         condition: service_started

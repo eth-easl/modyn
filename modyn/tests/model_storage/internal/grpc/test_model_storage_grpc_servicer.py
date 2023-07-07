@@ -1,9 +1,9 @@
 import os
 import pathlib
+import shutil
 import tempfile
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from modyn.common.ftp.ftp_server import FTPServer
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel, Trigger
 
@@ -60,9 +60,9 @@ def teardown():
     os.remove(DATABASE)
 
 
+@patch("modyn.model_storage.internal.grpc.model_storage_grpc_servicer.download_file")
 @patch("modyn.model_storage.internal.grpc.model_storage_grpc_servicer.current_time_millis", return_value=100)
-def test_register_model(current_time_millis):  # pylint: disable=unused-argument
-    # On macOS, the FTP server works but throws a file descriptor warning upon termination in tests
+def test_register_model(current_time_millis, download_file_mock: MagicMock):  # pylint: disable=unused-argument
     config = get_modyn_config()
     with tempfile.TemporaryDirectory() as storage_dir:
         storage_path = pathlib.Path(storage_dir)
@@ -73,18 +73,24 @@ def test_register_model(current_time_millis):  # pylint: disable=unused-argument
         servicer = ModelStorageGRPCServicer(config, storage_path)
         assert servicer is not None
 
-        with FTPServer(str(5222), storage_path):
-            req = RegisterModelRequest(
-                pipeline_id=1,
-                trigger_id=10,
-                hostname=config["trainer_server"]["hostname"],
-                port=int(config["trainer_server"]["ftp_port"]),
-                model_path="test.txt",
-            )
+        req = RegisterModelRequest(
+            pipeline_id=1,
+            trigger_id=10,
+            hostname=config["trainer_server"]["hostname"],
+            port=int(config["trainer_server"]["ftp_port"]),
+            model_path="test.txt",
+        )
 
-            resp: RegisterModelResponse = servicer.RegisterModel(req, None)
+        resp: RegisterModelResponse = servicer.RegisterModel(req, None)
 
-            assert resp.success
+        download_file_mock.assert_called_once()
+        kwargs = download_file_mock.call_args.kwargs
+        remote_file_path = kwargs["remote_file_path"]
+        local_file_path = kwargs["local_file_path"]
+
+        shutil.copyfile(storage_path / remote_file_path, local_file_path)
+
+        assert resp.success
 
         # download file under path {current_time_millis}_{pipeline_id}_{trigger_id}.modyn
         with open(storage_path / f"100_{resp.model_id}_10.modyn", "rb") as file:

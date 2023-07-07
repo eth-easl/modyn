@@ -10,6 +10,8 @@ service Storage {
       returns (stream GetNewDataSinceResponse) {}
   rpc GetDataInInterval(GetDataInIntervalRequest)
       returns (stream GetDataInIntervalResponse) {}
+  rpc GetDataPerWorker(GetDataPerWorkerRequest)
+      returns (stream GetDataPerWorkerResponse) {}
   rpc CheckAvailability(DatasetAvailableRequest)
       returns (DatasetAvailableResponse) {}
   rpc RegisterNewDataset(RegisterNewDatasetRequest)
@@ -52,6 +54,16 @@ message GetDataInIntervalResponse {
   repeated int64 keys = 1;
   repeated int64 timestamps = 2;
   repeated int64 labels = 3;
+}
+
+message GetDataPerWorkerRequest {
+  string dataset_id = 1;
+  int32 worker_id = 2;
+  int32 total_workers = 3;
+}
+
+message GetDataPerWorkerResponse {
+  repeated int64 keys = 1;
 }
 
 message DatasetAvailableRequest { string dataset_id = 1; }
