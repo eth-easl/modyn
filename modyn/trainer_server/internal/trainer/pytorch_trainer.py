@@ -495,6 +495,8 @@ class PytorchTrainer:
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
 
+        # set the model to eval to avoid errors like Expected more than 1 value per channel when training, got ...
+        self._model.model.eval()
         # keys must be taken from the selector.
         # This operation is needed only when we sample several times (otherwise the source is already the selector)
         selector_key_source = SelectorKeySource(
@@ -511,11 +513,11 @@ class PytorchTrainer:
             batch_number = 0
             for label in available_labels:
                 per_class_dataloader.dataset._filtered_label = label
-                class_batch_number, class_number_of_samples = self._iterate_dataloader_and_compute_scores(
-                    per_class_dataloader
+                batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(
+                    per_class_dataloader,
+                    previous_batch_number=batch_number,
+                    previous_number_of_samples=number_of_samples,
                 )
-                batch_number += class_batch_number
-                number_of_samples += class_number_of_samples
                 self._downsampler.inform_end_of_current_label()
         else:
             batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(self._train_dataloader)
@@ -543,10 +545,17 @@ class PytorchTrainer:
         self._train_dataloader.dataset.change_key_source(new_key_source)
 
         self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
+        # set the model to train
+        self._model.model.train()
 
-    def _iterate_dataloader_and_compute_scores(self, dataloader: torch.utils.data.DataLoader) -> Tuple[int, int]:
-        number_of_samples = 0
-        batch_number = 0
+    def _iterate_dataloader_and_compute_scores(
+        self,
+        dataloader: torch.utils.data.DataLoader,
+        previous_batch_number: int = 0,
+        previous_number_of_samples: int = 0,
+    ) -> Tuple[int, int]:
+        number_of_samples = previous_number_of_samples
+        batch_number = previous_batch_number
         for batch_number, batch in enumerate(dataloader):
             self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
 
