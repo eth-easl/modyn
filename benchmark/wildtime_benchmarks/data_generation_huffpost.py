@@ -35,7 +35,7 @@ class HuffpostDownloader(Dataset):
     def __len__(self):
         return len(self._dataset["category"])
 
-    def __init__(self, data_dir):
+    def __init__(self, data_dir: str):
         super().__init__()
 
         maybe_download(
@@ -48,7 +48,7 @@ class HuffpostDownloader(Dataset):
         self._dataset = datasets
         self.path = data_dir
 
-    def store_data(self):
+    def store_data(self) -> None:
         for year in tqdm(self._dataset):
             year_timestamp = get_timestamp(year)
             year_rows = []

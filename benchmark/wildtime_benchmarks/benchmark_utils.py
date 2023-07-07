@@ -6,6 +6,8 @@ from datetime import datetime
 
 import gdown
 
+DAY_LENGTH_SECONDS = 24 * 60 * 60
+
 
 def maybe_download(drive_id: str, destination_dir: str, destination_file_name: str) -> None:
     """
@@ -55,9 +57,6 @@ def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
             f.write(features_bytes)
 
     os.utime(output_file_name, (timestamp, timestamp))
-
-
-DAY_LENGTH_SECONDS = 24 * 60 * 60
 
 
 def create_fake_timestamp(year: int, base_year: int) -> int:

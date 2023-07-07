@@ -12,7 +12,7 @@ from wilds import get_dataset
 logger = setup_logger()
 
 
-def main():
+def main() -> None:
     parser = setup_argparser_wildtime("FMoW")
     args = parser.parse_args()
 
@@ -58,7 +58,7 @@ class FMOWDownloader(Dataset):
         self.metadata = parse_metadata(data_dir)
         self.data_dir = data_dir
 
-    def clean_folder(self):
+    def clean_folder(self) -> None:
         folder_path = os.path.join(self.data_dir, "fmow_v1.1")
         if os.path.exists(folder_path):
             shutil.rmtree(folder_path)
@@ -72,7 +72,7 @@ class FMOWDownloader(Dataset):
             new_name = os.path.join(self.data_dir, f"{index}.png")
             os.rename(dest_file, new_name)
 
-    def store_data(self):
+    def store_data(self) -> None:
 
         for year in tqdm(self._dataset):
             split = 0  # just use training split for now

@@ -1,5 +1,6 @@
 import os
 import pickle
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -32,7 +33,7 @@ class YearbookDownloader(Dataset):
     drive_id = "1mPpxoX2y2oijOvW1ymiHEYd7oMu2vVRb"
     file_name = "yearbook.pkl"
 
-    def __init__(self, data_dir):
+    def __init__(self, data_dir: str):
         super().__init__()
         maybe_download(
             drive_id=self.drive_id,
@@ -43,7 +44,7 @@ class YearbookDownloader(Dataset):
         self._dataset = datasets
         self.data_dir = data_dir
 
-    def _get_year_data(self, year: int):
+    def _get_year_data(self, year: int) -> list[Tuple]:
         images = torch.FloatTensor(
             np.array(
                 [
@@ -55,10 +56,10 @@ class YearbookDownloader(Dataset):
         labels = torch.LongTensor(self._dataset[year][0]["labels"])
         return [(images[i], labels[i]) for i in range(len(images))]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._dataset["labels"])
 
-    def store_data(self):
+    def store_data(self) -> None:
         # create directories
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
