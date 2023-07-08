@@ -52,8 +52,8 @@ class DummyStorageStub:
     # pylint: disable-next=invalid-name
     def GetDatasetSize(self, request: GetDatasetSizeRequest) -> GetDatasetSizeResponse:
         if request.dataset_id == "MNIST":
-            return GetDatasetSizeResponse(num_keys=1000)
-        return GetDatasetSizeResponse(num_keys=-1)
+            return GetDatasetSizeResponse(success=True, num_keys=1000)
+        return GetDatasetSizeResponse(success=False)
 
 
 def get_evaluation_process_info():

@@ -179,6 +179,11 @@ def test__validate_training_options():
     sup.pipeline_config["training"]["batch_size"] = -1
     assert not sup._validate_training_options()
 
+    # Check that training with an invalid dataloader amount gets rejected
+    sup.pipeline_config = get_minimal_pipeline_config()
+    sup.pipeline_config["training"]["dataloader_workers"] = -1
+    assert not sup._validate_training_options()
+
     # Check that training with an invalid strategy gets rejected
     sup.pipeline_config = get_minimal_pipeline_config()
     sup.pipeline_config["training"]["selection_strategy"]["name"] = "UnknownStrategy"
@@ -208,6 +213,23 @@ def test__validate_training_options():
     sup.pipeline_config["training"]["initial_pass"]["reference"] = "amount"
     sup.pipeline_config["training"]["initial_pass"]["amount"] = 0.5
     assert sup._validate_training_options()
+
+
+def test__validate_evaluation_options():
+    # Check that evaluation with identical dataset_ids gets rejected
+    evaluation_config = get_minimal_evaluation_config()
+    evaluation_config["datasets"].append({"dataset_id": "MNIST_eval", "batch_size": 3, "dataloader_workers": 3})
+    assert not Supervisor._validate_evaluation_options(evaluation_config)
+
+    # Check that evaluation with an invalid batch size gets rejected
+    evaluation_config = get_minimal_evaluation_config()
+    evaluation_config["datasets"][0]["batch_size"] = -1
+    assert not Supervisor._validate_evaluation_options(evaluation_config)
+
+    # Check that evaluation with an invalid dataloader amount gets rejected
+    evaluation_config = get_minimal_evaluation_config()
+    evaluation_config["datasets"][0]["dataloader_workers"] = -1
+    assert not Supervisor._validate_evaluation_options(evaluation_config)
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)

@@ -357,19 +357,20 @@ def test_get_data_per_worker():
 def test_get_dataset_size():
     server = StorageGRPCServicer(get_minimal_modyn_config())
     request = GetDatasetSizeRequest(dataset_id="test")
-    response: [GetDatasetSizeResponse] = server.GetDatasetSize(request, None)
+    response: GetDatasetSizeResponse = server.GetDatasetSize(request, None)
 
     assert response is not None
+    assert response.success
     assert response.num_keys == 3
 
 
 def test_get_dataset_size_invalid():
     server = StorageGRPCServicer(get_minimal_modyn_config())
     request = GetDatasetSizeRequest(dataset_id="unknown")
-    response: [GetDatasetSizeResponse] = server.GetDatasetSize(request, None)
+    response: GetDatasetSizeResponse = server.GetDatasetSize(request, None)
 
     assert response is not None
-    assert response.num_keys == -1
+    assert not response.success
 
 
 def test_check_availability():

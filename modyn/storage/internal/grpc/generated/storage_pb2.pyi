@@ -202,14 +202,17 @@ global___GetDatasetSizeRequest = GetDatasetSizeRequest
 class GetDatasetSizeResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    SUCCESS_FIELD_NUMBER: builtins.int
     NUM_KEYS_FIELD_NUMBER: builtins.int
+    success: builtins.bool
     num_keys: builtins.int
     def __init__(
         self,
         *,
+        success: builtins.bool = ...,
         num_keys: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["num_keys", b"num_keys"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["num_keys", b"num_keys", "success", b"success"]) -> None: ...
 
 global___GetDatasetSizeResponse = GetDatasetSizeResponse
 

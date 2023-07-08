@@ -40,7 +40,7 @@ message EvaluateModelRequest {
 message EvaluateModelResponse {
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
-  int32 dataset_size = 3;
+  int64 dataset_size = 3;
 }
 
 message EvaluationStatusRequest { int32 evaluation_id = 1; }

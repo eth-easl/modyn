@@ -107,7 +107,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         dataset_size_req = GetDatasetSizeRequest(dataset_id=request.dataset_info.dataset_id)
         dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
 
-        if dataset_size_response.num_keys < 0:
+        if not dataset_size_response.success:
             logger.error(
                 f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
                 f"Evaluation cannot be started."

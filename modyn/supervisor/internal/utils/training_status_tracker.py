@@ -6,7 +6,7 @@ import enlighten
 CurrentEvent = Enum("CurrentEvent", ["IDLE", "TRAINING", "DOWNSAMPLING"])
 
 
-class SupervisorCounter:
+class TrainingStatusTracker:
     def __init__(
         self, progress_mgr: enlighten.Manager, training_id: int, samples_per_epoch: int, status_bar_scale: float
     ) -> None:
@@ -30,6 +30,30 @@ class SupervisorCounter:
         self.current_event: CurrentEvent = CurrentEvent.IDLE
         self.progress_mgr: enlighten.Manager = progress_mgr
         self.sample_pbar: Optional[enlighten.counter] = None
+
+    def progress_counter(self, samples_seen_training: int, samples_seen_downsampling: int, is_training: bool) -> None:
+        if self.current_event == CurrentEvent.IDLE:
+            if is_training:
+                self._start_training_epoch()
+            else:
+                self._start_downsampling()
+
+        if self.current_event == CurrentEvent.DOWNSAMPLING and is_training:
+            self._end_downsampling()
+            self._start_training_epoch()
+
+        if self.current_event == CurrentEvent.TRAINING and not is_training:
+            self._end_training_epoch()
+            self._start_downsampling()
+
+        if self.current_event == CurrentEvent.TRAINING:
+            if samples_seen_training < self.last_samples_training:
+                # outdated message
+                return
+            self._progress_counter_training(samples_seen_training)
+
+        elif self.current_event == CurrentEvent.DOWNSAMPLING:
+            self._progress_counter_downsampling(samples_seen_downsampling)
 
     def close_counter(self) -> None:
         """
@@ -62,32 +86,6 @@ class SupervisorCounter:
         self.sample_pbar.close(clear=True)
         self.current_event = CurrentEvent.IDLE
         self.sample_pbar = None
-
-    def progress_counter(self, samples_seen_training: int, samples_seen_downsampling: int, is_training: bool) -> None:
-        print(self.current_event)
-
-        if self.current_event == CurrentEvent.IDLE:
-            if is_training:
-                self._start_training_epoch()
-            else:
-                self._start_downsampling()
-
-        if self.current_event == CurrentEvent.DOWNSAMPLING and is_training:
-            self._end_downsampling()
-            self._start_training_epoch()
-
-        if self.current_event == CurrentEvent.TRAINING and not is_training:
-            self._end_training_epoch()
-            self._start_downsampling()
-
-        if self.current_event == CurrentEvent.TRAINING:
-            if samples_seen_training < self.last_samples_training:
-                # outdated message
-                return
-            self._progress_counter_training(samples_seen_training)
-
-        elif self.current_event == CurrentEvent.DOWNSAMPLING:
-            self._progress_counter_downsampling(samples_seen_downsampling)
 
     def _progress_counter_training(self, samples_seen_training: int) -> None:
         assert self.current_event == CurrentEvent.TRAINING

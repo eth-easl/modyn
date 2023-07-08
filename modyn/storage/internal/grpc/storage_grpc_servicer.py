@@ -247,7 +247,7 @@ class StorageGRPCServicer(StorageServicer):
 
     # pylint: disable-next=unused-argument,invalid-name
     def GetDatasetSize(self, request: GetDatasetSizeRequest, context: grpc.ServicerContext) -> GetDatasetSizeResponse:
-        """Get the total amount of keys for a given dataset (-1 if dataset cannot be found).
+        """Get the total amount of keys for a given dataset.
 
         Returns:
             GetDatasetSizeResponse: A response containing the amount of keys for a given dataset.
@@ -259,10 +259,10 @@ class StorageGRPCServicer(StorageServicer):
 
             if dataset is None:
                 logger.error(f"Dataset with name {request.dataset_id} does not exist.")
-                return GetDatasetSizeResponse(num_keys=-1)
+                return GetDatasetSizeResponse(success=False)
 
             total_keys = session.query(Sample.sample_id).filter(Sample.dataset_id == dataset.dataset_id).count()
-            return GetDatasetSizeResponse(num_keys=total_keys)
+            return GetDatasetSizeResponse(success=True, num_keys=total_keys)
 
     # pylint: disable-next=unused-argument,invalid-name
     def CheckAvailability(

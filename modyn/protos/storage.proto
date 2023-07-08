@@ -73,7 +73,8 @@ message GetDatasetSizeRequest {
 }
 
 message GetDatasetSizeResponse {
-  int32 num_keys = 1;
+  bool success = 1;
+  int64 num_keys = 2;
 }
 
 message DatasetAvailableRequest { string dataset_id = 1; }

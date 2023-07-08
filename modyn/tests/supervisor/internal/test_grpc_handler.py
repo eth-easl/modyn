@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
+import json
 import pathlib
 import tempfile
 from unittest.mock import patch
@@ -528,26 +529,6 @@ def test_start_evaluation(test_connection_established):
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def test_start_evaluation_invalid(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
-    assert handler.evaluator is not None
-
-    trained_model_id = 10
-    pipeline_config = get_minimal_pipeline_config()
-    pipeline_config["evaluation"]["datasets"].append({"dataset_id": "MNIST_eval"})
-
-    with pytest.raises(ValueError):
-        with patch.object(handler.evaluator, "evaluate_model") as start_method:
-            handler.start_evaluation(trained_model_id, pipeline_config)
-            start_method.assert_not_called()
-
-
-@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_wait_for_evaluation_completion(test_connection_established):
     mgr = enlighten.get_manager()
     pbar = mgr.status_bar(
@@ -610,11 +591,47 @@ def test_store_evaluation_results(test_connection_established):
             called_ids = [call[0][0].evaluation_id for call in get_method.call_args_list]
             assert called_ids == [10, 15]
 
-            file_path_small = eval_dir / f"{5}_{3}_MNIST_small.eval"
-            assert file_path_small.exists() and file_path_small.is_file()
+            file_path = eval_dir / f"{5}_{3}.eval"
+            assert file_path.exists() and file_path.is_file()
 
-            file_path_large = eval_dir / f"{5}_{3}_MNIST_large.eval"
-            assert file_path_large.exists() and file_path_large.is_file()
+            with open(file_path, "r", encoding="utf-8") as eval_file:
+                evaluation_results = json.load(eval_file)
+                assert evaluation_results == json.loads(
+                    """{
+                    "datasets": [
+                        {
+                            "MNIST_small": {
+                                "dataset_size": 1000,
+                                "metrics": [
+                                    {
+                                        "name": "Accuracy",
+                                        "result": 0.5
+                                    },
+                                    {
+                                        "name": "F1-score",
+                                        "result": 0.75
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "MNIST_large": {
+                                "dataset_size": 5000,
+                                "metrics": [
+                                    {
+                                        "name": "Accuracy",
+                                        "result": 0.5
+                                    },
+                                    {
+                                        "name": "F1-score",
+                                        "result": 0.75
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }"""
+                )
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
@@ -638,4 +655,9 @@ def test_store_evaluation_results_invalid(test_connection_established):
             handler.store_evaluation_results(eval_dir, 5, 3, evaluations)
             get_method.assert_called_with(EvaluationResultRequest(evaluation_id=10))
 
-            assert not any(eval_dir.iterdir())
+            file_path = eval_dir / f"{5}_{3}.eval"
+            assert file_path.exists() and file_path.is_file()
+
+            with open(file_path, "r", encoding="utf-8") as eval_file:
+                evaluation_results = json.load(eval_file)
+                assert evaluation_results["datasets"] == []
