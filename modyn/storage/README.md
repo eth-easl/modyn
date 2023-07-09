@@ -43,6 +43,7 @@ The following file wrappers are currently implemented:
 
 - `single_sample`: Each file contains a single sample
 - `binary`: Each file contains columns and row in a binary format
+- `csv`: Each file contains columns and rows in a csv format
 
 Future file wrappers may include:
 

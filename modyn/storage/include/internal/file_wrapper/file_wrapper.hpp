@@ -8,7 +8,7 @@
 
 namespace storage {
 
-enum FileWrapperType { SINGLE_SAMPLE, BINARY };
+enum FileWrapperType { SINGLE_SAMPLE, BINARY, CSV };
 
 class FileWrapper {  // NOLINT
  protected:
@@ -34,7 +34,7 @@ class FileWrapper {  // NOLINT
     static const std::unordered_map<std::string, FileWrapperType> FILE_WRAPPER_TYPE_MAP = {
         {"single_sample", FileWrapperType::SINGLE_SAMPLE},
         {"binary", FileWrapperType::BINARY},
-    };
+        {"csv", FileWrapperType::CSV}};
     return FILE_WRAPPER_TYPE_MAP.at(type);
   }
   virtual void set_file_path(const std::string& path) { file_path_ = path; }

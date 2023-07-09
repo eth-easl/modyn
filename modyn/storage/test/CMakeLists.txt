@@ -39,7 +39,7 @@ set(
 add_library(modynstorage-test-objs OBJECT ${MODYNSTORAGE_TEST_SOURCES})
 target_link_libraries(modynstorage-test-objs PRIVATE modynstorage-test-utils-objs)
 
-add_executable(modynstorage-test newstorage_test.cpp)
+add_executable(modynstorage-test storage_test.cpp)
 target_link_libraries(modynstorage-test PRIVATE modynstorage-test-objs modynstorage-test-utils-objs)
 add_test(modynstorage-test modynstorage-test)
 
@@ -47,7 +47,7 @@ add_test(modynstorage-test modynstorage-test)
 # TARGET CONTAINING ALL TEST FILES (FOR CLANG-TIDY UNITY BUILD)
 ##################################################################
 add_executable(modynstorage-all-test-sources-for-tidy EXCLUDE_FROM_ALL
-  newstorage_test.cpp ${MODYNSTORAGE_TEST_UTILS_SOURCES} ${MODYNSTORAGE_TEST_SOURCES})
+  storage_test.cpp ${MODYNSTORAGE_TEST_UTILS_SOURCES} ${MODYNSTORAGE_TEST_SOURCES})
 
 # just for the include directories
 target_link_libraries(modynstorage-all-test-sources-for-tidy PRIVATE

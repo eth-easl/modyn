@@ -338,6 +338,25 @@ grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifi
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDatasetResponse* response) {       // NOLINT (misc-unused-parameters)
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
+
+  std::string base_path;
+  int64_t filesystem_wrapper_type;
+
+  soci::session session = storage_database_connection.get_session();
+  session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
+      soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
+
+  auto filesystem_wrapper =
+      Utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+
+  std::vector<std::string> file_paths;
+  session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths),
+      soci::use(request->dataset_id());
+
+  for (const auto& file_path : file_paths) {
+    filesystem_wrapper->remove(file_path);
+  }
+
   bool success = storage_database_connection.delete_dataset(request->dataset_id());
   response->set_success(success);
   grpc::Status status;
@@ -453,6 +472,7 @@ grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-
 
       if (number_of_samples_in_file - samples_to_delete == 0) {
         session << "DELETE FROM files WHERE file_id = :file_id", soci::use(file_id);
+        filesystem_wrapper->remove(path);
       } else {
         session << "UPDATE files SET number_of_samples = :number_of_samples WHERE file_id = :file_id",
             soci::use(number_of_samples_in_file - samples_to_delete), soci::use(file_id);
