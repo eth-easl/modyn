@@ -263,8 +263,8 @@ class GRPCHandler:
         else:
             seed = None
 
-        if "tokenizer" in pipeline_config["training"]:
-            tokenizer = pipeline_config["training"]["tokenizer"]
+        if "tokenizer" in pipeline_config["data"]:
+            tokenizer = pipeline_config["data"]["tokenizer"]
         else:
             tokenizer = None
 

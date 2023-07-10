@@ -38,10 +38,9 @@ data:
   dataset_id: huffpost
   transformations: ["DistilBertTokenizerTransform(300)"]
   bytes_parser_function: |
-    from modyn.models import DistilBertTokenizerTransform
-    import torch
-    def bytes_parser_function(data: bytes) -> torch.Tensor:
-      return DistilBertTokenizerTransform()(data.decode("utf-8"))
+    def bytes_parser_function(data: bytes) -> str:
+      return data.decode("utf-8")
+  tokenizer: DistilBertTokenizerTransform
 
 trigger:
   id: TimeTrigger

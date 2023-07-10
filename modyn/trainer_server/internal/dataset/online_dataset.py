@@ -229,5 +229,3 @@ class OnlineDataset(IterableDataset):
                 del new_labels
                 del new_weights
                 gc.collect()
-
-

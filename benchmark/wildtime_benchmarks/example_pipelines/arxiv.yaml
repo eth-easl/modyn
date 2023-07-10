@@ -39,6 +39,7 @@ data:
   bytes_parser_function: |
     def bytes_parser_function(data: bytes) -> str:
       return data.decode("utf-8")
+  tokenizer: DistilBertTokenizerTransform
 
 trigger:
   id: TimeTrigger
