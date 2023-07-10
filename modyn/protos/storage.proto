@@ -31,9 +31,8 @@ message GetResponse {
   repeated int64 labels = 3;
 }
 
-message GetCurrentTimestampRequest {
-  int64 foo = 1;
-}
+// https://github.com/grpc/grpc/issues/15937
+message GetCurrentTimestampRequest {}
 
 message GetNewDataSinceRequest {
   string dataset_id = 1;
