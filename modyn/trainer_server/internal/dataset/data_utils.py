@@ -18,6 +18,7 @@ def prepare_dataloaders(
     storage_address: str,
     selector_address: str,
     training_id: int,
+    tokenizer: Optional[str],
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -31,6 +32,7 @@ def prepare_dataloaders(
         bytes_parser (str): Serialized Python code,
             used for converting bytes to a form useful for futher transformations (such as Tensors).
         transform (list[str]): List of serialized torchvision transforms for the samples, before loading.
+        tokenizer (optional[str]): Optional tokenizer for NLP tasks
         storage_address (str): Address of the Storage endpoint that the OnlineDataset workers connect to.
         selector_address (str): Address of the Selector endpoint that the OnlineDataset workers connect to.
     Returns:
@@ -39,7 +41,15 @@ def prepare_dataloaders(
     """
     logger.debug("Creating OnlineDataset.")
     train_set = OnlineDataset(
-        pipeline_id, trigger_id, dataset_id, bytes_parser, transform, storage_address, selector_address, training_id
+        pipeline_id,
+        trigger_id,
+        dataset_id,
+        bytes_parser,
+        transform,
+        storage_address,
+        selector_address,
+        training_id,
+        tokenizer,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)

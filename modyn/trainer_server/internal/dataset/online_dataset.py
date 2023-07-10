@@ -13,6 +13,7 @@ from modyn.utils.utils import (
     BYTES_PARSER_FUNC_NAME,
     MAX_MESSAGE_SIZE,
     deserialize_function,
+    dynamic_module_import,
     grpc_connection_established,
 )
 from torch.utils.data import IterableDataset, get_worker_info
@@ -35,6 +36,7 @@ class OnlineDataset(IterableDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
+        tokenizer: Optional[str],
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -55,6 +57,11 @@ class OnlineDataset(IterableDataset):
         # the default key source is the Selector. Then it can be changed using change_key_source
         self._key_source = SelectorKeySource(self._pipeline_id, self._trigger_id, self._selector_address)
         self._uses_weights = None
+
+        # tokenizer for NLP tasks
+        self._tokenizer = None
+        if tokenizer is not None:
+            self._tokenizer = self._instantiate_tokenizer(tokenizer)
 
         logger.debug("Initialized OnlineDataset.")
 
@@ -149,12 +156,22 @@ class OnlineDataset(IterableDataset):
     def _yield_samples(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Tuple:
         assert self._uses_weights is not None
         # mypy complains here because _transform has unknown type, which is ok
+        tranformed_sample = self._transform(sample)  # type: ignore
+        if self._tokenizer is not None:
+            tranformed_sample = self._tokenizer(tranformed_sample)
+
         if self._uses_weights:
-            return key, self._transform(sample), label, weight  # type: ignore
-        return key, self._transform(sample), label  # type: ignore
+            return key, tranformed_sample, label, weight
+        return key, tranformed_sample, label
 
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()
+
+    def _instantiate_tokenizer(self, tokenizer: str) -> Callable:
+        tokenizer_module = dynamic_module_import("modyn.models.tokenizers")
+        if not hasattr(tokenizer_module, tokenizer):
+            raise ValueError("Requested tokenizer is not available.")
+        return getattr(tokenizer_module, tokenizer)()
 
     # pylint: disable=too-many-locals, too-many-branches
     def __iter__(self) -> Generator:
@@ -212,3 +229,5 @@ class OnlineDataset(IterableDataset):
                 del new_labels
                 del new_weights
                 gc.collect()
+
+
