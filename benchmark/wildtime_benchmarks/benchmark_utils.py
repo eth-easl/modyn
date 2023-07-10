@@ -44,21 +44,6 @@ def setup_logger():
     return logging.getLogger(__name__)
 
 
-def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
-    with open(output_file_name, "wb") as f:
-        for tensor1, tensor2 in data:
-            features_bytes = tensor1.numpy().tobytes()
-            label_integer = tensor2.item()
-
-            features_size = len(features_bytes)
-            assert features_size == 4096
-
-            f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
-            f.write(features_bytes)
-
-    os.utime(output_file_name, (timestamp, timestamp))
-
-
 def create_fake_timestamp(year: int, base_year: int) -> int:
     timestamp = ((year - base_year) * DAY_LENGTH_SECONDS) + 1
     return timestamp

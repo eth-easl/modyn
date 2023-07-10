@@ -3,15 +3,11 @@ import pickle
 from datetime import datetime
 
 import torch
-from benchmark_utils import maybe_download, setup_argparser_wildtime, setup_logger
+from benchmark_utils import create_timestamp, maybe_download, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
 logger = setup_logger()
-
-
-def get_timestamp(year) -> int:
-    return int(datetime(year=year, month=1, day=1).timestamp())
 
 
 def main():
@@ -50,7 +46,7 @@ class HuffpostDownloader(Dataset):
 
     def store_data(self) -> None:
         for year in tqdm(self._dataset):
-            year_timestamp = get_timestamp(year)
+            year_timestamp = create_timestamp(year=1970, month=1, day=year-2012)
             year_rows = []
             for i in range(len(self._dataset[year][0]["headline"])):
                 text = self._dataset[year][0]["headline"][i]

@@ -45,7 +45,8 @@ class ArXivDownloader(Dataset):
 
     def store_data(self):
         for year in tqdm(self._dataset):
-            year_timestamp = create_timestamp(year)
+            # for simplicity, instead of using years we map each day to a year from 1970
+            year_timestamp = create_timestamp(year=1970, month=1, day=year-2006)
             year_rows = []
             for i in range(len(self._dataset[year][0]["title"])):
                 text = self._dataset[year][0]["title"][i].replace("\n", " ")

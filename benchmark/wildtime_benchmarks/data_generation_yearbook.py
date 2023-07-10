@@ -4,13 +4,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from benchmark_utils import (
-    create_binary_file,
-    create_fake_timestamp,
-    maybe_download,
-    setup_argparser_wildtime,
-    setup_logger,
-)
+from benchmark_utils import create_fake_timestamp, maybe_download, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 
 logger = setup_logger()
@@ -24,6 +18,20 @@ def main():
 
     downloader = YearbookDownloader(args.dir)
     downloader.store_data()
+
+def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
+    with open(output_file_name, "wb") as f:
+        for tensor1, tensor2 in data:
+            features_bytes = tensor1.numpy().tobytes()
+            label_integer = tensor2.item()
+
+            features_size = len(features_bytes)
+            assert features_size == 4096
+
+            f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
+            f.write(features_bytes)
+
+    os.utime(output_file_name, (timestamp, timestamp))
 
 
 class YearbookDownloader(Dataset):
