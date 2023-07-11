@@ -35,6 +35,7 @@ from modyn.utils import (
     package_available_and_can_be_imported,
     seed_everything,
 )
+from modyn.utils.utils import instantiate_class
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
 
@@ -274,13 +275,15 @@ class PytorchTrainer:
     def instantiate_downsampler(
         self, strategy_name: str, downsampler_config: dict, per_sample_loss: torch.nn.modules.loss
     ) -> AbstractRemoteDownsamplingStrategy:
-        remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
-        downsampler_class = getattr(remote_downsampling_module, strategy_name)
-
-        downsampler = downsampler_class(
-            self.pipeline_id, self.trigger_id, self._batch_size, downsampler_config, per_sample_loss
+        return instantiate_class(
+            "modyn.trainer_server.internal.trainer.remote_downsamplers",
+            strategy_name,
+            self.pipeline_id,
+            self.trigger_id,
+            self._batch_size,
+            downsampler_config,
+            per_sample_loss,
         )
-        return downsampler
 
     def sample_then_batch_this_epoch(self, epoch: int) -> bool:
         if self._downsampling_mode != DownsamplingMode.SAMPLE_THEN_BATCH:

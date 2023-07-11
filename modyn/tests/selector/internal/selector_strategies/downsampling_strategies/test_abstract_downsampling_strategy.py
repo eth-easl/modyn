@@ -1,13 +1,9 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name,abstract-class-instantiated
-import os
-import pathlib
-import shutil
-import tempfile
 from unittest.mock import patch
 
 import pytest
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
+
 
 @patch.multiple(AbstractDownsamplingStrategy, __abstractmethods__=set())
 def test_constructor_invalid_config():

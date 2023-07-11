@@ -29,6 +29,3 @@ def test_init_loss():
     params = strat.downsampling_params
     assert "downsampling_ratio" in params
     assert params["downsampling_ratio"] == 10
-
-
-

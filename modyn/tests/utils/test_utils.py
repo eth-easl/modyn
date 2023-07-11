@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 import torch
 import yaml
-
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
@@ -171,14 +170,22 @@ def test_seed():
         assert torch.equal(torch_master, torch.randn(10))
         assert np.all(np.equal(np_master, np.random.randn(10)))
 
+
 def test_instantiate_class_existing():
     # class with a single parameter
     trigger_storage = instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage", "test_path")
     assert isinstance(trigger_storage, TriggerSampleStorage)
     assert trigger_storage.trigger_sample_directory == "test_path"
     # class with several parameters
-    remote_downsampler = instantiate_class("modyn.trainer_server.internal.trainer.remote_downsamplers", "RemoteLossDownsampling",
-                                           10, 11, 64, {"downsampling_ratio": 67}, {})
+    remote_downsampler = instantiate_class(
+        "modyn.trainer_server.internal.trainer.remote_downsamplers",
+        "RemoteLossDownsampling",
+        10,
+        11,
+        64,
+        {"downsampling_ratio": 67},
+        {},
+    )
     assert isinstance(remote_downsampler, RemoteLossDownsampling)
     assert remote_downsampler.downsampling_ratio == 67
     assert remote_downsampler.pipeline_id == 10
@@ -190,9 +197,8 @@ def test_instantiate_class_not_existing():
     with pytest.raises(ModuleNotFoundError):
         instantiate_class("modyn.common.rumble_db_storage", "RumbleStorage", "test_path")
     # missing class
-    with pytest.raises(ModuleNotFoundError):
+    with pytest.raises(ValueError):
         instantiate_class("modyn.common.trigger_sample", "BeautifulAmazingStorage", "test_path")
     # missing parameters
     with pytest.raises(TypeError):
         instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage")
-
