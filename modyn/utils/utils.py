@@ -150,7 +150,7 @@ def instantiate_class(class_module_name: str, class_name: str, *class_params: An
     """
     class_module = dynamic_module_import(class_module_name)
     if not hasattr(class_module, class_name):
-        raise ValueError(f"Requested class {class_name} not found in {class_module} module.")
+        raise ModuleNotFoundError(f"Requested class {class_name} not found in {class_module} module.")
     actual_class = getattr(class_module, class_name)
     return actual_class(*class_params)
 
