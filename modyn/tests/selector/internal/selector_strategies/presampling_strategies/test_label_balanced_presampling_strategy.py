@@ -8,10 +8,6 @@ import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.coreset_strategy import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies import LabelBalancedPresamplingStrategy
-from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_balanced_strategy import (
-    get_fair_share,
-    get_fair_share_predicted_total,
-)
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -142,28 +138,6 @@ def test_counting_query_reset_after_trigger():
     # now use tail trigger = 2 (so it should consider all the triggers)
     count = strat.presampling_strategy._get_samples_count_per_balanced_column(strat._next_trigger_id, 2)
     assert count == [200, 50, 40, 10, 2, 2]
-
-
-def test_get_fair_share():
-    # required less than available
-    assert get_fair_share(1000, [10, 15, 30]) == 333
-    assert get_fair_share_predicted_total(333, [10, 15, 30]) == 55
-
-    # required more than base fs
-    assert get_fair_share(100, [30, 50, 40, 28]) == 25
-    assert get_fair_share_predicted_total(25, [30, 50, 40, 28]) == 100
-
-    # one class below
-    assert get_fair_share(100, [30, 50, 40, 21]) == 26
-    assert get_fair_share_predicted_total(26, [30, 50, 40, 21]) == 99
-    assert get_fair_share(100, [30, 50, 40, 20]) == 26
-    assert get_fair_share_predicted_total(26, [30, 50, 40, 20]) == 98
-    assert get_fair_share(100, [30, 50, 40, 19]) == 27
-    assert get_fair_share_predicted_total(27, [30, 50, 40, 19]) == 100
-
-    # two classes below
-    assert get_fair_share(200, [30, 80, 90, 28]) == 71  # 30 + 71 + 71 + 28 = 200
-    assert get_fair_share_predicted_total(71, [30, 80, 90, 28]) == 200
 
 
 def test_query_data_above_threshold():

@@ -30,12 +30,12 @@ def get_fair_share_predicted_total(fair_share: int, requests: list[int]) -> int:
 
 
 class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
+    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, balanced_column: int):
         super().__init__(presampling_config, modyn_config, pipeline_id)
 
         self.force_required_target_size = presampling_config.get("force_required_target_size", False)
         self.force_column_balancing = presampling_config.get("force_column_balancing", False)
-        self.balanced_column = None
+        self.balanced_column = balanced_column
 
     def get_presampling_query(
         self,

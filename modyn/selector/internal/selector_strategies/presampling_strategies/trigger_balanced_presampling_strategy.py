@@ -7,9 +7,7 @@ from sqlalchemy import Select
 
 class TriggerBalancedPresamplingStrategy(AbstractBalancedPresamplingStrategy):
     def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
-        super().__init__(presampling_config, modyn_config, pipeline_id)
-
-        self.balanced_column = SelectorStateMetadata.seen_in_trigger_id
+        super().__init__(presampling_config, modyn_config, pipeline_id, SelectorStateMetadata.seen_in_trigger_id)
 
     def get_presampling_query(
         self,

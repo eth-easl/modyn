@@ -64,8 +64,6 @@ class AbstractDownsamplingStrategy(ABC):
             return 100
         return self.downsampling_ratio
 
-
-
     def _build_downsampling_params(self) -> dict:
         config = {
             "downsampling_ratio": self.downsampling_ratio,
