@@ -3,12 +3,12 @@ pipeline:
   description: Example pipeline
   version: 1.0.0
 model:
-  id: DistilBertNet
+  id: ArticleNet
   config:
     num_classes: 55
 training:
   gpus: 1
-  device: "cpu"
+  device: "cuda:0"
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
@@ -36,7 +36,6 @@ training:
       reset_after_trigger: True
 data:
   dataset_id: huffpost
-  transformations: ["DistilBertTokenizerTransform(300)"]
   bytes_parser_function: |
     def bytes_parser_function(data: bytes) -> str:
       return data.decode("utf-8")

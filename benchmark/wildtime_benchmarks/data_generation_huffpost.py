@@ -46,7 +46,7 @@ class HuffpostDownloader(Dataset):
 
     def store_data(self) -> None:
         for year in tqdm(self._dataset):
-            year_timestamp = create_timestamp(year=1970, month=1, day=year-2012)
+            year_timestamp = create_timestamp(year=1970, month=1, day=year-2011)
             year_rows = []
             for i in range(len(self._dataset[year][0]["headline"])):
                 text = self._dataset[year][0]["headline"][i]
