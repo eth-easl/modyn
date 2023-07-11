@@ -125,7 +125,7 @@ properties:
                   strategy:
                     type: string
                     description: |
-                      Strategy used to presample the data. Available strategies: Random, Empty (get all data)
+                      Strategy used to presample the data. Available strategies: Random, RandomNoReplacement, LabelBalanced, TriggerBalanced, No (get all data)
                   ratio:
                     type: number
                     description: |
