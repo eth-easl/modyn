@@ -22,8 +22,9 @@ training:
       param_groups:
         - module: "model"
           config:
-            lr: 0.1
-            momentum: 0.001
+            lr: 0.00002
+            momentum: 0.9
+            weight_decay: 0.01
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
