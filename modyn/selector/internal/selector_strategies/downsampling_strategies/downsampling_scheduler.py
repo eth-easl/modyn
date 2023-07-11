@@ -17,7 +17,7 @@ class DownsamplingScheduler:
 
         self.maximum_keys_in_memory = maximum_keys_in_memory
 
-        self.current_downsampler, self.next_threshold = self._get_new_downsampler_and_threshold()
+        self.current_downsampler, self.next_threshold = self._get_next_downsampler_and_threshold()
 
     def _validate_threshold(self) -> None:
         if not len(self.dowsampling_configs) == len(self.dowsampling_thresholds) + 1:
@@ -27,7 +27,7 @@ class DownsamplingScheduler:
         if not len(self.dowsampling_thresholds) == len(set(self.dowsampling_thresholds)):
             raise ValueError("Thresholds must be unique")
 
-    def _get_new_downsampler_and_threshold(self) -> Tuple[AbstractDownsamplingStrategy, Optional[int]]:
+    def _get_next_downsampler_and_threshold(self) -> Tuple[AbstractDownsamplingStrategy, Optional[int]]:
         next_downsampler = instantiate_downsampler(
             self.dowsampling_configs[self.downsampler_index], self.maximum_keys_in_memory
         )
@@ -39,29 +39,29 @@ class DownsamplingScheduler:
         )
         return next_downsampler, next_threshold
 
-    def _update_downsampler_if_needed(self, next_trigger_id: int) -> None:
-        if self.next_threshold is not None and next_trigger_id >= self.next_threshold:
-            self.downsampler_index += 1
-            self.current_downsampler, self.next_threshold = self._get_new_downsampler_and_threshold()
-
-    def get_requires_remote_computation(self, next_trigger_id: int) -> bool:
-        self._update_downsampler_if_needed(next_trigger_id)
+    @property
+    def requires_remote_computation(self) -> bool:
         return self.current_downsampler.requires_remote_computation
 
-    def get_downsampling_strategy(self, next_trigger_id: int) -> str:
-        self._update_downsampler_if_needed(next_trigger_id)
+    @property
+    def downsampling_strategy(self) -> str:
         assert hasattr(
             self.current_downsampler, "remote_downsampling_strategy_name"
         ), "Your downsampler must specify the remote_downsampling_strategy_name"
         return self.current_downsampler.remote_downsampling_strategy_name
 
-    def get_downsampling_params(self, next_trigger_id: int) -> dict:
-        self._update_downsampler_if_needed(next_trigger_id)
+    @property
+    def downsampling_params(self) -> dict:
         return self.current_downsampler.downsampling_params
 
-    def get_training_status_bar_scale(self, next_trigger_id: int) -> int:
-        self._update_downsampler_if_needed(next_trigger_id)
+    @property
+    def training_status_bar_scale(self) -> int:
         return self.current_downsampler.status_bar_scale
+
+    def inform_next_trigger(self, next_trigger_id: int) -> None:
+        if self.next_threshold is not None and next_trigger_id >= self.next_threshold:
+            self.downsampler_index += 1
+            self.current_downsampler, self.next_threshold = self._get_next_downsampler_and_threshold()
 
 
 def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> DownsamplingScheduler:

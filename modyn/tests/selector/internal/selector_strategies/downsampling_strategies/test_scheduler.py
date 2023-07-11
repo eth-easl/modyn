@@ -49,7 +49,7 @@ def test_switch_downsamplers():
     assert downs.current_downsampler.downsampling_ratio == 50
     assert downs.next_threshold == 12
 
-    downs.get_requires_remote_computation(12)
+    downs.inform_next_trigger(12)
 
     assert downs.maximum_keys_in_memory == 1000
     assert isinstance(downs.current_downsampler, GradNormDownsamplingStrategy)
@@ -65,26 +65,28 @@ def test_switch_functions():
 
     # below the threshold
     for i in range(12):
-        assert downs.get_requires_remote_computation(i)
-        assert downs.get_downsampling_params(i) == {
+        downs.inform_next_trigger(i)
+        assert downs.requires_remote_computation
+        assert downs.downsampling_params == {
             "downsampling_period": 1,
             "downsampling_ratio": 50,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": True,
         }
-        assert downs.get_downsampling_strategy(i) == "RemoteLossDownsampling"
-        assert downs.get_training_status_bar_scale(i) == 50
+        assert downs.downsampling_strategy == "RemoteLossDownsampling"
+        assert downs.training_status_bar_scale == 50
 
     # above the threshold
     for i in range(12, 20):
-        assert downs.get_requires_remote_computation(i)
-        assert downs.get_downsampling_params(i) == {
+        downs.inform_next_trigger(i)
+        assert downs.requires_remote_computation
+        assert downs.downsampling_params == {
             "downsampling_ratio": 25,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": False,
         }
-        assert downs.get_downsampling_strategy(i) == "RemoteGradNormDownsampling"
-        assert downs.get_training_status_bar_scale(i) == 100
+        assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
+        assert downs.training_status_bar_scale == 100
 
 
 def test_wrong_number_threshold():
@@ -115,33 +117,36 @@ def test_double_threshold():
 
     # below the first threshold
     for i in range(12):
-        assert downs.get_requires_remote_computation(i)
-        assert downs.get_downsampling_params(i) == {
+        downs.inform_next_trigger(i)
+        assert downs.requires_remote_computation
+        assert downs.downsampling_params == {
             "downsampling_period": 1,
             "downsampling_ratio": 50,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": True,
         }
-        assert downs.get_downsampling_strategy(i) == "RemoteLossDownsampling"
-        assert downs.get_training_status_bar_scale(i) == 50
+        assert downs.downsampling_strategy == "RemoteLossDownsampling"
+        assert downs.training_status_bar_scale == 50
 
     # above the first threshold, below the second one
     for i in range(12, 15):
-        assert downs.get_requires_remote_computation(i)
-        assert downs.get_downsampling_params(i) == {
+        downs.inform_next_trigger(i)
+        assert downs.requires_remote_computation
+        assert downs.downsampling_params == {
             "downsampling_ratio": 25,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": False,
         }
-        assert downs.get_downsampling_strategy(i) == "RemoteGradNormDownsampling"
-        assert downs.get_training_status_bar_scale(i) == 100
+        assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
+        assert downs.training_status_bar_scale == 100
 
     # above the last threshold
     for i in range(15, 25):
-        assert not downs.get_requires_remote_computation(i)
-        assert downs.get_downsampling_params(i) == {}
-        assert downs.get_downsampling_strategy(i) == ""
-        assert downs.get_training_status_bar_scale(i) == 100
+        downs.inform_next_trigger(i)
+        assert not downs.requires_remote_computation
+        assert downs.downsampling_params == {}
+        assert downs.downsampling_strategy == ""
+        assert downs.training_status_bar_scale == 100
 
 
 def test_wrong_trigger():
@@ -149,29 +154,32 @@ def test_wrong_trigger():
     downs = DownsamplingScheduler(conf, [12], 1000)
 
     for i in range(12):
-        assert downs.get_requires_remote_computation(i)
-        assert downs.get_downsampling_params(i) == {
+        downs.inform_next_trigger(i)
+        assert downs.requires_remote_computation
+        assert downs.downsampling_params == {
             "downsampling_period": 1,
             "downsampling_ratio": 50,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": True,
         }
-        assert downs.get_downsampling_strategy(i) == "RemoteLossDownsampling"
-        assert downs.get_training_status_bar_scale(i) == 50
+        assert downs.downsampling_strategy == "RemoteLossDownsampling"
+        assert downs.training_status_bar_scale == 50
 
     # pass the threshold for the first time
-    downs.get_requires_remote_computation(13)
+    downs.inform_next_trigger(13)
+    assert downs.requires_remote_computation
 
     # then ask again for triggers below the threshold, you still get the second downsampler
     for i in range(12):
-        assert downs.get_requires_remote_computation(i)
-        assert downs.get_downsampling_params(i) == {
+        downs.inform_next_trigger(i)
+        assert downs.requires_remote_computation
+        assert downs.downsampling_params == {
             "downsampling_ratio": 25,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": False,
         }
-        assert downs.get_downsampling_strategy(i) == "RemoteGradNormDownsampling"
-        assert downs.get_training_status_bar_scale(i) == 100
+        assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
+        assert downs.training_status_bar_scale == 100
 
 
 def test_instantiate_scheduler_empty():
@@ -194,7 +202,8 @@ def test_instantiate_scheduler_list():
     assert isinstance(scheduler.current_downsampler, LossDownsamplingStrategy)
     assert scheduler.next_threshold == 7
 
-    scheduler.get_requires_remote_computation(8)
+    scheduler.inform_next_trigger(8)
+    assert scheduler.requires_remote_computation
 
     assert isinstance(scheduler.current_downsampler, GradNormDownsamplingStrategy)
     assert scheduler.next_threshold is None

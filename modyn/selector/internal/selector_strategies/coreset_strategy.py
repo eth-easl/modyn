@@ -31,9 +31,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
         self._persist_samples(keys, timestamps, labels)
 
     def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
-        # we don't want to shuffle if the downsampler needs the samples ordered by label. THe downsampler will take care
-        # of shuffling the samples.
-
         for samples in self._get_data():
             random.shuffle(samples)
             yield [(sample, 1.0) for sample in samples]
@@ -75,14 +72,21 @@ class CoresetStrategy(AbstractSelectionStrategy):
                 .count()
             )
 
-    def get_downsampling_strategy(self) -> str:
-        return self.downsampling_scheduler.get_downsampling_strategy(self._next_trigger_id)
+    def inform_next_trigger(self) -> None:
+        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
 
-    def get_downsampling_params(self) -> dict:
-        return self.downsampling_scheduler.get_downsampling_params(self._next_trigger_id)
+    @property
+    def downsampling_strategy(self) -> str:
+        return self.downsampling_scheduler.downsampling_strategy
 
-    def get_requires_remote_computation(self) -> bool:
-        return self.downsampling_scheduler.get_requires_remote_computation(self._next_trigger_id)
+    @property
+    def downsampling_params(self) -> dict:
+        return self.downsampling_scheduler.downsampling_params
 
-    def get_training_status_bar_scale(self) -> int:
-        return self.downsampling_scheduler.get_training_status_bar_scale(self._next_trigger_id)
+    @property
+    def requires_remote_computation(self) -> bool:
+        return self.downsampling_scheduler.requires_remote_computation
+
+    @property
+    def training_status_bar_scale(self) -> int:
+        return self.downsampling_scheduler.training_status_bar_scale
