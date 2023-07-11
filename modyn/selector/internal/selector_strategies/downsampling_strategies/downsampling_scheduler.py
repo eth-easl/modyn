@@ -83,6 +83,7 @@ def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> Downsamp
             )
         list_of_thresholds = config["downsampling_config"]["downsampling_thresholds"]
 
+        # Allow users to specify just the threshold (and not [threshold]) when there are just 2 downsamplers.
         if isinstance(list_of_thresholds, int):
             assert (
                 len(list_of_downsamplers) == 2
