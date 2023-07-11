@@ -1,7 +1,7 @@
 from modyn.selector.internal.selector_strategies.downsampling_strategies import NoDownsamplingStrategy
 
 
-def test_init_empty():
+def test_init_no():
     # Test init works
     strat = NoDownsamplingStrategy(
         {},
@@ -9,5 +9,4 @@ def test_init_empty():
     )
 
     assert not strat.requires_remote_computation
-
     assert strat.remote_downsampling_strategy_name == ""
