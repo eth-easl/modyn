@@ -325,7 +325,7 @@ class GRPCHandler:
             "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
             "epochs_per_trigger": epochs_per_trigger,
             "seed": seed,
-            "tokenizer": PythonString(value=tokenizer),
+            "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
         }
 
         cleaned_kwargs = {k: v for k, v in start_training_kwargs.items() if v is not None}

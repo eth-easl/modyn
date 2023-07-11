@@ -36,7 +36,7 @@ class OnlineDataset(IterableDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
-        tokenizer: Optional[str],
+        tokenizer: str,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -60,7 +60,7 @@ class OnlineDataset(IterableDataset):
 
         # tokenizer for NLP tasks
         self._tokenizer = None
-        if tokenizer is not None:
+        if tokenizer != "":
             self._tokenizer = self._instantiate_tokenizer(tokenizer)
 
         logger.debug("Initialized OnlineDataset.")

@@ -10,6 +10,8 @@ The downloading scripts are adapted from `wild-time-data`.
 There is a `data_generation_[benchmark].py` script for each available dataset. 
 Use the `-h` flag to find out more.
 
+
+
 ## Datasets description
 
 ### Yearbook
@@ -23,8 +25,8 @@ separately (in png format) and the os timestamp is set accordingly.
 
 ### HuffPost
 The goal is to predict tag of news given headlines. The dataset contains more than 60k samples collected from 2012 to 2018. Titles belonging to the same year are grouped 
-into the same CSV file and stored together.
+into the same CSV file and stored together. Each year is mapped to a year starting from 1/1/1970.
 
 ### Arxiv
 The goal is to predict paper category (55 classes) given paper title. The dataset contains more than 2 million samples collected from 2002 to 2017. Titles belonging to the same year are grouped 
-into the same CSV file and stored together.
+into the same CSV file and stored together. Each year is mapped to a year starting from 1/1/1970.

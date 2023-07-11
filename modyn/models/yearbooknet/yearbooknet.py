@@ -3,8 +3,6 @@ from typing import Any
 import torch
 from torch import nn
 
-torch.manual_seed(0)
-
 
 class YearbookNet:
     # pylint: disable-next=unused-argument
