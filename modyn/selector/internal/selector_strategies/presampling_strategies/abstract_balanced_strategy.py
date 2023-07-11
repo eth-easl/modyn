@@ -1,6 +1,6 @@
-from abc import ABC
 from typing import Optional
 
+import sqlalchemy
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
@@ -29,8 +29,14 @@ def get_fair_share_predicted_total(fair_share: int, requests: list[int]) -> int:
     return sum(min(fair_share, req) for req in requests)
 
 
-class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy, ABC):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int, balanced_column: int):
+class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
+    def __init__(
+        self,
+        presampling_config: dict,
+        modyn_config: dict,
+        pipeline_id: int,
+        balanced_column: sqlalchemy.orm.attributes.InstrumentedAttribute,
+    ):
         super().__init__(presampling_config, modyn_config, pipeline_id)
 
         self.force_required_target_size = presampling_config.get("force_required_target_size", False)
