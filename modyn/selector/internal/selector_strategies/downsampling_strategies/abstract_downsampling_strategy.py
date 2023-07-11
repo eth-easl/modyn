@@ -7,11 +7,15 @@ class AbstractDownsamplingStrategy(ABC):
 
     """
     This abstract strategy is used to represent the common behaviour of downsampling strategies
-    like loss-based, importance downsampling (distribution-based methods) and craig&adacore (greedy-based methods)
+    like loss-based, importance downsampling (distribution-based methods) and craig&adacore (greedy-based methods).
 
     These methods work on a uniformly-presampled version of the entire dataset (relying on AbstractPresampleStrategy),
     then the actual downsampling is done at the trainer server since all of these methods rely on the result of
     forward pass.
+
+    If your downsampler requires remote computations, please make sure to specify the remote class using the parameter
+    remote_downsampling_strategy_name. The value of the parameter should be the name of a class in the module
+    modyn.trainer_server.internal.trainer.remote_downsamplers
 
     Args:
         downsampling_config (dict): The configuration for the selector.
@@ -59,6 +63,8 @@ class AbstractDownsamplingStrategy(ABC):
         if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             return 100
         return self.downsampling_ratio
+
+
 
     def _build_downsampling_params(self) -> dict:
         config = {
