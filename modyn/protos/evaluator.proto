@@ -50,9 +50,9 @@ message EvaluationStatusResponse {
   bool is_running = 2;
   bool state_available = 3;
   bool blocked = 4;
-  string exception = 5;
-  int32 batches_seen = 6;
-  int32 samples_seen = 7;
+  optional string exception = 5;
+  optional int64 batches_seen = 6;
+  optional int64 samples_seen = 7;
 }
 
 message EvaluationData {

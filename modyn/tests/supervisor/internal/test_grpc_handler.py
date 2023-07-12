@@ -548,10 +548,10 @@ def test_wait_for_evaluation_completion(test_connection_established):
         status_method.side_effect = [
             EvaluationStatusResponse(valid=False),
             EvaluationStatusResponse(valid=True, blocked=True),
-            EvaluationStatusResponse(valid=True, blocked=False, exception="Error"),
             EvaluationStatusResponse(
                 valid=True, blocked=False, is_running=True, state_available=True, batches_seen=10, samples_seen=5000
             ),
+            EvaluationStatusResponse(valid=True, blocked=False, exception="Error"),
             EvaluationStatusResponse(valid=True, blocked=False, is_running=False, state_available=False),
         ]
         handler.wait_for_evaluation_completion(10, evaluations)
@@ -559,7 +559,7 @@ def test_wait_for_evaluation_completion(test_connection_established):
 
         # from call get args (call[0]) then get first argument
         called_ids = [call[0][0].evaluation_id for call in status_method.call_args_list]
-        assert called_ids == [1, 2, 2, 3, 3]
+        assert called_ids == [1, 2, 3, 2, 3]
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

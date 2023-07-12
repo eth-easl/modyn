@@ -111,7 +111,7 @@ def check_dataset_size_invalid() -> None:
     request = GetDatasetSizeRequest(dataset_id="unknown_dataset")
     response: GetDatasetSizeResponse = storage.GetDatasetSize(request)
 
-    assert not response.success, "Dataset is available (even tough it should not be)."
+    assert not response.success, "Dataset is available (even though it should not be)."
 
 
 def check_data_per_worker() -> None:

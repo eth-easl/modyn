@@ -239,7 +239,9 @@ def test_get_evaluation_status_alive(
         assert response.valid
         assert response.is_running
         assert not response.blocked
+        assert not response.HasField("exception")
         assert response.state_available
+        assert response.HasField("batches_seen") and response.HasField("samples_seen")
         assert response.batches_seen == 3
         assert response.samples_seen == 50
         test_check_for_evaluation_exception.assert_not_called()
@@ -267,6 +269,8 @@ def test_get_evaluation_status_alive_blocked(
         assert response.is_running
         assert response.blocked
         assert not response.state_available
+        assert not response.HasField("exception")
+        assert not (response.HasField("batches_seen") or response.HasField("samples_seen"))
         test_check_for_evaluation_exception.assert_not_called()
 
 
@@ -292,6 +296,8 @@ def test_get_evaluation_status_finished_with_exception(
         assert not response.is_running
         assert not response.blocked
         assert not response.state_available
+        assert not (response.HasField("batches_seen") or response.HasField("samples_seen"))
+        assert response.HasField("exception")
         assert response.exception == "exception"
         test_get_status.assert_not_called()
 
