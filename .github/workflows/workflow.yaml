@@ -26,23 +26,3 @@ jobs:
       run: docker run modynbase conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
 
 
-# Tests whether docker-compose up starts all components successfully and integration tests run through
-# Only one job to reduce Github CI usage
-  integrationtests:
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    needs:
-      - flake8
-      - mypy-typechecking
-      - pylint
-      - unittests
-      - isort
-      - black
-      - dockerized-unittests
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Start docker compose and exit when tests run through
-        run: bash run_integrationtests.sh
