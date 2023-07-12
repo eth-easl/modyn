@@ -33,6 +33,9 @@ if [[ ! -z "$CI" ]]; then
     echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
     echo "Found CI server and set container to ${CI_CONTAINER}, exiting."
     touch ".modyn_configured"
+    echo "DEBUG PRINT"
+    cat $SCRIPT_DIR/docker/Dependencies/Dockerfile
+    echo "END PRINT"
     exit 0
 fi
 
