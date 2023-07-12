@@ -5,7 +5,7 @@ using namespace storage;
 void TestUtils::create_dummy_yaml() {
   std::ofstream out("config.yaml");
   out << "storage:" << std::endl;
-  out << "  port: 50051" << std::endl;
+  out << "  port: 50042" << std::endl;
   out << "  sample_batch_size: 5" << std::endl;
   out << "  insertion_threads: 1" << std::endl;
   out << "  retrieval_threads: 1" << std::endl;
@@ -38,6 +38,11 @@ YAML::Node TestUtils::get_dummy_file_wrapper_config() {
   config["label_file_extension"] = ".json";
   config["label_size"] = 1;
   config["record_size"] = 2;
+  config["label_index"] = 0;
+  config["encoding"] = "utf-8";
+  config["validate_file_content"] = false;
+  config["ignore_first_line"] = false;
+  config["separator"] = ',';
   return config;
 }
 

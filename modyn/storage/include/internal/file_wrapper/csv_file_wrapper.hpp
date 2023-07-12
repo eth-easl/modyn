@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
-#include "internal/filesystem_wrapper/abstract_filesystem_wrapper.hpp"
+#include "internal/file_wrapper/file_wrapper.hpp"
 
 namespace storage {
 
@@ -13,19 +13,15 @@ class CsvFileWrapper : public FileWrapper {
   char separator_;
   int label_index_;
   bool ignore_first_line_;
-  std::string encoding_;
 
-  void validate_file_extension();
-  void validate_file_content();
-  std::vector<unsigned char> filter_rows_samples(const std::vector<int64_t>& indices);
+  void validate_file_extension() override;
+  std::vector<std::vector<unsigned char>> filter_rows_samples(const std::vector<int64_t>& indices);
   std::vector<int64_t> filter_rows_labels(const std::vector<int64_t>& indices);
 
  public:
-  CsvFileWrapper::CsvFileWrapper(std::string file_path, const YAML::Node& file_wrapper_config,
-                                 std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
-      : FileWrapper(std::move(file_path), file_wrapper_config, std::move(filesystem_wrapper)) {
-    file_wrapper_type_ = FileWrapperType::CsvFileWrapper;
-
+  CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,  // NOLINT
+                    std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+      : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     if (file_wrapper_config_["separator"]) {
       separator_ = file_wrapper_config_["separator"].as<char>();
     } else {
@@ -47,12 +43,6 @@ class CsvFileWrapper : public FileWrapper {
       ignore_first_line_ = false;
     }
 
-    if (file_wrapper_config_["encoding"]) {
-      encoding_ = file_wrapper_config_["encoding"].as<std::string>();
-    } else {
-      encoding_ = "utf-8";
-    }
-
     validate_file_extension();
 
     // Do not validate the content only if "validate_file_content" is explicitly set to false
@@ -68,5 +58,8 @@ class CsvFileWrapper : public FileWrapper {
   std::vector<int64_t> get_all_labels() override;
   int64_t get_number_of_samples() override;
   void delete_samples(const std::vector<int64_t>& indices) override;
+  FileWrapperType get_type() override { return FileWrapperType::CSV; }
+  void validate_file_content();
+  ~CsvFileWrapper() override = default;
 };
 }  // namespace storage

@@ -1,8 +1,8 @@
 #include "internal/file_wrapper/csv_file_wrapper.hpp"
 
 #include <algorithm>
-#include <fstream>
 #include <stdexcept>
+#include <numeric>
 
 using namespace storage;
 
@@ -13,16 +13,15 @@ void CsvFileWrapper::validate_file_extension() {
 }
 
 void CsvFileWrapper::validate_file_content() {
-  std::ifstream file(file_path_);
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file for validation: " + file_path_);
-  }
+  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
+  std::string file_content(content.begin(), content.end());
 
-  std::string line;
   std::vector<int> number_of_columns;
   int line_number = 0;
 
-  while (std::getline(file, line)) {
+  std::istringstream file_stream(file_content);
+  std::string line;
+  while (std::getline(file_stream, line)) {
     ++line_number;
 
     // Skip the first line if required
@@ -49,8 +48,6 @@ void CsvFileWrapper::validate_file_content() {
     number_of_columns.push_back(column_count);
   }
 
-  file.close();
-
   if (std::set<int>(number_of_columns.begin(), number_of_columns.end()).size() != 1) {
     throw std::invalid_argument("Some rows have different widths.");
   }
@@ -58,7 +55,7 @@ void CsvFileWrapper::validate_file_content() {
 
 std::vector<unsigned char> CsvFileWrapper::get_sample(int64_t index) {
   std::vector<int64_t> indices = {index};
-  return filter_rows_samples(indices);
+  return filter_rows_samples(indices)[0];
 }
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(int64_t start, int64_t end) {
@@ -78,15 +75,15 @@ int64_t CsvFileWrapper::get_label(int64_t index) {
 
 std::vector<int64_t> CsvFileWrapper::get_all_labels() {
   std::vector<int64_t> labels;
-  std::ifstream file(file_path_);
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file for reading labels: " + file_path_);
-  }
 
-  std::string line;
+  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
+  std::string file_content(content.begin(), content.end());
+
   int line_number = 0;
 
-  while (std::getline(file, line)) {
+  std::istringstream file_stream(file_content);
+  std::string line;
+  while (std::getline(file_stream, line)) {
     ++line_number;
 
     // Skip the first line if required
@@ -110,22 +107,19 @@ std::vector<int64_t> CsvFileWrapper::get_all_labels() {
     }
   }
 
-  file.close();
-
   return labels;
 }
 
 int64_t CsvFileWrapper::get_number_of_samples() {
-  std::ifstream file(file_path_);
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file for counting samples: " + file_path_);
-  }
+  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
+  std::string file_content(content.begin(), content.end());
 
   int64_t count = 0;
-  std::string line;
   int line_number = 0;
 
-  while (std::getline(file, line)) {
+  std::istringstream file_stream(file_content);
+  std::string line;
+  while (std::getline(file_stream, line)) {
     ++line_number;
 
     // Skip the first line if required
@@ -136,25 +130,22 @@ int64_t CsvFileWrapper::get_number_of_samples() {
     ++count;
   }
 
-  file.close();
-
   return count;
 }
 
 void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) { throw std::logic_error("Not implemented"); }
 
-std::vector<unsigned char> CsvFileWrapper::filter_rows_samples(const std::vector<int64_t>& indices) {
-  std::ifstream file(file_path_);
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file for filtering rows: " + file_path_);
-  }
+std::vector<std::vector<unsigned char>> CsvFileWrapper::filter_rows_samples(const std::vector<int64_t>& indices) {
+  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
+  std::string file_content(content.begin(), content.end());
 
-  std::vector<unsigned char> samples;
-  std::string line;
+  std::vector<std::vector<unsigned char>> samples;
   int line_number = 0;
   int64_t current_index = 0;
 
-  while (std::getline(file, line)) {
+  std::istringstream file_stream(file_content);
+  std::string line;
+  while (std::getline(file_stream, line)) {
     ++line_number;
 
     // Skip the first line if required
@@ -170,8 +161,6 @@ std::vector<unsigned char> CsvFileWrapper::filter_rows_samples(const std::vector
     ++current_index;
   }
 
-  file.close();
-
   if (samples.size() != indices.size()) {
     throw std::out_of_range("Invalid index");
   }
@@ -180,17 +169,16 @@ std::vector<unsigned char> CsvFileWrapper::filter_rows_samples(const std::vector
 }
 
 std::vector<int64_t> CsvFileWrapper::filter_rows_labels(const std::vector<int64_t>& indices) {
-  std::ifstream file(file_path_);
-  if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file for filtering rows: " + file_path_);
-  }
+  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
+  std::string file_content(content.begin(), content.end());
 
   std::vector<int64_t> labels;
-  std::string line;
   int line_number = 0;
   int64_t current_index = 0;
 
-  while (std::getline(file, line)) {
+  std::istringstream file_stream(file_content);
+  std::string line;
+  while (std::getline(file_stream, line)) {
     ++line_number;
 
     // Skip the first line if required
@@ -220,8 +208,6 @@ std::vector<int64_t> CsvFileWrapper::filter_rows_labels(const std::vector<int64_
 
     ++current_index;
   }
-
-  file.close();
 
   if (labels.size() != indices.size()) {
     throw std::out_of_range("Invalid index");

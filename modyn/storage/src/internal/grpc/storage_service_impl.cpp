@@ -348,13 +348,19 @@ grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifi
 
   auto filesystem_wrapper =
       Utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
-
-  std::vector<std::string> file_paths;
-  session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths),
+  
+  int64_t number_of_files = 0;
+  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
       soci::use(request->dataset_id());
 
-  for (const auto& file_path : file_paths) {
-    filesystem_wrapper->remove(file_path);
+  if (number_of_files > 0) {
+    std::vector<std::string> file_paths = std::vector<std::string>(number_of_files);
+    session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths),
+        soci::use(request->dataset_id());
+
+    for (const auto& file_path : file_paths) {
+      filesystem_wrapper->remove(file_path);
+    }
   }
 
   bool success = storage_database_connection.delete_dataset(request->dataset_id());
