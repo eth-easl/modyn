@@ -10,6 +10,11 @@ runs:
         bash ./initial_setup.sh
       shell: bash
 
+    - name: Temporary print of dockerfile
+      run: |
+         cat ./docker/Dependencies/Dockerfile
+      shell: bashs
+
     - name: Build dependencies and push
       uses: docker/build-push-action@v4
       with:
