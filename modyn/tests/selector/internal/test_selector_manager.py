@@ -171,6 +171,7 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
 
         selector_inform_data_and_trigger.assert_called_once_with([10], [0], [0])
 
+
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
@@ -190,6 +191,7 @@ def test_get_available_labels(selector_get_available_labels: MagicMock, test__in
 
         with pytest.raises(ValueError):
             selector.get_available_labels(pipe_id + 1)
+
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
