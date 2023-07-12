@@ -27,7 +27,7 @@ fi
 
 # On CI, we change the base image from CUDA to Python and stop here
 if [[ ! -z "$CI" ]]; then
-    dockerContent=$(tail -n "+1" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
+    dockerContent=$(tail -n "+2" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
     mv $SCRIPT_DIR/docker/Dependencies/Dockerfile $SCRIPT_DIR/docker/Dependencies/Dockerfile.original
     echo "FROM ${CI_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
     echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
@@ -81,7 +81,7 @@ if [ "$IS_MAC" != true ]; then
         echo "$fileEnd" >> $SCRIPT_DIR/docker-compose.yml
 
         # Fix Dockerfile
-        dockerContent=$(tail -n "+1" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
+        dockerContent=$(tail -n "+2" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
         mv $SCRIPT_DIR/docker/Dependencies/Dockerfile $SCRIPT_DIR/docker/Dependencies/Dockerfile.original
         echo "FROM ${CUDA_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
         echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
