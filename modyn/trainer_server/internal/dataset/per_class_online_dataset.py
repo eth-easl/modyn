@@ -19,7 +19,7 @@ class PerClassOnlineDataset(OnlineDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
-        initial_filter_label: int,
+        initial_filtered_label: int,
     ):
         super().__init__(
             pipeline_id,
@@ -31,8 +31,8 @@ class PerClassOnlineDataset(OnlineDataset):
             selector_address,
             training_id,
         )
-        assert initial_filter_label is not None
-        self.filtered_label = initial_filter_label
+        assert initial_filtered_label is not None
+        self.filtered_label = initial_filtered_label
 
     def _get_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
         assert self.filtered_label is not None
