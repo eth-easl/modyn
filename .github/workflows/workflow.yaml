@@ -132,7 +132,7 @@ jobs:
       - name: Install clang-tidy
         run: |
           sudo apt update
-          sudo apt -y install clang-tidy-15
+          sudo apt install -y clang-tidy-15
           cmake --version
 
       - name: Configure CMake
@@ -177,7 +177,7 @@ jobs:
       - name: Install ccache
         run: |
           sudo apt update
-          sudo apt -y install ccache
+          sudo apt install -y ccache
 
       - name: Install clang version
         if: ${{ matrix.compiler.version > 14 }}
@@ -295,16 +295,16 @@ jobs:
       - name: Calculate changes
         shell: bash
         run: |
-          echo ::set-output name=line-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.build_test.outputs.line-coverage }}-${{ needs.coverage-main.outputs.line-coverage }}; exit}')"
-          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.build_test.outputs.branch-coverage }}-${{ needs.coverage-main.outputs.branch-coverage }}; exit}')"
+          echo ::set-output name=line-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.line-coverage }}-${{ needs.cpp_coverage_main.outputs.line-coverage }}; exit}')"
+          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.branch-coverage }}-${{ needs.cpp_coverage_main.outputs.branch-coverage }}; exit}')"        
         id: calculation
 
       - name: Comment on PR
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           message: |
-            ![Line Coverage: ${{ needs.build_test.outputs.line-coverage }}%](https://img.shields.io/badge/Line_Coverage-${{ needs.build_test.outputs.line-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.line-changes }} % to main)</sup>
-            ![Branch Coverage: ${{ needs.build_test.outputs.branch-coverage }}%](https://img.shields.io/badge/Branch_Coverage-${{ needs.build_test.outputs.branch-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.branch-changes }} % to main)</sup>
+            ![Line Coverage: ${{ needs.cpp_build_and_test.outputs.line-coverage }}%](https://img.shields.io/badge/Line_Coverage-${{ needs.cpp_build_and_test.outputs.line-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.line-changes }} % to main)</sup>
+            ![Branch Coverage: ${{ needs.cpp_build_and_test.outputs.branch-coverage }}%](https://img.shields.io/badge/Branch_Coverage-${{ needs.cpp_build_and_test.outputs.branch-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.branch-changes }} % to main)</sup>
 
 ### Integration Tests ###
 # We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
