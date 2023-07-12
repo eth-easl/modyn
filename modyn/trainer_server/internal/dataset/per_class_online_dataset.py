@@ -19,6 +19,7 @@ class PerClassOnlineDataset(OnlineDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
+        initial_filter_label: int,
     ):
         super().__init__(
             pipeline_id,
@@ -30,16 +31,12 @@ class PerClassOnlineDataset(OnlineDataset):
             selector_address,
             training_id,
         )
-
-        self.filtered_label = None
+        assert initial_filter_label is not None
+        self.filtered_label = initial_filter_label
 
     def _get_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
-        assert self._uses_weights is not None
+        assert self.filtered_label is not None
 
         if self.filtered_label != label:
             return None
-
-        # mypy complains here because _transform has unknown type, which is ok
-        if self._uses_weights:
-            return key, self._transform(sample), label, weight  # type: ignore
-        return key, self._transform(sample), label  # type: ignore
+        return super()._get_data_tuple(key, sample, label, weight)

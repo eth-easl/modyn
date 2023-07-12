@@ -510,13 +510,19 @@ class PytorchTrainer:
         if self._downsampler.requires_data_label_by_label:
             assert isinstance(self._downsampler, AbstractPerLabelRemoteDownsamplingStrategy)
             available_labels = self._get_available_labels_from_selector()
-            per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
-                self._train_dataloader.dataset, self._batch_size, self._num_dataloaders
-            )
+
             number_of_samples = 0
             batch_number = 0
+            first_label = True
             for label in available_labels:
-                per_class_dataloader.dataset.filtered_label = label
+                if first_label:
+                    per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
+                        self._train_dataloader.dataset, self._batch_size, self._num_dataloaders, label
+                    )
+                    first_label = False
+                else:
+                    per_class_dataloader.dataset.filtered_label = label
+
                 batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(
                     per_class_dataloader,
                     previous_batch_number=batch_number,
