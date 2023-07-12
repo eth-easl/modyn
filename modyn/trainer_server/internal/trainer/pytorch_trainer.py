@@ -27,6 +27,9 @@ from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, Se
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
+    AbstractPerLabelRemoteDownsamplingStrategy,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
     AbstractRemoteDownsamplingStrategy,
     get_tensors_subset,
@@ -505,6 +508,7 @@ class PytorchTrainer:
         self._train_dataloader.dataset.change_key_source(selector_key_source)
         self._downsampler.init_downsampler()
         if self._downsampler.requires_data_label_by_label:
+            assert isinstance(self._downsampler, AbstractPerLabelRemoteDownsamplingStrategy)
             available_labels = self._get_available_labels_from_selector()
             per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
                 self._train_dataloader.dataset, self._batch_size, self._num_dataloaders

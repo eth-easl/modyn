@@ -66,7 +66,3 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     @abstractmethod
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         raise NotImplementedError
-
-    def inform_end_of_current_label(self) -> None:
-        if self.requires_data_label_by_label:
-            raise NotImplementedError

@@ -53,6 +53,7 @@ def prepare_dataloaders(
 def prepare_per_class_dataloader_from_online_dataset(
     online_dataset: OnlineDataset, batch_size: int, num_workers: int
 ) -> torch.utils.data.DataLoader:
+    # TODO(#289): Replace inefficient per class dataloader
     dataset = PerClassOnlineDataset(
         online_dataset._pipeline_id,
         online_dataset._trigger_id,
