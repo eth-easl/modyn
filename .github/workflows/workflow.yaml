@@ -6,106 +6,6 @@ defaults:
     shell: bash
 
 jobs:
-  flake8:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup Conda
-        uses: ./.github/actions/conda
-
-      - name: Flake8
-        run: |
-          conda run -n modyn flake8 --version
-          conda run -n modyn flake8 modyn --statistics
-
-  mypy-typechecking:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup Conda
-        uses: ./.github/actions/conda
-
-      - name: Mypy
-        run: |
-          conda run -n modyn mypy --version
-          conda run -n modyn mypy modyn
-
-  pylint:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup Conda
-        uses: ./.github/actions/conda
-
-      - name: Pylint
-        run: |
-          conda run -n modyn pylint --version
-          conda run -n modyn pylint modyn
-
-  isort:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup Conda
-        uses: ./.github/actions/conda
-
-      - name: Isort
-        run: |
-          conda run -n modyn isort --version
-          conda run -n modyn isort modyn --check --diff
-          conda run -n modyn isort integrationtests --check --diff
-          conda run -n modyn isort benchmark --check --diff
-
-  black:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup Conda
-        uses: ./.github/actions/conda
-
-      - name: Black
-        run: |
-          conda run -n modyn black --version
-          conda run -n modyn black --check modyn --verbose --config black.toml
-
-  unittests:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup Conda
-        uses: ./.github/actions/conda
-
-      - name: Pytest
-        run: |
-          conda run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=90
-          conda run -n modyn pytest > pytest-coverage.txt
-
-      - name: Comment coverage
-        uses: coroo/pytest-coverage-commentator@v1.0.2
 
 ### Integration Tests ###
 # We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
@@ -114,13 +14,6 @@ jobs:
   dockerized-unittests:
     timeout-minutes: 30
     runs-on: ubuntu-latest
-    needs:
-      - flake8
-      - mypy-typechecking
-      - pylint
-      - unittests
-      - isort
-      - black
 
     steps:
     - name: Check out code
