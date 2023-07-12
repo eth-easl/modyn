@@ -564,6 +564,18 @@ class PytorchTrainer:
         previous_batch_number: int = 0,
         previous_number_of_samples: int = 0,
     ) -> Tuple[int, int]:
+        """
+        Function to iterate a dataloader, compute the forward pass and send the forward output to the downsampler.
+        Args:
+            dataloader: torch.dataloader to get the data
+            previous_batch_number: number of batches processed before calling this function. Useful when this function
+            is called several times to keep track of previous invocations (ex label by label dataloader). We need to
+            have a total to correctly update the queue and show the progress in the supervisor counter.
+            previous_number_of_samples: number of samples processed before calling this function. See above for the use.
+
+        Returns:
+            Updated number of batches and samples
+        """
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
         for batch_number, batch in enumerate(dataloader):
