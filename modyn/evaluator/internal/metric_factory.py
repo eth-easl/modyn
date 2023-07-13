@@ -16,8 +16,10 @@ class MetricFactory:
         raise NotImplementedError(f"Metric {name} is not available!")
 
     @staticmethod
-    def contains_holistic_metric(metrics: list[AbstractEvaluationMetric]) -> bool:
+    def prepare_metrics(metrics: list[AbstractEvaluationMetric]) -> bool:
+        contains_holistic = False
         for metric in metrics:
+            metric.deserialize_evaluation_transformer()
             if isinstance(metric, AbstractHolisticMetric):
                 return True
-        return False
+        return contains_holistic

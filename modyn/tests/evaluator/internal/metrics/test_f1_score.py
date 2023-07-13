@@ -18,8 +18,9 @@ def get_mock_evaluation_transformer():
 
 
 def test_f1_score_invalid_transform():
+    f1_score = F1Score(evaluation_transform_func=get_invalid_evaluation_transformer(), config={"num_classes": 2})
     with pytest.raises(ValueError):
-        F1Score(evaluation_transform_func=get_invalid_evaluation_transformer(), config={"num_classes": 2})
+        f1_score.deserialize_evaluation_transformer()
 
 
 def test_f1_score_invalid():
@@ -76,6 +77,8 @@ def test_f1_score():
 
 def test_f1_score_transform():
     f1_score = F1Score(get_mock_evaluation_transformer(), config={"num_classes": 2})
+    f1_score.deserialize_evaluation_transformer()
+
     assert f1_score.average == F1ScoreTypes.MACRO
     assert f1_score.evaluation_transformer_function(torch.arange(10)) == 9
 
