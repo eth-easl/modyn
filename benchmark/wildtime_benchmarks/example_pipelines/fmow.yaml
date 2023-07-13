@@ -47,6 +47,6 @@ data:
       return Image.open(io.BytesIO(data)).convert("RGB")
 
 trigger:
-  id: DataAmountTrigger
+  id: TimeTrigger
   trigger_config:
-    data_points_for_trigger: 2000
+    data_points_for_trigger: "1w"
