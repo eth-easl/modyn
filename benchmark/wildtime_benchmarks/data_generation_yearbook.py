@@ -55,8 +55,10 @@ class YearbookDownloader(Dataset):
     def _get_year_data(self, year: int) -> list[Tuple]:
         images = torch.FloatTensor(
             np.array(
-                [
+                [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
+                    # Pytorch requires CHW format
                     img.transpose(2, 0, 1)[0].reshape(*self.input_dim)
+                    # _dataset has 3 dimensions [years][train=0,valid=1]["images"/"labels"]
                     for img in self._dataset[year][0]["images"]
                 ]
             )

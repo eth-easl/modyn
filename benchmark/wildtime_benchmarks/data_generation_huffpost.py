@@ -56,7 +56,7 @@ class HuffpostDownloader(Dataset):
 
             # store the sentences
             text_file = os.path.join(self.path, f"{year}.csv")
-            with open(text_file, "w") as f:
+            with open(text_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(year_rows))
 
             # set timestamp
