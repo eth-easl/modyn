@@ -6,10 +6,11 @@ from torch import nn
 
 class YearbookNet:
     """
-        Adapted from WildTime.
-        Here you can find the original implementation:
-        https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/yearbook.py
+    Adapted from WildTime.
+    Here you can find the original implementation:
+    https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/yearbook.py
     """
+
     # pylint: disable-next=unused-argument
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         self.model = YearbookNetModel(**model_configuration)

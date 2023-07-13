@@ -8,9 +8,9 @@ from torchvision.models import densenet121
 
 class FmowNet:
     """
-        Adapted from WildTime.
-        Here you can find the original implementation:
-        https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/fmow.py
+    Adapted from WildTime.
+    Here you can find the original implementation:
+    https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/fmow.py
     """
 
     # pylint: disable-next=unused-argument
