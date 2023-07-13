@@ -1,3 +1,5 @@
+
+
 from typing import Any
 
 import torch
@@ -6,6 +8,11 @@ from transformers import DistilBertForSequenceClassification, DistilBertModel
 
 
 class ArticleNet:
+    """
+    Adapted from WildTime.
+    Here you can find the original implementation:
+    https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/article.py
+    """
     # pylint: disable-next=unused-argument
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         self.model = ArticleNetwork(**model_configuration)
