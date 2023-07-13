@@ -1,9 +1,20 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
+import json
+import pathlib
+import tempfile
 from unittest.mock import patch
 
 import enlighten
 import grpc
 import pytest
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelResponse,
+    EvaluationData,
+    EvaluationResultRequest,
+    EvaluationResultResponse,
+    EvaluationStatusResponse,
+)
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetNumberOfSamplesRequest,
@@ -23,6 +34,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
+from modyn.supervisor.internal.utils import EvaluationStatusTracker
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     StartTrainingResponse,
     StoreFinalModelRequest,
@@ -42,6 +54,7 @@ def get_simple_config() -> dict:
         "storage": {"hostname": "test", "port": 42},
         "trainer_server": {"hostname": "localhost", "port": 42, "ftp_port": 1337},
         "selector": {"hostname": "test", "port": 42},
+        "evaluator": {"hostname": "test", "port": 42},
     }
 
 
@@ -66,12 +79,25 @@ def get_minimal_pipeline_config() -> dict:
         },
         "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
+        "evaluation": {
+            "device": "cpu",
+            "datasets": [
+                {
+                    "dataset_id": "MNIST_eval",
+                    "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+                    "dataloader_workers": 2,
+                    "batch_size": 64,
+                    "metrics": [{"name": "Accuracy"}],
+                }
+            ],
+        },
     }
 
 
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
+@patch.object(EvaluatorStub, "__init__", noop_constructor_mock)
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
@@ -85,6 +111,7 @@ def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
+@patch.object(EvaluatorStub, "__init__", noop_constructor_mock)
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init(test_insecure_channel, test_connection_established):
@@ -102,6 +129,7 @@ def test_init(test_insecure_channel, test_connection_established):
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
+@patch.object(EvaluatorStub, "__init__", noop_constructor_mock)
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage(test_insecure_channel, test_connection_established):
@@ -126,6 +154,7 @@ def test_init_storage(test_insecure_channel, test_connection_established):
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
+@patch.object(EvaluatorStub, "__init__", noop_constructor_mock)
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=False)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage_throws(test_insecure_channel, test_connection_established):
@@ -138,7 +167,8 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
     with patch.object(GRPCHandler, "init_storage", return_value=None):
         with patch.object(GRPCHandler, "init_trainer_server", return_value=None):
             with patch.object(GRPCHandler, "init_selector", return_value=None):
-                handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
+                with patch.object(GRPCHandler, "init_evaluator", return_value=None):
+                    handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -150,6 +180,7 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch.object(TrainerServerStub, "__init__", noop_constructor_mock)
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
+@patch.object(EvaluatorStub, "__init__", noop_constructor_mock)
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_selector(test_insecure_channel, test_connection_established):
@@ -469,3 +500,164 @@ def test_store_trained_model(test_connection_established):
         model_id = handler.store_trained_model(21)
         get_method.assert_called_once_with(StoreFinalModelRequest(training_id=21))
         assert model_id == 42
+
+
+@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_start_evaluation(test_connection_established):
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    assert handler.evaluator is not None
+
+    trained_model_id = 10
+    pipeline_config = get_minimal_pipeline_config()
+
+    with patch.object(
+        handler.evaluator,
+        "evaluate_model",
+        return_value=EvaluateModelResponse(evaluation_started=True, evaluation_id=12, dataset_size=1000),
+    ) as avail_method:
+        evaluations = handler.start_evaluation(trained_model_id, pipeline_config)
+
+        assert len(evaluations) == 1
+        assert evaluations[12].dataset_id == "MNIST_eval"
+        assert evaluations[12].dataset_size == 1000
+        avail_method.assert_called_once()
+
+
+@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_wait_for_evaluation_completion(test_connection_established):
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    assert handler.evaluator is not None
+
+    evaluations = {
+        1: EvaluationStatusTracker(dataset_id="MNIST_small", dataset_size=1000),
+        2: EvaluationStatusTracker(dataset_id="MNIST_big", dataset_size=5000),
+        3: EvaluationStatusTracker(dataset_id="MNIST_large", dataset_size=10000),
+    }
+
+    with patch.object(handler.evaluator, "get_evaluation_status") as status_method:
+        status_method.side_effect = [
+            EvaluationStatusResponse(valid=False),
+            EvaluationStatusResponse(valid=True, blocked=True),
+            EvaluationStatusResponse(
+                valid=True, blocked=False, is_running=True, state_available=True, batches_seen=10, samples_seen=5000
+            ),
+            EvaluationStatusResponse(valid=True, blocked=False, exception="Error"),
+            EvaluationStatusResponse(valid=True, blocked=False, is_running=False, state_available=False),
+        ]
+        handler.wait_for_evaluation_completion(10, evaluations)
+        assert status_method.call_count == 5
+
+        # from call get args (call[0]) then get first argument
+        called_ids = [call[0][0].evaluation_id for call in status_method.call_args_list]
+        assert called_ids == [1, 2, 3, 2, 3]
+
+
+@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_store_evaluation_results(test_connection_established):
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    assert handler.evaluator is not None
+
+    res = EvaluationResultResponse(
+        valid=True,
+        evaluation_data=[EvaluationData(metric="Accuracy", result=0.5), EvaluationData(metric="F1-score", result=0.75)],
+    )
+
+    evaluations = {
+        10: EvaluationStatusTracker(dataset_id="MNIST_small", dataset_size=1000),
+        15: EvaluationStatusTracker(dataset_id="MNIST_large", dataset_size=5000),
+    }
+
+    with tempfile.TemporaryDirectory() as path:
+        with patch.object(handler.evaluator, "get_evaluation_result", return_value=res) as get_method:
+            eval_dir = pathlib.Path(path)
+            handler.store_evaluation_results(eval_dir, 5, 3, evaluations)
+            assert get_method.call_count == 2
+
+            called_ids = [call[0][0].evaluation_id for call in get_method.call_args_list]
+            assert called_ids == [10, 15]
+
+            file_path = eval_dir / f"{5}_{3}.eval"
+            assert file_path.exists() and file_path.is_file()
+
+            with open(file_path, "r", encoding="utf-8") as eval_file:
+                evaluation_results = json.load(eval_file)
+                assert evaluation_results == json.loads(
+                    """{
+                    "datasets": [
+                        {
+                            "MNIST_small": {
+                                "dataset_size": 1000,
+                                "metrics": [
+                                    {
+                                        "name": "Accuracy",
+                                        "result": 0.5
+                                    },
+                                    {
+                                        "name": "F1-score",
+                                        "result": 0.75
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "MNIST_large": {
+                                "dataset_size": 5000,
+                                "metrics": [
+                                    {
+                                        "name": "Accuracy",
+                                        "result": 0.5
+                                    },
+                                    {
+                                        "name": "F1-score",
+                                        "result": 0.75
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }"""
+                )
+
+
+@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_store_evaluation_results_invalid(test_connection_established):
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    assert handler.evaluator is not None
+
+    res = EvaluationResultResponse(valid=False)
+
+    evaluations = {10: EvaluationStatusTracker(dataset_id="MNIST_small", dataset_size=1000)}
+
+    with tempfile.TemporaryDirectory() as path:
+        with patch.object(handler.evaluator, "get_evaluation_result", return_value=res) as get_method:
+            eval_dir = pathlib.Path(path)
+
+            handler.store_evaluation_results(eval_dir, 5, 3, evaluations)
+            get_method.assert_called_with(EvaluationResultRequest(evaluation_id=10))
+
+            file_path = eval_dir / f"{5}_{3}.eval"
+            assert file_path.exists() and file_path.is_file()
+
+            with open(file_path, "r", encoding="utf-8") as eval_file:
+                evaluation_results = json.load(eval_file)
+                assert evaluation_results["datasets"] == []

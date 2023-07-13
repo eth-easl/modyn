@@ -101,7 +101,7 @@ def get_evaluation_info(
             MetricConfiguration(
                 name="Accuracy",
                 config=JsonString(value=json.dumps({})),
-                evaluation_transform_function=PythonString(value=get_mock_accuracy_transformer()),
+                evaluation_transformer=PythonString(value=get_mock_accuracy_transformer()),
             )
         ],
         model_id="model",

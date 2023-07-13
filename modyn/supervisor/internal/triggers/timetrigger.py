@@ -1,6 +1,6 @@
 from typing import Optional
 
-from modyn.supervisor.internal.trigger import Trigger
+from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.utils import convert_timestr_to_seconds, validate_timestr
 
 
