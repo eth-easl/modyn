@@ -3,6 +3,11 @@ from transformers import DistilBertTokenizer
 
 
 class DistilBertTokenizerTransform:
+    """
+        Adapted from WildTime's initialize_distilbert_transform
+        Here you can find the original implementation:
+        https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/data/utils.py
+    """
     def __init__(self, max_token_length: int = 300) -> None:
         self.max_token_length = max_token_length
         self.tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
