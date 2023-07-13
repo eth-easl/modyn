@@ -99,7 +99,6 @@ class Selector:
         if not isinstance(self._strategy, CoresetStrategy):
             return 100
 
-        self._strategy.inform_next_trigger()
         return self._strategy.training_status_bar_scale
 
     def get_number_of_partitions(self, trigger_id: int) -> int:
@@ -113,7 +112,6 @@ class Selector:
 
     def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
         if isinstance(self._strategy, CoresetStrategy):
-            self._strategy.inform_next_trigger()
             return (
                 self._strategy.requires_remote_computation,
                 self._strategy.downsampling_strategy,

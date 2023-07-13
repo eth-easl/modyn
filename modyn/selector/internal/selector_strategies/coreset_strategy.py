@@ -30,6 +30,11 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
         self._persist_samples(keys, timestamps, labels)
 
+    def trigger(self) -> tuple[int, int, int]:
+        trigger_id, total_keys_in_trigger, num_partitions = super().trigger()
+        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
+        return trigger_id, total_keys_in_trigger, num_partitions
+
     def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
         for samples in self._get_data():
             random.shuffle(samples)
@@ -71,9 +76,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
                 )
                 .count()
             )
-
-    def inform_next_trigger(self) -> None:
-        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
 
     @property
     def downsampling_strategy(self) -> str:
