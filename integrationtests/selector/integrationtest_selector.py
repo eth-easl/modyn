@@ -628,7 +628,6 @@ def test_many_samples_unevenly_distributed():
 def test_get_available_labels(reset_after_trigger: bool):
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
-    # We test without reset, i.e., after an empty trigger we get the same data
 
     strategy_config = {
         "name": "NewDataStrategy",

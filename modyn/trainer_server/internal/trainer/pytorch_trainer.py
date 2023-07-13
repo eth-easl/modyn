@@ -521,6 +521,7 @@ class PytorchTrainer:
                     )
                     first_label = False
                 else:
+                    assert per_class_dataloader is not None
                     per_class_dataloader.dataset.filtered_label = label
 
                 batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(
