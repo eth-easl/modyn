@@ -348,6 +348,15 @@ properties:
     description: |
       Evaluation configuration.
     properties:
+      device:
+        type: string
+        description: |
+          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
+          and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
+      amp:
+        type: boolean
+        description: |
+          If True, automatic mixed precision will be used.
       datasets:
         type: array
         description: |
@@ -415,19 +424,9 @@ properties:
             - dataloader_workers
             - batch_size
             - metrics
-      device:
-        type: string
-        description: |
-          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
-          and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
-      amp:
-        type: boolean
-        description: |
-          If True, automatic mixed precision will be used.
     required:
       - datasets
       - device
-      - amp
 required:
   - pipeline
   - model

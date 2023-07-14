@@ -52,7 +52,7 @@ class PytorchEvaluator:
         self._metric_result_queue = metric_result_queue
 
         self._num_samples = 0
-        self._contains_holistic_metric = MetricFactory.contains_holistic_metric(self._metrics)
+        self._contains_holistic_metric = MetricFactory.prepare_metrics(self._metrics)
 
         self._info("Initialized PyTorch evaluator.")
 

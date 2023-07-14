@@ -56,12 +56,14 @@ data:
     from PIL import Image
     import io
     def bytes_parser_function(data: bytes) -> Image:
-      return Image.open(io.BytesIO(data))
+      return Image.open(io.BytesIO(data)).convert("RGB")
 trigger:
   id: DataAmountTrigger
   trigger_config:
     data_points_for_trigger: 100
 evaluation:
+  device: "cpu"
+  amp: False
   datasets:
     - dataset_id: mnist
       transformations: ["transforms.ToTensor()",
@@ -87,5 +89,3 @@ evaluation:
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
               return torch.argmax(model_output, dim=-1)
-  device: "cpu"
-  amp: False
