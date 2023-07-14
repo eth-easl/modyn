@@ -2,12 +2,16 @@ import os
 import pathlib
 import shutil
 import tempfile
+from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy, CoresetStrategy
-from modyn.selector.internal.selector_strategies.downsampling_strategies import NoDownsamplingStrategy
+from modyn.selector.internal.selector_strategies.downsampling_strategies import (
+    DownsamplingScheduler,
+    NoDownsamplingStrategy,
+)
 from modyn.selector.internal.selector_strategies.presampling_strategies import RandomPresamplingStrategy
 from modyn.utils import flatten
 
@@ -359,3 +363,22 @@ def test_dataset_size_tail():
     strat.inform_data([1210, 1211, 1212], [0, 1, 2], ["dog", "dog", "cat"])
 
     assert strat._get_trigger_dataset_size() == 9
+
+
+@patch.object(CoresetStrategy, "_on_trigger")
+@patch.object(DownsamplingScheduler, "inform_next_trigger")
+def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: MagicMock):
+    strat = CoresetStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    assert not strat.reset_after_trigger
+    assert strat._next_trigger_id == 0
+
+    test__on_trigger.return_value = [[]]
+
+    trigger_id, trigger_num_keys, _ = strat.trigger()
+
+    assert trigger_id == 0
+    assert strat._next_trigger_id == 1
+    assert trigger_num_keys == 0
+
+    test_inform.assert_called_once_with(1)
+    test__on_trigger.assert_called_once()
