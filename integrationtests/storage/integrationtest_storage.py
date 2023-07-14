@@ -14,6 +14,10 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     GetDataInIntervalRequest,
     GetDataInIntervalResponse,
+    GetDataPerWorkerRequest,
+    GetDataPerWorkerResponse,
+    GetDatasetSizeRequest,
+    GetDatasetSizeResponse,
     GetNewDataSinceRequest,
     GetNewDataSinceResponse,
     GetRequest,
@@ -87,6 +91,43 @@ def check_dataset_availability() -> None:
     response = storage.CheckAvailability(request)
 
     assert response.available, "Dataset is not available."
+
+
+def check_dataset_size(expected_size: int) -> None:
+    storage_channel = connect_to_storage()
+
+    storage = StorageStub(storage_channel)
+    request = GetDatasetSizeRequest(dataset_id="test_dataset")
+    response: GetDatasetSizeResponse = storage.GetDatasetSize(request)
+
+    assert response.success, "Dataset is not available."
+    assert response.num_keys == expected_size
+
+
+def check_dataset_size_invalid() -> None:
+    storage_channel = connect_to_storage()
+
+    storage = StorageStub(storage_channel)
+    request = GetDatasetSizeRequest(dataset_id="unknown_dataset")
+    response: GetDatasetSizeResponse = storage.GetDatasetSize(request)
+
+    assert not response.success, "Dataset is available (even though it should not be)."
+
+
+def check_data_per_worker() -> None:
+    storage_channel = connect_to_storage()
+
+    storage = StorageStub(storage_channel)
+
+    for worker_id in range(6):
+        request = GetDataPerWorkerRequest(dataset_id="test_dataset", worker_id=worker_id, total_workers=6)
+        responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
+
+        assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
+
+        response_keys_size = len(responses[0].keys)
+
+        assert response_keys_size == 4 if worker_id <= 1 else response_keys_size == 3
 
 
 def check_get_current_timestamp() -> None:
@@ -210,6 +251,7 @@ def test_storage() -> None:
     add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
+    check_dataset_size_invalid()
 
     response = None
     for i in range(20):
@@ -225,6 +267,7 @@ def test_storage() -> None:
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
+    check_dataset_size(10)
 
     add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
 
@@ -241,12 +284,15 @@ def test_storage() -> None:
     assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, SECOND_ADDED_IMAGES)
+    check_dataset_size(20)
 
     responses = list(get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9]))
     assert len(responses) == 1, f"Received batched/no response, shouldn't happen: {responses}"
     response = responses[0]
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
+
+    check_data_per_worker()
 
     check_get_current_timestamp()  # Check if the storage service is still available.
 

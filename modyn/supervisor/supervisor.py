@@ -6,8 +6,8 @@ from typing import Optional
 
 import enlighten
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.trigger import Trigger
-from modyn.utils import dynamic_module_import, model_available, trigger_available, validate_yaml
+from modyn.supervisor.internal.triggers import Trigger
+from modyn.utils import dynamic_module_import, is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,13 @@ class Supervisor:
         self,
         pipeline_config: dict,
         modyn_config: dict,
+        eval_directory: pathlib.Path,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
+        self.eval_directory = eval_directory
         self.current_training_id: Optional[int] = None
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
@@ -50,6 +52,9 @@ class Supervisor:
 
         if not self.validate_pipeline_config():
             raise ValueError("Invalid pipeline configuration")
+
+        if not is_directory_writable(self.eval_directory):
+            raise ValueError("No permission to write to the evaluation results directory.")
 
         logging.info("Setting up connections to cluster components.")
         self.grpc = GRPCHandler(modyn_config, self.progress_mgr, self.status_bar)
@@ -99,10 +104,33 @@ class Supervisor:
 
         return True
 
+    @staticmethod
+    def _validate_evaluation_options(evaluation_config: dict) -> bool:
+        is_valid = True
+
+        dataset_ids = [dataset["dataset_id"] for dataset in evaluation_config["datasets"]]
+        if len(set(dataset_ids)) < len(dataset_ids):
+            logger.error("Dataset ids must be unique in evaluation")
+            is_valid = False
+
+        for dataset in evaluation_config["datasets"]:
+            batch_size = dataset["batch_size"]
+            if batch_size < 1:
+                logger.error(f"Invalid batch size: {batch_size}.")
+                is_valid = False
+
+            dataloader_workers = dataset["dataloader_workers"]
+            if dataloader_workers < 1:
+                logger.error(f"Invalid dataloader worker amount: {dataloader_workers}.")
+                is_valid = False
+
+        return is_valid
+
     # pylint: disable=too-many-branches
     def _validate_training_options(self) -> bool:
         is_valid = True
         batch_size = self.pipeline_config["training"]["batch_size"]
+        dataloader_workers = self.pipeline_config["training"]["dataloader_workers"]
         strategy = self.pipeline_config["training"]["selection_strategy"]["name"]
         initial_model = self.pipeline_config["training"]["initial_model"]
 
@@ -111,7 +139,11 @@ class Supervisor:
             is_valid = False
 
         if batch_size < 1:
-            logger.error("Invalid batch size: {batch_size}")
+            logger.error(f"Invalid batch size: {batch_size}.")
+            is_valid = False
+
+        if dataloader_workers < 1:
+            logger.error(f"Invalid dataloader worker amount: {dataloader_workers}.")
             is_valid = False
 
         if strategy not in Supervisor.supported_strategies:
@@ -162,6 +194,9 @@ class Supervisor:
         if not trigger_available(trigger_id):
             logger.error(f"Trigger {trigger_id} is not available within Modyn.")
             is_valid = False
+
+        if "evaluation" in self.pipeline_config:
+            is_valid = is_valid and self._validate_evaluation_options(self.pipeline_config["evaluation"])
 
         return is_valid
 
@@ -321,6 +356,12 @@ class Supervisor:
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
         if self.pipeline_config["training"]["use_previous_model"]:
             self.previous_model_id = trained_model_id
+
+        # Start evaluation
+        if "evaluation" in self.pipeline_config:
+            evaluations = self.grpc.start_evaluation(trained_model_id, self.pipeline_config)
+            self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+            self.grpc.store_evaluation_results(self.eval_directory, self.pipeline_id, trigger_id, evaluations)
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.

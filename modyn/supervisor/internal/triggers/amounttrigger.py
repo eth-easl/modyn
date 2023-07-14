@@ -1,4 +1,4 @@
-from modyn.supervisor.internal.trigger import Trigger
+from modyn.supervisor.internal.triggers.trigger import Trigger
 
 
 class DataAmountTrigger(Trigger):
