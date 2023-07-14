@@ -2,12 +2,12 @@ from typing import Any
 
 import torch
 from torch import nn
-from transformers import DistilBertForSequenceClassification, DistilBertModel
+from transformers import DistilBertModel
 
 
 class ArticleNet:
     """
-    Adapted from WildTime.
+    Adapted from WildTime. This network is used for NLP tasks (Arxiv and Huffpost)
     Here you can find the original implementation:
     https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/article.py
     """
@@ -18,39 +18,37 @@ class ArticleNet:
         self.model.to(device)
 
 
-class DistilBertClassifier(DistilBertForSequenceClassification):
-    def __call__(self, data: torch.Tensor) -> torch.Tensor:
-        input_ids = data[:, :, 0]
-        attention_mask = data[:, :, 1]
-        outputs = super().__call__(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-        )[0]
-        return outputs
-
-
 class DistilBertFeaturizer(DistilBertModel):
     def __init__(self, config: Any) -> None:
         super().__init__(config)
         self.d_out = config.hidden_size
 
     def __call__(self, data: torch.Tensor) -> torch.Tensor:
+        # slice the input tensor to get input ids and attention mask
+        # The model receives as input the output of the tokenizer, where the first dimension
+        # contains the tokens and the second a boolean mask to indicate which tokens are valid
+        # (the sentences have different lengths but the output of the tokenizer has always the same size,
+        # so you need the mask to understand what is useful data and what is just padding)
         input_ids = data[:, :, 0]
         attention_mask = data[:, :, 1]
+        # DistilBert's forward pass
         hidden_state = super().__call__(
             input_ids=input_ids,
             attention_mask=attention_mask,
-        )[0]
-        pooled_output = hidden_state[:, 0]
+        )[
+            0
+        ]  # 0: last hidden state, 1: hiddent states, 2: attentions
+        pooled_output = hidden_state[:, 0]  # first token is the pooled output, which is the aggregated representation
+        # of the entire input sequence
         return pooled_output
 
 
 class ArticleNetwork(nn.Module):
     def __init__(self, num_classes: int) -> None:
         super().__init__()
-        featurizer = DistilBertFeaturizer.from_pretrained("distilbert-base-uncased")
-        classifier = nn.Linear(featurizer.d_out, num_classes)
-        self.model = nn.Sequential(featurizer, classifier)
+        self.featurizer = DistilBertFeaturizer.from_pretrained("distilbert-base-uncased")
+        self.classifier = nn.Linear(self.featurizer.d_out, num_classes)
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
-        return self.model(data)
+        embedding = self.featurizer(data)
+        return self.classifier(embedding)
