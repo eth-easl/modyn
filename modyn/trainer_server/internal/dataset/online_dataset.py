@@ -36,7 +36,7 @@ class OnlineDataset(IterableDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
-        tokenizer: str,
+        tokenizer: Optional[str],
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -60,7 +60,7 @@ class OnlineDataset(IterableDataset):
 
         # tokenizer for NLP tasks
         self._tokenizer = None
-        if tokenizer != "":
+        if tokenizer is not None:
             self._tokenizer = self._instantiate_tokenizer(tokenizer)
 
         logger.debug("Initialized OnlineDataset.")
@@ -82,20 +82,24 @@ class OnlineDataset(IterableDataset):
 
         return sample_list, label_list
 
-    def _deserialize_torchvision_transforms(self) -> None:
+    def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
 
         self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
+
+        if self._tokenizer is not None:
+            self._transform_list.append(self._tokenizer)
+
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
-        self._deserialize_torchvision_transforms()
+        self._setup_composed_transform()
 
     def _init_grpc(self) -> None:
         storage_channel = grpc.insecure_channel(
@@ -157,8 +161,6 @@ class OnlineDataset(IterableDataset):
         assert self._uses_weights is not None
         # mypy complains here because _transform has unknown type, which is ok
         tranformed_sample = self._transform(sample)  # type: ignore
-        if self._tokenizer is not None:
-            tranformed_sample = self._tokenizer(tranformed_sample)
 
         if self._uses_weights:
             return key, tranformed_sample, label, weight

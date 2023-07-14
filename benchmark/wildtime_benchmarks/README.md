@@ -19,12 +19,13 @@ The goal is to predict the sex given a yearbook picture.
 The dataset contains 37189 samples collected from 1930 to 2013. 
 Since timestamps in Modyn are based on Unix Timestamps (so 0 is 1/1/1970) we have to remap the years to days. 
 Precisely, the timestamp for pictures from 1930 is 1/1/1970, then 2/1/1970 for the ones taken in 1931 and so forth. 
+Samples are saved using BinaryFileWrapper by grouping all samples of the same year in one file.
 
 ### FMoW
 The goal is to predict land use for example, _park_, _port_, _police station_ and _swimming pool_, given a satellite image.
 Due to human activity, satellite imagery changes over time, requiring models that are robust to temporal distribution shifts.
 The dataset contains more than 100.000 samples collected from 2002 to 2017. 
-Every picture is stored separately (in png format) and the os timestamp is set accordingly.
+Every picture is stored separately (in png format and loaded using SingleSampleFileWrapper) and the os timestamp is set accordingly.
 
 ### HuffPost
 The goal is to predict the tag of news given headlines. 
