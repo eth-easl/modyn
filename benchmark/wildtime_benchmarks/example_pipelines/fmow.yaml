@@ -1,5 +1,5 @@
 pipeline:
-  name: FeatureMapoftheWorld (fmow) Test Pipeline
+  name: FunctionalMapoftheWorld (fmow) Test Pipeline
   description: Example pipeline
   version: 1.0.0
 model:
