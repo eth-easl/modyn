@@ -23,19 +23,6 @@ def main() -> None:
     downloader.clean_folder()
 
 
-def parse_metadata(data_dir: str) -> list:
-    filename = os.path.join(data_dir, "fmow_v1.1", "rgb_metadata.csv")
-    metadata = []
-
-    with open(filename, 'r') as file:
-        csv_reader = csv.reader(file)
-        next(csv_reader)
-        for row in csv_reader:
-            picture_info = {"split": row[0], "timestamp": row[11]}
-            metadata.append(picture_info)
-    return metadata
-
-
 class FMOWDownloader(Dataset):
     time_steps = list(range(16))
     input_dim = (3, 224, 224)
@@ -55,7 +42,7 @@ class FMOWDownloader(Dataset):
             self._root = get_dataset(dataset="fmow", root_dir=data_dir, download=True).root
         except ValueError:
             pass
-        self.metadata = parse_metadata(data_dir)
+        self.metadata = self.parse_metadata(data_dir)
         self.data_dir = data_dir
 
     def clean_folder(self) -> None:
@@ -97,6 +84,18 @@ class FMOWDownloader(Dataset):
                 image_file = os.path.join(self.data_dir, f"{index}.png")
                 os.utime(image_file, (timestamp.timestamp(), timestamp.timestamp()))
 
+    @staticmethod
+    def parse_metadata(data_dir: str) -> list:
+        filename = os.path.join(data_dir, "fmow_v1.1", "rgb_metadata.csv")
+        metadata = []
+
+        with open(filename, 'r') as file:
+            csv_reader = csv.reader(file)
+            next(csv_reader)
+            for row in csv_reader:
+                picture_info = {"split": row[0], "timestamp": row[11]}
+                metadata.append(picture_info)
+        return metadata
 
 if __name__ == "__main__":
     main()

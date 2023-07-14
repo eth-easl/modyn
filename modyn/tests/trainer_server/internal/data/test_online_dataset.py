@@ -65,7 +65,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             storage_address="localhost:1234",
             selector_address="localhost:1234",
             training_id=42,
-            tokenizer="",
+            tokenizer=None,
         )._init_transforms()
 
     with pytest.raises(ValueError):
@@ -490,7 +490,7 @@ def test_init_transforms(
     assert online_dataset._bytes_parser_function is None
     assert online_dataset._transform is None
 
-    with patch.object(online_dataset, "_deserialize_torchvision_transforms") as tv_ds:
+    with patch.object(online_dataset, "_setup_composed_transform") as tv_ds:
         online_dataset._init_transforms()
         assert online_dataset._bytes_parser_function is not None
         assert online_dataset._bytes_parser_function(b"\x01") == 1

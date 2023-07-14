@@ -19,20 +19,6 @@ def main():
     downloader = YearbookDownloader(args.dir)
     downloader.store_data()
 
-def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
-    with open(output_file_name, "wb") as f:
-        for tensor1, tensor2 in data:
-            features_bytes = tensor1.numpy().tobytes()
-            label_integer = tensor2.item()
-
-            features_size = len(features_bytes)
-            assert features_size == 4096
-
-            f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
-            f.write(features_bytes)
-
-    os.utime(output_file_name, (timestamp, timestamp))
-
 
 class YearbookDownloader(Dataset):
     time_steps = [i for i in range(1930, 2014)]
@@ -77,11 +63,26 @@ class YearbookDownloader(Dataset):
         for year in self.time_steps:
             print(f"Saving data for year {year}")
             ds = self._get_year_data(year)
-            create_binary_file(ds,
-                               os.path.join(self.data_dir, f"{year}.bin"),
-                               create_fake_timestamp(year, base_year=1930))
+            self.create_binary_file(ds,
+                                    os.path.join(self.data_dir, f"{year}.bin"),
+                                    create_fake_timestamp(year, base_year=1930))
 
         os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
+
+    @staticmethod
+    def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
+        with open(output_file_name, "wb") as f:
+            for tensor1, tensor2 in data:
+                features_bytes = tensor1.numpy().tobytes()
+                label_integer = tensor2.item()
+
+                features_size = len(features_bytes)
+                assert features_size == 4096
+
+                f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
+                f.write(features_bytes)
+
+        os.utime(output_file_name, (timestamp, timestamp))
 
 
 if __name__ == "__main__":

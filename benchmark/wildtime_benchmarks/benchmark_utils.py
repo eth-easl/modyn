@@ -9,10 +9,10 @@ import gdown
 DAY_LENGTH_SECONDS = 24 * 60 * 60
 
 
-def maybe_download(drive_id: str, destination_dir: str, destination_file_name: str) -> None:
+def download_if_not_exists(drive_id: str, destination_dir: str, destination_file_name: str) -> None:
     """
     Function to download data from Google Drive. Used for Wild-time based benchmarks.
-    This function is adapted from wild-time-data
+    This function is adapted from wild-time-data's maybe_download
     """
     destination_dir = pathlib.Path(destination_dir)
     destination = destination_dir / destination_file_name
