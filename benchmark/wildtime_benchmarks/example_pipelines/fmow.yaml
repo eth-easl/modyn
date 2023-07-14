@@ -45,8 +45,8 @@ data:
     import io
     def bytes_parser_function(data: bytes) -> Image:
       return Image.open(io.BytesIO(data)).convert("RGB")
-
+#change and configure it if you want day/week/month granularity
 trigger:
-  id: TimeTrigger
+  id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: "1w"
+    data_points_for_trigger: 2000
