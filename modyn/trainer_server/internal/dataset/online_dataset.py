@@ -146,7 +146,7 @@ class OnlineDataset(IterableDataset):
 
         return key, sample, label, weight
 
-    def _yield_samples(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Tuple:
+    def _get_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
         assert self._uses_weights is not None
         # mypy complains here because _transform has unknown type, which is ok
         if self._uses_weights:
@@ -198,7 +198,10 @@ class OnlineDataset(IterableDataset):
                         worker_id=worker_id, partition_id=partition + 1
                     )
 
-                yield self._yield_samples(key, sample, label, weight)
+                data_tuple = self._get_data_tuple(key, sample, label, weight)
+
+                if data_tuple is not None:
+                    yield data_tuple
 
             # this should mean we keep only two partitions in mem
             if partition < self._num_partitions - 1:

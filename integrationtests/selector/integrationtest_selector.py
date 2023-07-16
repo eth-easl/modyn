@@ -4,6 +4,7 @@ import grpc
 from integrationtests.utils import get_modyn_config
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
+    GetAvailableLabelsRequest,
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     JsonString,
@@ -624,6 +625,64 @@ def test_many_samples_unevenly_distributed():
     assert len(total_samples) == 10001
 
 
+def test_get_available_labels(reset_after_trigger: bool):
+    selector_channel = connect_to_selector_servicer()
+    selector = SelectorStub(selector_channel)
+
+    strategy_config = {
+        "name": "NewDataStrategy",
+        "maximum_keys_in_memory": 2,
+        "config": {"limit": -1, "reset_after_trigger": reset_after_trigger},
+    }
+
+    pipeline_id = selector.register_pipeline(
+        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+    ).pipeline_id
+
+    selector.inform_data(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=[0, 1, 2],
+            timestamps=[1, 2, 3],
+            labels=[1, 0, 1],
+        )
+    )
+    available_labels = selector.get_available_labels(
+        GetAvailableLabelsRequest(pipeline_id=pipeline_id)
+    ).available_labels
+
+    assert len(available_labels) == 2
+    assert 0 in available_labels and 1 in available_labels
+
+    selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=[3],
+            timestamps=[1],
+            labels=[189],
+        )
+    )
+
+    selector.inform_data(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=[4, 5, 6],
+            timestamps=[4, 5, 6],
+            labels=[10, 7, 45],
+        )
+    )
+    available_labels = selector.get_available_labels(
+        GetAvailableLabelsRequest(pipeline_id=pipeline_id)
+    ).available_labels
+
+    if reset_after_trigger:
+        assert len(available_labels) == 3
+        assert sorted(available_labels) == [7, 10, 45]
+    else:
+        assert len(available_labels) == 6
+        assert sorted(available_labels) == [0, 1, 7, 10, 45, 189]
+
+
 if __name__ == "__main__":
     test_newdata()
     test_empty_triggers()
@@ -631,3 +690,5 @@ if __name__ == "__main__":
     test_many_samples_unevenly_distributed()
     test_abstract_downsampler(reset_after_trigger=False)
     test_abstract_downsampler(reset_after_trigger=True)
+    test_get_available_labels(reset_after_trigger=False)
+    test_get_available_labels(reset_after_trigger=True)

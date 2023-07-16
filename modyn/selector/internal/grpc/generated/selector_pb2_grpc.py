@@ -48,6 +48,11 @@ class SelectorStub(object):
                 request_serializer=selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
                 response_deserializer=selector__pb2.NumberOfPartitionsResponse.FromString,
                 )
+        self.get_available_labels = channel.unary_unary(
+                '/selector.Selector/get_available_labels',
+                request_serializer=selector__pb2.GetAvailableLabelsRequest.SerializeToString,
+                response_deserializer=selector__pb2.AvailableLabelsResponse.FromString,
+                )
         self.get_selection_strategy = channel.unary_unary(
                 '/selector.Selector/get_selection_strategy',
                 request_serializer=selector__pb2.GetSelectionStrategyRequest.SerializeToString,
@@ -110,6 +115,12 @@ class SelectorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_available_labels(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def get_selection_strategy(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -165,6 +176,11 @@ def add_SelectorServicer_to_server(servicer, server):
                     servicer.get_number_of_partitions,
                     request_deserializer=selector__pb2.GetNumberOfPartitionsRequest.FromString,
                     response_serializer=selector__pb2.NumberOfPartitionsResponse.SerializeToString,
+            ),
+            'get_available_labels': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_available_labels,
+                    request_deserializer=selector__pb2.GetAvailableLabelsRequest.FromString,
+                    response_serializer=selector__pb2.AvailableLabelsResponse.SerializeToString,
             ),
             'get_selection_strategy': grpc.unary_unary_rpc_method_handler(
                     servicer.get_selection_strategy,
@@ -307,6 +323,23 @@ class Selector(object):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_partitions',
             selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
             selector__pb2.NumberOfPartitionsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_available_labels(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_available_labels',
+            selector__pb2.GetAvailableLabelsRequest.SerializeToString,
+            selector__pb2.AvailableLabelsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
