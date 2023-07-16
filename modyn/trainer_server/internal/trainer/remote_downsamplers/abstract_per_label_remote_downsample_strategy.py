@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
 
