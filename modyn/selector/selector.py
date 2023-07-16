@@ -107,6 +107,9 @@ class Selector:
 
         return self._trigger_partition_cache[trigger_id]
 
+    def get_available_labels(self) -> list[int]:
+        return self._strategy.get_available_labels()
+
     def uses_weights(self) -> bool:
         return self._strategy.uses_weights
 

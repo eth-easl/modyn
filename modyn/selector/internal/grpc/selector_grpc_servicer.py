@@ -6,8 +6,10 @@ import grpc
 
 # pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    AvailableLabelsResponse,
     DataInformRequest,
     Empty,
+    GetAvailableLabelsRequest,
     GetNumberOfPartitionsRequest,
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
@@ -124,6 +126,16 @@ class SelectorGRPCServicer(SelectorServicer):
         num_partitions = self.selector_manager.get_number_of_partitions(pipeline_id, trigger_id)
 
         return NumberOfPartitionsResponse(num_partitions=num_partitions)
+
+    def get_available_labels(  # pylint: disable-next=unused-argument
+        self, request: GetAvailableLabelsRequest, context: grpc.ServicerContext
+    ) -> AvailableLabelsResponse:
+        pipeline_id = request.pipeline_id
+        logger.info(f"[Pipeline {pipeline_id}]: Received get available labels request")
+
+        available_labels = self.selector_manager.get_available_labels(pipeline_id)
+
+        return AvailableLabelsResponse(available_labels=available_labels)
 
     def uses_weights(  # pylint: disable-next=unused-argument
         self, request: UsesWeightsRequest, context: grpc.ServicerContext

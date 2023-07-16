@@ -12,9 +12,17 @@ from typing import Optional, Tuple, Union
 
 import grpc
 import torch
-from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest, SelectionStrategyResponse
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    AvailableLabelsResponse,
+    GetAvailableLabelsRequest,
+    GetSelectionStrategyRequest,
+    SelectionStrategyResponse,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
+from modyn.trainer_server.internal.dataset.data_utils import (
+    prepare_dataloaders,
+    prepare_per_class_dataloader_from_online_dataset,
+)
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
@@ -22,6 +30,9 @@ from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callb
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
     get_tensors_subset,
+)
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
+    AbstractPerLabelRemoteDownsamplingStrategy,
 )
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
@@ -490,28 +501,40 @@ class PytorchTrainer:
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
 
+        # set the model to eval to avoid errors like Expected more than 1 value per channel when training, got ...
+        self._model.model.eval()
         # keys must be taken from the selector.
         # This operation is needed only when we sample several times (otherwise the source is already the selector)
         selector_key_source = SelectorKeySource(
             pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, selector_address=self.selector_address
         )
         self._train_dataloader.dataset.change_key_source(selector_key_source)
-
-        number_of_samples = 0
-
         self._downsampler.init_downsampler()
+        if self._downsampler.requires_data_label_by_label:
+            assert isinstance(self._downsampler, AbstractPerLabelRemoteDownsamplingStrategy)
+            available_labels = self._get_available_labels_from_selector()
 
-        batch_number = 0
-        for batch_number, batch in enumerate(self._train_dataloader):
-            self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
+            number_of_samples = 0
+            batch_number = 0
+            first_label = True
+            for label in available_labels:
+                if first_label:
+                    per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
+                        self._train_dataloader.dataset, self._batch_size, self._num_dataloaders, label
+                    )
+                    first_label = False
+                else:
+                    assert per_class_dataloader is not None
+                    per_class_dataloader.dataset.filtered_label = label
 
-            sample_ids, target, data = self.preprocess_batch(batch)
-            number_of_samples += len(sample_ids)
-
-            with torch.autocast(self._device_type, enabled=self._amp):
-                # compute the scores and accumulate them
-                model_output = self._model.model(data)
-                self._downsampler.inform_samples(sample_ids, model_output, target)
+                batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(
+                    per_class_dataloader,
+                    previous_batch_number=batch_number,
+                    previous_number_of_samples=number_of_samples,
+                )
+                self._downsampler.inform_end_of_current_label()
+        else:
+            batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(self._train_dataloader)
 
         selected_ids, weights = self._downsampler.select_points()
 
@@ -536,9 +559,50 @@ class PytorchTrainer:
         self._train_dataloader.dataset.change_key_source(new_key_source)
 
         self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
+        # set the model to train
+        self._model.model.train()
+
+    def _iterate_dataloader_and_compute_scores(
+        self,
+        dataloader: torch.utils.data.DataLoader,
+        previous_batch_number: int = 0,
+        previous_number_of_samples: int = 0,
+    ) -> Tuple[int, int]:
+        """
+        Function to iterate a dataloader, compute the forward pass and send the forward output to the downsampler.
+        Args:
+            dataloader: torch.dataloader to get the data
+            previous_batch_number: number of batches processed before calling this function. Useful when this function
+            is called several times to keep track of previous invocations (ex label by label dataloader). We need to
+            have a total to correctly update the queue and show the progress in the supervisor counter.
+            previous_number_of_samples: number of samples processed before calling this function. See above for the use.
+
+        Returns:
+            Updated number of batches and samples
+        """
+        number_of_samples = previous_number_of_samples
+        batch_number = previous_batch_number
+        for batch_number, batch in enumerate(dataloader):
+            self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
+
+            sample_ids, target, data = self.preprocess_batch(batch)
+            number_of_samples += len(sample_ids)
+
+            with torch.autocast(self._device_type, enabled=self._amp):
+                # compute the scores and accumulate them
+                model_output = self._model.model(data)
+                self._downsampler.inform_samples(sample_ids, model_output, target)
+        return batch_number, number_of_samples
 
     def end_of_trigger_cleaning(self) -> None:
         self._train_dataloader.dataset.end_of_trigger_cleaning()
+
+    def _get_available_labels_from_selector(self) -> list[int]:
+        req = GetAvailableLabelsRequest(pipeline_id=self.pipeline_id)
+
+        response: AvailableLabelsResponse = self.selector_stub.get_available_labels(req)
+
+        return response.available_labels
 
 
 def train(
