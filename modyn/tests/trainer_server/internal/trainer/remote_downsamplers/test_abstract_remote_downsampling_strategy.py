@@ -1,7 +1,7 @@
 # pylint: disable=abstract-class-instantiated
 from unittest.mock import patch
 
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
 

@@ -72,7 +72,6 @@ class AbstractSelectionStrategy(ABC):
         self._pipeline_id = pipeline_id
         self._maximum_keys_in_memory = maximum_keys_in_memory
         self._insertion_threads = modyn_config["selector"]["insertion_threads"]
-        self._requires_remote_computation = False
 
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ
         self._is_mac = platform.system() == "Darwin"
@@ -136,6 +135,7 @@ class AbstractSelectionStrategy(ABC):
         Args:
             keys (list[str]): A list of keys of the data
             timestamps (list[int]): A list of timestamps of the data.
+            labels list[int]: A list of labels
         """
         raise NotImplementedError
 
@@ -352,7 +352,6 @@ class AbstractSelectionStrategy(ABC):
             keys (list[str]): A list of keys of the data
             timestamps (list[int]): A list of timestamps of the data.
             labels (list[int]): A list of labels of the data.
-            database (MetadataDatabaseConnection): The database connection.
         """
         # TODO(#116): Right now we persist all datapoint into DB. We might want to
         # keep this partly in memory for performance.
