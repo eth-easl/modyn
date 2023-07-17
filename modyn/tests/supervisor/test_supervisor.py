@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 from modyn.supervisor import Supervisor
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
+from modyn.supervisor.internal.utils.evaluation_result_writer import AbstractEvaluationResultWriter, JsonResultWriter
 from modyn.supervisor.internal.utils.evaluation_status_tracker import EvaluationStatusTracker
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
@@ -215,21 +216,29 @@ def test__validate_training_options():
     assert sup._validate_training_options()
 
 
+@patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test__validate_evaluation_options():
+    sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
+
     # Check that evaluation with identical dataset_ids gets rejected
     evaluation_config = get_minimal_evaluation_config()
     evaluation_config["datasets"].append({"dataset_id": "MNIST_eval", "batch_size": 3, "dataloader_workers": 3})
-    assert not Supervisor._validate_evaluation_options(evaluation_config)
+    assert not sup._validate_evaluation_options(evaluation_config)
 
     # Check that evaluation with an invalid batch size gets rejected
     evaluation_config = get_minimal_evaluation_config()
     evaluation_config["datasets"][0]["batch_size"] = -1
-    assert not Supervisor._validate_evaluation_options(evaluation_config)
+    assert not sup._validate_evaluation_options(evaluation_config)
 
     # Check that evaluation with an invalid dataloader amount gets rejected
     evaluation_config = get_minimal_evaluation_config()
     evaluation_config["datasets"][0]["dataloader_workers"] = -1
-    assert not Supervisor._validate_evaluation_options(evaluation_config)
+    assert not sup._validate_evaluation_options(evaluation_config)
+
+    # Check that evaluation with invalid evaluation writer gets rejected
+    evaluation_config = get_minimal_evaluation_config()
+    evaluation_config["result_writers"] = ["json", "unknown", "unknown2"]
+    assert not sup._validate_evaluation_options(evaluation_config)
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
@@ -591,6 +600,7 @@ def test__run_training_with_evaluation(
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     evaluation_pipeline_config = get_minimal_pipeline_config()
     evaluation_pipeline_config["evaluation"] = get_minimal_evaluation_config()
+    evaluation_pipeline_config["evaluation"]["result_writers"] = ["json"]
     sup.pipeline_config = evaluation_pipeline_config
 
     assert sup.validate_pipeline_config_schema()
@@ -606,7 +616,13 @@ def test__run_training_with_evaluation(
 
     test_start_evaluation.assert_called_once_with(101, evaluation_pipeline_config)
     test_wait_for_evaluation_completion.assert_called_once_with(1337, evaluations)
-    test_store_evaluation_results.assert_called_once_with(EVALUATION_DIRECTORY, 42, 21, evaluations)
+    test_store_evaluation_results.assert_called_once()
+    assert len(test_store_evaluation_results.call_args[0][0]) == 1
+    result_writer: AbstractEvaluationResultWriter = test_store_evaluation_results.call_args[0][0][0]
+    assert result_writer.get_name() == JsonResultWriter.get_name()
+    assert result_writer.eval_directory == EVALUATION_DIRECTORY
+    assert result_writer.pipeline_id == 42
+    assert result_writer.trigger_id == 21
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)

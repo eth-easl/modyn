@@ -1,7 +1,6 @@
 # pylint: disable=no-name-in-module
 import json
 import logging
-import pathlib
 from collections import deque
 from time import sleep
 from typing import Iterable, Optional
@@ -46,6 +45,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
+from modyn.supervisor.internal.utils.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -612,16 +612,12 @@ class GRPCHandler:
 
     def store_evaluation_results(
         self,
-        eval_directory: pathlib.Path,
-        pipeline_id: int,
-        trigger_id: int,
+        evaluation_result_writers: list[AbstractEvaluationResultWriter],
         evaluations: dict[int, EvaluationStatusTracker],
     ) -> None:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
-        # TODO(#281): store results in a framework-specific format
-        results: dict = {"datasets": []}
         for evaluation_id in evaluations:
             req = EvaluationResultRequest(evaluation_id=evaluation_id)
             res: EvaluationResultResponse = self.evaluator.get_evaluation_result(req)
@@ -629,12 +625,11 @@ class GRPCHandler:
             if not res.valid:
                 logger.warning(f"Cannot get the evaluation result for evaluation {evaluation_id}")
                 continue
+            dataset_id = evaluations[evaluation_id].dataset_id
+            dataset_size = evaluations[evaluation_id].dataset_size
 
-            dataset_results: dict = {"dataset_size": evaluations[evaluation_id].dataset_size, "metrics": []}
-            for metric in res.evaluation_data:
-                dataset_results["metrics"].append({"name": metric.metric, "result": metric.result})
-            results["datasets"].append({evaluations[evaluation_id].dataset_id: dataset_results})
+            for result_writer in evaluation_result_writers:
+                result_writer.add_evaluation_data(dataset_id, dataset_size, res.evaluation_data)
 
-        file_name = f"{pipeline_id}_{trigger_id}.eval"
-        with open(eval_directory / file_name, "w+", encoding="utf-8") as output_file:
-            json.dump(results, output_file)
+        for result_writer in evaluation_result_writers:
+            result_writer.store_results()

@@ -93,3 +93,6 @@ model_storage:
 evaluator:
   hostname: "evaluator"
   port: "50061"
+
+tensorboard:
+  port: "50062"
