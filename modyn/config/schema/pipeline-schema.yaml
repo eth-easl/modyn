@@ -434,8 +434,9 @@ properties:
             - batch_size
             - metrics
     required:
-      - datasets
       - device
+      - result_writers
+      - datasets
 required:
   - pipeline
   - model
