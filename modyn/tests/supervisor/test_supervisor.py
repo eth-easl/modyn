@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 from modyn.supervisor import Supervisor
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, JsonResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.utils.evaluation_status_tracker import EvaluationStatusTracker
 
