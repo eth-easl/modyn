@@ -45,10 +45,16 @@ class SelectorManager:
             )
 
         if any(Path(trigger_sample_directory).iterdir()) and not ignore_existing_trigger_samples:
-            raise ValueError(
-                f"The trigger sample directory {trigger_sample_directory} is not empty. \
-                  Please delete the directory or set the ignore_existing_trigger_samples flag to True."
-            )
+            folder = Path(trigger_sample_directory)
+            for filename in os.listdir(folder):
+                file_path = os.path.join(folder, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print("Failed to delete %s. Reason: %s" % (file_path, e))
 
         if not is_directory_writable(Path(trigger_sample_directory)):
             raise ValueError(
