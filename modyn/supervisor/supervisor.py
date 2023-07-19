@@ -1,20 +1,19 @@
 import logging
 import os
 import pathlib
-import subprocess
-from multiprocessing import Process
 from time import sleep
 from typing import Optional
 
 import enlighten
-from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.triggers import Trigger
-from modyn.supervisor.internal.utils.evaluation_result_writer import (
+from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
     TensorboardResultWriter,
 )
+from modyn.supervisor.internal.grpc_handler import GRPCHandler
+from modyn.supervisor.internal.triggers import Trigger
 from modyn.utils import dynamic_module_import, is_directory_writable, model_available, trigger_available, validate_yaml
+from tensorboard import program
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ class Supervisor:
         "CoresetStrategy",
     ]
 
-    supported_evaluation_result_writers = {JsonResultWriter, TensorboardResultWriter}
+    supported_evaluation_result_writers: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
 
     def __init__(
         self,
@@ -85,11 +84,10 @@ class Supervisor:
         if "seed" in pipeline_config["training"]:
             self.grpc.seed_selector(pipeline_config["training"]["seed"])
 
-        self.tensorboard_process: Optional[Process] = None
         if "tensorboard" in self.modyn_config:
-            port = int(self.modyn_config["tensorboard"]["port"])
-            self.tensorboard_process = Process(target=self._run_tensorboard, args=(port,))
-            self.tensorboard_process.start()
+            port = self.modyn_config["tensorboard"]["port"]
+            self._run_tensorboard(port)
+            logger.info(f"Starting up tensorboard on port {port}.")
 
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
@@ -127,8 +125,7 @@ class Supervisor:
 
         if "result_writers" in evaluation_config:
             writer_names = set(evaluation_config["result_writers"])
-            supported_names = {writer.get_name() for writer in self.supported_evaluation_result_writers}
-            if diff := writer_names.difference(supported_names):
+            if diff := writer_names.difference(self.supported_evaluation_result_writers.keys()):
                 logger.error(f"Found invalid evaluation result writers: {', '.join(diff)}.")
                 is_valid = False
 
@@ -243,12 +240,25 @@ class Supervisor:
     def validate_system(self) -> bool:
         return self.dataset_available() and self.grpc.trainer_server_available()
 
-    def _run_tensorboard(self, port: int) -> None:
-        logger.info(f"Starting up tensorboard on port {port}.")
-        try:
-            subprocess.call(f"tensorboard --logdir {self.eval_directory} --bind_all --port={port}".split(" "))
-        except KeyboardInterrupt:
-            logger.info("Tensorboard stopped.")
+    def _run_tensorboard(self, port: str) -> None:
+        logging.getLogger("tensorboard").setLevel(logging.ERROR)
+        logging.getLogger("MARKDOWN").setLevel(logging.ERROR)
+
+        tensorboard = program.TensorBoard()
+        tensorboard.configure(
+            argv=[
+                None,
+                "--logdir",
+                str(self.eval_directory),
+                "--bind_all",
+                "--port",
+                port,
+                "--window_title",
+                "Modyn TensorBoard",
+            ]
+        )
+        tensorboard.launch()
+        logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:
@@ -388,16 +398,12 @@ class Supervisor:
             evaluations = self.grpc.start_evaluation(trained_model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
-            writer_names: set[str] = set()
-            if "result_writers" in self.pipeline_config["evaluation"]:
-                writer_names.update(self.pipeline_config["evaluation"]["result_writers"])
-
-            writers: list[AbstractEvaluationResultWriter] = []
-            for writer_handler in self.supported_evaluation_result_writers:
-                if writer_handler.get_name() in writer_names:
-                    writers.append(writer_handler(self.pipeline_id, trigger_id, self.eval_directory))
-
+            writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
+            writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
             self.grpc.store_evaluation_results(writers, evaluations)
+
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
+        return self.supported_evaluation_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.

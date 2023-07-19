@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 from modyn.supervisor import Supervisor
+from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, JsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.utils.evaluation_result_writer import AbstractEvaluationResultWriter, JsonResultWriter
 from modyn.supervisor.internal.utils.evaluation_status_tracker import EvaluationStatusTracker
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
@@ -619,7 +619,6 @@ def test__run_training_with_evaluation(
     test_store_evaluation_results.assert_called_once()
     assert len(test_store_evaluation_results.call_args[0][0]) == 1
     result_writer: AbstractEvaluationResultWriter = test_store_evaluation_results.call_args[0][0][0]
-    assert result_writer.get_name() == JsonResultWriter.get_name()
     assert result_writer.eval_directory == EVALUATION_DIRECTORY
     assert result_writer.pipeline_id == 42
     assert result_writer.trigger_id == 21

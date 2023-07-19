@@ -33,9 +33,9 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.utils import EvaluationStatusTracker
-from modyn.supervisor.internal.utils.evaluation_result_writer import JsonResultWriter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     StartTrainingResponse,
     StoreFinalModelRequest,

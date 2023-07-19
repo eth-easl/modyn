@@ -359,12 +359,13 @@ properties:
           If True, automatic mixed precision will be used.
       result_writers:
         type: array
+        description: |
+          Specifies in which formats to store the evaluation results. We currently support json and tensorboard.
+        minItems: 1
         items:
           type: string
           description: |
             Name of the evaluation result writer.
-        description: |
-          Specifies in which format(s) to store the evaluation results. We currently support json and tensorboard.
       datasets:
         type: array
         description: |
