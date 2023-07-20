@@ -335,11 +335,22 @@ def test_register_pipeline_at_selector(test_grpc_connection_established):
         mock.return_value = PipelineResponse(pipeline_id=42)
 
         result = handler.register_pipeline_at_selector(
-            {"pipeline": {"name": "test"}, "training": {"dataloader_workers": 2, "selection_strategy": {}}}
+            {
+                "pipeline": {"name": "test"},
+                "training": {"dataloader_workers": 2, "selection_strategy": {}},
+                "model": {"id": "ResNet18"},
+            }
         )
 
         assert result == 42
-        mock.assert_called_once_with(RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value="{}")))
+        mock.assert_called_once_with(
+            RegisterPipelineRequest(
+                num_workers=2,
+                selection_strategy=JsonString(value="{}"),
+                model_id="ResNet18",
+                model_configuration=JsonString(value="{}"),
+            )
+        )
 
 
 def test_unregister_pipeline_at_selector():

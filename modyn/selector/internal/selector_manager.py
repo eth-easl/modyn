@@ -57,7 +57,7 @@ class SelectorManager:
                 + f"Directory info: {os.stat(trigger_sample_directory)}"
             )
 
-    def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
+    def register_pipeline(self, num_workers: int, selection_strategy: str, model_id: str, model_config: str) -> int:
         """
         Registers a new pipeline at the Selector.
         Returns:
@@ -70,7 +70,7 @@ class SelectorManager:
 
         with self._next_pipeline_lock:
             with MetadataDatabaseConnection(self._modyn_config) as database:
-                pipeline_id = database.register_pipeline(num_workers)
+                pipeline_id = database.register_pipeline(num_workers, model_id, model_config)
 
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
         selector = Selector(selection_strategy, pipeline_id, num_workers, self._selector_cache_size)

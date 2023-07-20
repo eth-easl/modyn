@@ -89,17 +89,24 @@ class RegisterPipelineRequest(google.protobuf.message.Message):
 
     NUM_WORKERS_FIELD_NUMBER: builtins.int
     SELECTION_STRATEGY_FIELD_NUMBER: builtins.int
+    MODEL_ID_FIELD_NUMBER: builtins.int
+    MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     num_workers: builtins.int
     @property
     def selection_strategy(self) -> global___JsonString: ...
+    model_id: builtins.str
+    @property
+    def model_configuration(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
         num_workers: builtins.int = ...,
         selection_strategy: global___JsonString | None = ...,
+        model_id: builtins.str = ...,
+        model_configuration: global___JsonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["selection_strategy", b"selection_strategy"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["num_workers", b"num_workers", "selection_strategy", b"selection_strategy"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["model_configuration", b"model_configuration", "selection_strategy", b"selection_strategy"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_configuration", b"model_configuration", "model_id", b"model_id", "num_workers", b"num_workers", "selection_strategy", b"selection_strategy"]) -> None: ...
 
 global___RegisterPipelineRequest = RegisterPipelineRequest
 

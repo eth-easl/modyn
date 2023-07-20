@@ -36,8 +36,6 @@ message StartTrainingRequest {
   int32 trigger_id = 2;
   string device = 3;
   bool amp = 4;
-  string model_id = 5;
-  JsonString model_configuration = 6;
   bool use_pretrained_model = 7;
   bool load_optimizer_state = 8;
   int32 pretrained_model_id = 9;

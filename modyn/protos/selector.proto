@@ -36,6 +36,8 @@ message TriggerResponse { int32 trigger_id = 1; }
 message RegisterPipelineRequest {
   int32 num_workers = 1;
   JsonString selection_strategy = 2;
+  string model_id = 3;
+  JsonString model_configuration = 4;
 }
 
 message PipelineResponse { int32 pipeline_id = 1; }

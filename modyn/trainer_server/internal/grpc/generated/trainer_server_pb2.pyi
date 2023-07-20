@@ -116,8 +116,6 @@ class StartTrainingRequest(google.protobuf.message.Message):
     TRIGGER_ID_FIELD_NUMBER: builtins.int
     DEVICE_FIELD_NUMBER: builtins.int
     AMP_FIELD_NUMBER: builtins.int
-    MODEL_ID_FIELD_NUMBER: builtins.int
-    MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     USE_PRETRAINED_MODEL_FIELD_NUMBER: builtins.int
     LOAD_OPTIMIZER_STATE_FIELD_NUMBER: builtins.int
     PRETRAINED_MODEL_ID_FIELD_NUMBER: builtins.int
@@ -138,9 +136,6 @@ class StartTrainingRequest(google.protobuf.message.Message):
     trigger_id: builtins.int
     device: builtins.str
     amp: builtins.bool
-    model_id: builtins.str
-    @property
-    def model_configuration(self) -> global___JsonString: ...
     use_pretrained_model: builtins.bool
     load_optimizer_state: builtins.bool
     pretrained_model_id: builtins.int
@@ -173,8 +168,6 @@ class StartTrainingRequest(google.protobuf.message.Message):
         trigger_id: builtins.int = ...,
         device: builtins.str = ...,
         amp: builtins.bool = ...,
-        model_id: builtins.str = ...,
-        model_configuration: global___JsonString | None = ...,
         use_pretrained_model: builtins.bool = ...,
         load_optimizer_state: builtins.bool = ...,
         pretrained_model_id: builtins.int = ...,
@@ -192,8 +185,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
         epochs_per_trigger: builtins.int = ...,
         seed: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "seed", b"seed", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "amp", b"amp", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "epochs_per_trigger", b"epochs_per_trigger", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "model_configuration", b"model_configuration", "model_id", b"model_id", "pipeline_id", b"pipeline_id", "pretrained_model_id", b"pretrained_model_id", "seed", b"seed", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "lr_scheduler", b"lr_scheduler", "seed", b"seed", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "amp", b"amp", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "epochs_per_trigger", b"epochs_per_trigger", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "pipeline_id", b"pipeline_id", "pretrained_model_id", b"pretrained_model_id", "seed", b"seed", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_seed", b"_seed"]) -> typing_extensions.Literal["seed"] | None: ...
 
 global___StartTrainingRequest = StartTrainingRequest

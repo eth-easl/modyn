@@ -44,7 +44,12 @@ def test_label_balanced_presampling_huge() -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     trigger_id = selector.inform_data_and_trigger(
@@ -124,7 +129,12 @@ def test_label_balanced_force_same_size():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     # now we just have 2 classes with 4 samples each
@@ -208,7 +218,12 @@ def test_label_balanced_force_all_samples():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     # same classes as before
@@ -298,7 +313,12 @@ def test_newdata() -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -437,7 +457,12 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -586,7 +611,12 @@ def test_empty_triggers() -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -754,7 +784,12 @@ def test_many_samples_evenly_distributed():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -824,7 +859,12 @@ def test_many_samples_unevenly_distributed():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -895,7 +935,12 @@ def test_get_available_labels(reset_after_trigger: bool):
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_id="ResNet10",
+            model_configuration=JsonString(value="{}"),
+        )
     ).pipeline_id
 
     selector.inform_data(

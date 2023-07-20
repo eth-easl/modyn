@@ -1,4 +1,5 @@
 # end-to-end testing of the model storage component
+import json
 import pathlib
 import shutil
 
@@ -68,7 +69,7 @@ def delete_dummy_file_from_trainer(config: dict):
 
 def insert_trigger_into_database(config: dict) -> (int, int):
     with MetadataDatabaseConnection(config) as database:
-        pipeline_id = database.register_pipeline(2)
+        pipeline_id = database.register_pipeline(2, "ResNet18", json.dumps({"num_classes": 10}))
 
         trigger = Trigger(trigger_id=10, pipeline_id=pipeline_id)
         database.session.add(trigger)
@@ -88,6 +89,12 @@ def delete_data_from_database(config: dict, pipeline_id: int, trigger_id: int):
 def test_model_storage(config: dict):
     # register pipeline and trigger
     pipeline_id, trigger_id = insert_trigger_into_database(config)
+
+    with MetadataDatabaseConnection(config) as database:
+        model_id, model_config = database.get_model_configuration(pipeline_id)
+
+    assert model_id == "ResNet18"
+    assert json.loads(model_config) == {"num_classes": 10}
 
     model_storage_channel = connect_to_model_storage(config)
     model_storage = ModelStorageStub(model_storage_channel)

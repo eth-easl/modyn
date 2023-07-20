@@ -82,6 +82,7 @@ services:
       - storage
       - selector
       - model_storage
+      - metadata-db
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile

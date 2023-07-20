@@ -67,16 +67,17 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         """
         MetadataBase.metadata.create_all(self.engine)
 
-    def register_pipeline(self, num_workers: int) -> int:
+    def register_pipeline(self, num_workers: int, model_id: str, model_config: str) -> int:
         """Register a new pipeline in the database.
 
         Args:
             num_workers (int): Number of workers in the pipeline.
-
+            model_id (str): the model name that is used by the pipeline.
+            model_config (str): the serialized model configuration options.
         Returns:
             int: Id of the newly created pipeline.
         """
-        pipeline = Pipeline(num_workers=num_workers)
+        pipeline = Pipeline(num_workers=num_workers, model_id=model_id, model_config=model_config)
         self.session.add(pipeline)
         self.session.commit()
         pipeline_id = pipeline.pipeline_id
@@ -111,3 +112,15 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         self.session.commit()
         model_id = trained_model.model_id
         return model_id
+
+    def get_model_configuration(self, pipeline_id: int) -> (str, str):
+        """Get the model id and its configuration options for a given pipeline.
+
+        Args:
+            pipeline_id: id of the pipeline from which we want to extract the model.
+
+        Returns:
+            (str, str): the model id and its configuration options.
+        """
+        pipeline: Pipeline = self.session.query(Pipeline).get(pipeline_id)
+        return pipeline.model_id, pipeline.model_config

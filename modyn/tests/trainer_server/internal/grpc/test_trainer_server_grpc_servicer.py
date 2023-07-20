@@ -12,6 +12,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import torch
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     FetchModelRequest,
     FetchModelResponse,
@@ -35,6 +36,8 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 
+DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / "test_trainer_server.database"
+
 trainer_available_request = TrainerAvailableRequest()
 get_status_request = TrainingStatusRequest(training_id=1)
 store_final_model_request = StoreFinalModelRequest(training_id=1)
@@ -46,6 +49,14 @@ modyn_config = {
         "port": "5001",
         "ftp_port": "3001",
         "offline_dataset_directory": "/tmp/offline_dataset",
+    },
+    "metadata_database": {
+        "drivername": "sqlite",
+        "username": "",
+        "password": "",
+        "host": "",
+        "port": 0,
+        "database": f"{DATABASE}",
     },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
@@ -59,10 +70,32 @@ modyn_download_file_config = {
         "ftp_port": "3001",
         "offline_dataset_directory": "/tmp/offline_dataset",
     },
+    "metadata_database": {
+        "drivername": "sqlite",
+        "username": "",
+        "password": "",
+        "host": "",
+        "port": 0,
+        "database": f"{DATABASE}",
+    },
     "storage": {"hostname": "storage", "port": "5002"},
     "selector": {"hostname": "selector", "port": "5003"},
     "model_storage": {"hostname": "localhost", "port": "5004", "ftp_port": "3002"},
 }
+
+
+def setup():
+    if os.path.exists(DATABASE):
+        os.remove(DATABASE)
+
+    with MetadataDatabaseConnection(modyn_config) as database:
+        database.create_tables()
+
+        database.register_pipeline(1, "model", json.dumps({}))
+
+
+def teardown():
+    os.remove(DATABASE)
 
 
 class DummyModelStorageStub:
@@ -104,13 +137,12 @@ def get_training_process_info():
     return training_process_info
 
 
-def get_start_training_request(checkpoint_path="", valid_model=True):
+def get_start_training_request(checkpoint_path=""):
     return StartTrainingRequest(
         pipeline_id=1,
         trigger_id=1,
         device="cpu",
         amp=False,
-        model_id="model" if valid_model else "unknown",
         batch_size=32,
         torch_optimizers_configuration=JsonString(
             value=json.dumps(
@@ -118,7 +150,6 @@ def get_start_training_request(checkpoint_path="", valid_model=True):
             )
         ),
         torch_criterion="CrossEntropyLoss",
-        model_configuration=JsonString(value=json.dumps({})),
         criterion_parameters=JsonString(value=json.dumps({})),
         data_info=Data(dataset_id="Dataset", num_dataloaders=1),
         checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=checkpoint_path),
@@ -142,7 +173,14 @@ def get_training_info(
     request = get_start_training_request(temp)
     offline_dataset_path = "/tmp/offline_dataset"
     training_info = TrainingInfo(
-        request, training_id, storage_address, selector_address, offline_dataset_path, pathlib.Path(final_temp)
+        request,
+        training_id,
+        "model",
+        json.dumps({}),
+        storage_address,
+        selector_address,
+        offline_dataset_path,
+        pathlib.Path(final_temp),
     )
     return training_info
 
@@ -181,7 +219,7 @@ def test_trainer_not_available(test_is_alive, test_connect_to_model_storage):
 def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
-        response = trainer_server.start_training(get_start_training_request(valid_model=False), None)
+        response = trainer_server.start_training(get_start_training_request(), None)
         assert not response.training_started
         assert not trainer_server._training_dict
         assert trainer_server._next_training_id == 0
@@ -192,7 +230,7 @@ def test_start_training_invalid(test_hasattr, test_connect_to_model_storage):
 def test_start_training_invalid_id(test_hasattr, test_connect_to_model_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
-        req = get_start_training_request(valid_model=True)
+        req = get_start_training_request()
         req.use_pretrained_model = True
         req.pretrained_model_id = 15
         resp = trainer_server.start_training(req, None)
@@ -215,16 +253,18 @@ def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storag
         mock_start.side_effect = noop
         trainer_server._training_dict[1] = None
         with patch("multiprocessing.Process.start", mock_start):
-            trainer_server.start_training(get_start_training_request(valid_model=True), None)
+            trainer_server.start_training(get_start_training_request(), None)
             assert 0 in trainer_server._training_process_dict
             assert trainer_server._next_training_id == 1
 
             # start new training
-            trainer_server.start_training(get_start_training_request(valid_model=True), None)
+            trainer_server.start_training(get_start_training_request(), None)
             assert 1 in trainer_server._training_process_dict
             assert trainer_server._next_training_id == 2
+            assert trainer_server._training_dict[1].model_id == "model"
+            assert trainer_server._training_dict[1].model_configuration_dict == {}
 
-            request = get_start_training_request(valid_model=True)
+            request = get_start_training_request()
             request.use_pretrained_model = True
             request.pretrained_model_id = 10
 

@@ -190,12 +190,19 @@ class GRPCHandler:
         if not self.connected_to_selector:
             raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
 
+        if "config" in pipeline_config["model"]:
+            model_config = json.dumps(pipeline_config["model"]["config"])
+        else:
+            model_config = "{}"
+
         pipeline_id = self.selector.register_pipeline(
             RegisterPipelineRequest(
                 num_workers=pipeline_config["training"]["dataloader_workers"],
                 selection_strategy=SelectorJsonString(
                     value=json.dumps(pipeline_config["training"]["selection_strategy"])
                 ),
+                model_id=pipeline_config["model"]["id"],
+                model_configuration=SelectorJsonString(value=model_config),
             )
         ).pipeline_id
 
@@ -254,11 +261,6 @@ class GRPCHandler:
     ) -> int:
         if not self.connected_to_trainer_server:
             raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
-
-        if "config" in pipeline_config["model"]:
-            model_config = json.dumps(pipeline_config["model"]["config"])
-        else:
-            model_config = "{}"
 
         optimizers_config = {}
         for optimizer in pipeline_config["training"]["optimizers"]:
@@ -328,8 +330,6 @@ class GRPCHandler:
             "trigger_id": trigger_id,
             "device": pipeline_config["training"]["device"],
             "amp": amp,
-            "model_id": pipeline_config["model"]["id"],
-            "model_configuration": TrainerServerJsonString(value=model_config),
             "use_pretrained_model": previous_model_id is not None,
             "pretrained_model_id": previous_model_id or -1,
             "load_optimizer_state": False,  # TODO(#137): Think about this.

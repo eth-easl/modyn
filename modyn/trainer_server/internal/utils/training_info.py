@@ -17,6 +17,8 @@ class TrainingInfo:
         self,
         request: StartTrainingRequest,
         training_id: int,
+        model_id: str,
+        model_config: str,
         storage_address: str,
         selector_address: str,
         offline_dataset_path: str,
@@ -32,7 +34,7 @@ class TrainingInfo:
         self.epochs_per_trigger = request.epochs_per_trigger
 
         self.torch_optimizers_configuration = json.loads(request.torch_optimizers_configuration.value)
-        self.model_configuration_dict = json.loads(request.model_configuration.value)
+        self.model_configuration_dict = json.loads(model_config)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
         self.grad_scaler_configuration = json.loads(request.grad_scaler_configuration.value)
 
@@ -40,7 +42,7 @@ class TrainingInfo:
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
 
-        self.model_id = request.model_id
+        self.model_id = model_id
         model_module = dynamic_module_import("modyn.models")
         self.model_handler = getattr(model_module, self.model_id)
 

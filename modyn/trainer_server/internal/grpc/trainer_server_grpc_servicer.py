@@ -11,6 +11,7 @@ import torch
 
 # pylint: disable=no-name-in-module
 from modyn.common.ftp import download_file, get_pretrained_model_callback
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     FetchModelRequest,
     FetchModelResponse,
@@ -86,6 +87,7 @@ class TrainerServerGRPCServicer:
 
         return TrainerAvailableResponse(available=True)
 
+    # pylint: disable=too-many-locals
     def start_training(
         self,
         request: StartTrainingRequest,
@@ -93,8 +95,11 @@ class TrainerServerGRPCServicer:
     ) -> StartTrainingResponse:
         logger.info("Received start training request.")
 
-        if not hasattr(dynamic_module_import("modyn.models"), request.model_id):
-            logger.error(f"Model {request.model_id} not available!")
+        with MetadataDatabaseConnection(self._config) as database:
+            model_id, model_config = database.get_model_configuration(request.pipeline_id)
+
+        if not hasattr(dynamic_module_import("modyn.models"), model_id):
+            logger.error(f"Model {model_id} not available!")
             return StartTrainingResponse(training_started=False)
 
         pretrained_model_path: Optional[pathlib.Path] = None
@@ -135,6 +140,8 @@ class TrainerServerGRPCServicer:
         training_info = TrainingInfo(
             request,
             training_id,
+            model_id,
+            model_config,
             self._storage_address,
             self._selector_address,
             self._offline_dataset_directory,

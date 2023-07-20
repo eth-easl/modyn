@@ -49,13 +49,18 @@ def test_register_pipeline(test_register_pipeline: MagicMock):
         config["selector"]["trigger_sample_directory"] = tmp_dir
         mgr = SelectorManager(config)
         servicer = SelectorGRPCServicer(mgr, 8096)
-        request = RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value="strat"))
+        request = RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value="strat"),
+            model_id="ResNet18",
+            model_configuration=JsonString(value="{}"),
+        )
         test_register_pipeline.return_value = 42
 
         response: PipelineResponse = servicer.register_pipeline(request, None)
 
         assert response.pipeline_id == 42
-        test_register_pipeline.assert_called_once_with(2, "strat")
+        test_register_pipeline.assert_called_once_with(2, "strat", "ResNet18", "{}")
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)

@@ -204,9 +204,7 @@ def get_training_info(
                 amp=False,
                 data_info=Data(dataset_id="MNIST", num_dataloaders=2),
                 torch_optimizers_configuration=JsonString(value=json.dumps(torch_optimizers_configuration)),
-                model_configuration=JsonString(value=json.dumps({})),
                 criterion_parameters=JsonString(value=json.dumps({})),
-                model_id="model",
                 batch_size=32,
                 torch_criterion="CrossEntropyLoss",
                 checkpoint_info=CheckpointInfo(checkpoint_interval=10, checkpoint_path=tmpdirname),
@@ -223,6 +221,8 @@ def get_training_info(
             training_info = TrainingInfo(
                 request,
                 training_id,
+                "model",
+                json.dumps({}),
                 storage_address,
                 selector_address,
                 offline_dataset_path,

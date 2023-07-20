@@ -44,7 +44,8 @@ class MockDatabaseConnection:
     def __init__(self, modyn_config: dict):  # pylint: disable=super-init-not-called,unused-argument
         self.current_pipeline_id = 0
 
-    def register_pipeline(self, number_of_workers: int) -> Optional[int]:  # pylint: disable=unused-argument
+    # pylint: disable=unused-argument
+    def register_pipeline(self, number_of_workers: int, model_id: int, model_config: dict) -> Optional[int]:
         pid = self.current_pipeline_id
         self.current_pipeline_id += 1
         return pid
@@ -89,13 +90,13 @@ def test_register_pipeline(test__instantiate_strategy: MagicMock):
 
         assert len(selec._selectors) == 0
 
-        assert selec.register_pipeline(42, "{}") == 0
+        assert selec.register_pipeline(42, "{}", "RestNet18", "{}") == 0
         assert len(selec._selectors) == 1
 
         assert isinstance(selec._selectors[0]._strategy, MockStrategy)
 
         with pytest.raises(ValueError):
-            selec.register_pipeline(0, "strat")
+            selec.register_pipeline(0, "strat", "RestNet18", "{}")
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
@@ -111,7 +112,7 @@ def test_get_sample_keys_and_weights(
         selec = SelectorManager(config)
 
         test__instantiate_strategy.return_value = MockStrategy()
-        pipe_id = selec.register_pipeline(2, "{}")
+        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
 
         with pytest.raises(ValueError):
             # Non existing pipeline
@@ -142,7 +143,7 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
         with pytest.raises(ValueError):
             selec.inform_data(0, [10], [0], [0])
 
-        pipe_id = selec.register_pipeline(2, "{}")
+        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
         selector_inform_data.return_value = None
 
         selec.inform_data(pipe_id, [10], [0], [0])
@@ -164,7 +165,7 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
         with pytest.raises(ValueError):
             selec.inform_data_and_trigger(0, [10], [0], [0])
 
-        pipe_id = selec.register_pipeline(2, "{}")
+        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
         selector_inform_data_and_trigger.return_value = None
 
         selec.inform_data_and_trigger(pipe_id, [10], [0], [0])
@@ -183,7 +184,7 @@ def test_get_available_labels(selector_get_available_labels: MagicMock, test__in
         selector = SelectorManager(config)
         test__instantiate_strategy.return_value = MockStrategy()
 
-        pipe_id = selector.register_pipeline(2, "{}")
+        pipe_id = selector.register_pipeline(2, "{}", "RestNet18", "{}")
         selector_get_available_labels.return_value = None
 
         selector.get_available_labels(pipe_id)
@@ -227,7 +228,7 @@ def test_get_number_of_samples(selector_get_number_of_samples: MagicMock, test__
         with pytest.raises(ValueError):
             selec.get_number_of_samples(0, 0)
 
-        pipe_id = selec.register_pipeline(2, "{}")
+        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
         selector_get_number_of_samples.return_value = 12
 
         assert selec.get_number_of_samples(pipe_id, 21) == 12

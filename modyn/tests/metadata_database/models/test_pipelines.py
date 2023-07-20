@@ -1,4 +1,6 @@
 # pylint: disable=redefined-outer-name
+import json
+
 import pytest
 from modyn.metadata_database.models import Pipeline
 from sqlalchemy import create_engine
@@ -19,20 +21,20 @@ def session():
 
 
 def test_add_pipeline(session):
-    pipeline = Pipeline(
-        num_workers=10,
-    )
+    pipeline = Pipeline(num_workers=10, model_id="ResNet18", model_config=json.dumps({"num_classes": 10}))
     session.add(pipeline)
     session.commit()
 
-    assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first() is not None
-    assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().num_workers == 10
+    extracted_pipeline: Pipeline = session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first()
+
+    assert extracted_pipeline is not None
+    assert extracted_pipeline.num_workers == 10
+    assert extracted_pipeline.model_id == "ResNet18"
+    assert json.loads(extracted_pipeline.model_config)["num_classes"] == 10
 
 
 def test_update_pipeline(session):
-    pipeline = Pipeline(
-        num_workers=10,
-    )
+    pipeline = Pipeline(num_workers=10, model_id="ResNet18", model_config="{}")
     session.add(pipeline)
     session.commit()
 
@@ -42,11 +44,14 @@ def test_update_pipeline(session):
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first() is not None
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().num_workers == 20
 
+    pipeline.model_id = "test_model"
+    session.commit()
+
+    assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().model_id == "test_model"
+
 
 def test_delete_pipeline(session):
-    pipeline = Pipeline(
-        num_workers=10,
-    )
+    pipeline = Pipeline(num_workers=10, model_id="ResNet18", model_config="{}")
     session.add(pipeline)
     session.commit()
 
