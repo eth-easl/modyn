@@ -135,6 +135,12 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_number_of_partitions(trigger_id)
 
+    def get_available_labels(self, pipeline_id: int) -> list[int]:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested available labels from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_available_labels()
+
     def uses_weights(self, pipeline_id: int) -> bool:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested whether the pipeline {pipeline_id} uses weights but it does not exist!")
