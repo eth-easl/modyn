@@ -60,6 +60,7 @@ class OnlineDataset(IterableDataset):
 
         # tokenizer for NLP tasks
         self._tokenizer = None
+        self._tokenizer_name = tokenizer
         if tokenizer is not None:
             self._tokenizer = self._instantiate_tokenizer(tokenizer)
 

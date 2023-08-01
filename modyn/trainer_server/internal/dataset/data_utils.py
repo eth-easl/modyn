@@ -74,5 +74,6 @@ def prepare_per_class_dataloader_from_online_dataset(
         online_dataset._selector_address,
         online_dataset._training_id,
         initial_filtered_label,
+        online_dataset._tokenizer_name,
     )
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
