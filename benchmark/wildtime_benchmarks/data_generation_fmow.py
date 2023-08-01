@@ -4,7 +4,7 @@ import pickle
 import shutil
 from datetime import datetime
 
-from benchmark_utils import maybe_download, setup_argparser_wildtime, setup_logger
+from benchmark_utils import download_if_not_exists, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from wilds import get_dataset
@@ -31,7 +31,7 @@ class FMOWDownloader(Dataset):
     file_name = "fmow.pkl"
 
     def __init__(self, data_dir: str) -> None:
-        maybe_download(
+        download_if_not_exists(
             drive_id=self.drive_id,
             destination_dir=data_dir,
             destination_file_name=self.file_name,

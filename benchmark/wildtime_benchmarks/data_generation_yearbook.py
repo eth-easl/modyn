@@ -4,7 +4,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from benchmark_utils import create_fake_timestamp, maybe_download, setup_argparser_wildtime, setup_logger
+from benchmark_utils import create_fake_timestamp, download_if_not_exists, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 
 logger = setup_logger()
@@ -29,7 +29,7 @@ class YearbookDownloader(Dataset):
 
     def __init__(self, data_dir: str):
         super().__init__()
-        maybe_download(
+        download_if_not_exists(
             drive_id=self.drive_id,
             destination_dir=data_dir,
             destination_file_name=self.file_name,
