@@ -7,7 +7,7 @@ defaults:
 
 jobs:
   flake8:
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
 
     steps:
@@ -23,7 +23,7 @@ jobs:
           conda run -n modyn flake8 modyn --statistics
 
   mypy-typechecking:
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
 
     steps:
@@ -39,7 +39,7 @@ jobs:
           conda run -n modyn mypy modyn
 
   pylint:
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
 
     steps:
@@ -55,7 +55,7 @@ jobs:
           conda run -n modyn pylint modyn
 
   isort:
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
 
     steps:
@@ -73,7 +73,7 @@ jobs:
           conda run -n modyn isort benchmark --check --diff
 
   black:
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
 
     steps:
@@ -89,7 +89,7 @@ jobs:
           conda run -n modyn black --check modyn --verbose --config black.toml
 
   unittests:
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
 
     steps:
