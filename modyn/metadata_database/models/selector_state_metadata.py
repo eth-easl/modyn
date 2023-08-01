@@ -22,6 +22,7 @@ class SelectorStateMetadataMixin:
     used = Column("used", Boolean, default=False)
     timestamp = Column("timestamp", BigInteger)
     label = Column("label", Integer)
+    last_used_in_trigger = Column("last_used_in_trigger", Integer, default=-1)
 
 
 # 1. Partition level: pipeline_id (LIST, manually create partition on new pipeline)

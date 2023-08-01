@@ -1,8 +1,8 @@
 import torch
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     get_tensors_subset,
 )
-from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_loss_downsample import RemoteLossDownsampling
+from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_loss_downsampling import RemoteLossDownsampling
 from torch import nn
 
 

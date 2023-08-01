@@ -136,6 +136,25 @@ def package_available_and_can_be_imported(package: str) -> bool:
         return False
 
 
+def instantiate_class(class_module_name: str, class_name: str, *class_params: Any) -> Any:
+    """
+    Checks whether the class exists in the given module and, if so, creates the class
+    Args:
+        class_module_name: name of the module, ex "modyn.selector.internal.selector_strategies.presampling_strategies"
+        class_name: name of the class
+        *class_params: parameters for class' __init__
+
+    Returns:
+        An instance of the required class
+
+    """
+    class_module = dynamic_module_import(class_module_name)
+    if not hasattr(class_module, class_name):
+        raise ValueError(f"Requested class {class_name} not found in {class_module} module.")
+    actual_class = getattr(class_module, class_name)
+    return actual_class(*class_params)
+
+
 def flatten(non_flat_list: list[list[Any]]) -> list[Any]:
     return [item for sublist in non_flat_list for item in sublist]
 
