@@ -1,9 +1,9 @@
 # adapted from torchvision https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
 from typing import Any
+
 import torch
-import torch.nn as nn
 from modyn.models.modyn_model import ModynModel
-from torch import Tensor
+from torch import Tensor, nn
 from torchvision.models.resnet import BasicBlock, ResNet
 
 

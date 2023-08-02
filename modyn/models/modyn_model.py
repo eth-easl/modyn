@@ -30,7 +30,7 @@ class ModynModel(nn.Module, ABC):
         self.embedding_recorder = EmbeddingRecorder(record_embedding)
 
     @property
-    def embedding(self):
+    def embedding(self) -> torch.Tensor:
         assert self.embedding_recorder is not None
         return self.embedding_recorder.embedding
 

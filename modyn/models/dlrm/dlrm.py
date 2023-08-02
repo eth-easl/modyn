@@ -6,6 +6,7 @@ from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
 from modyn.models.dlrm.utils.utils import get_device_mapping
+from modyn.models.modyn_model import ModynModel
 from modyn.utils.utils import package_available_and_can_be_imported
 from torch import nn
 
@@ -16,7 +17,7 @@ class DLRM:
         self.model.to(device)
 
 
-class DlrmModel(nn.Module):
+class DlrmModel(ModynModel):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
@@ -124,3 +125,10 @@ class DlrmModel(nn.Module):
             numerical_input, self.reorder_categorical_input(categorical_input)
         )
         return self.top_model(from_bottom, bottom_mlp_output).squeeze()
+
+    @property
+    def embedding(self) -> torch.Tensor:
+        return self.top_model.embedding
+
+    def get_last_layer(self) -> nn.Module:
+        return self.top_model.get_last_layer()
