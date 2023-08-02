@@ -259,6 +259,37 @@ class NumberOfPartitionsResponse(google.protobuf.message.Message):
 global___NumberOfPartitionsResponse = NumberOfPartitionsResponse
 
 @typing_extensions.final
+class GetAvailableLabelsRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+
+global___GetAvailableLabelsRequest = GetAvailableLabelsRequest
+
+@typing_extensions.final
+class AvailableLabelsResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    AVAILABLE_LABELS_FIELD_NUMBER: builtins.int
+    @property
+    def available_labels(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def __init__(
+        self,
+        *,
+        available_labels: collections.abc.Iterable[builtins.int] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["available_labels", b"available_labels"]) -> None: ...
+
+global___AvailableLabelsResponse = AvailableLabelsResponse
+
+@typing_extensions.final
 class GetSelectionStrategyRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 

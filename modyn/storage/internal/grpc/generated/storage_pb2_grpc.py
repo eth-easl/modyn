@@ -34,6 +34,11 @@ class StorageStub(object):
                 request_serializer=storage__pb2.GetDataPerWorkerRequest.SerializeToString,
                 response_deserializer=storage__pb2.GetDataPerWorkerResponse.FromString,
                 )
+        self.GetDatasetSize = channel.unary_unary(
+                '/modyn.storage.Storage/GetDatasetSize',
+                request_serializer=storage__pb2.GetDatasetSizeRequest.SerializeToString,
+                response_deserializer=storage__pb2.GetDatasetSizeResponse.FromString,
+                )
         self.CheckAvailability = channel.unary_unary(
                 '/modyn.storage.Storage/CheckAvailability',
                 request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
@@ -83,6 +88,12 @@ class StorageServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetDataPerWorker(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetDatasetSize(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -140,6 +151,11 @@ def add_StorageServicer_to_server(servicer, server):
                     servicer.GetDataPerWorker,
                     request_deserializer=storage__pb2.GetDataPerWorkerRequest.FromString,
                     response_serializer=storage__pb2.GetDataPerWorkerResponse.SerializeToString,
+            ),
+            'GetDatasetSize': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetDatasetSize,
+                    request_deserializer=storage__pb2.GetDatasetSizeRequest.FromString,
+                    response_serializer=storage__pb2.GetDatasetSizeResponse.SerializeToString,
             ),
             'CheckAvailability': grpc.unary_unary_rpc_method_handler(
                     servicer.CheckAvailability,
@@ -241,6 +257,23 @@ class Storage(object):
         return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetDataPerWorker',
             storage__pb2.GetDataPerWorkerRequest.SerializeToString,
             storage__pb2.GetDataPerWorkerResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetDatasetSize(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/GetDatasetSize',
+            storage__pb2.GetDatasetSizeRequest.SerializeToString,
+            storage__pb2.GetDatasetSizeResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

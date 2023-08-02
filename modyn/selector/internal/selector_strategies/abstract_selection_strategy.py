@@ -398,3 +398,20 @@ class AbstractSelectionStrategy(ABC):
 
         for proc in processes:
             proc.join()
+
+    def get_available_labels(self) -> list[int]:
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            result = (
+                database.session.query(SelectorStateMetadata.label)
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
+                    if self.tail_triggers is not None
+                    else True,
+                )
+                .distinct()
+                .all()
+            )
+            available_labels = [result_tuple[0] for result_tuple in result]
+
+        return available_labels

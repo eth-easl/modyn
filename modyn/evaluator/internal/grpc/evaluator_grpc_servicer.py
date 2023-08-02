@@ -30,6 +30,10 @@ from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
+
+# pylint: disable-next=no-name-in-module
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import dynamic_module_import, grpc_connection_established
 
 logger = logging.getLogger(__name__)
@@ -60,9 +64,10 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._evaluation_process_dict: dict[int, EvaluationProcessInfo] = {}
 
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
-        self._model_storage_address = f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
+        self._storage_stub = EvaluatorGRPCServicer.connect_to_storage(self._storage_address)
 
-        self._model_storage_stub = EvaluatorGRPCServicer.connect_to_model_storage(self._model_storage_address)
+        model_storage_address = f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
+        self._model_storage_stub = EvaluatorGRPCServicer.connect_to_model_storage(model_storage_address)
 
     @staticmethod
     def connect_to_model_storage(model_storage_address: str) -> ModelStorageStub:
@@ -73,6 +78,14 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 f"Could not establish gRPC connection to model storage at address {model_storage_address}."
             )
         return ModelStorageStub(model_storage_channel)
+
+    @staticmethod
+    def connect_to_storage(storage_address: str) -> StorageStub:
+        storage_channel = grpc.insecure_channel(storage_address)
+        assert storage_channel is not None
+        if not grpc_connection_established(storage_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
+        return StorageStub(storage_channel)
 
     def evaluate_model(self, request: EvaluateModelRequest, context: grpc.ServicerContext) -> EvaluateModelResponse:
         logger.info("Received evaluate model request.")
@@ -91,6 +104,16 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
             return EvaluateModelResponse(evaluation_started=False)
 
+        dataset_size_req = GetDatasetSizeRequest(dataset_id=request.dataset_info.dataset_id)
+        dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
+
+        if not dataset_size_response.success:
+            logger.error(
+                f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
+                f"Evaluation cannot be started."
+            )
+            return EvaluateModelResponse(evaluation_started=False)
+
         with self._lock:
             evaluation_id = self._next_evaluation_id
             self._next_evaluation_id += 1
@@ -103,7 +126,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
-        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id)
+        return EvaluateModelResponse(
+            evaluation_started=True, evaluation_id=evaluation_id, dataset_size=dataset_size_response.num_keys
+        )
 
     def _download_trained_model(self, fetch_resp: FetchModelResponse, evaluation_id: int) -> pathlib.Path:
         local_model_path = self._base_dir / f"trained_model_{evaluation_id}.modyn"
@@ -130,7 +155,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         for configuration in metric_configurations:
             loaded_config = json.loads(configuration.config.value)
             metric = MetricFactory.get_evaluation_metric(
-                configuration.name, configuration.evaluation_transform_function.value, loaded_config
+                configuration.name, configuration.evaluation_transformer.value, loaded_config
             )
             if metric.get_name() not in metric_names:
                 metrics.append(metric)
@@ -237,7 +262,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(f"Evaluation with id {evaluation_id} is still running.")
             return EvaluationResultResponse(valid=False)
 
-        logger.error("Returning results of all metrics.")
+        logger.info("Returning results of all metrics.")
         evaluation_data: list[EvaluationData] = []
 
         metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue

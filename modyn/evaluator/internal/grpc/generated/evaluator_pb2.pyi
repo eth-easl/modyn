@@ -8,6 +8,7 @@ import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.message
 import sys
+import typing
 
 if sys.version_info >= (3, 8):
     import typing as typing_extensions
@@ -70,21 +71,21 @@ class MetricConfiguration(google.protobuf.message.Message):
 
     NAME_FIELD_NUMBER: builtins.int
     CONFIG_FIELD_NUMBER: builtins.int
-    EVALUATION_TRANSFORM_FUNCTION_FIELD_NUMBER: builtins.int
+    EVALUATION_TRANSFORMER_FIELD_NUMBER: builtins.int
     name: builtins.str
     @property
     def config(self) -> global___JsonString: ...
     @property
-    def evaluation_transform_function(self) -> global___PythonString: ...
+    def evaluation_transformer(self) -> global___PythonString: ...
     def __init__(
         self,
         *,
         name: builtins.str = ...,
         config: global___JsonString | None = ...,
-        evaluation_transform_function: global___PythonString | None = ...,
+        evaluation_transformer: global___PythonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer_function", b"evaluation_transformer_function"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer_function", b"evaluation_transformer_function", "name", b"name"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer", b"evaluation_transformer"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["config", b"config", "evaluation_transformer", b"evaluation_transformer", "name", b"name"]) -> None: ...
 
 global___MetricConfiguration = MetricConfiguration
 
@@ -146,15 +147,18 @@ class EvaluateModelResponse(google.protobuf.message.Message):
 
     EVALUATION_STARTED_FIELD_NUMBER: builtins.int
     EVALUATION_ID_FIELD_NUMBER: builtins.int
+    DATASET_SIZE_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
     evaluation_id: builtins.int
+    dataset_size: builtins.int
     def __init__(
         self,
         *,
         evaluation_started: builtins.bool = ...,
         evaluation_id: builtins.int = ...,
+        dataset_size: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_size", b"dataset_size", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
 
 global___EvaluateModelResponse = EvaluateModelResponse
 
@@ -198,11 +202,18 @@ class EvaluationStatusResponse(google.protobuf.message.Message):
         is_running: builtins.bool = ...,
         state_available: builtins.bool = ...,
         blocked: builtins.bool = ...,
-        exception: builtins.str = ...,
-        batches_seen: builtins.int = ...,
-        samples_seen: builtins.int = ...,
+        exception: builtins.str | None = ...,
+        batches_seen: builtins.int | None = ...,
+        samples_seen: builtins.int | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["batches_seen", b"batches_seen", "blocked", b"blocked", "exception", b"exception", "is_running", b"is_running", "samples_seen", b"samples_seen", "state_available", b"state_available", "valid", b"valid"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "exception", b"exception", "samples_seen", b"samples_seen"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "blocked", b"blocked", "exception", b"exception", "is_running", b"is_running", "samples_seen", b"samples_seen", "state_available", b"state_available", "valid", b"valid"]) -> None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_batches_seen", b"_batches_seen"]) -> typing_extensions.Literal["batches_seen"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_exception", b"_exception"]) -> typing_extensions.Literal["exception"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_samples_seen", b"_samples_seen"]) -> typing_extensions.Literal["samples_seen"] | None: ...
 
 global___EvaluationStatusResponse = EvaluationStatusResponse
 

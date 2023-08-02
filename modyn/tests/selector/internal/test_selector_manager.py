@@ -174,6 +174,27 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
+@patch.object(SelectorManager, "_instantiate_strategy")
+@patch.object(Selector, "get_available_labels")
+def test_get_available_labels(selector_get_available_labels: MagicMock, test__instantiate_strategy: MagicMock):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        config = get_modyn_config()
+        config["selector"]["trigger_sample_directory"] = tmp_dir
+        selector = SelectorManager(config)
+        test__instantiate_strategy.return_value = MockStrategy()
+
+        pipe_id = selector.register_pipeline(2, "{}")
+        selector_get_available_labels.return_value = None
+
+        selector.get_available_labels(pipe_id)
+        selector_get_available_labels.assert_called_once_with()
+
+        with pytest.raises(ValueError):
+            selector.get_available_labels(pipe_id + 1)
+
+
+@patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init_selector_manager_with_existing_trigger_dir():
     with tempfile.TemporaryDirectory() as tmp_dir:
         with open(os.path.join(tmp_dir, "test"), "w", encoding="utf-8") as file:
