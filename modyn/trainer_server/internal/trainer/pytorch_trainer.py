@@ -30,7 +30,7 @@ from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callb
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsample_strategy import (
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
     get_tensors_subset,
 )
@@ -46,6 +46,7 @@ from modyn.utils import (
     package_available_and_can_be_imported,
     seed_everything,
 )
+from modyn.utils.utils import instantiate_class
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
 
@@ -146,6 +147,7 @@ class PytorchTrainer:
             training_info.storage_address,
             training_info.selector_address,
             training_info.training_id,
+            training_info.tokenizer,
         )
 
         # create callbacks - For now, assume LossCallback by default
@@ -285,13 +287,15 @@ class PytorchTrainer:
     def instantiate_downsampler(
         self, strategy_name: str, downsampler_config: dict, per_sample_loss: torch.nn.modules.loss
     ) -> AbstractRemoteDownsamplingStrategy:
-        remote_downsampling_module = dynamic_module_import("modyn.trainer_server.internal.trainer.remote_downsamplers")
-        downsampler_class = getattr(remote_downsampling_module, strategy_name)
-
-        downsampler = downsampler_class(
-            self.pipeline_id, self.trigger_id, self._batch_size, downsampler_config, per_sample_loss
+        return instantiate_class(
+            "modyn.trainer_server.internal.trainer.remote_downsamplers",
+            strategy_name,
+            self.pipeline_id,
+            self.trigger_id,
+            self._batch_size,
+            downsampler_config,
+            per_sample_loss,
         )
-        return downsampler
 
     def sample_then_batch_this_epoch(self, epoch: int) -> bool:
         if self._downsampling_mode != DownsamplingMode.SAMPLE_THEN_BATCH:
