@@ -129,6 +129,7 @@ class DlrmTop(ModynModel):
         """
         interaction_output = self.interaction.interact(bottom_output, bottom_mlp_output)
         mlp_output = self.mlp(interaction_output)
+        mlp_output = self.embedding_recorder(mlp_output)
         return self.out(mlp_output)
 
     def get_last_layer(self) -> nn.Module:

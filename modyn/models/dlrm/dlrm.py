@@ -6,7 +6,7 @@ from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
 from modyn.models.dlrm.utils.utils import get_device_mapping
-from modyn.models.modyn_model import ModynModel
+from modyn.models.modyn_model import EmbeddingRecorder, ModynModel
 from modyn.utils.utils import package_available_and_can_be_imported
 from torch import nn
 
@@ -126,9 +126,14 @@ class DlrmModel(ModynModel):
         )
         return self.top_model(from_bottom, bottom_mlp_output).squeeze()
 
+    # delegate the embedding handling to the top model
     @property
     def embedding(self) -> Optional[torch.Tensor]:
         return self.top_model.embedding
+
+    @property
+    def embedding_recorder(self) -> EmbeddingRecorder:
+        return self.top_model.embedding_recorder
 
     def get_last_layer(self) -> nn.Module:
         return self.top_model.get_last_layer()
