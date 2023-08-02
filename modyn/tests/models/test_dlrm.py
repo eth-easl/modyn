@@ -67,3 +67,14 @@ def test_dlrm_reorder_categorical_input():
     assert reordered_test_data.shape == (64, 26)
     assert reordered_test_data.dtype == torch.long
     assert torch.equal(reordered_test_data, input_data)
+
+
+def test_get_last_layer():
+    net = DLRM(get_dlrm_configuration(), "cpu", False)
+    last_layer = net.model.get_last_layer()
+
+    assert isinstance(last_layer, torch.nn.Linear)
+    assert last_layer.in_features == 16
+    assert last_layer.out_features == 1
+    assert last_layer.bias.shape == (1,)
+    assert last_layer.weight.shape == (1, 16)

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -127,7 +127,7 @@ class DlrmModel(ModynModel):
         return self.top_model(from_bottom, bottom_mlp_output).squeeze()
 
     @property
-    def embedding(self) -> torch.Tensor:
+    def embedding(self) -> Optional[torch.Tensor]:
         return self.top_model.embedding
 
     def get_last_layer(self) -> nn.Module:
