@@ -54,6 +54,7 @@ message StartTrainingRequest {
   JsonString grad_scaler_configuration = 20;
   int32 epochs_per_trigger = 21;
   optional int32 seed = 22;
+  optional PythonString tokenizer = 23;
 }
 
 message StartTrainingResponse {

@@ -67,6 +67,7 @@ def test_dataloader_dataset(
         selector_address="localhost:1234",
         training_id=42,
         initial_filtered_label=0,
+        tokenizer=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
 

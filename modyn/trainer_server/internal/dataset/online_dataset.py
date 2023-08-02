@@ -14,6 +14,7 @@ from modyn.utils.utils import (
     MAX_MESSAGE_SIZE,
     deserialize_function,
     grpc_connection_established,
+    instantiate_class,
 )
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
@@ -35,6 +36,7 @@ class OnlineDataset(IterableDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
+        tokenizer: Optional[str],
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -56,6 +58,12 @@ class OnlineDataset(IterableDataset):
         self._key_source = SelectorKeySource(self._pipeline_id, self._trigger_id, self._selector_address)
         self._uses_weights = None
 
+        # tokenizer for NLP tasks
+        self._tokenizer = None
+        self._tokenizer_name = tokenizer
+        if tokenizer is not None:
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
+
         logger.debug("Initialized OnlineDataset.")
 
     def change_key_source(self, source: AbstractKeySource) -> None:
@@ -75,20 +83,24 @@ class OnlineDataset(IterableDataset):
 
         return sample_list, label_list
 
-    def _deserialize_torchvision_transforms(self) -> None:
+    def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
 
         self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
+
+        if self._tokenizer is not None:
+            self._transform_list.append(self._tokenizer)
+
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
-        self._deserialize_torchvision_transforms()
+        self._setup_composed_transform()
 
     def _init_grpc(self) -> None:
         storage_channel = grpc.insecure_channel(
@@ -149,14 +161,17 @@ class OnlineDataset(IterableDataset):
     def _get_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
         assert self._uses_weights is not None
         # mypy complains here because _transform has unknown type, which is ok
+        tranformed_sample = self._transform(sample)  # type: ignore
+
         if self._uses_weights:
-            return key, self._transform(sample), label, weight  # type: ignore
-        return key, self._transform(sample), label  # type: ignore
+            return key, tranformed_sample, label, weight
+        return key, tranformed_sample, label
 
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()
 
     # pylint: disable=too-many-locals, too-many-branches
+
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
