@@ -13,8 +13,8 @@ from modyn.utils.utils import (
     BYTES_PARSER_FUNC_NAME,
     MAX_MESSAGE_SIZE,
     deserialize_function,
-    dynamic_module_import,
     grpc_connection_established,
+    instantiate_class,
 )
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
@@ -62,7 +62,7 @@ class OnlineDataset(IterableDataset):
         self._tokenizer = None
         self._tokenizer_name = tokenizer
         if tokenizer is not None:
-            self._tokenizer = self._instantiate_tokenizer(tokenizer)
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
 
         logger.debug("Initialized OnlineDataset.")
 
@@ -170,13 +170,8 @@ class OnlineDataset(IterableDataset):
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()
 
-    def _instantiate_tokenizer(self, tokenizer: str) -> Callable:
-        tokenizer_module = dynamic_module_import("modyn.models.tokenizers")
-        if not hasattr(tokenizer_module, tokenizer):
-            raise ValueError("Requested tokenizer is not available.")
-        return getattr(tokenizer_module, tokenizer)()
-
     # pylint: disable=too-many-locals, too-many-branches
+
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
