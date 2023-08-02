@@ -29,10 +29,9 @@ class ModynModel(nn.Module, ABC):
         super().__init__()
         self.embedding_recorder = EmbeddingRecorder(record_embedding)
 
-    def get_embedding_recorder(self) -> EmbeddingRecorder:
-        return self.embedding_recorder
-
-    def get_embedding(self) -> torch.Tensor:
+    @property
+    def embedding(self):
+        assert self.embedding_recorder is not None
         return self.embedding_recorder.embedding
 
     @abstractmethod
