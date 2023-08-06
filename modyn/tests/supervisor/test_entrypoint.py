@@ -4,6 +4,7 @@ successfully runs through. This is _not_ the place for an integration test.
 """
 import os
 import pathlib
+import tempfile
 import typing
 from unittest.mock import patch
 
@@ -21,6 +22,7 @@ def noop_constructor_mock(
     self,
     pipeline_config: dict,
     modyn_config: dict,
+    eval_directory: pathlib.Path,
     start_replay_at: typing.Optional[int] = None,
     stop_replay_at: typing.Optional[int] = None,
 ) -> None:
@@ -34,19 +36,30 @@ def noop_pipeline(self) -> None:
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 @patch.object(Supervisor, "pipeline", noop_pipeline)
 def test_supervisor_script_runs(script_runner):
-    ret = script_runner.run("_modyn_supervisor", str(EXAMPLE_PIPELINE), str(EXAMPLE_SYSTEM_CONFIG))
-    assert ret.success
+    with tempfile.TemporaryDirectory() as eval_dir:
+        ret = script_runner.run("_modyn_supervisor", str(EXAMPLE_PIPELINE), str(EXAMPLE_SYSTEM_CONFIG), str(eval_dir))
+        assert ret.success
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_supervisor_script_fails_on_non_existing_system_config(script_runner):
-    assert not NO_FILE.is_file(), "File that shouldn't exist exists."
-    ret = script_runner.run("_modyn_supervisor", str(EXAMPLE_PIPELINE), str(NO_FILE))
-    assert not ret.success
+    with tempfile.TemporaryDirectory() as eval_dir:
+        assert not NO_FILE.is_file(), "File that shouldn't exist exists."
+        ret = script_runner.run("_modyn_supervisor", str(EXAMPLE_PIPELINE), str(NO_FILE), str(eval_dir))
+        assert not ret.success
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_supervisor_script_fails_on_non_existing_pipeline_config(script_runner):
-    assert not NO_FILE.is_file(), "File that shouldn't exist exists."
-    ret = script_runner.run("_modyn_supervisor", str(NO_FILE), str(EXAMPLE_SYSTEM_CONFIG))
+    with tempfile.TemporaryDirectory() as eval_dir:
+        assert not NO_FILE.is_file(), "File that shouldn't exist exists."
+        ret = script_runner.run("_modyn_supervisor", str(NO_FILE), str(EXAMPLE_SYSTEM_CONFIG), str(eval_dir))
+        assert not ret.success
+
+
+@patch.object(Supervisor, "__init__", noop_constructor_mock)
+def test_supervisor_script_fails_on_non_existing_eval_dir(script_runner):
+    eval_dir = pathlib.Path("unknownfolder")
+    assert not eval_dir.is_dir(), "Directory that shouldn't exist exists."
+    ret = script_runner.run("_modyn_supervisor", str(NO_FILE), str(EXAMPLE_SYSTEM_CONFIG), str(eval_dir))
     assert not ret.success

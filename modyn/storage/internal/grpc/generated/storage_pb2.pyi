@@ -184,6 +184,39 @@ class GetDataPerWorkerResponse(google.protobuf.message.Message):
 global___GetDataPerWorkerResponse = GetDataPerWorkerResponse
 
 @typing_extensions.final
+class GetDatasetSizeRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    DATASET_ID_FIELD_NUMBER: builtins.int
+    dataset_id: builtins.str
+    def __init__(
+        self,
+        *,
+        dataset_id: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id"]) -> None: ...
+
+global___GetDatasetSizeRequest = GetDatasetSizeRequest
+
+@typing_extensions.final
+class GetDatasetSizeResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SUCCESS_FIELD_NUMBER: builtins.int
+    NUM_KEYS_FIELD_NUMBER: builtins.int
+    success: builtins.bool
+    num_keys: builtins.int
+    def __init__(
+        self,
+        *,
+        success: builtins.bool = ...,
+        num_keys: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["num_keys", b"num_keys", "success", b"success"]) -> None: ...
+
+global___GetDatasetSizeResponse = GetDatasetSizeResponse
+
+@typing_extensions.final
 class DatasetAvailableRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 

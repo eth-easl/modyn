@@ -82,7 +82,7 @@ properties:
           name:
             type: string
             description: |
-              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy, LossDownsamplingStrategy, GradNormDownsamplingStrategy
+              The Selector strategy that the pipeline should use. Currently supported: NewDataStrategy, FreshnessSamplingStrategy, CoresetStrategy
           maximum_keys_in_memory:
             type: number
             description: |
@@ -117,22 +117,39 @@ properties:
                 type: string
                 description: |
                  [NewDataStrategy] Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true. Either "lastX" or "sampleUAR" are supported. See class description for further info.
-              presampling_ratio:
-                type: number
+              presampling_config:
+                type: object
                 description: |
-                  [AbstractDownsampleStrategy] percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
-              sample_then_batch:
-                type: boolean
+                  [CoresetStrategy] Config for the presampling strategy. If missing, no presampling is applied.
+                properties:
+                  strategy:
+                    type: string
+                    description: |
+                      Strategy used to presample the data. Available strategies: Random, RandomNoReplacement, LabelBalanced, TriggerBalanced, No (get all data)
+                  ratio:
+                    type: number
+                    description: |
+                      Percentage of points on which the metric (loss, gradient norm,..) is computed. Must be between 0 and 100
+              downsampling_config:
                 description: |
-                  [AbstractDownsampleStrategy] If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
-              downsampling_ratio:
-                type: number
-                description: |
-                  [AbstractDownsampleStrategy] Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Must be in (0,100).
-              downsampling_period:
-                type: number
-                description: |
-                  [AbstractDownsampleStrategy] In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
+                  You can either specify a single downsampler or a list of downsamplers. If you use the first option, 
+                  please follow the format at the end of the schema (section definitions). The second option requires an 
+                  array of downsamplers following the same format described before and a list of thresholds for the transitions.
+                one of:
+                  - $ref: "#/definitions/single_downsampling_config"
+                  - type: object
+                    properties:
+                      downsampling_list:
+                        type: array
+                        items:
+                          $ref: "#/definitions/single_downsampling_config"
+                      downsampling_thresholds:
+                        type: array
+                        description: |
+                          A list of thresholds to switch from a downsampler to another. The i-th threshold is used for the
+                          transition from the i-th downsampler to the (i+1)-th. This array should have one less item on the list of downsamplers.
+                        items:
+                          type: int
           processor_type:
             type: string
             description: |
@@ -308,6 +325,10 @@ properties:
         type: string
         description: |
           (Optional) function used to transform the label (tensors of integers).
+      tokenizer:
+        type: string
+        description: |
+          (Optional) Function to tokenize the input. Must be a class in modyn.models.tokenizers.
     required:
       - dataset_id
       - bytes_parser_function
@@ -331,6 +352,15 @@ properties:
     description: |
       Evaluation configuration.
     properties:
+      device:
+        type: string
+        description: |
+          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
+          and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
+      amp:
+        type: boolean
+        description: |
+          If True, automatic mixed precision will be used.
       datasets:
         type: array
         description: |
@@ -398,22 +428,37 @@ properties:
             - dataloader_workers
             - batch_size
             - metrics
-      device:
-        type: string
-        description: |
-          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
-          and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
-      amp:
-        type: boolean
-        description: |
-          If True, automatic mixed precision will be used.
     required:
       - datasets
       - device
-      - amp
 required:
   - pipeline
   - model
   - training
   - data
   - trigger
+definitions:
+  single_downsampling_config:
+    type: object
+    description: |
+      [CoresetStrategy] Config for the downsampling strategy. If missing, No downsampling (NoDownsamplingStrategy) is applied.
+    properties:
+      strategy:
+        type: string
+        description: |
+          Strategy used to downsample the data. Available strategies: Loss, Gradnorm, No (no downsampling)
+      sample_then_batch:
+        type: boolean
+        description: |
+          If True, the samples are first sampled and then batched and supplied to the training loop. If False, the datapoints are first divided into batches and then sampled.
+      ratio:
+        type: number
+        description: |
+          Ratio post_sampling_size/pre_sampling_size. For example, with 160 datapoints and a ratio of 50 we keep 80. Must be in (0,100].
+      period:
+        type: number
+        description: |
+          In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
+    required:
+      - strategy
+

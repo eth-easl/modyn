@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Callable, Optional
 
 import torch
 from modyn.utils import EVALUATION_TRANSFORMER_FUNC_NAME, deserialize_function
@@ -23,8 +23,15 @@ class AbstractEvaluationMetric(ABC):
         """
         self.config = config
 
+        self.evaluation_transformer = evaluation_transformer
+        self.evaluation_transformer_function: Optional[Callable[[torch.Tensor], torch.Tensor]] = None
+
+    def deserialize_evaluation_transformer(self) -> None:
+        """
+        Deserialize the evaluation transform function.
+        """
         self.evaluation_transformer_function = deserialize_function(
-            evaluation_transformer, EVALUATION_TRANSFORMER_FUNC_NAME
+            self.evaluation_transformer, EVALUATION_TRANSFORMER_FUNC_NAME
         )
 
     @abstractmethod

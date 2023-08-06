@@ -135,6 +135,12 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_number_of_partitions(trigger_id)
 
+    def get_available_labels(self, pipeline_id: int) -> list[int]:
+        if pipeline_id not in self._selectors:
+            raise ValueError(f"Requested available labels from pipeline {pipeline_id} which does not exist!")
+
+        return self._selectors[pipeline_id].get_available_labels()
+
     def uses_weights(self, pipeline_id: int) -> bool:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested whether the pipeline {pipeline_id} uses weights but it does not exist!")
@@ -171,6 +177,6 @@ class SelectorManager:
             "cleanup_trigger_samples_after_shutdown" in self._modyn_config["selector"]
             and "trigger_sample_directory" in self._modyn_config["selector"]
         ):
-            shutil.rmtree(self._modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"])
+            shutil.rmtree(self._modyn_config["selector"]["trigger_sample_directory"])
             Path(self._modyn_config["selector"]["trigger_sample_directory"]).mkdir(parents=True, exist_ok=True)
             logger.info("Deleted the trigger sample directory.")
