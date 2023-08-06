@@ -122,7 +122,7 @@ void StorageServiceImpl::send_get_response(grpc::ServerWriter<modyn::storage::Ge
   }
 }
 
-grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetNewDataSince(                           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetNewDataSinceRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -199,7 +199,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
   }
 }
 
-grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetDataInInterval(                           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::GetDataInIntervalRequest* request,                  // NOLINT (misc-unused-parameters)
     grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {  // NOLINT (misc-unused-parameters)
@@ -278,7 +278,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   }
 }
 
-grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DatasetAvailableResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -302,7 +302,7 @@ grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT (readability-iden
   return status;
 }
 
-grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::RegisterNewDataset(           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::RegisterNewDatasetRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::RegisterNewDatasetResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -324,7 +324,7 @@ grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT (readability-ide
   return status;
 }
 
-grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::GetCurrentTimestamp(         // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
     modyn::storage::GetCurrentTimestampResponse* response) {  // NOLINT (misc-unused-parameters)
   response->set_timestamp(
@@ -333,7 +333,7 @@ grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT (readability-id
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDatasetResponse* response) {       // NOLINT (misc-unused-parameters)
@@ -348,7 +348,7 @@ grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifi
 
   auto filesystem_wrapper =
       Utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
-  
+
   int64_t number_of_files = 0;
   session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
       soci::use(request->dataset_id());
@@ -374,7 +374,7 @@ grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT (readability-identifi
   return status;
 }
 
-grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-naming)
+grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-identifier-naming)
     grpc::ServerContext* /*context*/,
     const modyn::storage::DeleteDataRequest* request,  // NOLINT (misc-unused-parameters)
     modyn::storage::DeleteDataResponse* response) {    // NOLINT (misc-unused-parameters)
@@ -489,5 +489,103 @@ grpc::Status StorageServiceImpl::DeleteData(  // NOLINT (readability-identifier-
     return {grpc::StatusCode::INTERNAL, "Error deleting data."};
   }
   response->set_success(true);
+  return grpc::Status::OK;
+}
+
+grpc::Status StorageServiceImpl::GetDataPerWorker(
+    grpc::ServerContext* context, const modyn::storage::GetDataPerWorkerRequest* request,
+    grpc::ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {
+  const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
+  soci::session session = storage_database_connection.get_session();
+
+  // Check if the dataset exists
+  int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+
+  if (dataset_id == 0) {
+    SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+    return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+  }
+
+  int64_t total_keys = 0;
+  soci::statement count_stmt = (session.prepare << "SELECT COUNT(*) FROM Sample WHERE dataset_id = :dataset_id",
+                                soci::into(total_keys), soci::use(dataset_id));
+  count_stmt.execute();
+
+  int64_t start_index, limit;
+  std::tie(start_index, limit) = get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
+
+  std::vector<int64_t> keys;
+  soci::statement stmt = (session.prepare << "SELECT sample_id FROM Sample WHERE dataset_id = :dataset_id ORDER BY "
+                                             "sample_id OFFSET :start_index LIMIT :limit",
+                          soci::use(dataset_id), soci::use(start_index), soci::use(limit));
+  stmt.execute();
+
+  int64_t key_value;
+  stmt.exchange(soci::into(key_value));
+  while (stmt.fetch()) {
+    keys.push_back(key_value);
+  }
+
+  modyn::storage::GetDataPerWorkerResponse response;
+  for (auto key : keys) {
+    response.add_keys(key);
+    if (response.keys_size() % sample_batch_size_ == 0) {
+      writer->Write(response);
+      response.Clear();
+    }
+  }
+
+  if (response.keys_size() > 0) {
+    writer->Write(response);
+  }
+
+  return grpc::Status::OK;
+}
+
+std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_t worker_id, int64_t total_workers,
+                                                                          int64_t total_num_elements) {
+  if (worker_id < 0 || worker_id >= total_workers) {
+    throw std::invalid_argument("Asked for invalid worker id!");
+  }
+
+  int64_t subset_size = total_num_elements / total_workers;
+  int64_t worker_subset_size = subset_size;
+
+  int64_t threshold = total_num_elements % total_workers;
+  if (threshold > 0) {
+    if (worker_id < threshold) {
+      worker_subset_size += 1;
+      int64_t start_index = worker_id * (subset_size + 1);
+      return {start_index, worker_subset_size};
+    } else {
+      int64_t start_index = threshold * (subset_size + 1) + (worker_id - threshold) * subset_size;
+      return {start_index, worker_subset_size};
+    }
+  } else {
+    int64_t start_index = worker_id * subset_size;
+    return {start_index, worker_subset_size};
+  }
+}
+
+grpc::Status StorageServiceImpl::GetDatasetSize(grpc::ServerContext* context,
+                                                const modyn::storage::GetDatasetSizeRequest* request,
+                                                modyn::storage::GetDatasetSizeResponse* response) {
+  const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
+  soci::session session = storage_database_connection.get_session();
+
+  // Check if the dataset exists
+  int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+
+  if (dataset_id == 0) {
+    SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+    return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+  }
+
+  int64_t total_keys = 0;
+  soci::statement count_stmt = (session.prepare << "SELECT COUNT(*) FROM Sample WHERE dataset_id = :dataset_id",
+                                soci::into(total_keys), soci::use(dataset_id));
+
+  count_stmt.execute();
+  response->set_num_keys(total_keys);
   return grpc::Status::OK;
 }

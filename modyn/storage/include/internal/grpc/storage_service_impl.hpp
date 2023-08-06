@@ -90,6 +90,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                              modyn::storage::DeleteDatasetResponse* response) override;
   grpc::Status DeleteData(grpc::ServerContext* context, const modyn::storage::DeleteDataRequest* request,
                           modyn::storage::DeleteDataResponse* response) override;
+  grpc::Status GetDataPerWorker(grpc::ServerContext* context, const modyn::storage::GetDataPerWorkerRequest* request,
+                                grpc::ServerWriter< ::modyn::storage::GetDataPerWorkerResponse>* writer) override;
+  grpc::Status GetDatasetSize(grpc::ServerContext* context, const modyn::storage::GetDatasetSizeRequest* request,
+                              modyn::storage::GetDatasetSizeResponse* response) override;
+  virtual std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,
+                                                      int64_t total_num_elements);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session) {
     int64_t dataset_id = 0;
     session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
