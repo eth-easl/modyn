@@ -133,7 +133,7 @@ int64_t CsvFileWrapper::get_number_of_samples() {
   return count;
 }
 
-void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) { throw std::logic_error("Not implemented"); }
+void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) { throw std::runtime_error("Not implemented"); }
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::filter_rows_samples(const std::vector<int64_t>& indices) {
   std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);

@@ -175,8 +175,10 @@ TEST(BinaryFileWrapperTest, TestDeleteSamples) {
   const std::string file_name = "test.bin";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+  EXPECT_CALL(*filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(4));
 
   BinaryFileWrapper file_wrapper = BinaryFileWrapper(file_name, config, filesystem_wrapper);
+
   std::vector<int64_t> label_indices{0, 1, 2, 3};
 
   ASSERT_NO_THROW(file_wrapper.delete_samples(label_indices));
