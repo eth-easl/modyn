@@ -44,6 +44,7 @@ class CoresetMethodsSupport(nn.Module, ABC):
             x = self.embedding_recorder(x)
             output = self.fc3(x)
     """
+
     def __init__(self, record_embedding: bool = False) -> None:
         super().__init__()
         self.embedding_recorder = EmbeddingRecorder(record_embedding)
