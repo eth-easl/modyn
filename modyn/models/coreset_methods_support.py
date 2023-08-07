@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Optional
 
 import torch
 from torch import nn
@@ -17,13 +17,10 @@ class EmbeddingRecorder(nn.Module):
             self.embedding = tensor
         return tensor
 
-    def __enter__(self) -> None:
+    def start_recording(self) -> None:
         self.record_embedding = True
 
-    def __exit__(self, *args: Any) -> None:
-        self.reset()
-
-    def reset(self) -> None:
+    def end_recording(self) -> None:
         self.record_embedding = False
         self.embedding = None
 

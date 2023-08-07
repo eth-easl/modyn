@@ -309,7 +309,7 @@ def test_get_available_labels_reset():
         database.session.commit()
 
     abstr = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 1, 1000)
-
+    abstr._next_trigger_id += 1
     assert sorted(abstr.get_available_labels()) == [0, 1, 18]
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:

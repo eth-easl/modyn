@@ -404,7 +404,7 @@ class AbstractSelectionStrategy(ABC):
                 database.session.query(SelectorStateMetadata.label)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers - 1
                     if self.tail_triggers is not None
                     else True,
                 )

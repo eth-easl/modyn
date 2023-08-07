@@ -9,13 +9,13 @@ def test_forward_with_embedding_recording():
     assert output.shape == (30, 10)
     assert net.model.embedding is None
 
-    with net.model.embedding_recorder:
-        input_data = torch.rand(30, 3, 32, 32)
-        output = net.model(input_data)
-        assert output.shape == (30, 10)
+    net.model.embedding_recorder.start_recording()
+    input_data = torch.rand(30, 3, 32, 32)
+    output = net.model(input_data)
+    assert output.shape == (30, 10)
 
-        assert net.model.embedding is not None
-        assert torch.equal(net.model.fc(net.model.embedding), output)
+    assert net.model.embedding is not None
+    assert torch.equal(net.model.fc(net.model.embedding), output)
 
 
 def test_get_last_layer():
