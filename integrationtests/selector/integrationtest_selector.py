@@ -922,7 +922,7 @@ def test_get_available_labels(reset_after_trigger: bool):
         )
     )
 
-    selector.inform_data(
+    selector.inform_data_and_trigger(
         DataInformRequest(
             pipeline_id=pipeline_id,
             keys=[4, 5, 6],
@@ -930,6 +930,7 @@ def test_get_available_labels(reset_after_trigger: bool):
             labels=[10, 7, 45],
         )
     )
+
     available_labels = selector.get_available_labels(
         GetAvailableLabelsRequest(pipeline_id=pipeline_id)
     ).available_labels
