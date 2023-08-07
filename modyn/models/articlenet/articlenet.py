@@ -1,7 +1,7 @@
 from typing import Any
 
 import torch
-from modyn.models.modyn_model import ModynModel
+from modyn.models.coreset_methods_support import CoresetMethodsSupport
 from torch import nn
 from transformers import DistilBertModel
 
@@ -44,7 +44,7 @@ class DistilBertFeaturizer(DistilBertModel):
         return pooled_output
 
 
-class ArticleNetwork(ModynModel):
+class ArticleNetwork(CoresetMethodsSupport):
     def __init__(self, num_classes: int) -> None:
         super().__init__()
         self.featurizer = DistilBertFeaturizer.from_pretrained("distilbert-base-uncased")

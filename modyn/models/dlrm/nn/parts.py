@@ -19,10 +19,10 @@ import math
 from typing import Optional, Sequence, Tuple
 
 import torch
+from modyn.models.coreset_methods_support import CoresetMethodsSupport
 from modyn.models.dlrm.nn.embeddings import Embeddings
 from modyn.models.dlrm.nn.factories import create_embeddings, create_mlp
 from modyn.models.dlrm.nn.interactions import Interaction
-from modyn.models.modyn_model import ModynModel
 from torch import nn
 
 
@@ -105,7 +105,7 @@ class DlrmBottom(nn.Module):
         return torch.cat(bottom_output, dim=1), bottom_mlp_output
 
 
-class DlrmTop(ModynModel):
+class DlrmTop(CoresetMethodsSupport):
     def __init__(self, top_mlp_sizes: Sequence[int], interaction: Interaction, device: str, use_cpp_mlp: bool = False):
         super().__init__()
 

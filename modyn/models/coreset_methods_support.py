@@ -23,11 +23,12 @@ class EmbeddingRecorder(nn.Module):
     def __exit__(self, *args: Any) -> None:
         self.reset()
 
-    def reset(self):
+    def reset(self) -> None:
         self.record_embedding = False
         self.embedding = None
 
-class ModynModel(nn.Module, ABC):
+
+class CoresetMethodsSupport(nn.Module, ABC):
     def __init__(self, record_embedding: bool = False) -> None:
         super().__init__()
         self.embedding_recorder = EmbeddingRecorder(record_embedding)

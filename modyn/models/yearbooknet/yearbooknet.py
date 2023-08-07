@@ -1,7 +1,7 @@
 from typing import Any
 
 import torch
-from modyn.models.modyn_model import ModynModel
+from modyn.models.coreset_methods_support import CoresetMethodsSupport
 from torch import nn
 
 
@@ -18,7 +18,7 @@ class YearbookNet:
         self.model.to(device)
 
 
-class YearbookNetModel(ModynModel):
+class YearbookNetModel(CoresetMethodsSupport):
     def __init__(self, num_input_channels: int, num_classes: int) -> None:
         super().__init__()
         self.enc = nn.Sequential(

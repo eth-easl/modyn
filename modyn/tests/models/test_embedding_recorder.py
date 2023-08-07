@@ -1,5 +1,5 @@
 import torch
-from modyn.models.modyn_model import EmbeddingRecorder
+from modyn.models.coreset_methods_support import EmbeddingRecorder
 
 
 def test_embedding_recording():

@@ -2,11 +2,11 @@ from typing import Any, Optional
 
 import numpy as np
 import torch
+from modyn.models.coreset_methods_support import CoresetMethodsSupport, EmbeddingRecorder
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
 from modyn.models.dlrm.utils.utils import get_device_mapping
-from modyn.models.modyn_model import EmbeddingRecorder, ModynModel
 from modyn.utils.utils import package_available_and_can_be_imported
 from torch import nn
 
@@ -17,7 +17,7 @@ class DLRM:
         self.model.to(device)
 
 
-class DlrmModel(ModynModel):
+class DlrmModel(CoresetMethodsSupport):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
