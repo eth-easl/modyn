@@ -78,3 +78,36 @@ def test_get_last_layer():
     assert last_layer.out_features == 1
     assert last_layer.bias.shape == (1,)
     assert last_layer.weight.shape == (1, 16)
+
+def test_dlrm_no_side_effect():
+    model = DLRM(get_dlrm_configuration(), "cpu", False)
+
+    data = {
+        "numerical_input": torch.ones((64, 13), dtype=torch.float32),
+        "categorical_input": torch.ones((64, 26), dtype=torch.long),
+    }
+    out_off = model.model(data)
+    model.model.embedding_recorder.record_embedding = True
+    out_on = model.model(data)
+
+    assert torch.equal(out_on, out_off)
+
+def test_shape_embedding_recorder():
+    model = DLRM(get_dlrm_configuration(), "cpu", False)
+
+    data = {
+        "numerical_input": torch.ones((64, 13), dtype=torch.float32),
+        "categorical_input": torch.ones((64, 26), dtype=torch.long),
+    }
+    model.model(data)
+    assert model.model.embedding is None
+    model.model.embedding_recorder.record_embedding = True
+
+    last_layer = model.model.get_last_layer()
+    recorded_output = model.model(data)
+    recorded_embedding = model.model.embedding
+
+    assert recorded_embedding is not None
+    assert recorded_embedding.shape == (64, last_layer.in_features)
+    assert torch.equal(torch.squeeze(last_layer(recorded_embedding)), recorded_output)
+
