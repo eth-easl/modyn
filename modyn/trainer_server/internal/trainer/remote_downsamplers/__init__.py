@@ -1,5 +1,6 @@
 import os
 
+from .remote_craig_downsampling import RemoteCraigDownsampling  # noqa: F401
 from .remote_gradnorm_downsampling import RemoteGradNormDownsampling  # noqa: F401
 from .remote_loss_downsampling import RemoteLossDownsampling  # noqa: F401
 

@@ -1,0 +1,164 @@
+from argparse import Namespace
+from typing import Any, Optional
+
+import numpy as np
+import torch
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
+    AbstractPerLabelRemoteDownsamplingStrategy,
+)
+from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import submodular_optimizer
+from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.euclidean import euclidean_dist_pair_np
+from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.submodular_function import (
+    FacilityLocation,
+)
+from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.submodular_optimizer import (
+    OPTIMIZER_CHOICES,
+)
+
+
+class RemoteCraigDownsampling(AbstractPerLabelRemoteDownsamplingStrategy):
+    def __init__(
+        self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, per_sample_loss: Any
+    ) -> None:
+        """
+        Selection strategy based on CRAIG (from the paper Data-efficient Training of Machine Learning Models). The
+        implementation is adapted from the DeepCore library (https://github.com/PatrickZH/DeepCore).
+        """
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector)
+
+        self.criterion = per_sample_loss
+
+        # these arguments are required by DeepCore. Default values are used if not provided
+        self.args = Namespace(**params_from_selector.get("args", {}))
+        if "print_freq" not in self.args:
+            self.args.print_freq = None  # avoid printing when running the submodular optimization
+        if "selection_batch" not in self.args:
+            self.args.selection_batch = 64
+
+        self.greedy = params_from_selector.get("greedy", "NaiveGreedy")
+        if self.greedy not in OPTIMIZER_CHOICES:
+            raise ValueError(
+                f"The required Greedy optimizer is not available. Pick one of the following: {OPTIMIZER_CHOICES}"
+            )
+
+        # This class uses the embedding recorder
+        self.requires_coreset_methods_support = True
+
+        # Samples are supplied label by label (this class is instance of AbstractPerLabelRemoteDownsamplingStrategy).
+        # The following list keeps the gradients of the current label. When all the samples belonging to the current
+        # label have been seen, the scores are computed and the list is emptied
+        self.current_class_gradients: list[torch.Tensor] = []
+        # distance_matrix[i,j] = 0 if label[i]!=label[j] else is proportional to the euclidean distance between the
+        # two samples in the gradient space
+        self.distance_matrix = np.zeros([0, 0])
+
+    def inform_samples(
+        self,
+        sample_ids: list[int],
+        forward_output: torch.Tensor,
+        target: torch.Tensor,
+        embedding: Optional[torch.Tensor] = None,
+    ) -> None:
+        assert embedding is not None
+
+        # Slightly different implementation for BTS and STB since in STB points are supplied class by class while in
+        # BTS are not. STB will always use the first branch, STB will typically (might use the first if all the points
+        # belong to the same class) use the second one
+        different_targets_in_this_batch = target.unique()
+        if len(different_targets_in_this_batch) == 1:
+            self._inform_samples_single_class(sample_ids, forward_output, target, embedding)
+        else:
+            for current_target in different_targets_in_this_batch:
+                mask = target == current_target
+                this_target_sample_ids = [sample_ids[i] for i, keep in enumerate(mask) if keep]
+                self._inform_samples_single_class(
+                    this_target_sample_ids, forward_output[mask], target[mask], embedding[mask]
+                )
+                self.inform_end_of_current_label()
+
+    def _inform_samples_single_class(
+        self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
+    ) -> None:
+        embedding_dim = embedding.shape[1]
+        num_classes = forward_output.shape[1]
+        batch_num = target.shape[0]
+
+        loss = self.criterion(forward_output, target).mean()
+
+        # compute the gradient for each element provided
+        with torch.no_grad():
+            bias_parameters_grads = torch.autograd.grad(loss, forward_output)[0]
+            weight_parameters_grads = embedding.view(batch_num, 1, embedding_dim).repeat(
+                1, num_classes, 1
+            ) * bias_parameters_grads.view(batch_num, num_classes, 1).repeat(1, 1, embedding_dim)
+
+            # store the computed gradients
+            self.current_class_gradients.append(
+                torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1).cpu().numpy()
+            )
+
+        # keep the mapping index<->sample_id
+        self.index_sampleid_map += sample_ids
+
+    def add_to_distance_matrix(self, submatrix: np.ndarray) -> None:
+        # compute the new size of the matrix
+        current_size = self.distance_matrix.shape[0]
+        new_size = current_size + submatrix.shape[0]
+
+        # copy the old matrix into the new one
+        new_matrix = np.zeros([new_size, new_size])
+        new_matrix[:current_size, :current_size] = self.distance_matrix
+
+        # add the new submatrix
+        new_matrix[
+            current_size:,
+            current_size:,
+        ] = submatrix
+
+        self.distance_matrix = new_matrix
+
+    def inform_end_of_current_label(self) -> None:
+        if len(self.current_class_gradients) == 0:
+            # no new gradients, just return
+            return
+        # compute the scores for each pair of samples belonging to the current class
+        gradients = np.concatenate(self.current_class_gradients)
+        matrix = -1.0 * euclidean_dist_pair_np(gradients)
+        matrix -= np.min(matrix) - 1e-3
+        # store the result in the matrix
+        self.add_to_distance_matrix(matrix)
+        # empty the gradients list
+        self.current_class_gradients = []
+
+    def calc_weights(self, matrix: np.ndarray, result: np.ndarray) -> torch.Tensor:
+        min_sample = np.argmax(matrix[result], axis=0)
+        weights = np.ones(np.sum(result) if result.dtype == bool else len(result))
+        for i in min_sample:
+            weights[i] = weights[i] + 1
+        return torch.tensor(weights)
+
+    def select_points(self) -> tuple[list[int], torch.Tensor]:
+        if len(self.current_class_gradients) != 0:
+            # conclude the last class if there are still samples
+            self.inform_end_of_current_label()
+
+        number_of_samples = self.distance_matrix.shape[0]
+        target_size = int(self.downsampling_ratio * number_of_samples / 100)
+        all_index = np.arange(number_of_samples)
+
+        submod_function = FacilityLocation(index=all_index, similarity_matrix=self.distance_matrix)
+        submod_optimizer = submodular_optimizer.__dict__[self.greedy](
+            args=self.args, index=all_index, budget=target_size
+        )
+        selection_result = submod_optimizer.select(
+            gain_function=submod_function.calc_gain_batch,
+            update_state=submod_function.update_state,
+            batch=self.args.selection_batch,
+        )
+        weights = self.calc_weights(self.distance_matrix, selection_result)
+        selected_ids = [self.index_sampleid_map[sample] for sample in selection_result]
+        return selected_ids, weights
+
+    def init_downsampler(self) -> None:
+        self.current_class_gradients = []
+        self.distance_matrix = np.zeros([0, 0])

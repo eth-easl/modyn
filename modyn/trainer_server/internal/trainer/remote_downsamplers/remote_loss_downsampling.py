@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
@@ -25,7 +25,13 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         self.index_sampleid_map: list[int] = []
         self.number_of_points_seen = 0
 
-    def inform_samples(self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor) -> None:
+    def inform_samples(
+        self,
+        sample_ids: list[int],
+        forward_output: torch.Tensor,
+        target: torch.Tensor,
+        embedding: Optional[torch.Tensor] = None,
+    ) -> None:
         scores = self.get_scores(forward_output, target)
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -55,12 +55,22 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         # can use the following parameter
         self.requires_data_label_by_label = False
 
+        # Some methods require extra features (embedding recorder, get_last_layer) that are implemented in the class
+        # CoresetMethodsSupport
+        self.requires_coreset_methods_support = False
+
     @abstractmethod
     def init_downsampler(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def inform_samples(self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor) -> None:
+    def inform_samples(
+        self,
+        sample_ids: list[int],
+        forward_output: torch.Tensor,
+        target: torch.Tensor,
+        embedding: Optional[torch.Tensor] = None,
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

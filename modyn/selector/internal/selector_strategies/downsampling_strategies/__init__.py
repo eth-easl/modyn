@@ -1,6 +1,7 @@
 import os
 
 from .abstract_downsampling_strategy import AbstractDownsamplingStrategy  # noqa: F401
+from .craig_downsampling_strategy import CraigDownsamplingStrategy  # noqa: F401
 from .downsampling_scheduler import DownsamplingScheduler, instantiate_scheduler  # noqa: F401
 from .gradnorm_downsampling_strategy import GradNormDownsamplingStrategy  # noqa: F401
 from .loss_downsampling_strategy import LossDownsamplingStrategy  # noqa: F401
