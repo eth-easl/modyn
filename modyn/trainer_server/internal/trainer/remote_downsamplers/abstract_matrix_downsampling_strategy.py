@@ -38,7 +38,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractRemoteDownsamplingStrategy):
         if self.matrix_content == MatrixContent.GRADIENTS:
             to_be_added = self._compute_gradients(forward_output, target, embedding)
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
-            to_be_added = embedding
+            to_be_added = embedding.detach()
         else:
             raise AssertionError("The required content does not exits.")
 
@@ -65,12 +65,18 @@ class AbstractMatrixDownsamplingStrategy(AbstractRemoteDownsamplingStrategy):
         return gradients
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
-        number_of_samples = len(self.matrix_elements)
+        matrix = np.concatenate(self.matrix_elements)
+        number_of_samples = len(matrix)
         target_size = int(self.downsampling_ratio * number_of_samples / 100)
 
-        matrix = np.concatenate(self.matrix_elements)
-        return self._select_points_from_matrix(matrix, target_size)
+        selected_indices, weights = self._select_indexes_from_matrix(matrix, target_size)
+        selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
+
+        return selected_ids, weights
+
+    def init_downsampler(self) -> None:
+        self.matrix_elements = []
 
     @abstractmethod
-    def _select_points_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
+    def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         raise NotImplementedError()

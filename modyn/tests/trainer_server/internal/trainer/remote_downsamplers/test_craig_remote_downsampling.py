@@ -1,8 +1,10 @@
 import numpy as np
 import torch
-from modyn.models.coreset_methods_support import CoresetMethodsSupport
+from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import (
+    DummyModel,
+    assert_close_matrices,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteCraigDownsamplingStrategy
-from torch import nn
 from torch.nn import BCEWithLogitsLoss
 
 
@@ -172,127 +174,105 @@ def test_bts_equals_stb():
     assert torch.equal(stb_selected_weights, bts_selected_weights)
 
 
-class DummyModel(CoresetMethodsSupport):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.hidden_layer = nn.Linear(in_features=1, out_features=10)
-        self.output_layer = nn.Linear(in_features=10, out_features=1)
-
-    def forward(self, input_tensor):
-        input_tensor = torch.relu(self.hidden_layer(input_tensor))
-        input_tensor = self.embedding_recorder(input_tensor)
-        outputs = self.output_layer(input_tensor)
-        return outputs
-
-    def get_last_layer(self):
-        return self.output_layer
-
-
-def assert_close_matrices(matrix1, matrix2):
-    for row1, row2 in zip(matrix1, matrix2):
-        assert len(row1) == len(row2)
-        for el1, el2 in zip(row1, row2):
-            assert np.isclose(el1, el2, 1e-3)
-
-
 def test_matching_results_with_deepcore():
     # RESULTS OBTAINED USING DEEPCORE IN THE SAME SETTING
-    distance_matrix = [
-        [0.17082947127723946, 0.0010000000000000009, 0.06881503558158875, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        [0.0010000000000000009, 0.17082947127723946, 0.10208309984207153, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        [0.06881503558158875, 0.10208309984207153, 0.17082947127723946, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    expected_distance_matrix = [
+        [0.23141611747646584, 0.0010000000000000009, 0.08913177049160004, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0010000000000000009, 0.23141611747646584, 0.13688503003120422, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.08913177049160004, 0.13688503003120422, 0.23141611747646584, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         [
             0.0,
             0.0,
             0.0,
-            0.10366127275133385,
-            0.04819417542219162,
-            0.04819088599085808,
-            0.03480425274372101,
-            0.06694299152493477,
-            0.10332244338840246,
-            0.08866848035156727,
-        ],
-        [
-            0.0,
-            0.0,
-            0.0,
-            0.04819417542219162,
-            0.10366127275133385,
-            0.10366127275133385,
-            0.08991418017446995,
-            0.013802578508853913,
-            0.047890564262866975,
-            0.03442031687498093,
-        ],
-        [
-            0.0,
-            0.0,
-            0.0,
-            0.04819088599085808,
-            0.10366127275133385,
-            0.10360123759508133,
-            0.08991729637980461,
-            0.013799531221389771,
-            0.04788725993037224,
-            0.03441711312532425,
-        ],
-        [
-            0.0,
-            0.0,
-            0.0,
-            0.03480425274372101,
-            0.08991418017446995,
-            0.08991729637980461,
-            0.10366127275133385,
+            0.07399794256687164,
+            0.013805931270122529,
+            0.04436375929415226,
             0.0010000000000000009,
-            0.03450607305765152,
-            0.021281858742237092,
+            0.047306565403938294,
+            0.07344558201637119,
+            0.037069154739379884,
         ],
         [
             0.0,
             0.0,
             0.0,
-            0.06694299152493477,
-            0.013802578508853913,
-            0.013799531221389771,
+            0.013805931270122529,
+            0.07405797772312417,
+            0.042330792009830476,
+            0.06103372650593519,
+            0.03912345489859581,
+            0.014334088027477265,
+            0.050075888469815255,
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            0.04436375929415226,
+            0.042330792009830476,
+            0.07399794256687164,
+            0.029320956975221635,
+            0.07084722916968167,
+            0.044916815891861916,
+            0.06630006742104888,
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
             0.0010000000000000009,
-            0.10366127275133385,
-            0.06728020107746124,
-            0.08189145086705685,
+            0.06103372650593519,
+            0.029320956975221635,
+            0.07397266097884858,
+            0.026116726756095887,
+            0.0015217790603637704,
+            0.03705782613158226,
         ],
         [
             0.0,
             0.0,
             0.0,
-            0.10332244338840246,
-            0.047890564262866975,
-            0.04788725993037224,
-            0.03450607305765152,
-            0.06728020107746124,
-            0.10366127275133385,
-            0.0890064619705081,
+            0.047306565403938294,
+            0.03912345489859581,
+            0.07084722916968167,
+            0.026116726756095887,
+            0.07405797772312417,
+            0.04786216451227665,
+            0.0630889374986291,
         ],
         [
             0.0,
             0.0,
             0.0,
-            0.08866848035156727,
-            0.03442031687498093,
-            0.03441711312532425,
-            0.021281858742237092,
-            0.08189145086705685,
-            0.0890064619705081,
-            0.10366127275133385,
+            0.07344558201637119,
+            0.014334088027477265,
+            0.044916815891861916,
+            0.0015217790603637704,
+            0.04786216451227665,
+            0.07399794256687164,
+            0.03761516308784485,
+        ],
+        [
+            0.0,
+            0.0,
+            0.0,
+            0.037069154739379884,
+            0.050075888469815255,
+            0.06630006742104888,
+            0.03705782613158226,
+            0.0630889374986291,
+            0.03761516308784485,
+            0.07405797772312417,
         ],
     ]
-    selected_samples_deepcore = [2, 3]
+
+    selected_samples_deepcore = [2, 5]
     selected_weights_deepcore = [4, 8]
 
     torch.manual_seed(42)
     dummy_model = DummyModel()
     np.random.seed(42)
-    samples = torch.tensor(np.random.rand(10, 1).astype(np.float32))
+    samples = torch.rand(10, 1)
     targets = torch.tensor([0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
 
     sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 20}, BCEWithLogitsLoss(reduction="none"))
@@ -326,19 +306,19 @@ def test_matching_results_with_deepcore():
 
     assert len(selected_samples) == 2
     assert len(selected_weights) == 2
-    assert_close_matrices(distance_matrix, sampler.distance_matrix.tolist())
+    assert_close_matrices(expected_distance_matrix, sampler.distance_matrix.tolist())
     assert selected_samples_deepcore == selected_samples
     assert selected_weights_deepcore == selected_weights.tolist()
 
 
 def test_matching_results_with_deepcore_permutation():
-    selected_samples_deepcore = [3, 4, 8]
-    selected_weights_deepcore = [3, 2, 8]
+    selected_samples_deepcore = [2, 1, 5]
+    selected_weights_deepcore = [4, 3, 6]
 
     torch.manual_seed(42)
     dummy_model = DummyModel()
     np.random.seed(42)
-    samples = torch.tensor(np.random.rand(10, 1).astype(np.float32))
+    samples = torch.rand(10, 1)
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
     sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 30}, BCEWithLogitsLoss(reduction="none"))
@@ -377,14 +357,14 @@ def test_matching_results_with_deepcore_permutation():
 
 def test_matching_results_with_deepcore_permutation_fancy_ids():
     index_mapping = [45, 56, 98, 34, 781, 12, 432, 422, 5, 10]
-    selected_indices_deepcore = [3, 4, 1, 6, 8]
+    selected_indices_deepcore = [2, 3, 4, 1, 9]
     selected_samples_deepcore = [index_mapping[i] for i in selected_indices_deepcore]
-    selected_weights_deepcore = [3, 2, 3, 3, 4]
+    selected_weights_deepcore = [2, 2, 2, 3, 6]
 
-    torch.manual_seed(42)
+    torch.manual_seed(2)
     dummy_model = DummyModel()
-    np.random.seed(42)
-    samples = torch.tensor(np.random.rand(10, 1).astype(np.float32))
+    np.random.seed(3)
+    samples = torch.rand(10, 1)
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
     sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 50}, BCEWithLogitsLoss(reduction="none"))

@@ -41,14 +41,17 @@ def test_collect_embeddings():
     amds.inform_samples([21, 31, 41], None, None, second_embedding)
 
     assert np.concatenate(amds.matrix_elements).shape == (7, 5)
-    assert amds.matrix_elements == [first_embedding, second_embedding]
+    assert all(torch.equal(el1, el2) for el1, el2 in zip(amds.matrix_elements, [first_embedding, second_embedding]))
     assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
 
     third_embedding = torch.randn((23, 5))
     amds.inform_samples(list(range(1000, 1023)), None, None, third_embedding)
 
     assert np.concatenate(amds.matrix_elements).shape == (30, 5)
-    assert amds.matrix_elements == [first_embedding, second_embedding, third_embedding]
+    assert all(
+        torch.equal(el1, el2)
+        for el1, el2 in zip(amds.matrix_elements, [first_embedding, second_embedding, third_embedding])
+    )
     assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41] + list(range(1000, 1023))
 
 
