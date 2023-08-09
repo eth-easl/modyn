@@ -3,6 +3,8 @@
 
 import numpy as np
 
+SUBMODULAR_FUNCTIONS = ["FacilityLocation", "GraphCut", "LogDeterminant"]
+
 
 class SubmodularFunction(object):
     def __init__(self, index, similarity_kernel=None, similarity_matrix=None, already_selected=[]):

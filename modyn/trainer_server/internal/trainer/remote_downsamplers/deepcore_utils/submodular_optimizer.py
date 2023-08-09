@@ -40,6 +40,7 @@ class NaiveGreedy(optimizer):
             greedy_gain[current_selection] = -np.inf
             if update_state is not None:
                 update_state(np.array([current_selection]), selected, **kwargs)
+
         return self.index[selected]
 
 
