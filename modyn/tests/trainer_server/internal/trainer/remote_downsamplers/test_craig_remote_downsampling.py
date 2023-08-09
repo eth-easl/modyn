@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from modyn.models.coreset_methods_support import CoresetMethodsSupport
-from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteCraigDownsampling
+from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteCraigDownsamplingStrategy
 from torch import nn
 from torch.nn import BCEWithLogitsLoss
 
@@ -15,7 +15,7 @@ def get_sampler_config():
 
 
 def test_inform_samples():
-    sampler = RemoteCraigDownsampling(*get_sampler_config())
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     # Test data
     sample_ids = [1, 2, 3]
     forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
@@ -35,7 +35,7 @@ initial_matrix = np.array([[0, 1], [1, 0]])
 
 
 def test_add_to_distance_matrix_single_submatrix():
-    sampler = RemoteCraigDownsampling(*get_sampler_config())
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     submatrix = np.array([[2]])
     sampler.add_to_distance_matrix(initial_matrix)
     sampler.add_to_distance_matrix(submatrix)
@@ -44,7 +44,7 @@ def test_add_to_distance_matrix_single_submatrix():
 
 
 def test_add_to_distance_matrix_multiple_submatrix():
-    sampler = RemoteCraigDownsampling(*get_sampler_config())
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     sampler.add_to_distance_matrix(initial_matrix)
     submatrix = np.array([[3, 4], [4, 3]])
     sampler.add_to_distance_matrix(submatrix)
@@ -53,7 +53,7 @@ def test_add_to_distance_matrix_multiple_submatrix():
 
 
 def test_add_to_distance_matrix_large_submatrix():
-    sampler = RemoteCraigDownsampling(*get_sampler_config())
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     sampler.add_to_distance_matrix(initial_matrix)
     submatrix = np.array([[5, 6, 7], [6, 5, 7], [7, 7, 5]])
     sampler.add_to_distance_matrix(submatrix)
@@ -73,7 +73,7 @@ def test_add_to_distance_matrix_large_submatrix():
 
 
 def test_inform_end_of_current_label_and_select():
-    sampler = RemoteCraigDownsampling(*get_sampler_config())
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     sample_ids = [1, 2, 3]
     forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
     forward_output.requires_grad = True
@@ -110,7 +110,7 @@ def test_inform_end_of_current_label_and_select():
 
 
 def test_bts():
-    sampler = RemoteCraigDownsampling(*get_sampler_config())
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     sample_ids = [1, 2, 3, 10, 11, 12, 13]
     forward_output = torch.randn(7, 5)  # 7 samples, 5 output classes
     forward_output.requires_grad = True
@@ -142,7 +142,7 @@ def test_bts_equals_stb():
     embedding = torch.randn(7, 10)  # 7 samples, embedding dimension 10
 
     # BTS, all in one call
-    bts_sampler = RemoteCraigDownsampling(*get_sampler_config())
+    bts_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     bts_sampler.inform_samples(sample_ids, forward_output, target, embedding)
 
     bts_selected_points, bts_selected_weights = bts_sampler.select_points()
@@ -150,7 +150,7 @@ def test_bts_equals_stb():
     # STB, first class 0 and then class 1
     class0 = target == 0
     class1 = target == 1
-    stb_sampler = RemoteCraigDownsampling(*get_sampler_config())
+    stb_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     stb_sampler.inform_samples(
         [sample_ids[i] for i, keep in enumerate(class0) if keep],
         forward_output[class0],
@@ -295,7 +295,7 @@ def test_matching_results_with_deepcore():
     samples = torch.tensor(np.random.rand(10, 1).astype(np.float32))
     targets = torch.tensor([0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
 
-    sampler = RemoteCraigDownsampling(0, 0, 5, {"downsampling_ratio": 20}, BCEWithLogitsLoss(reduction="none"))
+    sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 20}, BCEWithLogitsLoss(reduction="none"))
     sample_ids = [0, 1, 2]
     dummy_model.embedding_recorder.start_recording()
     forward_output = dummy_model(samples[0:3]).float()
@@ -341,7 +341,7 @@ def test_matching_results_with_deepcore_permutation():
     samples = torch.tensor(np.random.rand(10, 1).astype(np.float32))
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
-    sampler = RemoteCraigDownsampling(0, 0, 5, {"downsampling_ratio": 30}, BCEWithLogitsLoss(reduction="none"))
+    sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 30}, BCEWithLogitsLoss(reduction="none"))
     sample_ids = [2, 3, 4]
     dummy_model.embedding_recorder.start_recording()
     forward_output = dummy_model(samples[targets == 0]).float()
@@ -387,7 +387,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
     samples = torch.tensor(np.random.rand(10, 1).astype(np.float32))
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
-    sampler = RemoteCraigDownsampling(0, 0, 5, {"downsampling_ratio": 50}, BCEWithLogitsLoss(reduction="none"))
+    sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 50}, BCEWithLogitsLoss(reduction="none"))
     sample_ids = [index_mapping[i] for i in [2, 3, 4]]
     dummy_model.embedding_recorder.start_recording()
     forward_output = dummy_model(samples[targets == 0]).float()

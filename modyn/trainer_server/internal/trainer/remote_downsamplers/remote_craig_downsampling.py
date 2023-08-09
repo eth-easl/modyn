@@ -16,7 +16,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.su
 )
 
 
-class RemoteCraigDownsampling(AbstractPerLabelRemoteDownsamplingStrategy):
+class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
     def __init__(
         self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, per_sample_loss: Any
     ) -> None:
