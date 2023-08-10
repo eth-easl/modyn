@@ -3,6 +3,7 @@ import os
 from .remote_craig_downsampling import RemoteCraigDownsamplingStrategy  # noqa: F401
 from .remote_grad_match_downsampling_strategy import RemoteGradMatchDownsamplingStrategy  # noqa: F401
 from .remote_gradnorm_downsampling import RemoteGradNormDownsampling  # noqa: F401
+from .remote_kcenter_greedy_downsampling_strategy import RemoteKcenterGreedyDownsamplingStrategy  # noqa: F401
 from .remote_loss_downsampling import RemoteLossDownsampling  # noqa: F401
 from .remote_submodular_downsampling_strategy import RemoteSubmodularDownsamplingStrategy  # noqa: F401
 
