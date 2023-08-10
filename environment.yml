@@ -26,6 +26,7 @@ dependencies:
   - pyaml
   - numpy
   - pandas
+  - scipy
   - pyftpdlib
   - types-protobuf
   - types-psycopg2
