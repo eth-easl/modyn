@@ -56,7 +56,6 @@ class AbstractMatrixDownsamplingStrategy(AbstractRemoteDownsamplingStrategy):
         # compute the gradient for each element provided
         with torch.no_grad():
             bias_parameters_grads = torch.autograd.grad(loss, forward_output)[0]
-
             weight_parameters_grads = embedding.view(batch_num, 1, embedding_dim).repeat(
                 1, num_classes, 1
             ) * bias_parameters_grads.view(batch_num, num_classes, 1).repeat(1, 1, embedding_dim)

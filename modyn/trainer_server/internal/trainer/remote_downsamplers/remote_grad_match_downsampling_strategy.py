@@ -20,7 +20,7 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss)
         self.matrix_content = MatrixContent.GRADIENTS
 
-        self.args = Namespace(**params_from_selector.get("args", {}))
+        self.args = Namespace(**params_from_selector.get("deepcore_args", {}))
         if "print_freq" not in self.args:
             self.args.print_freq = None
         if "device" not in self.args:

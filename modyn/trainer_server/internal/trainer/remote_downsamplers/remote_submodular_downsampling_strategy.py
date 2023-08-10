@@ -28,7 +28,7 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         self.matrix_content = MatrixContent.GRADIENTS
 
         # these arguments are required by DeepCore. Default values are used if not provided
-        self.args = Namespace(**params_from_selector.get("args", {}))
+        self.args = Namespace(**params_from_selector.get("deepcore_args", {}))
         if "print_freq" not in self.args:
             self.args.print_freq = None  # avoid printing when running the submodular optimization
         if "selection_batch" not in self.args:
