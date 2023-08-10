@@ -74,6 +74,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractRemoteDownsamplingStrategy):
 
     def init_downsampler(self) -> None:
         self.matrix_elements = []
+        self.index_sampleid_map: list[int] = []
 
     @abstractmethod
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
