@@ -135,7 +135,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         weights = np.ones(np.sum(result) if result.dtype == bool else len(result))
         for i in min_sample:
             weights[i] = weights[i] + 1
-        return torch.tensor(weights)
+        return torch.tensor(weights).float()
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         if len(self.current_class_gradients) != 0:
@@ -160,5 +160,6 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         return selected_ids, weights
 
     def init_downsampler(self) -> None:
+        self.index_sampleid_map: list[int] = []
         self.current_class_gradients = []
         self.distance_matrix = np.zeros([0, 0])
