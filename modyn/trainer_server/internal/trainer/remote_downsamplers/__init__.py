@@ -6,6 +6,7 @@ from .remote_gradnorm_downsampling import RemoteGradNormDownsampling  # noqa: F4
 from .remote_kcenter_greedy_downsampling_strategy import RemoteKcenterGreedyDownsamplingStrategy  # noqa: F401
 from .remote_loss_downsampling import RemoteLossDownsampling  # noqa: F401
 from .remote_submodular_downsampling_strategy import RemoteSubmodularDownsamplingStrategy  # noqa: F401
+from .remote_uncertainty_downsampling_strategy import RemoteUncertaintyDownsamplingStrategy # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")
