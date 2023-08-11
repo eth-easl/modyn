@@ -13,7 +13,12 @@ def get_sampler_config():
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "args": {}}
+    params_from_selector = {
+        "downsampling_ratio": downsampling_ratio,
+        "sample_then_batch": False,
+        "args": {},
+        "balance": False,
+    }
     return 0, 0, 0, params_from_selector, per_sample_loss_fct
 
 

@@ -11,7 +11,12 @@ def get_sampler_config():
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "args": {}}
+    params_from_selector = {
+        "downsampling_ratio": downsampling_ratio,
+        "sample_then_batch": False,
+        "args": {},
+        "balance": False,
+    }
     return 0, 0, 0, params_from_selector, per_sample_loss_fct
 
 
@@ -80,7 +85,11 @@ def test_matching_results_with_deepcore():
         np.random.seed(42)
 
         sampler = RemoteKcenterGreedyDownsamplingStrategy(
-            0, 0, 5, {"downsampling_ratio": 10 * num_of_target_samples}, BCEWithLogitsLoss(reduction="none")
+            0,
+            0,
+            5,
+            {"downsampling_ratio": 10 * num_of_target_samples, "balance": False},
+            BCEWithLogitsLoss(reduction="none"),
         )
         sampler.inform_samples(sample_ids, forward_output, target, embedding)
         assert sampler.index_sampleid_map == list(range(10))
@@ -102,7 +111,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 0, 0]).float()
 
     sampler = RemoteKcenterGreedyDownsamplingStrategy(
-        0, 0, 5, {"downsampling_ratio": 50}, BCEWithLogitsLoss(reduction="none")
+        0, 0, 5, {"downsampling_ratio": 50, "balance": False}, BCEWithLogitsLoss(reduction="none")
     )
 
     dummy_model.embedding_recorder.start_recording()

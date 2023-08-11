@@ -16,6 +16,7 @@ def get_sampler_config(submodular: str = "GraphCut"):
         "sample_then_batch": False,
         "args": {},
         "submodular_function": submodular,
+        "balance": False,
     }
     return 0, 0, 0, params_from_selector, per_sample_loss_fct
 
@@ -61,7 +62,7 @@ def _get_selected_samples(submodular, num_of_target_samples, sample_ids, forward
         0,
         0,
         5,
-        {"downsampling_ratio": 10 * num_of_target_samples, "submodular_function": submodular},
+        {"downsampling_ratio": 10 * num_of_target_samples, "submodular_function": submodular, "balance": False},
         BCEWithLogitsLoss(reduction="none"),
     )
     sampler.inform_samples(sample_ids, forward_output, target, embedding)
