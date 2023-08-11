@@ -8,6 +8,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import submodular_optimizer
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.euclidean import euclidean_dist_pair_np
+from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.submodular_function import (
     FacilityLocation,
 )
@@ -51,6 +52,14 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         # distance_matrix[i,j] = 0 if label[i]!=label[j] else is proportional to the euclidean distance between the
         # two samples in the gradient space
         self.distance_matrix = np.zeros([0, 0])
+
+        # if true, the downsampling is balanced across classes ex class sizes = [10, 50, 30] and 50% downsampling
+        # yields the following downsampled class sizes [5, 25, 15] while without balance something like [0, 45, 0] can
+        # happen
+        self.balance = params_from_selector["balance"]
+        if self.balance:
+            self.already_selected_samples: list[int] = []
+            self.already_selected_weights = torch.tensor([]).float()
 
     def inform_samples(
         self,
@@ -130,6 +139,14 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         # empty the gradients list
         self.current_class_gradients = []
 
+        if self.balance:
+            # here we select the points if we want to keep a balance across classes
+            this_class_samples, this_class_weights = self._select_points_from_distance_matrix()
+            self.already_selected_samples += this_class_samples
+            self.already_selected_weights = torch.cat((self.already_selected_weights, this_class_weights))
+            self.distance_matrix = np.zeros([0, 0])
+            self.index_sampleid_map: list[int] = []
+
     def calc_weights(self, matrix: np.ndarray, result: np.ndarray) -> torch.Tensor:
         min_sample = np.argmax(matrix[result], axis=0)
         weights = np.ones(np.sum(result) if result.dtype == bool else len(result))
@@ -138,14 +155,23 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         return torch.tensor(weights).float()
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
+        if self.balance:
+            # return a shuffled version, otherwise training happens class by class
+            return _shuffle_list_and_tensor(self.already_selected_samples, self.already_selected_weights)
+
         if len(self.current_class_gradients) != 0:
             # conclude the last class if there are still samples
             self.inform_end_of_current_label()
+        return self._select_points_from_distance_matrix()
 
+    def _select_points_from_distance_matrix(self) -> tuple[list[int], torch.Tensor]:
         number_of_samples = self.distance_matrix.shape[0]
         target_size = int(self.downsampling_ratio * number_of_samples / 100)
-        all_index = np.arange(number_of_samples)
 
+        if target_size == 0:
+            return [], torch.Tensor([]).float()
+
+        all_index = np.arange(number_of_samples)
         submod_function = FacilityLocation(index=all_index, similarity_matrix=self.distance_matrix)
         submod_optimizer = submodular_optimizer.__dict__[self.greedy](
             args=self.args, index=all_index, budget=target_size
@@ -160,6 +186,9 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         return selected_ids, weights
 
     def init_downsampler(self) -> None:
-        self.index_sampleid_map: list[int] = []
+        self.index_sampleid_map = []
         self.current_class_gradients = []
         self.distance_matrix = np.zeros([0, 0])
+        if self.balance:
+            self.already_selected_samples = []
+            self.already_selected_weights = torch.tensor([]).float()

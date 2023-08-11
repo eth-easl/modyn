@@ -8,11 +8,16 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteCrai
 from torch.nn import BCEWithLogitsLoss
 
 
-def get_sampler_config():
+def get_sampler_config(balance=False):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "args": {}}
+    params_from_selector = {
+        "downsampling_ratio": downsampling_ratio,
+        "sample_then_batch": False,
+        "args": {},
+        "balance": balance,
+    }
     return 0, 0, 0, params_from_selector, per_sample_loss_fct
 
 
@@ -92,7 +97,7 @@ def test_inform_end_of_current_label_and_select():
     sample_ids = [10, 11, 12, 13]
     forward_output = torch.randn(4, 5)  # 4 samples, 5 output classes
     forward_output.requires_grad = True
-    target = torch.tensor([1, 1, 1, 1])  # 4 target labels
+    target = torch.tensor([0, 0, 0, 0])  # 4 target labels
     embedding = torch.randn(4, 10)  # 4 samples, embedding dimension 10
 
     sampler.inform_samples(sample_ids, forward_output, target, embedding)
@@ -109,6 +114,48 @@ def test_inform_end_of_current_label_and_select():
     assert len(selected_weights) == 3
     assert all(weight > 0 for weight in selected_weights)
     assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
+
+
+def test_inform_end_of_current_label_and_select_balanced():
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(True))
+    sample_ids = [1, 2, 3, 4]
+    forward_output = torch.randn(4, 5)
+    forward_output.requires_grad = True
+    target = torch.tensor([1, 1, 1, 1])
+    embedding = torch.randn(4, 10)
+
+    sampler.inform_samples(sample_ids, forward_output, target, embedding)
+
+    assert sampler.distance_matrix.shape == (0, 0)
+    sampler.inform_end_of_current_label()
+    assert len(sampler.already_selected_samples) == 2
+    assert len(sampler.already_selected_weights) == 2
+    assert sampler.distance_matrix.shape == (0, 0)
+    assert len(sampler.current_class_gradients) == 0
+
+    sample_ids = [10, 11, 12, 13, 14, 15]
+    forward_output = torch.randn(6, 5)  # 4 samples, 5 output classes
+    forward_output.requires_grad = True
+    target = torch.tensor([0, 0, 0, 0, 0, 0])  # 4 target labels
+    embedding = torch.randn(6, 10)  # 4 samples, embedding dimension 10
+
+    sampler.inform_samples(sample_ids, forward_output, target, embedding)
+
+    assert sampler.distance_matrix.shape == (0, 0)
+    sampler.inform_end_of_current_label()
+    assert len(sampler.already_selected_samples) == 5
+    assert len(sampler.already_selected_weights) == 5
+    assert sampler.distance_matrix.shape == (0, 0)
+    assert len(sampler.current_class_gradients) == 0
+
+    selected_points, selected_weights = sampler.select_points()
+
+    assert len(selected_points) == 5
+    assert len(selected_weights) == 5
+    assert all(weight > 0 for weight in selected_weights)
+    assert all(id in [1, 2, 3, 4, 10, 11, 12, 13, 14, 15] for id in selected_points)
+    assert sum(id in [1, 2, 3, 4] for id in selected_points) == 2
+    assert sum(id in [10, 11, 12, 13, 14, 15] for id in selected_points) == 3
 
 
 def test_bts():
@@ -275,7 +322,9 @@ def test_matching_results_with_deepcore():
     samples = torch.rand(10, 1)
     targets = torch.tensor([0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
 
-    sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 20}, BCEWithLogitsLoss(reduction="none"))
+    sampler = RemoteCraigDownsamplingStrategy(
+        0, 0, 5, {"downsampling_ratio": 20, "balance": False}, BCEWithLogitsLoss(reduction="none")
+    )
     sample_ids = [0, 1, 2]
     dummy_model.embedding_recorder.start_recording()
     forward_output = dummy_model(samples[0:3]).float()
@@ -321,7 +370,9 @@ def test_matching_results_with_deepcore_permutation():
     samples = torch.rand(10, 1)
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
-    sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 30}, BCEWithLogitsLoss(reduction="none"))
+    sampler = RemoteCraigDownsamplingStrategy(
+        0, 0, 5, {"downsampling_ratio": 30, "balance": False}, BCEWithLogitsLoss(reduction="none")
+    )
     sample_ids = [2, 3, 4]
     dummy_model.embedding_recorder.start_recording()
     forward_output = dummy_model(samples[targets == 0]).float()
@@ -367,7 +418,9 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
     samples = torch.rand(10, 1)
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
-    sampler = RemoteCraigDownsamplingStrategy(0, 0, 5, {"downsampling_ratio": 50}, BCEWithLogitsLoss(reduction="none"))
+    sampler = RemoteCraigDownsamplingStrategy(
+        0, 0, 5, {"downsampling_ratio": 50, "balance": False}, BCEWithLogitsLoss(reduction="none")
+    )
     sample_ids = [index_mapping[i] for i in [2, 3, 4]]
     dummy_model.embedding_recorder.start_recording()
     forward_output = dummy_model(samples[targets == 0]).float()
