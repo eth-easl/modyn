@@ -80,14 +80,14 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         self.already_selected_samples += selected_samples
         self.already_selected_weights = torch.cat((self.already_selected_weights, selected_weights))
         self.matrix_elements = []
-        self.index_sampleid_map = []
+        self.index_sampleid_map: list[int] = []
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         if self.balance:
             return _shuffle_list_and_tensor(self.already_selected_samples, self.already_selected_weights)
         return self._select_from_matrix()
 
-    def _select_from_matrix(self):
+    def _select_from_matrix(self) -> tuple[list[int], torch.Tensor]:
         matrix = np.concatenate(self.matrix_elements)
         number_of_samples = len(matrix)
         target_size = int(self.downsampling_ratio * number_of_samples / 100)
@@ -97,7 +97,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
 
     def init_downsampler(self) -> None:
         self.matrix_elements = []
-        self.index_sampleid_map: list[int] = []
+        self.index_sampleid_map = []
 
     @abstractmethod
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:

@@ -37,6 +37,6 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
                 torch.Tensor(matrix).T, torch.Tensor(cur_val_gradients), budget=target_size
             )
         selection_result = np.nonzero(cur_weights)[0]
-        weights = cur_weights[selection_result]
+        weights = torch.tensor(cur_weights[selection_result])
 
         return selection_result.tolist(), weights

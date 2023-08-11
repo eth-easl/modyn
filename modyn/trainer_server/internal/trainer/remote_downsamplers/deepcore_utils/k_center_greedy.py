@@ -31,6 +31,9 @@ def k_center_greedy(matrix, budget: int, metric, device, print_freq: int = 20):
         budget -= 1
         select_result[already_selected] = True
 
+        if budget == 0:
+            return index[select_result]
+
         num_of_already_selected = np.sum(select_result)
 
         # Initialize a (num_of_already_selected+budget-1)*sample_num matrix storing distances of pool points from
