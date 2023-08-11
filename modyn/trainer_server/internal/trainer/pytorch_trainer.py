@@ -518,6 +518,8 @@ class PytorchTrainer:
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
 
+        self._info("Started downsampling of the presampled dataset!")
+
         # set the model to eval to avoid errors like Expected more than 1 value per channel when training, got ...
         self._model.model.eval()
         # keys must be taken from the selector.
@@ -562,6 +564,8 @@ class PytorchTrainer:
 
         selected_ids, weights = self._downsampler.select_points()
 
+        self._info("Downsampling complete! Storing selected points...")
+
         if self._downsampler.requires_coreset_methods_support:
             # turn off the embedding recording (not needed for regular training)
             assert isinstance(self._model.model, CoresetMethodsSupport)
@@ -580,6 +584,8 @@ class PytorchTrainer:
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
         # we need to manually trigger the store
         local_dataset.finalize()
+
+        self._info("Points stored! Key source set to local")
 
         # instead of getting keys from the selector, now are taken from the local storage
         new_key_source = LocalKeySource(

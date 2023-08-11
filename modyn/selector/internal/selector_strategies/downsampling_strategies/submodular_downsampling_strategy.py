@@ -2,6 +2,7 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.submodular_function import (
     SUBMODULAR_FUNCTIONS,
 )
+from modyn.utils import DownsamplingMode
 
 
 class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
@@ -24,4 +25,9 @@ class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
             config["submodular_optimizer"] = self.downsampling_config["submodular_optimizer"]
 
         config["deepcore_args"] = self.downsampling_config.get("deepcore_args", {})
+
+        config["balance"] = self.downsampling_config.get("balance", False)
+        if config["balance"] and self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            raise ValueError("Balanced sampling (balance=True) can be used only in Sample then Batch mode.")
+
         return config
