@@ -48,7 +48,7 @@ properties:
           name:
             type: string
             description: |
-              Name of the full model strategy. We currently support NaiveFullModelStrategy and BinaryFullModelStrategy.
+              Name of the full model strategy. We currently support PyTorchFullModel and CompressedFullModel.
           config:
             type: object
             description: |
@@ -60,7 +60,7 @@ properties:
           zip_algorithm:
             type: string
             description: |
-              Which zip algorithm to use. Default is DEFLATED.
+              Which zip algorithm to use. Default is ZIP_DEFLATED.
         required:
           - name
       incremental_model_strategy:
@@ -71,8 +71,7 @@ properties:
           name:
             type: string
             description: |
-              Name of the incremental model strategy. We currently support NaiveDeltaBasedModelStrategy and
-              BinaryDeltaBasedModelStrategy.
+              Name of the incremental model strategy. We currently support WeightsDifference.
           config:
             type: object
             description: |
@@ -84,7 +83,7 @@ properties:
           zip_algorithm:
             type: string
             description: |
-              Which zip algorithm to use. Default is DEFLATED.
+              Which zip algorithm to use. Default is ZIP_DEFLATED.
         required:
           - name
       full_model_interval:
