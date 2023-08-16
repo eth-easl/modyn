@@ -381,6 +381,10 @@ properties:
         type: string
         description: |
           (Optional) function used to transform the label (tensors of integers).
+      tokenizer:
+        type: string
+        description: |
+          (Optional) Function to tokenize the input. Must be a class in modyn.models.tokenizers.
     required:
       - dataset_id
       - bytes_parser_function

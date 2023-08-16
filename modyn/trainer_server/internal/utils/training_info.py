@@ -74,4 +74,10 @@ class TrainingInfo:
         else:
             self.seed = None
 
+        self.tokenizer: Optional[str]
+        if request.HasField("tokenizer"):
+            self.tokenizer = request.tokenizer.value
+        else:
+            self.tokenizer = None
+
         self.offline_dataset_path = offline_dataset_path
