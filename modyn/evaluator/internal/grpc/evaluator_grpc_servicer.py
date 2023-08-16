@@ -8,7 +8,7 @@ from threading import Lock
 from typing import Any, Optional
 
 import grpc
-from modyn.common.ftp import download_file, get_pretrained_model_callback
+from modyn.common.ftp import download_trained_model
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -26,6 +26,8 @@ from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import AbstractEvaluationMetric
 from modyn.evaluator.internal.pytorch_evaluator import evaluate
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models import TrainedModel
 
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
@@ -87,14 +89,23 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
         return StorageStub(storage_channel)
 
+    # pylint: disable=too-many-locals
     def evaluate_model(self, request: EvaluateModelRequest, context: grpc.ServicerContext) -> EvaluateModelResponse:
         logger.info("Received evaluate model request.")
 
-        if not hasattr(dynamic_module_import("modyn.models"), request.model_id):
-            logger.error(f"Model {request.model_id} not available!")
+        with MetadataDatabaseConnection(self._config) as database:
+            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, request.trained_model_id)
+
+            if not trained_model:
+                logger.error(f"Trained model {request.trained_model_id} does not exist!")
+                return EvaluateModelResponse(evaluation_started=False)
+            model_id, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
+
+        if not hasattr(dynamic_module_import("modyn.models"), model_id):
+            logger.error(f"Model {model_id} not available!")
             return EvaluateModelResponse(evaluation_started=False)
 
-        fetch_request = FetchModelRequest(model_id=request.trained_model_id)
+        fetch_request = FetchModelRequest(model_id=request.trained_model_id, load_metadata=False)
         fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
 
         if not fetch_resp.success:
@@ -118,10 +129,22 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             evaluation_id = self._next_evaluation_id
             self._next_evaluation_id += 1
 
-        local_model_path = self._download_trained_model(fetch_resp, evaluation_id)
+        trained_model_path = download_trained_model(
+            logger=logger,
+            model_storage_config=self._config["model_storage"],
+            remote_path=pathlib.Path(fetch_resp.model_path),
+            checksum=fetch_resp.checksum,
+            identifier=evaluation_id,
+            base_directory=self._base_dir,
+        )
+
+        if not trained_model_path:
+            return EvaluateModelResponse(evaluation_started=False)
 
         metrics = self._setup_metrics(request.metrics)
-        evaluation_info = EvaluationInfo(request, evaluation_id, self._storage_address, metrics, local_model_path)
+        evaluation_info = EvaluationInfo(
+            request, evaluation_id, model_id, model_config, amp, self._storage_address, metrics, trained_model_path
+        )
         self._evaluation_dict[evaluation_id] = evaluation_info
         self._run_evaluation(evaluation_id)
 
@@ -129,23 +152,6 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         return EvaluateModelResponse(
             evaluation_started=True, evaluation_id=evaluation_id, dataset_size=dataset_size_response.num_keys
         )
-
-    def _download_trained_model(self, fetch_resp: FetchModelResponse, evaluation_id: int) -> pathlib.Path:
-        local_model_path = self._base_dir / f"trained_model_{evaluation_id}.modyn"
-
-        download_file(
-            hostname=self._config["model_storage"]["hostname"],
-            port=int(self._config["model_storage"]["ftp_port"]),
-            user="modyn",
-            password="modyn",
-            remote_file_path=pathlib.Path(fetch_resp.model_path),
-            local_file_path=local_model_path,
-            callback=get_pretrained_model_callback(logger),
-        )
-
-        logger.info(f"Successfully downloaded trained model to {local_model_path}.")
-
-        return local_model_path
 
     @staticmethod
     def _setup_metrics(metric_configurations: list[MetricConfiguration]) -> list[AbstractEvaluationMetric]:

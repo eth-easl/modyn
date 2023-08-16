@@ -18,7 +18,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import Evaluator
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetNumberOfSamplesRequest,
-    JsonString,
     NumberOfSamplesResponse,
     PipelineResponse,
     RegisterPipelineRequest,
@@ -337,20 +336,37 @@ def test_register_pipeline_at_selector(test_grpc_connection_established):
         result = handler.register_pipeline_at_selector(
             {
                 "pipeline": {"name": "test"},
-                "training": {"dataloader_workers": 2, "selection_strategy": {}},
+                "training": {"dataloader_workers": 2, "selection_strategy": {}, "amp": True},
                 "model": {"id": "ResNet18"},
+                "model_storage": {
+                    "full_model_strategy": {"name": "PyTorchFullModel", "zip": True, "zip_algorithm": "ZIP_DEFLATED"},
+                    "incremental_model_strategy": {"name": "WeightsDifference", "config": {"operator": "sub"}},
+                    "full_model_interval": 10,
+                },
             }
         )
 
         assert result == 42
-        mock.assert_called_once_with(
-            RegisterPipelineRequest(
-                num_workers=2,
-                selection_strategy=JsonString(value="{}"),
-                model_id="ResNet18",
-                model_configuration=JsonString(value="{}"),
-            )
+        mock.assert_called_once()
+
+        request: RegisterPipelineRequest = mock.call_args.args[0]
+        assert request.num_workers == 2
+        assert request.selection_strategy.value == "{}"
+        assert request.model_id == "ResNet18"
+        assert request.model_configuration.value == "{}"
+        assert request.amp
+        assert request.model_storage_strategy.full_model_strategy_config.name == "PyTorchFullModel"
+        assert request.model_storage_strategy.full_model_strategy_config.zip
+        assert request.model_storage_strategy.full_model_strategy_config.zip_algorithm == "ZIP_DEFLATED"
+        assert not request.model_storage_strategy.full_model_strategy_config.HasField("config")
+        assert request.model_storage_strategy.incremental_model_strategy_config.name == "WeightsDifference"
+        assert not request.model_storage_strategy.incremental_model_strategy_config.HasField("zip")
+        assert not request.model_storage_strategy.incremental_model_strategy_config.HasField("zip_algorithm")
+        assert (
+            json.loads(request.model_storage_strategy.incremental_model_strategy_config.config.value)["operator"]
+            == "sub"
         )
+        assert request.model_storage_strategy.full_model_interval == 10
 
 
 def test_unregister_pipeline_at_selector():
@@ -537,6 +553,19 @@ def test_start_evaluation(test_connection_established):
         assert evaluations[12].dataset_id == "MNIST_eval"
         assert evaluations[12].dataset_size == 1000
         avail_method.assert_called_once()
+
+
+def test__prepare_evaluation_request():
+    pipeline_config = get_minimal_pipeline_config()
+    request = GRPCHandler._prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
+
+    assert request.trained_model_id == 23
+    assert request.device == "cpu"
+    assert request.batch_size == 64
+    assert request.dataset_info.dataset_id == "MNIST_eval"
+    assert request.dataset_info.num_dataloaders == 2
+    assert request.metrics[0].name == "Accuracy"
+    assert request.metrics[0].config.value == "{}"
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

@@ -1,10 +1,11 @@
 import json
 import logging
-from typing import Iterable
+from typing import Iterable, Optional
 
 import grpc
 
 # pylint: disable=no-name-in-module
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     DataInformRequest,
@@ -27,6 +28,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     SeedSelectorResponse,
     SelectionStrategyResponse,
     StatusBarScaleResponse,
+    StrategyConfig,
     TriggerResponse,
     UsesWeightsRequest,
     UsesWeightsResponse,
@@ -49,10 +51,49 @@ class SelectorGRPCServicer(SelectorServicer):
 
     def register_pipeline(self, request: RegisterPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         logger.info(f"Registering pipeline with request - {str(request)}")
+
+        full_model_strategy = self.get_model_storage_strategy_config(
+            request.model_storage_strategy.full_model_strategy_config
+        )
+
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
+        if (
+            request.model_storage_strategy.HasField("incremental_model_strategy_config")
+            and request.model_storage_strategy.incremental_model_strategy_config is not None
+        ):
+            incremental_model_strategy = self.get_model_storage_strategy_config(
+                request.model_storage_strategy.incremental_model_strategy_config
+            )
+
+        full_model_interval: Optional[int] = None
+        if (
+            request.model_storage_strategy.HasField("full_model_interval")
+            and request.model_storage_strategy.full_model_interval is not None
+        ):
+            full_model_interval = request.model_storage_strategy.full_model_interval
+
         pipeline_id = self.selector_manager.register_pipeline(
-            request.num_workers, request.selection_strategy.value, request.model_id, request.model_configuration.value
+            request.num_workers,
+            request.selection_strategy.value,
+            request.model_id,
+            request.model_configuration.value,
+            request.amp,
+            full_model_strategy,
+            incremental_model_strategy,
+            full_model_interval,
         )
         return PipelineResponse(pipeline_id=pipeline_id)
+
+    @staticmethod
+    def get_model_storage_strategy_config(strategy_config: StrategyConfig) -> ModelStorageStrategyConfig:
+        strategy = ModelStorageStrategyConfig(strategy_config.name)
+        if strategy_config.HasField("zip") and strategy_config.zip is not None:
+            strategy.zip = strategy_config.zip
+        if strategy_config.HasField("zip_algorithm") and strategy_config.zip is not None:
+            strategy.zip_algorithm = strategy_config.zip_algorithm
+        if strategy_config.HasField("config") and strategy_config.config is not None:
+            strategy.config = strategy_config.config.value
+        return strategy
 
     def get_sample_keys_and_weights(  # pylint: disable-next=unused-argument
         self, request: GetSamplesRequest, context: grpc.ServicerContext

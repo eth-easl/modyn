@@ -37,6 +37,62 @@ properties:
           Configuration dictionary that will be passed to the model on initialization.
     required:
       - id
+  model_storage:
+    type: object
+    properties:
+      full_model_strategy:
+        type: object
+        description: |
+          Which full model strategy is used.
+        properties:
+          name:
+            type: string
+            description: |
+              Name of the full model strategy. We currently support NaiveFullModelStrategy and BinaryFullModelStrategy.
+          config:
+            type: object
+            description: |
+              Configuration dictionary that will be passed to the strategy.
+          zip:
+            type: boolean
+            description: |
+              Whether to zip the file in the end. Defaults to False.
+          zip_algorithm:
+            type: string
+            description: |
+              Which zip algorithm to use. Default is DEFLATED.
+        required:
+          - name
+      incremental_model_strategy:
+        type: object
+        description: |
+          Which incremental model strategy is used.
+        properties:
+          name:
+            type: string
+            description: |
+              Name of the incremental model strategy. We currently support NaiveDeltaBasedModelStrategy and
+              BinaryDeltaBasedModelStrategy.
+          config:
+            type: object
+            description: |
+              Configuration dictionary that will be passed to the strategy.
+          zip:
+            type: boolean
+            description: |
+              Whether to zip the file in the end. Defaults to False.
+          zip_algorithm:
+            type: string
+            description: |
+              Which zip algorithm to use. Default is DEFLATED.
+        required:
+          - name
+      full_model_interval:
+        type: number
+        description: |
+          In which interval we are using the full model strategy.
+    required:
+      - full_model_strategy
   training:
     type: object
     properties:
@@ -353,10 +409,6 @@ properties:
         description: |
           The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
           and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
-      amp:
-        type: boolean
-        description: |
-          If True, automatic mixed precision will be used.
       datasets:
         type: array
         description: |

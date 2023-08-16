@@ -5,6 +5,7 @@ from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_manager import SelectorManager
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
@@ -45,7 +46,16 @@ class MockDatabaseConnection:
         self.current_pipeline_id = 0
 
     # pylint: disable=unused-argument
-    def register_pipeline(self, number_of_workers: int, model_id: int, model_config: dict) -> Optional[int]:
+    def register_pipeline(
+        self,
+        number_of_workers: int,
+        model_id: int,
+        model_config: dict,
+        amp: bool,
+        full_model_strategy: ModelStorageStrategyConfig,
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
+        full_model_interval: Optional[int] = None,
+    ) -> Optional[int]:
         pid = self.current_pipeline_id
         self.current_pipeline_id += 1
         return pid
@@ -90,13 +100,20 @@ def test_register_pipeline(test__instantiate_strategy: MagicMock):
 
         assert len(selec._selectors) == 0
 
-        assert selec.register_pipeline(42, "{}", "RestNet18", "{}") == 0
+        assert (
+            selec.register_pipeline(
+                42, "{}", "RestNet18", "{}", True, ModelStorageStrategyConfig(name="PyTorchFullModel")
+            )
+            == 0
+        )
         assert len(selec._selectors) == 1
 
         assert isinstance(selec._selectors[0]._strategy, MockStrategy)
 
         with pytest.raises(ValueError):
-            selec.register_pipeline(0, "strat", "RestNet18", "{}")
+            selec.register_pipeline(
+                0, "strat", "RestNet18", "{}", False, ModelStorageStrategyConfig(name="PyTorchFullModel")
+            )
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
@@ -112,7 +129,9 @@ def test_get_sample_keys_and_weights(
         selec = SelectorManager(config)
 
         test__instantiate_strategy.return_value = MockStrategy()
-        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
+        pipe_id = selec.register_pipeline(
+            2, "{}", "RestNet18", "{}", True, ModelStorageStrategyConfig(name="PyTorchFullModel")
+        )
 
         with pytest.raises(ValueError):
             # Non existing pipeline
@@ -143,7 +162,9 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
         with pytest.raises(ValueError):
             selec.inform_data(0, [10], [0], [0])
 
-        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
+        pipe_id = selec.register_pipeline(
+            2, "{}", "RestNet18", "{}", False, ModelStorageStrategyConfig(name="PyTorchFullModel")
+        )
         selector_inform_data.return_value = None
 
         selec.inform_data(pipe_id, [10], [0], [0])
@@ -165,7 +186,9 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
         with pytest.raises(ValueError):
             selec.inform_data_and_trigger(0, [10], [0], [0])
 
-        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
+        pipe_id = selec.register_pipeline(
+            2, "{}", "RestNet18", "{}", True, ModelStorageStrategyConfig(name="PyTorchFullModel")
+        )
         selector_inform_data_and_trigger.return_value = None
 
         selec.inform_data_and_trigger(pipe_id, [10], [0], [0])
@@ -184,7 +207,9 @@ def test_get_available_labels(selector_get_available_labels: MagicMock, test__in
         selector = SelectorManager(config)
         test__instantiate_strategy.return_value = MockStrategy()
 
-        pipe_id = selector.register_pipeline(2, "{}", "RestNet18", "{}")
+        pipe_id = selector.register_pipeline(
+            2, "{}", "RestNet18", "{}", False, ModelStorageStrategyConfig(name="PyTorchFullModel")
+        )
         selector_get_available_labels.return_value = None
 
         selector.get_available_labels(pipe_id)
@@ -228,7 +253,9 @@ def test_get_number_of_samples(selector_get_number_of_samples: MagicMock, test__
         with pytest.raises(ValueError):
             selec.get_number_of_samples(0, 0)
 
-        pipe_id = selec.register_pipeline(2, "{}", "RestNet18", "{}")
+        pipe_id = selec.register_pipeline(
+            2, "{}", "RestNet18", "{}", True, ModelStorageStrategyConfig(name="PyTorchFullModel")
+        )
         selector_get_number_of_samples.return_value = 12
 
         assert selec.get_number_of_samples(pipe_id, 21) == 12

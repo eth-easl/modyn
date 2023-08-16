@@ -8,8 +8,10 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     JsonString,
+    ModelStorageStrategyInfo,
     RegisterPipelineRequest,
     SamplesResponse,
+    StrategyConfig,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
@@ -27,6 +29,10 @@ def connect_to_selector_servicer() -> grpc.Channel:
         raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
 
     return selector_channel
+
+
+def get_model_storage_strategy() -> ModelStorageStrategyInfo:
+    return ModelStorageStrategyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
 
 
 def test_label_balanced_presampling_huge() -> None:
@@ -49,6 +55,8 @@ def test_label_balanced_presampling_huge() -> None:
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -134,6 +142,8 @@ def test_label_balanced_force_same_size():
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -223,6 +233,8 @@ def test_label_balanced_force_all_samples():
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -318,6 +330,8 @@ def test_newdata() -> None:
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -462,6 +476,8 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -616,6 +632,8 @@ def test_empty_triggers() -> None:
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -789,6 +807,8 @@ def test_many_samples_evenly_distributed():
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -864,6 +884,8 @@ def test_many_samples_unevenly_distributed():
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 
@@ -940,6 +962,8 @@ def test_get_available_labels(reset_after_trigger: bool):
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
             model_id="ResNet10",
             model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_strategy=get_model_storage_strategy(),
         )
     ).pipeline_id
 

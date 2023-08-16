@@ -6,8 +6,10 @@ import os
 import shutil
 from pathlib import Path
 from threading import Lock
+from typing import Optional
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
 from modyn.utils.utils import dynamic_module_import, is_directory_writable
@@ -57,7 +59,17 @@ class SelectorManager:
                 + f"Directory info: {os.stat(trigger_sample_directory)}"
             )
 
-    def register_pipeline(self, num_workers: int, selection_strategy: str, model_id: str, model_config: str) -> int:
+    def register_pipeline(
+        self,
+        num_workers: int,
+        selection_strategy: str,
+        model_id: str,
+        model_config: str,
+        amp: bool,
+        full_model_strategy: ModelStorageStrategyConfig,
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
+        full_model_interval: Optional[int] = None,
+    ) -> int:
         """
         Registers a new pipeline at the Selector.
         Returns:
@@ -70,7 +82,15 @@ class SelectorManager:
 
         with self._next_pipeline_lock:
             with MetadataDatabaseConnection(self._modyn_config) as database:
-                pipeline_id = database.register_pipeline(num_workers, model_id, model_config)
+                pipeline_id = database.register_pipeline(
+                    num_workers,
+                    model_id,
+                    model_config,
+                    amp,
+                    full_model_strategy,
+                    incremental_model_strategy,
+                    full_model_interval,
+                )
 
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
         selector = Selector(selection_strategy, pipeline_id, num_workers, self._selector_cache_size)

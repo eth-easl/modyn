@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 from modyn.metadata_database.metadata_base import MetadataBase
 from modyn.metadata_database.models import Pipeline
 from modyn.metadata_database.models.selector_state_metadata import SelectorStateMetadata
 from modyn.metadata_database.models.trained_models import TrainedModel
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -67,17 +69,45 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         """
         MetadataBase.metadata.create_all(self.engine)
 
-    def register_pipeline(self, num_workers: int, model_id: str, model_config: str) -> int:
+    def register_pipeline(
+        self,
+        num_workers: int,
+        model_id: str,
+        model_config: str,
+        amp: bool,
+        full_model_strategy: ModelStorageStrategyConfig,
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
+        full_model_interval: Optional[int] = None,
+    ) -> int:
         """Register a new pipeline in the database.
 
         Args:
             num_workers (int): Number of workers in the pipeline.
             model_id (str): the model name that is used by the pipeline.
             model_config (str): the serialized model configuration options.
+            amp (bool): whether amp is enabled for the model.
+            full_model_strategy: the strategy used to store full models.
+            incremental_model_strategy: the strategy used to store models incrementally.
+            full_model_interval: interval between which the full model strategy is used.
         Returns:
             int: Id of the newly created pipeline.
         """
-        pipeline = Pipeline(num_workers=num_workers, model_id=model_id, model_config=model_config)
+        pipeline = Pipeline(
+            num_workers=num_workers,
+            model_id=model_id,
+            model_config=model_config,
+            amp=amp,
+            full_model_strategy_name=full_model_strategy.name,
+            full_model_strategy_zip=full_model_strategy.zip,
+            full_model_strategy_zip_algorithm=full_model_strategy.zip_algorithm,
+            full_model_strategy_config=full_model_strategy.config,
+        )
+        if incremental_model_strategy:
+            pipeline.inc_model_strategy_name = incremental_model_strategy.name
+            pipeline.inc_model_strategy_zip = incremental_model_strategy.zip
+            pipeline.inc_model_strategy_zip_algorithm = incremental_model_strategy.zip_algorithm
+            pipeline.inc_model_strategy_config = incremental_model_strategy.config
+        pipeline.full_model_interval = full_model_interval
         self.session.add(pipeline)
         self.session.commit()
         pipeline_id = pipeline.pipeline_id
@@ -96,31 +126,45 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             pipeline_id, trigger_id, self.session, self.engine, self.hash_partition_modulus
         )
 
-    def add_trained_model(self, pipeline_id: int, trigger_id: int, model_path: str) -> int:
+    def add_trained_model(
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        model_path: str,
+        metadata_path: Optional[str] = None,
+        parent_model: Optional[int] = None,
+    ) -> int:
         """Add a trained model to the database.
 
         Args:
             pipeline_id: id of the pipeline it was created from.
             trigger_id: id of the trigger it was created.
             model_path: path on the local filesystem on which the model is stored.
-
+            metadata_path: the path on the local filesystem on which metadata to the model are stored.
+            parent_model: id of the parent model.
         Returns:
             int: Id of the registered model
         """
-        trained_model = TrainedModel(pipeline_id=pipeline_id, trigger_id=trigger_id, model_path=model_path)
+        trained_model = TrainedModel(
+            pipeline_id=pipeline_id,
+            trigger_id=trigger_id,
+            model_path=model_path,
+            metadata_path=metadata_path,
+            parent_model=parent_model,
+        )
         self.session.add(trained_model)
         self.session.commit()
         model_id = trained_model.model_id
         return model_id
 
-    def get_model_configuration(self, pipeline_id: int) -> (str, str):
+    def get_model_configuration(self, pipeline_id: int) -> tuple[str, str, bool]:
         """Get the model id and its configuration options for a given pipeline.
 
         Args:
             pipeline_id: id of the pipeline from which we want to extract the model.
 
         Returns:
-            (str, str): the model id and its configuration options.
+            (str, str, bool): the model id, its configuration options and if amp is enabled.
         """
         pipeline: Pipeline = self.session.query(Pipeline).get(pipeline_id)
-        return pipeline.model_id, pipeline.model_config
+        return pipeline.model_id, pipeline.model_config, pipeline.amp

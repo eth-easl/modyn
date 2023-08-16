@@ -1,13 +1,16 @@
 # end-to-end testing of the model storage component
+import io
 import json
 import pathlib
 import shutil
 
 import grpc
+import torch
 from integrationtests.utils import get_modyn_config
 from modyn.common.ftp import delete_file, download_file, upload_file
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     DeleteModelRequest,
     DeleteModelResponse,
@@ -17,19 +20,20 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     RegisterModelResponse,
 )
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
-from modyn.utils import grpc_connection_established
+from modyn.models import ResNet18
+from modyn.utils import calculate_checksum, grpc_connection_established
 
 TEST_MODELS_PATH = pathlib.Path("/app") / "model_storage" / "test_models"
-TEST_FILE_NAME_LOCAL = "test_model_local.txt"
-TEST_FILE_NAME_LOCAL_RESP = "test_model_local_response.txt"
-TEST_FILE_NAME_REMOTE = "test_model_remote.txt"
+TEST_FILE_NAME_LOCAL = "test_model_local.modyn"
+TEST_FILE_NAME_LOCAL_RESP = "test_model_local_response.modyn"
+TEST_FILE_NAME_REMOTE = "test_model_remote.modyn"
+SAMPLE_MODEL = ResNet18(model_configuration={"num_classes": 10}, device="cpu", amp=False)
 
 
 def create_dummy_file():
     pathlib.Path(TEST_MODELS_PATH).mkdir(parents=True, exist_ok=True)
 
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL, "w") as f:
-        f.write("Test model storage component")
+    torch.save({"model": SAMPLE_MODEL.model.state_dict(), "metadata": True}, TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL)
 
 
 def cleanup_models_dir() -> None:
@@ -68,8 +72,13 @@ def delete_dummy_file_from_trainer(config: dict):
 
 
 def insert_trigger_into_database(config: dict) -> (int, int):
+    model_storage_strategy = ModelStorageStrategyConfig("CompressedFullModel")
+    model_storage_strategy.zip = True
+
     with MetadataDatabaseConnection(config) as database:
-        pipeline_id = database.register_pipeline(2, "ResNet18", json.dumps({"num_classes": 10}))
+        pipeline_id = database.register_pipeline(
+            2, "ResNet18", json.dumps({"num_classes": 10}), False, model_storage_strategy
+        )
 
         trigger = Trigger(trigger_id=10, pipeline_id=pipeline_id)
         database.session.add(trigger)
@@ -86,15 +95,32 @@ def delete_data_from_database(config: dict, pipeline_id: int, trigger_id: int):
         database.session.commit()
 
 
+def check_loaded_model() -> None:
+    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "rb") as state_file:
+        checkpoint = torch.load(io.BytesIO(state_file.read()))
+
+    assert "model" in checkpoint, "Model state is not stored in file"
+    resnet = ResNet18(model_configuration={"num_classes": 10}, device="cpu", amp=False)
+    resnet.model.load_state_dict(checkpoint["model"])
+
+    assert checkpoint["metadata"]
+
+    loaded_state = resnet.model.state_dict()
+    original_state = SAMPLE_MODEL.model.state_dict()
+    for layer_name, _ in resnet.model.state_dict().items():
+        assert torch.all(torch.eq(loaded_state[layer_name], original_state[layer_name]))
+
+
 def test_model_storage(config: dict):
     # register pipeline and trigger
     pipeline_id, trigger_id = insert_trigger_into_database(config)
 
     with MetadataDatabaseConnection(config) as database:
-        model_id, model_config = database.get_model_configuration(pipeline_id)
+        model_id, model_config, amp = database.get_model_configuration(pipeline_id)
 
     assert model_id == "ResNet18"
     assert json.loads(model_config) == {"num_classes": 10}
+    assert not amp
 
     model_storage_channel = connect_to_model_storage(config)
     model_storage = ModelStorageStub(model_storage_channel)
@@ -106,6 +132,7 @@ def test_model_storage(config: dict):
         hostname=config["trainer_server"]["hostname"],
         port=int(config["trainer_server"]["ftp_port"]),
         model_path=str(TEST_FILE_NAME_REMOTE),
+        checksum=calculate_checksum(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL),
     )
     response_register: RegisterModelResponse = model_storage.RegisterModel(request_register)
 
@@ -113,9 +140,8 @@ def test_model_storage(config: dict):
     model_id = response_register.model_id
 
     # try to fetch the registered model
-    request_fetch = FetchModelRequest(model_id=model_id)
+    request_fetch = FetchModelRequest(model_id=model_id, load_metadata=True)
     response_fetch: FetchModelResponse = model_storage.FetchModel(request_fetch)
-    model_path = pathlib.Path(response_fetch.model_path)
 
     assert response_fetch.success, "Could not find model with this id"
 
@@ -125,13 +151,13 @@ def test_model_storage(config: dict):
         int(config["model_storage"]["ftp_port"]),
         "modyn",
         "modyn",
-        remote_file_path=model_path,
+        remote_file_path=pathlib.Path(response_fetch.model_path),
         local_file_path=TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP,
+        checksum=response_fetch.checksum,
     )
 
     # compare if content matches initial dummy file
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "r") as resp_file:
-        assert resp_file.read() == "Test model storage component", "File contents do not match"
+    check_loaded_model()
 
     # delete model on model storage component
     request_delete = DeleteModelRequest(model_id=model_id)

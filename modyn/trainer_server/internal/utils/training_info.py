@@ -19,6 +19,7 @@ class TrainingInfo:
         training_id: int,
         model_id: str,
         model_config: str,
+        amp: bool,
         storage_address: str,
         selector_address: str,
         offline_dataset_path: str,
@@ -55,7 +56,7 @@ class TrainingInfo:
 
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
-        self.amp = request.amp
+        self.amp = amp
 
         self.lr_scheduler = json.loads(request.lr_scheduler.value)
 

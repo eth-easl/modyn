@@ -12,6 +12,7 @@ from .utils import (  # noqa: F401
     LABEL_TRANSFORMER_FUNC_NAME,
     MAX_MESSAGE_SIZE,
     DownsamplingMode,
+    calculate_checksum,
     convert_timestr_to_seconds,
     current_time_millis,
     deserialize_function,
@@ -24,8 +25,10 @@ from .utils import (  # noqa: F401
     package_available_and_can_be_imported,
     seed_everything,
     trigger_available,
+    unzip_file,
     validate_timestr,
     validate_yaml,
+    zip_file,
 )
 
 files = os.listdir(os.path.dirname(__file__))

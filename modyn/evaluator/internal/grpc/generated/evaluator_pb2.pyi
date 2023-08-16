@@ -96,11 +96,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     TRAINED_MODEL_ID_FIELD_NUMBER: builtins.int
     DATASET_INFO_FIELD_NUMBER: builtins.int
     DEVICE_FIELD_NUMBER: builtins.int
-    AMP_FIELD_NUMBER: builtins.int
     BATCH_SIZE_FIELD_NUMBER: builtins.int
     METRICS_FIELD_NUMBER: builtins.int
-    MODEL_ID_FIELD_NUMBER: builtins.int
-    MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
     TRANSFORM_LIST_FIELD_NUMBER: builtins.int
     BYTES_PARSER_FIELD_NUMBER: builtins.int
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
@@ -108,13 +105,9 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
     device: builtins.str
-    amp: builtins.bool
     batch_size: builtins.int
     @property
     def metrics(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___MetricConfiguration]: ...
-    model_id: builtins.str
-    @property
-    def model_configuration(self) -> global___JsonString: ...
     @property
     def transform_list(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     @property
@@ -127,17 +120,14 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         trained_model_id: builtins.int = ...,
         dataset_info: global___DatasetInfo | None = ...,
         device: builtins.str = ...,
-        amp: builtins.bool = ...,
         batch_size: builtins.int = ...,
         metrics: collections.abc.Iterable[global___MetricConfiguration] | None = ...,
-        model_id: builtins.str = ...,
-        model_configuration: global___JsonString | None = ...,
         transform_list: collections.abc.Iterable[builtins.str] | None = ...,
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "label_transformer", b"label_transformer", "model_configuration", b"model_configuration"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["amp", b"amp", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "device", b"device", "label_transformer", b"label_transformer", "metrics", b"metrics", "model_configuration", b"model_configuration", "model_id", b"model_id", "trained_model_id", b"trained_model_id", "transform_list", b"transform_list"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "label_transformer", b"label_transformer"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "device", b"device", "label_transformer", b"label_transformer", "metrics", b"metrics", "trained_model_id", b"trained_model_id", "transform_list", b"transform_list"]) -> None: ...
 
 global___EvaluateModelRequest = EvaluateModelRequest
 

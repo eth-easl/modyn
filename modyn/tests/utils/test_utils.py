@@ -1,5 +1,6 @@
 # pylint: disable=unused-argument,redefined-outer-name
 import pathlib
+import tempfile
 from unittest.mock import patch
 
 import grpc
@@ -11,6 +12,7 @@ from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
 from modyn.utils import (
+    calculate_checksum,
     convert_timestr_to_seconds,
     current_time_millis,
     deserialize_function,
@@ -22,8 +24,10 @@ from modyn.utils import (
     package_available_and_can_be_imported,
     seed_everything,
     trigger_available,
+    unzip_file,
     validate_timestr,
     validate_yaml,
+    zip_file,
 )
 from modyn.utils.utils import instantiate_class
 
@@ -202,3 +206,46 @@ def test_instantiate_class_not_existing():
     # missing parameters
     with pytest.raises(TypeError):
         instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage")
+
+
+def test_calculate_checksum():
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempdir_path = pathlib.Path(tempdir)
+
+        with open(tempdir_path / "testfile1.txt", "w", encoding="utf-8") as file:
+            file.write("This is a test")
+
+        with open(tempdir_path / "testfile2.txt", "w", encoding="utf-8") as file:
+            file.write("This is a test")
+
+        assert calculate_checksum(tempdir_path / "testfile1.txt") == calculate_checksum(tempdir_path / "testfile2.txt")
+        assert calculate_checksum(tempdir_path / "testfile1.txt", chunk_num_blocks=20) == calculate_checksum(
+            tempdir_path / "testfile2.txt", chunk_num_blocks=10
+        )
+        assert calculate_checksum(tempdir_path / "testfile1.txt", hash_func_name="blake2s") != calculate_checksum(
+            tempdir_path / "testfile2.txt", chunk_num_blocks=10
+        )
+
+
+def test_zip_and_unzip_file():
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempdir_path = pathlib.Path(tempdir)
+
+        text_file_path = tempdir_path / "testfile.txt"
+        zip_file_path = tempdir_path / "testfile.zip"
+
+        with open(text_file_path, "w", encoding="utf-8") as file:
+            file.write("This is a testfile!")
+
+        zip_file(text_file_path, zip_file_path, remove_file=True)
+
+        assert not text_file_path.exists()
+        assert zip_file_path.exists() and zip_file_path.is_file()
+
+        unzip_file(zip_file_path, text_file_path, remove_file=True)
+
+        assert not zip_file_path.exists()
+        assert text_file_path.exists() and text_file_path.is_file()
+
+        with open(text_file_path, "r", encoding="utf-8") as file:
+            assert file.read() == "This is a testfile!"

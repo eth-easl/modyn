@@ -10,7 +10,7 @@ import grpc
 import torch
 
 # pylint: disable=no-name-in-module
-from modyn.common.ftp import download_file, get_pretrained_model_callback
+from modyn.common.ftp import download_trained_model
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     FetchModelRequest,
@@ -36,6 +36,7 @@ from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
 from modyn.utils import current_time_millis, dynamic_module_import, grpc_connection_established
+from modyn.utils.utils import calculate_checksum
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class TrainerServerGRPCServicer:
         logger.info("Received start training request.")
 
         with MetadataDatabaseConnection(self._config) as database:
-            model_id, model_config = database.get_model_configuration(request.pipeline_id)
+            model_id, model_config, amp = database.get_model_configuration(request.pipeline_id)
 
         if not hasattr(dynamic_module_import("modyn.models"), model_id):
             logger.error(f"Model {model_id} not available!")
@@ -104,7 +105,7 @@ class TrainerServerGRPCServicer:
 
         pretrained_model_path: Optional[pathlib.Path] = None
         if request.use_pretrained_model:
-            fetch_request = FetchModelRequest(model_id=request.pretrained_model_id)
+            fetch_request = FetchModelRequest(model_id=request.pretrained_model_id, load_metadata=True)
             fetch_resp: FetchModelResponse = self.model_storage_stub.FetchModel(fetch_request)
 
             if not fetch_resp.success:
@@ -118,19 +119,18 @@ class TrainerServerGRPCServicer:
                 training_id = self._next_training_id
                 self._next_training_id += 1
 
-            pretrained_model_path = self._modyn_base_dir / pathlib.Path(f"pretrained_model_{training_id}.modyn")
-
-            download_file(
-                hostname=self._config["model_storage"]["hostname"],
-                port=int(self._config["model_storage"]["ftp_port"]),
-                user="modyn",
-                password="modyn",
-                remote_file_path=pathlib.Path(fetch_resp.model_path),
-                local_file_path=pretrained_model_path,
-                callback=get_pretrained_model_callback(logger),
+            pretrained_model_path = download_trained_model(
+                logger=logger,
+                model_storage_config=self._config["model_storage"],
+                remote_path=pathlib.Path(fetch_resp.model_path),
+                checksum=fetch_resp.checksum,
+                identifier=training_id,
+                base_directory=self._modyn_base_dir,
             )
 
-            logger.info(f"Completed pretrained model download. Local path: {pretrained_model_path}")
+            if not pretrained_model_path:
+                return StartTrainingResponse(training_started=False)
+
         else:
             with self._lock:
                 training_id = self._next_training_id
@@ -142,6 +142,7 @@ class TrainerServerGRPCServicer:
             training_id,
             model_id,
             model_config,
+            amp,
             self._storage_address,
             self._selector_address,
             self._offline_dataset_directory,
@@ -331,9 +332,9 @@ class TrainerServerGRPCServicer:
             logger.error(f"Training with id {training_id} is still running.")
             return StoreFinalModelResponse(valid_state=False)
 
-        final_model_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
-        if final_model_path.exists():
-            prefix_path = str(final_model_path.relative_to(self._modyn_base_dir))
+        final_checkpoint_path = self._prepare_final_model(training_id)
+        if final_checkpoint_path:
+            prefix_model_path = final_checkpoint_path.relative_to(self._modyn_base_dir)
 
             pipeline_id = self._training_dict[training_id].pipeline_id
             trigger_id = self._training_dict[training_id].trigger_id
@@ -343,23 +344,29 @@ class TrainerServerGRPCServicer:
                 trigger_id=trigger_id,
                 hostname=self._config["trainer_server"]["hostname"],
                 port=int(self._config["trainer_server"]["ftp_port"]),
-                model_path=prefix_path,
+                model_path=str(prefix_model_path),
+                checksum=calculate_checksum(final_checkpoint_path),
             )
 
             register_response: RegisterModelResponse = self.model_storage_stub.RegisterModel(register_request)
 
             if not register_response.success:
-                logger.error(f"Could not store final model from training id {training_id}.")
+                logger.error(f"Could not store final model from training id {training_id} at model storage.")
                 return StoreFinalModelResponse(valid_state=False)
-
-            os.remove(final_model_path)
-
-            logger.info(f"Deleted final model at {final_model_path}")
+            os.remove(final_checkpoint_path)
+            logger.info(f"Deleted final model on path {final_checkpoint_path}")
 
             return StoreFinalModelResponse(valid_state=True, model_id=register_response.model_id)
 
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
         return StoreFinalModelResponse(valid_state=False)
+
+    def _prepare_final_model(self, training_id: int) -> Optional[pathlib.Path]:
+        final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
+        if not final_checkpoint_path.exists():
+            return None
+
+        return final_checkpoint_path
 
     def get_latest_model(
         self,

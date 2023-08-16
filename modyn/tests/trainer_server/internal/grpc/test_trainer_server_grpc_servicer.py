@@ -4,7 +4,6 @@ import multiprocessing as mp
 import os
 import pathlib
 import platform
-import shutil
 import tempfile
 from io import BytesIO
 from time import sleep
@@ -13,6 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import torch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
     FetchModelRequest,
     FetchModelResponse,
@@ -35,6 +35,7 @@ from modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer import Trai
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.trainer_server.internal.utils.training_process_info import TrainingProcessInfo
+from modyn.utils import calculate_checksum
 
 DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / "test_trainer_server.database"
 
@@ -63,26 +64,6 @@ modyn_config = {
     "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
 
-modyn_download_file_config = {
-    "trainer_server": {
-        "hostname": "trainer_server",
-        "port": "5001",
-        "ftp_port": "3001",
-        "offline_dataset_directory": "/tmp/offline_dataset",
-    },
-    "metadata_database": {
-        "drivername": "sqlite",
-        "username": "",
-        "password": "",
-        "host": "",
-        "port": 0,
-        "database": f"{DATABASE}",
-    },
-    "storage": {"hostname": "storage", "port": "5002"},
-    "selector": {"hostname": "selector", "port": "5003"},
-    "model_storage": {"hostname": "localhost", "port": "5004", "ftp_port": "3002"},
-}
-
 
 def setup():
     if os.path.exists(DATABASE):
@@ -91,7 +72,15 @@ def setup():
     with MetadataDatabaseConnection(modyn_config) as database:
         database.create_tables()
 
-        database.register_pipeline(1, "model", json.dumps({}))
+        database.register_pipeline(
+            1,
+            "model",
+            json.dumps({}),
+            True,
+            ModelStorageStrategyConfig(name="PyTorchFullModel"),
+            incremental_model_strategy=None,
+            full_model_interval=None,
+        )
 
 
 def teardown():
@@ -142,7 +131,6 @@ def get_start_training_request(checkpoint_path=""):
         pipeline_id=1,
         trigger_id=1,
         device="cpu",
-        amp=False,
         batch_size=32,
         torch_optimizers_configuration=JsonString(
             value=json.dumps(
@@ -177,6 +165,7 @@ def get_training_info(
         training_id,
         "model",
         json.dumps({}),
+        True,
         storage_address,
         selector_address,
         offline_dataset_path,
@@ -237,18 +226,19 @@ def test_start_training_invalid_id(test_hasattr, test_connect_to_model_storage):
         assert not resp.training_started
 
 
-@patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.download_file")
+@patch(
+    "modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.download_trained_model",
+    return_value=pathlib.Path("downloaded_model.modyn"),
+)
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr", return_value=True)
 @patch(
     "modyn.trainer_server.internal.utils.training_info.getattr",
     return_value=DummyModelWrapper,
 )
-def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storage, download_file_mock: MagicMock):
+def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storage, download_model_mock: MagicMock):
     with tempfile.TemporaryDirectory() as modyn_temp:
-        trainer_server = TrainerServerGRPCServicer(modyn_download_file_config, modyn_temp)
-        with open(pathlib.Path(modyn_temp) / "testpath.modyn", "wb") as file:
-            file.write(b"Our pretrained model!")
+        trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         mock_start = mock.Mock()
         mock_start.side_effect = noop
         trainer_server._training_dict[1] = None
@@ -263,6 +253,7 @@ def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storag
             assert trainer_server._next_training_id == 2
             assert trainer_server._training_dict[1].model_id == "model"
             assert trainer_server._training_dict[1].model_configuration_dict == {}
+            assert trainer_server._training_dict[1].amp
 
             request = get_start_training_request()
             request.use_pretrained_model = True
@@ -270,16 +261,20 @@ def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storag
 
             resp = trainer_server.start_training(request, None)
 
-            download_file_mock.assert_called_once()
-            kwargs = download_file_mock.call_args.kwargs
-            remote_file_path = kwargs["remote_file_path"]
-            local_file_path = kwargs["local_file_path"]
-
-            shutil.copyfile(pathlib.Path(modyn_temp) / remote_file_path, local_file_path)
+            download_model_mock.assert_called_once()
+            kwargs = download_model_mock.call_args.kwargs
+            remote_file_path = kwargs["remote_path"]
+            base_directory = kwargs["base_directory"]
+            identifier = kwargs["identifier"]
 
             assert resp.training_id == 2
-            with open(trainer_server._training_dict[resp.training_id].pretrained_model_path, "rb") as file:
-                assert file.read().decode("utf-8") == "Our pretrained model!"
+            assert str(remote_file_path) == "testpath.modyn"
+            assert base_directory == trainer_server._modyn_base_dir
+            assert resp.training_started
+            assert resp.training_id == identifier
+            assert (
+                str(trainer_server._training_dict[resp.training_id].pretrained_model_path) == "downloaded_model.modyn"
+            )
 
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -569,6 +564,7 @@ def test_store_final_model_found(test_is_alive, test_connect_to_model_storage):
 
             checkpoint_file = base_path / "model_final.modyn"
             torch.save(dict_to_save, checkpoint_file)
+            checksum = calculate_checksum(checkpoint_file)
 
             trainer_server._training_dict[1] = training_info
             trainer_server._training_process_dict[1] = get_training_process_info()
@@ -585,6 +581,7 @@ def test_store_final_model_found(test_is_alive, test_connect_to_model_storage):
             assert req.hostname == "trainer_server"
             assert req.port == 3001
             assert req.model_path == "model_final.modyn"
+            assert req.checksum == checksum
 
 
 @patch.object(TrainerServerGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())

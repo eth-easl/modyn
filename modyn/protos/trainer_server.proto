@@ -35,23 +35,22 @@ message StartTrainingRequest {
   int32 pipeline_id = 1;
   int32 trigger_id = 2;
   string device = 3;
-  bool amp = 4;
-  bool use_pretrained_model = 7;
-  bool load_optimizer_state = 8;
-  int32 pretrained_model_id = 9;
-  int32 batch_size = 10;
-  JsonString torch_optimizers_configuration = 11;
-  string torch_criterion = 12;
-  JsonString criterion_parameters = 13;
-  Data data_info = 14;
-  CheckpointInfo checkpoint_info = 15;
-  PythonString bytes_parser = 16;
-  repeated string transform_list = 17;
-  JsonString lr_scheduler = 18;
-  PythonString label_transformer = 19;
-  JsonString grad_scaler_configuration = 20;
-  int32 epochs_per_trigger = 21;
-  optional int32 seed = 22;
+  bool use_pretrained_model = 4;
+  bool load_optimizer_state = 5;
+  int32 pretrained_model_id = 6;
+  int32 batch_size = 7;
+  JsonString torch_optimizers_configuration = 8;
+  string torch_criterion = 9;
+  JsonString criterion_parameters = 10;
+  Data data_info = 11;
+  CheckpointInfo checkpoint_info = 12;
+  PythonString bytes_parser = 13;
+  repeated string transform_list = 14;
+  JsonString lr_scheduler = 15;
+  PythonString label_transformer = 16;
+  JsonString grad_scaler_configuration = 17;
+  int32 epochs_per_trigger = 18;
+  optional int32 seed = 19;
 }
 
 message StartTrainingResponse {

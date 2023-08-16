@@ -95,7 +95,6 @@ def get_evaluation_info(
         trained_model_id=1,
         dataset_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=1),
         device="cpu",
-        amp=False,
         batch_size=4,
         metrics=[
             MetricConfiguration(
@@ -104,14 +103,12 @@ def get_evaluation_info(
                 evaluation_transformer=PythonString(value=get_mock_accuracy_transformer()),
             )
         ],
-        model_id="model",
-        model_configuration=JsonString(value=json.dumps({})),
         transform_list=[],
         bytes_parser=PythonString(value=get_mock_bytes_parser()),
         label_transformer=PythonString(value=get_mock_label_transformer() if label_transformer else ""),
     )
 
-    return EvaluationInfo(request, evaluation_id, storage_address, metrics, trained_model_path)
+    return EvaluationInfo(request, evaluation_id, "model", "{}", False, storage_address, metrics, trained_model_path)
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)

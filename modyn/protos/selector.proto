@@ -24,6 +24,19 @@ message Empty {}
 
 message JsonString { string value = 1; }
 
+message StrategyConfig {
+  string name = 1;
+  optional bool zip = 2;
+  optional string zip_algorithm = 3;
+  optional JsonString config = 4;
+}
+
+message ModelStorageStrategyInfo {
+  StrategyConfig full_model_strategy_config = 1;
+  optional StrategyConfig incremental_model_strategy_config = 2;
+  optional int32 full_model_interval = 3;
+}
+
 message DataInformRequest {
   int32 pipeline_id = 1;
   repeated int64 keys = 2;
@@ -38,6 +51,8 @@ message RegisterPipelineRequest {
   JsonString selection_strategy = 2;
   string model_id = 3;
   JsonString model_configuration = 4;
+  bool amp = 5;
+  ModelStorageStrategyInfo model_storage_strategy = 6;
 }
 
 message PipelineResponse { int32 pipeline_id = 1; }
