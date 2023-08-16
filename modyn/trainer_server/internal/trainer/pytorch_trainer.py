@@ -147,6 +147,7 @@ class PytorchTrainer:
             training_info.storage_address,
             training_info.selector_address,
             training_info.training_id,
+            training_info.tokenizer,
         )
 
         # create callbacks - For now, assume LossCallback by default
