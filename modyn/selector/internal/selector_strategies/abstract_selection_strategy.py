@@ -12,8 +12,10 @@ from modyn.metadata_database.metadata_database_connection import MetadataDatabas
 from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
 from sqlalchemy import func
 
-logger = logging.getLogger(__name__)
+from modyn.trainer_server.internal.time_logger import TimeLogger, Event
 
+logger = logging.getLogger(__name__)
+TIME_LOGGER = TimeLogger()
 
 class AbstractSelectionStrategy(ABC):
     """This class is the base class for selection strategies.
@@ -187,7 +189,13 @@ class AbstractSelectionStrategy(ABC):
         """
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         trigger_id = self._next_trigger_id
+
+        if trigger_id == 82:
+            self.store_keys_trigger_mapping()
         total_keys_in_trigger = 0
+
+        TIME_LOGGER.set_trigger(trigger_id)
+
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
             trigger = Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id)
@@ -196,7 +204,9 @@ class AbstractSelectionStrategy(ABC):
 
         partition_num_keys = {}
         partition: Optional[int] = None
+        TIME_LOGGER.log(Event.SELECTOR_START_TRIGGER)
         for partition, training_samples in enumerate(self._on_trigger()):
+            TIME_LOGGER.log(Event.SELECTOR_START_PARTITION, str(partition))
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
                 + f" {len(training_samples)} samples for new trigger {trigger_id}."
@@ -244,7 +254,8 @@ class AbstractSelectionStrategy(ABC):
 
                 for proc in processes:
                     proc.join()
-
+            TIME_LOGGER.log(Event.SELECTOR_STORED_SAMPLES, str(len(training_samples)))
+        TIME_LOGGER.log(Event.SELECTOR_END_STORING)
         num_partitions = partition + 1 if partition is not None else 0
 
         # Update Trigger about number of partitions and keys
@@ -272,6 +283,7 @@ class AbstractSelectionStrategy(ABC):
             self._reset_state()
 
         self._next_trigger_id += 1
+        TIME_LOGGER.log(Event.SELECTOR_END_TRIGGER)
         return trigger_id, total_keys_in_trigger, num_partitions
 
     def get_trigger_partition_keys(
@@ -414,3 +426,22 @@ class AbstractSelectionStrategy(ABC):
             available_labels = [result_tuple[0] for result_tuple in result]
 
         return available_labels
+
+    def store_keys_trigger_mapping(self):
+        logger.info("Start storing the mapping")
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            query_result = (
+                database.session.query(SelectorStateMetadata.sample_key, SelectorStateMetadata.seen_in_trigger_id)
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                ).all()
+            )
+        logger.info("Query for storing the mapping completed")
+        with open("index_trigger_mapping.json", "w") as f:
+            import json
+            result_list = [
+                (row.sample_key, row.seen_in_trigger_id)
+                for row in query_result
+            ]
+            print(result_list)
+            json.dump(result_list, f)

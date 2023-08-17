@@ -1,0 +1,329 @@
+{
+  "all_data" : {
+  },
+  "random_75pc_1ep": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 75
+    }
+  },
+  "random_50pc_1ep": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 50
+    }
+  },
+  "random_25pc_1ep": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 25
+    }
+  },
+  "randomNoRep_75pc_1ep": {
+    "presampling_config" : {
+      "strategy": "RandomNoReplacement",
+      "ratio": 75
+    }
+  },
+  "randomNoRep_50pc_1ep": {
+    "presampling_config" : {
+      "strategy": "RandomNoReplacement",
+      "ratio": 50
+    }
+  },
+  "randomNoRep_25pc_1ep": {
+    "presampling_config" : {
+      "strategy": "RandomNoReplacement",
+      "ratio": 25
+    }
+  },
+  "labelBalanced_75pc_1ep": {
+    "presampling_config" : {
+      "strategy": "LabelBalanced",
+      "ratio": 75
+    }
+  },
+  "labelBalanced_50pc_1ep": {
+    "presampling_config" : {
+      "strategy": "LabelBalanced",
+      "ratio": 50
+    }
+  },
+  "labelBalanced_25pc_1ep": {
+    "presampling_config" : {
+      "strategy": "LabelBalanced",
+      "ratio": 25
+    }
+  },
+  "random_50pc_2ep": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 50
+    },
+    "epochs_per_trigger" : 2
+  },
+  "random_25pc_2ep": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 2
+  },
+  "random_25pc_4ep": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 4
+  },
+  "randomNoRep_50pc_2ep": {
+    "presampling_config" : {
+      "strategy": "RandomNoReplacement",
+      "ratio": 50
+    },
+    "epochs_per_trigger" : 2
+  },
+  "randomNoRep_25pc_2ep": {
+    "presampling_config" : {
+      "strategy": "RandomNoReplacement",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 2
+  },
+  "randomNoRep_25pc_4ep": {
+    "presampling_config" : {
+      "strategy": "RandomNoReplacement",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 4
+  },
+  "labelBalanced_50pc_2ep": {
+    "presampling_config" : {
+      "strategy": "LabelBalanced",
+      "ratio": 50
+    },
+    "epochs_per_trigger" : 2
+  },
+  "labelBalanced_25pc_2ep": {
+    "presampling_config" : {
+      "strategy": "LabelBalanced",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 2
+  },
+  "labelBalanced_25pc_4ep": {
+    "presampling_config" : {
+      "strategy": "LabelBalanced",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 4
+  },
+  "triggerBalanced_75pc_1ep": {
+    "presampling_config" : {
+      "strategy": "TriggerBalanced",
+      "ratio": 75
+    }
+  },
+  "triggerBalanced_50pc_1ep": {
+    "presampling_config" : {
+      "strategy": "TriggerBalanced",
+      "ratio": 50
+    }
+  },
+  "triggerBalanced_25pc_1ep": {
+    "presampling_config" : {
+      "strategy": "TriggerBalanced",
+      "ratio": 25
+    }
+  },
+  "TriggerBalanced_75pc_4ep_tail5": {
+    "presampling_config" : {
+      "strategy": "TriggerBalanced",
+      "ratio": 75
+    },
+    "epochs_per_trigger" : 4,
+    "tail_triggers" : 5
+  },
+  "triggerBalanced_50pc_2ep": {
+    "presampling_config" : {
+      "strategy": "TriggerBalanced",
+      "ratio": 50
+    },
+    "epochs_per_trigger" : 2
+  },
+  "triggerBalanced_25pc_2ep": {
+    "presampling_config" : {
+      "strategy": "TriggerBalanced",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 2
+  },
+  "triggerBalanced_25pc_4ep": {
+    "presampling_config" : {
+      "strategy": "TriggerBalanced",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 4
+  },
+  "random_25pc_8ep": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 25
+    },
+    "epochs_per_trigger" : 8
+  },
+  "all_data_2ep": {
+    "epochs_per_trigger" : 2
+  },
+  "all_data_4ep": {
+    "epochs_per_trigger" : 4
+  },
+  "all_data_4ep_tail5": {
+    "epochs_per_trigger" : 4,
+    "tail_triggers" : 5
+  },
+  "random_75pc_4ep_tail5": {
+    "presampling_config" : {
+      "strategy": "Random",
+      "ratio": 75
+    },
+    "epochs_per_trigger" : 4,
+    "tail_triggers" : 5
+  },
+  "randomNoRep_75pc_4ep_tail5": {
+    "presampling_config" : {
+      "strategy": "RandomNoReplacement",
+      "ratio": 75
+    },
+    "epochs_per_trigger" : 4,
+    "tail_triggers" : 5
+  },
+  "LabelBalanced_75pc_4ep_tail5": {
+    "presampling_config" : {
+      "strategy": "LabelBalanced",
+      "ratio": 75
+    },
+    "epochs_per_trigger" : 4,
+    "tail_triggers" : 5
+  },
+  "GradNorm_25pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "GradNorm",
+      "ratio": 25,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "GradNorm_10pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "GradNorm",
+      "ratio": 10,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Craig_25pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Craig",
+      "ratio": 25,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Craig_10pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Craig",
+      "ratio": 10,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "GradMatch_25pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "GradMatch",
+      "ratio": 25,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "GradMatch_10pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "GradMatch",
+      "ratio": 10,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Margin_25pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Uncertainty",
+      "score_metric": "Margin",
+      "ratio": 25,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Margin_10pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Uncertainty",
+      "score_metric": "Margin",
+      "ratio": 10,
+      "sample_then_batch": false
+    },
+    "epochs_per_trigger" : 2
+  },
+  "SubmodularFL_25pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Submodular",
+      "ratio": 25,
+      "sample_then_batch": false,
+      "submodular_function": "FacilityLocation"
+    },
+    "epochs_per_trigger" : 2
+  },
+  "SubmodularFL_10pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Submodular",
+      "ratio": 10,
+      "sample_then_batch": false,
+      "submodular_function": "FacilityLocation"
+    },
+    "epochs_per_trigger" : 2
+  },
+  "SubmodularLD_25pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Submodular",
+      "ratio": 25,
+      "sample_then_batch": false,
+      "submodular_function": "LogDeterminant"
+    },
+    "epochs_per_trigger" : 2
+  },
+  "SubmodularLD_10pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Submodular",
+      "ratio": 10,
+      "sample_then_batch": false,
+      "submodular_function": "LogDeterminant"
+    },
+    "epochs_per_trigger" : 2
+  },
+  "SubmodularGC_25pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Submodular",
+      "ratio": 25,
+      "sample_then_batch": false,
+      "submodular_function": "GraphCut"
+    },
+    "epochs_per_trigger" : 2
+  },
+  "SubmodularGC_10pc_2ep_BTS": {
+    "downsampling_config" : {
+      "strategy": "Submodular",
+      "ratio": 10,
+      "sample_then_batch": false,
+      "submodular_function": "GraphCut"
+    },
+    "epochs_per_trigger" : 2
+  }
+}

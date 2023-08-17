@@ -16,9 +16,9 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 24gb
+    shm_size: 24gb
     volumes:
-      - ./metadata-postgres-data:/var/lib/postgresql/data
+      - /scratch/fdeaglio/meta_psql:/var/lib/postgresql/data
       - ./metadata_postgresql.conf:/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -34,9 +34,9 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 8gb
+    shm_size: 8gb
     volumes:
-      - ./storage-postgres-data:/var/lib/postgresql/data
+      - /scratch/fdeaglio/storage_psql:/var/lib/postgresql/data
       - ./storage_postgresql.conf:/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -45,6 +45,7 @@ services:
       retries: 20
   storage:
     restart: on-failure
+    shm_size: 8gb
     depends_on:
       - storage-db
     build:
@@ -52,7 +53,7 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - storage-data:/app/storage
-#      - /mnt/datasets:/datasets
+      - /scratch/fdeaglio/datasets/:/datasets
 #      - .:/modyn_host
   metadata_processor:
     restart: on-failure
@@ -87,18 +88,18 @@ services:
       dockerfile: docker/Trainer_Server/Dockerfile
     volumes:
     - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
-#      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
+    - /scratch/fdeaglio/offline_dataset:/tmp/offline_dataset
 #      - .:/modyn_host
-#    shm_size: 4gb
+    shm_size: 4gb
 # CUDASTART (ignore/delete if enabling cuda manually)
-#    runtime: nvidia
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: 1
-#              capabilities: [gpu, utility, compute]
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility, compute]
 # CUDAEND (ignore/delete if enabling cuda manually)
   selector:
     restart: on-failure
@@ -109,9 +110,9 @@ services:
       dockerfile: docker/Selector/Dockerfile
     volumes:
        - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (line below)
-#      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
+       - /scratch/fdeaglio/trigger_samples:/tmp/trigger_samples
 #      - .:/modyn_host
-#    shm_size: 4gb
+    shm_size: 24gb
   supervisor:
     depends_on:
     - storage

@@ -1,0 +1,54 @@
+data:
+  bytes_parser_function: "import torch\nimport numpy as np\ndef bytes_parser_function(data:\
+    \ bytes) -> torch.Tensor:\n  return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1,\
+    \ 32, 32)\n"
+  dataset_id: yearbook
+  transformations: []
+model:
+  config:
+    num_classes: 2
+    num_input_channels: 1
+  id: YearbookNet
+pipeline:
+  description: Example pipeline
+  name: Yearbook Test Pipeline
+  version: 1.0.0
+training:
+  batch_size: 256
+  checkpointing:
+    activated: false
+  dataloader_workers: 2
+  device: cuda:0
+  epochs_per_trigger: 2
+  gpus: 1
+  initial_model: random
+  initial_pass:
+    activated: false
+  optimization_criterion:
+    name: CrossEntropyLoss
+  optimizers:
+  - algorithm: SGD
+    name: default
+    param_groups:
+    - config:
+        lr: 0.001
+        momentum: 0.9
+      module: model
+    source: PyTorch
+  seed: 24
+  selection_strategy:
+    config:
+      downsampling_config:
+        ratio: 25
+        sample_then_batch: false
+        strategy: Submodular
+        submodular_function: FacilityLocation
+      presampling_config:
+        strategy: 'No'
+    maximum_keys_in_memory: 10000
+    name: CoresetStrategy
+  use_previous_model: true
+trigger:
+  id: TimeTrigger
+  trigger_config:
+    trigger_every: 1d

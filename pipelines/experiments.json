@@ -1,0 +1,52 @@
+{
+  "GradNorm_25pc_2ep_STB": {
+    "downsampling_config" : {
+      "strategy": "GradNorm",
+      "ratio": 25,
+      "sample_then_batch": true
+    },
+    "epochs_per_trigger" : 2
+  },
+  "GradNorm_10pc_2ep_STB": {
+    "downsampling_config" : {
+      "strategy": "GradNorm",
+      "ratio": 10,
+      "sample_then_batch": true
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Kcenter_25pc_2ep_STB": {
+    "downsampling_config" : {
+      "strategy": "KcenterGreedy",
+      "ratio": 25,
+      "sample_then_batch": true
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Kcenter_10pc_2ep_STB": {
+    "downsampling_config" : {
+      "strategy": "KcenterGreedy",
+      "ratio": 10,
+      "sample_then_batch": true
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Margin_25pc_2ep_STB": {
+    "downsampling_config" : {
+      "strategy": "Uncertainty",
+      "score_metric": "Margin",
+      "ratio": 25,
+      "sample_then_batch": true
+    },
+    "epochs_per_trigger" : 2
+  },
+  "Margin_10pc_2ep_STB": {
+    "downsampling_config" : {
+      "strategy": "Uncertainty",
+      "score_metric": "Margin",
+      "ratio": 10,
+      "sample_then_batch": true
+    },
+    "epochs_per_trigger" : 2
+  }
+}

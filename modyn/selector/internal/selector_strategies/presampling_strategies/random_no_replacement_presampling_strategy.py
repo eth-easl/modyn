@@ -15,6 +15,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
 
         # a complete_trigger is the last time when all the datapoints (in the db at that time) have been seen
         self.last_complete_trigger = 0
+        self._reset_last_used_in_trigger()
 
     def get_presampling_query(
         self,
@@ -92,3 +93,10 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
                 )
                 .count()
             )
+
+    def _reset_last_used_in_trigger(self) -> None:
+        with MetadataDatabaseConnection(self.modyn_config) as database:
+            database.session.query(SelectorStateMetadata).filter(
+                SelectorStateMetadata.pipeline_id == self.pipeline_id,
+            ).update({"last_used_in_trigger": -1})
+            database.session.commit()
