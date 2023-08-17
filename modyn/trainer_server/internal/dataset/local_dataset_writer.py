@@ -62,14 +62,11 @@ class LocalDatasetWriter(TriggerSampleStorage):
     def inform_samples(self, sample_ids: list, sample_weights: torch.Tensor) -> None:
         # map the two input lists to the desired format
         assert self.output_samples_list is not None
-        samples_list = np.empty(len(sample_ids), dtype=np.dtype("i8,f8"))
 
-        for i, _ in enumerate(sample_ids):
-            samples_list[i] = (sample_ids[i], sample_weights[i])
 
         # add the input tuples to the output list.
-        for element in samples_list:
-            self.output_samples_list[self.current_sample_index] = element
+        for i, _ in enumerate(sample_ids):
+            self.output_samples_list[self.current_sample_index] = (sample_ids[i], sample_weights[i])
             self.current_sample_index += 1
 
             # if the target is reached, store the samples

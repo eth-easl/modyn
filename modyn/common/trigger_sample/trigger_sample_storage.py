@@ -232,6 +232,10 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
+
+        if not os.path.isfile(file_path):
+            return np.ndarray(0, dtype=("i8,f8"))
+
         return np.load(file_path, allow_pickle=False, fix_imports=False)
 
     def _parse_file_subset(self, file_path: Path, start_index: int, end_index: int) -> np.memmap:

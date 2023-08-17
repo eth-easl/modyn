@@ -27,6 +27,7 @@ from modyn.trainer_server.internal.dataset.data_utils import (
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
+from modyn.trainer_server.internal.time_logger import TimeLogger, Event
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
@@ -50,7 +51,7 @@ from modyn.utils import (
 from modyn.utils.utils import instantiate_class
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
-
+TIMING_LOGGER = TimeLogger()
 
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
@@ -69,6 +70,7 @@ class PytorchTrainer:
         self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id
         self.trigger_id = training_info.trigger_id
+        TIMING_LOGGER.set_trigger(self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
@@ -311,6 +313,8 @@ class PytorchTrainer:
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
 
+        TIMING_LOGGER.log(Event.START_TRAINING)
+
         self._model.model.train()
 
         for _, callback in self._callbacks.items():
@@ -320,11 +324,15 @@ class PytorchTrainer:
 
         batch_number = -1
         for epoch in range(self.epochs_per_trigger):
+            TIMING_LOGGER.log(Event.START_EPOCH, str(epoch))
             if self.sample_then_batch_this_epoch(epoch):
+                TIMING_LOGGER.log(Event.STB_START)
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
                 self.downsample_trigger_training_set()
+                TIMING_LOGGER.log(Event.STB_END)
 
             for batch_number, batch in enumerate(self._train_dataloader):
+                TIMING_LOGGER.log(Event.START_BATCH, str(batch_number))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
 
                 for _, callback in self._callbacks.items():
@@ -337,7 +345,7 @@ class PytorchTrainer:
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
                     # We need to cast to do the dot product
-                    weights = batch[3].float()
+                    weights = batch[3].float().to(self._device)
 
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
@@ -347,12 +355,16 @@ class PytorchTrainer:
                     self._lr_scheduler.step()
 
                 pre_downsampling_size = target.shape[0]
+                TIMING_LOGGER.log(Event.PREPROCESS_END)
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+                        TIMING_LOGGER.log(Event.BTS_START)
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
+                        TIMING_LOGGER.log(Event.BTS_END)
 
                     output = self._model.model(data)
+                    TIMING_LOGGER.log(Event.FORWARD_END)
 
                     if weighted_optimization:
                         # weighted gradient descent
@@ -362,6 +374,7 @@ class PytorchTrainer:
                         loss = self._criterion(output, target)
 
                 self._scaler.scale(loss).backward()
+                TIMING_LOGGER.log(Event.BACKWARD_END)
 
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
@@ -372,6 +385,7 @@ class PytorchTrainer:
                     self._scaler.step(optimizer)
 
                 self._scaler.update()
+                TIMING_LOGGER.log(Event.STEP_END)
 
                 if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
                     checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
@@ -383,6 +397,8 @@ class PytorchTrainer:
                     callback.on_batch_end(
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
+                TIMING_LOGGER.log(Event.END_BATCH, str(batch_number))
+            TIMING_LOGGER.log(Event.END_EPOCH, str(epoch))
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         for _, callback in self._callbacks.items():
@@ -400,6 +416,7 @@ class PytorchTrainer:
         self.end_of_trigger_cleaning()
 
         self._info("Training complete!")
+        TIMING_LOGGER.log(Event.END_TRIGGER, str(self._num_samples))
 
     def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
         # whether the dataloader returned the weights.
@@ -493,6 +510,7 @@ class PytorchTrainer:
             self._model.model.embedding_recorder.start_recording()
 
         big_batch_output = self._model.model(data)
+        TIMING_LOGGER.log(Event.BTS_COMPUTED_FORWARD)
 
         # supply the embeddings if required by the downsampler
         if self._downsampler.requires_coreset_methods_support:
@@ -502,12 +520,14 @@ class PytorchTrainer:
             embeddings = None
 
         self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
+        TIMING_LOGGER.log(Event.BTS_INFORMED_SAMPLES, str(len(sample_ids)))
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
+        TIMING_LOGGER.log(Event.BTS_SELECTED_SAMPLES, str(len(selected_indexes)))
         selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
         sample_ids, data, target = selected_indexes, selected_data, selected_target
         # TODO(#219) Investigate if we can avoid 2 forward passes
-        return data, sample_ids, target, weights
+        return data, sample_ids, target, weights.to(self._device)
 
     def downsample_trigger_training_set(self) -> None:
         """
@@ -559,10 +579,13 @@ class PytorchTrainer:
                     previous_number_of_samples=number_of_samples,
                 )
                 self._downsampler.inform_end_of_current_label()
+                TIMING_LOGGER.log(Event.STB_LABEL_COMPLETED, f"Label: {label}")
         else:
             batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(self._train_dataloader)
+        TIMING_LOGGER.log(Event.STB_ALL_SAMPLES_INFORMED)
 
         selected_ids, weights = self._downsampler.select_points()
+        TIMING_LOGGER.log(Event.STB_POINTS_SELECTED, str(len(selected_ids)))
 
         self._info("Downsampling complete! Storing selected points...")
 
@@ -573,7 +596,7 @@ class PytorchTrainer:
 
         # to store all the selected (sample, weight).
         # TODO(#283) investigate which size performs the best
-        file_size = self._num_dataloaders * self._batch_size
+        file_size = self._num_dataloaders * self._batch_size * 4
         local_dataset = LocalDatasetWriter(
             self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size, self.offline_dataset_path
         )
@@ -584,6 +607,7 @@ class PytorchTrainer:
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
         # we need to manually trigger the store
         local_dataset.finalize()
+        TIMING_LOGGER.log(Event.STB_POINTS_STORED)
 
         self._info("Points stored! Key source set to local")
 
@@ -618,14 +642,18 @@ class PytorchTrainer:
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
         for batch_number, batch in enumerate(dataloader):
+
+            TIMING_LOGGER.log(Event.STB_BATCH_START, str(batch_number))
             self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
 
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
+            TIMING_LOGGER.log(Event.STB_PREPROCESS_END)
 
             with torch.autocast(self._device_type, enabled=self._amp):
                 # compute the scores and accumulate them
                 model_output = self._model.model(data)
+                TIMING_LOGGER.log(Event.STB_FORWARD_END)
                 # supply the embeddings if required by the downsampler
                 if self._downsampler.requires_coreset_methods_support:
                     assert isinstance(self._model.model, CoresetMethodsSupport)
@@ -634,11 +662,13 @@ class PytorchTrainer:
                 else:
                     embeddings = None
                 self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
+                TIMING_LOGGER.log(Event.STB_INFORM_SAMPLES_END, f"{len(sample_ids)}")
 
         return batch_number, number_of_samples
 
     def end_of_trigger_cleaning(self) -> None:
-        self._train_dataloader.dataset.end_of_trigger_cleaning()
+        # self._train_dataloader.dataset.end_of_trigger_cleaning()
+        pass
 
     def _get_available_labels_from_selector(self) -> list[int]:
         req = GetAvailableLabelsRequest(pipeline_id=self.pipeline_id)

@@ -90,7 +90,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
     def _select_from_matrix(self) -> tuple[list[int], torch.Tensor]:
         matrix = np.concatenate(self.matrix_elements)
         number_of_samples = len(matrix)
-        target_size = int(self.downsampling_ratio * number_of_samples / 100)
+        target_size = max(int(self.downsampling_ratio * number_of_samples / 100), 1)
         selected_indices, weights = self._select_indexes_from_matrix(matrix, target_size)
         selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
         return selected_ids, weights
