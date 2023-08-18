@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 MODELS_PATH = "../new_models"
 OUTPUT_FOLDER = "../test_out"
-
+DEVICE = "cuda:0"
 
 class YearbookNetModel(nn.Module):
     def __init__(self, num_input_channels: int, num_classes: int) -> None:
@@ -56,7 +56,7 @@ def evaluate_model(checkpoint_path, year):
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     # Load trained model
-    model = YearbookNetModel(1, 2)
+    model = YearbookNetModel(1, 2).to(DEVICE)
     checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint["model"])
 
@@ -66,8 +66,8 @@ def evaluate_model(checkpoint_path, year):
 
     for inputs, targets in dataloader:
         model.eval()
-        outputs = model(inputs)
-        predictions = outputs.argmax(dim=1)
+        outputs = model(inputs.to(DEVICE))
+        predictions = outputs.argmax(dim=1).cpu()
         accuracy = (predictions == targets).float().mean()
 
         accuracies_list.append(accuracy.item())
@@ -105,6 +105,7 @@ def get_final_table(measurements):
         for sample in measurements:
             if sample["model_year"] == model_year:
                 data[i][sample["data_year"] - 1930] = sample["accuracy"]
+                print(sample["accuracy"])
 
     return data
 

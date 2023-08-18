@@ -24,7 +24,7 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         if "print_freq" not in self.args:
             self.args.print_freq = None
         if "device" not in self.args:
-            self.args.device = "cpu"
+            self.args.device = "cuda:0"
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         cur_val_gradients = np.mean(matrix, axis=0)
@@ -34,7 +34,7 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
             cur_weights = orthogonal_matching_pursuit_np(matrix.T, cur_val_gradients, budget=target_size)
         else:
             cur_weights = orthogonal_matching_pursuit(
-                torch.Tensor(matrix).T, torch.Tensor(cur_val_gradients), budget=target_size
+                torch.Tensor(matrix).T.to(device="cuda:0"), torch.Tensor(cur_val_gradients).to(device="cuda:0"), budget=target_size
             )
         selection_result = np.nonzero(cur_weights)[0]
         weights = torch.tensor(cur_weights[selection_result])

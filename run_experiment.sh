@@ -6,6 +6,8 @@ echo "$experiment_name"
 # clean directories and make dbs writeable
 rm -f /scratch/fdeaglio/trigger_samples/*
 rm -f /scratch/fdeaglio/offline_dataset/*
+mkdir "/scratch/fdeaglio/offline_dataset/"
+chmod 777 /scratch/fdeaglio/offline_dataset/
 bash ./run_modyn.sh
 docker exec -it "$(docker compose ps -q storage-db)" chmod 777 /var/lib/postgresql/data
 docker exec -it "$(docker compose ps -q metadata-db)" chmod 777 /var/lib/postgresql/data

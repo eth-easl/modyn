@@ -24,7 +24,7 @@ class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy
         if "print_freq" not in self.args:
             self.args.print_freq = None
         if "device" not in self.args:
-            self.args.device = "cpu"
+            self.args.device = "cuda:0"
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         selected_indices = k_center_greedy(
