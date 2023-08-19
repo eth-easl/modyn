@@ -74,6 +74,7 @@ trigger:
     data_points_for_trigger: 100
 evaluation:
   device: "cpu"
+  result_writers: ["json", "tensorboard"]
   datasets:
     - dataset_id: mnist
       transformations: ["transforms.ToTensor()",

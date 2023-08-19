@@ -412,6 +412,15 @@ properties:
         description: |
           The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
           and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
+      result_writers:
+        type: array
+        description: |
+          Specifies in which formats to store the evaluation results. We currently support json and tensorboard.
+        minItems: 1
+        items:
+          type: string
+          description: |
+            Name of the evaluation result writer.
       datasets:
         type: array
         description: |
@@ -480,8 +489,9 @@ properties:
             - batch_size
             - metrics
     required:
-      - datasets
       - device
+      - result_writers
+      - datasets
 required:
   - pipeline
   - model

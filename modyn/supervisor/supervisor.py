@@ -5,9 +5,15 @@ from time import sleep
 from typing import Optional
 
 import enlighten
+from modyn.supervisor.internal.evaluation_result_writer import (
+    AbstractEvaluationResultWriter,
+    JsonResultWriter,
+    TensorboardResultWriter,
+)
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
 from modyn.utils import dynamic_module_import, is_directory_writable, model_available, trigger_available, validate_yaml
+from tensorboard import program
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +28,8 @@ class Supervisor:
         "FreshnessSamplingStrategy",
         "CoresetStrategy",
     ]
+
+    supported_evaluation_result_writers: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
 
     def __init__(
         self,
@@ -76,6 +84,11 @@ class Supervisor:
         if "seed" in pipeline_config["training"]:
             self.grpc.seed_selector(pipeline_config["training"]["seed"])
 
+        if "tensorboard" in self.modyn_config:
+            port = self.modyn_config["tensorboard"]["port"]
+            self._run_tensorboard(port)
+            logger.info(f"Starting up tensorboard on port {port}.")
+
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
         trigger_config = {}
@@ -102,14 +115,19 @@ class Supervisor:
 
         return True
 
-    @staticmethod
-    def _validate_evaluation_options(evaluation_config: dict) -> bool:
+    def _validate_evaluation_options(self, evaluation_config: dict) -> bool:
         is_valid = True
 
         dataset_ids = [dataset["dataset_id"] for dataset in evaluation_config["datasets"]]
         if len(set(dataset_ids)) < len(dataset_ids):
             logger.error("Dataset ids must be unique in evaluation")
             is_valid = False
+
+        if "result_writers" in evaluation_config:
+            writer_names = set(evaluation_config["result_writers"])
+            if diff := writer_names.difference(self.supported_evaluation_result_writers.keys()):
+                logger.error(f"Found invalid evaluation result writers: {', '.join(diff)}.")
+                is_valid = False
 
         for dataset in evaluation_config["datasets"]:
             batch_size = dataset["batch_size"]
@@ -221,6 +239,26 @@ class Supervisor:
 
     def validate_system(self) -> bool:
         return self.dataset_available() and self.grpc.trainer_server_available()
+
+    def _run_tensorboard(self, port: str) -> None:
+        logging.getLogger("tensorboard").setLevel(logging.ERROR)
+        logging.getLogger("MARKDOWN").setLevel(logging.ERROR)
+
+        tensorboard = program.TensorBoard()
+        tensorboard.configure(
+            argv=[
+                None,
+                "--logdir",
+                str(self.eval_directory),
+                "--bind_all",
+                "--port",
+                port,
+                "--window_title",
+                "Modyn TensorBoard",
+            ]
+        )
+        tensorboard.launch()
+        logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:
@@ -359,7 +397,13 @@ class Supervisor:
         if "evaluation" in self.pipeline_config:
             evaluations = self.grpc.start_evaluation(trained_model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-            self.grpc.store_evaluation_results(self.eval_directory, self.pipeline_id, trigger_id, evaluations)
+
+            writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
+            writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
+            self.grpc.store_evaluation_results(writers, evaluations)
+
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
+        return self.supported_evaluation_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.

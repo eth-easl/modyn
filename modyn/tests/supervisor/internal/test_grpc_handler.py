@@ -32,6 +32,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.utils import EvaluationStatusTracker
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -625,7 +626,7 @@ def test_store_evaluation_results(test_connection_established):
     with tempfile.TemporaryDirectory() as path:
         with patch.object(handler.evaluator, "get_evaluation_result", return_value=res) as get_method:
             eval_dir = pathlib.Path(path)
-            handler.store_evaluation_results(eval_dir, 5, 3, evaluations)
+            handler.store_evaluation_results([JsonResultWriter(5, 3, eval_dir)], evaluations)
             assert get_method.call_count == 2
 
             called_ids = [call[0][0].evaluation_id for call in get_method.call_args_list]
@@ -692,7 +693,7 @@ def test_store_evaluation_results_invalid(test_connection_established):
         with patch.object(handler.evaluator, "get_evaluation_result", return_value=res) as get_method:
             eval_dir = pathlib.Path(path)
 
-            handler.store_evaluation_results(eval_dir, 5, 3, evaluations)
+            handler.store_evaluation_results([JsonResultWriter(5, 3, eval_dir)], evaluations)
             get_method.assert_called_with(EvaluationResultRequest(evaluation_id=10))
 
             file_path = eval_dir / f"{5}_{3}.eval"
