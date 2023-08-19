@@ -127,6 +127,8 @@ services:
 #    volumes:
 #      - .:/modyn_host
     container_name: supervisor
+    ports:
+      - 3000:50062
   tests:
     depends_on:
       storage:

@@ -361,6 +361,15 @@ properties:
         type: boolean
         description: |
           If True, automatic mixed precision will be used.
+      result_writers:
+        type: array
+        description: |
+          Specifies in which formats to store the evaluation results. We currently support json and tensorboard.
+        minItems: 1
+        items:
+          type: string
+          description: |
+            Name of the evaluation result writer.
       datasets:
         type: array
         description: |
@@ -429,8 +438,9 @@ properties:
             - batch_size
             - metrics
     required:
-      - datasets
       - device
+      - result_writers
+      - datasets
 required:
   - pipeline
   - model
