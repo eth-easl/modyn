@@ -7,6 +7,7 @@ from typing import Iterable, Optional
 
 import enlighten
 import grpc
+from modyn.common.benchmark import Stopwatch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
@@ -22,6 +23,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString a
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
+    DataInformResponse,
     GetNumberOfSamplesRequest,
     GetStatusBarScaleRequest,
 )
@@ -154,11 +156,13 @@ class GRPCHandler:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
+        swt = Stopwatch()
         request = GetNewDataSinceRequest(dataset_id=dataset_id, timestamp=timestamp)
         response: GetNewDataSinceResponse
+        swt.start("request", overwrite=True)
         for response in self.storage.GetNewDataSince(request):
             data = list(zip(response.keys, response.timestamps, response.labels))
-            yield data
+            yield data, swt.stop()
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
@@ -207,12 +211,16 @@ class GRPCHandler:
         #  # TODO(#64,#124): Implement.
         pass
 
-    def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> None:
+    def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> dict[str, object]:
         keys, timestamps, labels = zip(*data)
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
-        self.selector.inform_data(request)
+        response: DataInformResponse = self.selector.inform_data(request)
 
-    def inform_selector_and_trigger(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> int:
+        return json.loads(response.log.value)
+
+    def inform_selector_and_trigger(
+        self, pipeline_id: int, data: list[tuple[int, int, int]]
+    ) -> tuple[int, dict[str, object]]:
         keys: list[int]
         timestamps: list[int]
         labels: list[int]
@@ -228,7 +236,7 @@ class GRPCHandler:
         trigger_id = response.trigger_id
         logging.info(f"Informed selector about trigger. Got trigger id {trigger_id}.")
 
-        return trigger_id
+        return trigger_id, json.loads(response.log.value)
 
     def trainer_server_available(self) -> bool:
         if not self.connected_to_trainer_server:
@@ -386,7 +394,7 @@ class GRPCHandler:
     # pylint: disable=too-many-nested-blocks
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
-    ) -> None:  # pragma: no cover
+    ) -> dict[str, object]:  # pragma: no cover
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
@@ -434,10 +442,13 @@ class GRPCHandler:
             if res.is_running:
                 sleep(2)
             else:
+                trainer_log = res.trainer_log
                 break
 
         status_tracker.close_counter()
         logger.info("Training completed 🚀")
+
+        return trainer_log
 
     def store_trained_model(self, training_id: int) -> int:
         logger.info(f"Storing trained model for training {training_id}")

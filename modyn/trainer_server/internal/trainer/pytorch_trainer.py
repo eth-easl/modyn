@@ -109,11 +109,15 @@ class PytorchTrainer:
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
         self.epochs_per_trigger = training_info.epochs_per_trigger
+        self._log_file_path = training_info.log_file_path
 
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
 
         self._final_checkpoint_path.mkdir()  # exist_ok == False, this directory should not exist before
+
+        self._log_file_path.unlink(missing_ok=True)
+        self._log = {}
 
         self._status_query_queue_training = status_query_queue_training
         self._status_response_queue_training = status_response_queue_training
@@ -150,11 +154,15 @@ class PytorchTrainer:
             training_info.tokenizer,
         )
 
-        # create callbacks - For now, assume LossCallback by default
+        # Create callbacks
         # TODO(#140): should be defined by the pipeline and passed with training request
         self._callbacks = {
-            MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
+            # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
+    def _persist_pipeline_log(self) -> None:
+        with open(self._log_file_path, "w", encoding="utf-8") as logfile:
+            json.dump(self._log, logfile)
 
     def _setup_downsampling(
         self,
@@ -383,6 +391,9 @@ class PytorchTrainer:
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
 
+            self._persist_pipeline_log()
+            
+
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
@@ -399,6 +410,7 @@ class PytorchTrainer:
         self.end_of_trigger_cleaning()
 
         self._info("Training complete!")
+        self._persist_pipeline_log()
 
     def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
         # whether the dataloader returned the weights.

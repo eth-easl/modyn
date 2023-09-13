@@ -1,6 +1,7 @@
 import random
 from typing import Iterable
 
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
@@ -24,21 +25,25 @@ class CoresetStrategy(AbstractSelectionStrategy):
         # strategy.
         self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, maximum_keys_in_memory)
 
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
-        self._persist_samples(keys, timestamps, labels)
+        swt = Stopwatch()
+        swt.start("persist_samples")
+        persist_log = self._persist_samples(keys, timestamps, labels)
+        return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def trigger(self) -> tuple[int, int, int]:
         trigger_id, total_keys_in_trigger, num_partitions = super().trigger()
         self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
         return trigger_id, total_keys_in_trigger, num_partitions
 
-    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
+    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
         for samples in self._get_data():
             random.shuffle(samples)
-            yield [(sample, 1.0) for sample in samples]
+            # Add logging here when required.
+            yield [(sample, 1.0) for sample in samples], {}
 
     def _get_data(self) -> Iterable[list[int]]:
         with MetadataDatabaseConnection(self._modyn_config) as database:

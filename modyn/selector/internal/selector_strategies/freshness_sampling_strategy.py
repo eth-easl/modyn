@@ -5,6 +5,7 @@ import random
 from math import isclose
 from typing import Iterable, Iterator
 
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
@@ -46,13 +47,16 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 "FreshnessSamplingStrategy cannot reset state after trigger, because then no old data would be available to sample from."
             )
 
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
-        self._persist_samples(keys, timestamps, labels)
+        swt = Stopwatch()
+        swt.start("persist_samples")
+        persist_log = self._persist_samples(keys, timestamps, labels)
+        return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
-    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
+    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
         """
         Internal function. Calculates the next set of data to
         train on.
@@ -75,7 +79,8 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             self._mark_used(samples)
             random.shuffle(samples)
 
-            yield [(sample, 1.0) for sample in samples]
+            # Add logging here when required.
+            yield [(sample, 1.0) for sample in samples], {}
 
     def _get_first_trigger_data(self) -> Iterable[list[int]]:
         assert self._is_first_trigger

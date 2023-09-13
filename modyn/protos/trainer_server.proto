@@ -70,11 +70,12 @@ message TrainingStatusResponse {
   bool is_training = 3;
   bool state_available = 4;
   bool blocked = 5;
-  optional string exception = 6;
-  optional int64 batches_seen = 7;
-  optional int64 samples_seen = 8;
-  optional int64 downsampling_batches_seen = 9;
-  optional int64 downsampling_samples_seen = 10;
+  JsonString log = 6;
+  optional string exception = 7;
+  optional int64 batches_seen = 8;
+  optional int64 samples_seen = 9;
+  optional int64 downsampling_batches_seen = 10;
+  optional int64 downsampling_samples_seen = 11;
 }
 
 message StoreFinalModelRequest { int32 training_id = 1; }

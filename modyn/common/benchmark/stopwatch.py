@@ -15,9 +15,13 @@ class Stopwatch:
         self._running_measurements: dict[str, int] = {}
         self._last_started_measurement: Optional[str] = None
 
-    def start(self, name: str, resume: bool = False) -> None:
-        assert name not in self.measurements or resume, "Measurement already done"
+    def start(self, name: str, resume: bool = False, overwrite: bool = False) -> None:
+        assert not (resume and overwrite), "Must either resume or overwrite"
+        assert name not in self.measurements or resume or overwrite, "Measurement already done"
         assert name not in self._running_measurements, "Measurement already running"
+
+        if overwrite:
+            self.measurements[name] = 0
 
         self._running_measurements[name] = current_time_millis()
         self._last_started_measurement = name

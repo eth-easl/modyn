@@ -91,7 +91,7 @@ def test_e2e_noreset_nolimit():
     conf["reset_after_trigger"] = False
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     training_samples = strat.get_trigger_partition_keys(trigger_id, 0)
 
     assert trigger_num_keys == 10
@@ -99,7 +99,7 @@ def test_e2e_noreset_nolimit():
     assert {int(key) for (key, _) in training_samples} == set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     training_samples = strat.get_trigger_partition_keys(trigger_id, 0)
     assert trigger_num_keys == 20
     assert trigger_num_partitions == 1
@@ -121,7 +121,7 @@ def test_e2e_noreset_nolimit_memory_limits():
     conf["reset_after_trigger"] = False
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 5)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 2
 
@@ -132,7 +132,7 @@ def test_e2e_noreset_nolimit_memory_limits():
     assert {int(key) for (key, _) in training_samples_part1} == set(range(5, 10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 20
     assert trigger_num_partitions == 4
 
@@ -163,7 +163,7 @@ def test_e2e_reset_nolimit():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 1
 
@@ -171,7 +171,7 @@ def test_e2e_reset_nolimit():
     assert {int(key) for (key, _) in training_samples} == set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 1
 
@@ -196,7 +196,7 @@ def test_e2e_reset_limit():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -204,7 +204,7 @@ def test_e2e_reset_limit():
     assert {int(key) for (key, _) in training_samples} < set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -229,7 +229,7 @@ def test_e2e_reset_limit_uar():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -237,7 +237,7 @@ def test_e2e_reset_limit_uar():
     assert {int(key) for (key, _) in training_samples} < set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -262,7 +262,7 @@ def test_e2e_reset_limit_lastx():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -270,7 +270,7 @@ def test_e2e_reset_limit_lastx():
     assert {int(key) for (key, _) in training_samples} == set(range(5, 10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -295,7 +295,7 @@ def test_e2e_reset_limit_lastx_large():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 1
 
@@ -303,7 +303,7 @@ def test_e2e_reset_limit_lastx_large():
     assert {int(key) for (key, _) in training_samples} == set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 15
     assert trigger_num_partitions == 1
 

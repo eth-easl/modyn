@@ -59,17 +59,22 @@ class Selector:
 
         return training_samples_subset
 
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
-        self._strategy.inform_data(keys, timestamps, labels)
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
+        return self._strategy.inform_data(keys, timestamps, labels)
 
-    def inform_data_and_trigger(self, keys: list[int], timestamps: list[int], labels: list[int]) -> int:
+    def inform_data_and_trigger(
+        self, keys: list[int], timestamps: list[int], labels: list[int]
+    ) -> tuple[int, dict[str, object]]:
         assert len(keys) == len(timestamps) and len(keys) == len(labels), "Inconsistent list lengths"
+        log = {"cached": False}
 
         if len(keys) > 0:
-            self._strategy.inform_data(keys, timestamps, labels)
+            log["inform"] = self._strategy.inform_data(keys, timestamps, labels)
 
         # Calculates the actual training set for that trigger.
-        trigger_id, total_keys_in_trigger, partitions_in_trigger = self._strategy.trigger()
+        trigger_id, total_keys_in_trigger, partitions_in_trigger, trigger_log = self._strategy.trigger()
+        log["trigger"] = trigger_log
+
         assert trigger_id not in self._trigger_size_cache, "Trigger ID already exists, something went wrong."
 
         if self._current_keys_in_cache + total_keys_in_trigger <= self._maximum_keys_in_cache:
@@ -82,11 +87,12 @@ class Selector:
             assert total_keys_in_trigger == len(
                 flatten(self._trigger_cache[trigger_id])
             ), "Inconsistency in DB and Strategy"
+            log["cached"] = True
 
         self._trigger_size_cache[trigger_id] = total_keys_in_trigger
         self._trigger_partition_cache[trigger_id] = partitions_in_trigger
 
-        return trigger_id
+        return trigger_id, log
 
     def get_number_of_samples(self, trigger_id: int) -> int:
         if trigger_id not in self._trigger_size_cache:

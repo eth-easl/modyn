@@ -7,6 +7,7 @@ from multiprocessing.managers import SharedMemoryManager
 from typing import Iterable, Optional
 
 import numpy as np
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
@@ -109,17 +110,18 @@ class AbstractSelectionStrategy(ABC):
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
 
     @abstractmethod
-    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
+    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
         """
         Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
         keys.
 
         Returns:
-            Iterable[list[tuple[str, float]]]:
+            Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
                 Iterable over partitions. Each partition consists of a list of training samples.
                 In each list, each entry is a training sample, where the first element of the tuple
-                is the key, and the second element is the associated weight.
+                is the key, and the second element is the associated weight. Each partition also has
+                a log attached to it, the second element in the tuple
         """
         raise NotImplementedError
 
@@ -129,7 +131,7 @@ class AbstractSelectionStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         """Informs the strategy of new data.
 
         Args:
@@ -178,7 +180,7 @@ class AbstractSelectionStrategy(ABC):
             database.session.commit()
 
     # pylint: disable=too-many-locals
-    def trigger(self) -> tuple[int, int, int]:
+    def trigger(self) -> tuple[int, int, int, dict[str, object]]:
         """
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
 
@@ -188,15 +190,22 @@ class AbstractSelectionStrategy(ABC):
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         trigger_id = self._next_trigger_id
         total_keys_in_trigger = 0
+        log = {"trigger_partitions": []}
+        swt = Stopwatch()
 
+        swt.start("trigger_creation")
         with MetadataDatabaseConnection(self._modyn_config) as database:
             trigger = Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id)
             database.session.add(trigger)
             database.session.commit()
+        log["trigger_creation_time"] = swt.stop()
 
         partition_num_keys = {}
         partition: Optional[int] = None
-        for partition, training_samples in enumerate(self._on_trigger()):
+        swt.start("on_trigger")
+        for partition, (training_samples, partition_log) in enumerate(self._on_trigger()):
+            overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop()}
+
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
                 + f" {len(training_samples)} samples for new trigger {trigger_id}."
@@ -207,6 +216,7 @@ class AbstractSelectionStrategy(ABC):
             total_keys_in_trigger += len(training_samples)
 
             if (self._is_mac and self._is_test) or self._disable_mt:
+                swt.start("store_triggersamples", overwrite=True)
                 AbstractSelectionStrategy._store_triggersamples_impl(
                     partition,
                     trigger_id,
@@ -215,8 +225,12 @@ class AbstractSelectionStrategy(ABC):
                     self._modyn_config,
                     0,
                 )
+                overall_partition_log["store_triggersamples_time"] = swt.stop()
+                log["trigger_partitions"].append(overall_partition_log)
                 continue
 
+            swt.start("store_triggersamples", overwrite=True)
+            swt.start("mt_prep", overwrite=True)
             samples_per_proc = int(len(training_samples) / self._insertion_threads)
             processes: list[mp.Process] = []
 
@@ -242,11 +256,22 @@ class AbstractSelectionStrategy(ABC):
                         proc.start()
                         processes.append(proc)
 
+                overall_partition_log["mt_prep_time"] = swt.stop()
+                swt.start("mt_finish", overwrite=True)
                 for proc in processes:
                     proc.join()
+                overall_partition_log["mt_finish_time"] = swt.stop()
+                overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
 
+            log["trigger_partitions"].append(overall_partition_log)
+            swt.start("on_trigger", overwrite=True)
+
+        swt.stop("on_trigger")
         num_partitions = partition + 1 if partition is not None else 0
+        log["num_partitions"] = num_partitions
+        log["num_keys"] = total_keys_in_trigger
 
+        swt.start("db_update")
         # Update Trigger about number of partitions and keys
         with MetadataDatabaseConnection(self._modyn_config) as database:
             trigger = (
@@ -268,11 +293,15 @@ class AbstractSelectionStrategy(ABC):
                 num_keys=partition_keys,
             )
 
+        log["db_update_time"] = swt.stop()
+
         if self.reset_after_trigger:
+            swt.start("reset_state")
             self._reset_state()
+            log["reset_state_time"] = swt.stop()
 
         self._next_trigger_id += 1
-        return trigger_id, total_keys_in_trigger, num_partitions
+        return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def get_trigger_partition_keys(
         self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
@@ -345,7 +374,7 @@ class AbstractSelectionStrategy(ABC):
             )
             database.session.commit()
 
-    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
+    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         """Persists the data in the database.
 
         Args:
@@ -359,20 +388,28 @@ class AbstractSelectionStrategy(ABC):
         # This also means that we have to clear this list on reset accordingly etc.
         assert len(keys) == len(timestamps) and len(keys) == len(labels)
 
+        log = {}
+        swt = Stopwatch()
+
         # First persist the trigger which also creates the partition tables
         #  This is done outside of subprocesses to avoid issues with duplicate table creation
+        swt.start("trigger_creation")
         with MetadataDatabaseConnection(self._modyn_config) as database:
             database.add_selector_state_metadata_trigger(self._pipeline_id, self._next_trigger_id)
+        log["trigger_creation_time"] = swt.stop()
 
         if self._disable_mt or (self._is_test and self._is_mac):
+            swt.start("persist_samples_time")
             AbstractSelectionStrategy._persist_samples_impl(
                 keys, timestamps, labels, self._pipeline_id, self._modyn_config, self._next_trigger_id
             )
-            return
+            log["persist_samples_time"] = swt.stop()
+            return log
 
         samples_per_proc = int(len(keys) / self._insertion_threads)
         processes: list[mp.Process] = []
 
+        swt.start("persist_samples_time")
         for i in range(self._insertion_threads):
             start_idx = i * samples_per_proc
             end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(keys)
@@ -397,6 +434,9 @@ class AbstractSelectionStrategy(ABC):
 
         for proc in processes:
             proc.join()
+        log["persist_samples_time"] = swt.stop()
+
+        return log
 
     def get_available_labels(self) -> list[int]:
         with MetadataDatabaseConnection(self._modyn_config) as database:

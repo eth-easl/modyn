@@ -29,6 +29,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainerAvailableResponse,
     TrainingStatusRequest,
     TrainingStatusResponse,
+    JsonString
 )
 from modyn.trainer_server.internal.trainer.pytorch_trainer import train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
@@ -132,6 +133,7 @@ class TrainerServerGRPCServicer:
                 self._next_training_id += 1
 
         final_checkpoint_path = self._modyn_base_dir / f"training_{training_id}"
+        logfile_path = self._modyn_base_dir / f"training_{training_id}_logs.log"
         training_info = TrainingInfo(
             request,
             training_id,
@@ -139,7 +141,8 @@ class TrainerServerGRPCServicer:
             self._selector_address,
             self._offline_dataset_directory,
             final_checkpoint_path,
-            pretrained_model_path,
+            logfile_path,
+            pretrained_model_path=pretrained_model_path,
         )
         self._training_dict[training_id] = training_info
 
@@ -218,6 +221,8 @@ class TrainerServerGRPCServicer:
 
         exception = self.check_for_training_exception(training_id)
         _, num_batches, num_samples = self.get_latest_checkpoint(training_id)
+        log_str = self.get_training_log(training_id)
+
         response_kwargs_finished: dict[str, Any] = {
             "valid": True,
             "is_running": False,
@@ -227,9 +232,19 @@ class TrainerServerGRPCServicer:
             "exception": exception,
             "batches_seen": num_batches,
             "samples_seen": num_samples,
+            "log": JsonString(value=log_str)
         }
         cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v is not None}
         return TrainingStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
+
+    def get_training_log(self, training_id: int) -> str:
+        log_file_path = self._training_dict[training_id].log_file_path
+        if not log_file_path.is_file():
+            logger.error(f"Log File for training {training_id} does not exist at {log_file_path}")
+            return ""
+        
+        with open(log_file_path,"r", encoding="utf-8") as logfile:
+            return logfile.read()
 
     def get_values_from_queues(
         self, training_id: int

@@ -4,6 +4,7 @@ import logging
 import random
 from typing import Iterable
 
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
@@ -49,13 +50,16 @@ class NewDataStrategy(AbstractSelectionStrategy):
             if self.limit_reset_strategy not in self.supported_limit_reset_strategies:
                 raise ValueError(f"Unsupported limit reset strategy: {self.limit_reset_strategy}")
 
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
-        self._persist_samples(keys, timestamps, labels)
+        swt = Stopwatch()
+        swt.start("persist_samples")
+        persist_log = self._persist_samples(keys, timestamps, labels)
+        return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
-    def _on_trigger(self) -> Iterable[list[tuple[int, float]]]:
+    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
         """
         Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
@@ -75,38 +79,50 @@ class NewDataStrategy(AbstractSelectionStrategy):
         else:
             get_data_func = self._get_data_no_reset
 
-        for samples in get_data_func():
+        swt = Stopwatch()
+        for samples, partition_log in get_data_func():
+            swt.start("shuffle", overwrite=True)
             random.shuffle(samples)
-            yield [(sample, 1.0) for sample in samples]
+            partition_log["shuffle_time"] = swt.stop()
+            yield [(sample, 1.0) for sample in samples], partition_log
 
-    def _get_data_reset(self) -> Iterable[list[int]]:
+    def _get_data_reset(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         assert self.reset_after_trigger
+        swt = Stopwatch()
 
-        for samples in self._get_current_trigger_data():
+        for samples, partition_log in self._get_current_trigger_data():
             # TODO(#179): this assumes limit < len(samples)
             if self.has_limit:
+                swt.start("sample_time")
                 samples = random.sample(samples, min(len(samples), self.training_set_size_limit))
+                partition_log["sample_time"] = swt.stop()
 
-            yield samples
+            yield samples, partition_log
 
-    def _get_data_tail(self) -> Iterable[list[int]]:
+    def _get_data_tail(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         assert not self.reset_after_trigger and self.tail_triggers > 0
+        swt = Stopwatch()
 
-        for samples in self._get_tail_triggers_data():
+        for samples, partition_log in self._get_tail_triggers_data():
             # TODO(#179): this assumes limit < len(samples)
             if self.has_limit:
+                swt.start("sample_time")
                 samples = random.sample(samples, min(len(samples), self.training_set_size_limit))
+                partition_log["sample_time"] = swt.stop()
 
-            yield samples
+            yield samples, partition_log
 
-    def _get_data_no_reset(self) -> Iterable[list[int]]:
+    def _get_data_no_reset(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         assert not self.reset_after_trigger
-        for samples in self._get_all_data():
+        swt = Stopwatch()
+        for samples, partition_log in self._get_all_data():
             # TODO(#179): this assumes limit < len(samples)
             if self.has_limit:
+                swt.start("handle_limit_time")
                 samples = self._handle_limit_no_reset(samples)
+                partition_log["handle_limit_time"] = swt.stop()
 
-            yield samples
+            yield samples, partition_log
 
     def _handle_limit_no_reset(self, samples: list[int]) -> list[int]:
         assert self.limit_reset_strategy is not None
@@ -131,12 +147,14 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
         return random.sample(samples, min(len(samples), self.training_set_size_limit))
 
-    def _get_current_trigger_data(self) -> Iterable[list[int]]:
+    def _get_current_trigger_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         """Returns all sample for current trigger
 
         Returns:
             list[int]: Keys of used samples
         """
+        swt = Stopwatch()
+
         with MetadataDatabaseConnection(self._modyn_config) as database:
             stmt = (
                 select(SelectorStateMetadata.sample_key)
@@ -149,18 +167,24 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
+            swt.start("get_chunk")
             for chunk in database.session.execute(stmt).partitions():
-                if len(chunk) > 0:
-                    yield [res[0] for res in chunk]
-                else:
-                    yield []
+                log = {"get_chunk_time": swt.stop()}
 
-    def _get_tail_triggers_data(self) -> Iterable[list[int]]:
+                if len(chunk) > 0:
+                    yield [res[0] for res in chunk], log
+                else:
+                    yield [], log
+
+                swt.start("get_chunk", overwrite=True)
+
+    def _get_tail_triggers_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         """Returns all sample for current trigger
 
         Returns:
             list[int]: Keys of used samples
         """
+        swt = Stopwatch()
         with MetadataDatabaseConnection(self._modyn_config) as database:
             stmt = (
                 select(SelectorStateMetadata.sample_key)
@@ -173,18 +197,24 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
+            swt.start("get_chunk")
             for chunk in database.session.execute(stmt).partitions():
-                if len(chunk) > 0:
-                    yield [res[0] for res in chunk]
-                else:
-                    yield []
+                log = {"get_chunk_time": swt.stop()}
 
-    def _get_all_data(self) -> Iterable[list[int]]:
+                if len(chunk) > 0:
+                    yield [res[0] for res in chunk], log
+                else:
+                    yield [], log
+
+                swt.start("get_chunk", overwrite=True)
+
+    def _get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         """Returns all sample
 
         Returns:
             list[str]: Keys of used samples
         """
+        swt = Stopwatch()
         with MetadataDatabaseConnection(self._modyn_config) as database:
             stmt = (
                 select(SelectorStateMetadata.sample_key)
@@ -194,11 +224,16 @@ class NewDataStrategy(AbstractSelectionStrategy):
                 .order_by(asc(SelectorStateMetadata.timestamp))
             )
 
+            swt.start("get_chunk")
             for chunk in database.session.execute(stmt).partitions():
+                log = {"get_chunk_time": swt.stop()}
+
                 if len(chunk) > 0:
-                    yield [res[0] for res in chunk]
+                    yield [res[0] for res in chunk], log
                 else:
-                    yield []
+                    yield [], log
+
+                swt.start("get_chunk", overwrite=True)
 
     def _reset_state(self) -> None:
         pass  # As we currently hold everything in database (#116), this currently is a noop.
