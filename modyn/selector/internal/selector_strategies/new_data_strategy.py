@@ -59,7 +59,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         persist_log = self._persist_samples(keys, timestamps, labels)
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
-    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
+    def _on_trigger(self, ignore_log=False) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
         """
         Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
@@ -118,7 +118,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         for samples, partition_log in self._get_all_data():
             # TODO(#179): this assumes limit < len(samples)
             if self.has_limit:
-                swt.start("handle_limit_time")
+                swt.start("handle_limit_time", overwrite=True)
                 samples = self._handle_limit_no_reset(samples)
                 partition_log["handle_limit_time"] = swt.stop()
 

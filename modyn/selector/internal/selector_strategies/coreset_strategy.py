@@ -34,10 +34,10 @@ class CoresetStrategy(AbstractSelectionStrategy):
         persist_log = self._persist_samples(keys, timestamps, labels)
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
-    def trigger(self) -> tuple[int, int, int]:
-        trigger_id, total_keys_in_trigger, num_partitions = super().trigger()
+    def trigger(self) -> tuple[int, int, int, dict[str, object]]:
+        trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
         self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
-        return trigger_id, total_keys_in_trigger, num_partitions
+        return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
         for samples in self._get_data():

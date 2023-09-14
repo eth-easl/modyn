@@ -98,9 +98,9 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
     assert trigger_id == 0
     assert strat._next_trigger_id == 1
@@ -121,9 +121,9 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)], [(13, 1.0), (14, 1.0), (15, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0), (14, 1.0), (15, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
     assert trigger_id == 0
     assert strat._next_trigger_id == 1
@@ -148,9 +148,9 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
     assert trigger_id == 0
     assert trigger_id == 0
@@ -171,9 +171,9 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)], [(13, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_id == 0
     assert trigger_num_keys == 4
     assert trigger_num_partitions == 2

@@ -26,7 +26,6 @@ from modyn.trainer_server.internal.dataset.data_utils import (
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
-from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -34,7 +33,6 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
     AbstractRemoteDownsamplingStrategy,
     get_tensors_subset,
 )
-from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import (
@@ -392,7 +390,6 @@ class PytorchTrainer:
                     )
 
             self._persist_pipeline_log()
-            
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         for _, callback in self._callbacks.items():

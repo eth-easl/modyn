@@ -179,7 +179,7 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger_partition)
             database.session.commit()
 
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals,too-many-statements
     def trigger(self) -> tuple[int, int, int, dict[str, object]]:
         """
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
@@ -203,8 +203,9 @@ class AbstractSelectionStrategy(ABC):
         partition_num_keys = {}
         partition: Optional[int] = None
         swt.start("on_trigger")
+
         for partition, (training_samples, partition_log) in enumerate(self._on_trigger()):
-            overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop()}
+            overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop("on_trigger")}
 
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
@@ -227,6 +228,7 @@ class AbstractSelectionStrategy(ABC):
                 )
                 overall_partition_log["store_triggersamples_time"] = swt.stop()
                 log["trigger_partitions"].append(overall_partition_log)
+                swt.start("on_trigger", overwrite=True)
                 continue
 
             swt.start("store_triggersamples", overwrite=True)
