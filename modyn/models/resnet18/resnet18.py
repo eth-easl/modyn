@@ -1,7 +1,7 @@
 from typing import Any
 
 import torch
-from modyn.models.coreset_methods_support import CoresetMethodsSupport
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import Tensor, nn
 from torchvision.models.resnet import BasicBlock, ResNet
 
@@ -17,7 +17,7 @@ class ResNet18:
 # torchvision https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
 
 
-class ResNet18Modyn(ResNet, CoresetMethodsSupport):
+class ResNet18Modyn(ResNet, CoresetSupportingModule):
     def __init__(self, model_configuration: dict[str, Any]) -> None:
         super().__init__(BasicBlock, [2, 2, 2, 2], **model_configuration)
 

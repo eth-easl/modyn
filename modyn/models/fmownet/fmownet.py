@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 import torch.nn.functional as F
-from modyn.models.coreset_methods_support import CoresetMethodsSupport
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 from torchvision.models import densenet121
 
@@ -20,7 +20,7 @@ class FmowNet:
         self.model.to(device)
 
 
-class FmowNetModel(CoresetMethodsSupport):
+class FmowNetModel(CoresetSupportingModule):
     def __init__(self, num_classes: int) -> None:
         super().__init__()
         self.num_classes = num_classes
