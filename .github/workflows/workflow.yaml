@@ -7,7 +7,7 @@ defaults:
 
 jobs:
   flake8:
-    timeout-minutes: 20
+    timeout-minutes: 50
     runs-on: ubuntu-latest
 
     steps:
