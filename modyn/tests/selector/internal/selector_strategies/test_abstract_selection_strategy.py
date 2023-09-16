@@ -348,7 +348,7 @@ def test_get_available_labels_no_reset():
 
     assert sorted(abstr.get_available_labels()) == []
     # simulate a trigger
-    abstr._next_trigger_id +=1
+    abstr._next_trigger_id += 1
     assert sorted(abstr.get_available_labels()) == [0, 1, 18]
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
