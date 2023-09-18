@@ -62,6 +62,6 @@ runs:
 
       - name: Install dev requirements 
         run: | 
-          mamba run -n modyn pip install -e .
-          mamba run -n modyn pip install -r dev-requirements.txt
+          microamba run -n modyn pip install -e .
+          micromamba run -n modyn pip install -r dev-requirements.txt
         shell: bash -l {0}
