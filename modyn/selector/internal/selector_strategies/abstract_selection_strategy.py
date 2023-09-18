@@ -4,7 +4,7 @@ import os
 import platform
 from abc import ABC, abstractmethod
 from multiprocessing.managers import SharedMemoryManager
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
@@ -110,14 +110,14 @@ class AbstractSelectionStrategy(ABC):
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
 
     @abstractmethod
-    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
+    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
         """
         Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
         train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
         keys.
 
         Returns:
-            Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
+            Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
                 Iterable over partitions. Each partition consists of a list of training samples.
                 In each list, each entry is a training sample, where the first element of the tuple
                 is the key, and the second element is the associated weight. Each partition also has
@@ -131,7 +131,7 @@ class AbstractSelectionStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         """Informs the strategy of new data.
 
         Args:
@@ -180,7 +180,7 @@ class AbstractSelectionStrategy(ABC):
             database.session.commit()
 
     # pylint: disable=too-many-locals,too-many-statements
-    def trigger(self) -> tuple[int, int, int, dict[str, object]]:
+    def trigger(self) -> tuple[int, int, int, dict[str, Any]]:
         """
         Causes the strategy to compute the training set, and (if so configured) reset its internal state.
 
@@ -190,7 +190,7 @@ class AbstractSelectionStrategy(ABC):
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         trigger_id = self._next_trigger_id
         total_keys_in_trigger = 0
-        log = {"trigger_partitions": []}
+        log: dict[str, Any] = {"trigger_partitions": []}
         swt = Stopwatch()
 
         swt.start("trigger_creation")
@@ -376,7 +376,7 @@ class AbstractSelectionStrategy(ABC):
             )
             database.session.commit()
 
-    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
+    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         """Persists the data in the database.
 
         Args:

@@ -3,7 +3,7 @@
 import logging
 import random
 from math import isclose
-from typing import Iterable, Iterator
+from typing import Any, Iterable, Iterator
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -47,7 +47,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 "FreshnessSamplingStrategy cannot reset state after trigger, because then no old data would be available to sample from."
             )
 
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
@@ -56,7 +56,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         persist_log = self._persist_samples(keys, timestamps, labels)
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
-    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
+    def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
         """
         Internal function. Calculates the next set of data to
         train on.

@@ -3,7 +3,7 @@ import json
 import logging
 from collections import deque
 from time import sleep
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import enlighten
 import grpc
@@ -152,7 +152,9 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[list[tuple[int, int, int]]]:
+    def get_new_data_since(
+        self, dataset_id: str, timestamp: int
+    ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -163,22 +165,26 @@ class GRPCHandler:
         for response in self.storage.GetNewDataSince(request):
             data = list(zip(response.keys, response.timestamps, response.labels))
             yield data, swt.stop()
+            swt.start("request", overwrite=True)
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
-    ) -> Iterable[list[tuple[int, int, int]]]:
+    ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
+        swt = Stopwatch()
         request = GetDataInIntervalRequest(
             dataset_id=dataset_id,
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
         )
         response: GetDataInIntervalResponse
+        swt.start("request", overwrite=True)
         for response in self.storage.GetDataInInterval(request):
             data = list(zip(response.keys, response.timestamps, response.labels))
-            yield data
+            yield data, swt.stop()
+            swt.start("request", overwrite=True)
 
     def get_time_at_storage(self) -> int:
         if not self.connected_to_storage:
@@ -211,7 +217,7 @@ class GRPCHandler:
         #  # TODO(#64,#124): Implement.
         pass
 
-    def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> dict[str, object]:
+    def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> dict[str, Any]:
         keys, timestamps, labels = zip(*data)
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         response: DataInformResponse = self.selector.inform_data(request)
@@ -220,7 +226,7 @@ class GRPCHandler:
 
     def inform_selector_and_trigger(
         self, pipeline_id: int, data: list[tuple[int, int, int]]
-    ) -> tuple[int, dict[str, object]]:
+    ) -> tuple[int, dict[str, Any]]:
         keys: list[int]
         timestamps: list[int]
         labels: list[int]
@@ -235,7 +241,6 @@ class GRPCHandler:
 
         trigger_id = response.trigger_id
         logging.info(f"Informed selector about trigger. Got trigger id {trigger_id}.")
-
         return trigger_id, json.loads(response.log.value)
 
     def trainer_server_available(self) -> bool:
@@ -394,7 +399,7 @@ class GRPCHandler:
     # pylint: disable=too-many-nested-blocks
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
-    ) -> dict[str, object]:  # pragma: no cover
+    ) -> dict[str, Any]:  # pragma: no cover
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
@@ -442,7 +447,7 @@ class GRPCHandler:
             if res.is_running:
                 sleep(2)
             else:
-                trainer_log = res.trainer_log
+                trainer_log = res.log
                 break
 
         status_tracker.close_counter()

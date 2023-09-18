@@ -506,7 +506,7 @@ def test__handle_triggers_within_batch(
     sup.pipeline_id = 42
     batch = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5), (15, 6), (16, 7)]
     triggering_indices = [1, 3, 5]
-    trigger_ids = [0, 1, 2]
+    trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
 
     sup._handle_triggers_within_batch(batch, triggering_indices)
@@ -537,7 +537,7 @@ def test__handle_triggers_within_batch_empty_triggers(
     sup.pipeline_id = 42
     batch = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5), (15, 6), (16, 7)]
     triggering_indices = [-1, -1, 3]
-    trigger_ids = [0, 1, 2]
+    trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
 
     sup._handle_triggers_within_batch(batch, triggering_indices)
@@ -632,7 +632,7 @@ def test_initial_pass():
     sup.initial_pass()
 
 
-@patch.object(GRPCHandler, "get_data_in_interval", return_value=[[(10, 1), (11, 2)]])
+@patch.object(GRPCHandler, "get_data_in_interval", return_value=[([(10, 1), (11, 2)], 0)])
 @patch.object(Supervisor, "_handle_new_data")
 def test_replay_data_closed_interval(test__handle_new_data: MagicMock, test_get_data_in_interval: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -644,7 +644,7 @@ def test_replay_data_closed_interval(test__handle_new_data: MagicMock, test_get_
     test__handle_new_data.assert_called_once_with([(10, 1), (11, 2)])
 
 
-@patch.object(GRPCHandler, "get_data_in_interval", return_value=[[(10, 1)], [(11, 2)]])
+@patch.object(GRPCHandler, "get_data_in_interval", return_value=[([(10, 1)], 0), ([(11, 2)], 0)])
 @patch.object(Supervisor, "_handle_new_data")
 def test_replay_data_closed_interval_batched(test__handle_new_data: MagicMock, test_get_data_in_interval: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -657,7 +657,7 @@ def test_replay_data_closed_interval_batched(test__handle_new_data: MagicMock, t
     assert test__handle_new_data.call_args_list == [call([(10, 1)]), call([(11, 2)])]
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[[(10, 1), (11, 2)]])
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[([(10, 1), (11, 2)], 0)])
 @patch.object(Supervisor, "_handle_new_data")
 def test_replay_data_open_interval(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -669,7 +669,7 @@ def test_replay_data_open_interval(test__handle_new_data: MagicMock, test_get_ne
     test__handle_new_data.assert_called_once_with([(10, 1), (11, 2)])
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[[(10, 1)], [(11, 2)]])
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[([(10, 1)], 0), ([(11, 2)], 0)])
 @patch.object(Supervisor, "_handle_new_data")
 def test_replay_data_open_interval_batched(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter

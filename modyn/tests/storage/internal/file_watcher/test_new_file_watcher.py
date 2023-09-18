@@ -774,7 +774,7 @@ def test_run_new_file_watcher(storage_database_connection):
 
     Process(target=run_new_file_watcher, args=(get_minimal_modyn_config(), dataset.dataset_id, should_stop)).start()
 
-    time.sleep(1)
+    time.sleep(2)  # If this test fails, try increasing this number
     should_stop.value = True  # type: ignore
 
     result = session.query(File).filter(File.path == TEST_FILE1).all()

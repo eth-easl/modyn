@@ -142,7 +142,13 @@ def get_training_info(
     request = get_start_training_request(temp)
     offline_dataset_path = "/tmp/offline_dataset"
     training_info = TrainingInfo(
-        request, training_id, storage_address, selector_address, offline_dataset_path, pathlib.Path(final_temp)
+        request,
+        training_id,
+        storage_address,
+        selector_address,
+        offline_dataset_path,
+        pathlib.Path(final_temp),
+        pathlib.Path(final_temp) / "log.log",
     )
     return training_info
 

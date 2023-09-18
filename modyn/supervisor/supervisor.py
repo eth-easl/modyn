@@ -3,7 +3,7 @@ import logging
 import os
 import pathlib
 from time import sleep
-from typing import Optional
+from typing import Any, Optional
 
 import enlighten
 from modyn.common.benchmark import Stopwatch
@@ -48,14 +48,14 @@ class Supervisor:
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
 
-        self.pipeline_log = {
+        self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": pipeline_config, "modyn_config": modyn_config},
             "supervisor": {
                 "triggers": {},
                 "new_data_requests": [],
                 "num_triggers": 0,
                 "trigger_batch_times": [],
-                "selector_inform_times": [],
+                "selector_informs": [],
             },
         }
         self._sw = Stopwatch()
@@ -427,6 +427,9 @@ class Supervisor:
         )
         trainer_log = self.grpc.wait_for_training_completion(self.current_training_id, self.pipeline_id, trigger_id)
 
+        if trigger_id not in self.pipeline_log["supervisor"]["triggers"]:
+            self.pipeline_log["supervisor"]["triggers"][trigger_id] = {}  # can happen in tests
+
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["total_trainer_time"] = self._sw.stop()
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["trainer_log"] = trainer_log
 
@@ -471,6 +474,8 @@ class Supervisor:
             generator = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
 
         for replay_data, request_time in generator:
+            assert isinstance(replay_data, list)
+            assert isinstance(request_time, int)
             self.pipeline_log["supervisor"]["new_data_requests"].append(
                 {"time": request_time, "num_items": len(replay_data)}
             )
@@ -480,6 +485,9 @@ class Supervisor:
         self.status_bar.update(demo="Replay done")
 
     def _persist_pipeline_log(self) -> None:
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return  # dont print in tests
+
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile)
 

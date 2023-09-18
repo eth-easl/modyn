@@ -228,6 +228,7 @@ def get_training_info(
                 selector_address,
                 offline_dataset_path,
                 pathlib.Path(final_tmpdirname),
+                pathlib.Path(final_tmpdirname) / "log.log",
                 pretrained_model_path,
             )
             return training_info

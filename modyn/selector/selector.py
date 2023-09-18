@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import Any, Dict
 
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
@@ -59,12 +59,12 @@ class Selector:
 
         return training_samples_subset
 
-    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         return self._strategy.inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(
         self, keys: list[int], timestamps: list[int], labels: list[int]
-    ) -> tuple[int, dict[str, object]]:
+    ) -> tuple[int, dict[str, Any]]:
         assert len(keys) == len(timestamps) and len(keys) == len(labels), "Inconsistent list lengths"
         log = {"cached": False}
 

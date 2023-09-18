@@ -8,7 +8,7 @@ import pathlib
 import queue
 import traceback
 from enum import Enum
-from typing import Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 import grpc
 import torch
@@ -33,6 +33,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
     AbstractRemoteDownsamplingStrategy,
     get_tensors_subset,
 )
+from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
 from modyn.utils import (
@@ -114,8 +115,13 @@ class PytorchTrainer:
 
         self._final_checkpoint_path.mkdir()  # exist_ok == False, this directory should not exist before
 
-        self._log_file_path.unlink(missing_ok=True)
-        self._log = {}
+        if self._log_file_path is not None:
+            assert isinstance(self._log_file_path, pathlib.Path)
+            self._log_file_path.unlink(missing_ok=True)
+        else:
+            logger.warn("Log file path is None.")
+
+        self._log: dict[str, Any] = {}
 
         self._status_query_queue_training = status_query_queue_training
         self._status_response_queue_training = status_response_queue_training
@@ -154,13 +160,19 @@ class PytorchTrainer:
 
         # Create callbacks
         # TODO(#140): should be defined by the pipeline and passed with training request
-        self._callbacks = {
+        self._callbacks: dict[MetricType, Any] = {
             # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
 
     def _persist_pipeline_log(self) -> None:
-        with open(self._log_file_path, "w", encoding="utf-8") as logfile:
-            json.dump(self._log, logfile)
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return  # dont print in tests
+
+        if self._log_file_path is not None:
+            with open(self._log_file_path, "w", encoding="utf-8") as logfile:
+                json.dump(self._log, logfile)
+        else:
+            self.logger.error("Log file path is None, cannot persist.")
 
     def _setup_downsampling(
         self,
