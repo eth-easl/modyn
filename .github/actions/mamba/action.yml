@@ -1,7 +1,3 @@
-defaults:
-  run:
-    shell: bash -l {0}
-
 runs:
   using: "composite"
   steps: 
@@ -68,4 +64,4 @@ runs:
         run: | 
           mamba run -n modyn pip install -e .
           mamba run -n modyn pip install -r dev-requirements.txt
-        shell: bash
+        shell: bash -l {0}
