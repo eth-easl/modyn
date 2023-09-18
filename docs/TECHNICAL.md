@@ -15,7 +15,8 @@ To run integration tests, run the `./run_integrationtests.sh` script.
 This will take care of setting up all containers and running the tests.
 
 ### Mamba and Docker Setup
-We manage dependency required to run Modyn using ma.
+We manage dependency required to run Modyn using mamba.
+Mamba is a fast implementation of conda.
 All dependencies are listed in the `environment.yml` file in the project root.
 Development dependencies are managed in the `dev-requirements.txt` file in the project root.
 There are two ways to develop modyn locally.
