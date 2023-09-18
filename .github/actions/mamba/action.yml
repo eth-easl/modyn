@@ -1,3 +1,7 @@
+defaults:
+  run:
+    shell: bash -l {0}
+
 runs:
   using: "composite"
   steps: 
