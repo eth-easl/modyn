@@ -12,6 +12,7 @@ from typing import Any, Optional, Tuple, Union
 
 import grpc
 import torch
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -330,26 +331,41 @@ class PytorchTrainer:
 
         self._model.model.train()
 
+        stopw = Stopwatch()
+        stopw.start("OnBeginCallbacks")
         for _, callback in self._callbacks.items():
             callback.on_train_begin(self._model.model, self._optimizers)
+        self._log["on_begin_callbacks_time"] = stopw.stop()
 
         self._info("Handled OnBegin Callbacks.")
+        self._log["epochs"] = []
 
         batch_number = -1
         for epoch in range(self.epochs_per_trigger):
+            stopw = Stopwatch()  # Reset timings per epoch
+            self._log["epochs"].append({})
+
             if self.sample_then_batch_this_epoch(epoch):
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
+                stopw.start("DownsampleSTB")
                 self.downsample_trigger_training_set()
+                stopw.stop()
 
+            stopw.start("FetchBatch", resume=True)
             for batch_number, batch in enumerate(self._train_dataloader):
+                stopw.stop()
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
 
+                stopw.start("OnBatchBeginCallbacks", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
+                stopw.stop()
 
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=True)
 
+                stopw.start("PreprocessBatch", resume=True)
                 sample_ids, target, data = self.preprocess_batch(batch)
+                stopw.stop()
 
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
@@ -367,43 +383,76 @@ class PytorchTrainer:
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+                        stopw.start("DownsampleBTS", resume=True)
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
+                        stopw.stop()
 
+                    stopw.start("Forward", resume=True)
                     output = self._model.model(data)
+                    stopw.stop("Forward")
 
+                    stopw.start("Loss", resume=True)
                     if weighted_optimization:
                         # weighted gradient descent
                         assert weights is not None
                         loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
                     else:
                         loss = self._criterion(output, target)
+                stopw.stop("Loss")
 
-                self._scaler.scale(loss).backward()
-
+                stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
+                stopw.stop()
 
+                stopw.start("Backward", resume=True)
+                self._scaler.scale(loss).backward()
+                stopw.stop("Backward")
+
+                stopw.start("OptimizerStep", resume=True)
                 for _, optimizer in self._optimizers.items():
                     self._scaler.step(optimizer)
 
                 self._scaler.update()
+                stopw.stop("OptimizerStep")
 
                 if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
+                    stopw.start("Checkpoint", resume=True)
                     checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
                     self.save_state(checkpoint_file_name, batch_number)
+                    stopw.stop("Checkpoint")
 
                 self._num_samples += pre_downsampling_size
 
+                stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_end(
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
+                stopw.stop()
+                stopw.start("FetchBatch", resume=True)
+
+            self._log["epochs"][epoch]["FetchBatch"] = stopw.measurements.get("FetchBatch", 0)
+            self._log["epochs"][epoch]["OnBatchBeginCallbacks"] = stopw.measurements.get("OnBatchBeginCallbacks", 0)
+            self._log["epochs"][epoch]["PreprocessBatch"] = stopw.measurements.get("PreprocessBatch", 0)
+            self._log["epochs"][epoch]["DownsampleBTS"] = stopw.measurements.get("DownsampleBTS", 0)
+            self._log["epochs"][epoch]["DownsampleSTB"] = stopw.measurements.get("DownsampleSTB", 0)
+            self._log["epochs"][epoch]["Forward"] = stopw.measurements.get("Forward", 0)
+            self._log["epochs"][epoch]["Loss"] = stopw.measurements.get("Loss", 0)
+            self._log["epochs"][epoch]["OnBatchBeforeUpdate"] = stopw.measurements.get("OnBatchBeforeUpdate", 0)
+            self._log["epochs"][epoch]["Backward"] = stopw.measurements.get("Backward", 0)
+            self._log["epochs"][epoch]["OptimizerStep"] = stopw.measurements.get("OptimizerStep", 0)
+            self._log["epochs"][epoch]["Checkpoint"] = stopw.measurements.get("Checkpoint", 0)
+            self._log["epochs"][epoch]["OnBatchEnd"] = stopw.measurements.get("OnBatchEnd", 0)
 
             self._persist_pipeline_log()
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
+        self._log["num_samples"] = self._num_samples
+        self._log["num_batches"] = batch_number + 1
+
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
 

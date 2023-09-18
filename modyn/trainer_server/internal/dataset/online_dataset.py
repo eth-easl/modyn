@@ -53,7 +53,6 @@ class OnlineDataset(IterableDataset):
         self._storagestub: StorageStub = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
-
         # the default key source is the Selector. Then it can be changed using change_key_source
         self._key_source = SelectorKeySource(self._pipeline_id, self._trigger_id, self._selector_address)
         self._uses_weights = None
