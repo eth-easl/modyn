@@ -19,6 +19,7 @@ import math
 from typing import Optional, Sequence, Tuple
 
 import torch
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.nn.embeddings import Embeddings
 from modyn.models.dlrm.nn.factories import create_embeddings, create_mlp
 from modyn.models.dlrm.nn.interactions import Interaction
@@ -104,7 +105,7 @@ class DlrmBottom(nn.Module):
         return torch.cat(bottom_output, dim=1), bottom_mlp_output
 
 
-class DlrmTop(nn.Module):
+class DlrmTop(CoresetSupportingModule):
     def __init__(self, top_mlp_sizes: Sequence[int], interaction: Interaction, device: str, use_cpp_mlp: bool = False):
         super().__init__()
 
@@ -127,4 +128,9 @@ class DlrmTop(nn.Module):
             bottom_mlp_output (Tensor): with shape [batch_size, embedding_dim]
         """
         interaction_output = self.interaction.interact(bottom_output, bottom_mlp_output)
-        return self.out(self.mlp(interaction_output))
+        mlp_output = self.mlp(interaction_output)
+        mlp_output = self.embedding_recorder(mlp_output)
+        return self.out(mlp_output)
+
+    def get_last_layer(self) -> nn.Module:
+        return self.out

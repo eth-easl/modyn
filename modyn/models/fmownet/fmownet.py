@@ -2,6 +2,7 @@ from typing import Any
 
 import torch
 import torch.nn.functional as F
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 from torchvision.models import densenet121
 
@@ -19,7 +20,7 @@ class FmowNet:
         self.model.to(device)
 
 
-class FmowNetModel(nn.Module):
+class FmowNetModel(CoresetSupportingModule):
     def __init__(self, num_classes: int) -> None:
         super().__init__()
         self.num_classes = num_classes
@@ -31,5 +32,8 @@ class FmowNetModel(nn.Module):
         out = F.relu(features, inplace=True)
         out = F.adaptive_avg_pool2d(out, (1, 1))
         out = torch.flatten(out, 1)
-
+        out = self.embedding_recorder(out)
         return self.classifier(out)
+
+    def get_last_layer(self) -> nn.Module:
+        return self.classifier
