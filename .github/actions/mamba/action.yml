@@ -6,34 +6,13 @@ runs:
         with:
           python-version: '3.10'
 
-#      - name: Check if shared miniconda installation exists (we are on a Github Runner)
-#        id: check_files
-#        uses: andstor/file-existence-action@v2
-#        with:
-#          files: "/usr/share/miniconda/envs"
-
-#      - name: Set shared conda path
-#        if: steps.check_files.outputs.files_exists == 'true'
-#        run: echo "CONDAPATH=/usr/share/miniconda/envs" >> $GITHUB_ENV 
-#        shell: bash
-
-#      - name: Miniconda exists, fix permissions
-#        if: steps.check_files.outputs.files_exists == 'true'
-#        run: sudo chown -R $(whoami):$(id -ng) ${CONDAPATH}
-#        shell: bash
-
-#      - name: Set custom conda path
-#        if: steps.check_files.outputs.files_exists == 'false'
-#        run: echo "CONDAPATH=${CONDA}" >> $GITHUB_ENV 
-#        shell: bash
-
       - name: Set cache date
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
         shell: bash
       
       # increase to reset cache manually
       - name: Set cache number
-        run: echo "CACHE_NUMBER=0" >> $GITHUB_ENV 
+        run: echo "CACHE_NUMBER=1" >> $GITHUB_ENV 
         shell: bash
 
       - name: Setup micromamba
@@ -43,22 +22,6 @@ runs:
           cache-environment-key: environment-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
           cache-downloads-key: downloads-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
           init-shell: bash
-
-#      - uses: actions/cache@v3
-#        with:
-#          path: ${{ env.CONDAPATH }}
-#          key: conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
-#        id: cache
-
-#      - name: Setup requirements
-#        run: |
-#          mamba update -n base -c defaults mamba
-#          mamba update --all
-#          mamba env create -f ./environment.yml
-#          mamba run -n modyn pip install -e .
-#          mamba run -n modyn pip install -r dev-requirements.txt
-#        if: steps.cache.outputs.cache-hit != 'true'
-#        shell: bash
 
       - name: Install dev requirements 
         run: | 

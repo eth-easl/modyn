@@ -27,7 +27,7 @@ ENV PATH="${PATH}:/home/appuser/.local/bin"
 
 # Install mamba
 ENV CONDA_DIR /opt/mamba
-RUN wget "https://github.com/mamba-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" -O ~/mamba.sh && \
+RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" -O ~/mamba.sh && \
     /bin/bash ~/mamba.sh -b -p /opt/mamba
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN mamba update -n base -c defaults mamba && mamba update --all && mamba init bash
