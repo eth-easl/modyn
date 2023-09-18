@@ -42,6 +42,7 @@ runs:
           environment-file: environment.yml
           cache-environment-key: environment-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
           cache-downloads-key: downloads-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        init-shell: bash
 
 #      - uses: actions/cache@v3
 #        with:
