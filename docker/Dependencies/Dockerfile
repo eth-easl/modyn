@@ -26,10 +26,10 @@ RUN adduser -u 5678 --disabled-password --gecos "" appuser
 ENV PATH="${PATH}:/home/appuser/.local/bin"
 
 # Install mamba
-ENV mamba_DIR /opt/mamba
+ENV CONDA_DIR /opt/mamba
 RUN wget "https://github.com/mamba-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" -O ~/mamba.sh && \
     /bin/bash ~/mamba.sh -b -p /opt/mamba
-ENV PATH=$mamba_DIR/bin:$PATH
+ENV PATH=$CONDA_DIR/bin:$PATH
 RUN mamba update -n base -c defaults mamba && mamba update --all && mamba init bash
 
 # Install dependencies
