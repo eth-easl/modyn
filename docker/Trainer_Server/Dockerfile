@@ -9,7 +9,7 @@ FROM modyndependencies:latest as apex-image
 
 FROM modynbase:latest AS trainerserver-image
 
-COPY --from=apex-image /opt/mamba/envs/modyn /opt/conda/envs/modyn
+COPY --from=apex-image /opt/conda/envs/modyn /opt/conda/envs/modyn
 RUN chmod a+x /src/modyn/trainer_server/modyn-trainer-server
 RUN mkdir -p /tmp/offline_dataset
 RUN chown appuser /tmp/offline_dataset
