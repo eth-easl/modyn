@@ -14,12 +14,17 @@ Modyn is an open-source platform for model training on dynamic datasets, i.e., d
 ## ⚡️ Quickstart
 
 For deploying and running integration tests, you will need [Docker](https://docs.docker.com/get-docker/).
-Furthermore, we use [conda](https://docs.conda.io/en/latest/) for local environments and [tmuxp](https://github.com/tmux-python/tmuxp) for easily managing components panes (optional).
+Furthermore, we use [mamba](https://mamba.readthedocs.io/en/latest/) for local environments and [tmuxp](https://github.com/tmux-python/tmuxp) for easily managing components panes (optional).
 For local development, run
 ```bash
+# In case you don't have mamba yet
+curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
+bash Mambaforge-$(uname)-$(uname -m).sh
+
+# Start here if you have Mamba already
 ./initial_setup.sh
-conda env create -f ./environment.yml
-conda activate modyn
+mamba env create -f ./environment.yml
+mamba activate modyn
 pip install -e .
 pip install -r dev-requirements.txt
 ```
