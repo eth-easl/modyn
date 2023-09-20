@@ -447,7 +447,7 @@ class GRPCHandler:
             if res.is_running:
                 sleep(2)
             else:
-                trainer_log = res.log
+                trainer_log = json.loads(res.log.value)
                 break
 
         status_tracker.close_counter()

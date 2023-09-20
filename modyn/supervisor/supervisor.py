@@ -489,7 +489,7 @@ class Supervisor:
             return  # dont print in tests
 
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
-            json.dump(self.pipeline_log, logfile)
+            json.dump(self.pipeline_log, logfile, indent=4)
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()

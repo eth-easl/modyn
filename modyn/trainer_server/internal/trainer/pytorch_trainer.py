@@ -1,4 +1,5 @@
 # pylint: disable=no-name-in-module
+import glob
 import io
 import json
 import logging
@@ -6,6 +7,8 @@ import multiprocessing as mp
 import os
 import pathlib
 import queue
+import shutil
+import tempfile
 import traceback
 from enum import Enum
 from typing import Any, Optional, Tuple, Union
@@ -110,6 +113,7 @@ class PytorchTrainer:
         self._final_checkpoint_path = training_info.final_checkpoint_path
         self.epochs_per_trigger = training_info.epochs_per_trigger
         self._log_file_path = training_info.log_file_path
+        self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
 
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
@@ -157,6 +161,7 @@ class PytorchTrainer:
             training_info.selector_address,
             training_info.training_id,
             training_info.tokenizer,
+            self._dataset_log_path,
         )
 
         # Create callbacks
@@ -246,6 +251,9 @@ class PytorchTrainer:
     def _warning(self, msg: str) -> None:
         self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
 
+    def _error(self, msg: str) -> None:
+        self.logger.error(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {}
         dict_to_save["model"] = self._model.model.state_dict()
@@ -328,10 +336,12 @@ class PytorchTrainer:
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
+        total_stopw = Stopwatch()
+        stopw = Stopwatch()
+        total_stopw.start("TotalTrain")
 
         self._model.model.train()
 
-        stopw = Stopwatch()
         stopw.start("OnBeginCallbacks")
         for _, callback in self._callbacks.items():
             callback.on_train_begin(self._model.model, self._optimizers)
@@ -449,9 +459,15 @@ class PytorchTrainer:
 
             self._persist_pipeline_log()
 
+        total_stopw.stop("TotalTrain")
+
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         self._log["num_samples"] = self._num_samples
         self._log["num_batches"] = batch_number + 1
+        self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
+
+        self._load_dataset_log()
+        self._persist_pipeline_log()
 
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
@@ -469,6 +485,23 @@ class PytorchTrainer:
 
         self._info("Training complete!")
         self._persist_pipeline_log()
+
+    def _load_dataset_log(self) -> None:
+        worker_log = {}
+        for filename in glob.glob(str(self._dataset_log_path / "*.log")):
+            key = filename.replace(".log", "")
+
+            with open(self._dataset_log_path / filename, "r", encoding="utf-8") as logfile:
+                worker_log[key] = json.load(logfile)
+
+        self._log["dataset_worker_log"] = worker_log
+
+        try:
+            if self._dataset_log_path.exists():
+                shutil.rmtree(self._dataset_log_path)
+        except OSError as exp:
+            self._error("Error while deleting OnlineDataset logging directory.")
+            self._error(str(exp))
 
     def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
         # whether the dataloader returned the weights.

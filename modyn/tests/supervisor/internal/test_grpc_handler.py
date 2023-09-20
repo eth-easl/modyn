@@ -37,6 +37,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.utils import EvaluationStatusTracker
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     StartTrainingResponse,
     StoreFinalModelRequest,
@@ -485,11 +486,17 @@ def test_wait_for_training_completion(test_connection_established):
                 handler.trainer_server,
                 "get_training_status",
                 return_value=TrainingStatusResponse(
-                    valid=True, blocked=False, exception=None, state_available=False, is_running=False
+                    valid=True,
+                    blocked=False,
+                    exception=None,
+                    state_available=False,
+                    is_running=False,
+                    log=TrainerJsonString(value='{"a": 1}'),
                 ),
             ) as avail_method:
-                handler.wait_for_training_completion(42, 21, 22)
+                log = handler.wait_for_training_completion(42, 21, 22)
                 avail_method.assert_called_once()
+                assert log == {"a": 1}
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

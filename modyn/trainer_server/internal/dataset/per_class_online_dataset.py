@@ -32,6 +32,7 @@ class PerClassOnlineDataset(OnlineDataset):
             selector_address,
             training_id,
             tokenizer,
+            None,
         )
         assert initial_filtered_label is not None
         self.filtered_label = initial_filtered_label

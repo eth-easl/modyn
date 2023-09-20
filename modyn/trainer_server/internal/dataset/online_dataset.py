@@ -1,8 +1,12 @@
 import gc
+import json
 import logging
-from typing import Callable, Generator, Optional, Tuple, Union
+import os
+import pathlib
+from typing import Any, Callable, Generator, Optional, Tuple, Union
 
 import grpc
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
     GetRequest,
     GetResponse,
@@ -37,6 +41,7 @@ class OnlineDataset(IterableDataset):
         selector_address: str,
         training_id: int,
         tokenizer: Optional[str],
+        log_path: Optional[pathlib.Path],
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -56,6 +61,12 @@ class OnlineDataset(IterableDataset):
         # the default key source is the Selector. Then it can be changed using change_key_source
         self._key_source = SelectorKeySource(self._pipeline_id, self._trigger_id, self._selector_address)
         self._uses_weights = None
+        self._log_path = log_path
+        self._log: dict[str, Any] = {"partitions": {}}
+        self._sw = Stopwatch()
+
+        if log_path is None:
+            logger.warning("Did not provide log path for OnlineDataset - logging disabled.")
 
         # tokenizer for NLP tasks
         self._tokenizer = None
@@ -126,10 +137,18 @@ class OnlineDataset(IterableDataset):
     def _get_data(
         self, worker_id: int, partition_id: int
     ) -> tuple[list[int], list[bytes], list[int], Optional[list[float]]]:
+        get_data_log = {}
+        self._sw.start("GetKeysAndWeights", overwrite=True)
         keys, weights = self._key_source.get_keys_and_weights(worker_id, partition_id)
+        get_data_log["get_keys_and_weights"] = self._sw.stop("GetKeysAndWeights")
 
         self._info("Getting data from storage", worker_id)
+        self._sw.start("GetData", overwrite=True)
         data, labels = self._get_data_from_storage(keys)
+        get_data_log["get_data"] = self._sw.stop("GetData")
+
+        self._log["partitions"][str(partition_id)] = get_data_log
+
         return keys, data, labels, weights
 
     def _get_data_iterator(
@@ -159,9 +178,10 @@ class OnlineDataset(IterableDataset):
 
     def _get_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
         assert self._uses_weights is not None
+        self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
         tranformed_sample = self._transform(sample)  # type: ignore
-
+        self._sw.stop("transform")
         if self._uses_weights:
             return key, tranformed_sample, label, weight
         return key, tranformed_sample, label
@@ -169,8 +189,20 @@ class OnlineDataset(IterableDataset):
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()
 
-    # pylint: disable=too-many-locals, too-many-branches
+    def _persist_log(self, worker_id: int) -> None:
+        if self._log_path is None:
+            return
 
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return  # dont print in tests
+
+        log_file = f"{self._log_path / str(worker_id)}.log"
+        self._log["transform"] = self._sw.measurements.get("transform", 0)
+
+        with open(log_file, "w", encoding="utf-8") as logfile:
+            json.dump(self._log, logfile)
+
+    # pylint: disable=too-many-locals, too-many-branches
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
@@ -190,14 +222,19 @@ class OnlineDataset(IterableDataset):
             self._uses_weights = self._key_source.uses_weights()
             self._silence_pil()
             self._debug("gRPC initialized.", worker_id)
+            # Reinit logging and timetracking in this worker
+            self._log = {"partitions": {}}
+            self._sw = Stopwatch()
 
         assert self._transform is not None
         self._num_partitions = self._key_source.get_num_data_partitions()
         self._info(f"Total number of partitions will be {self._num_partitions}", worker_id)
+        self._log["num_partitions"] = self._num_partitions
 
         keys, data, labels, weights = self._get_data(worker_id=worker_id, partition_id=0)
 
         for partition in range(self._num_partitions):
+            self._persist_log(worker_id)
             num_samples_on_this_partition = len(keys)
             # We (arbitrarily) fetch the next partition when we have seen 80% of the current partition
             fetch_next_partition_idx = int(num_samples_on_this_partition * 0.8)
@@ -229,3 +266,5 @@ class OnlineDataset(IterableDataset):
                 del new_labels
                 del new_weights
                 gc.collect()
+
+        self._persist_log(worker_id)

@@ -33,7 +33,7 @@ class Stopwatch:
             assert self._last_started_measurement is not None, "Cannot stop before starting a measurement"
             name = self._last_started_measurement
 
-        assert name in self._running_measurements, "Measurement not running"
+        assert name in self._running_measurements, f"Measurement {name} not running"
 
         self.measurements[name] = self.measurements.get(name, 0) + time - self._running_measurements[name]
 
