@@ -12,3 +12,4 @@ black
 grpcio-tools --no-binary :all:
 grpcio --no-binary :all:
 mypy-protobuf
+pystack

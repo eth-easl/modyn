@@ -141,6 +141,7 @@ class OnlineDataset(IterableDataset):
         self._sw.start("GetKeysAndWeights", overwrite=True)
         keys, weights = self._key_source.get_keys_and_weights(worker_id, partition_id)
         get_data_log["get_keys_and_weights"] = self._sw.stop("GetKeysAndWeights")
+        get_data_log["num_items"] = len(keys)
 
         self._info("Getting data from storage", worker_id)
         self._sw.start("GetData", overwrite=True)

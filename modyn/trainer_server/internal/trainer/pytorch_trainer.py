@@ -14,6 +14,7 @@ from enum import Enum
 from typing import Any, Optional, Tuple, Union
 
 import grpc
+import numpy as np
 import torch
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -354,6 +355,7 @@ class PytorchTrainer:
         for epoch in range(self.epochs_per_trigger):
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
+            batch_timings = []
 
             if self.sample_then_batch_this_epoch(epoch):
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
@@ -361,9 +363,11 @@ class PytorchTrainer:
                 self.downsample_trigger_training_set()
                 stopw.stop()
 
+            stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
             for batch_number, batch in enumerate(self._train_dataloader):
-                stopw.stop()
+                stopw.stop("FetchBatch")
+                batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
 
                 stopw.start("OnBatchBeginCallbacks", resume=True)
@@ -444,7 +448,15 @@ class PytorchTrainer:
                 stopw.stop()
                 stopw.start("FetchBatch", resume=True)
 
-            self._log["epochs"][epoch]["FetchBatch"] = stopw.measurements.get("FetchBatch", 0)
+            batch_timings = np.array(batch_timings)
+            self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings)
+            self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings)
+            self._log["epochs"][epoch]["AvgFetchBatch"] = np.mean(batch_timings)
+            self._log["epochs"][epoch]["MedianFetchBatch"] = np.median(batch_timings)
+            self._log["epochs"][epoch]["StdFetchBatch"] = np.std(batch_timings)
+            del batch_timings
+
+            self._log["epochs"][epoch]["TotalFetchBatch"] = stopw.measurements.get("FetchBatch", 0)
             self._log["epochs"][epoch]["OnBatchBeginCallbacks"] = stopw.measurements.get("OnBatchBeginCallbacks", 0)
             self._log["epochs"][epoch]["PreprocessBatch"] = stopw.measurements.get("PreprocessBatch", 0)
             self._log["epochs"][epoch]["DownsampleBTS"] = stopw.measurements.get("DownsampleBTS", 0)
@@ -489,7 +501,8 @@ class PytorchTrainer:
     def _load_dataset_log(self) -> None:
         worker_log = {}
         for filename in glob.glob(str(self._dataset_log_path / "*.log")):
-            key = filename.replace(".log", "")
+            filepath = pathlib.Path(filename)
+            key = filepath.stem
 
             with open(self._dataset_log_path / filename, "r", encoding="utf-8") as logfile:
                 worker_log[key] = json.load(logfile)
