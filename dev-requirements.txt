@@ -9,7 +9,7 @@ pillow
 autopep8
 isort
 black
-grpcio-tools --no-binary :all:
-grpcio --no-binary :all:
+grpcio-tools
+grpcio # Linux
 mypy-protobuf
 pystack
