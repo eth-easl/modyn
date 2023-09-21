@@ -447,6 +447,7 @@ class PytorchTrainer:
                     )
                 stopw.stop()
                 stopw.start("FetchBatch", resume=True)
+                stopw.start("IndivFetchBatch", overwrite=True)
 
             if len(batch_timings) <= 100000:
                 self._log["epochs"][epoch]["BatchTimings"] = batch_timings

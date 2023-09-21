@@ -40,10 +40,13 @@ class Supervisor:
         eval_directory: pathlib.Path,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
+        maximum_triggers: Optional[int] = None,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
         self.eval_directory = eval_directory
+        self.maximum_triggers = maximum_triggers
+        self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
@@ -292,8 +295,10 @@ class Supervisor:
 
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
+        continue_running = True
+
         try:
-            while True:
+            while continue_running:
                 self.status_bar.update(demo="Fetching new data")
                 trigger_occured = False
                 largest_keys = set()
@@ -315,6 +320,9 @@ class Supervisor:
 
                     if self._handle_new_data(new_data):
                         trigger_occured = True
+
+                    if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                        continue_running = False
 
                 previous_largest_keys = largest_keys
                 if not trigger_occured:
@@ -349,6 +357,9 @@ class Supervisor:
             self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
             pbar.update(self._selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
+            if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                logger.info(f"Reached trigger limit ({self.maximum_triggers}), exiting.")
+                break
 
         self.status_bar.update(demo="New data handled")
         pbar.clear(flush=True)
@@ -417,6 +428,10 @@ class Supervisor:
 
             self._persist_pipeline_log()
 
+            self.num_triggers = self.num_triggers + 1
+            if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                break
+
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
@@ -481,6 +496,9 @@ class Supervisor:
             )
             self._handle_new_data(replay_data)
             self._persist_pipeline_log()
+            if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                logger.info("Exiting replay loop due to trigger limit.")
+                break
 
         self.status_bar.update(demo="Replay done")
 
