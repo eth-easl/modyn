@@ -1,4 +1,5 @@
 import logging
+import pathlib
 from typing import Optional
 
 import torch
@@ -20,6 +21,7 @@ def prepare_dataloaders(
     selector_address: str,
     training_id: int,
     tokenizer: Optional[str],
+    log_path: Optional[pathlib.Path],
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -51,6 +53,7 @@ def prepare_dataloaders(
         selector_address,
         training_id,
         tokenizer,
+        log_path,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)

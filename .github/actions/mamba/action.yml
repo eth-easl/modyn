@@ -6,6 +6,10 @@ runs:
         with:
           python-version: '3.10'
 
+      - name: Install prerequisites for pystack
+        run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev
+        shell: bash
+
       - name: Set cache date
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
         shell: bash

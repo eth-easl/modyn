@@ -74,12 +74,12 @@ def test_inform_data_and_trigger_caching(
     selector = Selector(MockStrategy(), 42, 3)
     assert selector._current_keys_in_cache == 0
 
-    test_trigger.return_value = (42, 2, 2)  # 2 keys in trigger, 2 partitions
+    test_trigger.return_value = (42, 2, 2, {})  # 2 keys in trigger, 2 partitions
     test_get_trigger_partition_keys.return_value = [(10, 1.0)]
 
     selector._maximum_keys_in_cache = 10  # Enforce that 2 keys fit into cache
 
-    trigger_id = selector.inform_data_and_trigger([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
+    trigger_id, _ = selector.inform_data_and_trigger([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
 
     test_inform_data.assert_called_once_with([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
     assert trigger_id == 42
@@ -99,13 +99,13 @@ def test_inform_data_and_trigger_nocaching(
     selector = Selector(MockStrategy(), 42, 3)
     assert selector._current_keys_in_cache == 0
 
-    test_trigger.return_value = (42, 2, 2)  # 2 keys in trigger, 2 partitions
+    test_trigger.return_value = (42, 2, 2, {})  # 2 keys in trigger, 2 partitions
     test_get_trigger_partition_keys.return_value = [(10, 1.0)]
 
     # Enforce that 1 key fit into cache => we can't cache 2 keys
     selector._maximum_keys_in_cache = 1
 
-    trigger_id = selector.inform_data_and_trigger([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
+    trigger_id, _ = selector.inform_data_and_trigger([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
     test_inform_data.assert_called_once_with([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
     assert trigger_id == 42
 

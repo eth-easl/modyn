@@ -18,6 +18,9 @@ RUN apt-get update -yq \
     htop \
     procps \
     libjpeg-dev \
+    gdb \
+    libdw-dev \
+    libelf-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder

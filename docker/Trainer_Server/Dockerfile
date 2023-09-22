@@ -3,9 +3,9 @@ FROM modyndependencies:latest as apex-image
 # Uncomment the following lines to install apex
 
 # TODO(#104): Make this easily configurable here
-# RUN mamba run -n modyn pip install packaging
+# RUN mamba run -n modyn pip install packaging ninja
 # RUN git clone https://github.com/NVIDIA/apex ./apex
-# RUN mamba run -v -n modyn pip install -v --no-build-isolation --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./apex
+# RUN mamba run -v -n modyn pip install -v --no-build-isolation --no-cache-dir --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./apex
 
 FROM modynbase:latest AS trainerserver-image
 

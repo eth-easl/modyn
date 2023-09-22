@@ -52,6 +52,13 @@ def setup_argparser() -> argparse.ArgumentParser:
         "If not given, all data is replayed.",
     )
 
+    parser_.add_argument(
+        "--maximum-triggers",
+        type=int,
+        action="store",
+        help="Optional parameter to limit the maximum number of triggers that we consider before exiting.",
+    )
+
     return parser_
 
 
@@ -62,6 +69,9 @@ def validate_args(args: Any) -> None:
 
     if args.start_replay_at is None and args.stop_replay_at is not None:
         raise ValueError("--stop-replay-at was provided, but --start-replay-at was not.")
+
+    if args.maximum_triggers is not None and args.maximum_triggers < 1:
+        raise ValueError(f"maximum_triggers is {args.maximum_triggers}, needs to be >= 1")
 
 
 def main() -> None:
@@ -82,7 +92,9 @@ def main() -> None:
             logger.info(f"Replay interval ends at {args.stop_replay_at}.")
 
     logger.info("Initializing supervisor.")
-    supervisor = Supervisor(pipeline_config, modyn_config, args.eval_dir, args.start_replay_at, args.stop_replay_at)
+    supervisor = Supervisor(
+        pipeline_config, modyn_config, args.eval_dir, args.start_replay_at, args.stop_replay_at, args.maximum_triggers
+    )
     logger.info("Starting pipeline.")
     supervisor.pipeline()
 
