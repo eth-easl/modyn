@@ -67,6 +67,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer=None,
             log_path=None,
+            prefetched_partitions=1,
         )._init_transforms()
 
     with pytest.raises(ValueError):
@@ -81,6 +82,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer="",
             log_path=None,
+            prefetched_partitions=1,
         )._init_transforms()
 
 
@@ -104,6 +106,7 @@ def test_init(test_insecure_channel, test_grpc_connection_established, test_grpc
         training_id=42,
         tokenizer=None,
         log_path=None,
+        prefetched_partitions=1,
     )
     assert online_dataset._pipeline_id == 1
     assert online_dataset._trigger_id == 1
@@ -136,6 +139,7 @@ def test_get_keys_and_weights_from_selector(
             "training_id": 42,
             "tokenizer": None,
             "log_path": None,
+            "prefetched_partitions": 1,
         }
 
         online_dataset = OnlineDataset(**kwargs)
@@ -170,6 +174,7 @@ def test_get_data_from_storage(
         training_id=42,
         tokenizer=None,
         log_path=None,
+        prefetched_partitions=0,
     )
     online_dataset._init_grpc()
     assert online_dataset._get_data_from_storage(list(range(10))) == (
@@ -229,6 +234,7 @@ def test_deserialize_torchvision_transforms(
         training_id=42,
         tokenizer=None,
         log_path=None,
+        prefetched_partitions=1,
     )
     online_dataset._bytes_parser_function = bytes_parser_function
     online_dataset._setup_composed_transform()
@@ -238,6 +244,7 @@ def test_deserialize_torchvision_transforms(
         assert transform1.__dict__ == transform2.__dict__
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -258,6 +265,7 @@ def test_dataset_iter(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -268,6 +276,7 @@ def test_dataset_iter(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -278,6 +287,7 @@ def test_dataset_iter(
     assert [x[2] for x in all_data] == [1] * 10
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -298,6 +308,7 @@ def test_dataset_iter_with_parsing(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -308,6 +319,7 @@ def test_dataset_iter_with_parsing(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -318,6 +330,7 @@ def test_dataset_iter_with_parsing(
     assert [x[2] for x in all_data] == [1] * 10
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -338,6 +351,7 @@ def test_dataloader_dataset(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -348,6 +362,7 @@ def test_dataloader_dataset(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -359,6 +374,7 @@ def test_dataloader_dataset(
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", WeightedMockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -379,6 +395,7 @@ def test_dataloader_dataset_weighted(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -389,6 +406,7 @@ def test_dataloader_dataset_weighted(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -401,6 +419,7 @@ def test_dataloader_dataset_weighted(
         assert torch.equal(batch[3], 2 * torch.ones(4, dtype=torch.float64))
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -419,6 +438,7 @@ def test_dataloader_dataset_multi_worker(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     if platform.system() == "Darwin":
         # On macOS, spawn is the default, which loses the mocks
@@ -434,6 +454,7 @@ def test_dataloader_dataset_multi_worker(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -463,6 +484,7 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established, test
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=1,
         tokenizer=None,
         log_path=None,
     )
@@ -485,7 +507,9 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established, test
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_transforms(
-    test_insecure_channel, test_grpc_connection_established, test_grpc_connection_established_selector
+    test_insecure_channel,
+    test_grpc_connection_established,
+    test_grpc_connection_established_selector,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -496,6 +520,7 @@ def test_init_transforms(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=1,
         tokenizer=None,
         log_path=None,
     )
@@ -513,6 +538,7 @@ def test_init_transforms(
         tv_ds.assert_called_once()
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -549,6 +575,7 @@ def test_iter_multi_partition(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -559,6 +586,7 @@ def test_iter_multi_partition(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -573,6 +601,7 @@ def test_iter_multi_partition(
     assert idx == 15
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", WeightedMockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -609,6 +638,7 @@ def test_iter_multi_partition_weighted(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -619,6 +649,7 @@ def test_iter_multi_partition_weighted(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -635,6 +666,7 @@ def test_iter_multi_partition_weighted(
     assert idx == 15
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -671,6 +703,7 @@ def test_iter_multi_partition_cross(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -681,6 +714,7 @@ def test_iter_multi_partition_cross(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -709,6 +743,7 @@ def test_iter_multi_partition_cross(
     assert idx == 10
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -738,6 +773,7 @@ def test_iter_multi_partition_multi_workers(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     if platform.system() == "Darwin":
         # On macOS, spawn is the default, which loses the mocks
@@ -753,6 +789,7 @@ def test_iter_multi_partition_multi_workers(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -766,6 +803,7 @@ def test_iter_multi_partition_multi_workers(
     assert idx == 7
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -786,6 +824,7 @@ def test_multi_epoch_dataloader_dataset(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selecotr,
+    prefetched_partitions,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -796,6 +835,7 @@ def test_multi_epoch_dataloader_dataset(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )

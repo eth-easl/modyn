@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import grpc
+import pytest
 import torch
 from modyn.selector.internal.grpc.generated.selector_pb2 import SamplesResponse, UsesWeightsResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetResponse
@@ -34,6 +35,7 @@ class MockStorageStub:
             )
 
 
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -56,6 +58,7 @@ def test_dataloader_dataset(
     test_insecure_channel,
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
+    prefetched_partitions,
 ):
     online_dataset = PerClassOnlineDataset(
         pipeline_id=1,
@@ -67,6 +70,7 @@ def test_dataloader_dataset(
         selector_address="localhost:1234",
         training_id=42,
         initial_filtered_label=0,
+        prefetched_partitions=prefetched_partitions,
         tokenizer=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)

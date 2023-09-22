@@ -20,6 +20,7 @@ class PerClassOnlineDataset(OnlineDataset):
         selector_address: str,
         training_id: int,
         initial_filtered_label: int,
+        prefetched_partitions: int,
         tokenizer: Optional[str],
     ):
         super().__init__(
@@ -31,6 +32,7 @@ class PerClassOnlineDataset(OnlineDataset):
             storage_address,
             selector_address,
             training_id,
+            prefetched_partitions,
             tokenizer,
             None,
         )

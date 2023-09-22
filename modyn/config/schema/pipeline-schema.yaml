@@ -48,6 +48,10 @@ properties:
         type: number
         description: |
           The number of epochs per trigger. Defaults to 1, if not given.
+      prefetched_partitions:
+        type: number
+        description: |
+          The number of partitions that are prefetched per DataLoader worker. Defaults to 1, if not given.
       device:
         type: string
         description: |

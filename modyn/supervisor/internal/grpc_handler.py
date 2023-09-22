@@ -300,6 +300,11 @@ class GRPCHandler:
         else:
             epochs_per_trigger = 1
 
+        if "prefetched_partitions" in pipeline_config["training"]:
+            prefetched_partitions = pipeline_config["training"]["prefetched_partitions"]
+        else:
+            prefetched_partitions = 1
+
         if "seed" in pipeline_config["training"]:
             seed = pipeline_config["training"]["seed"]
         else:
@@ -366,6 +371,7 @@ class GRPCHandler:
             "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
             "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
             "epochs_per_trigger": epochs_per_trigger,
+            "prefetched_partitions": prefetched_partitions,
             "seed": seed,
             "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
         }
