@@ -370,12 +370,15 @@ class Supervisor:
     def _handle_new_data_batch(self, batch: list[tuple[int, int, int]]) -> bool:
         self._sw.start("trigger_inform", overwrite=True)
         triggering_indices = self.trigger.inform(batch)
+        num_triggers = len(triggering_indices)
         self.pipeline_log["supervisor"]["num_triggers"] += len(triggering_indices)
-        self.pipeline_log["supervisor"]["trigger_batch_times"].append(self._sw.stop())
+        self.pipeline_log["supervisor"]["trigger_batch_times"].append(
+            {"batch_size": len(batch), "time": self._sw.stop("trigger_inform"), "num_triggers": num_triggers}
+        )
 
-        if len(triggering_indices) > 0:
+        if num_triggers > 0:
             self.status_bar.update(demo="Handling triggers")
-            logger.info(f"There are {len(triggering_indices)} triggers in this batch.")
+            logger.info(f"There are {num_triggers} triggers in this batch.")
             self._handle_triggers_within_batch(batch, triggering_indices)
             return True
 
