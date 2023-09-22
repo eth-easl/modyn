@@ -6,16 +6,18 @@ service Selector {
   rpc register_pipeline(RegisterPipelineRequest) returns (PipelineResponse) {}
   rpc get_sample_keys_and_weights(GetSamplesRequest)
       returns (stream SamplesResponse) {}
-  rpc inform_data(DataInformRequest) returns (Empty) {}
+  rpc inform_data(DataInformRequest) returns (DataInformResponse) {}
   rpc inform_data_and_trigger(DataInformRequest) returns (TriggerResponse) {}
   rpc get_number_of_samples(GetNumberOfSamplesRequest)
       returns (NumberOfSamplesResponse) {}
-  rpc get_status_bar_scale(GetStatusBarScaleRequest) returns (StatusBarScaleResponse) {}
+  rpc get_status_bar_scale(GetStatusBarScaleRequest)
+      returns (StatusBarScaleResponse) {}
   rpc get_number_of_partitions(GetNumberOfPartitionsRequest)
       returns (NumberOfPartitionsResponse) {}
   rpc get_available_labels(GetAvailableLabelsRequest)
       returns (AvailableLabelsResponse) {}
-  rpc get_selection_strategy(GetSelectionStrategyRequest) returns (SelectionStrategyResponse) {}
+  rpc get_selection_strategy(GetSelectionStrategyRequest)
+      returns (SelectionStrategyResponse) {}
   rpc seed_selector(SeedSelectorRequest) returns (SeedSelectorResponse) {}
   rpc uses_weights(UsesWeightsRequest) returns (UsesWeightsResponse) {}
 }
@@ -44,7 +46,12 @@ message DataInformRequest {
   repeated int64 labels = 4;
 }
 
-message TriggerResponse { int32 trigger_id = 1; }
+message DataInformResponse { JsonString log = 1; }
+
+message TriggerResponse {
+  int32 trigger_id = 1;
+  JsonString log = 2;
+}
 
 message RegisterPipelineRequest {
   int32 num_workers = 1;
@@ -74,17 +81,11 @@ message GetNumberOfSamplesRequest {
   int32 trigger_id = 2;
 }
 
-message NumberOfSamplesResponse {
-  int32 num_samples = 1;
-}
+message NumberOfSamplesResponse { int32 num_samples = 1; }
 
-message GetStatusBarScaleRequest {
-  int32 pipeline_id = 1;
-}
+message GetStatusBarScaleRequest { int32 pipeline_id = 1; }
 
-message StatusBarScaleResponse {
-  int32 status_bar_scale = 1;
-}
+message StatusBarScaleResponse { int32 status_bar_scale = 1; }
 
 message GetNumberOfPartitionsRequest {
   int32 pipeline_id = 1;
@@ -93,36 +94,22 @@ message GetNumberOfPartitionsRequest {
 
 message NumberOfPartitionsResponse { int32 num_partitions = 1; }
 
-message GetAvailableLabelsRequest {
-  int32 pipeline_id = 1;
-}
+message GetAvailableLabelsRequest { int32 pipeline_id = 1; }
 
-message AvailableLabelsResponse {
-  repeated int64 available_labels = 1;
-}
+message AvailableLabelsResponse { repeated int64 available_labels = 1; }
 
-message GetSelectionStrategyRequest {
-    int32 pipeline_id = 1;
-}
+message GetSelectionStrategyRequest { int32 pipeline_id = 1; }
 
 message SelectionStrategyResponse {
-    bool downsampling_enabled = 1;
-    string strategy_name = 2;
-    JsonString downsampler_config = 3;
+  bool downsampling_enabled = 1;
+  string strategy_name = 2;
+  JsonString downsampler_config = 3;
 }
 
-message UsesWeightsRequest {
-    int32 pipeline_id = 1;
-}
+message UsesWeightsRequest { int32 pipeline_id = 1; }
 
-message UsesWeightsResponse {
-    bool uses_weights = 1;
-}
+message UsesWeightsResponse { bool uses_weights = 1; }
 
-message SeedSelectorRequest {
-    int32 seed = 1;
-}
+message SeedSelectorRequest { int32 seed = 1; }
 
-message SeedSelectorResponse {
-    bool success = 1;
-}
+message SeedSelectorResponse { bool success = 1; }

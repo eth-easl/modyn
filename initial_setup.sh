@@ -25,6 +25,13 @@ if [ "$IS_MAC" = true ] || [ "$(dpkg --print-architecture)" = "arm64" ] || [ "$(
     sed -i '' -e 's/pytorch:://g' $SCRIPT_DIR/environment.yml # Do not use Pytorch Channel (broken)
 fi
 
+if [ "$IS_MAC" = true ]; then
+    echo "Detected macOS, updating dev-requirements.txt to build grpcio from source"
+    export GRPC_PYTHON_LDFLAGS=" -framework CoreFoundation"
+    sed -i '' -e 's/grpcio-tools/grpcio-tools --no-binary :all:/g' $SCRIPT_DIR/dev-requirements.txt 
+    sed -i '' -e 's/grpcio # Linux/grpcio --no-binary :all:/g' $SCRIPT_DIR/dev-requirements.txt 
+fi
+
 # On CI, we change the base image from CUDA to Python and stop here
 if [[ ! -z "$CI" ]]; then
     dockerContent=$(tail -n "+2" $SCRIPT_DIR/docker/Dependencies/Dockerfile)

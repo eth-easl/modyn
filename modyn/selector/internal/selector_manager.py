@@ -121,16 +121,18 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id, partition_id)
 
-    def inform_data(self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]) -> None:
+    def inform_data(
+        self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]
+    ) -> dict[str, object]:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
 
         with self._selector_locks[pipeline_id]:
-            self._selectors[pipeline_id].inform_data(keys, timestamps, labels)
+            return self._selectors[pipeline_id].inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(
         self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]
-    ) -> int:
+    ) -> tuple[int, dict[str, object]]:
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")
 

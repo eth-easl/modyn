@@ -3,24 +3,24 @@ on: [pull_request]
 
 defaults:
   run:
-    shell: bash
+    shell: bash -l {0}
 
 jobs:
   flake8:
-    timeout-minutes: 20
+    timeout-minutes: 40
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Setup Conda
-        uses: ./.github/actions/conda
+      - name: Setup mamba
+        uses: ./.github/actions/mamba
 
       - name: Flake8
         run: |
-          conda run -n modyn flake8 --version
-          conda run -n modyn flake8 modyn --statistics
+          micromamba run -n modyn flake8 --version
+          micromamba run -n modyn flake8 modyn --statistics
 
   mypy-typechecking:
     timeout-minutes: 20
@@ -30,13 +30,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Setup Conda
-        uses: ./.github/actions/conda
+      - name: Setup mamba
+        uses: ./.github/actions/mamba
 
       - name: Mypy
         run: |
-          conda run -n modyn mypy --version
-          conda run -n modyn mypy modyn
+          micromamba run -n modyn mypy --version
+          micromamba run -n modyn mypy modyn
 
   pylint:
     timeout-minutes: 20
@@ -46,13 +46,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Setup Conda
-        uses: ./.github/actions/conda
+      - name: Setup mamba
+        uses: ./.github/actions/mamba
 
       - name: Pylint
         run: |
-          conda run -n modyn pylint --version
-          conda run -n modyn pylint modyn
+          micromamba run -n modyn pylint --version
+          micromamba run -n modyn pylint modyn
 
   isort:
     timeout-minutes: 20
@@ -62,15 +62,15 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Setup Conda
-        uses: ./.github/actions/conda
+      - name: Setup mamba
+        uses: ./.github/actions/mamba
 
       - name: Isort
         run: |
-          conda run -n modyn isort --version
-          conda run -n modyn isort modyn --check --diff
-          conda run -n modyn isort integrationtests --check --diff
-          conda run -n modyn isort benchmark --check --diff
+          micromamba run -n modyn isort --version
+          micromamba run -n modyn isort modyn --check --diff
+          micromamba run -n modyn isort integrationtests --check --diff
+          micromamba run -n modyn isort benchmark --check --diff
 
   black:
     timeout-minutes: 20
@@ -80,13 +80,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Setup Conda
-        uses: ./.github/actions/conda
+      - name: Setup mamba
+        uses: ./.github/actions/mamba
 
       - name: Black
         run: |
-          conda run -n modyn black --version
-          conda run -n modyn black --check modyn --verbose --config black.toml
+          micromamba run -n modyn black --version
+          micromamba run -n modyn black --check modyn --verbose --config black.toml
 
   unittests:
     timeout-minutes: 20
@@ -96,13 +96,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Setup Conda
-        uses: ./.github/actions/conda
+      - name: Setup mamba
+        uses: ./.github/actions/mamba
 
       - name: Pytest
         run: |
-          conda run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=90
-          conda run -n modyn pytest > pytest-coverage.txt
+          micromamba run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=90
+          micromamba run -n modyn pytest > pytest-coverage.txt
 
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
@@ -112,7 +112,7 @@ jobs:
 
 # Checks whether the base container works correctly.
   dockerized-unittests:
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     needs:
       - flake8
@@ -130,13 +130,13 @@ jobs:
       uses: ./.github/actions/base
 
     - name: Setup dev-requirements and run pytest within container
-      run: docker run modynbase conda run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
+      run: docker run modynbase mamba run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
 
 
 # Tests whether docker-compose up starts all components successfully and integration tests run through
 # Only one job to reduce Github CI usage
   integrationtests:
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     needs:
       - flake8

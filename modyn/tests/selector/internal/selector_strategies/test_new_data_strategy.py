@@ -91,7 +91,7 @@ def test_e2e_noreset_nolimit():
     conf["reset_after_trigger"] = False
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     training_samples = strat.get_trigger_partition_keys(trigger_id, 0)
 
     assert trigger_num_keys == 10
@@ -99,7 +99,7 @@ def test_e2e_noreset_nolimit():
     assert {int(key) for (key, _) in training_samples} == set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     training_samples = strat.get_trigger_partition_keys(trigger_id, 0)
     assert trigger_num_keys == 20
     assert trigger_num_partitions == 1
@@ -121,7 +121,7 @@ def test_e2e_noreset_nolimit_memory_limits():
     conf["reset_after_trigger"] = False
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 5)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 2
 
@@ -132,7 +132,7 @@ def test_e2e_noreset_nolimit_memory_limits():
     assert {int(key) for (key, _) in training_samples_part1} == set(range(5, 10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 20
     assert trigger_num_partitions == 4
 
@@ -163,7 +163,7 @@ def test_e2e_reset_nolimit():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 1
 
@@ -171,7 +171,7 @@ def test_e2e_reset_nolimit():
     assert {int(key) for (key, _) in training_samples} == set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 1
 
@@ -196,7 +196,7 @@ def test_e2e_reset_limit():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -204,7 +204,7 @@ def test_e2e_reset_limit():
     assert {int(key) for (key, _) in training_samples} < set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -229,7 +229,7 @@ def test_e2e_reset_limit_uar():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -237,7 +237,7 @@ def test_e2e_reset_limit_uar():
     assert {int(key) for (key, _) in training_samples} < set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -262,7 +262,7 @@ def test_e2e_reset_limit_lastx():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -270,7 +270,7 @@ def test_e2e_reset_limit_lastx():
     assert {int(key) for (key, _) in training_samples} == set(range(5, 10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -295,7 +295,7 @@ def test_e2e_reset_limit_lastx_large():
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
     strat.inform_data(data1, timestamps1, labels1)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
     assert trigger_num_partitions == 1
 
@@ -303,7 +303,7 @@ def test_e2e_reset_limit_lastx_large():
     assert {int(key) for (key, _) in training_samples} == set(range(10))
 
     strat.inform_data(data2, timestamps2, labels2)
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 15
     assert trigger_num_partitions == 1
 
@@ -362,10 +362,10 @@ def test__on_trigger_reset(test__get_data_no_reset: MagicMock, test__get_data_re
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
     assert strat.reset_after_trigger
 
-    test__get_data_reset.return_value = [[10, 11, 12, 13]]
+    test__get_data_reset.return_value = [([10, 11, 12, 13], {})]
     test__get_data_no_reset.return_value = []
 
-    result = list(strat._on_trigger())[0]
+    result = list(strat._on_trigger())[0][0]
 
     test__get_data_no_reset.assert_not_called()
     test__get_data_reset.assert_called_once()
@@ -387,9 +387,9 @@ def test__on_trigger_no_reset(test__get_data_no_reset: MagicMock, test__get_data
     assert not strat.reset_after_trigger
 
     test__get_data_reset.return_value = []
-    test__get_data_no_reset.return_value = [[10, 11, 12, 13]]
+    test__get_data_no_reset.return_value = [([10, 11, 12, 13], {})]
 
-    result = list(strat._on_trigger())[0]
+    result = list(strat._on_trigger())[0][0]
 
     test__get_data_reset.assert_not_called()
     test__get_data_no_reset.assert_called_once()
@@ -408,10 +408,10 @@ def test__get_data_reset_nolimit(test__get_all_data: MagicMock, test__get_curren
     conf = get_config()
     conf["reset_after_trigger"] = True
 
-    test__get_current_trigger_data.return_value = [[10, 11, 12]]
+    test__get_current_trigger_data.return_value = [([10, 11, 12], {})]
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
-    assert list(strat._get_data_reset()) == [[10, 11, 12]]
+    assert list(strat._get_data_reset()) == [([10, 11, 12], {})]
     test__get_all_data.assert_not_called()
     test__get_current_trigger_data.assert_called_once()
 
@@ -422,10 +422,10 @@ def test__get_data_reset_nolimit_partitions(test__get_all_data: MagicMock, test_
     conf = get_config()
     conf["reset_after_trigger"] = True
 
-    test__get_current_trigger_data.return_value = [[10, 11, 12], [13, 14, 15]]
+    test__get_current_trigger_data.return_value = [([10, 11, 12], {}), ([13, 14, 15], {})]
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
-    assert list(strat._get_data_reset()) == [[10, 11, 12], [13, 14, 15]]
+    assert list(strat._get_data_reset()) == [([10, 11, 12], {}), ([13, 14, 15], {})]
     test__get_all_data.assert_not_called()
     test__get_current_trigger_data.assert_called_once()
 
@@ -436,10 +436,10 @@ def test__get_data_reset_smalllimit(test__get_all_data: MagicMock, test__get_cur
     conf = get_config()
     conf["reset_after_trigger"] = True
     conf["limit"] = 2
-    test__get_current_trigger_data.return_value = [[10, 11, 12]]
+    test__get_current_trigger_data.return_value = [([10, 11, 12], {})]
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
-    keys = list(strat._get_data_reset())[0]
+    keys = list(strat._get_data_reset())[0][0]
     assert len(keys) == 2
     assert set(keys) < set([10, 11, 12])
     test__get_all_data.assert_not_called()
@@ -452,10 +452,10 @@ def test__get_data_reset_largelimit(test__get_all_data: MagicMock, test__get_cur
     conf = get_config()
     conf["reset_after_trigger"] = True
     conf["limit"] = 42
-    test__get_current_trigger_data.return_value = [[10, 11, 12]]
+    test__get_current_trigger_data.return_value = [([10, 11, 12], {})]
 
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
-    keys = list(strat._get_data_reset())[0]
+    keys = list(strat._get_data_reset())[0][0]
     assert len(keys) == 3
     assert set(keys) == set([10, 11, 12])
     test__get_all_data.assert_not_called()
@@ -471,10 +471,10 @@ def test__get_data_no_reset_nolimit(
     conf = get_config()
     conf["reset_after_trigger"] = False
 
-    test__get_all_data.return_value = [[10, 11, 12]]
+    test__get_all_data.return_value = [([10, 11, 12], {})]
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
-    assert list(strat._get_data_no_reset())[0] == [10, 11, 12]
+    assert list(strat._get_data_no_reset())[0][0] == [10, 11, 12]
     test__get_all_data.assert_called_once()
     test__get_current_trigger_data.assert_not_called()
     test__handle_limit_no_reset.assert_not_called()
@@ -492,10 +492,10 @@ def test__get_data_no_reset_limit(
     conf["limit_reset"] = "sampleUAR"
 
     test__handle_limit_no_reset.return_value = [10, 11]
-    test__get_all_data.return_value = [[10, 11, 12]]
+    test__get_all_data.return_value = [([10, 11, 12], {})]
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
-    assert list(strat._get_data_no_reset()) == [[10, 11]]
+    assert list(strat._get_data_no_reset())[0][0] == [10, 11]
     test__get_all_data.assert_called_once()
     test__get_current_trigger_data.assert_not_called()
     test__handle_limit_no_reset.assert_called_once()
@@ -513,10 +513,10 @@ def test__get_data_no_reset_limit_partitions(
     conf["limit_reset"] = "sampleUAR"
 
     test__handle_limit_no_reset.side_effect = lambda x: [x[0], x[1]]
-    test__get_all_data.return_value = [[10, 11, 12], [13, 14, 15]]
+    test__get_all_data.return_value = [([10, 11, 12], {}), ([13, 14, 15], {})]
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
-    assert list(strat._get_data_no_reset()) == [[10, 11], [13, 14]]
+    assert [data for data, _ in strat._get_data_no_reset()] == [[10, 11], [13, 14]]
     test__get_all_data.assert_called_once()
     test__get_current_trigger_data.assert_not_called()
     assert test__handle_limit_no_reset.call_count == 2
@@ -585,7 +585,7 @@ def test__get_current_trigger_data_no_partitions():
 
     strat.inform_data(data1, timestamps1, labels)
 
-    current_data = list(strat._get_current_trigger_data())[0]
+    current_data = list(strat._get_current_trigger_data())[0][0]
 
     assert set(current_data) == set(data1)
     strat.trigger()
@@ -594,7 +594,7 @@ def test__get_current_trigger_data_no_partitions():
     timestamps2 = list(range(10, 20))
 
     strat.inform_data(data2, timestamps2, labels)
-    current_data = list(strat._get_current_trigger_data())[0]
+    current_data = list(strat._get_current_trigger_data())[0][0]
 
     assert set(current_data) == set(data2)
 
@@ -608,7 +608,7 @@ def test__get_current_trigger_data_partitions():
 
     strat.inform_data(data1, timestamps1, labels)
 
-    current_data = list(strat._get_current_trigger_data())
+    current_data = [data for data, _ in strat._get_current_trigger_data()]
     assert len(current_data) == 10
     current_data = flatten(current_data)
 
@@ -619,7 +619,7 @@ def test__get_current_trigger_data_partitions():
     timestamps2 = list(range(10, 20))
 
     strat.inform_data(data2, timestamps2, labels)
-    current_data = list(strat._get_current_trigger_data())
+    current_data = [data for data, _ in strat._get_current_trigger_data()]
     assert len(current_data) == 10
     current_data = flatten(current_data)
 
@@ -636,7 +636,7 @@ def test__get_tail_triggers_data():
 
     strat.inform_data(data1, timestamps1, labels)
 
-    current_data = list(strat._get_tail_triggers_data())
+    current_data = [data for data, _ in strat._get_tail_triggers_data()]
     assert len(current_data) == 10
     current_data = flatten(current_data)
 
@@ -648,7 +648,7 @@ def test__get_tail_triggers_data():
     strat.trigger()
     strat.inform_data(data2, timestamps2, labels)
 
-    current_data = list(strat._get_tail_triggers_data())
+    current_data = [data for data, _ in strat._get_tail_triggers_data()]
     assert len(current_data) == 20
     current_data = flatten(current_data)
 
@@ -661,7 +661,7 @@ def test__get_tail_triggers_data():
     strat.inform_data(data3, timestamps3, labels)
 
     # since tail_trigger = 1 we should not get any point belonging to the first trigger
-    current_data = list(strat._get_tail_triggers_data())
+    current_data = [data for data, _ in strat._get_tail_triggers_data()]
     assert len(current_data) == 20
     current_data = flatten(current_data)
 
@@ -674,7 +674,7 @@ def test__get_tail_triggers_data():
     strat.inform_data(data4, timestamps4, labels)
 
     # since tail_trigger = 1 we should not get any point belonging to the first and second trigger
-    current_data = list(strat._get_tail_triggers_data())
+    current_data = [data for data, _ in strat._get_tail_triggers_data()]
     assert len(current_data) == 20
     current_data = flatten(current_data)
 
@@ -688,7 +688,7 @@ def test__get_all_data_no_partitions():
     labels = [0] * 10
 
     strat.inform_data(data1, timestamps1, labels)
-    all_data = list(strat._get_all_data())[0]
+    all_data = list(strat._get_all_data())[0][0]
 
     assert set(all_data) == set(data1)
     strat.trigger()
@@ -697,7 +697,7 @@ def test__get_all_data_no_partitions():
     timestamps2 = list(range(10, 20))
 
     strat.inform_data(data2, timestamps2, labels)
-    all_data = list(strat._get_all_data())[0]
+    all_data = list(strat._get_all_data())[0][0]
     assert all_data == data1 + data2
 
 
@@ -710,7 +710,7 @@ def test__get_all_data_partitions():
     labels = [0] * 10
 
     strat.inform_data(data1, timestamps1, labels)
-    all_data = list(strat._get_all_data())
+    all_data = [data for data, _ in strat._get_all_data()]
     assert len(all_data) == 10
     assert flatten(all_data) == data1
 
@@ -720,7 +720,7 @@ def test__get_all_data_partitions():
     timestamps2 = list(range(10, 20))
 
     strat.inform_data(data2, timestamps2, labels)
-    all_data = list(strat._get_all_data())
+    all_data = [data for data, _ in strat._get_all_data()]
     assert len(all_data) == 20
     assert flatten(all_data) == data1 + data2
 
@@ -739,7 +739,7 @@ def test__get_all_data_partitions_with_same_timestamp():
     labels = [0] * 10
 
     strat.inform_data(data1, timestamps1, labels)
-    all_data = list(strat._get_all_data())
+    all_data = [data for data, _ in strat._get_all_data()]
     assert len(all_data) == 10
     assert set(flatten(all_data)) == set(data1)
     assert len(flatten(all_data)) == len(data1)
@@ -750,7 +750,7 @@ def test__get_all_data_partitions_with_same_timestamp():
     timestamps2 = [21 for _ in range(10)]
 
     strat.inform_data(data2, timestamps2, labels)
-    all_data = list(strat._get_all_data())
+    all_data = [data for data, _ in strat._get_all_data()]
     assert len(all_data) == 20
     assert set(flatten(all_data)) == set(data1 + data2)
     assert len(flatten(all_data)) == len(data1 + data2)

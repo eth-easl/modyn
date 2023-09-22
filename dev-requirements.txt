@@ -10,4 +10,6 @@ autopep8
 isort
 black
 grpcio-tools
+grpcio # Linux
 mypy-protobuf
+pystack

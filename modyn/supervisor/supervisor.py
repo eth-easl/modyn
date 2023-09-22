@@ -1,10 +1,12 @@
+import json
 import logging
 import os
 import pathlib
 from time import sleep
-from typing import Optional
+from typing import Any, Optional
 
 import enlighten
+from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -38,13 +40,29 @@ class Supervisor:
         eval_directory: pathlib.Path,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
+        maximum_triggers: Optional[int] = None,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
         self.eval_directory = eval_directory
+        self.maximum_triggers = maximum_triggers
+        self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
+
+        self.pipeline_log: dict[str, Any] = {
+            "configuration": {"pipeline_config": pipeline_config, "modyn_config": modyn_config},
+            "supervisor": {
+                "triggers": {},
+                "new_data_requests": [],
+                "num_triggers": 0,
+                "trigger_batch_times": [],
+                "selector_informs": [],
+            },
+        }
+        self._sw = Stopwatch()
+        self._pipeline_log_file = eval_directory / "pipeline.log"
 
         self.progress_mgr = enlighten.get_manager()
         self.status_bar = self.progress_mgr.status_bar(
@@ -69,10 +87,15 @@ class Supervisor:
             raise ValueError("Invalid system configuration")
 
         if start_replay_at is None:
+            self.pipeline_log["experiment"] = False
             self.experiment_mode = False
             if stop_replay_at is not None:
                 raise ValueError("stop_replay_at can only be used in conjunction with start_replay_at.")
         else:
+            self.pipeline_log["experiment"] = True
+            self.pipeline_log["start_replay_at"] = start_replay_at
+            self.pipeline_log["stop_replay_at"] = stop_replay_at
+
             self.experiment_mode = True
             self.start_replay_at = start_replay_at
             self.stop_replay_at = stop_replay_at
@@ -272,8 +295,10 @@ class Supervisor:
 
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
+        continue_running = True
+
         try:
-            while True:
+            while continue_running:
                 self.status_bar.update(demo="Fetching new data")
                 trigger_occured = False
                 largest_keys = set()
@@ -295,6 +320,9 @@ class Supervisor:
 
                     if self._handle_new_data(new_data):
                         trigger_occured = True
+
+                    if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                        continue_running = False
 
                 previous_largest_keys = largest_keys
                 if not trigger_occured:
@@ -329,6 +357,9 @@ class Supervisor:
             self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
             pbar.update(self._selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
+            if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                logger.info(f"Reached trigger limit ({self.maximum_triggers}), exiting.")
+                break
 
         self.status_bar.update(demo="New data handled")
         pbar.clear(flush=True)
@@ -337,15 +368,26 @@ class Supervisor:
         return any_training_triggered
 
     def _handle_new_data_batch(self, batch: list[tuple[int, int, int]]) -> bool:
+        self._sw.start("trigger_inform", overwrite=True)
         triggering_indices = self.trigger.inform(batch)
+        num_triggers = len(triggering_indices)
+        self.pipeline_log["supervisor"]["num_triggers"] += len(triggering_indices)
+        self.pipeline_log["supervisor"]["trigger_batch_times"].append(
+            {"batch_size": len(batch), "time": self._sw.stop("trigger_inform"), "num_triggers": num_triggers}
+        )
 
-        if len(triggering_indices) > 0:
+        if num_triggers > 0:
             self.status_bar.update(demo="Handling triggers")
-            logger.info(f"There are {len(triggering_indices)} triggers in this batch.")
+            logger.info(f"There are {num_triggers} triggers in this batch.")
             self._handle_triggers_within_batch(batch, triggering_indices)
             return True
 
-        self.grpc.inform_selector(self.pipeline_id, batch)
+        self._sw.start("selector_inform", overwrite=True)
+        selector_log = self.grpc.inform_selector(self.pipeline_id, batch)
+        self.pipeline_log["supervisor"]["selector_informs"].append(
+            {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
+        )
+
         return False
 
     def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
@@ -359,7 +401,14 @@ class Supervisor:
             # the data point that caused the trigger and then also notifies it about the triggering.
             # This means the next training call on trigger_id will guarantee
             # that all data until that point has been processed by the selector.
-            trigger_id = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
+            self._sw.start("selector_inform", overwrite=True)
+            trigger_id, selector_log = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
+            self.pipeline_log["supervisor"]["triggers"][trigger_id] = {
+                "total_selector_time": self._sw.stop(),
+                "selector_log": selector_log,
+            }
+            self._persist_pipeline_log()
+
             self.status_bar.update(demo="Training")
             self._run_training(trigger_id)  # Blocks until training is done.
             self.status_bar.update(demo="Handling triggers")
@@ -374,20 +423,38 @@ class Supervisor:
                     # These data points will be included in the next trigger
                     # because we inform the Selector about them,
                     # just like other batches with no trigger at all are included.
-                    self.grpc.inform_selector(self.pipeline_id, remaining_data)
+                    self._sw.start("selector_inform", overwrite=True)
+                    selector_log = self.grpc.inform_selector(self.pipeline_id, remaining_data)
+                    self.pipeline_log["supervisor"]["selector_informs"].append(
+                        {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
+                    )
+
+            self._persist_pipeline_log()
+
+            self.num_triggers = self.num_triggers + 1
+            if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                break
 
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
         logger.info(f"Running training for trigger {trigger_id}")
-
+        self._sw.start("train", overwrite=True)
         self.current_training_id = self.grpc.start_training(
             self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model_id
         )
-        self.grpc.wait_for_training_completion(self.current_training_id, self.pipeline_id, trigger_id)
+        trainer_log = self.grpc.wait_for_training_completion(self.current_training_id, self.pipeline_id, trigger_id)
+
+        if trigger_id not in self.pipeline_log["supervisor"]["triggers"]:
+            self.pipeline_log["supervisor"]["triggers"][trigger_id] = {}  # can happen in tests
+
+        self.pipeline_log["supervisor"]["triggers"][trigger_id]["total_trainer_time"] = self._sw.stop()
+        self.pipeline_log["supervisor"]["triggers"][trigger_id]["trainer_log"] = trainer_log
 
         # We store the trained model for evaluation in any case.
+        self._sw.start("store_trained_model", overwrite=True)
         trained_model_id = self.grpc.store_trained_model(self.current_training_id)
+        self.pipeline_log["supervisor"]["triggers"][trigger_id]["store_trained_model_time"] = self._sw.stop()
 
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
         if self.pipeline_config["training"]["use_previous_model"]:
@@ -395,6 +462,7 @@ class Supervisor:
 
         # Start evaluation
         if "evaluation" in self.pipeline_config:
+            # TODO(#300) Add evaluator to pipeline log
             evaluations = self.grpc.start_evaluation(trained_model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
@@ -423,10 +491,27 @@ class Supervisor:
         else:
             generator = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
 
-        for replay_data in generator:
+        for replay_data, request_time in generator:
+            assert isinstance(replay_data, list)
+            assert isinstance(request_time, int)
+            self.pipeline_log["supervisor"]["new_data_requests"].append(
+                {"time": request_time, "num_items": len(replay_data)}
+            )
             self._handle_new_data(replay_data)
+            self._persist_pipeline_log()
+            if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                logger.info("Exiting replay loop due to trigger limit.")
+                break
 
         self.status_bar.update(demo="Replay done")
+
+    def _persist_pipeline_log(self) -> None:
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            json.dumps(self.pipeline_log)  # Enforce serialization to catch issues
+            return  # But don't actually store in tests
+
+        with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
+            json.dump(self.pipeline_log, logfile, indent=4)
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
@@ -445,3 +530,4 @@ class Supervisor:
         self.status_bar.update(demo="Cleanup")
         logger.info("Pipeline done, unregistering.")
         self.grpc.unregister_pipeline_at_selector(self.pipeline_id)
+        self._persist_pipeline_log()

@@ -1,4 +1,3 @@
 #!/bin/bash
 MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
-# TODO(#31): activate conda environment here
 python $MODYNPATH/metadata_processor/metadata_processor_entrypoint.py "$@"

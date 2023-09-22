@@ -119,7 +119,7 @@ def test_dataset_size_various_scenarios():
     strat.inform_data(data1, timestamps1, labels1)
     trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 5  # 50% of presampling
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
     assert trigger_num_partitions == 1
 
@@ -135,7 +135,7 @@ def test_dataset_size_various_scenarios():
     assert presampling_strat.get_target_size(trigger_size, None) == 15  # 50% of presampling
 
     # only trigger data
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert all(int(key) >= 10 for (key, _) in strat.get_trigger_partition_keys(trigger_id, 0))
 
     # remove the trigger

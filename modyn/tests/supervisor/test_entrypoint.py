@@ -25,6 +25,7 @@ def noop_constructor_mock(
     eval_directory: pathlib.Path,
     start_replay_at: typing.Optional[int] = None,
     stop_replay_at: typing.Optional[int] = None,
+    maximum_triggers: typing.Optional[int] = None,
 ) -> None:
     pass
 

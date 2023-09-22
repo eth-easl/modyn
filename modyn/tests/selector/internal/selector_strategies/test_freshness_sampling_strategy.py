@@ -98,7 +98,7 @@ def test__on_trigger_first_trigger(
     test__get_trigger_data.return_value = []
     test__get_first_trigger_data.return_value = [[10, 11, 12, 13]]
 
-    result = list(strat._on_trigger())
+    result = [data for data, _ in strat._on_trigger()]
     assert len(result) == 1
     result = result[0]
 
@@ -126,7 +126,7 @@ def test__on_trigger_subsequent_trigger(
     test__get_trigger_data.return_value = [[10, 11, 12, 13]]
     test__get_first_trigger_data.return_value = []
 
-    result = list(strat._on_trigger())
+    result = [data for data, _ in strat._on_trigger()]
     assert len(result) == 1
     result = result[0]
 

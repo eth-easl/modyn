@@ -24,6 +24,7 @@ class TrainingInfo:
         selector_address: str,
         offline_dataset_path: str,
         final_checkpoint_path: pathlib.Path,
+        log_file_path: pathlib.Path,
         pretrained_model_path: Optional[pathlib.Path] = None,
     ) -> None:
         self.pipeline_id = request.pipeline_id
@@ -50,6 +51,7 @@ class TrainingInfo:
         self.use_pretrained_model = request.use_pretrained_model
         self.load_optimizer_state = request.load_optimizer_state
         self.pretrained_model_path = pretrained_model_path
+        self.log_file_path = log_file_path
 
         if self.use_pretrained_model:
             assert self.pretrained_model_path, "Inconsistent pretrained model configuration"

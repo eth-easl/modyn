@@ -130,17 +130,39 @@ class DataInformRequest(google.protobuf.message.Message):
 global___DataInformRequest = DataInformRequest
 
 @typing_extensions.final
+class DataInformResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    LOG_FIELD_NUMBER: builtins.int
+    @property
+    def log(self) -> global___JsonString: ...
+    def __init__(
+        self,
+        *,
+        log: global___JsonString | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["log", b"log"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["log", b"log"]) -> None: ...
+
+global___DataInformResponse = DataInformResponse
+
+@typing_extensions.final
 class TriggerResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     TRIGGER_ID_FIELD_NUMBER: builtins.int
+    LOG_FIELD_NUMBER: builtins.int
     trigger_id: builtins.int
+    @property
+    def log(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
         trigger_id: builtins.int = ...,
+        log: global___JsonString | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["trigger_id", b"trigger_id"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["log", b"log"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["log", b"log", "trigger_id", b"trigger_id"]) -> None: ...
 
 global___TriggerResponse = TriggerResponse
 

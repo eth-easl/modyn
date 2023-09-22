@@ -17,6 +17,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
+    DataInformResponse,
     GetNumberOfSamplesRequest,
     NumberOfSamplesResponse,
     PipelineResponse,
@@ -35,6 +36,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.utils import EvaluationStatusTracker
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     StartTrainingResponse,
     StoreFinalModelRequest,
@@ -245,7 +247,7 @@ def test_get_new_data_since(test_grpc_connection_established):
     with patch.object(handler.storage, "GetNewDataSince") as mock:
         mock.return_value = [GetNewDataSinceResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
 
-        result = list(handler.get_new_data_since("test_dataset", 21))
+        result = [data for data, _ in handler.get_new_data_since("test_dataset", 21)]
 
         assert result == [[(0, 41, 0), (1, 42, 1)]]
         mock.assert_called_once_with(GetNewDataSinceRequest(dataset_id="test_dataset", timestamp=21))
@@ -266,7 +268,7 @@ def test_get_new_data_since_batched(test_grpc_connection_established):
             GetNewDataSinceResponse(keys=[2, 3], timestamps=[42, 43], labels=[0, 1]),
         ]
 
-        result = list(handler.get_new_data_since("test_dataset", 21))
+        result = [data for data, _ in handler.get_new_data_since("test_dataset", 21)]
 
         assert result == [[(0, 41, 0), (1, 42, 1)], [(2, 42, 0), (3, 43, 1)]]
         mock.assert_called_once_with(GetNewDataSinceRequest(dataset_id="test_dataset", timestamp=21))
@@ -291,7 +293,7 @@ def test_get_data_in_interval(test_grpc_connection_established):
     with patch.object(handler.storage, "GetDataInInterval") as mock:
         mock.return_value = [GetDataInIntervalResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
 
-        result = list(handler.get_data_in_interval("test_dataset", 21, 45))
+        result = [data for data, _ in handler.get_data_in_interval("test_dataset", 21, 45)]
 
         assert result == [[(0, 41, 0), (1, 42, 1)]]
         mock.assert_called_once_with(
@@ -314,7 +316,7 @@ def test_get_data_in_interval_batched(test_grpc_connection_established):
             GetDataInIntervalResponse(keys=[2, 3], timestamps=[42, 43], labels=[0, 1]),
         ]
 
-        result = list(handler.get_data_in_interval("test_dataset", 21, 45))
+        result = [data for data, _ in handler.get_data_in_interval("test_dataset", 21, 45)]
 
         assert result == [[(0, 41, 0), (1, 42, 1)], [(2, 42, 0), (3, 43, 1)]]
         mock.assert_called_once_with(
@@ -388,13 +390,15 @@ def test_inform_selector(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
 
     with patch.object(handler.selector, "inform_data") as mock:
-        mock.return_value = None
+        mock.return_value = DataInformResponse(log=JsonString(value='{"1": 2}'))
 
-        handler.inform_selector(42, [(10, 42, 0), (11, 43, 1)])
+        log = handler.inform_selector(42, [(10, 42, 0), (11, 43, 1)])
 
         mock.assert_called_once_with(
             DataInformRequest(pipeline_id=42, keys=[10, 11], timestamps=[42, 43], labels=[0, 1])
         )
+
+        assert log == {"1": 2}
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
@@ -407,9 +411,11 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
 
     with patch.object(handler.selector, "inform_data_and_trigger") as mock:
-        mock.return_value = TriggerResponse(trigger_id=12)
+        mock.return_value = TriggerResponse(trigger_id=12, log=JsonString(value='{"1": 2}'))
 
-        assert 12 == handler.inform_selector_and_trigger(42, [(10, 42, 0), (11, 43, 1)])
+        trigger_id, log = handler.inform_selector_and_trigger(42, [(10, 42, 0), (11, 43, 1)])
+        assert trigger_id == 12
+        assert log == {"1": 2}
 
         mock.assert_called_once_with(
             DataInformRequest(pipeline_id=42, keys=[10, 11], timestamps=[42, 43], labels=[0, 1])
@@ -417,8 +423,10 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
 
     # Test empty trigger
     with patch.object(handler.selector, "inform_data_and_trigger") as mock:
-        mock.return_value = TriggerResponse(trigger_id=13)
-        assert 13 == handler.inform_selector_and_trigger(42, [])
+        mock.return_value = TriggerResponse(trigger_id=13, log=JsonString(value='{"1": 2}'))
+        trigger_id, log = handler.inform_selector_and_trigger(42, [])
+        assert 13 == trigger_id
+        assert log == {"1": 2}
 
         mock.assert_called_once_with(DataInformRequest(pipeline_id=42, keys=[], timestamps=[], labels=[]))
 
@@ -505,11 +513,17 @@ def test_wait_for_training_completion(test_connection_established):
                 handler.trainer_server,
                 "get_training_status",
                 return_value=TrainingStatusResponse(
-                    valid=True, blocked=False, exception=None, state_available=False, is_running=False
+                    valid=True,
+                    blocked=False,
+                    exception=None,
+                    state_available=False,
+                    is_running=False,
+                    log=TrainerJsonString(value='{"a": 1}'),
                 ),
             ) as avail_method:
-                handler.wait_for_training_completion(42, 21, 22)
+                log = handler.wait_for_training_completion(42, 21, 22)
                 avail_method.assert_called_once()
+                assert log == {"a": 1}
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

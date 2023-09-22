@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 import torch
+from modyn.models.coreset_methods_support import CoresetSupportingModule, EmbeddingRecorder
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
@@ -16,7 +17,7 @@ class DLRM:
         self.model.to(device)
 
 
-class DlrmModel(nn.Module):
+class DlrmModel(CoresetSupportingModule):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
@@ -124,3 +125,15 @@ class DlrmModel(nn.Module):
             numerical_input, self.reorder_categorical_input(categorical_input)
         )
         return self.top_model(from_bottom, bottom_mlp_output).squeeze()
+
+    # delegate the embedding handling to the top model
+    @property
+    def embedding(self) -> Optional[torch.Tensor]:
+        return self.top_model.embedding
+
+    @property
+    def embedding_recorder(self) -> EmbeddingRecorder:
+        return self.top_model.embedding_recorder
+
+    def get_last_layer(self) -> nn.Module:
+        return self.top_model.get_last_layer()

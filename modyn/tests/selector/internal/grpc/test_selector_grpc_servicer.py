@@ -170,7 +170,7 @@ def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
         mgr = SelectorManager(config)
         servicer = SelectorGRPCServicer(mgr, 8096)
         request = DataInformRequest(pipeline_id=0, keys=[10, 11], timestamps=[1, 2], labels=[0, 1])
-        test_inform_data_and_trigger.return_value = 42
+        test_inform_data_and_trigger.return_value = (42, {})
 
         response: TriggerResponse = servicer.inform_data_and_trigger(request, None)
         assert response.trigger_id == 42
