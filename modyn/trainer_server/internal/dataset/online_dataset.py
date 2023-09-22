@@ -195,7 +195,8 @@ class OnlineDataset(IterableDataset):
             return
 
         if "PYTEST_CURRENT_TEST" in os.environ:
-            return  # dont print in tests
+            json.dumps(self._log)  # Enforce serialization to catch issues
+            return  # But don't actually store in tests
 
         log_file = f"{self._log_path / str(worker_id)}.log"
         self._log["transform"] = self._sw.measurements.get("transform", 0)

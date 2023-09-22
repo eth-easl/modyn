@@ -504,7 +504,8 @@ class Supervisor:
 
     def _persist_pipeline_log(self) -> None:
         if "PYTEST_CURRENT_TEST" in os.environ:
-            return  # dont print in tests
+            json.dumps(self._log)  # Enforce serialization to catch issues
+            return  # But don't actually store in tests
 
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)

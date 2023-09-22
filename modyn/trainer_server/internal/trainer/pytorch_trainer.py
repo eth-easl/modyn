@@ -173,7 +173,8 @@ class PytorchTrainer:
 
     def _persist_pipeline_log(self) -> None:
         if "PYTEST_CURRENT_TEST" in os.environ:
-            return  # dont print in tests
+            json.dumps(self._log)  # Enforce serialization to catch issues
+            return  # But don't actually store in tests
 
         if self._log_file_path is not None:
             with open(self._log_file_path, "w", encoding="utf-8") as logfile:
@@ -453,11 +454,11 @@ class PytorchTrainer:
                 self._log["epochs"][epoch]["BatchTimings"] = batch_timings
 
             batch_timings = np.array(batch_timings)
-            self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings)
-            self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings)
-            self._log["epochs"][epoch]["AvgFetchBatch"] = np.mean(batch_timings)
-            self._log["epochs"][epoch]["MedianFetchBatch"] = np.median(batch_timings)
-            self._log["epochs"][epoch]["StdFetchBatch"] = np.std(batch_timings)
+            self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings).item()
+            self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings).item()
+            self._log["epochs"][epoch]["AvgFetchBatch"] = np.mean(batch_timings).item()
+            self._log["epochs"][epoch]["MedianFetchBatch"] = np.median(batch_timings).item()
+            self._log["epochs"][epoch]["StdFetchBatch"] = np.std(batch_timings).item()
             del batch_timings
 
             self._log["epochs"][epoch]["TotalFetchBatch"] = stopw.measurements.get("FetchBatch", 0)
