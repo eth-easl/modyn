@@ -462,7 +462,7 @@ class Supervisor:
 
         # Start evaluation
         if "evaluation" in self.pipeline_config:
-            # TODO(create issue): Add evaluator to pipeline log
+            # TODO(#300) Add evaluator to pipeline log
             evaluations = self.grpc.start_evaluation(trained_model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
