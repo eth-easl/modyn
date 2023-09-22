@@ -508,6 +508,7 @@ def test__handle_triggers_within_batch(
     triggering_indices = [1, 3, 5]
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
+    test_inform_selector.return_value = {}
 
     sup._handle_triggers_within_batch(batch, triggering_indices)
 
@@ -539,6 +540,7 @@ def test__handle_triggers_within_batch_empty_triggers(
     triggering_indices = [-1, -1, 3]
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
+    test_inform_selector.return_value = {}
 
     sup._handle_triggers_within_batch(batch, triggering_indices)
 

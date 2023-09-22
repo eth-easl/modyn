@@ -453,9 +453,10 @@ class PytorchTrainer:
             if len(batch_timings) <= 100000:
                 self._log["epochs"][epoch]["BatchTimings"] = batch_timings
 
+            # mypy cannot handle np.min and np.max
             batch_timings = np.array(batch_timings)
-            self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings).item()
-            self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings).item()
+            self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings).item()  # type: ignore
+            self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings).item()  # type: ignore
             self._log["epochs"][epoch]["AvgFetchBatch"] = np.mean(batch_timings).item()
             self._log["epochs"][epoch]["MedianFetchBatch"] = np.median(batch_timings).item()
             self._log["epochs"][epoch]["StdFetchBatch"] = np.std(batch_timings).item()
