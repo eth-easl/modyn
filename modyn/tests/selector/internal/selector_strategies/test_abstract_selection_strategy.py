@@ -98,9 +98,9 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
     assert trigger_id == 0
     assert strat._next_trigger_id == 1
@@ -121,9 +121,9 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)], [(13, 1.0), (14, 1.0), (15, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0), (14, 1.0), (15, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
     assert trigger_id == 0
     assert strat._next_trigger_id == 1
@@ -148,9 +148,9 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
     assert trigger_id == 0
     assert trigger_id == 0
@@ -171,9 +171,9 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[(10, 1.0), (11, 1.0), (12, 1.0)], [(13, 1.0)]]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0)], {})]
 
-    trigger_id, trigger_num_keys, trigger_num_partitions = strat.trigger()
+    trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_id == 0
     assert trigger_num_keys == 4
     assert trigger_num_partitions == 2
@@ -309,7 +309,7 @@ def test_get_available_labels_reset():
         database.session.commit()
 
     abstr = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 1, 1000)
-
+    abstr._next_trigger_id += 1
     assert sorted(abstr.get_available_labels()) == [0, 1, 18]
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
@@ -329,7 +329,7 @@ def test_get_available_labels_reset():
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test_get_available_labels_no_reset():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        # first trigger
+        # first batch of data
         database.session.add(
             SelectorStateMetadata(pipeline_id=1, sample_key=0, seen_in_trigger_id=0, timestamp=0, label=1)
         )
@@ -346,10 +346,13 @@ def test_get_available_labels_no_reset():
 
     abstr = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 1, 1000)
 
+    assert sorted(abstr.get_available_labels()) == []
+    # simulate a trigger
+    abstr._next_trigger_id += 1
     assert sorted(abstr.get_available_labels()) == [0, 1, 18]
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        # second trigger
+        # another batch of data is inserted with just one more class
         database.session.add(
             SelectorStateMetadata(pipeline_id=1, sample_key=4, seen_in_trigger_id=1, timestamp=0, label=0)
         )
@@ -358,5 +361,7 @@ def test_get_available_labels_no_reset():
         )
         database.session.commit()
 
+    assert sorted(abstr.get_available_labels()) == [0, 1, 18]
+    # simulate a trigger
     abstr._next_trigger_id += 1
     assert sorted(abstr.get_available_labels()) == [0, 1, 18, 890]

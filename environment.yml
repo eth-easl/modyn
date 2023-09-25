@@ -2,7 +2,7 @@
 # This contains all dependencies to run modyn and modyn itself, but not the dependencies to run the tests/development
 # By default, we disable CUDA to reduce the size of installed packages.
 # When deploying on a real system, please uncomment the according lines.
-# Furthermore, we need to separate the dependencies for the individual components, since not all components require all dependencies (e.g., only the trainer server needs PyTorch). This is issue #104.
+# Furthermore, we need to separate the dependencies for the individual components, since not all components require all dependencies (e.g., only the trainer server and evaluator need PyTorch). This is issue #104.
 
 name: modyn
 
@@ -26,6 +26,7 @@ dependencies:
   - pyaml
   - numpy
   - pandas
+  - tensorboard
   - pyftpdlib
   - types-protobuf
   - types-psycopg2

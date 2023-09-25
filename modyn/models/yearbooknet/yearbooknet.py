@@ -1,6 +1,7 @@
 from typing import Any
 
 import torch
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 
 
@@ -17,7 +18,7 @@ class YearbookNet:
         self.model.to(device)
 
 
-class YearbookNetModel(nn.Module):
+class YearbookNetModel(CoresetSupportingModule):
     def __init__(self, num_input_channels: int, num_classes: int) -> None:
         super().__init__()
         self.enc = nn.Sequential(
@@ -37,5 +38,8 @@ class YearbookNetModel(nn.Module):
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         data = self.enc(data)
         data = torch.mean(data, dim=(2, 3))
-
+        data = self.embedding_recorder(data)
         return self.classifier(data)
+
+    def get_last_layer(self) -> nn.Module:
+        return self.classifier

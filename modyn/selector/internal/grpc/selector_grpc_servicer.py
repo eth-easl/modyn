@@ -5,19 +5,17 @@ from typing import Iterable
 import grpc
 
 # pylint: disable=no-name-in-module
+from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString  # noqa: E402, E501
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     DataInformRequest,
-    Empty,
+    DataInformResponse,
     GetAvailableLabelsRequest,
     GetNumberOfPartitionsRequest,
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
     GetSelectionStrategyRequest,
     GetStatusBarScaleRequest,
-)
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString  # noqa: E402, E501
-from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
@@ -80,12 +78,12 @@ class SelectorGRPCServicer(SelectorServicer):
             batch_weights = [sample[1] for sample in batch]
             yield SamplesResponse(training_samples_subset=batch_keys, training_samples_weights=batch_weights)
 
-    def inform_data(self, request: DataInformRequest, context: grpc.ServicerContext) -> Empty:
+    def inform_data(self, request: DataInformRequest, context: grpc.ServicerContext) -> DataInformResponse:
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
         logger.info(f"[Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points")
 
-        self.selector_manager.inform_data(pipeline_id, keys, timestamps, labels)
-        return Empty()
+        log = self.selector_manager.inform_data(pipeline_id, keys, timestamps, labels)
+        return DataInformResponse(log=JsonString(value=json.dumps(log)))
 
     def inform_data_and_trigger(self, request: DataInformRequest, context: grpc.ServicerContext) -> TriggerResponse:
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
@@ -94,8 +92,8 @@ class SelectorGRPCServicer(SelectorServicer):
             + f"+ trigger at timestamp {timestamps[-1] if len(keys) > 0 else 'n/a'}"
         )
 
-        trigger_id = self.selector_manager.inform_data_and_trigger(pipeline_id, keys, timestamps, labels)
-        return TriggerResponse(trigger_id=trigger_id)
+        trigger_id, log = self.selector_manager.inform_data_and_trigger(pipeline_id, keys, timestamps, labels)
+        return TriggerResponse(trigger_id=trigger_id, log=JsonString(value=json.dumps(log)))
 
     def get_number_of_samples(  # pylint: disable-next=unused-argument
         self, request: GetNumberOfSamplesRequest, context: grpc.ServicerContext
@@ -164,7 +162,7 @@ class SelectorGRPCServicer(SelectorServicer):
         return SelectionStrategyResponse(
             downsampling_enabled=downsampling_enabled,
             strategy_name=name,
-            downsampler_config=SelectorJsonString(value=downsampler_config),
+            downsampler_config=JsonString(value=downsampler_config),
         )
 
     def seed_selector(  # pylint: disable-next=unused-argument

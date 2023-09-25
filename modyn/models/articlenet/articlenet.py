@@ -1,6 +1,7 @@
 from typing import Any
 
 import torch
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 from transformers import DistilBertModel
 
@@ -43,7 +44,7 @@ class DistilBertFeaturizer(DistilBertModel):
         return pooled_output
 
 
-class ArticleNetwork(nn.Module):
+class ArticleNetwork(CoresetSupportingModule):
     def __init__(self, num_classes: int) -> None:
         super().__init__()
         self.featurizer = DistilBertFeaturizer.from_pretrained("distilbert-base-uncased")
@@ -51,4 +52,8 @@ class ArticleNetwork(nn.Module):
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         embedding = self.featurizer(data)
+        embedding = self.embedding_recorder(embedding)
         return self.classifier(embedding)
+
+    def get_last_layer(self) -> nn.Module:
+        return self.classifier

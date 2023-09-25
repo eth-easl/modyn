@@ -7,23 +7,24 @@ This document will deal with some more details of development and how to extend 
 ### Linting and Testing
 For an automatic execution of automatic formatting, linting, and testing, you can use the `compliance_check.sh` script in the project root. 
 This script runs isort, autopep8, black, mypy, pylint, and pytest.
-The script assumes that `conda` is available and if not, tries to activate it on `zsh` and `bash`.
-Furthermore, you must have created a conda environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
+The script assumes that `mamba` is available and if not, tries to activate it on `zsh` and `bash`.
+Furthermore, you must have created a mamba environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
 
-To run linters/formatters/pytest manually, make sure to enable the conda environment and then run the tools in your command line.
+To run linters/formatters/pytest manually, make sure to enable the mamba environment and then run the tools in your command line.
 To run integration tests, run the `./run_integrationtests.sh` script.
 This will take care of setting up all containers and running the tests.
 
-### Conda and Docker Setup
-We manage dependency required to run Modyn using conda.
+### Mamba and Docker Setup
+We manage dependency required to run Modyn using mamba.
+Mamba is a fast implementation of conda.
 All dependencies are listed in the `environment.yml` file in the project root.
 Development dependencies are managed in the `dev-requirements.txt` file in the project root.
 There are two ways to develop modyn locally.
-First, if not using Docker, you can install all dependencies and the Modyn module itself on your local machine via `conda env create -f ./environment.yml`, `pip install -e .`, and `pip install -r dev-requirements.txt`, as outlined in the README.
-Note that the `initial_setup.sh` scripts performs some adjustments to your conda and docker settings, depending on your local system (e.g., choose correct Pytorch channel when on macOS, or enable CUDA).
+First, if not using Docker, you can install all dependencies and the Modyn module itself on your local machine via `mamba env create -f ./environment.yml`, `pip install -e .`, and `pip install -r dev-requirements.txt`, as outlined in the README.
+Note that the `initial_setup.sh` scripts performs some adjustments to your mamba and docker settings, depending on your local system (e.g., choose correct Pytorch channel when on macOS, or enable CUDA).
 
 Second, you can use a Docker container.
-We provide a Modyn base container where the conda setup is already done. 
+We provide a Modyn base container where the mamba setup is already done. 
 You can find the Dockerfile in `docker/Base/Dockerfile` and build the image using `docker build -t modyn -f docker/Base/Dockerfile .`.
 Then, you can run a container for example using `docker run modyn /bin/bash`.
 

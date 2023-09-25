@@ -24,10 +24,10 @@ class SelectorStub(object):
             response_deserializer=selector__pb2.SamplesResponse.FromString,
         )
         self.inform_data = channel.unary_unary(
-            '/selector.Selector/inform_data',
-            request_serializer=selector__pb2.DataInformRequest.SerializeToString,
-            response_deserializer=selector__pb2.Empty.FromString,
-        )
+                '/selector.Selector/inform_data',
+                request_serializer=selector__pb2.DataInformRequest.SerializeToString,
+                response_deserializer=selector__pb2.DataInformResponse.FromString,
+                )
         self.inform_data_and_trigger = channel.unary_unary(
             '/selector.Selector/inform_data_and_trigger',
             request_serializer=selector__pb2.DataInformRequest.SerializeToString,
@@ -155,7 +155,7 @@ def add_SelectorServicer_to_server(servicer, server):
             'inform_data': grpc.unary_unary_rpc_method_handler(
                     servicer.inform_data,
                     request_deserializer=selector__pb2.DataInformRequest.FromString,
-                    response_serializer=selector__pb2.Empty.SerializeToString,
+                    response_serializer=selector__pb2.DataInformResponse.SerializeToString,
             ),
             'inform_data_and_trigger': grpc.unary_unary_rpc_method_handler(
                     servicer.inform_data_and_trigger,
@@ -254,10 +254,10 @@ class Selector(object):
                     timeout=None,
                     metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/inform_data',
-                                             selector__pb2.DataInformRequest.SerializeToString,
-                                             selector__pb2.Empty.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            selector__pb2.DataInformRequest.SerializeToString,
+            selector__pb2.DataInformResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def inform_data_and_trigger(request,

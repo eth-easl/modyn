@@ -355,6 +355,15 @@ properties:
         - port
         - ftp_port
         - offline_dataset_directory
+  tensorboard:
+    type: object
+    properties:
+      port:
+        type: string
+        description: |
+          The port on which tensorboard is run.
+    required:
+      - port
 required:
   - project
   - storage

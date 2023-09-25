@@ -14,12 +14,17 @@ Modyn is an open-source platform for model training on dynamic datasets, i.e., d
 ## ⚡️ Quickstart
 
 For deploying and running integration tests, you will need [Docker](https://docs.docker.com/get-docker/).
-Furthermore, we use [conda](https://docs.conda.io/en/latest/) for local environments and [tmuxp](https://github.com/tmux-python/tmuxp) for easily managing components panes (optional).
+Furthermore, we use [mamba](https://mamba.readthedocs.io/en/latest/) for local environments and [tmuxp](https://github.com/tmux-python/tmuxp) for easily managing components panes (optional).
 For local development, run
 ```bash
+# In case you don't have mamba yet
+curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
+bash Mambaforge-$(uname)-$(uname -m).sh
+
+# Start here if you have Mamba already
 ./initial_setup.sh
-conda env create -f ./environment.yml
-conda activate modyn
+mamba env create -f ./environment.yml
+mamba activate modyn
 pip install -e .
 pip install -r dev-requirements.txt
 ```
@@ -57,7 +62,7 @@ Training must incorporate data changes for high model quality, however this is o
 With Modyn, we are actively developing an open-source platform that manages dynamic datasets at scale and supports pluggable policies for when and what data to train on.
 Furthermore, we are developing a representative open-source benchmarking suite for ML training on dynamic datasets.
 
-The unit of execution in Modyn is a _pipeline_,.
+The unit of execution in Modyn is a _pipeline_.
 At minimum, a pipeline consists of (1) the model specification, (2) the training dataset, and a corresponding byte parsing function that defines how to convert raw sample bytes to model input, (3) the trigger policy, (4) the data selection policy, (5) training hyperparameters such as optimization criterion, optimizer, learning rate, batch size, and (6) training configuration such as data processing workers, whether to use automatic mixed precision, etc.
 Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.
 
