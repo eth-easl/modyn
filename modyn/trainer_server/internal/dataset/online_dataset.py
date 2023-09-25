@@ -224,7 +224,7 @@ class OnlineDataset(IterableDataset):
             self._next_partition_to_fetch not in self._data_threads
         ), f"Prefetching for partition {self._next_partition_to_fetch} has already been started"
 
-        self._thread_data_container[self._next_partition_to_fetch]: dict[str, Any] = {}
+        self._thread_data_container[self._next_partition_to_fetch] = {}
 
         self._data_threads[self._next_partition_to_fetch] = threading.Thread(
             target=self._get_data,
@@ -287,9 +287,9 @@ class OnlineDataset(IterableDataset):
             self._sw = Stopwatch()
 
         # Always reinitialize these structures for prefetching (for multiple epochs)
-        self._data_threads: dict[int, threading.Thread] = {}
-        self._thread_data_container: dict[str, Any] = {}
-        self._pref_started: dict[int, bool] = {}
+        self._data_threads = {}
+        self._thread_data_container = {}
+        self._pref_started = {}
         self._next_partition_to_fetch = 0
 
         assert self._transform is not None
