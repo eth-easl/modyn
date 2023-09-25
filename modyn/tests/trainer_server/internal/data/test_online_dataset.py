@@ -9,6 +9,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import SamplesResponse,
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetResponse
 from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
+from modyn.utils import flatten
 from torchvision import transforms
 
 
@@ -177,16 +178,27 @@ def test_get_data_from_storage(
         prefetched_partitions=0,
     )
     online_dataset._init_grpc()
-    assert online_dataset._get_data_from_storage(list(range(10))) == (
+    keys = []
+    data = []
+    labels = []
+
+    for key_list, data_list, label_list, _ in online_dataset._get_data_from_storage(list(range(10))):
+        keys.extend(key_list)
+        data.extend(data_list)
+        labels.extend(label_list)
+
+    assert (keys, data, labels)  == (
+        list(range(10)),
         [bytes(f"sample{x}", "utf-8") for x in range(10)],
         list(range(10)),
     )
 
-    permuted_list = [0, 9, 6, 5, 4, 3]
-    assert online_dataset._get_data_from_storage(permuted_list) == (
-        [b"sample0", b"sample9", b"sample6", b"sample5", b"sample4", b"sample3"],
-        [0, 9, 6, 5, 4, 3],
-    )
+    # TODO(create issue): readd when re-adding support for ordering in onlinedataset
+    #permuted_list = [0, 9, 6, 5, 4, 3]
+    #assert online_dataset._get_data_from_storage(permuted_list) == (
+    #    [b"sample0", b"sample9", b"sample6", b"sample5", b"sample4", b"sample3"],
+    #    [0, 9, 6, 5, 4, 3],
+    #)
 
 
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
@@ -254,7 +266,7 @@ def test_deserialize_torchvision_transforms(
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch.object(
-    OnlineDataset, "_get_data_from_storage", return_value=([bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10)
+    OnlineDataset, "_get_data_from_storage", return_value=[(list(range(10)),[bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10, 0)]
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(10)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -297,7 +309,7 @@ def test_dataset_iter(
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch.object(
-    OnlineDataset, "_get_data_from_storage", return_value=([bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10)
+    OnlineDataset, "_get_data_from_storage", return_value=[(list(range(10)), [bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10, 0)]
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(10)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -340,7 +352,7 @@ def test_dataset_iter_with_parsing(
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch.object(
-    OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(16)], [1] * 16)
+    OnlineDataset, "_get_data_from_storage", return_value=[(list(range(16)),[x.to_bytes(2, "big") for x in range(16)], [1] * 16,0)]
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(16)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -384,7 +396,7 @@ def test_dataloader_dataset(
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch.object(
-    OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(16)], [1] * 16)
+    OnlineDataset, "_get_data_from_storage", return_value=[(list(range(16)),[x.to_bytes(2, "big") for x in range(16)], [1] * 16,0)]
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(16)), [2.0] * 16))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -538,7 +550,7 @@ def test_init_transforms(
         tv_ds.assert_called_once()
 
 
-@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("prefetched_partitions", [0,1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
 @patch(
@@ -551,20 +563,20 @@ def test_init_transforms(
     OnlineDataset,
     "_get_data_from_storage",
     side_effect=[
-        ([x.to_bytes(2, "big") for x in range(16)], [1] * 16),
-        ([x.to_bytes(2, "big") for x in range(16, 32)], [1] * 16),
-        ([x.to_bytes(2, "big") for x in range(32, 48)], [1] * 16),
-        ([x.to_bytes(2, "big") for x in range(48, 64)], [1] * 16),
+        ([x for x in range(0,16)], [x.to_bytes(2, "big") for x in range(16)], [1] * 16, 0),
+        ([x for x in range(16,32)],[x.to_bytes(2, "big") for x in range(16, 32)], [1] * 16, 0),
+        ([x for x in range(32,48)],[x.to_bytes(2, "big") for x in range(32, 48)], [1] * 16, 0),
+        ([x for x in range(48,64)],[x.to_bytes(2, "big") for x in range(48, 64)], [1] * 16, 0),
     ],
 )
 @patch.object(
     SelectorKeySource,
     "get_keys_and_weights",
     side_effect=[
-        ([str(i) for i in range(16)], None),
-        ([str(i) for i in range(16, 32)], None),
-        ([str(i) for i in range(32, 48)], None),
-        ([str(i) for i in range(48, 64)], None),
+        ([i for i in range(16)], None),
+        ([i for i in range(16, 32)], None),
+        ([i for i in range(32, 48)], None),
+        ([i for i in range(48, 64)], None),
     ],
 )
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=4)
@@ -595,7 +607,7 @@ def test_iter_multi_partition(
     idx = 0
     for idx, batch in enumerate(dataloader):
         assert len(batch) == 3
-        assert batch[0] == (str(4 * idx), str(4 * idx + 1), str(4 * idx + 2), str(4 * idx + 3))
+        assert torch.equal(batch[0], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
         assert torch.equal(batch[1], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
     assert idx == 15

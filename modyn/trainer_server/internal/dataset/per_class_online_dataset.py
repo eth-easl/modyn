@@ -44,4 +44,4 @@ class PerClassOnlineDataset(OnlineDataset):
 
         if self.filtered_label != label:
             return None
-        return super()._get_data_tuple(key, sample, label, weight)
+        return super()._get_transformed_data_tuple(key, sample, label, weight)
