@@ -359,21 +359,20 @@ def test_register_pipeline_at_selector(test_grpc_connection_established):
         request: RegisterPipelineRequest = mock.call_args.args[0]
         assert request.num_workers == 2
         assert request.selection_strategy.value == "{}"
-        assert request.model_id == "ResNet18"
+        assert request.model_class_name == "ResNet18"
         assert request.model_configuration.value == "{}"
         assert request.amp
-        assert request.model_storage_strategy.full_model_strategy_config.name == "PyTorchFullModel"
-        assert request.model_storage_strategy.full_model_strategy_config.zip
-        assert request.model_storage_strategy.full_model_strategy_config.zip_algorithm == "ZIP_DEFLATED"
-        assert not request.model_storage_strategy.full_model_strategy_config.HasField("config")
-        assert request.model_storage_strategy.incremental_model_strategy_config.name == "WeightsDifference"
-        assert not request.model_storage_strategy.incremental_model_strategy_config.HasField("zip")
-        assert not request.model_storage_strategy.incremental_model_strategy_config.HasField("zip_algorithm")
+        assert request.model_storage_policy.full_model_strategy_config.name == "PyTorchFullModel"
+        assert request.model_storage_policy.full_model_strategy_config.zip
+        assert request.model_storage_policy.full_model_strategy_config.zip_algorithm == "ZIP_DEFLATED"
+        assert not request.model_storage_policy.full_model_strategy_config.HasField("config")
+        assert request.model_storage_policy.incremental_model_strategy_config.name == "WeightsDifference"
+        assert not request.model_storage_policy.incremental_model_strategy_config.HasField("zip")
+        assert not request.model_storage_policy.incremental_model_strategy_config.HasField("zip_algorithm")
         assert (
-            json.loads(request.model_storage_strategy.incremental_model_strategy_config.config.value)["operator"]
-            == "sub"
+            json.loads(request.model_storage_policy.incremental_model_strategy_config.config.value)["operator"] == "sub"
         )
-        assert request.model_storage_strategy.full_model_interval == 10
+        assert request.model_storage_policy.full_model_interval == 10
 
 
 def test_unregister_pipeline_at_selector():

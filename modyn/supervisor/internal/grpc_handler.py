@@ -229,7 +229,7 @@ class GRPCHandler:
                 model_storage_policy=ModelStoragePolicyInfo(
                     full_model_strategy_config=self.get_model_strategy(model_storage_config["full_model_strategy"]),
                     incremental_model_strategy_config=incremental_model_strategy,
-                    full_model_interval=full_model_interval
+                    full_model_interval=full_model_interval,
                 ),
             )
         ).pipeline_id
