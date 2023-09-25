@@ -28,4 +28,4 @@ RUN mkdir -p ./modyn/storage/build \
     && make -j8
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD mamba run -n modyn --no-capture-output ./modyn/storage/modyn-storage ./modyn/config/examples/modyn_config.yaml
+CMD ./modyn/storage/modyn-storage ./modyn/config/examples/modyn_config.yaml
