@@ -87,19 +87,24 @@ class OnlineDataset(IterableDataset):
     def change_key_source(self, source: AbstractKeySource) -> None:
         self._key_source = source
 
-    def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int]]:
+    def _get_data_from_storage(self, selector_keys: list[int]) -> tuple[list[bytes], list[int], list[int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
+        stopw = Stopwatch()
+        response_times = []
 
         data_from_storage: dict[int, tuple[bytes, int]] = {}
         response: GetResponse
+        stopw.start("ResponseTime", overwrite=True)
         for _, response in enumerate(self._storagestub.Get(req)):
+            response_times.append(stopw.stop("ResponseTime"))
             for key, sample, label in zip(response.keys, response.samples, response.labels):
                 data_from_storage[key] = (sample, label)
+            stopw.start("ResponseTime", overwrite=True)
 
         sample_list = [data_from_storage[key][0] for key in selector_keys]
         label_list = [data_from_storage[key][1] for key in selector_keys]
 
-        return sample_list, label_list
+        return sample_list, label_list, response_times
 
     def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
@@ -151,8 +156,9 @@ class OnlineDataset(IterableDataset):
 
         self._info("Getting data from storage", worker_id)
         self._sw.start(f"GetDataPart{partition_id}", overwrite=True)
-        data, labels = self._get_data_from_storage(keys)
+        data, labels, response_times = self._get_data_from_storage(keys)
         get_data_log["get_data"] = self._sw.stop(f"GetDataPart{partition_id}")
+        get_data_log["response_times"] = response_times
 
         self._log["partitions"][str(partition_id)] = get_data_log
 
