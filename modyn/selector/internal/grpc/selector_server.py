@@ -21,7 +21,7 @@ class SelectorServer:
 
     def prepare_server(self) -> grpc.server:
         server = grpc.server(
-            futures.ThreadPoolExecutor(max_workers=10),
+            futures.ThreadPoolExecutor(max_workers=64),
             options=[
                 ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
                 ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
