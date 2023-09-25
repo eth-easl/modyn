@@ -71,4 +71,22 @@ class Utils {
     return base_name + random_number_string + ".tmp";
   }
 };
+
+#define FAIL(msg) throw hashmap::utils::ModynException("ERROR at " __FILE__ ":" + std::to_string(__LINE__) + " " + (msg) + "\nExecution failed.")
+
+#define ASSERT(expr, msg)         \
+  if (!static_cast<bool>(expr)) { \
+    FAIL((msg));                  \
+  }                               \
+  static_assert(true, "End call of macro with a semicolon")
+
+class ModynException : public std::exception {
+ public:
+  explicit ModynException(std::string msg) : msg_{std::move(msg)} {}
+  const char* what() const noexcept override { return msg_.c_str(); }
+
+ private:
+  const std::string msg_;
+};
+
 }  // namespace storage

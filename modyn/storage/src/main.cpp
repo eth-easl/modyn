@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "storage.hpp"
+#include "internal/utils/utils.hpp"
 
 using namespace storage;
 
@@ -24,16 +25,14 @@ int main(int argc, char* argv[]) {
 
   auto parser = setup_argparser();
 
-  try {
-    parser.parse_args(argc, argv);
-  } catch (const std::runtime_error& err) {
-    SPDLOG_ERROR("{}", err.what());
-    exit(0);
-  }
+  parser.parse_args(argc, argv);
 
   std::string config_file = parser.get<std::string>("config");
 
   assert(std::filesystem::exists(config_file));
+  if (!std::filesystem::exists(config_file)) {
+    FAIL("Config file does not exist.");
+  }
 
   // Verify that the config file exists and is readable.
   YAML::Node config = YAML::LoadFile(config_file);
