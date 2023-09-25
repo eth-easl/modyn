@@ -14,13 +14,15 @@ class MockModel(torch.nn.Module):
         return data
 
 
-def test_save_model():
+def test_store_model():
     model = MockModel()
-    full_model_strategy = CompressedFullModel(zip_activated=False, zip_algorithm_name="", config={})
+    full_model_strategy = CompressedFullModel(
+        zipping_dir=pathlib.Path(), zip_activated=False, zip_algorithm_name="", config={}
+    )
     with tempfile.NamedTemporaryFile() as temporary_file:
         temp_file_path = pathlib.Path(temporary_file.name)
 
-        full_model_strategy.save_model(model.state_dict(), temp_file_path)
+        full_model_strategy.store_model(model.state_dict(), temp_file_path)
 
         with open(temp_file_path, "rb") as stored_model_file:
             assert stored_model_file.read() == b"\x00\x00\x80\x3f\x00\x00\x80\x3f"
@@ -28,7 +30,9 @@ def test_save_model():
 
 def test_load_model():
     model = MockModel()
-    full_model_strategy = CompressedFullModel(zip_activated=False, zip_algorithm_name="", config={})
+    full_model_strategy = CompressedFullModel(
+        zipping_dir=pathlib.Path(), zip_activated=False, zip_algorithm_name="", config={}
+    )
     with tempfile.NamedTemporaryFile() as temporary_file:
         temp_file_path = pathlib.Path(temporary_file.name)
 

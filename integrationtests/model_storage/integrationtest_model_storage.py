@@ -1,13 +1,14 @@
 # end-to-end testing of the model storage component
 import io
 import json
+import logging
 import pathlib
 import shutil
 
 import grpc
 import torch
 from integrationtests.utils import get_modyn_config
-from modyn.common.ftp import delete_file, download_file, upload_file
+from modyn.common.ftp import delete_file, download_trained_model, upload_file
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -95,8 +96,8 @@ def delete_data_from_database(config: dict, pipeline_id: int, trigger_id: int):
         database.session.commit()
 
 
-def check_loaded_model() -> None:
-    with open(TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP, "rb") as state_file:
+def check_loaded_model(path: pathlib.Path) -> None:
+    with open(path, "rb") as state_file:
         checkpoint = torch.load(io.BytesIO(state_file.read()))
 
     assert "model" in checkpoint, "Model state is not stored in file"
@@ -146,18 +147,19 @@ def test_model_storage(config: dict):
     assert response_fetch.success, "Could not find model with this id"
 
     # download the model (dummy file) from model storage
-    download_file(
-        config["model_storage"]["hostname"],
-        int(config["model_storage"]["ftp_port"]),
-        "modyn",
-        "modyn",
-        remote_file_path=pathlib.Path(response_fetch.model_path),
-        local_file_path=TEST_MODELS_PATH / TEST_FILE_NAME_LOCAL_RESP,
+    downloaded_path = download_trained_model(
+        logging.getLogger(__name__),
+        config["model_storage"],
+        remote_path=pathlib.Path(response_fetch.model_path),
         checksum=response_fetch.checksum,
+        identifier=42,
+        base_directory=TEST_MODELS_PATH,
     )
 
+    assert downloaded_path is not None
+
     # compare if content matches initial dummy file
-    check_loaded_model()
+    check_loaded_model(downloaded_path)
 
     # delete model on model storage component
     request_delete = DeleteModelRequest(model_id=model_id)

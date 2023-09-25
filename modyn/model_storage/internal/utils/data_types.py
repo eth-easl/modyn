@@ -1,9 +1,6 @@
 """
 This class provides useful functionalities for different data types and conversions between them.
 """
-import math
-from typing import BinaryIO
-
 import numpy as np
 import torch
 
@@ -20,8 +17,6 @@ torch_dtype_to_numpy_dict = {
     torch.complex128: np.complex128,
 }
 
-numpy_dtype_to_torch_dict = {value: key for (key, value) in torch_dtype_to_numpy_dict.items()}
-
 torch_dtype_to_byte_size = {
     torch.uint8: 1,
     torch.int8: 1,
@@ -36,16 +31,19 @@ torch_dtype_to_byte_size = {
 }
 
 
-def read_tensor_from_bytes(tensor: torch.Tensor, bytestream: BinaryIO) -> torch.Tensor:
-    shape = tensor.shape
-    num_bytes = math.prod(shape) * torch_dtype_to_byte_size[tensor.dtype]
-    byte_data = bytestream.read(num_bytes)
+def read_tensor_from_bytes(tensor: torch.Tensor, buffer: bytes) -> torch.Tensor:
+    """
+    Reconstruct a tensor from bytes.
+
+    Args:
+        tensor: the template for the reconstructed tensor.
+        buffer: the serialized tensor information.
+
+    Returns:
+        Tensor: the reconstructed tensor.
+    """
     np_dtype = np.dtype(torch_dtype_to_numpy_dict[tensor.dtype])
-    return create_tensor(byte_data, np_dtype, shape)
-
-
-def create_tensor(buffer: bytes, dtype: np.dtype, shape: torch.Size) -> torch.Tensor:
-    dtype = dtype.newbyteorder("<")
-    np_array = np.frombuffer(buffer, dtype=dtype)
+    np_dtype = np_dtype.newbyteorder("<")
+    np_array = np.frombuffer(buffer, dtype=np_dtype)
     array_tensor = torch.tensor(np.array(np_array))
-    return torch.reshape(array_tensor, shape)
+    return torch.reshape(array_tensor, tensor.shape)

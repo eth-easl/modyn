@@ -13,9 +13,9 @@ class AbstractIncrementalModelStrategy(AbstractModelStorageStrategy, ABC):
     """
 
     @abstractmethod
-    def _save_model(self, model_state: dict, prev_model_state: dict, file_path: pathlib.Path) -> None:
+    def _store_model(self, model_state: dict, prev_model_state: dict, file_path: pathlib.Path) -> None:
         """
-        Stores the delta between to successive models.
+        Stores the delta between two successive models.
 
         Args:
             model_state: the newer model state.
@@ -24,14 +24,14 @@ class AbstractIncrementalModelStrategy(AbstractModelStorageStrategy, ABC):
         """
         raise NotImplementedError()
 
-    def save_model(self, model_state: dict, prev_model_state: dict, file_path: pathlib.Path) -> None:
+    def store_model(self, model_state: dict, prev_model_state: dict, file_path: pathlib.Path) -> None:
         if self.zip:
-            with tempfile.NamedTemporaryFile() as temporary_file:
+            with tempfile.NamedTemporaryFile(dir=self.zipping_dir) as temporary_file:
                 temp_file_path = pathlib.Path(temporary_file.name)
-                self._save_model(model_state, prev_model_state, temp_file_path)
+                self._store_model(model_state, prev_model_state, temp_file_path)
                 zip_file(temp_file_path, file_path, self.zip_algorithm, remove_file=False)
         else:
-            self._save_model(model_state, prev_model_state, file_path)
+            self._store_model(model_state, prev_model_state, file_path)
 
     @abstractmethod
     def _load_model(self, prev_model_state: dict, file_path: pathlib.Path) -> None:
@@ -46,7 +46,7 @@ class AbstractIncrementalModelStrategy(AbstractModelStorageStrategy, ABC):
 
     def load_model(self, prev_model_state: dict, file_path: pathlib.Path) -> None:
         if self.zip:
-            with tempfile.NamedTemporaryFile() as temporary_file:
+            with tempfile.NamedTemporaryFile(dir=self.zipping_dir) as temporary_file:
                 temp_file_path = pathlib.Path(temporary_file.name)
                 unzip_file(file_path, temp_file_path, compression=self.zip_algorithm, remove_file=False)
                 self._load_model(prev_model_state, temp_file_path)

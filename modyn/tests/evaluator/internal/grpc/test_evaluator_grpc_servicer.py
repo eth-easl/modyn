@@ -63,8 +63,8 @@ def setup():
             incremental_model_strategy=None,
             full_model_interval=None,
         )
-        database.add_trained_model(1, 10, "trained_model.modyn")
-        database.add_trained_model(1, 11, "trained_model2.modyn")
+        database.add_trained_model(1, 10, "trained_model.modyn", "trained_model.metadata")
+        database.add_trained_model(1, 11, "trained_model2.modyn", "trained_model.metadata")
 
 
 def teardown():

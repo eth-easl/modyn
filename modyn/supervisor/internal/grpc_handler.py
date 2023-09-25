@@ -29,7 +29,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
 )
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
-    ModelStorageStrategyInfo,
+    ModelStoragePolicyInfo,
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
     SeedSelectorRequest,
@@ -209,8 +209,13 @@ class GRPCHandler:
 
         model_storage_config = pipeline_config["model_storage"]
         incremental_model_strategy: Optional[StrategyConfig] = None
+        full_model_interval: Optional[int] = None
         if "incremental_model_strategy" in model_storage_config:
-            incremental_model_strategy = self.get_model_strategy(model_storage_config["incremental_model_strategy"])
+            incremental_strategy = model_storage_config["incremental_model_strategy"]
+            incremental_model_strategy = self.get_model_strategy(incremental_strategy)
+            full_model_interval = (
+                incremental_strategy["full_model_interval"] if "full_model_interval" in incremental_strategy else None
+            )
 
         pipeline_id = self.selector.register_pipeline(
             RegisterPipelineRequest(
@@ -218,15 +223,13 @@ class GRPCHandler:
                 selection_strategy=SelectorJsonString(
                     value=json.dumps(pipeline_config["training"]["selection_strategy"])
                 ),
-                model_id=pipeline_config["model"]["id"],
+                model_class_name=pipeline_config["model"]["id"],
                 model_configuration=SelectorJsonString(value=model_config),
                 amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
-                model_storage_strategy=ModelStorageStrategyInfo(
+                model_storage_policy=ModelStoragePolicyInfo(
                     full_model_strategy_config=self.get_model_strategy(model_storage_config["full_model_strategy"]),
                     incremental_model_strategy_config=incremental_model_strategy,
-                    full_model_interval=model_storage_config["full_model_interval"]
-                    if "full_model_interval" in model_storage_config
-                    else None,
+                    full_model_interval=full_model_interval
                 ),
             )
         ).pipeline_id

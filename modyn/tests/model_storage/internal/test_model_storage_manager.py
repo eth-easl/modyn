@@ -71,24 +71,24 @@ def get_mock_model_after() -> MockModel:
 
 
 def test_init():
-    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"))
+    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
 
     assert manager._modyn_config == get_modyn_config()
     assert manager._storage_dir == pathlib.Path("storage")
+    assert manager._ftp_dir == pathlib.Path("ftp")
 
 
-def test__get_previous_model():
+def test__get_parent_model():
     with MetadataDatabaseConnection(get_modyn_config()) as database:
-        database.add_trained_model(10, 2, "model.modyn")
+        model_id = database.add_trained_model(10, 2, "model.modyn", "model.metadata")
 
-    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"))
-    previous_model = manager._get_previous_model(10, 3)
-    assert previous_model and previous_model.trigger_id == 2
-    assert manager._get_previous_model(10, 2) is None
+    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
+    assert manager._get_parent_model_id(10, 3) == model_id
+    assert manager._get_parent_model_id(10, 2) is None
 
 
 def test__get_base_model_state():
-    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"))
+    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
     model_state = manager._get_base_model_state(1)
 
     assert len(model_state) == 122
@@ -97,43 +97,49 @@ def test__get_base_model_state():
 def test__reconstruct_model():
     mock_model = MockModel()
     model_state = mock_model.state_dict()
-    full_model_strategy = PyTorchFullModel(zip_activated=False, zip_algorithm_name="", config={})
-    incremental_model_strategy = WeightsDifference(zip_activated=False, zip_algorithm_name="", config={})
+    full_model_strategy = PyTorchFullModel(
+        zipping_dir=pathlib.Path("ftp"), zip_activated=False, zip_algorithm_name="", config={}
+    )
+    incremental_model_strategy = WeightsDifference(
+        zipping_dir=pathlib.Path("ftp"), zip_activated=False, zip_algorithm_name="", config={}
+    )
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_directory_path = pathlib.Path(temp_dir)
-        manager = ModelStorageManager(get_modyn_config(), temp_directory_path)
+        manager = ModelStorageManager(get_modyn_config(), temp_directory_path, pathlib.Path("ftp"))
 
         prev_model_file_name = "before.model"
-        full_model_strategy.save_model(model_state, temp_directory_path / prev_model_file_name)
+        full_model_strategy.store_model(model_state, temp_directory_path / prev_model_file_name)
 
         difference_model_file_name = "difference.model"
-        incremental_model_strategy.save_model(
+        incremental_model_strategy.store_model(
             get_mock_model_after().state_dict(), model_state, temp_directory_path / difference_model_file_name
         )
 
         with MetadataDatabaseConnection(get_modyn_config()) as database:
-            prev_model_id = database.add_trained_model(15, 3, prev_model_file_name)
-            curr_model_id = database.add_trained_model(15, 4, difference_model_file_name, parent_model=prev_model_id)
+            prev_model_id = database.add_trained_model(15, 3, prev_model_file_name, "model.metadata")
+            curr_model_id = database.add_trained_model(
+                15, 4, difference_model_file_name, "model.metadata", parent_model=prev_model_id
+            )
 
-        manager._reconstruct_model(curr_model_id, model_state, manager.get_model_storage_strategy(1))
+        manager._reconstruct_model(curr_model_id, model_state, manager.get_model_storage_policy(1))
 
         assert model_state["_weight"].item() == 3  # pylint: disable=unsubscriptable-object
 
 
 def test__handle_new_model_full():
     with MetadataDatabaseConnection(get_modyn_config()) as database:
-        database.add_trained_model(1, 4, "model.modyn")
+        database.add_trained_model(1, 4, "model.modyn", "model.metadata")
 
     mock_model = MockModel()
     model_state = mock_model.state_dict()
 
-    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"))
+    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
 
     with tempfile.NamedTemporaryFile() as temporary_file:
         temp_file_path = pathlib.Path(temporary_file.name)
 
-        parent_id = manager._handle_new_model(1, 5, model_state, temp_file_path, manager.get_model_storage_strategy(1))
+        parent_id = manager._handle_new_model(1, 5, model_state, temp_file_path, manager.get_model_storage_policy(1))
         assert parent_id is None
 
         loaded_state = torch.load(temp_file_path)
@@ -142,17 +148,17 @@ def test__handle_new_model_full():
 
 @patch.object(ModelStorageManager, "_get_base_model_state", return_value=MockModel().state_dict())
 @patch.object(ModelStorageManager, "_reconstruct_model")
-@patch.object(ModelStorageManager, "_get_previous_model", return_value=TrainedModel(model_id=101))
+@patch.object(ModelStorageManager, "_get_parent_model_id", return_value=101)
 def test__handle_new_model_incremental(
     previous_model_mock, reconstruct_model_mock: MagicMock, base_model_state_mock: MagicMock
 ):
-    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"))
+    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
 
     with tempfile.NamedTemporaryFile() as temporary_file:
         temp_file_path = pathlib.Path(temporary_file.name)
 
         parent_id = manager._handle_new_model(
-            5, 4, get_mock_model_after().state_dict(), temp_file_path, manager.get_model_storage_strategy(1)
+            5, 4, get_mock_model_after().state_dict(), temp_file_path, manager.get_model_storage_policy(1)
         )
 
         assert parent_id == 101
@@ -164,7 +170,7 @@ def test__handle_new_model_incremental(
         previous_model_mock.assert_called_once_with(5, 4)
 
 
-def test_get_model_storage_strategy():
+def test_get_model_storage_policy():
     with MetadataDatabaseConnection(get_modyn_config()) as database:
         simple_pipeline = database.register_pipeline(
             74,
@@ -186,18 +192,18 @@ def test_get_model_storage_strategy():
             75, "ResNet18", json.dumps({"num_classes": 10}), True, full_model_strategy, inc_model_strategy, 10
         )
 
-    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"))
+    manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
 
-    strategy = manager.get_model_storage_strategy(simple_pipeline)
-    assert strategy.incremental_model_strategy is None
-    assert strategy.full_model_interval is None
-    assert not strategy.full_model_strategy.zip
+    policy = manager.get_model_storage_policy(simple_pipeline)
+    assert policy.incremental_model_strategy is None
+    assert policy.full_model_interval is None
+    assert not policy.full_model_strategy.zip
 
-    complex_strategy = manager.get_model_storage_strategy(complex_pipeline)
-    assert complex_strategy.full_model_strategy.zip
-    assert complex_strategy.full_model_strategy.zip_algorithm == ZIP_DEFLATED
-    assert complex_strategy.incremental_model_strategy
-    assert not complex_strategy.incremental_model_strategy.zip
+    complex_policy = manager.get_model_storage_policy(complex_pipeline)
+    assert complex_policy.full_model_strategy.zip
+    assert complex_policy.full_model_strategy.zip_algorithm == ZIP_DEFLATED
+    assert complex_policy.incremental_model_strategy
+    assert not complex_policy.incremental_model_strategy.zip
 
 
 @patch("modyn.model_storage.internal.model_storage_manager.current_time_millis", return_value=100)
@@ -205,15 +211,13 @@ def test_get_model_storage_strategy():
 def test_store_model(base_model_mock, current_time_mock):
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_directory_path = pathlib.Path(temp_dir)
-        manager = ModelStorageManager(get_modyn_config(), temp_directory_path)
+        manager = ModelStorageManager(get_modyn_config(), temp_directory_path, temp_directory_path)
 
         with MetadataDatabaseConnection(get_modyn_config()) as database:
-            parent_id = database.add_trained_model(1, 128, "before.model")
+            parent_id = database.add_trained_model(1, 128, "before.model", "before.metadata")
 
-        model_storage_strategy = manager.get_model_storage_strategy(1)
-        model_storage_strategy.full_model_strategy.save_model(
-            MockModel().state_dict(), temp_directory_path / "before.model"
-        )
+        policy = manager.get_model_storage_policy(1)
+        policy.full_model_strategy.store_model(MockModel().state_dict(), temp_directory_path / "before.model")
 
         torch.save(
             {"model": get_mock_model_after().state_dict(), "metadata": True}, temp_directory_path / "model.modyn"
@@ -254,7 +258,7 @@ def test_store_model_resnet():
     resnet = ResNet18(model_configuration={"num_classes": 10}, device="cpu", amp=False)
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_directory_path = pathlib.Path(temp_dir)
-        manager = ModelStorageManager(get_modyn_config(), temp_directory_path)
+        manager = ModelStorageManager(get_modyn_config(), temp_directory_path, temp_directory_path)
 
         torch.save({"model": resnet.model.state_dict(), "metadata": True}, temp_directory_path / "model.modyn")
 
@@ -264,21 +268,22 @@ def test_store_model_resnet():
 
         original_state = resnet.model.state_dict()
         for layer_name, _ in loaded_state["model"].items():
-            assert torch.all(torch.eq(loaded_state["model"][layer_name], original_state[layer_name]))
+            original_layer = original_state[layer_name]  # pylint: disable=unsubscriptable-object
+            assert torch.all(torch.eq(loaded_state["model"][layer_name], original_layer))
 
 
 @patch.object(ModelStorageManager, "_get_base_model_state", return_value=MockModel().state_dict())
 def test_load_model(base_model_mock: MagicMock):
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_directory_path = pathlib.Path(temp_dir)
-        manager = ModelStorageManager(get_modyn_config(), temp_directory_path)
+        manager = ModelStorageManager(get_modyn_config(), temp_directory_path, temp_directory_path)
 
         model_file_name = "mock.model"
         with MetadataDatabaseConnection(get_modyn_config()) as database:
-            model_id = database.add_trained_model(1, 32, model_file_name)
+            model_id = database.add_trained_model(1, 32, model_file_name, "mock.metadata")
 
-        model_storage_strategy = manager.get_model_storage_strategy(1)
-        model_storage_strategy.full_model_strategy.save_model(
+        policy = manager.get_model_storage_policy(1)
+        policy.full_model_strategy.store_model(
             get_mock_model_after().state_dict(), temp_directory_path / model_file_name
         )
 
@@ -291,14 +296,14 @@ def test_load_model(base_model_mock: MagicMock):
 def test_load_model_metadata(base_model_mock: MagicMock):
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_directory_path = pathlib.Path(temp_dir)
-        manager = ModelStorageManager(get_modyn_config(), temp_directory_path)
+        manager = ModelStorageManager(get_modyn_config(), temp_directory_path, temp_directory_path)
 
         model_file_name = "mock.model"
         with MetadataDatabaseConnection(get_modyn_config()) as database:
             model_id = database.add_trained_model(1, 32, model_file_name, "mock.metadata.zip")
 
-        model_storage_strategy = manager.get_model_storage_strategy(1)
-        model_storage_strategy.full_model_strategy.save_model(
+        policy = manager.get_model_storage_policy(1)
+        policy.full_model_strategy.store_model(
             get_mock_model_after().state_dict(), temp_directory_path / model_file_name
         )
         torch.save({"metadata": True}, temp_directory_path / "mock.metadata")
@@ -314,20 +319,9 @@ def test_load_model_metadata(base_model_mock: MagicMock):
 def test_load_model_invalid(base_model_mock: MagicMock):
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_directory_path = pathlib.Path(temp_dir)
-        manager = ModelStorageManager(get_modyn_config(), temp_directory_path)
+        manager = ModelStorageManager(get_modyn_config(), temp_directory_path, temp_directory_path)
 
         assert manager.load_model(133, False) is None
-
-        model_file_name = "mock.model"
-        with MetadataDatabaseConnection(get_modyn_config()) as database:
-            model_id = database.add_trained_model(1, 23, model_file_name)
-
-        model_storage_strategy = manager.get_model_storage_strategy(1)
-        model_storage_strategy.full_model_strategy.save_model(
-            get_mock_model_after().state_dict(), temp_directory_path / model_file_name
-        )
-
-        assert manager.load_model(model_id, True) is None
 
 
 @patch.object(ModelStorageManager, "_get_base_model_state", return_value=MockModel().state_dict())
@@ -340,32 +334,28 @@ def test_delete_model(base_model_mock: MagicMock):
         temp_directory_path = pathlib.Path(temp_dir)
 
         with MetadataDatabaseConnection(get_modyn_config()) as database:
-            parent_id = database.add_trained_model(1, 52, "parent.modyn")
-            first_child_id = database.add_trained_model(1, 53, "child1.modyn", parent_model=parent_id)
-            second_child_id = database.add_trained_model(1, 54, "child2.modyn", parent_model=parent_id)
+            parent_id = database.add_trained_model(1, 52, "parent.modyn", "parent.metadata")
+            child_id = database.add_trained_model(1, 53, "child.modyn", "child.metadata", parent_model=parent_id)
 
-        manager = ModelStorageManager(get_modyn_config(), temp_directory_path)
-        model_storage_strategy = manager.get_model_storage_strategy(1)
-        model_storage_strategy.full_model_strategy.save_model(model_state, temp_directory_path / "parent.modyn")
-        model_storage_strategy.incremental_model_strategy.save_model(
-            model_state_after, model_state, temp_directory_path / "child1.modyn"
+        manager = ModelStorageManager(get_modyn_config(), temp_directory_path, temp_directory_path)
+        policy = manager.get_model_storage_policy(1)
+        policy.full_model_strategy.store_model(model_state, temp_directory_path / "parent.modyn")
+        torch.save({"metadata": True}, temp_directory_path / "parent.metadata")
+        policy.incremental_model_strategy.store_model(
+            model_state_after, model_state, temp_directory_path / "child.modyn"
         )
-        model_storage_strategy.incremental_model_strategy.save_model(
-            model_state_after, model_state, temp_directory_path / "child2.modyn"
-        )
+        torch.save({"metadata": True}, temp_directory_path / "child.metadata")
 
         success = manager.delete_model(parent_id)
+        assert not success
 
+        success = manager.delete_model(child_id)
+        assert success
+        assert not (temp_directory_path / "child.modyn").exists()
+        success = manager.delete_model(parent_id)
         assert success
         assert not (temp_directory_path / "parent.modyn").exists()
 
         with MetadataDatabaseConnection(get_modyn_config()) as database:
-            first_child: TrainedModel = database.session.get(TrainedModel, first_child_id)
-            second_child: TrainedModel = database.session.get(TrainedModel, second_child_id)
-
-            assert first_child.parent_model is None
-            assert second_child.parent_model is None
-
-        assert manager.load_model(first_child_id, False)["model"]["_weight"] == 3
-        assert manager.load_model(second_child_id, False)["model"]["_weight"] == 3
-        assert not manager.delete_model(-1)
+            assert not database.session.get(TrainedModel, child_id)
+            assert not database.session.get(TrainedModel, parent_id)

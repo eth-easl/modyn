@@ -63,7 +63,7 @@ class SelectorManager:
         self,
         num_workers: int,
         selection_strategy: str,
-        model_id: str,
+        model_class_name: str,
         model_config: str,
         amp: bool,
         full_model_strategy: ModelStorageStrategyConfig,
@@ -84,7 +84,7 @@ class SelectorManager:
             with MetadataDatabaseConnection(self._modyn_config) as database:
                 pipeline_id = database.register_pipeline(
                     num_workers,
-                    model_id,
+                    model_class_name,
                     model_config,
                     amp,
                     full_model_strategy,

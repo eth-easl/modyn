@@ -51,16 +51,19 @@ def test_add_trained_model():
 
         assert pipeline_id == 1 and trigger_id == 5
 
-        model_id = database.add_trained_model(pipeline_id, trigger_id, "test_path.modyn")
+        model_id = database.add_trained_model(pipeline_id, trigger_id, "test_path.modyn", "test_path.metadata")
 
         model_parent: TrainedModel = database.session.get(TrainedModel, model_id)
 
         assert model_parent.model_id == 1
         assert model_parent.model_path == "test_path.modyn"
+        assert model_parent.metadata_path == "test_path.metadata"
         assert model_parent.pipeline_id == 1 and model_parent.trigger_id == 5
         assert model_parent.parent_model is None
 
-        model_id = database.add_trained_model(pipeline_id, 6, "test_path.modyn", parent_model=model_parent.model_id)
+        model_id = database.add_trained_model(
+            pipeline_id, 6, "test_path.modyn", "test_path.metadata", parent_model=model_parent.model_id
+        )
         model_child: TrainedModel = database.session.get(TrainedModel, model_id)
 
         assert model_child.parent_model == model_parent.model_id

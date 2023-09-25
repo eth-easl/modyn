@@ -23,7 +23,7 @@ def session():
 def test_add_pipeline(session):
     pipeline = Pipeline(
         num_workers=10,
-        model_id="ResNet18",
+        model_class_name="ResNet18",
         model_config=json.dumps({"num_classes": 10}),
         amp=True,
         full_model_strategy_name="PyTorchFullModel",
@@ -35,18 +35,22 @@ def test_add_pipeline(session):
 
     assert extracted_pipeline is not None
     assert extracted_pipeline.num_workers == 10
-    assert extracted_pipeline.model_id == "ResNet18"
+    assert extracted_pipeline.model_class_name == "ResNet18"
     assert json.loads(extracted_pipeline.model_config)["num_classes"] == 10
     assert extracted_pipeline.amp
     assert extracted_pipeline.full_model_strategy_name == "PyTorchFullModel"
-    assert extracted_pipeline.full_model_strategy_zip is None
+    assert not extracted_pipeline.full_model_strategy_zip
     assert extracted_pipeline.inc_model_strategy_name is None
     assert extracted_pipeline.full_model_strategy_config is None
 
 
 def test_update_pipeline(session):
     pipeline = Pipeline(
-        num_workers=10, model_id="ResNet18", model_config="{}", amp=True, full_model_strategy_name="PyTorchFullModel"
+        num_workers=10,
+        model_class_name="ResNet18",
+        model_config="{}",
+        amp=True,
+        full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)
     session.commit()
@@ -59,15 +63,19 @@ def test_update_pipeline(session):
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().num_workers == 20
     assert not session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().amp
 
-    pipeline.model_id = "test_model"
+    pipeline.model_class_name = "test_model"
     session.commit()
 
-    assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().model_id == "test_model"
+    assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().model_class_name == "test_model"
 
 
 def test_delete_pipeline(session):
     pipeline = Pipeline(
-        num_workers=10, model_id="ResNet18", model_config="{}", amp=False, full_model_strategy_name="PyTorchFullModel"
+        num_workers=10,
+        model_class_name="ResNet18",
+        model_config="{}",
+        amp=False,
+        full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)
     session.commit()

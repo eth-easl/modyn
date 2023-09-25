@@ -13,7 +13,7 @@ class AbstractFullModelStrategy(AbstractModelStorageStrategy, ABC):
     """
 
     @abstractmethod
-    def _save_model(self, model_state: dict, file_path: pathlib.Path) -> None:
+    def _store_model(self, model_state: dict, file_path: pathlib.Path) -> None:
         """
         Stores the model state to the given file.
 
@@ -23,14 +23,14 @@ class AbstractFullModelStrategy(AbstractModelStorageStrategy, ABC):
         """
         raise NotImplementedError()
 
-    def save_model(self, model_state: dict, file_path: pathlib.Path) -> None:
+    def store_model(self, model_state: dict, file_path: pathlib.Path) -> None:
         if self.zip:
-            with tempfile.NamedTemporaryFile() as temporary_file:
+            with tempfile.NamedTemporaryFile(dir=self.zipping_dir) as temporary_file:
                 temp_file_path = pathlib.Path(temporary_file.name)
-                self._save_model(model_state, temp_file_path)
+                self._store_model(model_state, temp_file_path)
                 zip_file(temp_file_path, file_path, self.zip_algorithm, remove_file=False)
         else:
-            self._save_model(model_state, file_path)
+            self._store_model(model_state, file_path)
 
     @abstractmethod
     def _load_model(self, base_model_state: dict, file_path: pathlib.Path) -> None:
@@ -45,7 +45,7 @@ class AbstractFullModelStrategy(AbstractModelStorageStrategy, ABC):
 
     def load_model(self, base_model_state: dict, file_path: pathlib.Path) -> None:
         if self.zip:
-            with tempfile.NamedTemporaryFile() as temporary_file:
+            with tempfile.NamedTemporaryFile(dir=self.zipping_dir) as temporary_file:
                 temp_file_path = pathlib.Path(temporary_file.name)
                 unzip_file(file_path, temp_file_path, compression=self.zip_algorithm, remove_file=False)
                 self._load_model(base_model_state, temp_file_path)

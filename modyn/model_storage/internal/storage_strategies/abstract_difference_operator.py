@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import BinaryIO
 
 import torch
 
@@ -27,13 +26,13 @@ class AbstractDifferenceOperator(ABC):
 
     @staticmethod
     @abstractmethod
-    def restore(tensor_prev: torch.Tensor, bytestream: BinaryIO) -> torch.Tensor:
+    def restore(tensor_prev: torch.Tensor, buffer: bytes) -> torch.Tensor:
         """
         Restores a weight tensor.
 
         Args:
             tensor_prev: the tensor representing some weights of the preceding model.
-            bytestream: difference bytes from which to restore the weights of the current model.
+            buffer: difference bytes, from which to restore the weights of the current model.
 
         Returns:
             tensor: the weight tensor of the current model.

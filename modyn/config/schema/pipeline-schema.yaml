@@ -84,12 +84,12 @@ properties:
             type: string
             description: |
               Which zip algorithm to use. Default is ZIP_DEFLATED.
+          full_model_interval:
+            type: number
+            description: |
+              In which interval we are using the full model strategy.
         required:
           - name
-      full_model_interval:
-        type: number
-        description: |
-          In which interval we are using the full model strategy.
     required:
       - full_model_strategy
   training:

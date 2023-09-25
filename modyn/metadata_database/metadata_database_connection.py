@@ -72,7 +72,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
     def register_pipeline(
         self,
         num_workers: int,
-        model_id: str,
+        model_class_name: str,
         model_config: str,
         amp: bool,
         full_model_strategy: ModelStorageStrategyConfig,
@@ -83,18 +83,20 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
 
         Args:
             num_workers (int): Number of workers in the pipeline.
-            model_id (str): the model name that is used by the pipeline.
+            model_class_name (str): the model class name that is used by the pipeline.
             model_config (str): the serialized model configuration options.
             amp (bool): whether amp is enabled for the model.
             full_model_strategy: the strategy used to store full models.
-            incremental_model_strategy: the strategy used to store models incrementally.
-            full_model_interval: interval between which the full model strategy is used.
+            incremental_model_strategy: the (optional) strategy used to store models incrementally.
+            full_model_interval: the (optional) interval between which the full model strategy is used. If not set,
+                                 the first model is stored according to the full model strategy, and the remaining
+                                 by using the incremental model strategy.
         Returns:
             int: Id of the newly created pipeline.
         """
         pipeline = Pipeline(
             num_workers=num_workers,
-            model_id=model_id,
+            model_class_name=model_class_name,
             model_config=model_config,
             amp=amp,
             full_model_strategy_name=full_model_strategy.name,
@@ -131,17 +133,18 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         pipeline_id: int,
         trigger_id: int,
         model_path: str,
-        metadata_path: Optional[str] = None,
+        metadata_path: str,
         parent_model: Optional[int] = None,
     ) -> int:
-        """Add a trained model to the database.
+        """Add a trained model to the database. Whenever the parent model is not specified, the model is expected to be
+        fully stored, i.e., by applying a full model strategy.
 
         Args:
             pipeline_id: id of the pipeline it was created from.
             trigger_id: id of the trigger it was created.
             model_path: path on the local filesystem on which the model is stored.
             metadata_path: the path on the local filesystem on which metadata to the model are stored.
-            parent_model: id of the parent model.
+            parent_model: (optional) id of the parent model.
         Returns:
             int: Id of the registered model
         """
@@ -164,7 +167,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             pipeline_id: id of the pipeline from which we want to extract the model.
 
         Returns:
-            (str, str, bool): the model id, its configuration options and if amp is enabled.
+            (str, str, bool): the model class name, its configuration options and if amp is enabled.
         """
         pipeline: Pipeline = self.session.query(Pipeline).get(pipeline_id)
-        return pipeline.model_id, pipeline.model_config, pipeline.amp
+        return pipeline.model_class_name, pipeline.model_config, pipeline.amp

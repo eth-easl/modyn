@@ -19,6 +19,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     DataInformResponse,
     GetNumberOfSamplesRequest,
+    JsonString,
     NumberOfSamplesResponse,
     PipelineResponse,
     RegisterPipelineRequest,
@@ -343,8 +344,11 @@ def test_register_pipeline_at_selector(test_grpc_connection_established):
                 "model": {"id": "ResNet18"},
                 "model_storage": {
                     "full_model_strategy": {"name": "PyTorchFullModel", "zip": True, "zip_algorithm": "ZIP_DEFLATED"},
-                    "incremental_model_strategy": {"name": "WeightsDifference", "config": {"operator": "sub"}},
-                    "full_model_interval": 10,
+                    "incremental_model_strategy": {
+                        "name": "WeightsDifference",
+                        "config": {"operator": "sub"},
+                        "full_model_interval": 10,
+                    },
                 },
             }
         )

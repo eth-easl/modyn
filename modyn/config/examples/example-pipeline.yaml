@@ -16,7 +16,7 @@ model_storage:
     config:
       operator: xor
       split_exponent: True
-  full_model_interval: 10
+    full_model_interval: 10
 training:
   gpus: 1
   device: "cpu"

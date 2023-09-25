@@ -214,6 +214,10 @@ properties:
         type: string
         description: |
           The port of the FDP server used by the model_storage component.
+      models_directory:
+        type: string
+        description: |
+          The directory where we store the trained models.
     required:
       - hostname
       - port

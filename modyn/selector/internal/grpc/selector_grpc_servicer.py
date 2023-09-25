@@ -5,7 +5,6 @@ from typing import Iterable, Optional
 import grpc
 
 # pylint: disable=no-name-in-module
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString  # noqa: E402, E501
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
@@ -17,6 +16,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetSamplesRequest,
     GetSelectionStrategyRequest,
     GetStatusBarScaleRequest,
+    JsonString,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
@@ -51,29 +51,29 @@ class SelectorGRPCServicer(SelectorServicer):
         logger.info(f"Registering pipeline with request - {str(request)}")
 
         full_model_strategy = self.get_model_storage_strategy_config(
-            request.model_storage_strategy.full_model_strategy_config
+            request.model_storage_policy.full_model_strategy_config
         )
 
         incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
         if (
-            request.model_storage_strategy.HasField("incremental_model_strategy_config")
-            and request.model_storage_strategy.incremental_model_strategy_config is not None
+            request.model_storage_policy.HasField("incremental_model_strategy_config")
+            and request.model_storage_policy.incremental_model_strategy_config is not None
         ):
             incremental_model_strategy = self.get_model_storage_strategy_config(
-                request.model_storage_strategy.incremental_model_strategy_config
+                request.model_storage_policy.incremental_model_strategy_config
             )
 
         full_model_interval: Optional[int] = None
         if (
-            request.model_storage_strategy.HasField("full_model_interval")
+            request.model_storage_policy.HasField("full_model_interval")
             and request.model_storage_strategy.full_model_interval is not None
         ):
-            full_model_interval = request.model_storage_strategy.full_model_interval
+            full_model_interval = request.model_storage_policy.full_model_interval
 
         pipeline_id = self.selector_manager.register_pipeline(
             request.num_workers,
             request.selection_strategy.value,
-            request.model_id,
+            request.model_class_name,
             request.model_configuration.value,
             request.amp,
             full_model_strategy,

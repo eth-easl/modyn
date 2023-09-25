@@ -11,7 +11,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402,
     GetSamplesRequest,
     GetSelectionStrategyRequest,
     JsonString,
-    ModelStorageStrategyInfo,
+    ModelStoragePolicyInfo,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
@@ -51,16 +51,14 @@ def test_register_pipeline(test_register_pipeline: MagicMock):
         config["selector"]["trigger_sample_directory"] = tmp_dir
         mgr = SelectorManager(config)
         servicer = SelectorGRPCServicer(mgr, 8096)
-        model_storage_strategy = ModelStorageStrategyInfo(
-            full_model_strategy_config=StrategyConfig(name="PyTorchFullModel")
-        )
+        policy = ModelStoragePolicyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
         request = RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value="strat"),
-            model_id="ResNet18",
+            model_class_name="ResNet18",
             model_configuration=JsonString(value="{}"),
             amp=True,
-            model_storage_strategy=model_storage_strategy,
+            model_storage_policy=policy,
         )
         test_register_pipeline.return_value = 42
 

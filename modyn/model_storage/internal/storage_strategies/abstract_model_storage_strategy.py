@@ -1,3 +1,4 @@
+import pathlib
 from abc import ABC, abstractmethod
 from zipfile import ZIP_DEFLATED
 
@@ -9,15 +10,17 @@ class AbstractModelStorageStrategy(ABC):
     Base class for all model storage strategies.
     """
 
-    def __init__(self, zip_activated: bool, zip_algorithm_name: str, config: dict):
+    def __init__(self, zipping_dir: pathlib.Path, zip_activated: bool, zip_algorithm_name: str, config: dict):
         """
         Initialize a model storage strategy.
 
         Args:
-            zip_activated: whether the generated file(s) are zipped.
+            zipping_dir: directory, in which the model is zipped.
+            zip_activated: whether the generated file is zipped.
             zip_algorithm_name: name of the zip algorithm.
             config: configuration options for the strategy.
         """
+        self.zipping_dir = zipping_dir
         self.zip = zip_activated
         self.zip_algorithm = ZIP_DEFLATED
         self._validate_zip_config(zip_algorithm_name)

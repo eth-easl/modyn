@@ -11,12 +11,6 @@ model_storage:
     name: "PyTorchFullModel"
     zip: True
     zip_algorithm: ZIP_DEFLATED
-  incremental_model_strategy:
-    name: "WeightsDifference"
-    config:
-      operator: xor
-      split_exponent: True
-  full_model_interval: 10
 training:
   gpus: 1
   device: "cuda:0"

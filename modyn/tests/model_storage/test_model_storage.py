@@ -1,4 +1,3 @@
-import pathlib
 import tempfile
 from unittest.mock import patch
 
@@ -11,7 +10,7 @@ def get_modyn_config():
 
 
 # pylint: disable=unused-argument
-def noop_setup_directories(self):
+def noop_setup_directory(self):
     pass
 
 
@@ -39,7 +38,8 @@ class MockGRPCServer(GRPCServer):
         pass
 
 
-@patch.object(ModelStorage, "_setup_model_storage_directories", noop_setup_directories)
+@patch.object(ModelStorage, "_init_model_storage_directory", noop_setup_directory)
+@patch.object(ModelStorage, "_setup_ftp_directory", noop_setup_directory)
 def test_model_storage_init():
     model_storage = ModelStorage(get_modyn_config())
     assert model_storage.config == get_modyn_config()
@@ -47,12 +47,11 @@ def test_model_storage_init():
 
 @patch("modyn.model_storage.model_storage.GRPCServer", MockGRPCServer)
 @patch("modyn.model_storage.model_storage.FTPServer", MockFTPServer)
-@patch("os.makedirs")
-def test_cleanup_at_exit(test_os_makedirs):
-    ftp_directory = pathlib.Path(tempfile.gettempdir()) / "ftp_model_storage"
-    assert not ftp_directory.exists()
-
-    model_storage = ModelStorage(get_modyn_config())
-    assert ftp_directory.exists()
-    model_storage.run()
-    assert not ftp_directory.exists()
+def test_cleanup_at_exit():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config = get_modyn_config()
+        config["model_storage"]["models_directory"] = temp_dir
+        model_storage = ModelStorage(config)
+        assert model_storage.ftp_directory.exists()
+        model_storage.run()
+        assert not model_storage.ftp_directory.exists()

@@ -32,15 +32,15 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
 
         Args:
             config (dict): Configuration of the storage module.
-            storage_dir (path): Path to the model storage directory.
-            ftp_dir (path): Path to the ftp directory.
+            storage_dir (path): Path to the directory, where the trained models are stored.
+            ftp_dir (path): Path to the temporary FTP directory, where the trained models are served.
         """
         super().__init__()
 
         self._config = config
         self.ftp_dir = ftp_dir
         self.storage_dir = storage_dir
-        self.model_storage_manager = ModelStorageManager(self._config, self.storage_dir)
+        self.model_storage_manager = ModelStorageManager(self._config, self.storage_dir, self.ftp_dir)
 
     def RegisterModel(self, request: RegisterModelRequest, context: grpc.ServicerContext) -> RegisterModelResponse:
         """Registers a new model at the model storage component by downloading it from a given server.
@@ -124,12 +124,9 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         model_id = request.model_id
         logger.info(f"Try to delete model having id {model_id}")
 
-        response = DeleteModelResponse()
         success = self.model_storage_manager.delete_model(model_id)
-
         if success:
             logger.info(f"Deleted model {request.model_id}.")
         else:
             logger.error(f"Deletion of model {request.model_id} was not successful.")
-        response.success = success
-        return response
+        return DeleteModelResponse(success=success)
