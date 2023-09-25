@@ -24,7 +24,7 @@ message MetricConfiguration {
 }
 
 message EvaluateModelRequest {
-  int32 trained_model_id  = 1;
+  int32 model_id  = 1;
   DatasetInfo dataset_info = 2;
   string device = 3;
   int32 batch_size = 4;

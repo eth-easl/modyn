@@ -117,9 +117,9 @@ def test_model_storage(config: dict):
     pipeline_id, trigger_id = insert_trigger_into_database(config)
 
     with MetadataDatabaseConnection(config) as database:
-        model_id, model_config, amp = database.get_model_configuration(pipeline_id)
+        model_class_name, model_config, amp = database.get_model_configuration(pipeline_id)
 
-    assert model_id == "ResNet18"
+    assert model_class_name == "ResNet18"
     assert json.loads(model_config) == {"num_classes": 10}
     assert not amp
 

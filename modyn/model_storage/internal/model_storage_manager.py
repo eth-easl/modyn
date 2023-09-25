@@ -130,11 +130,11 @@ class ModelStorageManager:
             dict: the plain model state derived from the model architecture of the pipeline's models.
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            model_id, model_config, amp = database.get_model_configuration(pipeline_id)
+            model_class_name, model_config, amp = database.get_model_configuration(pipeline_id)
         model_module = dynamic_module_import("modyn.models")
-        assert hasattr(model_module, model_id), f"Model {model_id} not available."
+        assert hasattr(model_module, model_class_name), f"Model {model_class_name} not available."
 
-        model_handler = getattr(model_module, model_id)
+        model_handler = getattr(model_module, model_class_name)
         return model_handler(json.loads(model_config), "cpu", amp).model.state_dict()
 
     def _reconstruct_model(self, model_id: int, model_state: dict, policy: ModelStoragePolicy) -> None:

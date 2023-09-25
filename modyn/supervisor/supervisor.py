@@ -453,17 +453,17 @@ class Supervisor:
 
         # We store the trained model for evaluation in any case.
         self._sw.start("store_trained_model", overwrite=True)
-        trained_model_id = self.grpc.store_trained_model(self.current_training_id)
+        model_id = self.grpc.store_trained_model(self.current_training_id)
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["store_trained_model_time"] = self._sw.stop()
 
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
         if self.pipeline_config["training"]["use_previous_model"]:
-            self.previous_model_id = trained_model_id
+            self.previous_model_id = model_id
 
         # Start evaluation
         if "evaluation" in self.pipeline_config:
             # TODO(#300) Add evaluator to pipeline log
-            evaluations = self.grpc.start_evaluation(trained_model_id, self.pipeline_config)
+            evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
             writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])

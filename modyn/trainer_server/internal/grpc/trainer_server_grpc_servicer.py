@@ -98,10 +98,10 @@ class TrainerServerGRPCServicer:
         logger.info("Received start training request.")
 
         with MetadataDatabaseConnection(self._config) as database:
-            model_id, model_config, amp = database.get_model_configuration(request.pipeline_id)
+            model_class_name, model_config, amp = database.get_model_configuration(request.pipeline_id)
 
-        if not hasattr(dynamic_module_import("modyn.models"), model_id):
-            logger.error(f"Model {model_id} not available!")
+        if not hasattr(dynamic_module_import("modyn.models"), model_class_name):
+            logger.error(f"Model {model_class_name} not available!")
             return StartTrainingResponse(training_started=False)
 
         pretrained_model_path: Optional[pathlib.Path] = None
@@ -142,7 +142,7 @@ class TrainerServerGRPCServicer:
         training_info = TrainingInfo(
             request,
             training_id,
-            model_id,
+            model_class_name,
             model_config,
             amp,
             self._storage_address,

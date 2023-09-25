@@ -92,7 +92,7 @@ def get_evaluation_info(
 ):
     model_dynamic_module_patch.return_value = MockModule()
     request = EvaluateModelRequest(
-        trained_model_id=1,
+        model_id=1,
         dataset_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=1),
         device="cpu",
         batch_size=4,

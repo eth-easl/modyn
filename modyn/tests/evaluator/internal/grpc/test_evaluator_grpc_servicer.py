@@ -124,7 +124,7 @@ def get_mock_evaluation_transformer():
 
 def get_evaluate_model_request():
     return EvaluateModelRequest(
-        trained_model_id=1,
+        model_id=1,
         dataset_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=1),
         device="cpu",
         batch_size=4,
@@ -146,7 +146,7 @@ def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict):
     return EvaluationInfo(
         request=get_evaluate_model_request(),
         evaluation_id=evaluation_id,
-        model_id="ResNet18",
+        model_class_name="ResNet18",
         amp=False,
         model_config="{}",
         storage_address=storage_address,
@@ -185,7 +185,7 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         req = get_evaluate_model_request()
-        req.trained_model_id = 15
+        req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
 
@@ -196,7 +196,7 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         assert evaluator._next_evaluation_id == 0
 
         req = get_evaluate_model_request()
-        req.trained_model_id = 2
+        req.model_id = 2
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
 

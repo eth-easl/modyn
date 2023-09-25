@@ -94,23 +94,23 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         logger.info("Received evaluate model request.")
 
         with MetadataDatabaseConnection(self._config) as database:
-            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, request.trained_model_id)
+            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, request.model_id)
 
             if not trained_model:
-                logger.error(f"Trained model {request.trained_model_id} does not exist!")
+                logger.error(f"Trained model {request.model_id} does not exist!")
                 return EvaluateModelResponse(evaluation_started=False)
-            model_id, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
+            model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
 
-        if not hasattr(dynamic_module_import("modyn.models"), model_id):
-            logger.error(f"Model {model_id} not available!")
+        if not hasattr(dynamic_module_import("modyn.models"), model_class_name):
+            logger.error(f"Model {model_class_name} not available!")
             return EvaluateModelResponse(evaluation_started=False)
 
-        fetch_request = FetchModelRequest(model_id=request.trained_model_id, load_metadata=False)
+        fetch_request = FetchModelRequest(model_id=request.model_id, load_metadata=False)
         fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
 
         if not fetch_resp.success:
             logger.error(
-                f"Trained model {request.trained_model_id} cannot be fetched from model storage. "
+                f"Trained model {request.model_id} cannot be fetched from model storage. "
                 f"Evaluation cannot be started."
             )
             return EvaluateModelResponse(evaluation_started=False)
@@ -143,7 +143,14 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
         metrics = self._setup_metrics(request.metrics)
         evaluation_info = EvaluationInfo(
-            request, evaluation_id, model_id, model_config, amp, self._storage_address, metrics, trained_model_path
+            request,
+            evaluation_id,
+            model_class_name,
+            model_config,
+            amp,
+            self._storage_address,
+            metrics,
+            trained_model_path,
         )
         self._evaluation_dict[evaluation_id] = evaluation_info
         self._run_evaluation(evaluation_id)

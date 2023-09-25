@@ -252,7 +252,7 @@ def test_start_training(test_getattr, test_hasattr, test_connect_to_model_storag
             trainer_server.start_training(get_start_training_request(), None)
             assert 1 in trainer_server._training_process_dict
             assert trainer_server._next_training_id == 2
-            assert trainer_server._training_dict[1].model_id == "model"
+            assert trainer_server._training_dict[1].model_class_name == "model"
             assert trainer_server._training_dict[1].model_configuration_dict == {}
             assert trainer_server._training_dict[1].amp
 

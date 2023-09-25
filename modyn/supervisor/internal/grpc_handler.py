@@ -511,7 +511,7 @@ class GRPCHandler:
 
         assert success, "Something went wrong while seeding the selector"
 
-    def start_evaluation(self, trained_model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusTracker]:
+    def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusTracker]:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
 
@@ -522,7 +522,7 @@ class GRPCHandler:
         for dataset in pipeline_config["evaluation"]["datasets"]:
             dataset_id = dataset["dataset_id"]
 
-            req = GRPCHandler._prepare_evaluation_request(dataset, trained_model_id, device)
+            req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
             response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
 
             if not response.evaluation_started:
@@ -535,7 +535,7 @@ class GRPCHandler:
         return evaluations
 
     @staticmethod
-    def _prepare_evaluation_request(dataset_config: dict, trained_model_id: int, device: str) -> EvaluateModelRequest:
+    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 
         if "transformations" in dataset_config:
@@ -573,7 +573,7 @@ class GRPCHandler:
             )
 
         start_evaluation_kwargs = {
-            "trained_model_id": trained_model_id,
+            "model_id": model_id,
             "dataset_info": DatasetInfo(dataset_id=dataset_id, num_dataloaders=dataloader_workers),
             "device": device,
             "batch_size": batch_size,

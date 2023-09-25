@@ -71,7 +71,7 @@ def test_add_trained_model():
         assert model_parent.children[0] == model_child
 
 
-def test_get_model_storage_strategy():
+def test_get_model_configuration():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
         pipeline_id = database.register_pipeline(
@@ -80,8 +80,8 @@ def test_get_model_storage_strategy():
 
         assert pipeline_id == 1
 
-        model_id, model_config, amp = database.get_model_configuration(pipeline_id)
+        model_class_name, model_config, amp = database.get_model_configuration(pipeline_id)
 
-        assert model_id == "ResNet18"
+        assert model_class_name == "ResNet18"
         assert json.loads(model_config) == {"num_classes": 10}
         assert amp

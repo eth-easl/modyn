@@ -557,7 +557,7 @@ def test_start_evaluation(test_connection_established):
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
     assert handler.evaluator is not None
 
-    trained_model_id = 10
+    model_id = 10
     pipeline_config = get_minimal_pipeline_config()
 
     with patch.object(
@@ -565,7 +565,7 @@ def test_start_evaluation(test_connection_established):
         "evaluate_model",
         return_value=EvaluateModelResponse(evaluation_started=True, evaluation_id=12, dataset_size=1000),
     ) as avail_method:
-        evaluations = handler.start_evaluation(trained_model_id, pipeline_config)
+        evaluations = handler.start_evaluation(model_id, pipeline_config)
 
         assert len(evaluations) == 1
         assert evaluations[12].dataset_id == "MNIST_eval"
@@ -577,7 +577,7 @@ def test__prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
     request = GRPCHandler._prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
 
-    assert request.trained_model_id == 23
+    assert request.model_id == 23
     assert request.device == "cpu"
     assert request.batch_size == 64
     assert request.dataset_info.dataset_id == "MNIST_eval"

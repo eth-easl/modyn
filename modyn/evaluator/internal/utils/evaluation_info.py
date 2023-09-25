@@ -17,14 +17,14 @@ class EvaluationInfo:
         self,
         request: EvaluateModelRequest,
         evaluation_id: int,
-        model_id: str,
+        model_class_name: str,
         model_config: str,
         amp: bool,
         storage_address: str,
         metrics: list[AbstractEvaluationMetric],
         model_path: pathlib.Path,
     ) -> None:
-        self.trained_model_id = request.trained_model_id
+        self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
 
@@ -33,9 +33,9 @@ class EvaluationInfo:
         self.batch_size = request.batch_size
         self.metrics = metrics
 
-        self.model_id = model_id
+        self.model_class_name = model_class_name
         model_module = dynamic_module_import("modyn.models")
-        self.model_handler = getattr(model_module, self.model_id)
+        self.model_handler = getattr(model_module, self.model_class_name)
         self.model_configuration_dict = json.loads(model_config)
 
         self.transform_list = list(request.transform_list)

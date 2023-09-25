@@ -8,7 +8,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     JsonString,
-    ModelStorageStrategyInfo,
+    ModelStoragePolicyInfo,
     RegisterPipelineRequest,
     SamplesResponse,
     StrategyConfig,
@@ -31,8 +31,8 @@ def connect_to_selector_servicer() -> grpc.Channel:
     return selector_channel
 
 
-def get_model_storage_strategy() -> ModelStorageStrategyInfo:
-    return ModelStorageStrategyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
+def get_model_storage_policy() -> ModelStoragePolicyInfo:
+    return ModelStoragePolicyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
 
 
 def test_label_balanced_presampling_huge() -> None:
@@ -53,10 +53,10 @@ def test_label_balanced_presampling_huge() -> None:
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -140,10 +140,10 @@ def test_label_balanced_force_same_size():
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -231,10 +231,10 @@ def test_label_balanced_force_all_samples():
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -328,10 +328,10 @@ def test_newdata() -> None:
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -474,10 +474,10 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -630,10 +630,10 @@ def test_empty_triggers() -> None:
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -805,10 +805,10 @@ def test_many_samples_evenly_distributed():
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -882,10 +882,10 @@ def test_many_samples_unevenly_distributed():
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
@@ -960,10 +960,10 @@ def test_get_available_labels(reset_after_trigger: bool):
         RegisterPipelineRequest(
             num_workers=2,
             selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_id="ResNet10",
+            model_class_name="ResNet10",
             model_configuration=JsonString(value="{}"),
             amp=False,
-            model_storage_strategy=get_model_storage_strategy(),
+            model_storage_policy=get_model_storage_policy(),
         )
     ).pipeline_id
 
