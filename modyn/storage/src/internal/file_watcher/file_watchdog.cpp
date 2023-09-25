@@ -117,7 +117,7 @@ void FileWatchdog::watch_file_watcher_processes(  // NOLINT (readability-convert
       // There is no FileWatcher process registered for this dataset. Start one.
       start_file_watcher_process(dataset_id, 0);
     } else if (file_watcher_process_retries_[dataset_id] > 2) {
-      // There have been more than 3 restart attempts for this process. Stop it.
+      // There have been more than 3 restart attempts for this dataset. Stop it.
       try {
         stop_file_watcher_process(dataset_id);
       } catch (const std::runtime_error& e) {
