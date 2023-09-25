@@ -249,6 +249,7 @@ class OnlineDataset(IterableDataset):
             assert self._pref_started[partition_id], f"Prefetching for partition {partition_id} has not been started"
             self._info(f"Joining thread for partition {partition_id}", worker_id)
             self._data_threads[partition_id].join()
+            self._info(f"Thread for partition {partition_id} joined", worker_id)
 
             container = self._thread_data_container[partition_id]
 
@@ -300,12 +301,17 @@ class OnlineDataset(IterableDataset):
         self._log["num_partitions"] = self._num_partitions
         self._prefetched_partitions = min(self._prefetched_partitions, self._num_partitions)
 
-        for partition in range(self._prefetched_partitions):
-            self._prefetch_partition(worker_id)
+        # Start prefetching first partition (avoid overloading by not fetching the other ones)
+        if self._prefetched_partitions > 0:
+            self._prefetch_partition(0)
 
         self._sw.start("wait_for_initial_partition", overwrite=True)
         keys, data, labels, weights = self._wait_for_partition(worker_id, 0)
         self._sw.stop("wait_for_initial_partition")
+
+        # Now prefetch next partitions
+        for partition in range(1, self._prefetched_partitions):
+            self._prefetch_partition(worker_id)
 
         for partition in range(self._num_partitions):
             self._persist_log(worker_id)
