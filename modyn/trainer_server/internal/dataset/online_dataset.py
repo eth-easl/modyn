@@ -1,12 +1,10 @@
-import gc
+import contextlib
 import json
 import logging
 import os
-import time
-import contextlib
 import pathlib
 import threading
-from typing import Any, Callable, Generator, Optional, Tuple, Union, Iterator
+from typing import Any, Callable, Generator, Iterator, Optional, Tuple
 
 import grpc
 from modyn.common.benchmark.stopwatch import Stopwatch
@@ -74,7 +72,7 @@ class OnlineDataset(IterableDataset):
         self._pref_started: dict[int, bool] = {}
         self._thread_data_container: dict[int, dict[str, Any]] = {}
         self._partition_locks: dict[int, threading.Lock] = {}
-        self._partition_signals: dict[int, threading.Condition] = {} # Should use the lock out of partition_locks
+        self._partition_signals: dict[int, threading.Condition] = {}  # Should use the lock out of partition_locks
         self._partition_valid_until: dict[int, int] = {}
         self._partition_valid: dict[int, bool] = {}
         self._next_partition_to_fetch = 0
@@ -134,8 +132,9 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-
-    def _get_data_from_storage(self, selector_keys: list[int]) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
+    def _get_data_from_storage(
+        self, selector_keys: list[int]
+    ) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
         stopw = Stopwatch()
 
@@ -144,8 +143,18 @@ class OnlineDataset(IterableDataset):
         for _, response in enumerate(self._storagestub.Get(req)):
             yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
             stopw.start("ResponseTime", overwrite=True)
-        
-    def _get_data(self, data_container: dict, worker_id: int, partition_id: int, partition_valid: Optional[dict], partition_valid_until: Optional[dict], partition_locks: Optional[dict], partition_signals:  Optional[dict]) -> None:
+
+    # pylint: disable=too-many-locals
+    def _get_data(
+        self,
+        data_container: dict,
+        worker_id: int,
+        partition_id: int,
+        partition_valid: Optional[dict],
+        partition_valid_until: Optional[dict],
+        partition_locks: Optional[dict],
+        partition_signals: Optional[dict],
+    ) -> None:
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
         keys, weights = self._key_source.get_keys_and_weights(worker_id, partition_id)
@@ -156,7 +165,7 @@ class OnlineDataset(IterableDataset):
         self._sw.start(f"GetDataPart{partition_id}", overwrite=True)
         all_response_times = []
 
-        key_weight_map = { key: weights[idx] for idx, key in enumerate(keys) } if weights is not None else None
+        key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
 
         for data_tuple in self._get_data_from_storage(keys):
             stor_keys, data, labels, response_time = data_tuple
@@ -166,7 +175,11 @@ class OnlineDataset(IterableDataset):
                 data_container["data"].extend(data)
                 data_container["keys"].extend(stor_keys)
                 data_container["labels"].extend(labels)
-                data_container["weights"].extend([key_weight_map[key] for key in stor_keys] if key_weight_map is not None else [None for _ in range(len(stor_keys))])
+                data_container["weights"].extend(
+                    [key_weight_map[key] for key in stor_keys]
+                    if key_weight_map is not None
+                    else [None for _ in range(len(stor_keys))]
+                )
                 if partition_valid_until is not None:
                     partition_valid_until[partition_id] += num_items
 
@@ -182,8 +195,9 @@ class OnlineDataset(IterableDataset):
             with partition_locks[partition_id]:
                 partition_valid[partition_id] = True
 
-
-    def _get_transformed_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
+    def _get_transformed_data_tuple(
+        self, key: int, sample: bytes, label: int, weight: Optional[float]
+    ) -> Optional[Tuple]:
         assert self._uses_weights is not None
         self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
@@ -221,15 +235,30 @@ class OnlineDataset(IterableDataset):
             self._next_partition_to_fetch not in self._data_threads
         ), f"Prefetching for partition {self._next_partition_to_fetch} has already been started"
 
-        self._thread_data_container[self._next_partition_to_fetch] = {"data": [], "keys": [], "labels": [], "weights": []}
+        self._thread_data_container[self._next_partition_to_fetch] = {
+            "data": [],
+            "keys": [],
+            "labels": [],
+            "weights": [],
+        }
         self._partition_valid[self._next_partition_to_fetch] = False
         self._partition_valid_until[self._next_partition_to_fetch] = -1
         self._partition_locks[self._next_partition_to_fetch] = threading.Lock()
-        self._partition_signals[self._next_partition_to_fetch] = threading.Condition(self._partition_locks[self._next_partition_to_fetch])
+        self._partition_signals[self._next_partition_to_fetch] = threading.Condition(
+            self._partition_locks[self._next_partition_to_fetch]
+        )
 
         self._data_threads[self._next_partition_to_fetch] = threading.Thread(
             target=self._get_data,
-            args=(self._thread_data_container[self._next_partition_to_fetch], worker_id, self._next_partition_to_fetch, self._partition_valid, self._partition_valid_until, self._partition_locks, self._partition_signals),
+            args=(
+                self._thread_data_container[self._next_partition_to_fetch],
+                worker_id,
+                self._next_partition_to_fetch,
+                self._partition_valid,
+                self._partition_valid_until,
+                self._partition_locks,
+                self._partition_signals,
+            ),
         )
 
         self._data_threads[self._next_partition_to_fetch].start()
@@ -256,32 +285,36 @@ class OnlineDataset(IterableDataset):
 
     def _get_partition_data(self, last_idx: int, max_idx: int, partition_id: int) -> Generator:
         for idx in range(last_idx + 1, max_idx + 1):
-            yield self._thread_data_container[partition_id]["keys"][idx], self._thread_data_container[partition_id]["data"][idx], self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id]["weights"][idx]
+            yield self._thread_data_container[partition_id]["keys"][idx], self._thread_data_container[partition_id][
+                "data"
+            ][idx], self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id][
+                "weights"
+            ][
+                idx
+            ]
 
     def _wait_for_new_partition_data(self, partition_id: int) -> None:
         with self._partition_signals[partition_id]:
-            self._partition_signals[partition_id].wait(1) # In case we do not get woken up, we at most waste a second
+            self._partition_signals[partition_id].wait(1)  # In case we do not get woken up, we at most waste a second
 
     def prefetched_partition_generator(self, worker_id: int, partition_id: int) -> Generator:
         assert self._pref_started[partition_id], f"Prefetching for partition {partition_id} has not been started"
         last_idx = -1
-       
-        while not self._is_partition_fetched(partition_id):
 
+        while not self._is_partition_fetched(partition_id):
             max_idx = self._partition_max_index(partition_id)
-            if max_idx <= last_idx: # No new data
+            if max_idx <= last_idx:  # No new data
                 self._wait_for_new_partition_data(partition_id)
 
             yield from self._get_partition_data(last_idx, max_idx, partition_id)
             last_idx = max_idx
-            
+
         # Yield potential remaining data
         self._info(f"Joining thread for partition {partition_id}", worker_id)
         self._data_threads[partition_id].join()
         self._info(f"Thread for partition {partition_id} joined", worker_id)
         max_idx = self._partition_max_index(partition_id)
         yield from self._get_partition_data(last_idx, max_idx, partition_id)
-        return
 
     def all_partition_generator(self, worker_id: int) -> Generator:
         for _ in range(self._prefetched_partitions):
@@ -299,10 +332,6 @@ class OnlineDataset(IterableDataset):
             else:
                 yield from self._fetch_partition_noprefetch(worker_id, partition_id)
 
-        
-
-
- 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
 
     def __iter__(self) -> Generator:
@@ -348,6 +377,7 @@ class OnlineDataset(IterableDataset):
         self._prefetched_partitions = min(self._prefetched_partitions, self._num_partitions)
 
         for data_tuple in self.all_partition_generator(worker_id):
-            if data_tuple is not None: # Can happen in subclasses overwriting generator
+            if data_tuple is not None:  # Can happen in subclasses overwriting generator
                 yield self._get_transformed_data_tuple(*data_tuple)
+
         self._persist_log(worker_id)
