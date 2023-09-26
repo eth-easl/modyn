@@ -13,6 +13,8 @@ python $SCRIPT_DIR/storage/integrationtest_storage.py
 python $SCRIPT_DIR/storage/integrationtest_storage_csv.py
 echo "Running selector integration tests"
 python $SCRIPT_DIR/selector/integrationtest_selector.py
+echo "Running online datasets integration tests"
+python $SCRIPT_DIR/online_dataset/test_online_dataset.py
 echo "Running model storage integration tests"
 python $SCRIPT_DIR/model_storage/integrationtest_model_storage.py
 echo "Successfuly ran all integration tests."

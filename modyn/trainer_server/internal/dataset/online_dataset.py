@@ -266,7 +266,9 @@ class OnlineDataset(IterableDataset):
 
         self._next_partition_to_fetch += 1
 
-    def _fetch_partition_noprefetch(self, worker_id: int, partition_id: int) -> Generator:
+    def _fetch_partition_noprefetch(
+        self, worker_id: int, partition_id: int
+    ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
         assert self._prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
         self._get_data(container, worker_id, partition_id, None, None, None, None)
@@ -283,7 +285,9 @@ class OnlineDataset(IterableDataset):
         with self._partition_locks[partition_id]:
             return self._partition_valid_until[partition_id]
 
-    def _get_partition_data(self, last_idx: int, max_idx: int, partition_id: int) -> Generator:
+    def _get_partition_data(
+        self, last_idx: int, max_idx: int, partition_id: int
+    ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
         for idx in range(last_idx + 1, max_idx + 1):
             yield self._thread_data_container[partition_id]["keys"][idx], self._thread_data_container[partition_id][
                 "data"
@@ -297,7 +301,9 @@ class OnlineDataset(IterableDataset):
         with self._partition_signals[partition_id]:
             self._partition_signals[partition_id].wait(1)  # In case we do not get woken up, we at most waste a second
 
-    def prefetched_partition_generator(self, worker_id: int, partition_id: int) -> Generator:
+    def prefetched_partition_generator(
+        self, worker_id: int, partition_id: int
+    ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
         assert self._pref_started[partition_id], f"Prefetching for partition {partition_id} has not been started"
         last_idx = -1
 
@@ -316,7 +322,7 @@ class OnlineDataset(IterableDataset):
         max_idx = self._partition_max_index(partition_id)
         yield from self._get_partition_data(last_idx, max_idx, partition_id)
 
-    def all_partition_generator(self, worker_id: int) -> Generator:
+    def all_partition_generator(self, worker_id: int) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
         for _ in range(self._prefetched_partitions):
             self._prefetch_partition(worker_id)
 
