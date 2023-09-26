@@ -377,7 +377,7 @@ class OnlineDataset(IterableDataset):
         self._prefetched_partitions = min(self._prefetched_partitions, self._num_partitions)
 
         for data_tuple in self.all_partition_generator(worker_id):
-            if data_tuple is not None:  # Can happen in subclasses overwriting generator
-                yield self._get_transformed_data_tuple(*data_tuple)
+            if (transformed_tuple := self._get_transformed_data_tuple(*data_tuple)) is not None:
+                yield transformed_tuple
 
         self._persist_log(worker_id)

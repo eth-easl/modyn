@@ -39,7 +39,9 @@ class PerClassOnlineDataset(OnlineDataset):
         assert initial_filtered_label is not None
         self.filtered_label = initial_filtered_label
 
-    def _get_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
+    def _get_transformed_data_tuple(
+        self, key: int, sample: bytes, label: int, weight: Optional[float]
+    ) -> Optional[Tuple]:
         assert self.filtered_label is not None
 
         if self.filtered_label != label:

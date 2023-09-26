@@ -447,7 +447,11 @@ def test_dataloader_dataset_weighted(
 )
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
-@patch.object(OnlineDataset, "_get_data_from_storage", return_value=([x.to_bytes(2, "big") for x in range(4)], [1] * 4))
+@patch.object(
+    OnlineDataset,
+    "_get_data_from_storage",
+    return_value=[(list(range(4)), [x.to_bytes(2, "big") for x in range(4)], [1] * 4, 0)],
+)
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(4)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
 def test_dataloader_dataset_multi_worker(
