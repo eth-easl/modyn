@@ -16,20 +16,6 @@
 
 namespace storage {
 class FileWatcher {
- private:
-  YAML::Node config_;
-  int64_t dataset_id_;
-  int16_t insertion_threads_;
-  bool disable_multithreading_;
-  int32_t sample_dbinsertion_batchsize_ = 1000000;
-  StorageDatabaseConnection storage_database_connection_;
-  std::string dataset_path_;
-  FilesystemWrapperType filesystem_wrapper_type_;
-  std::vector<std::thread> thread_pool;
-  std::deque<std::function<void()>> tasks;
-  std::mutex mtx;
-  std::condition_variable cv;
-
  public:
   std::atomic<bool>* stop_file_watcher_;
   explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id,  // NOLINT
@@ -119,5 +105,19 @@ class FileWatcher {
                         bool ignore_last_timestamp, int64_t timestamp);
   void postgres_copy_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const;
   void fallback_insertion(const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame) const;
+
+ private:
+  YAML::Node config_;
+  int64_t dataset_id_;
+  int16_t insertion_threads_;
+  bool disable_multithreading_;
+  int32_t sample_dbinsertion_batchsize_ = 1000000;
+  StorageDatabaseConnection storage_database_connection_;
+  std::string dataset_path_;
+  FilesystemWrapperType filesystem_wrapper_type_;
+  std::vector<std::thread> thread_pool;
+  std::deque<std::function<void()>> tasks;
+  std::mutex mtx;
+  std::condition_variable cv;
 };
 }  // namespace storage

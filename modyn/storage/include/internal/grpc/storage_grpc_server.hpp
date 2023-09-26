@@ -10,10 +10,6 @@
 namespace storage {
 
 class StorageGrpcServer {
- private:
-  YAML::Node config_;
-  std::atomic<bool>* stop_grpc_server_;
-
  public:
   StorageGrpcServer(const YAML::Node& config, std::atomic<bool>* stop_grpc_server)
       : config_{config}, stop_grpc_server_(stop_grpc_server) {}
@@ -45,6 +41,10 @@ class StorageGrpcServer {
     }
     server->Shutdown();
   }
+
+ private:
+  YAML::Node config_;
+  std::atomic<bool>* stop_grpc_server_;
 };
 
 }  // namespace storage

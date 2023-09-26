@@ -10,14 +10,6 @@
 #include "yaml-cpp/yaml.h"
 namespace storage {
 class StorageDatabaseConnection {
- private:
-  std::string username_;
-  std::string password_;
-  std::string host_;
-  std::string port_;
-  std::string database_;
-  int16_t hash_partition_modulus_ = 8;
-
  public:
   std::string drivername;
   explicit StorageDatabaseConnection(const YAML::Node& config) {
@@ -42,6 +34,14 @@ class StorageDatabaseConnection {
   bool delete_dataset(const std::string& name) const;
   void add_sample_dataset_partition(const std::string& dataset_name) const;
   soci::session get_session() const;
+
+ private:
+  std::string username_;
+  std::string password_;
+  std::string host_;
+  std::string port_;
+  std::string database_;
+  int16_t hash_partition_modulus_ = 8;
 };
 
 }  // namespace storage

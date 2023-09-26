@@ -1,7 +1,7 @@
 set(MODYNSTORAGE_SOURCES
     storage.cpp
     internal/database/storage_database_connection.cpp
-    internal/file_watcher/file_watchdog.cpp
+    internal/file_watcher/file_watcher_watchdog.cpp
     internal/file_watcher/file_watcher.cpp
     internal/file_wrapper/binary_file_wrapper.cpp
     internal/file_wrapper/single_sample_file_wrapper.cpp
@@ -14,7 +14,7 @@ set(MODYNSTORAGE_SOURCES
 set(MODYNSTORAGE_HEADERS
     ../include/storage.hpp
     ../include/internal/database/storage_database_connection.hpp
-    ../include/internal/file_watcher/file_watchdog.hpp
+    ../include/internal/file_watcher/file_watcher_watchdog.hpp
     ../include/internal/file_watcher/file_watcher.hpp
     ../include/internal/file_wrapper/file_wrapper.hpp
     ../include/internal/file_wrapper/binary_file_wrapper.hpp

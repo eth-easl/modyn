@@ -19,23 +19,6 @@ struct SampleData {
 };
 
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
- private:
-  YAML::Node config_;
-  int16_t sample_batch_size_;
-  std::vector<std::thread> thread_pool;
-  std::deque<std::function<void()>> tasks;
-  std::mutex mtx;
-  std::condition_variable cv;
-  int16_t retrieval_threads_;
-  bool disable_multithreading_;
-  void send_get_response(grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
-                         SampleData sample_data, const YAML::Node& file_wrapper_config,
-                         const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper, int64_t file_wrapper_type);
-  void send_get_new_data_since_response(grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
-                                        int64_t file_id);
-  void send_get_new_data_in_interval_response(grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer,
-                                              int64_t file_id);
-
  public:
   explicit StorageServiceImpl(const YAML::Node& config, int16_t retrieval_threads = 1)
       : Service(), config_{config}, retrieval_threads_{retrieval_threads} {  // NOLINT
@@ -102,5 +85,22 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
     return dataset_id;
   }
+
+ private:
+  YAML::Node config_;
+  int16_t sample_batch_size_;
+  std::vector<std::thread> thread_pool;
+  std::deque<std::function<void()>> tasks;
+  std::mutex mtx;
+  std::condition_variable cv;
+  int16_t retrieval_threads_;
+  bool disable_multithreading_;
+  void send_get_response(grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
+                         SampleData sample_data, const YAML::Node& file_wrapper_config,
+                         const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper, int64_t file_wrapper_type);
+  void send_get_new_data_since_response(grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
+                                        int64_t file_id);
+  void send_get_new_data_in_interval_response(grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer,
+                                              int64_t file_id);
 };
 }  // namespace storage

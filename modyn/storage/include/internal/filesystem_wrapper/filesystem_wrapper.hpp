@@ -11,9 +11,6 @@ namespace storage {
 enum FilesystemWrapperType { LOCAL };
 
 class FilesystemWrapper {  // NOLINT
- protected:
-  std::string base_path_;
-
  public:
   explicit FilesystemWrapper(std::string path) : base_path_{std::move(path)} {}
   virtual std::vector<unsigned char> get(const std::string& path) = 0;
@@ -34,5 +31,8 @@ class FilesystemWrapper {  // NOLINT
     return FILESYSTEM_WRAPPER_TYPE_MAP.at(type);
   }
   virtual ~FilesystemWrapper() {}  // NOLINT
+
+ protected:
+  std::string base_path_;
 };
 }  // namespace storage

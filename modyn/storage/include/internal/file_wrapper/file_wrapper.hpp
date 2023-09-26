@@ -11,11 +11,6 @@ namespace storage {
 enum FileWrapperType { SINGLE_SAMPLE, BINARY, CSV };
 
 class FileWrapper {  // NOLINT
- protected:
-  std::string file_path_;
-  YAML::Node file_wrapper_config_;
-  std::shared_ptr<FilesystemWrapper> filesystem_wrapper_;
-
  public:
   FileWrapper(std::string path, const YAML::Node& fw_config, std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
       : file_path_{std::move(path)},
@@ -40,5 +35,10 @@ class FileWrapper {  // NOLINT
   virtual void set_file_path(const std::string& path) { file_path_ = path; }
   virtual ~FileWrapper() {}  // NOLINT
   FileWrapper(const FileWrapper& other) = default;
+
+ protected:
+  std::string file_path_;
+  YAML::Node file_wrapper_config_;
+  std::shared_ptr<FilesystemWrapper> filesystem_wrapper_;
 };
 }  // namespace storage
