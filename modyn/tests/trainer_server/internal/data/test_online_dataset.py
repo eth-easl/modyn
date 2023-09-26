@@ -438,6 +438,7 @@ def test_dataloader_dataset_weighted(
         assert torch.equal(batch[3], 2 * torch.ones(4, dtype=torch.float64))
 
 
+@pytest.mark.parametrize("num_workers", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -462,6 +463,7 @@ def test_dataloader_dataset_multi_worker(
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
     prefetched_partitions,
+    num_workers,
 ):
     if platform.system() == "Darwin":
         # On macOS, spawn is the default, which loses the mocks
@@ -481,7 +483,7 @@ def test_dataloader_dataset_multi_worker(
         tokenizer=None,
         log_path=None,
     )
-    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
+    dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=num_workers)
     for batch in dataloader:
         assert len(batch) == 3
         assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
@@ -795,8 +797,10 @@ def test_iter_multi_partition_multi_workers(
         assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
 
-    # each worker gets 8 items from get_keys_and_weights; batch size 4; minus one for zero indexing
-    assert idx == ((max(num_workers, 1) * 32) / 4) - 1
+    if num_workers % 2 == 0:
+        # only test this for even number of workers to avoid fractions
+        # each worker gets 8 items from get_keys_and_weights; batch size 4; minus one for zero indexing
+        assert idx == ((max(num_workers, 1) * 8) / 4) - 1
 
 
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
