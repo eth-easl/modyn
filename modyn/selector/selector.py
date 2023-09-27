@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models.triggers import Trigger
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.utils.utils import flatten, get_partition_for_worker
@@ -13,11 +15,17 @@ class Selector:
     """
 
     def __init__(
-        self, strategy: AbstractSelectionStrategy, pipeline_id: int, num_workers: int, cache_size: int = 100000
+        self,
+        strategy: AbstractSelectionStrategy,
+        pipeline_id: int,
+        num_workers: int,
+        modyn_config: dict,
+        cache_size: int = 100000,
     ) -> None:
         self._strategy = strategy
         self._pipeline_id = pipeline_id
         self._num_workers = num_workers
+        self._modyn_config = modyn_config
 
         self._trigger_cache: Dict[int, list[list[tuple[int, float]]]] = {}
         self._maximum_keys_in_cache = cache_size
@@ -25,6 +33,19 @@ class Selector:
 
         self._trigger_size_cache: Dict[int, int] = {}
         self._trigger_partition_cache: Dict[int, int] = {}
+
+    def _populate_trigger_if_exists(self, trigger_id: int) -> None:
+        if trigger_id in self._trigger_size_cache:
+            assert trigger_id in self._trigger_partition_cache, "Inconsistent state"
+            return
+
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            trigger: Optional[Trigger] = database.session.get(Trigger, trigger_id, self._pipeline_id)
+            if trigger is None:
+                return
+
+            self._trigger_size_cache[trigger_id] = trigger.num_keys
+            self._trigger_partition_cache[trigger_id] = trigger.num_partitions
 
     def get_sample_keys_and_weights(
         self, trigger_id: int, worker_id: int, partition_id: int
@@ -40,6 +61,8 @@ class Selector:
             List of tuples for the samples to be returned to that particular worker. The first
             index of the tuple will be the key, and the second index will be that sample's weight.
         """
+        self._populate_trigger_if_exists(trigger_id)
+
         if trigger_id not in self._trigger_partition_cache or partition_id >= self._trigger_partition_cache[trigger_id]:
             raise ValueError(f"Invalid request: Trigger {trigger_id}, partition {partition_id}")
         if worker_id < 0 or worker_id >= self._num_workers:
@@ -95,6 +118,8 @@ class Selector:
         return trigger_id, log
 
     def get_number_of_samples(self, trigger_id: int) -> int:
+        self._populate_trigger_if_exists(trigger_id)
+
         if trigger_id not in self._trigger_size_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 
@@ -108,6 +133,8 @@ class Selector:
         return self._strategy.training_status_bar_scale
 
     def get_number_of_partitions(self, trigger_id: int) -> int:
+        self._populate_trigger_if_exists(trigger_id)
+
         if trigger_id not in self._trigger_partition_cache:
             raise ValueError(f"Trigger ID {trigger_id} does not exist!")
 

@@ -1,9 +1,12 @@
 """Storage GRPC servicer."""
 
 import logging
+import os
+import threading
 from typing import Iterable, Tuple
 
 import grpc
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.storage.internal.database.models import Dataset, File, Sample
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.database.storage_database_utils import get_file_wrapper, get_filesystem_wrapper
@@ -64,6 +67,9 @@ class StorageGRPCServicer(StorageServicer):
         Yields:
             Iterator[Iterable[GetResponse]]: Response containing the data for the given keys.
         """
+        tid = threading.get_native_id()
+        pid = os.getpid()
+        logger.info(f"[{pid}][{tid}] Received request for {len(request.keys)} items.")
         with StorageDatabaseConnection(self.modyn_config) as database:
             session = database.session
 
@@ -73,12 +79,16 @@ class StorageGRPCServicer(StorageServicer):
                 yield GetResponse()
                 return
 
+            stopw = Stopwatch()
+            stopw.start("GetSamples")
             samples: list[Sample] = (
                 session.query(Sample)
                 .filter(and_(Sample.sample_id.in_(request.keys), Sample.dataset_id == dataset.dataset_id))
                 .order_by(Sample.file_id)
                 .all()
             )
+            samples_time = stopw.stop()
+            logger.info(f"[{pid}][{tid}] Getting samples took {samples_time / 1000}s.")
 
             if len(samples) == 0:
                 logger.error("No samples found in the database.")
