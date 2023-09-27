@@ -51,7 +51,7 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
   }
 
   auto filesystem_wrapper =
-      storage::utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+      storage::filesystem_wrapper::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
   const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
 
   if (file_id_to_sample_data.size() == 0) {
@@ -98,7 +98,7 @@ void StorageServiceImpl::send_get_response(grpc::ServerWriter<modyn::storage::Ge
   std::string file_path;
   session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
 
-  auto file_wrapper = storage::utils::get_file_wrapper(file_path, static_cast<FileWrapperType>(file_wrapper_type),
+  auto file_wrapper = storage::file_wrapper::get_file_wrapper(file_path, static_cast<FileWrapperType>(file_wrapper_type),
                                               file_wrapper_config, filesystem_wrapper);
 
   std::vector<std::vector<unsigned char>> samples = file_wrapper->get_samples_from_indices(sample_data.indices);
@@ -346,7 +346,7 @@ grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readabil
   session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
       soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
 
-  auto filesystem_wrapper = storage::utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
 
   int64_t number_of_files = 0;
   session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
@@ -433,7 +433,7 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
     return {grpc::StatusCode::NOT_FOUND, "No files found."};
   }
 
-  auto filesystem_wrapper = storage::utils::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
   std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
   std::string index_placeholders;
@@ -447,7 +447,7 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
       return {grpc::StatusCode::INTERNAL, "Error deleting data."};
     }
 
-    auto file_wrapper = storage::utils::get_file_wrapper(file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
+    auto file_wrapper = storage::file_wrapper::get_file_wrapper(file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
                                                 file_wrapper_config_node, filesystem_wrapper);
     for (size_t i = 0; i < file_paths.size(); ++i) {
       const auto& file_id = file_ids[i];

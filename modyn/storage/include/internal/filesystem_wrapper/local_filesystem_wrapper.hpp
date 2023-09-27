@@ -2,7 +2,7 @@
 
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 
-namespace storage {
+namespace storage::filesystem_wrapper {
 class LocalFilesystemWrapper : public FilesystemWrapper {  // NOLINT
  public:
   explicit LocalFilesystemWrapper(const std::string& path) : FilesystemWrapper(path) {}

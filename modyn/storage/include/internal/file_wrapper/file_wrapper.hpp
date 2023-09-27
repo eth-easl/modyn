@@ -5,6 +5,7 @@
 #include <string>
 
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
+#include "internal/file_wrapper/file_wraper_utils.hpp"
 
 namespace storage {
 

@@ -24,7 +24,7 @@ const char path_separator =
     '/';
 #endif
 
-using namespace storage;
+using namespace storage::filesystem_wrapper;
 
 std::vector<unsigned char> LocalFilesystemWrapper::get(const std::string& path) {
   std::ifstream file;

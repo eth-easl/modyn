@@ -20,8 +20,10 @@ set(MODYNSTORAGE_HEADERS
     ../include/internal/file_wrapper/binary_file_wrapper.hpp
     ../include/internal/file_wrapper/single_sample_file_wrapper.hpp
     ../include/internal/file_wrapper/csv_file_wrapper.hpp
+    ../include/internal/file_wrapper/file_wrapper_utils.hpp
     ../include/internal/filesystem_wrapper/filesystem_wrapper.hpp
     ../include/internal/filesystem_wrapper/local_filesystem_wrapper.hpp
+    ../include/internal/filesystem_wrapper/filesystem_wrapper_utils.hpp
     ../include/internal/grpc/storage_grpc_server.hpp
     ../include/internal/utils/utils.hpp
     )

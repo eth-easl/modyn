@@ -13,7 +13,7 @@
 #include "internal/utils/utils.hpp"
 #include "internal/database/storage_database_connection.hpp"
 
-namespace storage {
+namespace storage::file_wrapper {
 class FileWatcherWatchdog {
  public:
   FileWatchdog(

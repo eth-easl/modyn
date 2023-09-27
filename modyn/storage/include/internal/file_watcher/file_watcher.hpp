@@ -15,7 +15,7 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "internal/utils/utils.hpp"
 
-namespace storage {
+namespace storage::file_wrapper {
 class FileWatcher {
  public:
   std::atomic<bool>* stop_file_watcher_;
