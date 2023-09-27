@@ -15,7 +15,26 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 
-namespace storage {
+#define FAIL(msg)                                                                                          \
+  throw storage::utils::ModynException("ERROR at " __FILE__ ":" + std::to_string(__LINE__) + " " + (msg) + \
+                                       "\nExecution failed.")
+
+#define ASSERT(expr, msg)         \
+  if (!static_cast<bool>(expr)) { \
+    FAIL((msg));                  \
+  }                               \
+  static_assert(true, "End call of macro with a semicolon")
+
+namespace storage::utils {
+
+class ModynException : public std::exception {
+ public:
+  explicit ModynException(std::string msg) : msg_{std::move(msg)} {}
+  const char* what() const noexcept override { return msg_.c_str(); }
+
+ private:
+  const std::string msg_;
+};
 
 static std::shared_ptr<FilesystemWrapper> get_filesystem_wrapper(const std::string& path,
                                                                  const FilesystemWrapperType& type) {
@@ -46,23 +65,4 @@ static std::unique_ptr<FileWrapper> get_file_wrapper(const std::string& path, co
   return file_wrapper;
 }
 
-#define FAIL(msg)                                                                                          \
-  throw hashmap::utils::ModynException("ERROR at " __FILE__ ":" + std::to_string(__LINE__) + " " + (msg) + \
-                                       "\nExecution failed.")
-
-#define ASSERT(expr, msg)         \
-  if (!static_cast<bool>(expr)) { \
-    FAIL((msg));                  \
-  }                               \
-  static_assert(true, "End call of macro with a semicolon")
-
-class ModynException : public std::exception {
- public:
-  explicit ModynException(std::string msg) : msg_{std::move(msg)} {}
-  const char* what() const noexcept override { return msg_.c_str(); }
-
- private:
-  const std::string msg_;
-};
-
-}  // namespace storage
+}  // namespace storage::utils

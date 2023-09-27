@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
+#include "internal/utils/utils.hpp"
 
 namespace storage {
 class BinaryFileWrapper : public FileWrapper {  // NOLINT
@@ -17,7 +18,7 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
   static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices) {
     for (int64_t indice : indices) {
       if (indice < 0 || indice > (total_samples - 1)) {
-        FAIL("Requested index " << indice << " is out of bounds.");
+        FAIL("Requested index " + std::to_string(indice) + " is out of bounds.");
       }
     }
   }

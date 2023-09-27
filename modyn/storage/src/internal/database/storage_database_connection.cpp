@@ -1,11 +1,11 @@
 #include "internal/database/storage_database_connection.hpp"
+#include "internal/utils/utils.hpp"
 
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
 #include <fstream>
 
-#include "internal/utils/utils.hpp"
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/sqlite3/soci-sqlite3.h"
 

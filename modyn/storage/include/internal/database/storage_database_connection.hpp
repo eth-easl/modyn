@@ -4,10 +4,13 @@
 
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
+#include "internal/utils/utils.hpp"
+
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/soci.h"
 #include "soci/sqlite3/soci-sqlite3.h"
 #include "yaml-cpp/yaml.h"
+
 namespace storage {
 
 enum class DatabaseDriver { POSTGRESQL, SQLITE3 };
@@ -56,7 +59,7 @@ class StorageDatabaseConnection {
     } else if (drivername == "sqlite3") {
       return DatabaseDriver::SQLITE3;
     } else {
-      FAIL("Unsupported database driver: {}", drivername);
+      FAIL("Unsupported database driver: " + drivername);
     }
   }
 };

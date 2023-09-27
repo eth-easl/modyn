@@ -58,7 +58,7 @@ class FileWatcher {
       return;
     }
 
-    filesystem_wrapper = Utils::get_filesystem_wrapper(dataset_path, filesystem_wrapper_type);
+    filesystem_wrapper = storage::utils::get_filesystem_wrapper(dataset_path, filesystem_wrapper_type);
 
     dataset_path_ = dataset_path;
     filesystem_wrapper_type_ = filesystem_wrapper_type;
@@ -114,7 +114,7 @@ class FileWatcher {
       std::string file_path = valid_files.front();
       int64_t number_of_samples;
       std::vector<FileFrame> file_frame;
-      auto file_wrapper = Utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+      auto file_wrapper = storage::utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
       for (const auto& file_path : valid_files) {
         file_wrapper->set_file_path(file_path);
         number_of_samples = file_wrapper->get_number_of_samples();
@@ -150,7 +150,7 @@ class FileWatcher {
           fallback_insertion(std::move(file_frame));
           break;
         default:
-          FAIL("Unsupported database driver: {}", storage_database_connection_.get_driver());
+          FAIL("Unsupported database driver");
       }
     }
   }
