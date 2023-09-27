@@ -8,7 +8,7 @@ using namespace storage;
 
 void CsvFileWrapper::validate_file_extension() {
   if (file_path_.substr(file_path_.find_last_of(".") + 1) != "csv") {
-    throw std::invalid_argument("File has wrong file extension.");
+    FAIL("The file extension must be .csv");
   }
 }
 
@@ -40,7 +40,7 @@ void CsvFileWrapper::validate_file_content() {
         try {
           std::stoi(cell);
         } catch (const std::exception&) {
-          throw std::invalid_argument("The label must be an integer.");
+          FAIL("The label must be an integer.");
         }
       }
     }
@@ -49,7 +49,7 @@ void CsvFileWrapper::validate_file_content() {
   }
 
   if (std::set<int>(number_of_columns.begin(), number_of_columns.end()).size() != 1) {
-    throw std::invalid_argument("Some rows have different widths.");
+    FAIL("Some rows have different widths.");
   }
 }
 
@@ -101,7 +101,7 @@ std::vector<int64_t> CsvFileWrapper::get_all_labels() {
         try {
           labels.push_back(std::stoi(cell));
         } catch (const std::exception&) {
-          throw std::runtime_error("Failed to parse label as an integer.");
+          FAIL("The label must be an integer.");
         }
       }
     }
@@ -133,7 +133,9 @@ int64_t CsvFileWrapper::get_number_of_samples() {
   return count;
 }
 
-void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) { throw std::runtime_error("Not implemented"); }
+void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) { 
+  FAIL("Not implemented");
+}
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::filter_rows_samples(const std::vector<int64_t>& indices) {
   std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
@@ -162,7 +164,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::filter_rows_samples(cons
   }
 
   if (samples.size() != indices.size()) {
-    throw std::out_of_range("Invalid index");
+    FAIL("Invalid index");
   }
 
   return samples;
@@ -198,7 +200,7 @@ std::vector<int64_t> CsvFileWrapper::filter_rows_labels(const std::vector<int64_
           try {
             label = std::stoll(cell);
           } catch (const std::exception&) {
-            throw std::runtime_error("Failed to parse label as an integer.");
+            FAIL("The label must be an integer.");
           }
         }
       }
@@ -210,7 +212,7 @@ std::vector<int64_t> CsvFileWrapper::filter_rows_labels(const std::vector<int64_
   }
 
   if (labels.size() != indices.size()) {
-    throw std::out_of_range("Invalid index");
+    FAIL("Invalid index");
   }
 
   return labels;

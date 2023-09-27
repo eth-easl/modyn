@@ -17,8 +17,7 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
   static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices) {
     for (int64_t indice : indices) {
       if (indice < 0 || indice > (total_samples - 1)) {
-        SPDLOG_ERROR("Requested index {} is out of bounds.", indice);
-        throw std::out_of_range("Requested index is out of bounds.");
+        FAIL("Requested index " << indice << " is out of bounds.");
       }
     }
   }
@@ -31,26 +30,25 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
     assert(filesystem_wrapper_ != nullptr);
 
     if (!fw_config["record_size"]) {
-      throw std::runtime_error("record_size_must be specified in the file wrapper config.");
+      FAIL("record_size_must be specified in the file wrapper config.");
     }
     record_size_ = fw_config["record_size"].as<int64_t>();
     if (!fw_config["label_size"]) {
-      throw std::runtime_error("label_size must be specified in the file wrapper config.");
+      FAIL("label_size must be specified in the file wrapper config.");
     }
     label_size_ = fw_config["label_size"].as<int64_t>();
     sample_size_ = record_size_ - label_size_;
 
     if (record_size_ - label_size_ < 1) {
-      throw std::runtime_error(
-          "Each record must have at least 1 byte of data "
-          "other than the label.");
+      FAIL("Each record must have at least 1 byte of data "
+           "other than the label.");
     }
 
     validate_file_extension();
     file_size_ = filesystem_wrapper_->get_file_size(path);
 
     if (file_size_ % record_size_ != 0) {
-      throw std::runtime_error("File size must be a multiple of the record size.");
+      FAIL("File size must be a multiple of the record size.");
     }
   }
   int64_t get_number_of_samples() override;
@@ -66,7 +64,7 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
     file_size_ = filesystem_wrapper_->get_file_size(path);
 
     if (file_size_ % record_size_ != 0) {
-      throw std::runtime_error("File size must be a multiple of the record size.");
+      FAIL("File size must be a multiple of the record size.");
     }
   }
   FileWrapperType get_type() override { return FileWrapperType::BINARY; }

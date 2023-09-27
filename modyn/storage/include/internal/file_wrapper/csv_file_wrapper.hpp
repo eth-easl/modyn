@@ -5,6 +5,7 @@
 
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/file_wrapper/file_wrapper.hpp"
+#include "internal/utils/utils.hpp"
 
 namespace storage {
 
@@ -29,12 +30,12 @@ class CsvFileWrapper : public FileWrapper {
     }
 
     if (!file_wrapper_config_["label_index"]) {
-      throw std::invalid_argument("Please specify the index of the column that contains the label.");
+      FAIL("Please specify the index of the column that contains the label.");
     }
     label_index_ = file_wrapper_config_["label_index"].as<int>();
 
     if (label_index_ < 0) {
-      throw std::invalid_argument("The label_index must be a non-negative integer.");
+      FAIL("The label_index must be a non-negative integer.");
     }
 
     if (file_wrapper_config_["ignore_first_line"]) {

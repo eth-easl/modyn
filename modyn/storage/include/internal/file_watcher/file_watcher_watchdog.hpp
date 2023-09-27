@@ -30,7 +30,7 @@ class FileWatcherWatchdog {
   }
   void watch_file_watcher_threads();
   void start_file_watcher_thread(int64_t dataset_id, int16_t retries);
-  void stop_file_watcher_thread(int64_t dataset_id, bool is_test = false);
+  void stop_file_watcher_thread(int64_t dataset_id);
   void run();
   std::vector<int64_t> get_running_file_watcher_threads();
 

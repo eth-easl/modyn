@@ -9,14 +9,16 @@
 #include "soci/sqlite3/soci-sqlite3.h"
 #include "yaml-cpp/yaml.h"
 namespace storage {
+
+enum class DatabaseDriver { POSTGRESQL, SQLITE3 };
+
 class StorageDatabaseConnection {
  public:
-  std::string drivername;
   explicit StorageDatabaseConnection(const YAML::Node& config) {
     if (!config["storage"]["database"]) {
-      throw std::runtime_error("No database configuration found");
+      FAIL("No database configuration found");
     }
-    drivername = config["storage"]["database"]["drivername"].as<std::string>();
+    drivername_ = get_drivername(config);
     username_ = config["storage"]["database"]["username"].as<std::string>();
     password_ = config["storage"]["database"]["password"].as<std::string>();
     host_ = config["storage"]["database"]["host"].as<std::string>();
@@ -34,6 +36,7 @@ class StorageDatabaseConnection {
   bool delete_dataset(const std::string& name) const;
   void add_sample_dataset_partition(const std::string& dataset_name) const;
   soci::session get_session() const;
+  DatabaseDriver get_drivername() const { return drivername_; }
 
  private:
   std::string username_;
@@ -42,6 +45,20 @@ class StorageDatabaseConnection {
   std::string port_;
   std::string database_;
   int16_t hash_partition_modulus_ = 8;
+  DatabaseDriver drivername_;
+  static DatabaseDriver get_drivername(const YAML::Node& config) {
+    if (!config["storage"]["database"]) {
+      FAIL("No database configuration found");
+    }
+    const auto drivername = config["storage"]["database"]["drivername"].as<std::string>();
+    if (drivername == "postgresql") {
+      return DatabaseDriver::POSTGRESQL;
+    } else if (drivername == "sqlite3") {
+      return DatabaseDriver::SQLITE3;
+    } else {
+      FAIL("Unsupported database driver: {}", drivername);
+    }
+  }
 };
 
 }  // namespace storage
