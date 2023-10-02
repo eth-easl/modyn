@@ -1,4 +1,5 @@
 import contextlib
+import functools
 import json
 import logging
 import os
@@ -154,6 +155,7 @@ class OnlineDataset(IterableDataset):
         partition_valid_until: Optional[dict],
         partition_locks: Optional[dict],
         partition_signals: Optional[dict],
+        callback: Optional[Callable],
     ) -> None:
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
@@ -194,6 +196,9 @@ class OnlineDataset(IterableDataset):
         if partition_locks is not None and partition_valid is not None:
             with partition_locks[partition_id]:
                 partition_valid[partition_id] = True
+
+        if callback is not None:
+            callback()
 
     def _get_transformed_data_tuple(
         self, key: int, sample: bytes, label: int, weight: Optional[float]
@@ -248,6 +253,12 @@ class OnlineDataset(IterableDataset):
             self._partition_locks[self._next_partition_to_fetch]
         )
 
+        #def potential_callback():
+        #    self._info("Prefetch callback called.")
+        #    self._prefetch_partition(worker_id, num_additional_prefetches - 1)
+
+        #callback = None if num_additional_prefetches == 0 else potential_callback
+
         self._data_threads[self._next_partition_to_fetch] = threading.Thread(
             target=self._get_data,
             args=(
@@ -258,6 +269,7 @@ class OnlineDataset(IterableDataset):
                 self._partition_valid_until,
                 self._partition_locks,
                 self._partition_signals,
+                None,
             ),
         )
 
@@ -271,13 +283,16 @@ class OnlineDataset(IterableDataset):
     ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
         assert self._prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
-        self._get_data(container, worker_id, partition_id, None, None, None, None)
+        self._get_data(container, worker_id, partition_id, None, None, None, None, None)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
         for idx in range(len(container["keys"])):
             yield container["keys"][idx], container["data"][idx], container["labels"][idx], container["weights"][idx]
 
     def _is_partition_fetched(self, partition_id: int) -> bool:
+        if partition_id not in self._partition_locks or partition_id not in self._partition_valid:
+            return False
+
         with self._partition_locks[partition_id]:
             return self._partition_valid[partition_id]
 
@@ -304,7 +319,6 @@ class OnlineDataset(IterableDataset):
     def prefetched_partition_generator(
         self, worker_id: int, partition_id: int
     ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
-        assert self._pref_started[partition_id], f"Prefetching for partition {partition_id} has not been started"
         last_idx = -1
 
         while not self._is_partition_fetched(partition_id):
@@ -322,7 +336,16 @@ class OnlineDataset(IterableDataset):
         max_idx = self._partition_max_index(partition_id)
         yield from self._get_partition_data(last_idx, max_idx, partition_id)
 
+    def start_prefetching(self, worker_id: int) -> None:
+        # WIP change of prefetching model
+        if self._prefetched_partitions < 1:
+            return
+
+        self._prefetch_partition(worker_id, self._prefetched_partitions - 1)
+
     def all_partition_generator(self, worker_id: int) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
+        #self.start_prefetching(worker_id)
+
         for _ in range(self._prefetched_partitions):
             self._prefetch_partition(worker_id)
 

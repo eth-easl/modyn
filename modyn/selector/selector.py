@@ -40,7 +40,7 @@ class Selector:
             return
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            trigger: Optional[Trigger] = database.session.get(Trigger, trigger_id, self._pipeline_id)
+            trigger: Optional[Trigger] = database.session.get(Trigger, (trigger_id, self._pipeline_id))
             if trigger is None:
                 return
 

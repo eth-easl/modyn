@@ -6,7 +6,7 @@ import os
 import pathlib
 from unittest.mock import patch
 
-from modyn.selector.internal.grpc.selector_server import SelectorServer
+from modyn.selector.internal.grpc.selector_server import SelectorGRPCServer
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
@@ -23,15 +23,15 @@ def noop_run(self) -> None:
     pass
 
 
-@patch.object(SelectorServer, "__init__", noop_constructor_mock)
-@patch.object(SelectorServer, "run", noop_run)
+@patch.object(SelectorGRPCServer, "__init__", noop_constructor_mock)
+@patch.object(SelectorGRPCServer, "run", noop_run)
 def test_trainer_server_script_runs(script_runner):
     ret = script_runner.run("_modyn_selector", str(EXAMPLE_SYSTEM_CONFIG))
     assert ret.success
 
 
-@patch.object(SelectorServer, "__init__", noop_constructor_mock)
-@patch.object(SelectorServer, "run", noop_run)
+@patch.object(SelectorGRPCServer, "__init__", noop_constructor_mock)
+@patch.object(SelectorGRPCServer, "run", noop_run)
 def test_trainer_server_fails_on_non_existing_system_config(script_runner):
     ret = script_runner.run("_modyn_selector", str(NO_FILE))
     assert not ret.success

@@ -3,7 +3,7 @@ import tempfile
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-from modyn.selector.internal.grpc.selector_server import SelectorServer
+from modyn.selector.internal.grpc.selector_server import SelectorGRPCServer
 from modyn.selector.internal.selector_manager import SelectorManager
 
 
@@ -27,7 +27,7 @@ def test_init():
     with tempfile.TemporaryDirectory() as tmp_dir:
         config = get_modyn_config()
         config["selector"]["trigger_sample_directory"] = tmp_dir
-        grpc_server = SelectorServer(config)
+        grpc_server = SelectorGRPCServer(config)
         assert grpc_server.modyn_config == config
 
 
@@ -36,7 +36,7 @@ def test_prepare_server():
     with tempfile.TemporaryDirectory() as tmp_dir:
         config = get_modyn_config()
         config["selector"]["trigger_sample_directory"] = tmp_dir
-        grpc_server = SelectorServer(config)
+        grpc_server = SelectorGRPCServer(config)
         mock_add = mock.Mock()
         grpc_server._add_servicer_to_server_func = mock_add
 
@@ -46,12 +46,12 @@ def test_prepare_server():
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
-@patch.object(SelectorServer, "prepare_server")
+@patch.object(SelectorGRPCServer, "prepare_server")
 def test_run(test_prepare_server: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
         config = get_modyn_config()
         config["selector"]["trigger_sample_directory"] = tmp_dir
-        grpc_server = SelectorServer(config)
+        grpc_server = SelectorGRPCServer(config)
 
         mock_start = mock.Mock()
         mock_wait = mock.Mock()

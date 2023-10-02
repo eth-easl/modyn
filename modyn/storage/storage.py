@@ -14,7 +14,7 @@ from typing import Tuple
 
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
 from modyn.storage.internal.file_watcher.new_file_watcher_watch_dog import run_watcher_watch_dog
-from modyn.storage.internal.grpc.grpc_server import GRPCServer
+from modyn.storage.internal.grpc.grpc_server import StorageGRPCServer
 from modyn.utils import validate_yaml
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class Storage:
         watchdog.start()
 
         #  Start the storage grpc server.
-        with GRPCServer(self.modyn_config) as server:
+        with StorageGRPCServer(self.modyn_config) as server:
             server.wait_for_termination()
 
         should_stop.value = True  # type: ignore  # See https://github.com/python/typeshed/issues/8799

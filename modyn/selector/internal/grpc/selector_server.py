@@ -1,13 +1,16 @@
 import contextlib
 import datetime
+import functools
 import logging
 import multiprocessing as mp
 import os
+import pickle
 import socket
 import time
 from concurrent import futures
 
 import grpc
+from modyn.common.grpc import GenericGRPCServer
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import add_SelectorServicer_to_server  # noqa: E402, E501
 from modyn.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
 from modyn.selector.internal.selector_manager import SelectorManager
@@ -16,72 +19,42 @@ from modyn.utils import MAX_MESSAGE_SIZE
 logger = logging.getLogger(__name__)
 
 
-@contextlib.contextmanager
-def _reserve_port(port: str):
-    """Find and reserve a port for all subprocesses to use."""
-    sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-    if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0:
-        raise RuntimeError("Failed to set SO_REUSEPORT.")
-    sock.bind(("", int(port)))
-    try:
-        assert sock.getsockname()[1] == int(port)
-        yield port
-    finally:
-        sock.close()
+class SelectorGRPCServer(GenericGRPCServer):
+    @staticmethod
+    def callback(modyn_config, server, selector_manager):
+        add_SelectorServicer_to_server(
+            SelectorGRPCServicer(selector_manager, modyn_config["selector"]["sample_batch_size"]), server
+        )
 
-
-def _wait_forever(server):
-    try:
-        while True:
-            time.sleep(datetime.timedelta(days=1).total_seconds())
-    except KeyboardInterrupt:
-        server.stop(None)
-
-
-def _run_server(bind_address, selector_manager, sample_batch_size):
-    """Start a server in a subprocess."""
-    logging.info(f"[{os.getpid()}] Starting new server.")
-
-    server = grpc.server(
-        futures.ThreadPoolExecutor(
-            max_workers=16,
-        ),
-        options=[
-            ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-            ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ("grpc.so_reuseport", 1),
-        ],
-    )
-    add_SelectorServicer_to_server(SelectorGRPCServicer(selector_manager, sample_batch_size), server)
-    server.add_insecure_port(bind_address)
-    server.start()
-    _wait_forever(server)
-
-
-class SelectorServer:
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
         self.selector_manager = SelectorManager(modyn_config)
-        self.sample_batch_size = self.modyn_config["selector"]["sample_batch_size"]
-        self.workers = []
 
-    def run(self) -> None:
-        port = self.modyn_config["selector"]["port"]
-        logger.info(f"Starting server. Listening on port {port}")
-        with _reserve_port(port) as port:
-            bind_address = "[::]:" + port
-            for _ in range(64):
-                worker = mp.Process(
-                    target=_run_server,
-                    args=(bind_address, self.selector_manager, self.sample_batch_size),
-                )
-                worker.start()
-                self.workers.append(worker)
+        callback_kwargs = {"selector_manager": self.selector_manager}
+        super().__init__(modyn_config, modyn_config["selector"]["port"], SelectorGRPCServer.callback, callback_kwargs)
 
-            for worker in self.workers:
-                worker.join()
+    def __getstate__(self):
+        for variable_name, value in vars(self).items():
+            try:
+                pickle.dumps(value)
+            except:
+                print(f"{variable_name} with value {value} is not pickable")
 
+        state = self.__dict__.copy()
+        if "add_servicer_callback" in state:
+            del state["add_servicer_callback"]
+
+        return state
+
+    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
+        """Exit the context manager.
+
+        Args:
+            exc_type (type): exception type
+            exc_val (Exception): exception value
+            exc_tb (Exception): exception traceback
+        """
+        super().__exit__(exc_type, exc_val, exc_tb)
         if (
             "cleanup_trigger_samples_after_shutdown" in self.modyn_config["selector"]
             and self.modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"]
