@@ -94,7 +94,7 @@ def test_validate_config():
     assert storage._validate_config()[0]
 
 
-@patch("modyn.storage.storage.GRPCServer", MockGRPCServer)
+@patch("modyn.storage.storage.StorageGRPCServer", MockGRPCServer)
 def test_run():
     with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()

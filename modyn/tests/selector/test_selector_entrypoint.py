@@ -19,19 +19,25 @@ def noop_constructor_mock(self, modyn_config: dict) -> None:
     pass
 
 
-def noop_run(self) -> None:
+def noop_enter(self) -> None:
+    pass
+
+
+def noop_exit(self, exc_type, exc_val, exc_tb) -> None:
     pass
 
 
 @patch.object(SelectorGRPCServer, "__init__", noop_constructor_mock)
-@patch.object(SelectorGRPCServer, "run", noop_run)
+@patch.object(SelectorGRPCServer, "__enter__", noop_enter)
+@patch.object(SelectorGRPCServer, "__exit__", noop_exit)
 def test_trainer_server_script_runs(script_runner):
     ret = script_runner.run("_modyn_selector", str(EXAMPLE_SYSTEM_CONFIG))
     assert ret.success
 
 
 @patch.object(SelectorGRPCServer, "__init__", noop_constructor_mock)
-@patch.object(SelectorGRPCServer, "run", noop_run)
+@patch.object(SelectorGRPCServer, "__enter__", noop_enter)
+@patch.object(SelectorGRPCServer, "__exit__", noop_exit)
 def test_trainer_server_fails_on_non_existing_system_config(script_runner):
     ret = script_runner.run("_modyn_selector", str(NO_FILE))
     assert not ret.success

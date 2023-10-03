@@ -6,7 +6,7 @@ import os
 import socket
 import time
 from concurrent import futures
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Generator, Optional
 
 import grpc
 from modyn.utils import MAX_MESSAGE_SIZE
@@ -18,7 +18,7 @@ NUM_GPRC_PROCESSES = 64
 
 
 @contextlib.contextmanager
-def reserve_port(port: str):
+def reserve_port(port: str) -> Generator:
     """Find and reserve a port for all subprocesses to use."""
     sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
@@ -32,7 +32,7 @@ def reserve_port(port: str):
         sock.close()
 
 
-def _wait_forever(server):
+def _wait_forever(server: Any) -> None:
     try:
         while True:
             time.sleep(datetime.timedelta(days=1).total_seconds())
@@ -40,7 +40,9 @@ def _wait_forever(server):
         server.stop(None)
 
 
-def _run_server_worker(bind_address: str, add_servicer_callback: Callable, modyn_config: dict, callback_kwargs: dict):
+def _run_server_worker(
+    bind_address: str, add_servicer_callback: Callable, modyn_config: dict, callback_kwargs: dict
+) -> None:
     """Start a server in a subprocess."""
     logging.info(f"[{os.getpid()}] Starting new gRPC server process.")
 
@@ -74,7 +76,7 @@ class GenericGRPCServer:
         self.modyn_config = modyn_config
         self.add_servicer_callback = add_servicer_callback
         self.callback_kwargs = callback_kwargs if callback_kwargs is not None else {}
-        self.workers = []
+        self.workers: list[mp.Process] = []
 
     def __enter__(self) -> Any:
         """Enter the context manager.
@@ -95,7 +97,7 @@ class GenericGRPCServer:
 
         return self
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         state = self.__dict__.copy()
         del state["add_servicer_callback"]
         return state

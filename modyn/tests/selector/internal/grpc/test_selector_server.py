@@ -1,7 +1,6 @@
 # pylint: disable=unused-argument,redefined-outer-name
 import tempfile
-from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from modyn.selector.internal.grpc.selector_server import SelectorGRPCServer
 from modyn.selector.internal.selector_manager import SelectorManager
@@ -29,40 +28,4 @@ def test_init():
         config["selector"]["trigger_sample_directory"] = tmp_dir
         grpc_server = SelectorGRPCServer(config)
         assert grpc_server.modyn_config == config
-
-
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
-def test_prepare_server():
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        config = get_modyn_config()
-        config["selector"]["trigger_sample_directory"] = tmp_dir
-        grpc_server = SelectorGRPCServer(config)
-        mock_add = mock.Mock()
-        grpc_server._add_servicer_to_server_func = mock_add
-
-        assert grpc_server.prepare_server() is not None
-
-        mock_add.assert_called_once()
-
-
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
-@patch.object(SelectorGRPCServer, "prepare_server")
-def test_run(test_prepare_server: MagicMock):
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        config = get_modyn_config()
-        config["selector"]["trigger_sample_directory"] = tmp_dir
-        grpc_server = SelectorGRPCServer(config)
-
-        mock_start = mock.Mock()
-        mock_wait = mock.Mock()
-
-        server = grpc_server.prepare_server()
-        server.start = mock_start
-        server.wait_for_termination = mock_wait
-
-        test_prepare_server.return_value = server
-
-        grpc_server.run()
-
-        mock_start.assert_called_once()
-        mock_wait.assert_called_once()
+        assert isinstance(grpc_server.selector_manager, SelectorManager)

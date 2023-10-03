@@ -2,6 +2,7 @@
 
 
 import logging
+from typing import Any
 
 from modyn.common.grpc import GenericGRPCServer
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import add_StorageServicer_to_server
@@ -14,7 +15,7 @@ class StorageGRPCServer(GenericGRPCServer):
     """GRPC server context manager."""
 
     @staticmethod
-    def callback(modyn_config, server):
+    def callback(modyn_config: dict, server: Any) -> None:
         add_StorageServicer_to_server(StorageGRPCServicer(modyn_config), server)
 
     def __init__(self, modyn_config: dict) -> None:

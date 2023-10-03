@@ -267,7 +267,7 @@ class OnlineDataset(IterableDataset):
             callback = None
             if maybe_continue:
 
-                def callback_func():
+                def callback_func() -> None:
                     self._info("Prefetch callback called.", worker_id)
 
                     # It might be that between the check and the actual launch

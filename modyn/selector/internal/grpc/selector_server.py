@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from modyn.common.grpc import GenericGRPCServer
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import add_SelectorServicer_to_server  # noqa: E402, E501
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class SelectorGRPCServer(GenericGRPCServer):
     @staticmethod
-    def callback(modyn_config, server, selector_manager):
+    def callback(modyn_config: dict, server: Any, selector_manager: SelectorManager) -> None:
         add_SelectorServicer_to_server(
             SelectorGRPCServicer(selector_manager, modyn_config["selector"]["sample_batch_size"]), server
         )
@@ -22,7 +23,7 @@ class SelectorGRPCServer(GenericGRPCServer):
         callback_kwargs = {"selector_manager": self.selector_manager}
         super().__init__(modyn_config, modyn_config["selector"]["port"], SelectorGRPCServer.callback, callback_kwargs)
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         state = self.__dict__.copy()
         if "add_servicer_callback" in state:
             del state["add_servicer_callback"]

@@ -35,6 +35,7 @@ class MockStorageStub:
             )
 
 
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -59,6 +60,7 @@ def test_dataloader_dataset(
     test_grpc_connection_established,
     test_grpc_connection_established_selector,
     prefetched_partitions,
+    parallel_prefetch_requests,
 ):
     online_dataset = PerClassOnlineDataset(
         pipeline_id=1,
@@ -71,6 +73,7 @@ def test_dataloader_dataset(
         training_id=42,
         initial_filtered_label=0,
         num_prefetched_partitions=prefetched_partitions,
+        parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)

@@ -39,6 +39,9 @@ class Selector:
             assert trigger_id in self._trigger_partition_cache, "Inconsistent state"
             return
 
+        if "metadata_database" not in self._modyn_config:  # Can happen in tests
+            return
+
         with MetadataDatabaseConnection(self._modyn_config) as database:
             trigger: Optional[Trigger] = database.session.get(Trigger, (trigger_id, self._pipeline_id))
             if trigger is None:

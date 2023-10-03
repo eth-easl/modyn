@@ -4,9 +4,10 @@ import json
 import logging
 import os
 import shutil
-from multiprocessing import Lock, Manager
+from multiprocessing import Manager
+from multiprocessing.managers import DictProxy
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models.pipelines import Pipeline
@@ -22,7 +23,7 @@ class SelectorManager:
         self._modyn_config = modyn_config
         self._manager = Manager()
         self._selectors: dict[int, Selector] = {}
-        self._selector_locks: dict[int, Lock] = self._manager.dict()
+        self._selector_locks: DictProxy[int, Any] = self._manager.dict()
         self._next_pipeline_lock = self._manager.Lock()
         self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
@@ -34,7 +35,7 @@ class SelectorManager:
         self.init_metadata_db()
         self._init_trigger_sample_directory()
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         state = self.__dict__.copy()
         del state["_manager"]
         return state

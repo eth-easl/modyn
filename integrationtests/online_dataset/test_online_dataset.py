@@ -267,6 +267,7 @@ def test_dataset_impl(
     num_dataworkers: int,
     batch_size: int,
     prefetched_partitions: int,
+    parallel_prefetch_requests: int,
     pipeline_id: int,
     trigger_id: int,
     items: list[int],
@@ -283,6 +284,7 @@ def test_dataset_impl(
         get_selector_address(),
         42,
         prefetched_partitions,
+        parallel_prefetch_requests,
         None,
         None,
     )
@@ -349,12 +351,21 @@ def test_dataset() -> None:
     for num_dataworkers in [0, 1, 2, 4, 8, 16]:
         pipeline_id, trigger_id = prepare_selector(num_dataworkers, keys)
         for prefetched_partitions in [0, 1, 2, 3, 4, 5, 999]:
-            for batch_size in [1, 2, 10]:
-                print(
-                    f"Testing num_workers = {num_dataworkers}, partitions = {prefetched_partitions},"
-                    + f"batch_size = {batch_size}"
-                )
-                test_dataset_impl(num_dataworkers, batch_size, prefetched_partitions, pipeline_id, trigger_id, keys)
+            for parallel_prefetch_requests in [1, 2, 5, 999]:
+                for batch_size in [1, 2, 10]:
+                    print(
+                        f"Testing num_workers = {num_dataworkers}, partitions = {prefetched_partitions},"
+                        + f"batch_size = {batch_size}, parallel_prefetch_requests={parallel_prefetch_requests}"
+                    )
+                    test_dataset_impl(
+                        num_dataworkers,
+                        batch_size,
+                        prefetched_partitions,
+                        parallel_prefetch_requests,
+                        pipeline_id,
+                        trigger_id,
+                        keys,
+                    )
 
 
 def main() -> None:
