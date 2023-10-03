@@ -1,5 +1,4 @@
 import contextlib
-import functools
 import json
 import logging
 import os
@@ -42,7 +41,8 @@ class OnlineDataset(IterableDataset):
         storage_address: str,
         selector_address: str,
         training_id: int,
-        prefetched_partitions: int,
+        num_prefetched_partitions: int,
+        parallel_prefetch_requests: int,
         tokenizer: Optional[str],
         log_path: Optional[pathlib.Path],
     ):
@@ -51,7 +51,8 @@ class OnlineDataset(IterableDataset):
         self._training_id = training_id
         self._dataset_id = dataset_id
         self._first_call = True
-        self._prefetched_partitions = prefetched_partitions
+        self._num_prefetched_partitions = num_prefetched_partitions
+        self._parallel_prefetch_requests = parallel_prefetch_requests
 
         self._bytes_parser = bytes_parser
         self._serialized_transforms = serialized_transforms
@@ -77,6 +78,8 @@ class OnlineDataset(IterableDataset):
         self._partition_valid_until: dict[int, int] = {}
         self._partition_valid: dict[int, bool] = {}
         self._next_partition_to_fetch = 0
+        self._launched_prefetches = 0
+        self._start_prefetch_lock = threading.Lock()
 
         if log_path is None:
             logger.warning("Did not provide log path for OnlineDataset - logging disabled.")
@@ -231,57 +234,80 @@ class OnlineDataset(IterableDataset):
         with open(log_file, "w", encoding="utf-8") as logfile:
             json.dump(self._log, logfile)
 
-    def _prefetch_partition(self, worker_id: int) -> None:
-        if self._prefetched_partitions < 1 or self._next_partition_to_fetch >= self._num_partitions:
-            return  # Prefetching disabled or nothing more to prefetch
+    def _prefetch_partition(self, worker_id: int, maybe_continue: bool = False) -> None:
+        with self._start_prefetch_lock:
+            if self._num_prefetched_partitions < 1 or self._next_partition_to_fetch >= self._num_partitions:
+                return  # Prefetching disabled or nothing more to prefetch
 
-        assert self._next_partition_to_fetch >= 0
-        assert (
-            self._next_partition_to_fetch not in self._data_threads
-        ), f"Prefetching for partition {self._next_partition_to_fetch} has already been started"
+            if maybe_continue and self._launched_prefetches >= self._num_prefetched_partitions:
+                return  # Two callbacks started to prefetch basically at the same time
 
-        self._thread_data_container[self._next_partition_to_fetch] = {
-            "data": [],
-            "keys": [],
-            "labels": [],
-            "weights": [],
-        }
-        self._partition_valid[self._next_partition_to_fetch] = False
-        self._partition_valid_until[self._next_partition_to_fetch] = -1
-        self._partition_locks[self._next_partition_to_fetch] = threading.Lock()
-        self._partition_signals[self._next_partition_to_fetch] = threading.Condition(
-            self._partition_locks[self._next_partition_to_fetch]
-        )
+            if maybe_continue:
+                # Do this as early as possible to avoid running into the "problem" above frequently
+                self._launched_prefetches += 1
 
-        #def potential_callback():
-        #    self._info("Prefetch callback called.")
-        #    self._prefetch_partition(worker_id, num_additional_prefetches - 1)
+            assert self._next_partition_to_fetch >= 0
+            assert (
+                self._next_partition_to_fetch not in self._data_threads
+            ), f"Prefetching for partition {self._next_partition_to_fetch} has already been started"
 
-        #callback = None if num_additional_prefetches == 0 else potential_callback
+            self._thread_data_container[self._next_partition_to_fetch] = {
+                "data": [],
+                "keys": [],
+                "labels": [],
+                "weights": [],
+            }
+            self._partition_valid[self._next_partition_to_fetch] = False
+            self._partition_valid_until[self._next_partition_to_fetch] = -1
+            self._partition_locks[self._next_partition_to_fetch] = threading.Lock()
+            self._partition_signals[self._next_partition_to_fetch] = threading.Condition(
+                self._partition_locks[self._next_partition_to_fetch]
+            )
 
-        self._data_threads[self._next_partition_to_fetch] = threading.Thread(
-            target=self._get_data,
-            args=(
-                self._thread_data_container[self._next_partition_to_fetch],
-                worker_id,
-                self._next_partition_to_fetch,
-                self._partition_valid,
-                self._partition_valid_until,
-                self._partition_locks,
-                self._partition_signals,
-                None,
-            ),
-        )
+            callback = None
+            if maybe_continue:
 
-        self._data_threads[self._next_partition_to_fetch].start()
-        self._pref_started[self._next_partition_to_fetch] = True
+                def callback_func():
+                    self._info("Prefetch callback called.", worker_id)
 
-        self._next_partition_to_fetch += 1
+                    # It might be that between the check and the actual launch
+                    # We start another launch
+                    # We catch this with the lock within _prefetch_partition
+                    if self._launched_prefetches < self._num_prefetched_partitions:
+                        self._info(
+                            f"Only {self._launched_prefetches} out of {self._num_prefetched_partitions}"
+                            + " partitions have been fetched, issuing another request.",
+                            worker_id,
+                        )
+                        self._prefetch_partition(worker_id, True)
+                    else:
+                        self._info("Not issuing another request.", worker_id)
+
+                callback = callback_func
+
+            self._data_threads[self._next_partition_to_fetch] = threading.Thread(
+                target=self._get_data,
+                args=(
+                    self._thread_data_container[self._next_partition_to_fetch],
+                    worker_id,
+                    self._next_partition_to_fetch,
+                    self._partition_valid,
+                    self._partition_valid_until,
+                    self._partition_locks,
+                    self._partition_signals,
+                    callback,
+                ),
+            )
+
+            self._data_threads[self._next_partition_to_fetch].start()
+            self._pref_started[self._next_partition_to_fetch] = True
+
+            self._next_partition_to_fetch += 1
 
     def _fetch_partition_noprefetch(
         self, worker_id: int, partition_id: int
     ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
-        assert self._prefetched_partitions < 1
+        assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
         self._get_data(container, worker_id, partition_id, None, None, None, None, None)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
@@ -337,25 +363,31 @@ class OnlineDataset(IterableDataset):
         yield from self._get_partition_data(last_idx, max_idx, partition_id)
 
     def start_prefetching(self, worker_id: int) -> None:
-        # WIP change of prefetching model
-        if self._prefetched_partitions < 1:
+        if self._num_prefetched_partitions < 1:
+            # No prefetching at all
             return
 
-        self._prefetch_partition(worker_id, self._prefetched_partitions - 1)
+        if self._num_prefetched_partitions <= self._parallel_prefetch_requests:
+            # We can emit prefetching requests once and be done with it
+            for _ in range(self._num_prefetched_partitions):
+                self._prefetch_partition(worker_id, False)
+
+            return
+
+        # We have to respect the limit of parallel requests
+        for _ in range(self._parallel_prefetch_requests):
+            self._prefetch_partition(worker_id, True)
 
     def all_partition_generator(self, worker_id: int) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
-        #self.start_prefetching(worker_id)
-
-        for _ in range(self._prefetched_partitions):
-            self._prefetch_partition(worker_id)
+        self.start_prefetching(worker_id)
 
         for partition_id in range(self._num_partitions):
             self._persist_log(worker_id)
 
-            if self._prefetched_partitions > 0:
-                # Prefetched generator
+            if self._num_prefetched_partitions > 0:
                 if partition_id < self._num_partitions - 1:
-                    self._prefetch_partition(worker_id)
+                    # As we consume one partition, prefetch exactly one more partition
+                    self._prefetch_partition(worker_id, False)
 
                 yield from self.prefetched_partition_generator(worker_id, partition_id)
             else:
@@ -399,11 +431,13 @@ class OnlineDataset(IterableDataset):
         assert self._transform is not None
         self._num_partitions = self._key_source.get_num_data_partitions()
         self._info(
-            f"Total number of partitions will be {self._num_partitions}. Prefetch factor={self._prefetched_partitions}",
+            f"Total number of partitions will be {self._num_partitions}."
+            + f"Parallel prefetch requests = {self._parallel_prefetch_requests}"
+            + f"Num prefetched partitions = {self._num_prefetched_partitions}",
             worker_id,
         )
         self._log["num_partitions"] = self._num_partitions
-        self._prefetched_partitions = min(self._prefetched_partitions, self._num_partitions)
+        self._num_prefetched_partitions = min(self._num_prefetched_partitions, self._num_partitions)
 
         for data_tuple in self.all_partition_generator(worker_id):
             if (transformed_tuple := self._get_transformed_data_tuple(*data_tuple)) is not None:

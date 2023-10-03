@@ -26,7 +26,9 @@ class SelectorManager:
         self._next_pipeline_lock = self._manager.Lock()
         self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
-        # TODO(create issue): currently we have to prepare N locks and then share. This is because we cannot share the manager with subprocesses. For now not a big problem since we mostly run one pipeline but we might want to redesign this.
+        # TODO(create issue): currently we have to prepare N locks and then share.
+        # This is because we cannot share the manager with subprocesses.
+        # For now not a big problem since we mostly run one pipeline but we might want to redesign this.
         self._prepared_locks = [self._manager.Lock() for _ in range(64)]
 
         self.init_metadata_db()
@@ -77,8 +79,10 @@ class SelectorManager:
             if pipeline is None:
                 return
             logging.info(
-                f"[{os.getpid()}] Instantiating new selector for pipeline {pipeline_id}"
-                + " that was in the DB but previously unknown to this process"
+                "[%d] Instantiating new selector for pipeline %d"
+                + " that was in the DB but previously unknown to this process",
+                os.getpid(),
+                pipeline_id,
             )
 
             self._instantiate_selector(pipeline_id, pipeline.num_workers, pipeline.selection_strategy)

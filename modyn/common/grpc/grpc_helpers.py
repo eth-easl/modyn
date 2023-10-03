@@ -3,11 +3,10 @@ import datetime
 import logging
 import multiprocessing as mp
 import os
-import pickle
 import socket
 import time
 from concurrent import futures
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import grpc
 from modyn.utils import MAX_MESSAGE_SIZE
@@ -64,7 +63,7 @@ def _run_server_worker(bind_address: str, add_servicer_callback: Callable, modyn
 
 class GenericGRPCServer:
     def __init__(
-        self, modyn_config: dict, port: str, add_servicer_callback: Callable, callback_kwargs: dict = {}
+        self, modyn_config: dict, port: str, add_servicer_callback: Callable, callback_kwargs: Optional[dict] = None
     ) -> None:
         """Initialize the GRPC server.
 
@@ -74,7 +73,7 @@ class GenericGRPCServer:
         self.port = port
         self.modyn_config = modyn_config
         self.add_servicer_callback = add_servicer_callback
-        self.callback_kwargs = callback_kwargs
+        self.callback_kwargs = callback_kwargs if callback_kwargs is not None else {}
         self.workers = []
 
     def __enter__(self) -> Any:
@@ -97,12 +96,6 @@ class GenericGRPCServer:
         return self
 
     def __getstate__(self):
-        for variable_name, value in vars(self).items():
-            try:
-                pickle.dumps(value)
-            except:
-                print(f"{variable_name} with value {value} is not pickable")
-
         state = self.__dict__.copy()
         del state["add_servicer_callback"]
         return state

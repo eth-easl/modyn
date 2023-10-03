@@ -67,7 +67,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer=None,
             log_path=None,
-            prefetched_partitions=1,
+            num_prefetched_partitions=1,
         )._init_transforms()
 
     with pytest.raises(ValueError):
@@ -82,7 +82,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer="",
             log_path=None,
-            prefetched_partitions=1,
+            num_prefetched_partitions=1,
         )._init_transforms()
 
 
@@ -106,7 +106,7 @@ def test_init(test_insecure_channel, test_grpc_connection_established, test_grpc
         training_id=42,
         tokenizer=None,
         log_path=None,
-        prefetched_partitions=1,
+        num_prefetched_partitions=1,
     )
     assert online_dataset._pipeline_id == 1
     assert online_dataset._trigger_id == 1
@@ -174,7 +174,7 @@ def test_get_data_from_storage(
         training_id=42,
         tokenizer=None,
         log_path=None,
-        prefetched_partitions=0,
+        num_prefetched_partitions=0,
     )
     online_dataset._init_grpc()
     keys = []
@@ -245,7 +245,7 @@ def test_deserialize_torchvision_transforms(
         training_id=42,
         tokenizer=None,
         log_path=None,
-        prefetched_partitions=1,
+        num_prefetched_partitions=1,
     )
     online_dataset._bytes_parser_function = bytes_parser_function
     online_dataset._setup_composed_transform()
@@ -289,7 +289,7 @@ def test_dataset_iter(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -334,7 +334,7 @@ def test_dataset_iter_with_parsing(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -379,7 +379,7 @@ def test_dataloader_dataset(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -425,7 +425,7 @@ def test_dataloader_dataset_weighted(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -479,7 +479,7 @@ def test_dataloader_dataset_multi_worker(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -509,7 +509,7 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established, test
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=1,
+        num_prefetched_partitions=1,
         tokenizer=None,
         log_path=None,
     )
@@ -545,7 +545,7 @@ def test_init_transforms(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=1,
+        num_prefetched_partitions=1,
         tokenizer=None,
         log_path=None,
     )
@@ -606,7 +606,7 @@ def test_iter_multi_partition(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -659,7 +659,7 @@ def test_iter_multi_partition_weighted(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -715,7 +715,7 @@ def test_iter_multi_partition_cross(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -785,7 +785,7 @@ def test_iter_multi_partition_multi_workers(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )
@@ -837,7 +837,7 @@ def test_multi_epoch_dataloader_dataset(
         storage_address="localhost:1234",
         selector_address="localhost:1234",
         training_id=42,
-        prefetched_partitions=prefetched_partitions,
+        num_prefetched_partitions=prefetched_partitions,
         tokenizer=None,
         log_path=None,
     )

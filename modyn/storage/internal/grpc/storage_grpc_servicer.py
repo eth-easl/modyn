@@ -53,7 +53,7 @@ class StorageGRPCServicer(StorageServicer):
         self._sample_batch_size = self.modyn_config["storage"]["sample_batch_size"]
         super().__init__()
 
-    # pylint: disable-next=unused-argument,invalid-name
+    # pylint: disable-next=unused-argument,invalid-name,too-many-locals
     def Get(self, request: GetRequest, context: grpc.ServicerContext) -> Iterable[GetResponse]:
         """Return the data for the given keys.
 

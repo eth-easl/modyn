@@ -1,20 +1,9 @@
-import contextlib
-import datetime
-import functools
 import logging
-import multiprocessing as mp
-import os
-import pickle
-import socket
-import time
-from concurrent import futures
 
-import grpc
 from modyn.common.grpc import GenericGRPCServer
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import add_SelectorServicer_to_server  # noqa: E402, E501
 from modyn.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
 from modyn.selector.internal.selector_manager import SelectorManager
-from modyn.utils import MAX_MESSAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +23,6 @@ class SelectorGRPCServer(GenericGRPCServer):
         super().__init__(modyn_config, modyn_config["selector"]["port"], SelectorGRPCServer.callback, callback_kwargs)
 
     def __getstate__(self):
-        for variable_name, value in vars(self).items():
-            try:
-                pickle.dumps(value)
-            except:
-                print(f"{variable_name} with value {value} is not pickable")
-
         state = self.__dict__.copy()
         if "add_servicer_callback" in state:
             del state["add_servicer_callback"]
