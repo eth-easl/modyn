@@ -34,11 +34,7 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         self.matrix_content = MatrixContent.GRADIENTS
 
         # these arguments are required by DeepCore. Default values are used if not provided
-        self.args = Namespace(**params_from_selector.get("deepcore_args", {}))
-        if "print_freq" not in self.args:
-            self.args.print_freq = None  # avoid printing when running the submodular optimization
-        if "selection_batch" not in self.args:
-            self.args.selection_batch = 64
+        self.selection_batch = params_from_selector["selection_batch"]
 
         if "submodular_function" not in params_from_selector:
             raise ValueError(
@@ -64,10 +60,12 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
             index=all_index, similarity_kernel=lambda a, b: cossim_np(matrix[a], matrix[b])
         )
         submod_optimizer = submodular_optimizer.__dict__[self._greedy](
-            args=self.args, index=all_index, budget=target_size
+            args=Namespace(print_freq=None), index=all_index, budget=target_size
         )
         selection_result = submod_optimizer.select(
-            gain_function=submod_function.calc_gain, update_state=submod_function.update_state
+            gain_function=submod_function.calc_gain,
+            update_state=submod_function.update_state,
+            batch=self.selection_batch,
         )
 
         # no weights are computed with this strategy

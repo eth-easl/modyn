@@ -24,7 +24,7 @@ class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
         if "submodular_optimizer" in self.downsampling_config:
             config["submodular_optimizer"] = self.downsampling_config["submodular_optimizer"]
 
-        config["deepcore_args"] = self.downsampling_config.get("deepcore_args", {})
+        config["selection_batch"] = self.downsampling_config.get("selection_batch", 64)
 
         config["balance"] = self.downsampling_config.get("balance", False)
         if config["balance"] and self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
