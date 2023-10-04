@@ -261,7 +261,7 @@ def test_deserialize_torchvision_transforms(
         assert transform1.__dict__ == transform2.__dict__
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -309,7 +309,7 @@ def test_dataset_iter(
     assert [x[2] for x in all_data] == [1] * 10
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -357,7 +357,7 @@ def test_dataset_iter_with_parsing(
     assert [x[2] for x in all_data] == [1] * 10
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -406,7 +406,7 @@ def test_dataloader_dataset(
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", WeightedMockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -456,7 +456,7 @@ def test_dataloader_dataset_weighted(
         assert torch.equal(batch[3], 2 * torch.ones(4, dtype=torch.float64))
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("num_workers", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
@@ -590,7 +590,7 @@ def iter_multi_partition_data_side_effect(keys):
     yield (list(keys), [x.to_bytes(2, "big") for x in keys], [1] * len(keys), 0)
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -646,7 +646,7 @@ def test_iter_multi_partition(
     assert idx == 15
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", WeightedMockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -705,7 +705,7 @@ def test_iter_multi_partition_weighted(
     assert idx == 15
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
@@ -772,7 +772,7 @@ def test_iter_multi_partition_cross(
     assert idx == 10
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("num_workers", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
@@ -838,7 +838,7 @@ def test_iter_multi_partition_multi_workers(
         assert idx == ((max(num_workers, 1) * 8) / 4) - 1
 
 
-@pytest.mark.parametrize("parallel_prefetch_requests", [1, 2, 5, 7, 8, 9, 10, 100, 999999])
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)

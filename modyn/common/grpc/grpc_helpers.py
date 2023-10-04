@@ -67,11 +67,7 @@ class GenericGRPCServer:
     def __init__(
         self, modyn_config: dict, port: str, add_servicer_callback: Callable, callback_kwargs: Optional[dict] = None
     ) -> None:
-        """Initialize the GRPC server.
-
-        Args:
-            TODO
-        """
+        """Initialize the GRPC server."""
         self.port = port
         self.modyn_config = modyn_config
         self.add_servicer_callback = add_servicer_callback
