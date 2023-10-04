@@ -27,7 +27,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         self.criterion = per_sample_loss
 
         # This class uses the embedding recorder
-        self.requires_coreset_methods_support = True
+        self.requires_coreset_supporting_module = True
         self.matrix_elements: list[torch.Tensor] = []
 
         self.matrix_content: Optional[MatrixContent] = None

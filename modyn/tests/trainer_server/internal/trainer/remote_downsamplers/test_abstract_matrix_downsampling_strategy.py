@@ -26,7 +26,7 @@ def get_sampler_config(balance=False):
 def test_init():
     amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config())
 
-    assert amds.requires_coreset_methods_support
+    assert amds.requires_coreset_supporting_module
     assert not amds.matrix_elements
     assert amds.matrix_content is None
 
@@ -37,7 +37,7 @@ def test_collect_embeddings():
 
     amds.matrix_content = MatrixContent.EMBEDDINGS
 
-    assert amds.requires_coreset_methods_support
+    assert amds.requires_coreset_supporting_module
     assert not amds.matrix_elements  # thank you pylint! amds.matrix_elements == []
 
     first_embedding = torch.randn((4, 5))
@@ -69,7 +69,7 @@ def test_collect_embedding_balance(test_amds):
 
     amds.matrix_content = MatrixContent.EMBEDDINGS
 
-    assert amds.requires_coreset_methods_support
+    assert amds.requires_coreset_supporting_module
     assert amds.requires_data_label_by_label
     assert not amds.matrix_elements  # thank you pylint! amds.matrix_elements == []
 

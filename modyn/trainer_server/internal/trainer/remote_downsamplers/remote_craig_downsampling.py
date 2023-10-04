@@ -43,7 +43,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
             )
 
         # This class uses the embedding recorder
-        self.requires_coreset_methods_support = True
+        self.requires_coreset_supporting_module = True
 
         # Samples are supplied label by label (this class is instance of AbstractPerLabelRemoteDownsamplingStrategy).
         # The following list keeps the gradients of the current label. When all the samples belonging to the current

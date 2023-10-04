@@ -21,7 +21,7 @@ def get_sampler_config(balance=False):
 def test_init():
     amds = RemoteUncertaintyDownsamplingStrategy(*get_sampler_config())
 
-    assert not amds.requires_coreset_methods_support
+    assert not amds.requires_coreset_supporting_module
     assert not amds.scores
     assert not amds.index_sampleid_map
     assert not amds.requires_data_label_by_label

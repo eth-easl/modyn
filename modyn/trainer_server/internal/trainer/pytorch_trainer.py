@@ -609,7 +609,7 @@ class PytorchTrainer:
 
         self._downsampler.init_downsampler()
 
-        if self._downsampler.requires_coreset_methods_support:
+        if self._downsampler.requires_coreset_supporting_module:
             # enable the embedding recorder to keep track of last layer embedding. The embeddings are stored
             # in self._model.model.embedding_recorder.embedding
             assert isinstance(self._model.model, CoresetSupportingModule)
@@ -618,7 +618,7 @@ class PytorchTrainer:
         big_batch_output = self._model.model(data)
 
         # supply the embeddings if required by the downsampler
-        if self._downsampler.requires_coreset_methods_support:
+        if self._downsampler.requires_coreset_supporting_module:
             embeddings = self._model.model.embedding_recorder.embedding
             self._model.model.embedding_recorder.end_recording()
         else:
@@ -651,7 +651,7 @@ class PytorchTrainer:
         self._train_dataloader.dataset.change_key_source(selector_key_source)
         self._downsampler.init_downsampler()
 
-        if self._downsampler.requires_coreset_methods_support:
+        if self._downsampler.requires_coreset_supporting_module:
             # enable the embedding recorder to keep track of last layer embedding. The embeddings are stored
             # in self._model.model.embedding_recorder.embedding
             assert isinstance(self._model.model, CoresetSupportingModule)
@@ -685,7 +685,7 @@ class PytorchTrainer:
 
         selected_ids, weights = self._downsampler.select_points()
 
-        if self._downsampler.requires_coreset_methods_support:
+        if self._downsampler.requires_coreset_supporting_module:
             # turn off the embedding recording (not needed for regular training)
             assert isinstance(self._model.model, CoresetSupportingModule)
             self._model.model.embedding_recorder.end_recording()
@@ -744,7 +744,7 @@ class PytorchTrainer:
                 # compute the scores and accumulate them
                 model_output = self._model.model(data)
                 # supply the embeddings if required by the downsampler
-                if self._downsampler.requires_coreset_methods_support:
+                if self._downsampler.requires_coreset_supporting_module:
                     assert isinstance(self._model.model, CoresetSupportingModule)
                     assert self._model.model.embedding_recorder.record_embedding
                     embeddings = self._model.model.embedding_recorder.embedding

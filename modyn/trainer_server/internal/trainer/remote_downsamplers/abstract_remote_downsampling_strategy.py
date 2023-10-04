@@ -59,8 +59,8 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         self.requires_data_label_by_label = False
 
         # Some methods require extra features (embedding recorder, get_last_layer) that are implemented in the class
-        # CoresetMethodsSupport
-        self.requires_coreset_methods_support = False
+        # CoresetSupporingModule
+        self.requires_coreset_supporting_module = False
 
     @abstractmethod
     def init_downsampler(self) -> None:
