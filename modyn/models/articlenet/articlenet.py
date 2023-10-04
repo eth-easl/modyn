@@ -19,6 +19,10 @@ class ArticleNet:
         self.model.to(device)
 
 
+# Pylint complaints about problem in transformers DistilBertModel
+# pylint: disable-next=abstract-method
+
+
 class DistilBertFeaturizer(DistilBertModel):
     def __init__(self, config: Any) -> None:
         super().__init__(config)
