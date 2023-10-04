@@ -1,3 +1,4 @@
+# pylint: disable=W0223
 from typing import Any
 
 import torch

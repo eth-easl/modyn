@@ -234,7 +234,7 @@ class TriggerSampleStorage:
         """
 
         if not os.path.isfile(file_path):
-            return np.ndarray(0, dtype=("i8,f8"))
+            return np.ndarray(0, dtype="i8,f8")
 
         return np.load(file_path, allow_pickle=False, fix_imports=False)
 

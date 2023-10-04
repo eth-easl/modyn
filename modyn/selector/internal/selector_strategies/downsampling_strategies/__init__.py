@@ -9,7 +9,7 @@ from .kcentergreedy_downsampling_strategy import KcenterGreedyDownsamplingStrate
 from .loss_downsampling_strategy import LossDownsamplingStrategy  # noqa: F401
 from .no_downsampling_strategy import NoDownsamplingStrategy  # noqa: F401
 from .submodular_downsampling_strategy import SubmodularDownsamplingStrategy  # noqa: F401
-from .uncertainty_downsampling_strategy import UncertaintyDownsamplingStrategy # noqa: F401
+from .uncertainty_downsampling_strategy import UncertaintyDownsamplingStrategy  # noqa: F401
 from .utils import instantiate_downsampler  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))

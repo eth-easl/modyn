@@ -55,6 +55,7 @@ from modyn.utils.utils import instantiate_class
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
 
+
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
 
@@ -610,7 +611,7 @@ class PytorchTrainer:
         if self._downsampler.requires_coreset_methods_support:
             # enable the embedding recorder to keep track of last layer embedding. The embeddings are stored
             # in self._model.model.embedding_recorder.embedding
-            assert isinstance(self._model.model, CoresetMethodsSupport)
+            assert isinstance(self._model.model, CoresetSupportingModule)
             self._model.model.embedding_recorder.start_recording()
 
         big_batch_output = self._model.model(data)
@@ -685,7 +686,7 @@ class PytorchTrainer:
 
         if self._downsampler.requires_coreset_methods_support:
             # turn off the embedding recording (not needed for regular training)
-            assert isinstance(self._model.model, CoresetMethodsSupport)
+            assert isinstance(self._model.model, CoresetSupportingModule)
             self._model.model.embedding_recorder.end_recording()
 
         # to store all the selected (sample, weight).

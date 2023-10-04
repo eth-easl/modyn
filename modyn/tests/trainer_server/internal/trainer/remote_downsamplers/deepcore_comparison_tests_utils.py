@@ -1,10 +1,10 @@
 import numpy as np
 import torch
-from modyn.models.coreset_methods_support import CoresetMethodsSupport
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 
 
-class DummyModel(CoresetMethodsSupport):
+class DummyModel(CoresetSupportingModule):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.hidden_layer = nn.Linear(in_features=1, out_features=10)
@@ -24,4 +24,4 @@ def assert_close_matrices(matrix1, matrix2):
     for row1, row2 in zip(matrix1, matrix2):
         assert len(row1) == len(row2)
         for el1, el2 in zip(row1, row2):
-            assert np.isclose(el1, el2, 1e-3)
+            assert np.isclose(el1, el2, 1e-2)

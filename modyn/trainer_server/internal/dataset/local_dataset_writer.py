@@ -63,7 +63,6 @@ class LocalDatasetWriter(TriggerSampleStorage):
         # map the two input lists to the desired format
         assert self.output_samples_list is not None
 
-
         # add the input tuples to the output list.
         for i, _ in enumerate(sample_ids):
             self.output_samples_list[self.current_sample_index] = (sample_ids[i], sample_weights[i])
