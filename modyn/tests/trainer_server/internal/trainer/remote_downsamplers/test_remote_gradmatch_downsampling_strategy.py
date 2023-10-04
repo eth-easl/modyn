@@ -17,7 +17,7 @@ def get_sampler_config(balance=False):
         "args": {},
         "balance": balance,
     }
-    return 0, 0, 0, params_from_selector, per_sample_loss_fct
+    return 0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu"
 
 
 def test_select():
@@ -177,6 +177,7 @@ def test_matching_results_with_deepcore():
             5,
             {"downsampling_ratio": 10 * num_of_target_samples, "balance": False},
             BCEWithLogitsLoss(reduction="none"),
+            "cpu",
         )
         sampler.inform_samples(sample_ids, forward_output, target, embedding)
         assert sampler.index_sampleid_map == list(range(10))
@@ -206,7 +207,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 0, 0]).float().unsqueeze(1)
 
     sampler = RemoteGradMatchDownsamplingStrategy(
-        0, 0, 5, {"downsampling_ratio": 50, "balance": False}, BCEWithLogitsLoss(reduction="none")
+        0, 0, 5, {"downsampling_ratio": 50, "balance": False}, BCEWithLogitsLoss(reduction="none"), "cpu"
     )
 
     dummy_model.embedding_recorder.start_recording()

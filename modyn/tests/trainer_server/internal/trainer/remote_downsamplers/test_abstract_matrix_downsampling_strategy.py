@@ -19,7 +19,7 @@ def get_sampler_config(balance=False):
         "args": {},
         "balance": balance,
     }
-    return 0, 0, 0, params_from_selector, per_sample_loss_fct
+    return 0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu"
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())

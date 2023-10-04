@@ -22,9 +22,15 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.su
 
 class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
     def __init__(
-        self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, per_sample_loss: Any
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        batch_size: int,
+        params_from_selector: dict,
+        per_sample_loss: Any,
+        device: str,
     ):
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss)
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device)
         self.matrix_content = MatrixContent.GRADIENTS
 
         # these arguments are required by DeepCore. Default values are used if not provided

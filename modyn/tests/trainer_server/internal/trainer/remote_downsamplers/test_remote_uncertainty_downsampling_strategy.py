@@ -15,7 +15,7 @@ def get_sampler_config(balance=False):
         "balance": balance,
         "score_metric": "LeastConfidence",
     }
-    return 0, 0, 0, params_from_selector, per_sample_loss_fct
+    return 0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu"
 
 
 def test_init():

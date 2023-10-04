@@ -19,13 +19,19 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.su
 
 class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
     def __init__(
-        self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, per_sample_loss: Any
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        batch_size: int,
+        params_from_selector: dict,
+        per_sample_loss: Any,
+        device: str,
     ) -> None:
         """
         Selection strategy based on CRAIG (from the paper Data-efficient Training of Machine Learning Models). The
         implementation is adapted from the DeepCore library (https://github.com/PatrickZH/DeepCore).
         """
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector)
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
 
         self.criterion = per_sample_loss
 

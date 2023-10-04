@@ -19,7 +19,7 @@ def get_sampler_config(balance=False):
         "selection_batch": 64,
         "greedy": "NaiveGreedy",
     }
-    return 0, 0, 0, params_from_selector, per_sample_loss_fct
+    return 0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu"
 
 
 def test_inform_samples():
@@ -329,6 +329,7 @@ def test_matching_results_with_deepcore():
         5,
         {"downsampling_ratio": 20, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
         BCEWithLogitsLoss(reduction="none"),
+        "cpu",
     )
     sample_ids = [0, 1, 2]
     dummy_model.embedding_recorder.start_recording()
@@ -381,6 +382,7 @@ def test_matching_results_with_deepcore_permutation():
         5,
         {"downsampling_ratio": 30, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
         BCEWithLogitsLoss(reduction="none"),
+        "cpu",
     )
     sample_ids = [2, 3, 4]
     dummy_model.embedding_recorder.start_recording()
@@ -433,6 +435,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
         5,
         {"downsampling_ratio": 50, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
         BCEWithLogitsLoss(reduction="none"),
+        "cpu",
     )
     sample_ids = [index_mapping[i] for i in [2, 3, 4]]
     dummy_model.embedding_recorder.start_recording()

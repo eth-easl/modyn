@@ -14,9 +14,15 @@ MatrixContent = Enum("MatrixContent", ["EMBEDDINGS", "GRADIENTS"])
 
 class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
     def __init__(
-        self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, per_sample_loss: Any
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        batch_size: int,
+        params_from_selector: dict,
+        per_sample_loss: Any,
+        device: str,
     ):
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector)
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
 
         self.criterion = per_sample_loss
 

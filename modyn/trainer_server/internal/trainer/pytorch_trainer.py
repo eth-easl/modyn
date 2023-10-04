@@ -325,6 +325,7 @@ class PytorchTrainer:
             self._batch_size,
             downsampler_config,
             per_sample_loss,
+            self._device,
         )
 
     def sample_then_batch_this_epoch(self, epoch: int) -> bool:
