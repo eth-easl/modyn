@@ -1,4 +1,3 @@
-from argparse import Namespace
 from typing import Any
 
 import numpy as np
@@ -26,16 +25,10 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device)
         self.matrix_content = MatrixContent.GRADIENTS
 
-        self.args = Namespace(**params_from_selector.get("deepcore_args", {}))
-        if "print_freq" not in self.args:
-            self.args.print_freq = None
-        if "device" not in self.args:
-            self.args.device = "cpu"
-
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         cur_val_gradients = np.mean(matrix, axis=0)
 
-        if self.args.device == "cpu":
+        if self.device == "cpu":
             # Compute OMP on numpy
             cur_weights = orthogonal_matching_pursuit_np(matrix.T, cur_val_gradients, budget=target_size)
         else:

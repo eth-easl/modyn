@@ -1,4 +1,3 @@
-from argparse import Namespace
 from typing import Any
 
 import numpy as np
@@ -26,15 +25,9 @@ class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy
         self.matrix_content = MatrixContent.EMBEDDINGS
         self.metric = euclidean_dist
 
-        self.args = Namespace(**params_from_selector.get("args", {}))
-        if "print_freq" not in self.args:
-            self.args.print_freq = None
-        if "device" not in self.args:
-            self.args.device = "cpu"
-
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         selected_indices = k_center_greedy(
-            matrix, budget=target_size, metric=self.metric, device=self.args.device, print_freq=self.args.print_freq
+            matrix, budget=target_size, metric=self.metric, device=self.device, print_freq=None
         )
 
         # no weights are returned by this technique
