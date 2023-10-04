@@ -86,7 +86,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
 
     def _select_from_scores(self) -> tuple[list[int], torch.Tensor]:
         number_of_samples = len(self.scores)
-        target_size = int(self.downsampling_ratio * number_of_samples / 100)
+        target_size = max(int(self.downsampling_ratio * number_of_samples / 100), 1)
         selected_indices, weights = self._select_indexes_from_scores(target_size)
         selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
         return selected_ids, weights
