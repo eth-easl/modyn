@@ -50,7 +50,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         if self.matrix_content == MatrixContent.GRADIENTS:
             to_be_added = self._compute_gradients(forward_output, target, embedding)
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
-            to_be_added = embedding.detach()
+            to_be_added = embedding.detach().cpu()
         else:
             raise AssertionError("The required content does not exits.")
 

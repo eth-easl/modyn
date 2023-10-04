@@ -46,8 +46,9 @@ def orthogonal_matching_pursuit(A, b, budget: int, lam: float = 1.0):
                 A_i = A[:, index].view(1, -1)
             else:
                 A_i = torch.cat((A_i, A[:, index].view(1, -1)), dim=0)
-                temp = torch.matmul(A_i, torch.transpose(A_i, 0, 1)) + lam * torch.eye(A_i.shape[0], device="cuda")
-                x_i, _ = torch.lstsq(torch.matmul(A_i, b).view(-1, 1), temp)
+                temp = torch.matmul(A_i, torch.transpose(A_i, 0, 1)) + lam * torch.eye(A_i.shape[0], device="cuda:0")
+                lstsq_out = torch.linalg.lstsq(temp, torch.matmul(A_i, b).view(-1, 1))
+                x_i = torch.cat((lstsq_out.solution, lstsq_out.residuals))
             resid = b - torch.matmul(torch.transpose(A_i, 0, 1), x_i).view(-1)
         if budget > 1:
             x_i = nnls(temp.cpu().numpy(), torch.matmul(A_i, b).view(-1).cpu().numpy())[0]

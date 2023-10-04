@@ -38,7 +38,8 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         self.index_sampleid_map += sample_ids
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
-        target_size = int(self.downsampling_ratio * self.number_of_points_seen / 100)
+        # select always at least 1 point
+        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / 100), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
         probabilities = probabilities / probabilities.sum()

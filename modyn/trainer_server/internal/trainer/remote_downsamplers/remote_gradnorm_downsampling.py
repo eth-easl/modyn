@@ -42,7 +42,7 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
             last_layer_gradients = torch.autograd.grad(sample_losses.sum(), forward_output, retain_graph=False)[0]
             scores = torch.norm(last_layer_gradients, dim=-1)
 
-        return scores
+        return scores.cpu()
 
     def init_downsampler(self) -> None:
         self.probabilities = []
@@ -62,7 +62,8 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         self.index_sampleid_map += sample_ids
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
-        target_size = int(self.downsampling_ratio * self.number_of_points_seen / 100)
+        # select always at least 1 point
+        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / 100), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
         probabilities = probabilities / probabilities.sum()
