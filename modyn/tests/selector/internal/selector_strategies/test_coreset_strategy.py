@@ -122,12 +122,12 @@ def test_on_trigger():
     strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
 
     generator = strat._on_trigger()
-    assert len(list(generator)[0]) == 3  # 50% presampling
+    assert len(list(generator)[0][0]) == 3  # 50% presampling
 
     # adjust the presampling to 100%
     strat.presampling_strategy.presampling_ratio = 100
     generator = strat._on_trigger()
-    assert len(list(generator)[0]) == 6  # 100% presampling
+    assert len(list(generator)[0][0]) == 6  # 100% presampling
 
     # adjust the presampling to 0%
     strat.presampling_strategy.presampling_ratio = 0
@@ -144,7 +144,7 @@ def test_on_trigger_multi_chunks():
     strat._maximum_keys_in_memory = 4
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 1
     assert len(indexes[0]) == 2
 
@@ -157,7 +157,7 @@ def test_on_trigger_multi_chunks_unbalanced():
     strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 2
     assert len(indexes[0]) == 2
     assert len(indexes[1]) == 1
@@ -172,7 +172,7 @@ def test_on_trigger_multi_chunks_bis():
     strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 2
     assert len(indexes[0]) == 2
     assert set(key for key, _ in indexes[0]) < set([10, 11, 12, 13, 14, 15])
@@ -191,7 +191,7 @@ def test_no_presampling():
     strat._maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 2
     assert len(indexes[0]) == 5
     assert len(indexes[1]) == 1
@@ -208,7 +208,7 @@ def test_chunking():
     strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 3
     assert len(indexes[0]) == 2
     assert len(indexes[1]) == 2
@@ -226,7 +226,7 @@ def test_chunking_with_stricter_limit():
     strat._maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 2
     assert len(indexes[0]) == 2
     assert len(indexes[1]) == 1
@@ -242,7 +242,7 @@ def test_chunking_with_stricter_presampling():
     strat._maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 1
     assert len(indexes[0]) == 3
 
@@ -323,7 +323,7 @@ def test_no_presampling_with_limit():
     strat._maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
-    indexes = list(generator)
+    indexes = [data for data, _ in generator]
     assert len(indexes) == 1
     assert len(indexes[0]) == 3
 
@@ -372,9 +372,9 @@ def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: Ma
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [[]]
+    test__on_trigger.return_value = [([], {})]
 
-    trigger_id, trigger_num_keys, _ = strat.trigger()
+    trigger_id, trigger_num_keys, _, _ = strat.trigger()
 
     assert trigger_id == 0
     assert strat._next_trigger_id == 1

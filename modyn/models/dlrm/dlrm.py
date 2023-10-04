@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 import numpy as np
 import torch
-from modyn.models.coreset_methods_support import CoresetMethodsSupport, EmbeddingRecorder
+from modyn.models.coreset_methods_support import CoresetSupportingModule, EmbeddingRecorder
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
@@ -17,7 +17,7 @@ class DLRM:
         self.model.to(device)
 
 
-class DlrmModel(CoresetMethodsSupport):
+class DlrmModel(CoresetSupportingModule):
     # pylint: disable=too-many-instance-attributes
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()

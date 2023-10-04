@@ -3,16 +3,16 @@ FROM modyndependencies:latest as apex-image
 # Uncomment the following lines to install apex
 
 # TODO(#104): Make this easily configurable here
-# RUN conda run -n modyn pip install packaging
+# RUN mamba run -n modyn pip install packaging ninja
 # RUN git clone https://github.com/NVIDIA/apex ./apex
-# RUN conda run -v -n modyn pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./apex
+# RUN mamba run -v -n modyn pip install -v --no-build-isolation --no-cache-dir --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./apex
 
 FROM modynbase:latest AS trainerserver-image
 
-COPY --from=apex-image /opt/conda/envs/modyn /opt/conda/envs/modyn
+COPY --from=apex-image /opt/mamba/envs/modyn /opt/mamba/envs/modyn
 RUN chmod a+x /src/modyn/trainer_server/modyn-trainer-server
 RUN mkdir -p /tmp/offline_dataset
 RUN chown appuser /tmp/offline_dataset
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD conda run -n modyn --no-capture-output ./modyn/trainer_server/modyn-trainer-server ./modyn/config/examples/modyn_config.yaml
+CMD mamba run -n modyn --no-capture-output ./modyn/trainer_server/modyn-trainer-server ./modyn/config/examples/modyn_config.yaml

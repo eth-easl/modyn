@@ -66,6 +66,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             selector_address="localhost:1234",
             training_id=42,
             tokenizer=None,
+            log_path=None,
         )._init_transforms()
 
     with pytest.raises(ValueError):
@@ -79,6 +80,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             selector_address="localhost:1234",
             training_id=42,
             tokenizer="",
+            log_path=None,
         )._init_transforms()
 
 
@@ -101,6 +103,7 @@ def test_init(test_insecure_channel, test_grpc_connection_established, test_grpc
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     assert online_dataset._pipeline_id == 1
     assert online_dataset._trigger_id == 1
@@ -132,6 +135,7 @@ def test_get_keys_and_weights_from_selector(
             "selector_address": "localhost:1234",
             "training_id": 42,
             "tokenizer": None,
+            "log_path": None,
         }
 
         online_dataset = OnlineDataset(**kwargs)
@@ -165,6 +169,7 @@ def test_get_data_from_storage(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     online_dataset._init_grpc()
     assert online_dataset._get_data_from_storage(list(range(10))) == (
@@ -223,6 +228,7 @@ def test_deserialize_torchvision_transforms(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     online_dataset._bytes_parser_function = bytes_parser_function
     online_dataset._setup_composed_transform()
@@ -263,6 +269,7 @@ def test_dataset_iter(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -302,6 +309,7 @@ def test_dataset_iter_with_parsing(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -341,6 +349,7 @@ def test_dataloader_dataset(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
@@ -381,6 +390,7 @@ def test_dataloader_dataset_weighted(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
@@ -425,6 +435,7 @@ def test_dataloader_dataset_multi_worker(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
     for batch in dataloader:
@@ -453,6 +464,7 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established, test
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
 
     assert online_dataset._storagestub is None
@@ -485,6 +497,7 @@ def test_init_transforms(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
 
     assert online_dataset._bytes_parser_function is None
@@ -547,6 +560,7 @@ def test_iter_multi_partition(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
 
@@ -606,6 +620,7 @@ def test_iter_multi_partition_weighted(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
 
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
@@ -667,6 +682,7 @@ def test_iter_multi_partition_cross(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=6)
 
@@ -738,6 +754,7 @@ def test_iter_multi_partition_multi_workers(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=4)
     idx = 0
@@ -780,6 +797,7 @@ def test_multi_epoch_dataloader_dataset(
         selector_address="localhost:1234",
         training_id=42,
         tokenizer=None,
+        log_path=None,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for _ in range(5):

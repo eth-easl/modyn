@@ -910,8 +910,8 @@ def test_get_available_labels(reset_after_trigger: bool):
         GetAvailableLabelsRequest(pipeline_id=pipeline_id)
     ).available_labels
 
-    assert len(available_labels) == 2
-    assert 0 in available_labels and 1 in available_labels
+    # here we expect to have 0 labels since it's before the first trigger
+    assert len(available_labels) == 0
 
     selector.inform_data_and_trigger(
         DataInformRequest(
@@ -922,6 +922,14 @@ def test_get_available_labels(reset_after_trigger: bool):
         )
     )
 
+    available_labels = selector.get_available_labels(
+        GetAvailableLabelsRequest(pipeline_id=pipeline_id)
+    ).available_labels
+
+    # we want all the labels belonging to the first trigger
+    assert len(available_labels) == 3
+    assert sorted(available_labels) == [0, 1, 189]
+
     selector.inform_data_and_trigger(
         DataInformRequest(
             pipeline_id=pipeline_id,
@@ -931,14 +939,26 @@ def test_get_available_labels(reset_after_trigger: bool):
         )
     )
 
+    # this label (99) should not appear in the available labels since it belongs to a future trigger.
+    selector.inform_data(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=[99],
+            timestamps=[7],
+            labels=[99],
+        )
+    )
+
     available_labels = selector.get_available_labels(
         GetAvailableLabelsRequest(pipeline_id=pipeline_id)
     ).available_labels
 
     if reset_after_trigger:
+        # only the last trigger must be considered but not point99
         assert len(available_labels) == 3
         assert sorted(available_labels) == [7, 10, 45]
     else:
+        # every past point must be considered. Only point99 is excluded.
         assert len(available_labels) == 6
         assert sorted(available_labels) == [0, 1, 7, 10, 45, 189]
 

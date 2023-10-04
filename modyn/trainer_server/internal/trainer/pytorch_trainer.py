@@ -1,4 +1,5 @@
 # pylint: disable=no-name-in-module
+import glob
 import io
 import json
 import logging
@@ -6,13 +7,17 @@ import multiprocessing as mp
 import os
 import pathlib
 import queue
+import shutil
+import tempfile
 import traceback
 from enum import Enum
-from typing import Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 import grpc
+import numpy as np
 import torch
-from modyn.models.coreset_methods_support import CoresetMethodsSupport
+from modyn.common.benchmark.stopwatch import Stopwatch
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -27,8 +32,6 @@ from modyn.trainer_server.internal.dataset.data_utils import (
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
-from modyn.trainer_server.internal.time_logger import TimeLogger, Event
-from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -51,7 +54,6 @@ from modyn.utils import (
 from modyn.utils.utils import instantiate_class
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
-TIMING_LOGGER = TimeLogger()
 
 class PytorchTrainer:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
@@ -70,7 +72,6 @@ class PytorchTrainer:
         self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id
         self.trigger_id = training_info.trigger_id
-        TIMING_LOGGER.set_trigger(self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
@@ -112,11 +113,21 @@ class PytorchTrainer:
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
         self.epochs_per_trigger = training_info.epochs_per_trigger
+        self._log_file_path = training_info.log_file_path
+        self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
 
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
 
         self._final_checkpoint_path.mkdir()  # exist_ok == False, this directory should not exist before
+
+        if self._log_file_path is not None:
+            assert isinstance(self._log_file_path, pathlib.Path)
+            self._log_file_path.unlink(missing_ok=True)
+        else:
+            logger.warn("Log file path is None.")
+
+        self._log: dict[str, Any] = {}
 
         self._status_query_queue_training = status_query_queue_training
         self._status_response_queue_training = status_response_queue_training
@@ -151,13 +162,25 @@ class PytorchTrainer:
             training_info.selector_address,
             training_info.training_id,
             training_info.tokenizer,
+            self._dataset_log_path,
         )
 
-        # create callbacks - For now, assume LossCallback by default
+        # Create callbacks
         # TODO(#140): should be defined by the pipeline and passed with training request
-        self._callbacks = {
-            MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
+        self._callbacks: dict[MetricType, Any] = {
+            # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
+    def _persist_pipeline_log(self) -> None:
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            json.dumps(self._log)  # Enforce serialization to catch issues
+            return  # But don't actually store in tests
+
+        if self._log_file_path is not None:
+            with open(self._log_file_path, "w", encoding="utf-8") as logfile:
+                json.dump(self._log, logfile)
+        else:
+            self.logger.error("Log file path is None, cannot persist.")
 
     def _setup_downsampling(
         self,
@@ -229,6 +252,9 @@ class PytorchTrainer:
 
     def _warning(self, msg: str) -> None:
         self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+
+    def _error(self, msg: str) -> None:
+        self.logger.error(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
 
     def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
         dict_to_save = {}
@@ -312,35 +338,49 @@ class PytorchTrainer:
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
-
-        TIMING_LOGGER.log(Event.START_TRAINING)
+        total_stopw = Stopwatch()
+        stopw = Stopwatch()
+        total_stopw.start("TotalTrain")
 
         self._model.model.train()
 
+        stopw.start("OnBeginCallbacks")
         for _, callback in self._callbacks.items():
             callback.on_train_begin(self._model.model, self._optimizers)
+        self._log["on_begin_callbacks_time"] = stopw.stop()
 
         self._info("Handled OnBegin Callbacks.")
+        self._log["epochs"] = []
 
         batch_number = -1
         for epoch in range(self.epochs_per_trigger):
-            TIMING_LOGGER.log(Event.START_EPOCH, str(epoch))
-            if self.sample_then_batch_this_epoch(epoch):
-                TIMING_LOGGER.log(Event.STB_START)
-                self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
-                self.downsample_trigger_training_set()
-                TIMING_LOGGER.log(Event.STB_END)
+            stopw = Stopwatch()  # Reset timings per epoch
+            self._log["epochs"].append({})
+            batch_timings = []
 
+            if self.sample_then_batch_this_epoch(epoch):
+                self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
+                stopw.start("DownsampleSTB")
+                self.downsample_trigger_training_set()
+                stopw.stop()
+
+            stopw.start("IndivFetchBatch", overwrite=True)
+            stopw.start("FetchBatch", resume=True)
             for batch_number, batch in enumerate(self._train_dataloader):
-                TIMING_LOGGER.log(Event.START_BATCH, str(batch_number))
+                stopw.stop("FetchBatch")
+                batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
 
+                stopw.start("OnBatchBeginCallbacks", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
+                stopw.stop()
 
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=True)
 
+                stopw.start("PreprocessBatch", resume=True)
                 sample_ids, target, data = self.preprocess_batch(batch)
+                stopw.stop()
 
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
@@ -355,52 +395,98 @@ class PytorchTrainer:
                     self._lr_scheduler.step()
 
                 pre_downsampling_size = target.shape[0]
-                TIMING_LOGGER.log(Event.PREPROCESS_END)
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
-                        TIMING_LOGGER.log(Event.BTS_START)
+                        stopw.start("DownsampleBTS", resume=True)
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
-                        TIMING_LOGGER.log(Event.BTS_END)
+                        stopw.stop()
 
+                    stopw.start("Forward", resume=True)
                     output = self._model.model(data)
-                    TIMING_LOGGER.log(Event.FORWARD_END)
+                    stopw.stop("Forward")
 
+                    stopw.start("Loss", resume=True)
                     if weighted_optimization:
                         # weighted gradient descent
                         assert weights is not None
                         loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
                     else:
                         loss = self._criterion(output, target)
+                stopw.stop("Loss")
 
-                self._scaler.scale(loss).backward()
-                TIMING_LOGGER.log(Event.BACKWARD_END)
-
+                stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
+                stopw.stop()
 
+                stopw.start("Backward", resume=True)
+                self._scaler.scale(loss).backward()
+                stopw.stop("Backward")
+
+                stopw.start("OptimizerStep", resume=True)
                 for _, optimizer in self._optimizers.items():
                     self._scaler.step(optimizer)
 
                 self._scaler.update()
-                TIMING_LOGGER.log(Event.STEP_END)
+                stopw.stop("OptimizerStep")
 
                 if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
+                    stopw.start("Checkpoint", resume=True)
                     checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
                     self.save_state(checkpoint_file_name, batch_number)
+                    stopw.stop("Checkpoint")
 
                 self._num_samples += pre_downsampling_size
 
+                stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_end(
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
-                TIMING_LOGGER.log(Event.END_BATCH, str(batch_number))
-            TIMING_LOGGER.log(Event.END_EPOCH, str(epoch))
+                stopw.stop()
+                stopw.start("FetchBatch", resume=True)
+                stopw.start("IndivFetchBatch", overwrite=True)
+
+            if len(batch_timings) <= 100000:
+                self._log["epochs"][epoch]["BatchTimings"] = batch_timings
+
+            # mypy cannot handle np.min and np.max
+            batch_timings = np.array(batch_timings)
+            self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings).item()  # type: ignore
+            self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings).item()  # type: ignore
+            self._log["epochs"][epoch]["AvgFetchBatch"] = np.mean(batch_timings).item()
+            self._log["epochs"][epoch]["MedianFetchBatch"] = np.median(batch_timings).item()
+            self._log["epochs"][epoch]["StdFetchBatch"] = np.std(batch_timings).item()
+            del batch_timings
+
+            self._log["epochs"][epoch]["TotalFetchBatch"] = stopw.measurements.get("FetchBatch", 0)
+            self._log["epochs"][epoch]["OnBatchBeginCallbacks"] = stopw.measurements.get("OnBatchBeginCallbacks", 0)
+            self._log["epochs"][epoch]["PreprocessBatch"] = stopw.measurements.get("PreprocessBatch", 0)
+            self._log["epochs"][epoch]["DownsampleBTS"] = stopw.measurements.get("DownsampleBTS", 0)
+            self._log["epochs"][epoch]["DownsampleSTB"] = stopw.measurements.get("DownsampleSTB", 0)
+            self._log["epochs"][epoch]["Forward"] = stopw.measurements.get("Forward", 0)
+            self._log["epochs"][epoch]["Loss"] = stopw.measurements.get("Loss", 0)
+            self._log["epochs"][epoch]["OnBatchBeforeUpdate"] = stopw.measurements.get("OnBatchBeforeUpdate", 0)
+            self._log["epochs"][epoch]["Backward"] = stopw.measurements.get("Backward", 0)
+            self._log["epochs"][epoch]["OptimizerStep"] = stopw.measurements.get("OptimizerStep", 0)
+            self._log["epochs"][epoch]["Checkpoint"] = stopw.measurements.get("Checkpoint", 0)
+            self._log["epochs"][epoch]["OnBatchEnd"] = stopw.measurements.get("OnBatchEnd", 0)
+
+            self._persist_pipeline_log()
+
+        total_stopw.stop("TotalTrain")
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
+        self._log["num_samples"] = self._num_samples
+        self._log["num_batches"] = batch_number + 1
+        self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
+
+        self._load_dataset_log()
+        self._persist_pipeline_log()
+
         for _, callback in self._callbacks.items():
             callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
 
@@ -416,7 +502,25 @@ class PytorchTrainer:
         self.end_of_trigger_cleaning()
 
         self._info("Training complete!")
-        TIMING_LOGGER.log(Event.END_TRIGGER, str(self._num_samples))
+        self._persist_pipeline_log()
+
+    def _load_dataset_log(self) -> None:
+        worker_log = {}
+        for filename in glob.glob(str(self._dataset_log_path / "*.log")):
+            filepath = pathlib.Path(filename)
+            key = filepath.stem
+
+            with open(self._dataset_log_path / filename, "r", encoding="utf-8") as logfile:
+                worker_log[key] = json.load(logfile)
+
+        self._log["dataset_worker_log"] = worker_log
+
+        try:
+            if self._dataset_log_path.exists():
+                shutil.rmtree(self._dataset_log_path)
+        except OSError as exp:
+            self._error("Error while deleting OnlineDataset logging directory.")
+            self._error(str(exp))
 
     def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
         # whether the dataloader returned the weights.
@@ -510,7 +614,6 @@ class PytorchTrainer:
             self._model.model.embedding_recorder.start_recording()
 
         big_batch_output = self._model.model(data)
-        TIMING_LOGGER.log(Event.BTS_COMPUTED_FORWARD)
 
         # supply the embeddings if required by the downsampler
         if self._downsampler.requires_coreset_methods_support:
@@ -520,10 +623,8 @@ class PytorchTrainer:
             embeddings = None
 
         self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
-        TIMING_LOGGER.log(Event.BTS_INFORMED_SAMPLES, str(len(sample_ids)))
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
-        TIMING_LOGGER.log(Event.BTS_SELECTED_SAMPLES, str(len(selected_indexes)))
         selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
         sample_ids, data, target = selected_indexes, selected_data, selected_target
         # TODO(#219) Investigate if we can avoid 2 forward passes
@@ -538,8 +639,6 @@ class PytorchTrainer:
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
 
-        self._info("Started downsampling of the presampled dataset!")
-
         # set the model to eval to avoid errors like Expected more than 1 value per channel when training, got ...
         self._model.model.eval()
         # keys must be taken from the selector.
@@ -553,7 +652,7 @@ class PytorchTrainer:
         if self._downsampler.requires_coreset_methods_support:
             # enable the embedding recorder to keep track of last layer embedding. The embeddings are stored
             # in self._model.model.embedding_recorder.embedding
-            assert isinstance(self._model.model, CoresetMethodsSupport)
+            assert isinstance(self._model.model, CoresetSupportingModule)
             self._model.model.embedding_recorder.start_recording()
 
         if self._downsampler.requires_data_label_by_label:
@@ -579,15 +678,10 @@ class PytorchTrainer:
                     previous_number_of_samples=number_of_samples,
                 )
                 self._downsampler.inform_end_of_current_label()
-                TIMING_LOGGER.log(Event.STB_LABEL_COMPLETED, f"Label: {label}")
         else:
             batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(self._train_dataloader)
-        TIMING_LOGGER.log(Event.STB_ALL_SAMPLES_INFORMED)
 
         selected_ids, weights = self._downsampler.select_points()
-        TIMING_LOGGER.log(Event.STB_POINTS_SELECTED, str(len(selected_ids)))
-
-        self._info("Downsampling complete! Storing selected points...")
 
         if self._downsampler.requires_coreset_methods_support:
             # turn off the embedding recording (not needed for regular training)
@@ -596,7 +690,7 @@ class PytorchTrainer:
 
         # to store all the selected (sample, weight).
         # TODO(#283) investigate which size performs the best
-        file_size = self._num_dataloaders * self._batch_size * 4
+        file_size = self._num_dataloaders * self._batch_size
         local_dataset = LocalDatasetWriter(
             self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size, self.offline_dataset_path
         )
@@ -607,9 +701,6 @@ class PytorchTrainer:
         # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
         # we need to manually trigger the store
         local_dataset.finalize()
-        TIMING_LOGGER.log(Event.STB_POINTS_STORED)
-
-        self._info("Points stored! Key source set to local")
 
         # instead of getting keys from the selector, now are taken from the local storage
         new_key_source = LocalKeySource(
@@ -642,33 +733,27 @@ class PytorchTrainer:
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
         for batch_number, batch in enumerate(dataloader):
-
-            TIMING_LOGGER.log(Event.STB_BATCH_START, str(batch_number))
             self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
 
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
-            TIMING_LOGGER.log(Event.STB_PREPROCESS_END)
 
             with torch.autocast(self._device_type, enabled=self._amp):
                 # compute the scores and accumulate them
                 model_output = self._model.model(data)
-                TIMING_LOGGER.log(Event.STB_FORWARD_END)
                 # supply the embeddings if required by the downsampler
                 if self._downsampler.requires_coreset_methods_support:
-                    assert isinstance(self._model.model, CoresetMethodsSupport)
+                    assert isinstance(self._model.model, CoresetSupportingModule)
                     assert self._model.model.embedding_recorder.record_embedding
                     embeddings = self._model.model.embedding_recorder.embedding
                 else:
                     embeddings = None
                 self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
-                TIMING_LOGGER.log(Event.STB_INFORM_SAMPLES_END, f"{len(sample_ids)}")
 
         return batch_number, number_of_samples
 
     def end_of_trigger_cleaning(self) -> None:
-        # self._train_dataloader.dataset.end_of_trigger_cleaning()
-        pass
+        self._train_dataloader.dataset.end_of_trigger_cleaning()
 
     def _get_available_labels_from_selector(self) -> list[int]:
         req = GetAvailableLabelsRequest(pipeline_id=self.pipeline_id)

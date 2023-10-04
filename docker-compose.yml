@@ -46,7 +46,8 @@ services:
   storage:
     restart: on-failure
     depends_on:
-      - storage-db
+      storage-db:
+        condition: service_healthy
     build:
       context: .
       dockerfile: docker/Storage/Dockerfile
@@ -57,14 +58,16 @@ services:
   metadata_processor:
     restart: on-failure
     depends_on:
-      - metadata-db
+      metadata-db:
+        condition: service_healthy
     build:
       context: .
       dockerfile: docker/MetadataProcessor/Dockerfile
   model_storage:
     restart: on-failure
     depends_on:
-      - metadata-db
+      metadata-db:
+        condition: service_healthy
     build:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
@@ -103,7 +106,8 @@ services:
   selector:
     restart: on-failure
     depends_on:
-      - metadata-db
+      metadata-db:
+        condition: service_healthy
     build:
       context: .
       dockerfile: docker/Selector/Dockerfile
@@ -127,6 +131,8 @@ services:
 #    volumes:
 #      - .:/modyn_host
     container_name: supervisor
+    ports:
+      - 3000:50062
   tests:
     depends_on:
       storage:

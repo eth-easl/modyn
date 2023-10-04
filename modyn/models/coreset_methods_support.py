@@ -25,7 +25,7 @@ class EmbeddingRecorder(nn.Module):
         self.embedding = None
 
 
-class CoresetMethodsSupport(nn.Module, ABC):
+class CoresetSupportingModule(nn.Module, ABC):
     """
     This class is used to support some Coreset Methods.
     Embeddings, here defined as the activation before the last layer, are often used to estimate the importance of

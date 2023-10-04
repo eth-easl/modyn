@@ -64,6 +64,7 @@ trigger:
 evaluation:
   device: "cpu"
   amp: False
+  result_writers: ["json", "tensorboard"]
   datasets:
     - dataset_id: mnist
       transformations: ["transforms.ToTensor()",

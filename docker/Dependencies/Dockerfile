@@ -18,6 +18,9 @@ RUN apt-get update -yq \
     htop \
     procps \
     libjpeg-dev \
+    gdb \
+    libdw-dev \
+    libelf-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
@@ -25,14 +28,14 @@ RUN apt-get update -yq \
 RUN adduser -u 5678 --disabled-password --gecos "" appuser
 ENV PATH="${PATH}:/home/appuser/.local/bin"
 
-# Install miniconda
-ENV CONDA_DIR /opt/conda
-RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=x86_64; fi \
-    && wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${ARCHITECTURE}.sh" -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda
+# Install mamba
+ENV CONDA_DIR /opt/mamba
+ENV MAMBA_DIR /opt/mamba
+RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" -O ~/mamba.sh && \
+    /bin/bash ~/mamba.sh -b -p /opt/mamba
 ENV PATH=$CONDA_DIR/bin:$PATH
-RUN conda update -n base -c defaults conda && conda update --all && conda init bash
+RUN mamba update -n base -c defaults mamba && mamba update --all && mamba init bash
 
 # Install dependencies
 COPY ./environment.yml /tmp/environment.yml
-RUN conda env create -f /tmp/environment.yml
+RUN mamba env create -f /tmp/environment.yml
