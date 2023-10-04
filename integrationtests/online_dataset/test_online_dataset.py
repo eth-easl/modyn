@@ -354,7 +354,7 @@ def test_dataset() -> None:
             ppr_list = [999]
             if prefetched_partitions == 5:
                 ppr_list = [1, 2, 5, 999]
-                
+
             for parallel_prefetch_requests in ppr_list:
                 for batch_size in [1, 2, 10]:
                     print(

@@ -235,6 +235,7 @@ class OnlineDataset(IterableDataset):
             json.dump(self._log, logfile)
 
     def _prefetch_partition(self, worker_id: int, maybe_continue: bool = False) -> None:
+        assert self._start_prefetch_lock is not None
         with self._start_prefetch_lock:
             if self._num_prefetched_partitions < 1 or self._next_partition_to_fetch >= self._num_partitions:
                 return  # Prefetching disabled or nothing more to prefetch
