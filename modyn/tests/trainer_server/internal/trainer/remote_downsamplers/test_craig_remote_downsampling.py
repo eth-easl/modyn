@@ -15,8 +15,9 @@ def get_sampler_config(balance=False):
     params_from_selector = {
         "downsampling_ratio": downsampling_ratio,
         "sample_then_batch": False,
-        "args": {},
         "balance": balance,
+        "selection_batch": 64,
+        "greedy": "NaiveGreedy",
     }
     return 0, 0, 0, params_from_selector, per_sample_loss_fct
 
@@ -323,7 +324,11 @@ def test_matching_results_with_deepcore():
     targets = torch.tensor([0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
 
     sampler = RemoteCraigDownsamplingStrategy(
-        0, 0, 5, {"downsampling_ratio": 20, "balance": False}, BCEWithLogitsLoss(reduction="none")
+        0,
+        0,
+        5,
+        {"downsampling_ratio": 20, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
+        BCEWithLogitsLoss(reduction="none"),
     )
     sample_ids = [0, 1, 2]
     dummy_model.embedding_recorder.start_recording()
@@ -371,7 +376,11 @@ def test_matching_results_with_deepcore_permutation():
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
     sampler = RemoteCraigDownsamplingStrategy(
-        0, 0, 5, {"downsampling_ratio": 30, "balance": False}, BCEWithLogitsLoss(reduction="none")
+        0,
+        0,
+        5,
+        {"downsampling_ratio": 30, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
+        BCEWithLogitsLoss(reduction="none"),
     )
     sample_ids = [2, 3, 4]
     dummy_model.embedding_recorder.start_recording()
@@ -419,7 +428,11 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
     targets = torch.tensor([1, 1, 0, 0, 0, 1, 1, 1, 1, 1])
 
     sampler = RemoteCraigDownsamplingStrategy(
-        0, 0, 5, {"downsampling_ratio": 50, "balance": False}, BCEWithLogitsLoss(reduction="none")
+        0,
+        0,
+        5,
+        {"downsampling_ratio": 50, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
+        BCEWithLogitsLoss(reduction="none"),
     )
     sample_ids = [index_mapping[i] for i in [2, 3, 4]]
     dummy_model.embedding_recorder.start_recording()

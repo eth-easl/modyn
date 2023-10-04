@@ -29,14 +29,8 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
 
         self.criterion = per_sample_loss
 
-        # these arguments are required by DeepCore. Default values are used if not provided
-        self.args = Namespace(**params_from_selector.get("args", {}))
-        if "print_freq" not in self.args:
-            self.args.print_freq = None  # avoid printing when running the submodular optimization
-        if "selection_batch" not in self.args:
-            self.args.selection_batch = 64
-
-        self.greedy = params_from_selector.get("greedy", "NaiveGreedy")
+        self.selection_batch = params_from_selector["selection_batch"]
+        self.greedy = params_from_selector["greedy"]
         if self.greedy not in OPTIMIZER_CHOICES:
             raise ValueError(
                 f"The required Greedy optimizer is not available. Pick one of the following: {OPTIMIZER_CHOICES}"
@@ -174,12 +168,12 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         all_index = np.arange(number_of_samples)
         submod_function = FacilityLocation(index=all_index, similarity_matrix=self.distance_matrix)
         submod_optimizer = submodular_optimizer.__dict__[self.greedy](
-            args=self.args, index=all_index, budget=target_size
+            args=Namespace(print_freq=None), index=all_index, budget=target_size
         )
         selection_result = submod_optimizer.select(
             gain_function=submod_function.calc_gain_batch,
             update_state=submod_function.update_state,
-            batch=self.args.selection_batch,
+            batch=self.selection_batch,
         )
         weights = self.calc_weights(self.distance_matrix, selection_result)
         selected_ids = [self.index_sampleid_map[sample] for sample in selection_result]
