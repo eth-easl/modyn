@@ -60,7 +60,7 @@ class MockDatabaseConnection:
 
 
 class MockSession:
-    def get(self, type, pipeline_id):  # pylint: disable=unused-argument
+    def get(self, some_type, pipeline_id):  # pylint: disable=unused-argument
         return None
 
 
