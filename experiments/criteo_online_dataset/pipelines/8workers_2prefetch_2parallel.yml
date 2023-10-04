@@ -1,5 +1,5 @@
 pipeline:
-    name: prefetch8
+    name: prefetch1
     description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
     version: 1.0.0
 model:
@@ -45,7 +45,8 @@ training:
   device: "cuda:0"
   amp: True
   dataloader_workers: 8
-  prefetched_partitions: 8
+  prefetched_partitions: 2
+  parallel_prefetch_requests: 2
   use_previous_model: True
   initial_model: random
   initial_pass:
@@ -116,5 +117,5 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 50000000
+    data_points_for_trigger: 20000000
 

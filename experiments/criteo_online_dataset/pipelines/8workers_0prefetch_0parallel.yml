@@ -46,6 +46,7 @@ training:
   amp: True
   dataloader_workers: 8
   prefetched_partitions: 0
+  parallel_prefetch_requests: 1
   use_previous_model: True
   initial_model: random
   initial_pass:
@@ -116,5 +117,5 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 50000000
+    data_points_for_trigger: 20000000
 

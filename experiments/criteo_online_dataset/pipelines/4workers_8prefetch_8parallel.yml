@@ -1,5 +1,5 @@
 pipeline:
-    name: exp0_finetune
+    name: prefetch8_4workers
     description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
     version: 1.0.0
 model:
@@ -44,9 +44,9 @@ training:
   gpus: 1
   device: "cuda:0"
   amp: True
-  dataloader_workers: 8
-  prefetched_partitions: 4
-  parallel_prefetch_requests: 4
+  dataloader_workers: 4
+  parallel_prefetch_requests: 8
+  prefetched_partitions: 8
   use_previous_model: True
   initial_model: random
   initial_pass:
@@ -115,6 +115,7 @@ data:
     def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
       return x.to(torch.float32)
 trigger:
-  id: TimeTrigger
+  id: DataAmountTrigger
   trigger_config:
-    trigger_every: "1d"
+    data_points_for_trigger: 20000000
+

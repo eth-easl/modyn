@@ -1,5 +1,5 @@
 pipeline:
-    name: exp0_finetune
+    name: prefetch4
     description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
     version: 1.0.0
 model:
@@ -115,6 +115,7 @@ data:
     def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
       return x.to(torch.float32)
 trigger:
-  id: TimeTrigger
+  id: DataAmountTrigger
   trigger_config:
-    trigger_every: "1d"
+    data_points_for_trigger: 20000000
+

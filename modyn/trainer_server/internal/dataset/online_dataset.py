@@ -79,7 +79,7 @@ class OnlineDataset(IterableDataset):
         self._partition_valid: dict[int, bool] = {}
         self._next_partition_to_fetch = 0
         self._launched_prefetches = 0
-        self._start_prefetch_lock = threading.Lock()
+        self._start_prefetch_lock: Optional[threading.Lock] = None
 
         if log_path is None:
             logger.warning("Did not provide log path for OnlineDataset - logging disabled.")
@@ -417,6 +417,7 @@ class OnlineDataset(IterableDataset):
             # Reinit logging, timetracking in this worker
             self._log = {"partitions": {}}
             self._sw = Stopwatch()
+            self._start_prefetch_lock = threading.Lock()
 
         # Always reinitialize these structures for prefetching (for multiple epochs)
         self._data_threads = {}
