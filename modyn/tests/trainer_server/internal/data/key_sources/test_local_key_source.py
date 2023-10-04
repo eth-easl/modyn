@@ -65,6 +65,44 @@ def test_read():
     assert keysource.get_num_data_partitions() == 0
 
 
+def test_read_dirty_directory():
+    # read from a directory that has samples belonging to another pipeline_id
+    current_pipeline = 12
+    other_pipeline = 99
+    maximum_keys_in_memory = 25
+
+    write_directory(other_pipeline, 1, TMP_PATH_TEST, number_of_files=10, maximum_keys_in_memory=maximum_keys_in_memory)
+
+    keysource = LocalKeySource(pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
+
+    assert keysource.get_num_data_partitions() == 0
+    assert keysource.get_keys_and_weights(0, 0) == ([], [])
+
+    write_directory(
+        current_pipeline, 1, TMP_PATH_TEST, number_of_files=4, maximum_keys_in_memory=maximum_keys_in_memory
+    )
+
+    assert keysource.get_num_data_partitions() == 4
+
+    for i in range(keysource.get_num_data_partitions()):
+        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i)
+        assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
+        assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
+
+    keysource.end_of_trigger_cleaning()
+
+    # now check that the other pipeline wasn't affected
+    ks_other = LocalKeySource(pipeline_id=other_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
+    assert ks_other.get_num_data_partitions() == 10
+
+    for i in range(ks_other.get_num_data_partitions()):
+        keys, weights = ks_other.get_keys_and_weights(worker_id=0, partition_id=i)
+        assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
+        assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
+
+    ks_other.end_of_trigger_cleaning()
+
+
 def test_reads_pro():
     writer = LocalDatasetWriter(
         pipeline_id=0,
