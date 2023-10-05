@@ -152,9 +152,9 @@ def test_matching_with_deepcore():
     ]
     for i in range(1, 10):
         assert (
-            _get_selected_samples("FacilityLocation", i, sample_ids, forward_output, target, embedding) == expected[i]
+            sorted(_get_selected_samples("FacilityLocation", i, sample_ids, forward_output, target, embedding))
+            == expected[i]
         )
-        # print(_get_selected_samples("FacilityLocation", i, sample_ids, forward_output, target, embedding))
 
     # GraphCut
     expected = [
@@ -170,5 +170,6 @@ def test_matching_with_deepcore():
         [0, 1, 3, 4, 5, 6, 7, 8, 9],
     ]
     for i in range(1, 10):
-        assert _get_selected_samples("GraphCut", i, sample_ids, forward_output, target, embedding) == expected[i]
-        # print(_get_selected_samples("GraphCut", i, sample_ids, forward_output, target, embedding))
+        assert (
+            sorted(_get_selected_samples("GraphCut", i, sample_ids, forward_output, target, embedding)) == expected[i]
+        )

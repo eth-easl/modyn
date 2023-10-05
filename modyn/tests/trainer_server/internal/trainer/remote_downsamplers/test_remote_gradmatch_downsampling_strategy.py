@@ -1,3 +1,5 @@
+# pylint: disable=too-many-locals
+
 import numpy as np
 import torch
 from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import DummyModel
@@ -183,15 +185,28 @@ def test_matching_results_with_deepcore():
         assert sampler.index_sampleid_map == list(range(10))
         selected_samples, selected_weights = sampler.select_points()
         assert len(selected_samples) == len(selected_weights)
-        assert selected_samples_deepcore[num_of_target_samples] == selected_samples
+
+        # sort the results
+        combined = list(zip(selected_samples, selected_weights))
+        combined.sort(key=lambda x: x[0])
+        selected_samples_sorted, selected_weights_sorted = zip(*combined)
+
+        # sort the expected deepcore results
+        combined = list(
+            zip(selected_samples_deepcore[num_of_target_samples], selected_weights_deepcore[num_of_target_samples])
+        )
+        combined.sort(key=lambda x: x[0])
+        selected_samples_sorted_deepcore, selected_weights_sorted_deepcore = zip(*combined)
+
+        assert selected_samples_sorted_deepcore == selected_samples_sorted
         assert all(
             np.isclose(expected, computed)
-            for expected, computed in zip(selected_weights_deepcore[num_of_target_samples], selected_weights)
+            for expected, computed in zip(selected_weights_sorted_deepcore, selected_weights_sorted)
         )
 
 
 def test_matching_results_with_deepcore_permutation_fancy_ids():
-    index_mapping = [45, 56, 98, 34, 781, 12, 432, 422, 5, 10]
+    index_mapping = [45, 56, 1, 2, 3, 12, 432, 422, 5, 4]
     selected_indices_deepcore = [2, 3, 4, 9]
     selected_samples_deepcore = [index_mapping[i] for i in selected_indices_deepcore]
     selected_weights_deepcore = [
@@ -200,6 +215,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
         0.0005646746722050011,
         0.0005694780265912414,
     ]
+
     torch.manual_seed(467)
     dummy_model = DummyModel()
     np.random.seed(67)
@@ -218,9 +234,14 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
 
     selected_samples, selected_weights = sampler.select_points()
 
-    assert len(selected_samples) == 4
-    assert len(selected_weights) == 4
-    assert selected_samples_deepcore == selected_samples
+    combined = list(zip(selected_samples, selected_weights))
+    combined.sort(key=lambda x: x[0])
+    selected_samples_sorted, selected_weights_sorted = zip(*combined)
+
+    assert len(selected_samples_sorted) == 4
+    assert len(selected_weights_sorted) == 4
+
+    assert selected_samples_deepcore == list(selected_samples_sorted)
     assert all(
-        np.isclose(expected, computed) for expected, computed in zip(selected_weights_deepcore, selected_weights)
+        np.isclose(expected, computed) for expected, computed in zip(selected_weights_deepcore, selected_weights_sorted)
     )

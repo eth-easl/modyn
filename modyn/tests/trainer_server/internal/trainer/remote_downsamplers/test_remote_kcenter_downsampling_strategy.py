@@ -139,7 +139,7 @@ def test_matching_results_with_deepcore():
         selected_samples, selected_weights = sampler.select_points()
         assert len(selected_samples) == num_of_target_samples
         assert len(selected_weights) == num_of_target_samples
-        assert selected_samples_deepcore[num_of_target_samples] == selected_samples
+        assert sorted(selected_samples_deepcore[num_of_target_samples]) == sorted(selected_samples)
 
 
 def test_matching_results_with_deepcore_permutation_fancy_ids():
@@ -167,4 +167,4 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
 
     assert len(selected_samples) == 5
     assert len(selected_weights) == 5
-    assert selected_samples_deepcore == selected_samples
+    assert sorted(selected_samples_deepcore) == sorted(selected_samples)

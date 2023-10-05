@@ -13,6 +13,11 @@ MatrixContent = Enum("MatrixContent", ["EMBEDDINGS", "GRADIENTS"])
 
 
 class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
+    """
+    Class to abstract the common behaviour of many downsampling strategies that collect the gradients or the embeddings
+    (thus a Matrix) and then select the points based on some method-specific metric (submodular, clustering, OMP...).
+    """
+
     def __init__(
         self,
         pipeline_id: int,
@@ -30,6 +35,8 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         self.requires_coreset_supporting_module = True
         self.matrix_elements: list[torch.Tensor] = []
 
+        # actual classes must specify which content should be stored. Can be either Gradients or Embeddings. Use the
+        # enum defined above to specify what should be stored
         self.matrix_content: Optional[MatrixContent] = None
 
         # if true, the downsampling is balanced across classes ex class sizes = [10, 50, 30] and 50% downsampling
@@ -37,6 +44,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         # happen
         self.balance = params_from_selector["balance"]
         if self.balance:
+            # Selection happens class by class. These data structures are used to store the selection results
             self.already_selected_samples: list[int] = []
             self.already_selected_weights = torch.tensor([]).float()
             self.requires_data_label_by_label = True
@@ -54,13 +62,13 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         assert self.matrix_content is not None
 
         if self.matrix_content == MatrixContent.GRADIENTS:
-            to_be_added = self._compute_gradients(forward_output, target, embedding)
+            new_elements = self._compute_gradients(forward_output, target, embedding)
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
-            to_be_added = embedding.detach().cpu()
+            new_elements = embedding.detach().cpu()
         else:
             raise AssertionError("The required content does not exits.")
 
-        self.matrix_elements.append(to_be_added)
+        self.matrix_elements.append(new_elements)
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
 
@@ -90,8 +98,11 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         if self.balance:
-            return _shuffle_list_and_tensor(self.already_selected_samples, self.already_selected_weights)
-        return self._select_from_matrix()
+            ids, weights = self.already_selected_samples, self.already_selected_weights
+        else:
+            ids, weights = self._select_from_matrix()
+
+        return _shuffle_list_and_tensor(ids, weights)
 
     def _select_from_matrix(self) -> tuple[list[int], torch.Tensor]:
         matrix = np.concatenate(self.matrix_elements)
@@ -107,4 +118,5 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
 
     @abstractmethod
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
+        # Here is where tha actual selection happens
         raise NotImplementedError()
