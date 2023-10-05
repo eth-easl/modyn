@@ -64,8 +64,8 @@ class LocalDatasetWriter(TriggerSampleStorage):
         assert self.output_samples_list is not None
 
         # add the input tuples to the output list.
-        for i, _ in enumerate(sample_ids):
-            self.output_samples_list[self.current_sample_index] = (sample_ids[i], sample_weights[i])
+        for sample_id, sample_weight in zip(sample_ids, sample_weights):
+            self.output_samples_list[self.current_sample_index] = (sample_id, sample_weight)
             self.current_sample_index += 1
 
             # if the target is reached, store the samples
