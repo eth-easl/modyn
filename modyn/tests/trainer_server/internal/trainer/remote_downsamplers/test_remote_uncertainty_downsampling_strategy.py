@@ -59,7 +59,7 @@ def test_collect_embedding_balance():
     assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
 
     amds.inform_end_of_current_label()
-    assert len(amds.already_selected_samples) == 3
+    assert len(amds.already_selected_ids) == 3
     assert len(amds.already_selected_weights) == 3
     assert len(amds.scores) == 0
     assert len(amds.index_sampleid_map) == 0
@@ -71,7 +71,7 @@ def test_collect_embedding_balance():
     assert amds.index_sampleid_map == list(range(1000, 1023))
 
     amds.inform_end_of_current_label()
-    assert len(amds.already_selected_samples) == 14
+    assert len(amds.already_selected_ids) == 14
     assert len(amds.already_selected_weights) == 14
     assert len(amds.scores) == 0
     assert len(amds.index_sampleid_map) == 0

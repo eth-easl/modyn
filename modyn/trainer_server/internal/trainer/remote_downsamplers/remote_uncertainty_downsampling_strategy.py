@@ -44,7 +44,8 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         # happen
         self.balance = params_from_selector["balance"]
         if self.balance:
-            self.already_selected_samples: list[int] = []
+            # the selection happens class by class. Hence, these data structures are used to store the selection
+            self.already_selected_ids: list[int] = []
             self.already_selected_weights = torch.tensor([]).float()
             self.requires_data_label_by_label = True
         else:
@@ -82,17 +83,29 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         return scores
 
     def inform_end_of_current_label(self) -> None:
+        """
+        Per-class selection. Here the top-k% samples of the current classes are selected and kept in
+        already_selected_ids
+
+        """
         assert self.balance
+        # select the samples
         selected_samples, selected_weights = self._select_from_scores()
-        self.already_selected_samples += selected_samples
+        # save the selected sample IDs and weights
+        self.already_selected_ids += selected_samples
         self.already_selected_weights = torch.cat((self.already_selected_weights, selected_weights))
+        # clean the data structures for the following class
         self.scores = np.array([])
         self.index_sampleid_map: list[int] = []
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         if self.balance:
-            return _shuffle_list_and_tensor(self.already_selected_samples, self.already_selected_weights)
-        return self._select_from_scores()
+            # the selection has already been done for each class, just return the concatenation of the selections
+            ids, weights = self.already_selected_ids, self.already_selected_weights
+        else:
+            # select the sampleIDs and compute the weights
+            ids, weights = self._select_from_scores()
+        return _shuffle_list_and_tensor(ids, weights)
 
     def _select_from_scores(self) -> tuple[list[int], torch.Tensor]:
         number_of_samples = len(self.scores)
