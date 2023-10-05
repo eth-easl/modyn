@@ -11,6 +11,17 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.k_
 
 
 class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
+    """
+    Strategy introduced in:
+    Active learning for convolutional neural networks: A coreset approach (Sener and Savarese)
+    Implementation adapted from:
+    DEEPCORE https://raw.githubusercontent.com/PatrickZH/DeepCore/main/deepcore/methods/kcentergreedy.py
+    This strategy collects the Embeddings (leveraging the abstract class AbstractMatrixDownsamplingStrategy)
+    and then selects the samples by clustering them in the embedding space. The clustering algorithm is k-center.
+    This strategy was introduced first for active learning to discover which points are worth receiving a label.
+    Hence, this class does not compute weights and returns a tensor of ones instead.
+    """
+
     def __init__(
         self,
         pipeline_id: int,

@@ -13,6 +13,19 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.or
 
 
 class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
+    """
+    Strategy introduced in:
+    GRAD-MATCH:Gradient Matching based Data Subset Selection for Efficient Deep Model Training (Killamsetty et. al.)
+    Implementation adapted from:
+    DEEPCORE https://raw.githubusercontent.com/PatrickZH/DeepCore/main/deepcore/methods/gradmatch.py
+    This strategy collects the Gradients (leveraging the abstract class AbstractMatrixDownsamplingStrategy) and then
+    selects the samples using Orthogonal Matching Pursuit (OMP). The goal is to find a sparse vector x such that
+    Ax = b, where A is the matrix containing the last layer gradients, and b is the mean across every dimension.
+    Note that DEEPCORE proposes two versions, one requiring a validation dataset. Such a dataset is not available
+    in modyn; thus, that version is unavailable. The vector b is the mean of the gradients of the validation dataset
+    in this alternative version.
+    """
+
     def __init__(
         self,
         pipeline_id: int,
@@ -29,7 +42,6 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         cur_val_gradients = np.mean(matrix, axis=0)
 
         if self.device == "cpu":
-            # Compute OMP on numpy
             cur_weights = orthogonal_matching_pursuit_np(matrix.T, cur_val_gradients, budget=target_size)
         else:
             cur_weights = orthogonal_matching_pursuit(

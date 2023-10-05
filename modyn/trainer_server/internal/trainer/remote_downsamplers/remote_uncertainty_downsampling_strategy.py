@@ -9,6 +9,16 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.sh
 
 
 class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
+    """
+    Strategy introduced in:
+    Selection via Proxy: Efficient Data Selection for Deep Learning
+    Implementation adapted from:
+    DEEPCORE https://raw.githubusercontent.com/PatrickZH/DeepCore/main/deepcore/methods/uncertainty.py
+    This strategy collects a measure of uncertainty (LeastConfidence, Entropy or Margin) for each sample and selects
+    the top-k most uncertain samples.
+    The user can specify which metric to use with the pipeline parameter score_metric.
+    """
+
     def __init__(
         self,
         pipeline_id: int,

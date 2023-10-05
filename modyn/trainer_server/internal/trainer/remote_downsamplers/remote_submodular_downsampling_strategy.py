@@ -21,6 +21,18 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.su
 
 
 class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
+    """
+    Strategy introduced in:
+    Submodular combinatorial information measures with applications in machine learning (Iyer et al.)
+    Implementation adapted from:
+    DEEPCORE https://raw.githubusercontent.com/PatrickZH/DeepCore/main/deepcore/methods/submodular.py
+    This strategy collects the last layer gradients (leveraging the class AbstractMatrixDownsamplingStrategy)
+    and then selects the samples by mapping the problem to submodular optimization. The user can select the submod
+    function (available: FacilityLocation, GraphCut and LogDeterminant) and the optimizer to solve it greedily.
+    The similarity between points is measured using the scaled and shifted cosine similarity between the last layer
+    gradients. The shift is needed since some submodular functions (e.g. GraphCut) require non-negative values.
+    """
+
     def __init__(
         self,
         pipeline_id: int,
@@ -33,24 +45,28 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device)
         self.matrix_content = MatrixContent.GRADIENTS
 
-        # these arguments are required by DeepCore. Default values are used if not provided
         self.selection_batch = params_from_selector["selection_batch"]
 
         if "submodular_function" not in params_from_selector:
             raise ValueError(
                 f"Please specify the submodular function used to select the datapoints. "
-                f"Available functions: {SUBMODULAR_FUNCTIONS}, param submodular_function"
+                f"Available functions: {SUBMODULAR_FUNCTIONS}."
+                f"Use the parameter param submodular_function"
             )
         self._function = params_from_selector["submodular_function"]
         if self._function not in SUBMODULAR_FUNCTIONS:
             raise ValueError(
-                f"The specified submodular function is not available. Pick one from {SUBMODULAR_FUNCTIONS}"
+                f"The specified submodular function is not available. "
+                f"Pick one from {SUBMODULAR_FUNCTIONS}"
+                f"Use the parameter param submodular_function"
             )
 
-        self._greedy = params_from_selector.get("greedy", "NaiveGreedy")
+        self._greedy = params_from_selector.get("submodular_optimizer", "NaiveGreedy")
         if self._greedy not in OPTIMIZER_CHOICES:
             raise ValueError(
-                f"The required Greedy optimizer is not available. Pick one of the following: {OPTIMIZER_CHOICES}"
+                f"The required Greedy optimizer is not available. "
+                f"Pick one of the following: {OPTIMIZER_CHOICES}"
+                f"Use the parameter param submodular_optimizer"
             )
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:

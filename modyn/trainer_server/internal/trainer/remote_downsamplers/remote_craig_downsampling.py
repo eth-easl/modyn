@@ -18,6 +18,15 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.su
 
 
 class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
+    """
+    Strategy introduced in:
+    Data-efficient Training of Machine Learning Models
+    Implementation adapted from:
+    DEEPCORE https://raw.githubusercontent.com/PatrickZH/DeepCore/main/deepcore/methods/craig.py
+    This strategy selects points via submodular maximization of a per-class FacilityLocation function. The score is
+    proportional to the Euclidean distance between the two samples' gradients.
+    """
+
     def __init__(
         self,
         pipeline_id: int,
@@ -27,10 +36,6 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         per_sample_loss: Any,
         device: str,
     ) -> None:
-        """
-        Selection strategy based on CRAIG (from the paper Data-efficient Training of Machine Learning Models). The
-        implementation is adapted from the DeepCore library (https://github.com/PatrickZH/DeepCore).
-        """
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
 
         self.criterion = per_sample_loss

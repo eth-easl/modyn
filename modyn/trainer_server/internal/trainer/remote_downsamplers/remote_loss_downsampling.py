@@ -7,6 +7,13 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 
 
 class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
+    """
+    Method inspired by
+    Not All Samples Are Created Equal: Deep Learning with Importance Sampling (Katharopoulos, Fleuret)
+    Instead of computing the last layer gradient (as GradNorm does), here, the selection proxy is the loss. Hence,
+    a higher loss means a higher probability of being selected. This version is cheaper but less accurate.
+    """
+
     def __init__(
         self,
         pipeline_id: int,

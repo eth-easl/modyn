@@ -14,7 +14,8 @@ class UncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
         if "score_metric" not in self.downsampling_config:
             raise ValueError(
                 "Please specify the metric used to score uncertainty for the datapoints. "
-                "Available metrics : LeastConfidence, Entropy, Margin,  param score_metric"
+                "Available metrics : LeastConfidence, Entropy, Margin"
+                "Use the pipeline parameter score_metric"
             )
         config["score_metric"] = self.downsampling_config["score_metric"]
 
