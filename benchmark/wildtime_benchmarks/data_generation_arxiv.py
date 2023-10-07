@@ -14,7 +14,7 @@ def main():
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
-    ArXivDownloader(args.dir).store_data()
+    ArXivDownloader(args.dir).store_data(args.all)
 
 
 class ArXivDownloader(Dataset):
@@ -43,16 +43,19 @@ class ArXivDownloader(Dataset):
         self._dataset = datasets
         self.path = data_dir
 
-    def store_data(self):
+    def store_data(self, store_all_data: bool):
         for year in tqdm(self._dataset):
             # for simplicity, instead of using years we map each day to a year from 1970
             year_timestamp = create_timestamp(year=1970, month=1, day=year-2006)
             year_rows = []
-            for i in range(len(self._dataset[year][0]["title"])):
-                text = self._dataset[year][0]["title"][i].replace("\n", " ")
-                label = self._dataset[year][0]["category"][i]
-                csv_row = f"{text}\t{label}"
-                year_rows.append(csv_row)
+
+            splits = [0, 1, 2] if store_all_data else [0]
+            for split in splits:
+                for i in range(len(self._dataset[year][split]["title"])):
+                    text = self._dataset[year][split]["title"][i].replace("\n", " ")
+                    label = self._dataset[year][split]["category"][i]
+                    csv_row = f"{text}\t{label}"
+                    year_rows.append(csv_row)
 
             # store the year file
             text_file = os.path.join(self.path, f"{year}.csv")
