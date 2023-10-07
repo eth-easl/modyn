@@ -67,7 +67,7 @@ class ArXivDownloader(Dataset):
 
         if add_final_dummy_year:
             dummy_year = year + 1
-            year_timestamp = create_timestamp(year=1970, month=1, day= dummy_year - 2011)
+            year_timestamp = create_timestamp(year=1970, month=1, day= dummy_year - 2006)
             text_file = os.path.join(self.path, f"{dummy_year}.csv")
             with open(text_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(["dummy\t0"]))
