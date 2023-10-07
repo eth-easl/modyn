@@ -4,7 +4,7 @@ import pickle
 import shutil
 from datetime import datetime
 
-from benchmark_utils import download_if_not_exists, setup_argparser_wildtime, setup_logger
+from benchmark_utils import create_timestamp, download_if_not_exists, setup_argparser_wildtime, setup_logger
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from wilds import get_dataset
@@ -13,13 +13,13 @@ logger = setup_logger()
 
 
 def main() -> None:
-    parser = setup_argparser_wildtime("FMoW")
+    parser = setup_argparser_wildtime("fMoW")
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = FMOWDownloader(args.dir)
-    downloader.store_data()
+    downloader.store_data(args.daily)
     downloader.clean_folder()
 
 
@@ -59,30 +59,34 @@ class FMOWDownloader(Dataset):
             new_name = os.path.join(self.data_dir, f"{index}.png")
             os.rename(dest_file, new_name)
 
-    def store_data(self) -> None:
+    def store_data(self, store_daily: bool) -> None:
 
         for year in tqdm(self._dataset):
             split = 0  # just use training split for now
             for i in range(len(self._dataset[year][split]["image_idxs"])):
                 index = self._dataset[year][split]["image_idxs"][i]
                 label = self._dataset[year][split]["labels"][i]
-                raw_timestamp = self.metadata[index]["timestamp"]
 
-                if len(raw_timestamp) == 24:
-                    timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+                if store_daily:
+                    raw_timestamp = self.metadata[index]["timestamp"]
+
+                    if len(raw_timestamp) == 24:
+                        timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+                    else:
+                        timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%SZ').timestamp()
                 else:
-                    timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%SZ')
+                    timestamp = create_timestamp(year=year)
 
                 # save label
                 label_file = os.path.join(self.data_dir, f"{index}.label")
                 with open(label_file, "w", encoding="utf-8") as f:
                     f.write(str(int(label)))
-                os.utime(label_file, (timestamp.timestamp(), timestamp.timestamp()))
+                os.utime(label_file, (timestamp, timestamp))
 
                 # set image timestamp
                 self.move_file_and_rename(index)
                 image_file = os.path.join(self.data_dir, f"{index}.png")
-                os.utime(image_file, (timestamp.timestamp(), timestamp.timestamp()))
+                os.utime(image_file, (timestamp, timestamp))
 
     @staticmethod
     def parse_metadata(data_dir: str) -> list:

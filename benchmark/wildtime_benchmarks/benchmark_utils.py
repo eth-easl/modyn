@@ -31,6 +31,12 @@ def setup_argparser_wildtime(dataset: str) -> argparse.ArgumentParser:
         "--dir", type=pathlib.Path, action="store", help="Path to data directory"
     )
 
+    if dataset == "fMoW":
+        parser_.add_argument(
+            "--daily", action="store_true", help="If specified, data is stored with real timestamps (dd/mm/yy)."
+                                                 "Otherwise, only the year is considered (as done in the other "
+                                                 "datasets).")
+
     return parser_
 
 
