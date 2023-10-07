@@ -92,7 +92,7 @@ class FMOWDownloader(Dataset):
         if add_final_dummy_year:
             dummy_year = year + 1
             timestamp = create_timestamp(year=dummy_year)
-            dummy_index = 0 #0 is not used by any sample
+            dummy_index = 9999999999 #not used by any real sample
 
             to_copy_image_file = os.path.join(self.data_dir, f"{index}.png")
             dummy_image_file = os.path.join(self.data_dir, f"{dummy_index}.png")
