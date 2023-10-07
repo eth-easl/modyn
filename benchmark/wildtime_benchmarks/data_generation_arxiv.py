@@ -14,7 +14,7 @@ def main():
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
-    ArXivDownloader(args.dir).store_data(args.all)
+    ArXivDownloader(args.dir).store_data(args.all, args.dummyyear)
 
 
 class ArXivDownloader(Dataset):
@@ -43,7 +43,7 @@ class ArXivDownloader(Dataset):
         self._dataset = datasets
         self.path = data_dir
 
-    def store_data(self, store_all_data: bool):
+    def store_data(self, store_all_data: bool, add_final_dummy_year: bool):
         for year in tqdm(self._dataset):
             # for simplicity, instead of using years we map each day to a year from 1970
             year_timestamp = create_timestamp(year=1970, month=1, day=year-2006)
@@ -61,6 +61,16 @@ class ArXivDownloader(Dataset):
             text_file = os.path.join(self.path, f"{year}.csv")
             with open(text_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(year_rows))
+
+            # set timestamp
+            os.utime(text_file, (year_timestamp, year_timestamp))
+
+        if add_final_dummy_year:
+            dummy_year = year + 1
+            year_timestamp = create_timestamp(year=1970, month=1, day= dummy_year - 2011)
+            text_file = os.path.join(self.path, f"{dummy_year}.csv")
+            with open(text_file, "w", encoding="utf-8") as f:
+                f.write("\n".join(["dummy\t0"]))
 
             # set timestamp
             os.utime(text_file, (year_timestamp, year_timestamp))
