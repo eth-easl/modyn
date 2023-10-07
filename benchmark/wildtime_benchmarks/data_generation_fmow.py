@@ -76,7 +76,7 @@ class FMOWDownloader(Dataset):
                         else:
                             timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%SZ').timestamp()
                     else:
-                        timestamp = create_timestamp(year=year)
+                        timestamp = create_timestamp(year=1970, month=1, day=year+1)
 
                     # save label
                     label_file = os.path.join(self.data_dir, f"{index}.label")
@@ -91,7 +91,7 @@ class FMOWDownloader(Dataset):
 
         if add_final_dummy_year:
             dummy_year = year + 1
-            timestamp = create_timestamp(year=dummy_year)
+            timestamp = create_timestamp(year=1970, month=1, day=dummy_year+1)
             dummy_index = 9999999999 #not used by any real sample
 
             to_copy_image_file = os.path.join(self.data_dir, f"{index}.png")
