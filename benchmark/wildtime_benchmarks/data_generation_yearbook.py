@@ -17,7 +17,7 @@ def main():
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = YearbookDownloader(args.dir)
-    downloader.store_data(args.all)
+    downloader.store_data(args.all, args.dummyyear)
 
 
 class YearbookDownloader(Dataset):
@@ -57,7 +57,7 @@ class YearbookDownloader(Dataset):
     def __len__(self) -> int:
         return len(self._dataset["labels"])
 
-    def store_data(self, store_all_data: bool) -> None:
+    def store_data(self, store_all_data: bool, add_final_dummy_year: bool) -> None:
         # create directories
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
@@ -68,6 +68,13 @@ class YearbookDownloader(Dataset):
             self.create_binary_file(ds,
                                     os.path.join(self.data_dir, f"{year}.bin"),
                                     create_fake_timestamp(year, base_year=1930))
+
+        if add_final_dummy_year:
+            dummy_year = year + 1
+            dummy_data = [ ds[0] ] # get one sample from the previous year
+            self.create_binary_file(dummy_data,
+                                    os.path.join(self.data_dir, f"{dummy_year}.bin"),
+                                    create_fake_timestamp(dummy_year, base_year=1930))
 
         os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
 

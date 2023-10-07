@@ -34,6 +34,9 @@ def setup_argparser_wildtime(dataset: str) -> argparse.ArgumentParser:
     parser_.add_argument(
         "--all", action="store_true", help="Store all the available data, including the validation and test sets."
     )
+    parser_.add_argument(
+        "--dummyyear", action="store_true", help="Add a final dummy year to train also on the last trigger in Modyn"
+    )
 
     if dataset == "fMoW":
         parser_.add_argument(
