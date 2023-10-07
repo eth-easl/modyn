@@ -19,7 +19,7 @@ def main() -> None:
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = FMOWDownloader(args.dir)
-    downloader.store_data(args.daily, args.all)
+    downloader.store_data(args.daily, args.all, args.dummyyear)
     downloader.clean_folder()
 
 
@@ -59,7 +59,7 @@ class FMOWDownloader(Dataset):
             new_name = os.path.join(self.data_dir, f"{index}.png")
             os.rename(dest_file, new_name)
 
-    def store_data(self, store_daily: bool, store_all_data: bool) -> None:
+    def store_data(self, store_daily: bool, store_all_data: bool, add_final_dummy_year: bool) -> None:
 
         for year in tqdm(self._dataset):
             splits = [0, 1, 2] if store_all_data else [0]
@@ -88,6 +88,23 @@ class FMOWDownloader(Dataset):
                     self.move_file_and_rename(index)
                     image_file = os.path.join(self.data_dir, f"{index}.png")
                     os.utime(image_file, (timestamp, timestamp))
+
+        if add_final_dummy_year:
+            dummy_year = year + 1
+            timestamp = create_timestamp(year=dummy_year)
+            dummy_index = 0 #0 is not used by any sample
+
+            to_copy_image_file = os.path.join(self.data_dir, f"{index}.png")
+            dummy_image_file = os.path.join(self.data_dir, f"{dummy_index}.png")
+            shutil.copy(to_copy_image_file, dummy_image_file)
+            os.utime(dummy_image_file, (timestamp, timestamp))
+
+            to_copy_label_file = os.path.join(self.data_dir, f"{index}.label")
+            dummy_label_file = os.path.join(self.data_dir, f"{dummy_index}.label")
+            shutil.copy(to_copy_label_file, dummy_label_file)
+            os.utime(dummy_label_file, (timestamp, timestamp))
+
+
 
     @staticmethod
     def parse_metadata(data_dir: str) -> list:
