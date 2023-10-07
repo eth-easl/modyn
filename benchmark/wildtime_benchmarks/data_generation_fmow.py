@@ -19,7 +19,7 @@ def main() -> None:
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = FMOWDownloader(args.dir)
-    downloader.store_data(args.daily)
+    downloader.store_data(args.daily, args.all)
     downloader.clean_folder()
 
 
@@ -59,34 +59,35 @@ class FMOWDownloader(Dataset):
             new_name = os.path.join(self.data_dir, f"{index}.png")
             os.rename(dest_file, new_name)
 
-    def store_data(self, store_daily: bool) -> None:
+    def store_data(self, store_daily: bool, store_all_data: bool) -> None:
 
         for year in tqdm(self._dataset):
-            split = 0  # just use training split for now
-            for i in range(len(self._dataset[year][split]["image_idxs"])):
-                index = self._dataset[year][split]["image_idxs"][i]
-                label = self._dataset[year][split]["labels"][i]
+            splits = [0, 1, 2] if store_all_data else [0]
+            for split in splits:
+                for i in range(len(self._dataset[year][split]["image_idxs"])):
+                    index = self._dataset[year][split]["image_idxs"][i]
+                    label = self._dataset[year][split]["labels"][i]
 
-                if store_daily:
-                    raw_timestamp = self.metadata[index]["timestamp"]
+                    if store_daily:
+                        raw_timestamp = self.metadata[index]["timestamp"]
 
-                    if len(raw_timestamp) == 24:
-                        timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+                        if len(raw_timestamp) == 24:
+                            timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+                        else:
+                            timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%SZ').timestamp()
                     else:
-                        timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%SZ').timestamp()
-                else:
-                    timestamp = create_timestamp(year=year)
+                        timestamp = create_timestamp(year=year)
 
-                # save label
-                label_file = os.path.join(self.data_dir, f"{index}.label")
-                with open(label_file, "w", encoding="utf-8") as f:
-                    f.write(str(int(label)))
-                os.utime(label_file, (timestamp, timestamp))
+                    # save label
+                    label_file = os.path.join(self.data_dir, f"{index}.label")
+                    with open(label_file, "w", encoding="utf-8") as f:
+                        f.write(str(int(label)))
+                    os.utime(label_file, (timestamp, timestamp))
 
-                # set image timestamp
-                self.move_file_and_rename(index)
-                image_file = os.path.join(self.data_dir, f"{index}.png")
-                os.utime(image_file, (timestamp, timestamp))
+                    # set image timestamp
+                    self.move_file_and_rename(index)
+                    image_file = os.path.join(self.data_dir, f"{index}.png")
+                    os.utime(image_file, (timestamp, timestamp))
 
     @staticmethod
     def parse_metadata(data_dir: str) -> list:
