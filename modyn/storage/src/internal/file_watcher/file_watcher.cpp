@@ -9,64 +9,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace storage;
-
-/*
- * Inserts the file frame into the database using the optimized postgresql copy command.
- *
- * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
- * It is then dumped into a csv file buffer and sent to postgresql using the copy command.
- *
- * @param file_frame The file frame to be inserted.
- */
-void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_frame) const {
-  soci::session session = storage_database_connection_.get_session();
-  const std::string table_name = fmt::format("samples__did{}", dataset_id_);
-  const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
-  const std::string cmd =
-      fmt::format("COPY {}{} FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')", table_name, table_columns);
-
-  // Create stringbuffer, dump data into file buffer csv and send to postgresql
-  std::stringstream ss;
-  for (const auto& frame : file_frame) {
-    ss << fmt::format("{},{},{},{}\n", frame.dataset_id, frame.file_id, frame.index, frame.label);
-  }
-
-  // Create a temporary stream object and pipe the stringbuffer to it
-  std::istringstream is(ss.str());
-
-  // Execute the COPY command using the temporary stream object
-  session << cmd, soci::use(is);
-}
-
-/*
- * Inserts the file frame into the database using the fallback method.
- *
- * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
- * It is then inserted into the database using a prepared statement.
- *
- * @param file_frame The file frame to be inserted.
- */
-void FileWatcher::fallback_insertion(
-    const std::vector<std::tuple<int64_t, int64_t, int32_t, int32_t>>& file_frame)
-    const {
-  soci::session session = storage_database_connection_.get_session();
-  // Prepare query
-  std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
-
-  if (!file_frame.empty()) {
-    for (auto frame = file_frame.cbegin(); frame != std::prev(file_frame.cend()); ++frame) {
-      query += fmt::format("({},{},{},{}),", frame->dataset_id, frame->file_id, frame->index, frame->label);
-    }
-
-    // Add the last tuple without the trailing comma
-    const auto& last_frame = file_frame.back();
-    query +=
-        fmt::format("({},{},{},{})", last_frame.dataset_id, last_frame.file_id, last_frame.index, last_frame.label);
-
-    session << query;
-  }
-}
+using namespace storage::file_watcher;
 
 /*
  * Checks if the file is valid for the dataset.
@@ -140,27 +83,24 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
     FileWatcher.handle_file_paths(file_paths, data_file_extension, file_wrapper_type, timestamp,
                                   file_wrapper_config_node);
   } else {
-    const size_t chunk_size = file_paths.size() / thread_pool.size();
+    std::vector<std::thread> threads(insertion_threads_);
+    const size_t chunk_size = file_paths.size() / insertion_threads_;
 
-    for (size_t i = 0; i < thread_pool.size(); ++i) {
+    for (size_t i = 0; i < insertion_threads_; ++i) {
       auto begin = file_paths.begin() + i * chunk_size;
-      auto end = (i < thread_pool.size() - 1) ? (begin + chunk_size) : file_paths.end();
+      auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
       std::vector<std::string> file_paths_thread(begin, end);
 
-      SPDLOG_INFO("File watcher thread {} will handle {} files", i, file_paths_thread.size());
-      std::function<void()> task = std::move([this, file_paths_thread, &data_file_extension, &file_wrapper_type,
-                                              &timestamp, &file_wrapper_config_node, &config_]() mutable {
+      threads.emplace_back(std::thread([this, file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp,
+                                        &file_wrapper_config_node]() mutable {
         FileWatcher.handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
-                                      file_wrapper_config_node, config_);
-      });
-
-      tasks.push_back(task);
-      SPDLOG_INFO("File watcher thread {} started", i);
+                                      file_wrapper_config_node);
+      }));
     }
 
     // join all threads
-    for (auto& thread : thread_pool) {
+    for (auto& thread : threads) {
       thread.join();
     }
   }
@@ -240,6 +180,8 @@ static void FileWatcher::handle_file_paths(const std::vector<std::string>& file_
     std::vector<FileFrame> file_frame;
     auto file_wrapper =
         storage::utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+
+    int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
       file_wrapper->set_file_path(file_path);
       number_of_samples = file_wrapper->get_number_of_samples();
@@ -263,19 +205,89 @@ static void FileWatcher::handle_file_paths(const std::vector<std::string>& file_
       for (const auto& label : labels) {
         file_frame.emplace_back(dataset_id_, *file_id, index, label);
         index++;
+        inserted_samples++;
+        if (inserted_samples > sample_dbinsertion_batchsize_) {
+          insert_file_frame(storage_database_connection, std::move(file_frame));
+          file_frame.clear();
+          inserted_samples = 0;
+        }
       }
     }
 
-    // Move the file_frame vector into the insertion function.
-    switch (storage_database_connection_.get_driver()) {
-      case DatabaseDriver::POSTGRESQL:
-        postgres_copy_insertion(std::move(file_frame));
-        break;
-      case DatabaseDriver::SQLITE3:
-        fallback_insertion(std::move(file_frame));
-        break;
-      default:
-        FAIL("Unsupported database driver");
+    if (!file_frame.empty()) {
+      // Move the file_frame vector into the insertion function.
+      insert_file_frame(storage_database_connection, std::move(file_frame));
     }
+  }
+}
+
+static void FileWatcher::insert_file_frame(StorageDatabaseConnection storage_database_connection,
+                                           const std::vector<FileFrame>& file_frame) {
+  switch (storage_database_connection.get_driver()) {
+    case DatabaseDriver::POSTGRESQL:
+      postgres_copy_insertion(file_frame, storage_database_connection);
+      break;
+    case DatabaseDriver::SQLITE3:
+      fallback_insertion(file_frame, storage_database_connection);
+      break;
+    default:
+      FAIL("Unsupported database driver");
+  }
+}
+
+/*
+ * Inserts the file frame into the database using the optimized postgresql copy command.
+ *
+ * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
+ * It is then dumped into a csv file buffer and sent to postgresql using the copy command.
+ *
+ * @param file_frame The file frame to be inserted.
+ */
+static void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
+                                                 StorageDatabaseConnection storage_database_connection) const {
+  soci::session session = storage_database_connection.get_session();
+  const std::string table_name = fmt::format("samples__did{}", dataset_id_);
+  const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
+  const std::string cmd =
+      fmt::format("COPY {}{} FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')", table_name, table_columns);
+
+  // Create stringbuffer, dump data into file buffer csv and send to postgresql
+  std::stringstream ss;
+  for (const auto& frame : file_frame) {
+    ss << fmt::format("{},{},{},{}\n", frame.dataset_id, frame.file_id, frame.index, frame.label);
+  }
+
+  // Create a temporary stream object and pipe the stringbuffer to it
+  std::istringstream is(ss.str());
+
+  // Execute the COPY command using the temporary stream object
+  session << cmd, soci::use(is);
+}
+
+/*
+ * Inserts the file frame into the database using the fallback method.
+ *
+ * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
+ * It is then inserted into the database using a prepared statement.
+ *
+ * @param file_frame The file frame to be inserted.
+ */
+static void FileWatcher::fallback_insertion(const std::vector<FileFrame>& file_frame,
+                                            StorageDatabaseConnection storage_database_connection) const {
+  soci::session session = storage_database_connection.get_session();
+  // Prepare query
+  std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
+
+  if (!file_frame.empty()) {
+    for (auto frame = file_frame.cbegin(); frame != std::prev(file_frame.cend()); ++frame) {
+      query += fmt::format("({},{},{},{}),", frame->dataset_id, frame->file_id, frame->index, frame->label);
+    }
+
+    // Add the last tuple without the trailing comma
+    const auto& last_frame = file_frame.back();
+    query +=
+        fmt::format("({},{},{},{})", last_frame.dataset_id, last_frame.file_id, last_frame.index, last_frame.label);
+
+    session << query;
   }
 }

@@ -11,7 +11,7 @@
 #include "soci/sqlite3/soci-sqlite3.h"
 #include "yaml-cpp/yaml.h"
 
-namespace storage {
+namespace storage::database {
 
 enum class DatabaseDriver { POSTGRESQL, SQLITE3 };
 
@@ -64,4 +64,4 @@ class StorageDatabaseConnection {
   }
 };
 
-}  // namespace storage
+}  // namespace storage::database

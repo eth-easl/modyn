@@ -1,10 +1,12 @@
 #include "internal/file_wrapper/csv_file_wrapper.hpp"
 
+#include <rapidcsv/document.h>
+
 #include <algorithm>
 #include <numeric>
 #include <stdexcept>
 
-using namespace storage;
+using namespace storage::file_wrapper;
 
 void CsvFileWrapper::validate_file_extension() {
   if (file_path_.substr(file_path_.find_last_of(".") + 1) != "csv") {

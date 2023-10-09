@@ -1,6 +1,6 @@
 #include "internal/grpc/storage_grpc_server.hpp"
 
-using namespace storage;
+using namespace storage::grpc;
 
 void StorageGrpcServer::run() {
     if (!config_["storage"]["port"]) {

@@ -15,19 +15,18 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "internal/utils/utils.hpp"
 
-namespace storage::file_wrapper {
+namespace storage::file_watcher {
 class FileWatcher {
  public:
   std::atomic<bool>* stop_file_watcher_;
-  explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id,
-                       std::atomic<bool>* stop_file_watcher, int16_t insertion_threads = 1)
+  explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id, std::atomic<bool>* stop_file_watcher,
+                       int16_t insertion_threads = 1)
       : config_{config},
         dataset_id_{dataset_id},
         insertion_threads_{insertion_threads},
         storage_database_connection_{StorageDatabaseConnection(config)},
         stop_file_watcher_{stop_file_watcher},
-        disable_multithreading_{insertion_threads <= 1}
-        {
+        disable_multithreading_{insertion_threads <= 1} {
     if (stop_file_watcher_ == nullptr) {
       FAIL("stop_file_watcher_ is nullptr.");
     }
@@ -69,30 +68,6 @@ class FileWatcher {
       stop_file_watcher_->store(true);
       return;
     }
-
-    if (disable_multithreading_) {
-      SPDLOG_INFO("Multithreading disabled.");
-    } else {
-      SPDLOG_INFO("Multithreading enabled.");
-
-      thread_pool.resize(insertion_threads_);
-
-      for (auto& thread : thread_pool) {
-        thread = std::thread([&]() {
-          while (true) {
-            std::function<void()> task;
-            {
-              std::unique_lock<std::mutex> lock(mtx);
-              cv.wait(lock, [&]() { return !tasks.empty(); });
-              task = std::move(tasks.front());
-              tasks.pop_front();
-            }
-            if (!task) break;  // If the task is empty, it's a signal to terminate the thread
-            task();
-          }
-        });
-      }
-    }
   }
   std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
   void run();
@@ -100,12 +75,14 @@ class FileWatcher {
       const std::vector<std::string>& file_paths, const std::string& data_file_extension,
       const FileWrapperType& file_wrapper_type, int64_t timestamp, const YAML::Node& file_wrapper_config,
       const YAML::Node& config) void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
+  static void insert_file_frame(StorageDatabaseConnection storage_database_connection,
+                                const std::vector<FileFrame>& file_frame);
   void seek_dataset();
   void seek();
   bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                         bool ignore_last_timestamp, int64_t timestamp);
-  void postgres_copy_insertion(const std::vector<FileFrame>& file_frame) const;
-  void fallback_insertion(const std::vector<FileFrame>& file_frame) const;
+  static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame) const;
+  static void fallback_insertion(const std::vector<FileFrame>& file_frame) const;
 
  private:
   YAML::Node config_;
@@ -116,10 +93,6 @@ class FileWatcher {
   StorageDatabaseConnection storage_database_connection_;
   std::string dataset_path_;
   FilesystemWrapperType filesystem_wrapper_type_;
-  std::vector<std::thread> thread_pool;
-  std::deque<std::function<void()>> tasks;
-  std::mutex mtx;
-  std::condition_variable cv;
   struct FileFrame {
     int64_t dataset_id;
     int64_t file_id;
@@ -127,4 +100,4 @@ class FileWatcher {
     int32_t label;
   };
 };
-}  // namespace storage::file_wrapper
+}  // namespace storage::file_watcher

@@ -8,9 +8,9 @@
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/utils/utils.hpp"
 
-namespace storage {
+namespace storage::file_wrapper {
 
-class CsvFileWrapper : public FileWrapper {
+class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
  private:
   char separator_;
   int64_t label_index_;
@@ -22,8 +22,8 @@ class CsvFileWrapper : public FileWrapper {
 
  public:
   CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                 std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
-      : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
+                 std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper)
+      : storage::file_wrapper::FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     if (file_wrapper_config_["separator"]) {
       separator_ = file_wrapper_config_["separator"].as<char>();
     } else {
@@ -64,4 +64,4 @@ class CsvFileWrapper : public FileWrapper {
   void validate_file_content();
   ~CsvFileWrapper() override = default;
 };
-}  // namespace storage
+}  // namespace storage::file_wrapper

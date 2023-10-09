@@ -13,7 +13,7 @@
 #include "internal/utils/utils.hpp"
 #include "internal/database/storage_database_connection.hpp"
 
-namespace storage::file_wrapper {
+namespace storage::file_watcher {
 class FileWatcherWatchdog {
  public:
   FileWatchdog(
@@ -42,4 +42,4 @@ class FileWatcherWatchdog {
   std::atomic<bool>* stop_file_watcher_watchdog_;
   StorageDatabaseConnection storage_database_connection_;
 };
-}  // namespace storage
+}  // namespace storage::file_watcher

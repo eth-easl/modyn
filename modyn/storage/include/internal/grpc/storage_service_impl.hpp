@@ -10,7 +10,7 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "storage.grpc.pb.h"
 
-namespace storage {
+namespace storage::grpc {
 
 struct SampleData {
   std::vector<int64_t> ids;
@@ -77,4 +77,4 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_get_new_data_in_interval_response(grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer,
                                               int64_t file_id);
 };
-}  // namespace storage
+}  // namespace storage::grpc

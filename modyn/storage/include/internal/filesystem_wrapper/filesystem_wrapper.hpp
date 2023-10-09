@@ -6,8 +6,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
-
 namespace storage::filesystem_wrapper {
 
 enum FilesystemWrapperType { LOCAL };

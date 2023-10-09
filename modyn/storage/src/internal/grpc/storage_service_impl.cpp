@@ -3,7 +3,7 @@
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/utils/utils.hpp"
 
-using namespace storage;
+using namespace storage::grpc;
 
 grpc::Status StorageServiceImpl::Get(grpc::ServerContext* /*context*/, const modyn::storage::GetRequest* request,
                                      grpc::ServerWriter<modyn::storage::GetResponse>* writer) {

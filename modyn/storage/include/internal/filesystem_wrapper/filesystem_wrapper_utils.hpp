@@ -6,7 +6,7 @@
 
 namespace storage::filesystem_wrapper {
 
-static std::shared_ptr<FilesystemWrapper> get_filesystem_wrapper(const std::string& path,
+static std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> get_filesystem_wrapper(const std::string& path,
                                                                  const FilesystemWrapperType& type) {
   std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
   if (type == FilesystemWrapperType::LOCAL) {

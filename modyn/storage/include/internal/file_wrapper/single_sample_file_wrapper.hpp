@@ -3,13 +3,15 @@
 #include <cstddef>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
+#include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 
-namespace storage {
-class SingleSampleFileWrapper : public FileWrapper {
+namespace storage::file_wrapper {
+
+class SingleSampleFileWrapper : public storage::file_wrapper::FileWrapper {
  public:
   SingleSampleFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                          std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
-      : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
+                          std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper)
+      : storage::file_wrapper::FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     validate_file_extension();
   }
   int64_t get_number_of_samples() override;
@@ -24,4 +26,4 @@ class SingleSampleFileWrapper : public FileWrapper {
   void delete_samples(const std::vector<int64_t>& indices) override;
   ~SingleSampleFileWrapper() override = default;
 };
-}  // namespace storage
+}  // namespace storage::file_wrapper

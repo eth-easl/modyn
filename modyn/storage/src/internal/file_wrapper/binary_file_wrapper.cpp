@@ -3,8 +3,9 @@
 #include <fstream>
 #include <numeric>
 #include <vector>
+#include <span>
 
-using namespace storage;
+using namespace storage::file_wrapper;
 
 /*
  * Transforms a vector of bytes into an int64_t.
@@ -58,8 +59,6 @@ int64_t BinaryFileWrapper::get_label(int64_t index) {
  * Offset calculation to retrieve all the labels of a sample.
  */
 std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
-  ASSERT(!filesystem_wrapper_->is_empty(file_path_), "The file is empty");
-
   const int64_t num_samples = get_number_of_samples();
   std::vector<int64_t> labels = std::vector<int64_t>();
   labels.reserve(num_samples);
@@ -112,7 +111,7 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
   unsigned char* sample_begin = data + record_start + label_size_;
   unsigned char* sample_end = sample_begin + sample_size_;
 
-  return std::span(sample_begin, sample_end).to_vector();
+  return std::vector(sample_begin, sample_end);
 }
 
 /*
@@ -136,7 +135,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
     unsigned char* sample_begin = data + record_start + label_size_;
     unsigned char* sample_end = sample_begin + sample_size_;
 
-    samples.push_back(std::span(sample_begin, sample_end).to_vector());
+    samples.push_back(std::vector(sample_begin, sample_end));
   }
 
   return samples;

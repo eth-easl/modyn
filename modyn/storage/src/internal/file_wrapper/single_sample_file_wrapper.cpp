@@ -7,10 +7,10 @@
 
 #include "internal/utils/utils.hpp"
 
-using namespace storage;
+using namespace storage::file_wrapper;
 
 int64_t SingleSampleFileWrapper::get_number_of_samples() {
-  ASSERT(file_wrapper_config_.contains("file_extension"), "File wrapper configuration does not contain a file extension");
+  ASSERT(!file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a file extension");
   const auto file_extension = file_wrapper_config_["file_extension"].as<std::string>();
 
   if (file_path_.find(file_extension) == std::string::npos) {
@@ -19,12 +19,12 @@ int64_t SingleSampleFileWrapper::get_number_of_samples() {
   return 1;
 }
 
-int64_t SingleSampleFileWrapper::get_label(int64_t index) {
-  ASSERT(file_wrapper_config_.contains("label_file_extension"), "File wrapper configuration does not contain a label file extension");
+int64_t SingleSampleFileWrapper::get_label(int64_t /* index */) {
+  ASSERT(!file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a label file extension");
   const auto label_file_extension = file_wrapper_config_["label_file_extension"].as<std::string>();
   auto label_path = std::filesystem::path(file_path_).replace_extension(label_file_extension);
 
-  ASSERT(filesystem_wrapper_->exists(label_path), fmt::format("Label file does not exist: {}", label_path));
+  ASSERT(filesystem_wrapper_->exists(label_path), fmt::format("Label file does not exist: {}", label_path.string()));
   std::vector<unsigned char> label = filesystem_wrapper_->get(label_path);
 
   if (!label.empty()) {
@@ -55,7 +55,12 @@ std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples_fro
 }
 
 void SingleSampleFileWrapper::validate_file_extension() {
-  ASSERT(file_wrapper_config_.contains("file_extension"), "File wrapper configuration does not contain a file extension");
+  ASSERT(!file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a file extension");
+
+  const auto file_extension = file_wrapper_config_["file_extension"].as<std::string>();
+  if (file_path_.find(file_extension) == std::string::npos) {
+    FAIL(fmt::format("File extension {} does not match file path {}", file_extension, file_path_));
+  }
 }
 
 void SingleSampleFileWrapper::delete_samples(const std::vector<int64_t>& /* indices */) {

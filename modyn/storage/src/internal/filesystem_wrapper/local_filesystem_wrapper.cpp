@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "internal/utils/utils.hpp"
+#include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
 
 const char path_separator = std::filesystem::path::preferred_separator;
 

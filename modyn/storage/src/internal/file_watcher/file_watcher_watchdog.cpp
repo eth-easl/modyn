@@ -6,7 +6,7 @@
 
 #include "soci/soci.h"
 
-using namespace storage;
+using namespace storage::file_watcher;
 
 /*
  * Start a new FileWatcher thread for the given dataset

@@ -6,7 +6,7 @@
 
 #include "internal/grpc/storage_service_impl.hpp"
 
-namespace storage {
+namespace storage::grpc {
 
 class StorageGrpcServer {
  public:
@@ -21,4 +21,4 @@ class StorageGrpcServer {
   std::condition_variable cv_;
 };
 
-}  // namespace storage
+}  // namespace storage::grpc

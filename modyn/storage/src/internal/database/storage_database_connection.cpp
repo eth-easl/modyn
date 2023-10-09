@@ -9,7 +9,7 @@
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/sqlite3/soci-sqlite3.h"
 
-using namespace storage;
+using namespace storage::database;
 
 soci::session StorageDatabaseConnection::get_session() const {
   const std::string connection_string = "dbname='" + database_ + "' user='" + username_ + "' password='" + password_ +
