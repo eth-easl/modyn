@@ -40,6 +40,9 @@ model:
       cat_23: 12022
       cat_24: 97
       cat_25: 35
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
 training:
   gpus: 1
   device: "cuda:0"

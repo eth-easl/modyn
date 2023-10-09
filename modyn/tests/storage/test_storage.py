@@ -54,6 +54,8 @@ def get_minimal_modyn_config() -> dict:
         },
         "selector": {"hostname": "host", "port": "1337"},
         "trainer_server": {"hostname": "host", "port": "1337"},
+        "evaluator": {"hostname": "host", "port": "1337"},
+        "model_storage": {"hostname": "host", "port": "1337", "ftp_port": "1337", "models_directory": "test.dir"},
     }
 
 

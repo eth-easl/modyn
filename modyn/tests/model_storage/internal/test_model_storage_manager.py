@@ -14,7 +14,6 @@ from modyn.model_storage.internal import ModelStorageManager
 from modyn.model_storage.internal.storage_strategies.full_model_strategies import PyTorchFullModel
 from modyn.model_storage.internal.storage_strategies.incremental_model_strategies import WeightsDifference
 from modyn.models import ResNet18
-from modyn.utils import unzip_file, zip_file
 
 DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / "test_model_storage.database"
 
@@ -35,8 +34,7 @@ def get_modyn_config():
 
 
 def setup():
-    if os.path.exists(DATABASE):
-        os.remove(DATABASE)
+    DATABASE.unlink(True)
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
         database.create_tables()
@@ -51,7 +49,7 @@ def setup():
 
 
 def teardown():
-    os.remove(DATABASE)
+    DATABASE.unlink()
 
 
 class MockModel(torch.nn.Module):
@@ -122,9 +120,11 @@ def test__reconstruct_model():
                 15, 4, difference_model_file_name, "model.metadata", parent_model=prev_model_id
             )
 
-        manager._reconstruct_model(curr_model_id, model_state, manager.get_model_storage_policy(1))
+        reconstructed_state = manager._reconstruct_model_state(
+            curr_model_id, model_state, manager.get_model_storage_policy(1)
+        )
 
-        assert model_state["_weight"].item() == 3  # pylint: disable=unsubscriptable-object
+        assert reconstructed_state["_weight"].item() == 3  # pylint: disable=unsubscriptable-object
 
 
 def test__handle_new_model_full():
@@ -147,7 +147,7 @@ def test__handle_new_model_full():
 
 
 @patch.object(ModelStorageManager, "_get_base_model_state", return_value=MockModel().state_dict())
-@patch.object(ModelStorageManager, "_reconstruct_model")
+@patch.object(ModelStorageManager, "_reconstruct_model_state", return_value=MockModel().state_dict())
 @patch.object(ModelStorageManager, "_get_parent_model_id", return_value=101)
 def test__handle_new_model_incremental(
     previous_model_mock, reconstruct_model_mock: MagicMock, base_model_state_mock: MagicMock
@@ -183,10 +183,9 @@ def test_get_model_storage_policy():
         )
 
         full_model_strategy = ModelStorageStrategyConfig(name="PyTorchFullModel")
-        full_model_strategy.zip = True
         full_model_strategy.zip_algorithm = "ZIP_DEFLATED"
         inc_model_strategy = ModelStorageStrategyConfig(name="WeightsDifference")
-        inc_model_strategy.zip = False
+        inc_model_strategy.zip = True
         inc_model_strategy.config = json.dumps({"operator": "sub"})
         complex_pipeline = database.register_pipeline(
             75, "ResNet18", json.dumps({"num_classes": 10}), True, full_model_strategy, inc_model_strategy, 10
@@ -200,10 +199,10 @@ def test_get_model_storage_policy():
     assert not policy.full_model_strategy.zip
 
     complex_policy = manager.get_model_storage_policy(complex_pipeline)
-    assert complex_policy.full_model_strategy.zip
+    assert not complex_policy.full_model_strategy.zip
     assert complex_policy.full_model_strategy.zip_algorithm == ZIP_DEFLATED
     assert complex_policy.incremental_model_strategy
-    assert not complex_policy.incremental_model_strategy.zip
+    assert complex_policy.incremental_model_strategy.zip
 
 
 @patch("modyn.model_storage.internal.model_storage_manager.current_time_millis", return_value=100)
@@ -237,8 +236,7 @@ def test_store_model(base_model_mock, current_time_mock):
         with open(temp_directory_path / model.model_path, "rb") as model_file:
             assert model_file.read() == b"\x00\x00\x00\x40"
 
-        unzip_file(temp_directory_path / model.metadata_path, temp_directory_path / "unzipped.metadata")
-        assert torch.load(temp_directory_path / "unzipped.metadata")["metadata"]
+        assert torch.load(temp_directory_path / model.metadata_path)["metadata"]
 
         loaded_model = manager.load_model(model_id, True)
 
@@ -247,7 +245,7 @@ def test_store_model(base_model_mock, current_time_mock):
 
 
 def test_store_model_resnet():
-    full_model_strategy = ModelStorageStrategyConfig(name="CompressedFullModel")
+    full_model_strategy = ModelStorageStrategyConfig(name="BinaryFullModel")
     full_model_strategy.zip = True
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
@@ -300,14 +298,13 @@ def test_load_model_metadata(base_model_mock: MagicMock):
 
         model_file_name = "mock.model"
         with MetadataDatabaseConnection(get_modyn_config()) as database:
-            model_id = database.add_trained_model(1, 32, model_file_name, "mock.metadata.zip")
+            model_id = database.add_trained_model(1, 32, model_file_name, "mock.metadata")
 
         policy = manager.get_model_storage_policy(1)
         policy.full_model_strategy.store_model(
             get_mock_model_after().state_dict(), temp_directory_path / model_file_name
         )
         torch.save({"metadata": True}, temp_directory_path / "mock.metadata")
-        zip_file(temp_directory_path / "mock.metadata", temp_directory_path / "mock.metadata.zip")
 
         reconstructed_state = manager.load_model(model_id, True)
 

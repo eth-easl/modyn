@@ -367,6 +367,8 @@ properties:
 required:
   - project
   - storage
+  - evaluator
+  - model_storage
   - metadata_database
   - selector
   - trainer_server

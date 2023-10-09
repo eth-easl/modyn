@@ -9,8 +9,6 @@ model:
 model_storage:
   full_model_strategy:
     name: "PyTorchFullModel"
-    zip: True
-    zip_algorithm: ZIP_DEFLATED
 training:
   gpus: 1
   device: "cuda:0"

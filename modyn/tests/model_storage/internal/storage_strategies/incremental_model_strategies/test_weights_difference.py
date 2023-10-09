@@ -107,26 +107,26 @@ def test_load_model():
 
 
 def test_rle():
-    assert WeightsDifference.rle_bytes(b"") == b""
+    assert WeightsDifference.encode_bytes(b"") == b""
 
-    encoded = WeightsDifference.rle_bytes(b"\x00\x00\x02\x01\x01\x01\x00")
+    encoded = WeightsDifference.encode_bytes(b"\x00\x00\x02\x01\x01\x01\x00")
     assert encoded == b"\x02\x00\x01\x02\x03\x01\x01\x00"
 
-    encoded = WeightsDifference.rle_bytes(512 * b"\x00" + b"\x01")
+    encoded = WeightsDifference.encode_bytes(512 * b"\x00" + b"\x01")
     assert encoded == b"\xff\x00\xff\x00\x02\x00\x01\x01"
 
 
 def test_inv_rle():
-    assert WeightsDifference.inv_rle_bytes(b"") == b""
+    assert WeightsDifference.decode_bytes(b"") == b""
 
-    encoded = WeightsDifference.inv_rle_bytes(b"\x02\x00\x01\x02\x03\x01\x01\x00")
+    encoded = WeightsDifference.decode_bytes(b"\x02\x00\x01\x02\x03\x01\x01\x00")
     assert encoded == b"\x00\x00\x02\x01\x01\x01\x00"
 
-    encoded = WeightsDifference.inv_rle_bytes(b"\xff\x00\xff\x00\x02\x00\x01\x01")
+    encoded = WeightsDifference.decode_bytes(b"\xff\x00\xff\x00\x02\x00\x01\x01")
     assert encoded == 512 * b"\x00" + b"\x01"
 
     with pytest.raises(AssertionError):
-        WeightsDifference.inv_rle_bytes(b"\x02\x00\x01")
+        WeightsDifference.decode_bytes(b"\x02\x00\x01")
 
 
 def test_store_then_load_model():

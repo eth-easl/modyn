@@ -143,7 +143,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             pipeline_id: id of the pipeline it was created from.
             trigger_id: id of the trigger it was created.
             model_path: path on the local filesystem on which the model is stored.
-            metadata_path: the path on the local filesystem on which metadata to the model are stored.
+            metadata_path: the path on the local filesystem where model metadata is stored.
             parent_model: (optional) id of the parent model.
         Returns:
             int: Id of the registered model

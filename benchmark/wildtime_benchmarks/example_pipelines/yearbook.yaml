@@ -7,6 +7,9 @@ model:
   config:
     num_input_channels: 1
     num_classes: 2
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
 training:
   gpus: 1
   device: "cuda:0"

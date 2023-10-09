@@ -350,7 +350,7 @@ class TrainerServerGRPCServicer:
             logger.error(f"Training with id {training_id} is still running.")
             return StoreFinalModelResponse(valid_state=False)
 
-        final_checkpoint_path = self._prepare_final_model(training_id)
+        final_checkpoint_path = self._get_final_model_path(training_id)
         if final_checkpoint_path:
             prefix_model_path = final_checkpoint_path.relative_to(self._modyn_base_dir)
 
@@ -379,7 +379,7 @@ class TrainerServerGRPCServicer:
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
         return StoreFinalModelResponse(valid_state=False)
 
-    def _prepare_final_model(self, training_id: int) -> Optional[pathlib.Path]:
+    def _get_final_model_path(self, training_id: int) -> Optional[pathlib.Path]:
         final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
         if not final_checkpoint_path.exists():
             return None

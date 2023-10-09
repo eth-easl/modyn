@@ -1,15 +1,13 @@
 import json
 import logging
-import os
 import pathlib
-import tempfile
 from typing import Optional
 
 import torch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, TrainedModel
 from modyn.model_storage.internal.utils import ModelStoragePolicy
-from modyn.utils import current_time_millis, dynamic_module_import, unzip_file, zip_file
+from modyn.utils import current_time_millis, dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
@@ -64,11 +62,7 @@ class ModelStorageManager:
         # now checkpoint only contains optimizer state and metadata.
         local_metadata_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.metadata.zip"
         metadata_path = self._storage_dir / local_metadata_filename
-
-        # zip the metadata file.
-        with tempfile.NamedTemporaryFile(dir=self._ftp_dir) as temp_file:
-            torch.save(checkpoint, temp_file)
-            zip_file(pathlib.Path(temp_file.name), metadata_path)
+        torch.save(checkpoint, metadata_path)
 
         # add the new model to the database.
         with MetadataDatabaseConnection(self._modyn_config) as database:
@@ -107,7 +101,7 @@ class ModelStorageManager:
                 parent_model_state = self._get_base_model_state(pipeline_id)
 
                 # load model state of the parent model.
-                self._reconstruct_model(parent_model_id, parent_model_state, policy)
+                parent_model_state = self._reconstruct_model_state(parent_model_id, parent_model_state, policy)
 
                 # finally store the model delta.
                 policy.incremental_model_strategy.store_model(state_dict, parent_model_state, model_path)
@@ -121,7 +115,7 @@ class ModelStorageManager:
 
     def _get_base_model_state(self, pipeline_id: int) -> dict:
         """
-        Get the base model state associated with a pipeline.
+        Get a randomly initialized model associated with the pipeline.
 
         Args:
             pipeline_id: the involved pipeline.
@@ -137,19 +131,19 @@ class ModelStorageManager:
         model_handler = getattr(model_module, model_class_name)
         return model_handler(json.loads(model_config), "cpu", amp).model.state_dict()
 
-    def _reconstruct_model(self, model_id: int, model_state: dict, policy: ModelStoragePolicy) -> None:
+    def _reconstruct_model_state(self, model_id: int, model_state: dict, policy: ModelStoragePolicy) -> dict:
         """
-        Reconstruct the model given the model state and the model storage policy.
-        The function recursively call itself, if the model is stored as a model delta.
-        In this case it first loads the (fully stored) parent model into the model state before overwriting it
-        according to the incremental model storage policy.
+        Reconstruct a given model according to the model storage policy.
+        The function recursively calls itself whenever the model is stored as a delta.
+        Otherwise it is stored according to a full model strategy and the model state can be retrieved.
+        Finally, the model_state is overwritten by the state of the inquired model.
 
         Args:
             model_id: the identifier of the model to be reconstructed.
-            model_state: the plain model state (or the loaded parent model state).
-            policy: the model storage policy containing the strategies.
+            model_state: a random model state (or the loaded parent model state).
+            policy: the model storage policy of the pipeline.
         Returns:
-            None: the model state is overwritten in order to minimize memory overhead.
+            dict: the reconstructed model state. Refers to the same object as model_state.
         """
 
         # we recursively overwrite the model state.
@@ -158,13 +152,15 @@ class ModelStorageManager:
         if not model.parent_model:
             # base case: we can load a fully stored model.
             policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
-            return
+            return model_state
 
         # recursive step: we recurse to load the model state of the parent model.
-        self._reconstruct_model(model.parent_model, model_state, policy)
+        model_state = self._reconstruct_model_state(model.parent_model, model_state, policy)
 
         # we apply the incremental strategy to load our model state.
         policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
+
+        return model_state
 
     def _get_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
         """
@@ -210,15 +206,11 @@ class ModelStorageManager:
 
         # retrieve the model by loading its state dictionary.
         model_state = self._get_base_model_state(model.pipeline_id)
-        self._reconstruct_model(model_id, model_state, policy)
-        model_dict = {"model": model_state}
+        model_dict = {"model": self._reconstruct_model_state(model_id, model_state, policy)}
 
         # append the metadata to the dictionary if specified.
         if metadata:
-            with tempfile.NamedTemporaryFile() as temp_file:
-                temp_file_path = pathlib.Path(temp_file.name)
-                unzip_file(self._storage_dir / model.metadata_path, temp_file_path)
-                metadata_dict = torch.load(temp_file_path)
+            metadata_dict = torch.load(self._storage_dir / model.metadata_path)
             model_dict.update(metadata_dict)
 
         return model_dict
@@ -246,8 +238,8 @@ class ModelStorageManager:
                 logger.info(f"Model {model_id} has depending child models: {', '.join(child_ids)}")
                 return False
 
-            os.remove(self._storage_dir / model.model_path)
-            os.remove(self._storage_dir / model.metadata_path)
+            (self._storage_dir / model.model_path).unlink()
+            (self._storage_dir / model.metadata_path).unlink()
 
             database.session.delete(model)
             database.session.commit()

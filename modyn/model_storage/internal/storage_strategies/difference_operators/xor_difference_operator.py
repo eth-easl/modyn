@@ -1,6 +1,6 @@
 import torch
 from modyn.model_storage.internal.storage_strategies.abstract_difference_operator import AbstractDifferenceOperator
-from modyn.model_storage.internal.utils import read_tensor_from_bytes
+from modyn.utils import reconstruct_tensor_from_bytes
 
 
 class XorDifferenceOperator(AbstractDifferenceOperator):
@@ -15,4 +15,4 @@ class XorDifferenceOperator(AbstractDifferenceOperator):
     def restore(tensor_prev: torch.Tensor, buffer: bytes) -> torch.Tensor:
         prev_model_data = tensor_prev.numpy().tobytes()
         new_model_data = bytes(a ^ b for (a, b) in zip(prev_model_data, buffer))
-        return read_tensor_from_bytes(tensor_prev, new_model_data)
+        return reconstruct_tensor_from_bytes(tensor_prev, new_model_data)

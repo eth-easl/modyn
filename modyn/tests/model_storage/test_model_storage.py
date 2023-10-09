@@ -39,7 +39,6 @@ class MockGRPCServer(GRPCServer):
 
 
 @patch.object(ModelStorage, "_init_model_storage_directory", noop_setup_directory)
-@patch.object(ModelStorage, "_setup_ftp_directory", noop_setup_directory)
 def test_model_storage_init():
     model_storage = ModelStorage(get_modyn_config())
     assert model_storage.config == get_modyn_config()

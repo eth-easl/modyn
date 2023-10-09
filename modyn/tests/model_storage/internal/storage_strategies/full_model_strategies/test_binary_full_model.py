@@ -2,7 +2,7 @@ import pathlib
 import tempfile
 
 import torch
-from modyn.model_storage.internal.storage_strategies.full_model_strategies import CompressedFullModel
+from modyn.model_storage.internal.storage_strategies.full_model_strategies import BinaryFullModel
 
 
 class MockModel(torch.nn.Module):
@@ -16,7 +16,7 @@ class MockModel(torch.nn.Module):
 
 def test_store_model():
     model = MockModel()
-    full_model_strategy = CompressedFullModel(
+    full_model_strategy = BinaryFullModel(
         zipping_dir=pathlib.Path(), zip_activated=False, zip_algorithm_name="", config={}
     )
     with tempfile.NamedTemporaryFile() as temporary_file:
@@ -30,7 +30,7 @@ def test_store_model():
 
 def test_load_model():
     model = MockModel()
-    full_model_strategy = CompressedFullModel(
+    full_model_strategy = BinaryFullModel(
         zipping_dir=pathlib.Path(), zip_activated=False, zip_algorithm_name="", config={}
     )
     with tempfile.NamedTemporaryFile() as temporary_file:

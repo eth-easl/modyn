@@ -1,5 +1,4 @@
 import io
-import math
 import pathlib
 from typing import BinaryIO, Union
 
@@ -12,7 +11,7 @@ from modyn.model_storage.internal.storage_strategies.difference_operators import
 from modyn.model_storage.internal.storage_strategies.incremental_model_strategies import (
     AbstractIncrementalModelStrategy,
 )
-from modyn.model_storage.internal.utils import torch_dtype_to_byte_size
+from modyn.utils import get_tensor_byte_size
 
 available_difference_operators = {"xor": XorDifferenceOperator, "sub": SubDifferenceOperator}
 
@@ -24,11 +23,19 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
     """
 
     def __init__(self, zipping_dir: pathlib.Path, zip_activated: bool, zip_algorithm_name: str, config: dict):
-        self.difference_operator = SubDifferenceOperator
-        self.split_exponent = False
-        self.rle = False
+        super().__init__(zipping_dir, zip_activated, zip_algorithm_name)
 
-        super().__init__(zipping_dir, zip_activated, zip_algorithm_name, config)
+        self._validate_config(config)
+
+    def _validate_config(self, config: dict) -> None:
+        self.difference_operator = SubDifferenceOperator
+        if "operator" in config:
+            difference_operator_name = config["operator"]
+            if difference_operator_name not in available_difference_operators:
+                raise ValueError(f"Operator should be one of {available_difference_operators}.")
+            self.difference_operator = available_difference_operators[difference_operator_name]
+        self.split_exponent = config["split_exponent"] if "split_exponent" in config else False
+        self.rle = config["rle"] if "rle" in config else False
 
     def _store_model(self, model_state: dict, prev_model_state: dict, file_path: pathlib.Path) -> None:
         bytestream = io.BytesIO()
@@ -37,7 +44,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
         for tensor_model, tensor_prev_model in zip(model_state.values(), prev_model_state.values()):
             difference = self.difference_operator.calculate_difference(tensor_model, tensor_prev_model)
 
-            if exponent_bytestream and tensor_model.dtype == torch.float32:
+            if exponent_bytestream is not None and tensor_model.dtype == torch.float32:
                 for i in range(0, len(difference), 4):
                     reordered_diff = self.reorder_buffer(difference[i : i + 4])
                     bytestream.write(reordered_diff[0:3])
@@ -46,10 +53,10 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
                 bytestream.write(difference)
 
         with open(file_path, "wb") as file:
-            if exponent_bytestream:
+            if exponent_bytestream is not None:
                 exponents = exponent_bytestream.getvalue()
                 if self.rle:
-                    exponents = self.rle_bytes(exponents)
+                    exponents = self.encode_bytes(exponents)
                 file.write(len(exponents).to_bytes(8, byteorder="big"))
                 file.write(exponents)
             file.write(bytestream.getbuffer().tobytes())
@@ -58,9 +65,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
         with open(file_path, "rb") as file:
             if not self.split_exponent:
                 for layer_name, tensor in prev_model_state.items():
-                    shape = tensor.shape
-                    num_bytes = math.prod(shape) * torch_dtype_to_byte_size[tensor.dtype]
-
+                    num_bytes = get_tensor_byte_size(tensor)
                     prev_model_state[layer_name] = self.difference_operator.restore(tensor, file.read(num_bytes))
             else:
                 self._load_model_split_exponent(prev_model_state, file)
@@ -70,13 +75,12 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
 
         with io.BytesIO() as exponent_bytes:
             exponent_bytes.write(
-                self.inv_rle_bytes(file.read(exponent_bytes_amount)) if self.rle else file.read(exponent_bytes_amount)
+                self.decode_bytes(file.read(exponent_bytes_amount)) if self.rle else file.read(exponent_bytes_amount)
             )
             exponent_bytes.seek(0)
 
             for layer_name, tensor in prev_model_state.items():
-                shape = tensor.shape
-                num_bytes = math.prod(shape) * torch_dtype_to_byte_size[tensor.dtype]
+                num_bytes = get_tensor_byte_size(tensor)
 
                 if tensor.dtype == torch.float32:
                     buffer = bytearray(num_bytes)
@@ -102,7 +106,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
         return bit_array.bytes
 
     @staticmethod
-    def rle_bytes(buffer: bytes) -> bytes:
+    def encode_bytes(buffer: bytes) -> bytes:
         """
         Perform byte-wise run-length encoding.
 
@@ -133,7 +137,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
         return bytestream.getvalue()
 
     @staticmethod
-    def inv_rle_bytes(buffer: bytes) -> bytes:
+    def decode_bytes(buffer: bytes) -> bytes:
         """
         Decode run-length encoded bytes.
 
@@ -151,12 +155,3 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
 
             bytestream.write(count * buffer[i + 1 : i + 2])
         return bytestream.getvalue()
-
-    def validate_config(self, config: dict) -> None:
-        if "operator" in config:
-            difference_operator_name = config["operator"]
-            if difference_operator_name not in available_difference_operators:
-                raise ValueError(f"Operator should be one of {available_difference_operators}.")
-            self.difference_operator = available_difference_operators[difference_operator_name]
-        self.split_exponent = config["split_exponent"] if "split_exponent" in config else False
-        self.rle = config["rle"] if "rle" in config else False

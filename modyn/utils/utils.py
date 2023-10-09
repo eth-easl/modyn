@@ -4,6 +4,7 @@ import importlib
 import importlib.util
 import inspect
 import logging
+import math
 import os
 import pathlib
 import random
@@ -305,3 +306,38 @@ def unzip_file(
 
     if remove_file:
         os.remove(zipped_file_path)
+
+
+def reconstruct_tensor_from_bytes(tensor: torch.Tensor, buffer: bytes) -> torch.Tensor:
+    """
+    Reconstruct a tensor from bytes.
+
+    Args:
+        tensor: the template for the reconstructed tensor.
+        buffer: the serialized tensor information.
+
+    Returns:
+        Tensor: the reconstructed tensor.
+    """
+    reconstructed_tensor = torch.frombuffer(buffer, dtype=tensor.dtype)
+    return torch.reshape(reconstructed_tensor, tensor.shape)
+
+
+def get_tensor_byte_size(tensor: torch.Tensor) -> int:
+    """
+    Get the amount of bytes needed to represent a tensor in binary format.
+
+    Args:
+        tensor: the tensor, for which the number of bytes is calculated.
+
+    Returns:
+        int: the number of bytes needed to represent the tensor.
+    """
+    shape = tensor.shape
+    if torch.is_floating_point(tensor):
+        type_size = torch.finfo(tensor.dtype).bits / 8
+    else:
+        type_size = torch.iinfo(tensor.dtype).bits / 8
+    num_bytes = int(math.prod(shape) * type_size)
+
+    return num_bytes

@@ -302,7 +302,7 @@ class Supervisor:
                 self.status_bar.update(demo="Fetching new data")
                 trigger_occured = False
                 largest_keys = set()
-                for new_data in self.grpc.get_new_data_since(dataset_id, last_timestamp):
+                for new_data, _ in self.grpc.get_new_data_since(dataset_id, last_timestamp):
                     # Since get_new_data_since is inclusive, we need to filter out the keys
                     # we have already processed in the previous get_new_data_since request
                     new_data = [

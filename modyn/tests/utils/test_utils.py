@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import io
 import pathlib
 import tempfile
 from unittest.mock import patch
@@ -19,9 +20,12 @@ from modyn.utils import (
     dynamic_module_import,
     flatten,
     get_partition_for_worker,
+    get_tensor_byte_size,
     grpc_connection_established,
+    instantiate_class,
     model_available,
     package_available_and_can_be_imported,
+    reconstruct_tensor_from_bytes,
     seed_everything,
     trigger_available,
     unzip_file,
@@ -29,7 +33,6 @@ from modyn.utils import (
     validate_yaml,
     zip_file,
 )
-from modyn.utils.utils import instantiate_class
 
 
 @patch.object(GRPCHandler, "init_storage", lambda self: None)
@@ -249,3 +252,43 @@ def test_zip_and_unzip_file():
 
         with open(text_file_path, "r", encoding="utf-8") as file:
             assert file.read() == "This is a testfile!"
+
+
+def test_read_tensor_from_bytes():
+    buf = io.BytesIO()
+    buf.write(b"\x01\x00\x00\x00")
+    buf.write(b"\x02\x00\x00\x00")
+    buf.write(b"\x03\x00\x00\x00")
+    buf.write(b"\x04\x00\x00\x00")
+    buf.seek(0)
+    res = reconstruct_tensor_from_bytes(torch.ones((2, 2), dtype=torch.int32), buf.getvalue())
+
+    assert res[0, 0] == 1 and res[0, 1] == 2 and res[1, 0] == 3 and res[1, 1] == 4
+
+    buf.seek(0, io.SEEK_END)
+    buf.write(b"\xff\x00\x00\x00")
+    buf.write(b"\x0f\x00\x00\x00")
+    buf.seek(0)
+
+    res = reconstruct_tensor_from_bytes(torch.ones((1, 6), dtype=torch.int32), buf.getvalue())
+    assert (
+        res[0, 0] == 1 and res[0, 1] == 2 and res[0, 2] == 3 and res[0, 3] == 4 and res[0, 4] == 255 and res[0, 5] == 15
+    )
+
+    buf_floats = io.BytesIO()
+    buf_floats.write(b"\x00\x00\x00\x3f")
+    buf_floats.write(b"\x00\x00\x00\x3e")
+
+    res = reconstruct_tensor_from_bytes(torch.ones((2, 1), dtype=torch.float32), buf_floats.getvalue())
+    assert res[0, 0] == 1.0 / 2 and res[1, 0] == 1.0 / 8
+
+
+def test_get_tensor_byte_size():
+    tensor = torch.ones((3, 3, 3), dtype=torch.int32)
+    assert get_tensor_byte_size(tensor) == 3 * 3 * 3 * 4
+
+    tensor = torch.ones((5, 5), dtype=torch.float64) * 5
+    assert get_tensor_byte_size(tensor) == 5 * 5 * 8
+
+    tensor = torch.ones(10, dtype=torch.float32)
+    assert get_tensor_byte_size(tensor) == 40

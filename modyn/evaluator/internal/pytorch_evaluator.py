@@ -89,7 +89,7 @@ class PytorchEvaluator:
         self._model.model.load_state_dict(checkpoint["model"])
 
         # delete trained model from disk
-        os.remove(path)
+        path.unlink()
 
     def send_status_to_server(self, batch_number: int) -> None:
         self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})

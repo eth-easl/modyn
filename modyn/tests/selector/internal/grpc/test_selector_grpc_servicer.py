@@ -74,7 +74,7 @@ def test_register_pipeline(test_register_pipeline: MagicMock):
         assert arguments[3] == "{}"
         assert arguments[4]
         assert arguments[5].name == "PyTorchFullModel"
-        assert arguments[5].zip is None
+        assert not arguments[5].zip
         assert arguments[6] is None
         assert arguments[7] is None
 

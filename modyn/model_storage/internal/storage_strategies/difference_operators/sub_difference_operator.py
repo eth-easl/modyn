@@ -1,6 +1,6 @@
 import torch
 from modyn.model_storage.internal.storage_strategies.abstract_difference_operator import AbstractDifferenceOperator
-from modyn.model_storage.internal.utils.data_types import read_tensor_from_bytes
+from modyn.utils import reconstruct_tensor_from_bytes
 
 
 class SubDifferenceOperator(AbstractDifferenceOperator):
@@ -11,5 +11,5 @@ class SubDifferenceOperator(AbstractDifferenceOperator):
 
     @staticmethod
     def restore(tensor_prev: torch.Tensor, buffer: bytes) -> torch.Tensor:
-        difference_tensor = read_tensor_from_bytes(tensor_prev, buffer)
+        difference_tensor = reconstruct_tensor_from_bytes(tensor_prev, buffer)
         return tensor_prev + difference_tensor
