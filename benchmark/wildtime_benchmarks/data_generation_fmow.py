@@ -62,7 +62,7 @@ class FMOWDownloader(Dataset):
     def store_data(self, store_daily: bool, store_all_data: bool, add_final_dummy_year: bool) -> None:
 
         for year in tqdm(self._dataset):
-            splits = [0, 1, 2] if store_all_data else [0]
+            splits = [0, 1] if store_all_data else [0]
             for split in splits:
                 for i in range(len(self._dataset[year][split]["image_idxs"])):
                     index = self._dataset[year][split]["image_idxs"][i]
@@ -92,7 +92,7 @@ class FMOWDownloader(Dataset):
         if add_final_dummy_year:
             dummy_year = year + 1
             timestamp = create_timestamp(year=1970, month=1, day=dummy_year+1)
-            dummy_index = 9999999999 #not used by any real sample
+            dummy_index = 100000 #not used by any real sample (last: 99999)
 
             to_copy_image_file = os.path.join(self.data_dir, f"{index}.png")
             dummy_image_file = os.path.join(self.data_dir, f"{dummy_index}.png")

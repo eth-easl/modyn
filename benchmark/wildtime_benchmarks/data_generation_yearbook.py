@@ -39,7 +39,7 @@ class YearbookDownloader(Dataset):
         self.data_dir = data_dir
 
     def _get_year_data(self, year: int, store_all_data: bool) -> list[Tuple]:
-        splits = [0, 1, 2] if store_all_data else [0]
+        splits = [0, 1] if store_all_data else [0]
         images = torch.FloatTensor(
             np.array(
                 [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
