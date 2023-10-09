@@ -608,29 +608,39 @@ class PytorchTrainer:
         assert self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
 
         self._downsampler.init_downsampler()
-
-        if self._downsampler.requires_coreset_supporting_module:
-            # enable the embedding recorder to keep track of last layer embedding. The embeddings are stored
-            # in self._model.model.embedding_recorder.embedding
-            assert isinstance(self._model.model, CoresetSupportingModule)
-            self._model.model.embedding_recorder.start_recording()
-
+        self.start_embedding_recording_if_needed()
         big_batch_output = self._model.model(data)
-
-        # supply the embeddings if required by the downsampler
-        if self._downsampler.requires_coreset_supporting_module:
-            embeddings = self._model.model.embedding_recorder.embedding
-            self._model.model.embedding_recorder.end_recording()
-        else:
-            embeddings = None
-
+        embeddings = self.get_embeddings_if_recorded()
         self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
+        self.end_embedding_recorder_if_needed()
+
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
         selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
         sample_ids, data, target = selected_indexes, selected_data, selected_target
         # TODO(#219) Investigate if we can avoid 2 forward passes
         return data, sample_ids, target, weights.to(self._device)
+
+    def start_embedding_recording_if_needed(self) -> None:
+        if self._downsampler.requires_coreset_supporting_module:
+            # enable the embedding recorder to keep track of last layer embedding. The embeddings are stored
+            # in self._model.model.embedding_recorder.embedding
+            assert isinstance(self._model.model, CoresetSupportingModule)
+            self._model.model.embedding_recorder.start_recording()
+
+    def get_embeddings_if_recorded(self) -> Optional[torch.Tensor]:
+        # supply the embeddings if required by the downsampler
+        if self._downsampler.requires_coreset_supporting_module:
+            embeddings = self._model.model.embedding_recorder.embedding
+        else:
+            embeddings = None
+        return embeddings
+
+    def end_embedding_recorder_if_needed(self) -> None:
+        if self._downsampler.requires_coreset_supporting_module:
+            # turn off the embedding recording (not needed for regular training)
+            assert isinstance(self._model.model, CoresetSupportingModule)
+            self._model.model.embedding_recorder.end_recording()
 
     def downsample_trigger_training_set(self) -> None:
         """
@@ -651,11 +661,7 @@ class PytorchTrainer:
         self._train_dataloader.dataset.change_key_source(selector_key_source)
         self._downsampler.init_downsampler()
 
-        if self._downsampler.requires_coreset_supporting_module:
-            # enable the embedding recorder to keep track of last layer embedding. The embeddings are stored
-            # in self._model.model.embedding_recorder.embedding
-            assert isinstance(self._model.model, CoresetSupportingModule)
-            self._model.model.embedding_recorder.start_recording()
+        self.start_embedding_recording_if_needed()
 
         if self._downsampler.requires_data_label_by_label:
             assert isinstance(self._downsampler, AbstractPerLabelRemoteDownsamplingStrategy)
@@ -685,10 +691,7 @@ class PytorchTrainer:
 
         selected_ids, weights = self._downsampler.select_points()
 
-        if self._downsampler.requires_coreset_supporting_module:
-            # turn off the embedding recording (not needed for regular training)
-            assert isinstance(self._model.model, CoresetSupportingModule)
-            self._model.model.embedding_recorder.end_recording()
+        self.end_embedding_recorder_if_needed()
 
         # to store all the selected (sample, weight).
         # TODO(#283) investigate which size performs the best
@@ -743,13 +746,7 @@ class PytorchTrainer:
             with torch.autocast(self._device_type, enabled=self._amp):
                 # compute the scores and accumulate them
                 model_output = self._model.model(data)
-                # supply the embeddings if required by the downsampler
-                if self._downsampler.requires_coreset_supporting_module:
-                    assert isinstance(self._model.model, CoresetSupportingModule)
-                    assert self._model.model.embedding_recorder.record_embedding
-                    embeddings = self._model.model.embedding_recorder.embedding
-                else:
-                    embeddings = None
+                embeddings = self.get_embeddings_if_recorded()
                 self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
 
         return batch_number, number_of_samples
