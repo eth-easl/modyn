@@ -43,7 +43,7 @@ class DistilBertFeaturizer(DistilBertModel):
         # of the entire input sequence
         return pooled_output
 
-    def _reorder_cache(self, past, beam_idx):
+    def _reorder_cache(self, past: Any, beam_idx: Any) -> None:
         pass
 
 
