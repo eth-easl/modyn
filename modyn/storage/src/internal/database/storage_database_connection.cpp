@@ -135,10 +135,10 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
   try {
     soci::session session = get_session();
 
-    int64_t dataset_id = 0;
+    int64_t dataset_id = -1;
     session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
 
-    if (dataset_id == 0) {
+    if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} not found", name);
       return false;
     }
@@ -162,10 +162,10 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
   soci::session session = get_session();
   switch (drivername_) {
     case DatabaseDriver::POSTGRESQL:
-      int64_t dataset_id = 0;
+      int64_t dataset_id = -1;
       session << "SELECT dataset_id FROM datasets WHERE name = :dataset_name", soci::into(dataset_id),
           soci::use(dataset_name);
-      if (dataset_id == 0) {
+      if (dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} not found", dataset_name);
       }
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);

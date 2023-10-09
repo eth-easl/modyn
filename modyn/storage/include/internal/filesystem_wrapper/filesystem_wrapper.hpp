@@ -12,7 +12,7 @@ namespace storage::filesystem_wrapper {
 
 enum FilesystemWrapperType { LOCAL };
 
-class FilesystemWrapper {  // NOLINT
+class FilesystemWrapper {
  public:
   explicit FilesystemWrapper(std::string path) : base_path_{std::move(path)} {}
   virtual std::vector<unsigned char> get(const std::string& path) = 0;
@@ -32,7 +32,7 @@ class FilesystemWrapper {  // NOLINT
     };
     return FILESYSTEM_WRAPPER_TYPE_MAP.at(type);
   }
-  virtual ~FilesystemWrapper() {}  // NOLINT
+  virtual ~FilesystemWrapper() = default;
 
  protected:
   std::string base_path_;

@@ -9,7 +9,7 @@ message(STATUS "Making spdlog available.")
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG v1.11.0
+  GIT_TAG v1.12.0
 )
 FetchContent_MakeAvailable(spdlog)
 
@@ -18,7 +18,7 @@ message(STATUS "Making fmt available.")
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 10.0.0
+  GIT_TAG 10.1.1
 )
 FetchContent_MakeAvailable(fmt)
 
@@ -37,10 +37,20 @@ message(STATUS "Making googletest available.")
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG v1.13.0
+  GIT_TAG v1.14.0
 )
 FetchContent_MakeAvailable(googletest)
 
+################### rapidcsv ####################
+message(STATUS "Making rapidcsv available.")
+
+FetchContent_Declare(
+  rapidcsv
+  GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
+  GIT_TAG v8.80
+)
+
+FetchContent_MakeAvailable(rapidcsv)
 
 ################### libpq++ ####################
 find_package(PostgreSQL REQUIRED) # This needs to be installed on the system - cannot do a lightweight CMake install
@@ -108,7 +118,7 @@ set(gRPC_PROTOBUF_PROVIDER "module" CACHE BOOL "" FORCE)
 FetchContent_Declare(
   gRPC
   GIT_REPOSITORY https://github.com/grpc/grpc
-  GIT_TAG        v1.53.0
+  GIT_TAG        v1.59.1
   GIT_SHALLOW TRUE
 )
 set(gRPC_BUILD_TESTS OFF CACHE BOOL "" FORCE)

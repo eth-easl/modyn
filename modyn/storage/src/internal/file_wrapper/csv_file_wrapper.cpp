@@ -1,8 +1,8 @@
 #include "internal/file_wrapper/csv_file_wrapper.hpp"
 
 #include <algorithm>
-#include <stdexcept>
 #include <numeric>
+#include <stdexcept>
 
 using namespace storage;
 
@@ -13,207 +13,80 @@ void CsvFileWrapper::validate_file_extension() {
 }
 
 void CsvFileWrapper::validate_file_content() {
-  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
-  std::string file_content(content.begin(), content.end());
+  const rapidcsv::Document doc(file_path_, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
+                               rapidcsv::ConverterParams());
+  doc.Parse();
 
-  std::vector<int> number_of_columns;
-  int line_number = 0;
-
-  std::istringstream file_stream(file_content);
-  std::string line;
-  while (std::getline(file_stream, line)) {
-    ++line_number;
-
-    // Skip the first line if required
-    if (line_number == 1 && ignore_first_line_) {
-      continue;
-    }
-
-    std::stringstream ss(line);
-    std::string cell;
-    int column_count = 0;
-
-    while (std::getline(ss, cell, separator_)) {
-      ++column_count;
-      if (column_count - 1 == label_index_) {
-        // Check if the label is numeric
-        try {
-          std::stoi(cell);
-        } catch (const std::exception&) {
-          FAIL("The label must be an integer.");
-        }
-      }
-    }
-
-    number_of_columns.push_back(column_count);
-  }
-
-  if (std::set<int>(number_of_columns.begin(), number_of_columns.end()).size() != 1) {
-    FAIL("Some rows have different widths.");
-  }
-}
-
-std::vector<unsigned char> CsvFileWrapper::get_sample(int64_t index) {
-  std::vector<int64_t> indices = {index};
-  return filter_rows_samples(indices)[0];
-}
-
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(int64_t start, int64_t end) {
-  std::vector<int64_t> indices(end - start);
-  std::iota(indices.begin(), indices.end(), start);
-  return filter_rows_samples(indices);
-}
-
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<int64_t>& indices) {
-  return filter_rows_samples(indices);
-}
-
-int64_t CsvFileWrapper::get_label(int64_t index) {
-  std::vector<int64_t> indices = {index};
-  return filter_rows_labels(indices)[0];
-}
-
-std::vector<int64_t> CsvFileWrapper::get_all_labels() {
-  std::vector<int64_t> labels;
-
-  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
-  std::string file_content(content.begin(), content.end());
-
-  int line_number = 0;
-
-  std::istringstream file_stream(file_content);
-  std::string line;
-  while (std::getline(file_stream, line)) {
-    ++line_number;
-
-    // Skip the first line if required
-    if (line_number == 1 && ignore_first_line_) {
-      continue;
-    }
-
-    std::stringstream ss(line);
-    std::string cell;
-    int column_count = 0;
-
-    while (std::getline(ss, cell, separator_)) {
-      ++column_count;
-      if (column_count - 1 == label_index_) {
-        try {
-          labels.push_back(std::stoi(cell));
-        } catch (const std::exception&) {
-          FAIL("The label must be an integer.");
-        }
-      }
+  const size_t num_columns = doc.GetRows()[0].size();
+  for (const rapidcsv::Row& row : doc.GetRows()) {
+    if (row.size() != num_columns) {
+      FAIL("CSV file is invalid: All rows must have the same number of columns.");
     }
   }
 
-  return labels;
-}
-
-int64_t CsvFileWrapper::get_number_of_samples() {
-  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
-  std::string file_content(content.begin(), content.end());
-
-  int64_t count = 0;
-  int line_number = 0;
-
-  std::istringstream file_stream(file_content);
-  std::string line;
-  while (std::getline(file_stream, line)) {
-    ++line_number;
-
-    // Skip the first line if required
-    if (line_number == 1 && ignore_first_line_) {
-      continue;
-    }
-
-    ++count;
+  const std::string label_column_name = doc.GetLabels()[label_index_];
+  if (label_column_name != "label") {
+    FAIL("CSV file is invalid: The label column must be named \"label\".");
   }
-
-  return count;
 }
 
-void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) { 
-  FAIL("Not implemented");
-}
-
-std::vector<std::vector<unsigned char>> CsvFileWrapper::filter_rows_samples(const std::vector<int64_t>& indices) {
-  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
-  std::string file_content(content.begin(), content.end());
+std::vector<std::vector<unsigned char>> read_csv_file(const std::string& file_path) {
+  rapidcsv::Document doc(file_path, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
+                         rapidcsv::ConverterParams());
+  doc.Parse();
 
   std::vector<std::vector<unsigned char>> samples;
-  int line_number = 0;
-  int64_t current_index = 0;
-
-  std::istringstream file_stream(file_content);
-  std::string line;
-  while (std::getline(file_stream, line)) {
-    ++line_number;
-
-    // Skip the first line if required
-    if (line_number == 1 && ignore_first_line_) {
-      continue;
-    }
-
-    if (std::find(indices.begin(), indices.end(), current_index) != indices.end()) {
-      std::vector<unsigned char> sample(line.begin(), line.end());
-      samples.push_back(sample);
-    }
-
-    ++current_index;
-  }
-
-  if (samples.size() != indices.size()) {
-    FAIL("Invalid index");
+  for (const rapidcsv::Row& row : doc.GetRows()) {
+    samples.push_back(std::vector<unsigned char>(row.begin(), row.end()));
   }
 
   return samples;
 }
 
-std::vector<int64_t> CsvFileWrapper::filter_rows_labels(const std::vector<int64_t>& indices) {
-  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
-  std::string file_content(content.begin(), content.end());
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples() override { return read_csv_file(file_path_); }
 
-  std::vector<int64_t> labels;
-  int line_number = 0;
-  int64_t current_index = 0;
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(int64_t start, int64_t end) {
+  ASSERT(start >= 0 && end >= start && end <= get_number_of_samples(), "Invalid indices");
 
-  std::istringstream file_stream(file_content);
-  std::string line;
-  while (std::getline(file_stream, line)) {
-    ++line_number;
+  rapidcsv::Document doc(file_path_, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
+                         rapidcsv::ConverterParams());
+  doc.Parse();
 
-    // Skip the first line if required
-    if (line_number == 1 && ignore_first_line_) {
-      continue;
-    }
-
-    if (std::find(indices.begin(), indices.end(), current_index) != indices.end()) {
-      std::istringstream ss(line);
-      std::string cell;
-      int column_count = 0;
-      int64_t label = 0;
-
-      while (std::getline(ss, cell, separator_)) {
-        ++column_count;
-        if (column_count - 1 == label_index_) {
-          try {
-            label = std::stoll(cell);
-          } catch (const std::exception&) {
-            FAIL("The label must be an integer.");
-          }
-        }
-      }
-
-      labels.push_back(label);
-    }
-
-    ++current_index;
+  std::vector<std::vector<unsigned char>> samples;
+  for (int64_t i = start; i < end; i++) {
+    const rapidcsv::Row& row = doc.GetRows()[i];
+    samples.push_back(std::vector<unsigned char>(row.begin(), row.end()));
   }
 
-  if (labels.size() != indices.size()) {
-    FAIL("Invalid index");
-  }
-
-  return labels;
+  return samples;
 }
+
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(
+    const std::vector<int64_t>& indices) override {
+  ASSERT(std::all_of(indices.begin(), indices.end(),
+                     [&](int64_t index) { return index >= 0 && index < get_number_of_samples(); }),
+         "Invalid indices");
+
+  std::vector<std::vector<unsigned char>> samples;
+  samples.reserve(indices.size());
+
+  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
+  const std::span<unsigned char> file_span(content.data(), content.size());
+
+  for (const int64_t index : indices) {
+    samples.push_back(file_span.subspan(record_start(index), record_size));
+  }
+
+  return samples;
+}
+
+int64_t CsvFileWrapper::get_label(int64_t index) override {
+  const rapidcsv::Document doc(file_path_, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
+                               rapidcsv::ConverterParams());
+  doc.Parse();
+
+  const rapidcsv::Row& row = doc.GetRows()[index];
+  return std::stoi(row[label_index_]);
+}
+
+FileWrapperType CsvFileWrapper::get_type() { return FileWrapperType::CSV; }

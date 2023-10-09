@@ -5,14 +5,13 @@
 
 using namespace storage;
 
-grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/, const modyn::storage::GetRequest* request,  // NOLINT (misc-unused-parameters)
-    grpc::ServerWriter<modyn::storage::GetResponse>* writer) {                    // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::Get(grpc::ServerContext* /*context*/, const modyn::storage::GetRequest* request,
+                                     grpc::ServerWriter<modyn::storage::GetResponse>* writer) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
   // Check if the dataset exists
-  int64_t dataset_id = 0;
+  int64_t dataset_id = -1;
   std::string base_path;
   int64_t filesystem_wrapper_type;
   int64_t file_wrapper_type;
@@ -21,19 +20,77 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
              "datasets WHERE name = :name",
       soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
       soci::into(file_wrapper_config), soci::use(request->dataset_id());
-  if (dataset_id == 0) {
+  if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
 
-  std::vector<int64_t> sample_ids = std::vector<int64_t>(request->keys_size());
-  for (int i = 0; i < request->keys_size(); i++) {
+  std::vector<int64_t> sample_ids(request->keys_size());
+  for (uint64_t i = 0; i < request->keys_size(); i++) {
     sample_ids[i] = request->keys(i);
   }
 
-  // Group the samples and indices by file
-  std::map<int64_t, SampleData> file_id_to_sample_data;
+  if (disable_multithreading_) {
+    // Group the samples and indices by file
+    std::map<int64_t, SampleData> file_id_to_sample_data;
 
+    get_sample_data(session, dataset_id, sample_ids, file_id_to_sample_data);
+
+    auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
+        base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+    const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
+
+    if (file_id_to_sample_data.size() == 0) {
+      SPDLOG_ERROR("No samples found in dataset {}.", request->dataset_id());
+      return {grpc::StatusCode::NOT_FOUND, "No samples found."};
+    }
+    for (auto& [file_id, sample_data] : file_id_to_sample_data) {
+      send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type);
+    }
+  } else {
+    // Divide the sample IDs into chunks
+
+    std::vector<std::vector<int64_t>> sample_id_chunks;
+    for (uint64_t i = 0; i < sample_ids.size(); i += sample_batch_size_) {
+      std::vector<int64_t> chunk;
+      for (uint64_t j = 0; j < sample_batch_size_ && i + j < sample_ids.size(); j++) {
+        chunk.push_back(sample_ids[i + j]);
+      }
+      sample_id_chunks.push_back(chunk);
+    }
+
+    std::vector<std::thread> threads;
+    for (auto& chunk : sample_id_chunks) {
+      threads.push_back(std::thread([&, chunk]() {
+        std::map<int64_t, SampleData> file_id_to_sample_data;
+
+        get_sample_data(session, dataset_id, chunk, file_id_to_sample_data);
+
+        auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
+            base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+        const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
+
+        if (file_id_to_sample_data.size() == 0) {
+          SPDLOG_ERROR("No samples found in dataset {}.", request->dataset_id());
+          return {grpc::StatusCode::NOT_FOUND, "No samples found."};
+        }
+        for (auto& [file_id, sample_data] : file_id_to_sample_data) {
+          send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper,
+                            file_wrapper_type);
+        }
+      }));
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+  }
+  return grpc::Status::OK;
+}
+
+void StorageServiceImpl::get_sample_data(soci::session& session, int64_t dataset_id,
+                                         const std::vector<int64_t>& sample_ids,
+                                         std::map<int64_t, SampleData>& file_id_to_sample_data) {
   std::vector<int64_t> sample_ids_found(sample_ids.size());
   std::vector<int64_t> sample_file_ids(sample_ids.size());
   std::vector<int64_t> sample_indices(sample_ids.size());
@@ -44,52 +101,15 @@ grpc::Status StorageServiceImpl::Get(  // NOLINT (readability-identifier-naming)
       soci::into(sample_ids_found), soci::into(sample_file_ids), soci::into(sample_indices), soci::into(sample_labels),
       soci::use(dataset_id), soci::use(sample_ids);
 
-  for (std::size_t i = 0; i < sample_ids_found.size(); i++) {
+  for (uint64_t i = 0; i < sample_ids_found.size(); i++) {
     file_id_to_sample_data[sample_file_ids[i]].ids.push_back(sample_ids_found[i]);
     file_id_to_sample_data[sample_file_ids[i]].indices.push_back(sample_indices[i]);
     file_id_to_sample_data[sample_file_ids[i]].labels.push_back(sample_labels[i]);
   }
-
-  auto filesystem_wrapper =
-      storage::filesystem_wrapper::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
-  const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
-
-  if (file_id_to_sample_data.size() == 0) {
-    SPDLOG_ERROR("No samples found in dataset {}.", request->dataset_id());
-    return {grpc::StatusCode::NOT_FOUND, "No samples found."};
-  }
-
-  if (disable_multithreading_) {
-    for (auto& [file_id, sample_data] : file_id_to_sample_data) {
-      send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type);
-    }
-  } else {
-    for (auto& item : file_id_to_sample_data) {
-      std::lock_guard<std::mutex> lock(mtx);
-      tasks.push_back([&, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type]() {
-        auto& [file_id, sample_data] = item;
-        send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper,
-                          file_wrapper_type);
-      });
-    }
-    cv.notify_all();
-
-    // add termination tasks
-    for (size_t i = 0; i < thread_pool.size(); ++i) {
-      std::lock_guard<std::mutex> lock(mtx);
-      tasks.push_back({});
-    }
-    cv.notify_all();  // notify all threads about available (termination) tasks
-
-    for (auto& thread : thread_pool) {
-      thread.join();
-    }
-  }
-  return grpc::Status::OK;
 }
 
 void StorageServiceImpl::send_get_response(grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
-                                           SampleData sample_data, const YAML::Node& file_wrapper_config,
+                                           const SampleData sample_data, const YAML::Node& file_wrapper_config,
                                            const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
                                            int64_t file_wrapper_type) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
@@ -98,18 +118,17 @@ void StorageServiceImpl::send_get_response(grpc::ServerWriter<modyn::storage::Ge
   std::string file_path;
   session << "SELECT path FROM files WHERE file_id = :file_id", soci::into(file_path), soci::use(file_id);
 
-  auto file_wrapper = storage::file_wrapper::get_file_wrapper(file_path, static_cast<FileWrapperType>(file_wrapper_type),
-                                              file_wrapper_config, filesystem_wrapper);
+  auto file_wrapper = storage::file_wrapper::get_file_wrapper(
+      file_path, static_cast<FileWrapperType>(file_wrapper_type), file_wrapper_config, filesystem_wrapper);
 
   std::vector<std::vector<unsigned char>> samples = file_wrapper->get_samples_from_indices(sample_data.indices);
 
   // Send the data to the client
   modyn::storage::GetResponse response;
-  for (std::size_t i = 0; i < samples.size(); i++) {
+  for (uint64_t i = 0; i < samples.size(); i++) {
     response.add_keys(sample_data.ids[i]);
-    for (auto sample : samples[i]) {
-      response.add_samples(std::string(1, sample));
-    }
+    std::vector<uint8_t> sample_bytes(samples[i].begin(), samples[i].end());
+    response.add_samples(sample_bytes);
     response.add_labels(sample_data.labels[i]);
 
     if (i % sample_batch_size_ == 0) {
@@ -122,28 +141,25 @@ void StorageServiceImpl::send_get_response(grpc::ServerWriter<modyn::storage::Ge
   }
 }
 
-grpc::Status StorageServiceImpl::GetNewDataSince(                           // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/,
-    const modyn::storage::GetNewDataSinceRequest* request,                  // NOLINT (misc-unused-parameters)
-    grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {  // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::GetNewDataSince(grpc::ServerContext* /*context*/,
+                                                 const modyn::storage::GetNewDataSinceRequest* request,
+                                                 grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  if (dataset_id == 0) {
+  if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
 
-  int64_t number_of_files;
-  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
-      soci::use(dataset_id);
+  int64_t number_of_files = get_number_of_files(dataset_id, session);
 
   // Get the file ids
-  std::vector<int64_t> file_ids = std::vector<int64_t>(number_of_files);
-  std::vector<int64_t> timestamps = std::vector<int64_t>(number_of_files);
+  std::vector<int64_t> file_ids(number_of_files);
+  std::vector<int64_t> timestamps(number_of_files);
   session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp > :timestamp",
       soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->timestamp());
 
@@ -152,20 +168,12 @@ grpc::Status StorageServiceImpl::GetNewDataSince(                           // N
       send_get_new_data_since_response(writer, file_id);
     }
   } else {
+    std::vector<std::thread> threads;
     for (int64_t file_id : file_ids) {
-      std::lock_guard<std::mutex> lock(mtx);
-      tasks.push_back([&, file_id]() { send_get_new_data_since_response(writer, file_id); });
+      threads.push_back(std::thread([&, file_id]() { send_get_new_data_since_response(writer, file_id); }));
     }
-    cv.notify_all();
 
-    // add termination tasks
-    for (size_t i = 0; i < thread_pool.size(); ++i) {
-      std::lock_guard<std::mutex> lock(mtx);
-      tasks.push_back({});
-    }
-    cv.notify_all();  // notify all threads about available (termination) tasks
-
-    for (auto& thread : thread_pool) {
+    for (auto& thread : threads) {
       thread.join();
     }
   }
@@ -178,8 +186,8 @@ void StorageServiceImpl::send_get_new_data_since_response(
   soci::session session = storage_database_connection.get_session();
   int64_t number_of_samples;
   session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
-  std::vector<int64_t> sample_ids = std::vector<int64_t>(number_of_samples);
-  std::vector<int64_t> sample_labels = std::vector<int64_t>(number_of_samples);
+  std::vector<int64_t> sample_ids(number_of_samples);
+  std::vector<int64_t> sample_labels(number_of_samples);
   soci::rowset<soci::row> rs = (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id",
                                 soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id));
 
@@ -199,28 +207,25 @@ void StorageServiceImpl::send_get_new_data_since_response(
   }
 }
 
-grpc::Status StorageServiceImpl::GetDataInInterval(                           // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/,
-    const modyn::storage::GetDataInIntervalRequest* request,                  // NOLINT (misc-unused-parameters)
-    grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {  // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::GetDataInInterval(
+    grpc::ServerContext* /*context*/, const modyn::storage::GetDataInIntervalRequest* request,
+    grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  if (dataset_id == 0) {
+  if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
 
-  int64_t number_of_files;
-  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
-      soci::use(dataset_id);
+  int64_t number_of_files = get_number_of_files(dataset_id, session);
 
   // Get the file ids
-  std::vector<int64_t> file_ids = std::vector<int64_t>(number_of_files);
-  std::vector<int64_t> timestamps = std::vector<int64_t>(number_of_files);
+  std::vector<int64_t> file_ids(number_of_files);
+  std::vector<int64_t> timestamps(number_of_files);
   session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp "
              "AND timestamp <= :end_timestamp ",
       soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->start_timestamp()),
@@ -231,20 +236,12 @@ grpc::Status StorageServiceImpl::GetDataInInterval(                           //
       send_get_new_data_in_interval_response(writer, file_id);
     }
   } else {
+    std::vector<std::thread> threads;
     for (int64_t file_id : file_ids) {
-      std::lock_guard<std::mutex> lock(mtx);
-      tasks.push_back([&, file_id]() { send_get_new_data_in_interval_response(writer, file_id); });
+      threads.push_back(std::thread([&, file_id]() { send_get_new_data_in_interval_response(writer, file_id); }));
     }
-    cv.notify_all();
 
-    // add termination tasks
-    for (size_t i = 0; i < thread_pool.size(); ++i) {
-      std::lock_guard<std::mutex> lock(mtx);
-      tasks.push_back({});
-    }
-    cv.notify_all();  // notify all threads about available (termination) tasks
-
-    for (auto& thread : thread_pool) {
+    for (auto& thread : threads) {
       thread.join();
     }
   }
@@ -257,8 +254,8 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   soci::session session = storage_database_connection.get_session();
   int64_t number_of_samples;
   session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
-  std::vector<int64_t> sample_ids = std::vector<int64_t>(number_of_samples);
-  std::vector<int64_t> sample_labels = std::vector<int64_t>(number_of_samples);
+  std::vector<int64_t> sample_ids(number_of_samples);
+  std::vector<int64_t> sample_labels(number_of_samples);
   soci::rowset<soci::row> rs = (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id",
                                 soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id));
 
@@ -278,20 +275,19 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   }
 }
 
-grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/,
-    const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
-    modyn::storage::DatasetAvailableResponse* response) {    // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::CheckAvailability(grpc::ServerContext* /*context*/,
+                                                   const modyn::storage::DatasetAvailableRequest* request,
+                                                   modyn::storage::DatasetAvailableResponse* response) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  SPDLOG_INFO("Dataset {} exists: {}", request->dataset_id(), dataset_id != 0);
+  SPDLOG_INFO("Dataset {} exists: {}", request->dataset_id(), dataset_id != -1);
 
   grpc::Status status;
-  if (dataset_id == 0) {
+  if (dataset_id == -1) {
     response->set_available(false);
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     status = grpc::Status(grpc::StatusCode::NOT_FOUND, "Dataset does not exist.");
@@ -302,10 +298,9 @@ grpc::Status StorageServiceImpl::CheckAvailability(          // NOLINT (readabil
   return status;
 }
 
-grpc::Status StorageServiceImpl::RegisterNewDataset(           // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/,
-    const modyn::storage::RegisterNewDatasetRequest* request,  // NOLINT (misc-unused-parameters)
-    modyn::storage::RegisterNewDatasetResponse* response) {    // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::RegisterNewDataset(grpc::ServerContext* /*context*/,
+                                                    const modyn::storage::RegisterNewDatasetRequest* request,
+                                                    modyn::storage::RegisterNewDatasetResponse* response) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
 
   bool success = storage_database_connection.add_dataset(
@@ -324,19 +319,18 @@ grpc::Status StorageServiceImpl::RegisterNewDataset(           // NOLINT (readab
   return status;
 }
 
-grpc::Status StorageServiceImpl::GetCurrentTimestamp(         // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
-    modyn::storage::GetCurrentTimestampResponse* response) {  // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::GetCurrentTimestamp(grpc::ServerContext* /*context*/,
+                                                     const modyn::storage::GetCurrentTimestampRequest* /*request*/,
+                                                     modyn::storage::GetCurrentTimestampResponse* response) {
   response->set_timestamp(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
           .count());
   return grpc::Status::OK;
 }
 
-grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/,
-    const modyn::storage::DatasetAvailableRequest* request,  // NOLINT (misc-unused-parameters)
-    modyn::storage::DeleteDatasetResponse* response) {       // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::DeleteDataset(grpc::ServerContext* /*context*/,
+                                               const modyn::storage::DatasetAvailableRequest* request,
+                                               modyn::storage::DeleteDatasetResponse* response) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
 
   std::string base_path;
@@ -346,14 +340,13 @@ grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readabil
   session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
       soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
 
-  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
+      base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
 
-  int64_t number_of_files = 0;
-  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
-      soci::use(request->dataset_id());
+  int64_t number_of_files = get_number_of_files(dataset_id, session);
 
-  if (number_of_files > 0) {
-    std::vector<std::string> file_paths = std::vector<std::string>(number_of_files);
+  if (number_of_files >= 0) {
+    std::vector<std::string> file_paths(number_of_files);
     session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths),
         soci::use(request->dataset_id());
 
@@ -373,15 +366,14 @@ grpc::Status StorageServiceImpl::DeleteDataset(              // NOLINT (readabil
   return status;
 }
 
-grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-identifier-naming)
-    grpc::ServerContext* /*context*/,
-    const modyn::storage::DeleteDataRequest* request,  // NOLINT (misc-unused-parameters)
-    modyn::storage::DeleteDataResponse* response) {    // NOLINT (misc-unused-parameters)
+grpc::Status StorageServiceImpl::DeleteData(grpc::ServerContext* /*context*/,
+                                            const modyn::storage::DeleteDataRequest* request,
+                                            modyn::storage::DeleteDataResponse* response) {
   const StorageDatabaseConnection storage_database_connection = StorageDatabaseConnection(config_);
   soci::session session = storage_database_connection.get_session();
 
   // Check if the dataset exists
-  int64_t dataset_id = 0;
+  int64_t dataset_id = -1;
   std::string base_path;
   int64_t filesystem_wrapper_type;
   int64_t file_wrapper_type;
@@ -391,7 +383,7 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
       soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
       soci::into(file_wrapper_config), soci::use(request->dataset_id());
 
-  if (dataset_id == 0) {
+  if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
@@ -402,7 +394,7 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
   }
 
   std::vector<int64_t> sample_ids;
-  for (int i = 0; i < request->keys_size(); i++) {
+  for (uint64_t i = 0; i < request->keys_size(); i++) {
     sample_ids.push_back(request->keys(i));
   }
 
@@ -433,13 +425,14 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
     return {grpc::StatusCode::NOT_FOUND, "No files found."};
   }
 
-  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
+      base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
   std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
   std::string index_placeholders;
 
   try {
-    std::vector<std::string> file_paths = std::vector<std::string>(number_of_files + 1);
+    std::vector<std::string> file_paths(number_of_files + 1);
     sql = fmt::format("SELECT path FROM files WHERE file_id IN {}", file_placeholders);
     session << sql, soci::into(file_paths);
     if (file_paths.size() != file_ids.size()) {
@@ -447,7 +440,8 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
       return {grpc::StatusCode::INTERNAL, "Error deleting data."};
     }
 
-    auto file_wrapper = storage::file_wrapper::get_file_wrapper(file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
+    auto file_wrapper =
+        storage::file_wrapper::get_file_wrapper(file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
                                                 file_wrapper_config_node, filesystem_wrapper);
     for (size_t i = 0; i < file_paths.size(); ++i) {
       const auto& file_id = file_ids[i];
@@ -459,7 +453,7 @@ grpc::Status StorageServiceImpl::DeleteData(           // NOLINT (readability-id
                         sample_placeholders);
       session << sql, soci::into(samples_to_delete), soci::use(file_id);
 
-      std::vector<int64_t> sample_ids_to_delete_indices = std::vector<int64_t>(samples_to_delete + 1);
+      std::vector<int64_t> sample_ids_to_delete_indices(samples_to_delete + 1);
       sql = fmt::format("SELECT sample_id FROM samples WHERE file_id = :file_id AND sample_id IN {}",
                         sample_placeholders);
       session << sql, soci::into(sample_ids_to_delete_indices), soci::use(file_id);
@@ -499,7 +493,7 @@ grpc::Status StorageServiceImpl::GetDataPerWorker(
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  if (dataset_id == 0) {
+  if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
@@ -540,8 +534,9 @@ grpc::Status StorageServiceImpl::GetDataPerWorker(
   return grpc::Status::OK;
 }
 
-std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_t worker_id, int64_t total_workers,
-                                                                          int64_t total_num_elements) {
+static std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_t worker_id,
+                                                                                 int64_t total_workers,
+                                                                                 int64_t total_num_elements) {
   if (worker_id < 0 || worker_id >= total_workers) {
     FAIL("Worker id must be between 0 and total_workers - 1.");
   }
@@ -574,7 +569,7 @@ grpc::Status StorageServiceImpl::GetDatasetSize(grpc::ServerContext* context,
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  if (dataset_id == 0) {
+  if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
@@ -586,4 +581,19 @@ grpc::Status StorageServiceImpl::GetDatasetSize(grpc::ServerContext* context,
   count_stmt.execute();
   response->set_num_keys(total_keys);
   return grpc::Status::OK;
+}
+
+static int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci::session& session) {
+  int64_t dataset_id = -1;
+  session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
+
+  return dataset_id;
+}
+
+static int64_t StorageServiceImpl::get_number_of_files(int64_t dataset_id, soci::session& session) {
+  int64_t number_of_files = -1;
+  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
+      soci::use(dataset_id);
+
+  return number_of_files;
 }

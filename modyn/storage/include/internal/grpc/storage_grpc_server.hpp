@@ -1,6 +1,5 @@
 #pragma once
 
-#include <absl/strings/str_format.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
@@ -13,38 +12,13 @@ class StorageGrpcServer {
  public:
   StorageGrpcServer(const YAML::Node& config, std::atomic<bool>* stop_grpc_server)
       : config_{config}, stop_grpc_server_(stop_grpc_server) {}
-  void run() {
-    if (!config_["storage"]["port"]) {
-      SPDLOG_ERROR("No port specified in config.yaml");
-      return;
-    }
-    auto port = config_["storage"]["port"].as<int64_t>();
-    std::string server_address = absl::StrFormat("0.0.0.0:%d", port);
-    if (!config_["storage"]["retrieval_threads"]) {
-      SPDLOG_ERROR("No retrieval_threads specified in config.yaml");
-      return;
-    }
-    auto retrieval_threads = config_["storage"]["retrieval_threads"].as<int16_t>();
-    StorageServiceImpl service(config_, retrieval_threads);
-
-    grpc::EnableDefaultHealthCheckService(true);
-    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
-    grpc::ServerBuilder builder;
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
-
-    std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-    SPDLOG_INFO("Server listening on {}", server_address);
-
-    while (!stop_grpc_server_->load()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    }
-    server->Shutdown();
-  }
+  void run();
 
  private:
   YAML::Node config_;
   std::atomic<bool>* stop_grpc_server_;
+  std::mutex mtx_;
+  std::condition_variable cv_;
 };
 
 }  // namespace storage

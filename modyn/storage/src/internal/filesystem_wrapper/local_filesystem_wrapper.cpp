@@ -1,5 +1,7 @@
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -9,20 +11,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
-#ifndef WIN32
-#include <unistd.h>
-#endif
 
-#ifdef WIN32
-#define stat _stat
-#endif
+#include "internal/utils/utils.hpp"
 
-const char path_separator =
-#ifdef _WIN32
-    '\\';
-#else
-    '/';
-#endif
+const char path_separator = std::filesystem::path::preferred_separator;
 
 using namespace storage::filesystem_wrapper;
 
@@ -34,81 +26,53 @@ std::vector<unsigned char> LocalFilesystemWrapper::get(const std::string& path) 
   return buffer;
 }
 
-bool LocalFilesystemWrapper::exists(const std::string& path) {
-  std::ifstream file;
-  file.open(path);
-  const bool exists = file.good();
-  file.close();
-  return exists;
-}
+bool LocalFilesystemWrapper::exists(const std::string& path) { return std::filesystem::exists(path); }
 
 std::vector<std::string> LocalFilesystemWrapper::list(const std::string& path, bool recursive) {
-  std::vector<std::string> files = std::vector<std::string>();
-  std::vector<std::string> directories = std::vector<std::string>();
   std::vector<std::string> paths = std::vector<std::string>();
-  paths.push_back(path);
-  while (!paths.empty()) {
-    const std::string current_path = paths.back();
-    paths.pop_back();
-    auto current_files = std::vector<std::string>();
-    auto current_directories = std::vector<std::string>();
-    for (const auto& entry : std::filesystem::directory_iterator(current_path)) {
-      const std::string entry_path = entry.path();
-      if (std::filesystem::is_directory(entry_path)) {
-        current_directories.push_back(entry_path);
-      } else {
-        current_files.push_back(entry_path);
+
+  if (recursive) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+      if (!std::filesystem::is_directory(entry)) {
+        paths.push_back(entry.path());
       }
     }
-    if (recursive) {
-      paths.insert(paths.end(), current_directories.begin(), current_directories.end());
+  } else {
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+      if (!std::filesystem::is_directory(entry)) {
+        paths.push_back(entry.path());
+      }
     }
-    files.insert(files.end(), current_files.begin(), current_files.end());
-    directories.insert(directories.end(), current_directories.begin(), current_directories.end());
   }
-  return files;
+
+  return paths;
 }
 
 bool LocalFilesystemWrapper::is_directory(const std::string& path) { return std::filesystem::is_directory(path); }
 
 bool LocalFilesystemWrapper::is_file(const std::string& path) { return std::filesystem::is_regular_file(path); }
 
-int64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
-  std::ifstream file;
-  file.open(path, std::ios::binary);
-  file.seekg(0, std::ios::end);
-  const int64_t size = file.tellg();
-  file.close();
-  return size;
-}
+int64_t LocalFilesystemWrapper::get_file_size(const std::string& path) { return std::filesystem::file_size(path); }
 
 int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
-  assert(is_valid_path(path));
-  assert(exists(path));
+  ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
+  ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
 
-  struct stat result = {};
-  int64_t mod_time;
-  if (stat(path.c_str(), &result) == 0) {
-    mod_time = static_cast<int64_t>(result.st_mtime);
-  } else {
-    SPDLOG_ERROR("Error getting modified time for file {}", path);
-    mod_time = -1;
-  }
-  return mod_time;
+  std::filesystem::file_time_type time = std::filesystem::last_write_time(path);
+  return std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count();
 }
 
-bool LocalFilesystemWrapper::is_valid_path(const std::string& path) { return path.find("..") == std::string::npos; }
+bool LocalFilesystemWrapper::is_valid_path(const std::string& path) { return std::filesystem::exists(path); }
 
-bool LocalFilesystemWrapper::remove(const std::string& path) { return std::filesystem::remove(path); }
+bool LocalFilesystemWrapper::remove(const std::string& path) {
+  ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
+  ASSERT(!std::filesystem::is_directory(path), fmt::format("Path is a directory: {}", path));
 
-std::string LocalFilesystemWrapper::join(     // NOLINT (readability-convert-member-functions-to-static)
-    const std::vector<std::string>& paths) {  // NOLINT (misc-unused-parameters)
-  std::string joined_path;
-  for (uint64_t i = 0; i < paths.size(); i++) {
-    joined_path += paths[i];
-    if (i < paths.size() - 1) {
-      joined_path += path_separator;
-    }
-  }
-  return joined_path;
+  return std::filesystem::remove(path);
 }
+
+std::string LocalFilesystemWrapper::join(const std::vector<std::string>& paths) {
+  return fmt::format("{}", fmt::join(paths, path_separator));
+}
+
+FilesystemWrapperType LocalFilesystemWrapper::get_type() { return FilesystemWrapperType::LOCAL; }

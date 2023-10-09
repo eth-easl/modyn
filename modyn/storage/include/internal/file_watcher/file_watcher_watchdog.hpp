@@ -18,7 +18,7 @@ class FileWatcherWatchdog {
  public:
   FileWatchdog(
       const YAML::Node& config,
-      std::atomic<bool>* stop_file_watcher_watchdog)  // NOLINT // clang-tidy thinks we dont initialize the unordered maps
+      std::atomic<bool>* stop_file_watcher_watchdog)
       : config_{config}, stop_file_watcher_watchdog_{stop_file_watcher_watchdog},
         file_watcher_threads_{std::unordered_map<int64_t, std::thread>()},
         file_watcher_dataset_retries_{std::unordered_map<int64_t, int16_t>()},

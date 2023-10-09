@@ -70,7 +70,7 @@ void FileWatchdog::watch_file_watcher_threads() {
   int64_t number_of_datasets = 0;
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
 
-  std::vector<int64_t> dataset_ids = std::vector<int64_t>(number_of_datasets);
+  std::vector<int64_t> dataset_ids(number_of_datasets);
   session << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
   std::vector<int64_t> running_file_watcher_threads = get_running_file_watcher_threads();

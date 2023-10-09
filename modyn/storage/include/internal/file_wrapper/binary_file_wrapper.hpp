@@ -9,23 +9,23 @@
 #include "internal/utils/utils.hpp"
 
 namespace storage {
-class BinaryFileWrapper : public FileWrapper {  // NOLINT
+class BinaryFileWrapper : public FileWrapper {
  private:
   int64_t record_size_;
   int64_t label_size_;
   int64_t file_size_;
   int64_t sample_size_;
   static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices) {
-    for (int64_t indice : indices) {
-      if (indice < 0 || indice > (total_samples - 1)) {
-        FAIL("Requested index " + std::to_string(indice) + " is out of bounds.");
+    for (int64_t index : indices) {
+      if (index < 0 || index > (total_samples - 1)) {
+        FAIL("Requested index " + std::to_string(index) + " is out of bounds.");
       }
     }
   }
   static int64_t int_from_bytes(const unsigned char* begin, const unsigned char* end);
 
  public:
-  BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,  // NOLINT
+  BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,
                     std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
       : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     assert(filesystem_wrapper_ != nullptr);
@@ -60,15 +60,8 @@ class BinaryFileWrapper : public FileWrapper {  // NOLINT
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<int64_t>& indices) override;
   void validate_file_extension() override;
   void delete_samples(const std::vector<int64_t>& indices) override;
-  void set_file_path(const std::string& path) override {
-    file_path_ = path;
-    file_size_ = filesystem_wrapper_->get_file_size(path);
-
-    if (file_size_ % record_size_ != 0) {
-      FAIL("File size must be a multiple of the record size.");
-    }
-  }
-  FileWrapperType get_type() override { return FileWrapperType::BINARY; }
+  void set_file_path(const std::string& path) override;
+  FileWrapperType get_type() override;
   ~BinaryFileWrapper() override = default;
 };
 }  // namespace storage

@@ -44,6 +44,8 @@ void BinaryFileWrapper::validate_file_extension() {
  * @param index The index of the sample.
  */
 int64_t BinaryFileWrapper::get_label(int64_t index) {
+  ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
+
   const int64_t record_start = index * record_size_;
   std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
   unsigned char* data = data_vec.data();
@@ -56,6 +58,8 @@ int64_t BinaryFileWrapper::get_label(int64_t index) {
  * Offset calculation to retrieve all the labels of a sample.
  */
 std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
+  ASSERT(!filesystem_wrapper_->is_empty(file_path_), "The file is empty");
+
   const int64_t num_samples = get_number_of_samples();
   std::vector<int64_t> labels = std::vector<int64_t>();
   labels.reserve(num_samples);
@@ -76,20 +80,21 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
  * @param end The end index of the sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t start, int64_t end) {
-  const std::vector<int64_t> indices = {start, end};
-  BinaryFileWrapper::validate_request_indices(get_number_of_samples(), indices);
+  ASSERT(start >= 0 && end >= start && end <= get_number_of_samples(), "Invalid indices");
+
   const int64_t num_samples = end - start + 1;
   const int64_t record_start = start * record_size_;
   const int64_t record_end = record_start + num_samples * record_size_;
   std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
   unsigned char* data = data_vec.data();
-  std::vector<std::vector<unsigned char>> samples = std::vector<std::vector<unsigned char>>(num_samples);
+  std::vector<std::vector<unsigned char>> samples(num_samples);
+
   for (int64_t i = record_start; i < record_end; i += record_size_) {
     unsigned char* sample_begin = data + i + label_size_;
     unsigned char* sample_end = sample_begin + sample_size_;
-    const std::vector<unsigned char> sample(sample_begin, sample_end);
-    samples[(i - record_start) / record_size_] = sample;
+    samples[i - record_start] = {sample_begin, sample_end};
   }
+
   return samples;
 }
 
@@ -99,14 +104,15 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
  * @param index The index of the sample.
  */
 std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
-  const std::vector<int64_t> indices = {index};
-  BinaryFileWrapper::validate_request_indices(get_number_of_samples(), indices);
+  ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
+
   const int64_t record_start = index * record_size_;
   std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
   unsigned char* data = data_vec.data();
   unsigned char* sample_begin = data + record_start + label_size_;
   unsigned char* sample_end = sample_begin + sample_size_;
-  return {sample_begin, sample_end};
+
+  return std::span(sample_begin, sample_end).to_vector();
 }
 
 /*
@@ -115,19 +121,24 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
  * @param indices The indices of the sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indices(
-    const std::vector<int64_t>& indices) {  // NOLINT (misc-unused-parameters)
-  BinaryFileWrapper::validate_request_indices(get_number_of_samples(), indices);
-  std::vector<std::vector<unsigned char>> samples = std::vector<std::vector<unsigned char>>();
+    const std::vector<int64_t>& indices) {
+  ASSERT(std::all_of(indices.begin(), indices.end(),
+                     [&](int64_t index) { return index >= 0 && index < get_number_of_samples(); }),
+         "Invalid indices");
+
+  std::vector<std::vector<unsigned char>> samples;
   samples.reserve(indices.size());
   std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
   unsigned char* data = data_vec.data();
+
   for (const int64_t index : indices) {
     const int64_t record_start = index * record_size_;
     unsigned char* sample_begin = data + record_start + label_size_;
     unsigned char* sample_end = sample_begin + sample_size_;
-    const std::vector<unsigned char> sample(sample_begin, sample_end);
-    samples.push_back(sample);
+
+    samples.push_back(std::span(sample_begin, sample_end).to_vector());
   }
+
   return samples;
 }
 
@@ -142,5 +153,20 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
  *
  * @param indices The indices of the samples to delete.
  */
-void BinaryFileWrapper::delete_samples(  // NOLINT (readability-convert-member-functions-to-static)
-    const std::vector<int64_t>& /*indices*/) {}
+void BinaryFileWrapper::delete_samples(const std::vector<int64_t>& /*indices*/) {}
+
+/*
+ * Set the file path of the file wrapper.
+ *
+ * @param path The new file path.
+ */
+void BinaryFileWrapper::set_file_path(const std::string& path) {
+  file_path_ = path;
+  file_size_ = filesystem_wrapper_->get_file_size(path);
+
+  if (file_size_ % record_size_ != 0) {
+    FAIL("File size must be a multiple of the record size.");
+  }
+}
+
+FileWrapperType BinaryFileWrapper::get_type() { return FileWrapperType::BINARY; }

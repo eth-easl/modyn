@@ -21,38 +21,20 @@ struct SampleData {
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
  public:
   explicit StorageServiceImpl(const YAML::Node& config, int16_t retrieval_threads = 1)
-      : Service(), config_{config}, retrieval_threads_{retrieval_threads} {  // NOLINT
-                                                                             // (cppcoreguidelines-pro-type-member-init)
+      : Service(),
+        config_{config},
+        retrieval_threads_{retrieval_threads},
+        disable_multithreading_{retrieval_threads <= 1} {
     if (!config_["storage"]["sample_batch_size"]) {
       SPDLOG_ERROR("No sample_batch_size specified in config.yaml");
       return;
     }
     sample_batch_size_ = config_["storage"]["sample_batch_size"].as<int16_t>();
 
-    disable_multithreading_ = retrieval_threads_ <= 1;  // NOLINT
-
     if (disable_multithreading_) {
       SPDLOG_INFO("Multithreading disabled.");
     } else {
       SPDLOG_INFO("Multithreading enabled.");
-
-      thread_pool.resize(retrieval_threads_);
-
-      for (auto& thread : thread_pool) {
-        thread = std::thread([&]() {
-          while (true) {
-            std::function<void()> task;
-            {
-              std::unique_lock<std::mutex> lock(mtx);
-              cv.wait(lock, [&]() { return !tasks.empty(); });
-              task = std::move(tasks.front());
-              tasks.pop_front();
-            }
-            if (!task) break;  // If the task is empty, it's a signal to terminate the thread
-            task();
-          }
-        });
-      }
     }
   }
   grpc::Status Get(grpc::ServerContext* context, const modyn::storage::GetRequest* request,
@@ -74,30 +56,22 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   grpc::Status DeleteData(grpc::ServerContext* context, const modyn::storage::DeleteDataRequest* request,
                           modyn::storage::DeleteDataResponse* response) override;
   grpc::Status GetDataPerWorker(grpc::ServerContext* context, const modyn::storage::GetDataPerWorkerRequest* request,
-                                grpc::ServerWriter< ::modyn::storage::GetDataPerWorkerResponse>* writer) override;
+                                grpc::ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) override;
   grpc::Status GetDatasetSize(grpc::ServerContext* context, const modyn::storage::GetDatasetSizeRequest* request,
                               modyn::storage::GetDatasetSizeResponse* response) override;
-  virtual std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,
-                                                      int64_t total_num_elements);
-  static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session) {
-    int64_t dataset_id = 0;
-    session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
-
-    return dataset_id;
-  }
+  static virtual std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,
+                                                                int64_t total_num_elements);
+  static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
 
  private:
   YAML::Node config_;
   int16_t sample_batch_size_;
-  std::vector<std::thread> thread_pool;
-  std::deque<std::function<void()>> tasks;
-  std::mutex mtx;
-  std::condition_variable cv;
   int16_t retrieval_threads_;
   bool disable_multithreading_;
-  void send_get_response(grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
-                         SampleData sample_data, const YAML::Node& file_wrapper_config,
-                         const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper, int64_t file_wrapper_type);
+  void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
+                       std::map<int64_t, SampleData>& file_id_to_sample_data);
+  void send_response(grpc::ServerWriter<modyn::storage::Response>* writer, const std::vector<int64_t>& keys,
+                     const std::vector<std::vector<uint8_t>>& samples, const std::vector<int64_t>& labels);
   void send_get_new_data_since_response(grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
                                         int64_t file_id);
   void send_get_new_data_in_interval_response(grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer,

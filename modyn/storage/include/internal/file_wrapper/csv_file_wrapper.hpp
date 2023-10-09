@@ -1,9 +1,10 @@
 #pragma once
 
+#include <rapidcsv.h>
+
 #include <string>
 #include <vector>
 
-#include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/utils/utils.hpp"
 
@@ -12,7 +13,7 @@ namespace storage {
 class CsvFileWrapper : public FileWrapper {
  private:
   char separator_;
-  int label_index_;
+  int64_t label_index_;
   bool ignore_first_line_;
 
   void validate_file_extension() override;
@@ -20,8 +21,8 @@ class CsvFileWrapper : public FileWrapper {
   std::vector<int64_t> filter_rows_labels(const std::vector<int64_t>& indices);
 
  public:
-  CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,  // NOLINT
-                    std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+  CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
+                 std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
       : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     if (file_wrapper_config_["separator"]) {
       separator_ = file_wrapper_config_["separator"].as<char>();
@@ -32,7 +33,7 @@ class CsvFileWrapper : public FileWrapper {
     if (!file_wrapper_config_["label_index"]) {
       FAIL("Please specify the index of the column that contains the label.");
     }
-    label_index_ = file_wrapper_config_["label_index"].as<int>();
+    label_index_ = file_wrapper_config_["label_index"].as<int64_t>();
 
     if (label_index_ < 0) {
       FAIL("The label_index must be a non-negative integer.");
@@ -59,7 +60,7 @@ class CsvFileWrapper : public FileWrapper {
   std::vector<int64_t> get_all_labels() override;
   int64_t get_number_of_samples() override;
   void delete_samples(const std::vector<int64_t>& indices) override;
-  FileWrapperType get_type() override { return FileWrapperType::CSV; }
+  FileWrapperType get_type() override;
   void validate_file_content();
   ~CsvFileWrapper() override = default;
 };
