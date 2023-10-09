@@ -43,6 +43,9 @@ class DistilBertFeaturizer(DistilBertModel):
         # of the entire input sequence
         return pooled_output
 
+    def _reorder_cache(self, past, beam_idx):
+        pass
+
 
 class ArticleNetwork(CoresetSupportingModule):
     def __init__(self, num_classes: int) -> None:
