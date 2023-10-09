@@ -46,7 +46,7 @@ training:
   amp: True
   dataloader_workers: 4
   parallel_prefetch_requests: 8
-  prefetched_partitions: 8
+  num_prefetched_partitions: 8
   use_previous_model: True
   initial_model: random
   initial_pass:

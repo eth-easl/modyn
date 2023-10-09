@@ -45,7 +45,7 @@ training:
   device: "cuda:0"
   amp: True
   dataloader_workers: 8
-  prefetched_partitions: 4
+  num_prefetched_partitions: 4
   parallel_prefetch_requests: 2
   use_previous_model: True
   initial_model: random

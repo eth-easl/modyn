@@ -60,3 +60,6 @@ report.html
 environment.yml.original
 docker-compose.yml.original
 Dockerfile.original
+
+# Experimental things
+plots/

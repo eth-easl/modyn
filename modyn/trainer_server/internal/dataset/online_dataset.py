@@ -433,8 +433,8 @@ class OnlineDataset(IterableDataset):
         assert self._transform is not None
         self._num_partitions = self._key_source.get_num_data_partitions()
         self._info(
-            f"Total number of partitions will be {self._num_partitions}."
-            + f"Parallel prefetch requests = {self._parallel_prefetch_requests}"
+            f"Total number of partitions will be {self._num_partitions}.\n"
+            + f"Parallel prefetch requests = {self._parallel_prefetch_requests}\n"
             + f"Num prefetched partitions = {self._num_prefetched_partitions}",
             worker_id,
         )
