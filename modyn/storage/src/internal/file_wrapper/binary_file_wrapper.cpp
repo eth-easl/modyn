@@ -2,10 +2,18 @@
 
 #include <fstream>
 #include <numeric>
-#include <vector>
 #include <span>
+#include <vector>
 
 using namespace storage::file_wrapper;
+
+void BinaryFileWrapper::validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices) {
+  for (int64_t index : indices) {
+    if (index < 0 || index > (total_samples - 1)) {
+      FAIL("Requested index " + std::to_string(index) + " is out of bounds.");
+    }
+  }
+}
 
 /*
  * Transforms a vector of bytes into an int64_t.

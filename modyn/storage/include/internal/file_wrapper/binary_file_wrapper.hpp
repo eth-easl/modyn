@@ -15,13 +15,7 @@ class BinaryFileWrapper : public storage::file_wrapper::FileWrapper {
   int64_t label_size_;
   int64_t file_size_;
   int64_t sample_size_;
-  static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices) {
-    for (int64_t index : indices) {
-      if (index < 0 || index > (total_samples - 1)) {
-        FAIL("Requested index " + std::to_string(index) + " is out of bounds.");
-      }
-    }
-  }
+  static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices);
   static int64_t int_from_bytes(const unsigned char* begin, const unsigned char* end);
 
  public:
