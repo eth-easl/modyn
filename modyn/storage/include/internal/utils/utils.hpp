@@ -9,7 +9,7 @@
 #include <random>
 #include <string>
 
-#define FAIL(msg) \
+#define FAIL(msg)                                                                                          \
   throw storage::utils::ModynException("ERROR at " __FILE__ ":" + std::to_string(__LINE__) + " " + (msg) + \
                                        "\nExecution failed.")
 

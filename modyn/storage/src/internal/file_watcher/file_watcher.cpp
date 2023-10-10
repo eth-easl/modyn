@@ -29,7 +29,8 @@ using namespace storage::file_watcher;
  * @return True if the file is valid, false otherwise.
  */
 bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
-                                   bool ignore_last_timestamp, int64_t timestamp, storage::database::StorageDatabaseConnection& storage_database_connection,
+                                   bool ignore_last_timestamp, int64_t timestamp,
+                                   storage::database::StorageDatabaseConnection& storage_database_connection,
                                    std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper) {
   if (file_path.empty()) {
     return false;
@@ -178,8 +179,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(file_path, filesystem_wrapper_type);
 
   for (const auto& file_path : file_paths) {
-    if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp, storage_database_connection,
-                         filesystem_wrapper)) {
+    if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp,
+                         storage_database_connection, filesystem_wrapper)) {
       valid_files.push_back(file_path);
     }
   }
@@ -234,7 +235,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 }
 
 void FileWatcher::insert_file_frame(storage::database::StorageDatabaseConnection storage_database_connection,
-                                           const std::vector<FileFrame>& file_frame) {
+                                    const std::vector<FileFrame>& file_frame) {
   switch (storage_database_connection.get_drivername()) {
     case storage::database::DatabaseDriver::POSTGRESQL:
       postgres_copy_insertion(file_frame, storage_database_connection);
@@ -256,7 +257,7 @@ void FileWatcher::insert_file_frame(storage::database::StorageDatabaseConnection
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
-                                                 storage::database::StorageDatabaseConnection storage_database_connection) {
+                                          storage::database::StorageDatabaseConnection storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   int64_t dataset_id_ = file_frame.front().dataset_id;
   const std::string table_name = fmt::format("samples__did{}", dataset_id_);
@@ -284,7 +285,7 @@ void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_fra
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                            storage::database::StorageDatabaseConnection storage_database_connection) {
+                                     storage::database::StorageDatabaseConnection storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   // Prepare query
   std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";

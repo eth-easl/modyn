@@ -34,4 +34,4 @@ class FilesystemWrapper {
  protected:
   std::string base_path_;
 };
-}  // namespace storage
+}  // namespace storage::filesystem_wrapper

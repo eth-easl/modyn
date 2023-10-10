@@ -3,8 +3,8 @@
 #include <gtest/gtest.h>
 #include <yaml-cpp/yaml.h>
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 
 #include "gmock/gmock.h"
 #include "test_utils.hpp"
@@ -34,16 +34,15 @@ class CsvFileWrapperTest : public ::testing::Test {
     out.close();
   }
 
-  void TearDown() override { 
-    std::filesystem::remove_all(file_name_);
-   }
+  void TearDown() override { std::filesystem::remove_all(file_name_); }
 };
 
 TEST_F(CsvFileWrapperTest, TestValidateFileContent) {
   // Expect no exceptions to be thrown
-  std::vector<unsigned char> file_content = {'1', ',', 'J', 'o', 'h', 'n', ',', 'D', 'o', 'e', ',', '2', '5', '\n',
-                                             '2', ',', 'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h', ',', '3', '0', '\n',
-                                             '3', ',', 'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n', ',', '3', '5', '\n'};
+  std::vector<unsigned char> file_content = {'1',  ',', 'J', 'o',  'h', 'n', ',', 'D', 'o', 'e', ',', '2', '5',
+                                             '\n', '2', ',', 'J',  'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h',
+                                             ',',  '3', '0', '\n', '3', ',', 'M', 'i', 'c', 'h', 'a', 'e', 'l',
+                                             ',',  'J', 'o', 'h',  'n', 's', 'o', 'n', ',', '3', '5', '\n'};
 
   EXPECT_CALL(*filesystem_wrapper_, get(testing::_)).WillOnce(testing::Return(file_content));
   ASSERT_NO_THROW(file_wrapper_.validate_file_content());
@@ -51,9 +50,10 @@ TEST_F(CsvFileWrapperTest, TestValidateFileContent) {
 
 TEST_F(CsvFileWrapperTest, TestValidateFileContentWithDifferentWidths) {
   // Add a row with different number of columns to the file content
-  std::vector<unsigned char> file_content_with_different_widths = {'1', ',', 'J', 'o', 'h', 'n', ',', 'D', 'o', 'e', ',', '2', '5', '\n',
-                                                                   '2', ',', 'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h', ',', '3', '0', '\n',
-                                                                   '3', ',', 'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n', '\n'};
+  std::vector<unsigned char> file_content_with_different_widths = {
+      '1', ',', 'J', 'o', 'h', 'n', ',', 'D', 'o', 'e', ',', '2', '5', '\n', '2', ',',
+      'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h', ',', '3', '0', '\n', '3', ',',
+      'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o',  'n', '\n'};
   EXPECT_CALL(*filesystem_wrapper_, get(testing::_)).WillOnce(testing::Return(file_content_with_different_widths));
 
   // Expect an invalid_argument exception to be thrown

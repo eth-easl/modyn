@@ -35,8 +35,9 @@ class BinaryFileWrapper : public storage::file_wrapper::FileWrapper {
     sample_size_ = record_size_ - label_size_;
 
     if (record_size_ - label_size_ < 1) {
-      FAIL("Each record must have at least 1 byte of data "
-           "other than the label.");
+      FAIL(
+          "Each record must have at least 1 byte of data "
+          "other than the label.");
     }
 
     validate_file_extension();
