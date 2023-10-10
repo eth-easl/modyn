@@ -86,7 +86,7 @@ class SelectorManager:
                 pipeline_id,
             )
             self._selector_locks[pipeline_id] = self._prepared_locks[pipeline_id % len(self._prepared_locks)]
-            
+
             self._instantiate_selector(pipeline_id, pipeline.num_workers, pipeline.selection_strategy)
 
     def _instantiate_selector(self, pipeline_id: int, num_workers: int, selection_strategy: str) -> None:
