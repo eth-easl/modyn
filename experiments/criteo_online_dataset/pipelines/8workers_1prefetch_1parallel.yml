@@ -1,5 +1,5 @@
 pipeline:
-    name: prefetch1
+    name: 8workers_1prefetch_1parallel
     description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
     version: 1.0.0
 model:
