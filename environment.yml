@@ -19,7 +19,8 @@ dependencies:
   - tqdm
   - conda-forge::enlighten
   - protobuf
-  - grpcio
+  - pip:
+    - grpcio
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
