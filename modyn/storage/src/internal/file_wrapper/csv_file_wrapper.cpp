@@ -1,9 +1,10 @@
 #include "internal/file_wrapper/csv_file_wrapper.hpp"
 
-#include <rapidcsv/document.h>
+#include <rapidcsv.h>
 
 #include <algorithm>
 #include <numeric>
+#include <span>
 #include <stdexcept>
 
 using namespace storage::file_wrapper;
@@ -14,81 +15,60 @@ void CsvFileWrapper::validate_file_extension() {
   }
 }
 
-void CsvFileWrapper::validate_file_content() {
-  const rapidcsv::Document doc(file_path_, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
-                               rapidcsv::ConverterParams());
-  doc.Parse();
+std::vector<unsigned char> CsvFileWrapper::get_sample(int64_t index) {
+  ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
 
-  const size_t num_columns = doc.GetRows()[0].size();
-  for (const rapidcsv::Row& row : doc.GetRows()) {
-    if (row.size() != num_columns) {
-      FAIL("CSV file is invalid: All rows must have the same number of columns.");
-    }
-  }
-
-  const std::string label_column_name = doc.GetLabels()[label_index_];
-  if (label_column_name != "label") {
-    FAIL("CSV file is invalid: The label column must be named \"label\".");
-  }
+  return doc_.GetRow<unsigned char>(index);
 }
-
-std::vector<std::vector<unsigned char>> read_csv_file(const std::string& file_path) {
-  rapidcsv::Document doc(file_path, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
-                         rapidcsv::ConverterParams());
-  doc.Parse();
-
-  std::vector<std::vector<unsigned char>> samples;
-  for (const rapidcsv::Row& row : doc.GetRows()) {
-    samples.push_back(std::vector<unsigned char>(row.begin(), row.end()));
-  }
-
-  return samples;
-}
-
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples() override { return read_csv_file(file_path_); }
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(int64_t start, int64_t end) {
   ASSERT(start >= 0 && end >= start && end <= get_number_of_samples(), "Invalid indices");
 
-  rapidcsv::Document doc(file_path_, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
-                         rapidcsv::ConverterParams());
-  doc.Parse();
-
   std::vector<std::vector<unsigned char>> samples;
-  for (int64_t i = start; i < end; i++) {
-    const rapidcsv::Row& row = doc.GetRows()[i];
-    samples.push_back(std::vector<unsigned char>(row.begin(), row.end()));
+  size_t start_t = start;
+  size_t end_t = end;
+  for (size_t i = start_t; i < end_t; i++) {
+    samples.push_back(doc_.GetRow<unsigned char>(i));
   }
 
   return samples;
 }
 
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(
-    const std::vector<int64_t>& indices) override {
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<int64_t>& indices) {
   ASSERT(std::all_of(indices.begin(), indices.end(),
                      [&](int64_t index) { return index >= 0 && index < get_number_of_samples(); }),
          "Invalid indices");
 
   std::vector<std::vector<unsigned char>> samples;
-  samples.reserve(indices.size());
-
-  std::vector<unsigned char> content = filesystem_wrapper_->get(file_path_);
-  const std::span<unsigned char> file_span(content.data(), content.size());
-
-  for (const int64_t index : indices) {
-    samples.push_back(file_span.subspan(record_start(index), record_size));
+  for (size_t i : indices) {
+    samples.push_back(doc_.GetRow<unsigned char>(i));
   }
 
   return samples;
 }
 
-int64_t CsvFileWrapper::get_label(int64_t index) override {
-  const rapidcsv::Document doc(file_path_, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
-                               rapidcsv::ConverterParams());
-  doc.Parse();
+int64_t CsvFileWrapper::get_label(int64_t index) { return doc_.GetRow<unsigned char>(index)[label_index_]; }
 
-  const rapidcsv::Row& row = doc.GetRows()[index];
-  return std::stoi(row[label_index_]);
+std::vector<int64_t> CsvFileWrapper::get_all_labels() {
+  std::vector<int64_t> labels;
+  size_t num_samples = get_number_of_samples();
+  for (size_t i = 0; i < num_samples; i++) {
+    labels.push_back(get_label(i));
+  }
+  return labels;
+}
+
+int64_t CsvFileWrapper::get_number_of_samples() { return doc_.GetRowCount() - (ignore_first_line_ ? 1 : 0); }
+
+void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) {
+  ASSERT(std::all_of(indices.begin(), indices.end(),
+                     [&](int64_t index) { return index >= 0 && index < get_number_of_samples(); }),
+         "Invalid indices");
+
+  for (size_t i : indices) {
+    doc_.RemoveRow(i);
+  }
+  doc_.Save();
 }
 
 FileWrapperType CsvFileWrapper::get_type() { return FileWrapperType::CSV; }

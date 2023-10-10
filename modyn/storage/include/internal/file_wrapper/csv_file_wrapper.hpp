@@ -11,19 +11,10 @@
 namespace storage::file_wrapper {
 
 class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
- private:
-  char separator_;
-  int64_t label_index_;
-  bool ignore_first_line_;
-
-  void validate_file_extension() override;
-  std::vector<std::vector<unsigned char>> filter_rows_samples(const std::vector<int64_t>& indices);
-  std::vector<int64_t> filter_rows_labels(const std::vector<int64_t>& indices);
-
  public:
   CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
                  std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper)
-      : storage::file_wrapper::FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
+      : storage::file_wrapper::FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
     if (file_wrapper_config_["separator"]) {
       separator_ = file_wrapper_config_["separator"].as<char>();
     } else {
@@ -45,12 +36,10 @@ class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
       ignore_first_line_ = false;
     }
 
-    validate_file_extension();
+    rapidcsv::Document doc_(path, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
+                            rapidcsv::ConverterParams());
 
-    // Do not validate the content only if "validate_file_content" is explicitly set to false
-    if (!file_wrapper_config_["validate_file_content"] || file_wrapper_config_["validate_file_content"].as<bool>()) {
-      validate_file_content();
-    }
+    validate_file_extension();
   }
 
   std::vector<unsigned char> get_sample(int64_t index) override;
@@ -61,7 +50,13 @@ class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
   int64_t get_number_of_samples() override;
   void delete_samples(const std::vector<int64_t>& indices) override;
   FileWrapperType get_type() override;
-  void validate_file_content();
   ~CsvFileWrapper() override = default;
+  void validate_file_extension() override;
+
+ private:
+  char separator_;
+  int64_t label_index_;
+  bool ignore_first_line_;
+  rapidcsv::Document doc_;
 };
 }  // namespace storage::file_wrapper

@@ -4,8 +4,6 @@
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
 
-#include "internal/grpc/storage_service_impl.hpp"
-
 namespace storage::grpc {
 
 class StorageGrpcServer {

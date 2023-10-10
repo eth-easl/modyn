@@ -1,7 +1,6 @@
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 
 #include <fmt/format.h>
-#include <fmt/ranges.h>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -12,9 +11,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
-
-const char path_separator = std::filesystem::path::preferred_separator;
+#include "internal/utils/utils.hpp"
 
 using namespace storage::filesystem_wrapper;
 
@@ -69,10 +66,6 @@ bool LocalFilesystemWrapper::remove(const std::string& path) {
   ASSERT(!std::filesystem::is_directory(path), fmt::format("Path is a directory: {}", path));
 
   return std::filesystem::remove(path);
-}
-
-std::string LocalFilesystemWrapper::join(const std::vector<std::string>& paths) {
-  return fmt::format("{}", fmt::join(paths, path_separator));
 }
 
 FilesystemWrapperType LocalFilesystemWrapper::get_type() { return FilesystemWrapperType::LOCAL; }

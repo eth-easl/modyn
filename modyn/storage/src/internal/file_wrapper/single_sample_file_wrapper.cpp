@@ -32,7 +32,7 @@ int64_t SingleSampleFileWrapper::get_label(int64_t /* index */) {
     return std::stoi(label_str);
   }
 
-  FAIL(fmt::format("Label file is empty: {}", label_path));
+  FAIL(fmt::format("Label file is empty: {}", label_path.string()));
   return -1;
 }
 

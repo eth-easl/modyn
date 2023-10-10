@@ -7,7 +7,6 @@
 
 #include <deque>
 
-#include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "storage.grpc.pb.h"
 
 namespace storage::grpc {
@@ -60,7 +59,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   grpc::Status GetDatasetSize(grpc::ServerContext* context, const modyn::storage::GetDatasetSizeRequest* request,
                               modyn::storage::GetDatasetSizeResponse* response) override;
   static virtual std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,
-                                                                int64_t total_num_elements);
+                                                                       int64_t total_num_elements);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
 
  private:

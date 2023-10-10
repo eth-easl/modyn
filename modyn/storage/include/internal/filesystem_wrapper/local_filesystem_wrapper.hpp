@@ -13,7 +13,6 @@ class LocalFilesystemWrapper : public FilesystemWrapper {
   bool is_file(const std::string& path) override;
   int64_t get_file_size(const std::string& path) override;
   int64_t get_modified_time(const std::string& path) override;
-  std::string join(const std::vector<std::string>& paths) override;
   bool is_valid_path(const std::string& path) override;
   FilesystemWrapperType get_type() override;
   bool remove(const std::string& path) override;

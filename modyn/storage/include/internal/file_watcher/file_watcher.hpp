@@ -13,20 +13,28 @@
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
+#include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
 #include "internal/utils/utils.hpp"
 
 namespace storage::file_watcher {
+
+struct FileFrame {
+  int64_t dataset_id;
+  int64_t file_id;
+  int64_t index;
+  int64_t label;
+};
 class FileWatcher {
  public:
   std::atomic<bool>* stop_file_watcher_;
   explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id, std::atomic<bool>* stop_file_watcher,
                        int16_t insertion_threads = 1)
-      : config_{config},
+      : stop_file_watcher_{stop_file_watcher},
+        config_{config},
         dataset_id_{dataset_id},
         insertion_threads_{insertion_threads},
-        storage_database_connection_{StorageDatabaseConnection(config)},
-        stop_file_watcher_{stop_file_watcher},
-        disable_multithreading_{insertion_threads <= 1} {
+        disable_multithreading_{insertion_threads <= 1},
+        storage_database_connection_{storage::database::StorageDatabaseConnection(config)} {
     if (stop_file_watcher_ == nullptr) {
       FAIL("stop_file_watcher_ is nullptr.");
     }
@@ -34,7 +42,7 @@ class FileWatcher {
     SPDLOG_INFO("Initializing file watcher for dataset {}.", dataset_id_);
 
     if (config_["storage"]["sample_dbinsertion_batchsize"]) {
-      sample_dbinsertion_batchsize_ = config_["storage"]["sample_dbinsertion_batchsize"].as<int32_t>();
+      sample_dbinsertion_batchsize_ = config_["storage"]["sample_dbinsertion_batchsize"].as<int64_t>();
     }
     soci::session session = storage_database_connection_.get_session();
 
@@ -50,7 +58,8 @@ class FileWatcher {
       // This is for testing purposes
       filesystem_wrapper_type_int = 1;
     }
-    const auto filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
+    const auto filesystem_wrapper_type =
+        static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type_int);
 
     if (dataset_path.empty()) {
       SPDLOG_ERROR("Dataset with id {} not found.", dataset_id_);
@@ -58,7 +67,7 @@ class FileWatcher {
       return;
     }
 
-    filesystem_wrapper = storage::utils::get_filesystem_wrapper(dataset_path, filesystem_wrapper_type);
+    filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(dataset_path, filesystem_wrapper_type);
 
     dataset_path_ = dataset_path;
     filesystem_wrapper_type_ = filesystem_wrapper_type;
@@ -69,35 +78,35 @@ class FileWatcher {
       return;
     }
   }
-  std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
+  std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper;
   void run();
-  static void handle_file_paths(
-      const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-      const FileWrapperType& file_wrapper_type, int64_t timestamp, const YAML::Node& file_wrapper_config,
-      const YAML::Node& config) void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
-  static void insert_file_frame(StorageDatabaseConnection storage_database_connection,
+  static void handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
+                                const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
+                                const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
+                                const int64_t dataset_id, const YAML::Node& file_wrapper_config,
+                                const YAML::Node& config, const int64_t sample_dbinsertion_batchsize);
+  void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
+  static void insert_file_frame(storage::database::StorageDatabaseConnection storage_database_connection,
                                 const std::vector<FileFrame>& file_frame);
   void seek_dataset();
   void seek();
-  bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
-                        bool ignore_last_timestamp, int64_t timestamp);
-  static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame) const;
-  static void fallback_insertion(const std::vector<FileFrame>& file_frame) const;
+  static bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
+                               bool ignore_last_timestamp, int64_t timestamp,
+                               storage::database::StorageDatabaseConnection& storage_database_connection,
+                               std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper);
+  static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
+                                      storage::database::StorageDatabaseConnection storage_database_connection);
+  static void fallback_insertion(const std::vector<FileFrame>& file_frame,
+                                 storage::database::StorageDatabaseConnection storage_database_connection);
 
  private:
   YAML::Node config_;
   int64_t dataset_id_;
   int16_t insertion_threads_;
   bool disable_multithreading_;
-  int32_t sample_dbinsertion_batchsize_ = 1000000;
-  StorageDatabaseConnection storage_database_connection_;
+  int64_t sample_dbinsertion_batchsize_ = 1000000;
+  storage::database::StorageDatabaseConnection storage_database_connection_;
   std::string dataset_path_;
-  FilesystemWrapperType filesystem_wrapper_type_;
-  struct FileFrame {
-    int64_t dataset_id;
-    int64_t file_id;
-    int32_t index;
-    int32_t label;
-  };
+  storage::filesystem_wrapper::FilesystemWrapperType filesystem_wrapper_type_;
 };
 }  // namespace storage::file_watcher

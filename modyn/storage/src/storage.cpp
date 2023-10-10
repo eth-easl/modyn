@@ -14,19 +14,27 @@ void Storage::run() {
   connection_.create_tables();
 
   // Start the file watcher watchdog
-  std::thread file_watcher_watchdog_thread(&FileWatchdog::run, file_watcher_watchdog_);
+  std::thread file_watcher_watchdog_thread(&file_watcher::FileWatcherWatchdog::run, &file_watcher_watchdog_);
 
   // Start the storage grpc server
-  std::thread grpc_server_thread(&StorageGrpcServer::run, grpc_server_);
+  std::thread grpc_server_thread(&storage::grpc::StorageGrpcServer::run, &grpc_server_);
 
-  // Wait for the file watcher watchdog or grpc server to exit
+  // Create a condition variable to wait for the file watcher watchdog or gRPC server to exit.
+  std::condition_variable cv;
+
+  // Create a mutex to protect the `stop_grpc_server_` and `stop_file_watcher_watchdog_` variables.
+  std::mutex m;
+
+  {
+    std::unique_lock<std::mutex> lk(m);
+    cv.wait(lk, [&] { return stop_grpc_server_.load() || stop_file_watcher_watchdog_.load(); });
+  }
+
   SPDLOG_INFO("Storage service shutting down.");
 
-  // Stop the grpc server
   stop_grpc_server_.store(true);
   grpc_server_thread.join();
 
-  // Stop the file watcher
-  stop_file_watcher_.store(true);
+  stop_file_watcher_watchdog_.store(true);
   file_watcher_watchdog_thread.join();
 }

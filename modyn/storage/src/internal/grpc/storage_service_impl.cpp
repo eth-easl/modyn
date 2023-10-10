@@ -1,7 +1,6 @@
 #include "internal/grpc/storage_service_impl.hpp"
 
 #include "internal/database/storage_database_connection.hpp"
-#include "internal/utils/utils.hpp"
 
 using namespace storage::grpc;
 

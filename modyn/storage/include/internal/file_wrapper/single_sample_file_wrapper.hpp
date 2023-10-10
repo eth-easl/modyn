@@ -3,7 +3,6 @@
 #include <cstddef>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
-#include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 
 namespace storage::file_wrapper {
 

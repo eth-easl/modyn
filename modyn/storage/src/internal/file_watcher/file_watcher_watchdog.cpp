@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
+#include <map>
 
 #include "soci/soci.h"
 
@@ -36,9 +37,9 @@ void FileWatcherWatchdog::start_file_watcher_thread(int64_t dataset_id, int16_t 
  *
  * @param dataset_id The id of the dataset to start a FileWatcher thread for
  */
-void FileWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
+void FileWatcherWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
   SPDLOG_INFO("Stopping FileWatcher thread for dataset {}", dataset_id);
-  if (std::map::contains(file_watcher_threads_, dataset_id)) {
+  if (file_watcher_threads_.contains(dataset_id)) {
     // Set the stop flag for the FileWatcher thread
     file_watcher_thread_stop_flags_[dataset_id].store(true);
     // Wait for the FileWatcher thread to stop
@@ -61,11 +62,8 @@ void FileWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
 /*
  * Watch the FileWatcher threads and start/stop them as needed
  */
-void FileWatchdog::watch_file_watcher_threads() {
-  if (storage_database_connection_ == nullptr) {
-    FAIL("StorageDatabaseConnection is null");
-  }
-  soci::session session = storage_database_connection_->get_session();
+void FileWatcherWatchdog::watch_file_watcher_threads() {
+  soci::session session = storage_database_connection_.get_session();
 
   int64_t number_of_datasets = 0;
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
@@ -85,7 +83,7 @@ void FileWatchdog::watch_file_watcher_threads() {
   for (const auto& dataset_id : dataset_ids) {
     if (file_watcher_dataset_retries_[dataset_id] > 2) {
       // There have been more than 3 restart attempts for this dataset, we are not going to try again
-    } else if (!std::map::contains(file_watcher_threads_, dataset_id)) {
+    } else if (!file_watcher_threads_.contains(dataset_id)) {
       // There is no FileWatcher thread registered for this dataset. Start one.
       start_file_watcher_thread(dataset_id, 0);
     } else if (!file_watcher_threads_[dataset_id].joinable()) {
@@ -96,7 +94,7 @@ void FileWatchdog::watch_file_watcher_threads() {
   }
 }
 
-void FileWatchdog::run() {
+void FileWatcherWatchdog::run() {
   SPDLOG_INFO("FileWatchdog running");
 
   while (true) {
@@ -113,9 +111,10 @@ void FileWatchdog::run() {
   for (auto& file_watcher_thread : file_watcher_threads_) {
     file_watcher_thread.second.join();
   }
+  stop_file_watcher_watchdog_->store(true);
 }
 
-std::vector<int64_t> FileWatchdog::get_running_file_watcher_threads() {
+std::vector<int64_t> FileWatcherWatchdog::get_running_file_watcher_threads() {
   std::vector<int64_t> running_file_watcher_threads;
   for (const auto& pair : file_watcher_threads_) {
     if (pair.second.joinable()) {

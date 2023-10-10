@@ -31,4 +31,5 @@ void StorageGrpcServer::run() {
     }
 
     server->Shutdown();
+    stop_grpc_server_->store(true);
   }

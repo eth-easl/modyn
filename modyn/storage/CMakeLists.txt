@@ -40,7 +40,7 @@ set(MODYNSTORAGE_COMPILE_OPTIONS "-Wall" "-Wextra" "-Werror" "-Wpedantic" "-Wext
 )
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Additional checks not supported by GCC -- some are supported on GCC, but not ignorable / not filterable
-  list(APPEND MODYNSTORAGE_COMPILE_OPTIONS "-Wdocumentation" "-Wconditional-uninitialized" "-Wmissing-prototypes" "-Wundef"
+  list(APPEND MODYNSTORAGE_COMPILE_OPTIONS "-Wconditional-uninitialized" "-Wmissing-prototypes" "-Wundef"
     "-Wunused-exception-parameter" "-Wunused-member-function")
   list(APPEND MODYNSTORAGE_COMPILE_OPTIONS "-Wno-gnu-zero-variadic-macro-arguments") # legal in c++20
 

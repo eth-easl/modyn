@@ -9,6 +9,9 @@
 #include <iostream>
 #include <sstream>
 
+#include "internal/file_wrapper/file_wrapper_utils.hpp"
+#include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
+
 using namespace storage::file_watcher;
 
 /*
@@ -26,7 +29,8 @@ using namespace storage::file_watcher;
  * @return True if the file is valid, false otherwise.
  */
 bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
-                                   bool ignore_last_timestamp, int64_t timestamp) {
+                                   bool ignore_last_timestamp, int64_t timestamp, storage::database::StorageDatabaseConnection& storage_database_connection,
+                                   std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper) {
   if (file_path.empty()) {
     return false;
   }
@@ -38,7 +42,8 @@ bool FileWatcher::check_valid_file(const std::string& file_path, const std::stri
   if (file_extension != data_file_extension) {
     return false;
   }
-  soci::session session = storage_database_connection_.get_session();
+
+  soci::session session = storage_database_connection.get_session();
 
   int64_t file_id = -1;
   session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
@@ -72,7 +77,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   session << "SELECT file_wrapper_type, file_wrapper_config FROM datasets "
              "WHERE dataset_id = :dataset_id",
       soci::into(file_wrapper_type_id), soci::into(file_wrapper_config), soci::use(dataset_id_);
-  const auto file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type_id);
+  const auto file_wrapper_type = static_cast<storage::file_wrapper::FileWrapperType>(file_wrapper_type_id);
 
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
   const auto data_file_extension = file_wrapper_config_node["file_extension"].as<std::string>();
@@ -80,13 +85,14 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   std::vector<std::string> file_paths = filesystem_wrapper->list(directory_path, /*recursive=*/true);
 
   if (disable_multithreading_) {
-    FileWatcher.handle_file_paths(file_paths, data_file_extension, file_wrapper_type, timestamp,
-                                  file_wrapper_config_node);
+    FileWatcher::handle_file_paths(file_paths, data_file_extension, file_wrapper_type, timestamp,
+                                   filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
+                                   sample_dbinsertion_batchsize_);
   } else {
     std::vector<std::thread> threads(insertion_threads_);
-    const size_t chunk_size = file_paths.size() / insertion_threads_;
+    const int16_t chunk_size = file_paths.size() / insertion_threads_;
 
-    for (size_t i = 0; i < insertion_threads_; ++i) {
+    for (int16_t i = 0; i < insertion_threads_; ++i) {
       auto begin = file_paths.begin() + i * chunk_size;
       auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
@@ -94,8 +100,9 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 
       threads.emplace_back(std::thread([this, file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp,
                                         &file_wrapper_config_node]() mutable {
-        FileWatcher.handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
-                                      file_wrapper_config_node);
+        FileWatcher::handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
+                                       filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
+                                       sample_dbinsertion_batchsize_);
       }));
     }
 
@@ -158,16 +165,21 @@ void FileWatcher::run() {
   }
 }
 
-static void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths,
-                                           const std::string& data_file_extension,
-                                           const FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                           const YAML::Node& file_wrapper_config, const YAML::Node& config) {
-  StorageDatabaseConnection storage_database_connection(config);
+void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
+                                    const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
+                                    const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
+                                    const int64_t dataset_id, const YAML::Node& file_wrapper_config,
+                                    const YAML::Node& config, const int64_t sample_dbinsertion_batchsize) {
+  storage::database::StorageDatabaseConnection storage_database_connection(config);
   soci::session session = storage_database_connection.get_session();
 
   std::vector<std::string> valid_files;
+  std::string file_path = file_paths.front();
+  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(file_path, filesystem_wrapper_type);
+
   for (const auto& file_path : file_paths) {
-    if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp)) {
+    if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp, storage_database_connection,
+                         filesystem_wrapper)) {
       valid_files.push_back(file_path);
     }
   }
@@ -177,9 +189,9 @@ static void FileWatcher::handle_file_paths(const std::vector<std::string>& file_
   if (!valid_files.empty()) {
     std::string file_path = valid_files.front();
     int64_t number_of_samples;
-    std::vector<FileFrame> file_frame;
-    auto file_wrapper =
-        storage::utils::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+    std::vector<FileFrame> file_frame(sample_dbinsertion_batchsize);
+    auto file_wrapper = storage::file_wrapper::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config,
+                                                                std::move(filesystem_wrapper));
 
     int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
@@ -189,11 +201,11 @@ static void FileWatcher::handle_file_paths(const std::vector<std::string>& file_
       session << "INSERT INTO files (dataset_id, path, number_of_samples, "
                  "updated_at) VALUES (:dataset_id, :path, "
                  ":number_of_samples, :updated_at)",
-          soci::use(dataset_id_), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
+          soci::use(dataset_id), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
 
       // Check if the insert was successful.
-      std::optional<long long> file_id = session.get_last_insert_id<long long>("files");
-      if (!file_id) {
+      long long file_id;
+      if (!session.get_last_insert_id("files", file_id)) {
         // The insert was not successful.
         SPDLOG_ERROR("Failed to insert file into database");
         continue;
@@ -203,14 +215,14 @@ static void FileWatcher::handle_file_paths(const std::vector<std::string>& file_
 
       int32_t index = 0;
       for (const auto& label : labels) {
-        file_frame.emplace_back(dataset_id_, *file_id, index, label);
-        index++;
-        inserted_samples++;
-        if (inserted_samples > sample_dbinsertion_batchsize_) {
-          insert_file_frame(storage_database_connection, std::move(file_frame));
+        if (inserted_samples == sample_dbinsertion_batchsize) {
+          insert_file_frame(storage_database_connection, file_frame);
           file_frame.clear();
           inserted_samples = 0;
         }
+        file_frame.push_back({dataset_id, file_id, index, label});
+        index++;
+        inserted_samples++;
       }
     }
 
@@ -221,13 +233,13 @@ static void FileWatcher::handle_file_paths(const std::vector<std::string>& file_
   }
 }
 
-static void FileWatcher::insert_file_frame(StorageDatabaseConnection storage_database_connection,
+void FileWatcher::insert_file_frame(storage::database::StorageDatabaseConnection storage_database_connection,
                                            const std::vector<FileFrame>& file_frame) {
-  switch (storage_database_connection.get_driver()) {
-    case DatabaseDriver::POSTGRESQL:
+  switch (storage_database_connection.get_drivername()) {
+    case storage::database::DatabaseDriver::POSTGRESQL:
       postgres_copy_insertion(file_frame, storage_database_connection);
       break;
-    case DatabaseDriver::SQLITE3:
+    case storage::database::DatabaseDriver::SQLITE3:
       fallback_insertion(file_frame, storage_database_connection);
       break;
     default:
@@ -243,9 +255,10 @@ static void FileWatcher::insert_file_frame(StorageDatabaseConnection storage_dat
  *
  * @param file_frame The file frame to be inserted.
  */
-static void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
-                                                 StorageDatabaseConnection storage_database_connection) const {
+void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
+                                                 storage::database::StorageDatabaseConnection storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
+  int64_t dataset_id_ = file_frame.front().dataset_id;
   const std::string table_name = fmt::format("samples__did{}", dataset_id_);
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
@@ -257,11 +270,9 @@ static void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& f
     ss << fmt::format("{},{},{},{}\n", frame.dataset_id, frame.file_id, frame.index, frame.label);
   }
 
-  // Create a temporary stream object and pipe the stringbuffer to it
-  std::istringstream is(ss.str());
-
   // Execute the COPY command using the temporary stream object
-  session << cmd, soci::use(is);
+  session << cmd;
+  session << ss.str();
 }
 
 /*
@@ -272,8 +283,8 @@ static void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& f
  *
  * @param file_frame The file frame to be inserted.
  */
-static void FileWatcher::fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                            StorageDatabaseConnection storage_database_connection) const {
+void FileWatcher::fallback_insertion(const std::vector<FileFrame>& file_frame,
+                                            storage::database::StorageDatabaseConnection storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   // Prepare query
   std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";

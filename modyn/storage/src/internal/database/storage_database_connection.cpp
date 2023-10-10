@@ -1,11 +1,12 @@
 #include "internal/database/storage_database_connection.hpp"
-#include "internal/utils/utils.hpp"
 
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
 #include <fstream>
 
+#include "internal/utils/utils.hpp"
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/sqlite3/soci-sqlite3.h"
 
@@ -24,7 +25,7 @@ soci::session StorageDatabaseConnection::get_session() const {
       parameters = soci::connection_parameters(soci::sqlite3, connection_string);
       break;
     default:
-      FAIL("Unsupported database driver: {}", drivername_);
+      FAIL("Unsupported database driver");
   }
   return soci::session(parameters);
 }
@@ -59,7 +60,7 @@ void StorageDatabaseConnection::create_tables() const {
           ;
       break;
     default:
-      FAIL("Unsupported database driver: {}", drivername_);
+      FAIL("Unsupported database driver");
   }
   session << dataset_table_sql;
 
@@ -68,17 +69,22 @@ void StorageDatabaseConnection::create_tables() const {
   session << sample_table_sql;
 }
 
-bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::string& base_path,
-                                            const FilesystemWrapperType& filesystem_wrapper_type,
-                                            const FileWrapperType& file_wrapper_type, const std::string& description,
-                                            const std::string& version, const std::string& file_wrapper_config,
-                                            const bool& ignore_last_timestamp, const int& file_watcher_interval) const {
+bool StorageDatabaseConnection::add_dataset(
+    const std::string& name, const std::string& base_path,
+    const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
+    const storage::file_wrapper::FileWrapperType& file_wrapper_type, const std::string& description,
+    const std::string& version, const std::string& file_wrapper_config, const bool& ignore_last_timestamp,
+    const int& file_watcher_interval) const {
   try {
     soci::session session = get_session();
 
     auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);
     auto file_wrapper_type_int = static_cast<int64_t>(file_wrapper_type);
     std::string boolean_string = ignore_last_timestamp ? "true" : "false";
+    if (get_dataset_id(name) != -1) {
+      SPDLOG_ERROR("Dataset {} already exists", name);
+      return false;
+    }
     switch (drivername_) {
       case DatabaseDriver::POSTGRESQL:
         session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
@@ -100,12 +106,6 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
             soci::use(file_wrapper_config), soci::use(boolean_string), soci::use(file_watcher_interval);
         break;
       case DatabaseDriver::SQLITE3:
-        int64_t dataset_id = 0;
-        session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
-        if (dataset_id != 0) {
-          SPDLOG_ERROR("Dataset {} already exists, deleting", name);
-          session << "DELETE FROM datasets WHERE dataset_id = :dataset_id", soci::use(dataset_id);
-        }
         session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
                    "file_wrapper_type, description, version, file_wrapper_config, "
                    "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
@@ -118,7 +118,7 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
             soci::use(file_wrapper_config), soci::use(boolean_string), soci::use(file_watcher_interval);
         break;
       default:
-        SPDLOG_ERROR("Error adding dataset: Unsupported database driver: " + drivername);
+        SPDLOG_ERROR("Error adding dataset: Unsupported database driver.");
         return false;
     }
 
@@ -131,43 +131,59 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
   return true;
 }
 
+int64_t StorageDatabaseConnection::get_dataset_id(const std::string& name) const {
+  soci::session session = get_session();
+
+  int64_t dataset_id = -1;
+  session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
+
+  return dataset_id;
+}
+
+DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& config) {
+  if (!config["storage"]["database"]) {
+    FAIL("No database configuration found");
+  }
+  const auto drivername = config["storage"]["database"]["drivername"].as<std::string>();
+  if (drivername == "postgresql") {
+    return DatabaseDriver::POSTGRESQL;
+  } else if (drivername == "sqlite3") {
+    return DatabaseDriver::SQLITE3;
+  } else {
+    FAIL("Unsupported database driver: " + drivername);
+  }
+}
+
 bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
-  try {
-    soci::session session = get_session();
-
-    int64_t dataset_id = -1;
-    session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
-
-    if (dataset_id == -1) {
-      SPDLOG_ERROR("Dataset {} not found", name);
-      return false;
-    }
-
-    // Delete all samples for this dataset
-    session << "DELETE FROM samples WHERE dataset_id = :dataset_id", soci::use(dataset_id);
-
-    // Delete all files for this dataset
-    session << "DELETE FROM files WHERE dataset_id = :dataset_id", soci::use(dataset_id);
-
-    // Delete the dataset
-    session << "DELETE FROM datasets WHERE name = :name", soci::use(name);
-  } catch (const std::exception& e) {
-    SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
+  int64_t dataset_id = get_dataset_id(name);
+  if (dataset_id == -1) {
+    SPDLOG_ERROR("Dataset {} not found", name);
     return false;
   }
+
+  soci::session session = get_session();
+
+  // Delete all samples for this dataset
+  session << "DELETE FROM samples WHERE dataset_id = :dataset_id", soci::use(dataset_id);
+
+  // Delete all files for this dataset
+  session << "DELETE FROM files WHERE dataset_id = :dataset_id", soci::use(dataset_id);
+
+  // Delete the dataset
+  session << "DELETE FROM datasets WHERE name = :name", soci::use(name);
+
   return true;
 }
 
 void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& dataset_name) const {
   soci::session session = get_session();
+  int64_t dataset_id = get_dataset_id(dataset_name);
+  if (dataset_id == -1) {
+    SPDLOG_ERROR("Dataset {} not found", dataset_name);
+    return;
+  }
   switch (drivername_) {
-    case DatabaseDriver::POSTGRESQL:
-      int64_t dataset_id = -1;
-      session << "SELECT dataset_id FROM datasets WHERE name = :dataset_name", soci::into(dataset_id),
-          soci::use(dataset_name);
-      if (dataset_id == -1) {
-        SPDLOG_ERROR("Dataset {} not found", dataset_name);
-      }
+    case DatabaseDriver::POSTGRESQL: {
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
       session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
                  "PARTITION OF samples "
@@ -185,13 +201,15 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
             soci::use(i);
       }
       break;
-    case DatabaseDriver::SQLITE3:
+    }
+    case DatabaseDriver::SQLITE3: {
       SPDLOG_INFO(
           "Skipping partition creation for dataset {}, not supported for "
-          "driver {}",
-          dataset_name, drivername);
+          "driver.",
+          dataset_name);
       break;
+    }
     default:
-      FAIL("Unsupported database driver: {}", drivername_);
+      FAIL("Unsupported database driver.");
   }
 }
