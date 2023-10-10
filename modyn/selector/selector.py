@@ -27,6 +27,7 @@ class Selector:
         self._num_workers = num_workers
         self._modyn_config = modyn_config
 
+        # TODO(#308): Share partition cache between selector instances
         self._trigger_cache: Dict[int, list[list[tuple[int, float]]]] = {}
         self._maximum_keys_in_cache = cache_size
         self._current_keys_in_cache = 0

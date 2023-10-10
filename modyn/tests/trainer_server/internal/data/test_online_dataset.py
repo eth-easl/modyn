@@ -1,4 +1,4 @@
-# pylint: disable=unused-argument, no-name-in-module
+# pylint: disable=unused-argument, no-name-in-module, too-many-locals
 import platform
 from unittest.mock import patch
 
@@ -197,12 +197,19 @@ def test_get_data_from_storage(
         list(range(10)),
     )
 
-    # TODO(create issue): readd when re-adding support for ordering in onlinedataset
-    # permuted_list = [0, 9, 6, 5, 4, 3]
-    # assert online_dataset._get_data_from_storage(permuted_list) == (
-    #    [b"sample0", b"sample9", b"sample6", b"sample5", b"sample4", b"sample3"],
-    #    [0, 9, 6, 5, 4, 3],
-    # )
+    result_keys = []
+    result_samples = []
+    result_labels = []
+
+    permuted_list = [0, 9, 6, 5, 4, 3]
+    for rkey, rsam, rlbl, _ in online_dataset._get_data_from_storage(permuted_list):
+        result_keys.extend(rkey)
+        result_samples.extend(rsam)
+        result_labels.extend(rlbl)
+
+    assert set(result_keys) == set(keys)
+    assert set(result_samples) == set(data)
+    assert set(result_labels) == set(labels)
 
 
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)

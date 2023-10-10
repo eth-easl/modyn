@@ -1,6 +1,6 @@
 from modyn.common.grpc import GenericGRPCServer
 
-# TODO(create issue): add more meaningful tests
+# TODO(310): add more meaningful tests
 
 
 def test_init():

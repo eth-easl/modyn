@@ -27,7 +27,7 @@ class SelectorManager:
         self._next_pipeline_lock = self._manager.Lock()
         self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
-        # TODO(create issue): currently we have to prepare N locks and then share.
+        # TODO(309): currently we have to prepare N locks and then share.
         # This is because we cannot share the manager with subprocesses.
         # For now not a big problem since we mostly run one pipeline but we might want to redesign this.
         self._prepared_locks = [self._manager.Lock() for _ in range(64)]
