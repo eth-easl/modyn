@@ -28,6 +28,7 @@ dependencies:
   - numpy
   - pandas
   - tensorboard
+  - scipy
   - pyftpdlib
   - types-protobuf
   - types-psycopg2

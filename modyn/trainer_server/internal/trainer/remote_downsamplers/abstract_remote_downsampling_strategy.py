@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -32,10 +32,13 @@ def get_tensors_subset(
 
 
 class AbstractRemoteDownsamplingStrategy(ABC):
-    def __init__(self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict) -> None:
+    def __init__(
+        self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, device: str
+    ) -> None:
         self.pipeline_id = pipeline_id
         self.batch_size = batch_size
         self.trigger_id = trigger_id
+        self.device = device
 
         assert "downsampling_ratio" in params_from_selector
         self.downsampling_ratio = params_from_selector["downsampling_ratio"]
@@ -55,12 +58,22 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         # can use the following parameter
         self.requires_data_label_by_label = False
 
+        # Some methods require extra features (embedding recorder, get_last_layer) that are implemented in the class
+        # CoresetSupporingModule for model implementations.
+        self.requires_coreset_supporting_module = False
+
     @abstractmethod
     def init_downsampler(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def inform_samples(self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor) -> None:
+    def inform_samples(
+        self,
+        sample_ids: list[int],
+        forward_output: torch.Tensor,
+        target: torch.Tensor,
+        embedding: Optional[torch.Tensor] = None,
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
