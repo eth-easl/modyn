@@ -5,6 +5,7 @@ import pathlib
 import random
 import shutil
 import time
+import gc
 from typing import Iterable, Tuple
 
 import grpc
@@ -370,6 +371,7 @@ def test_dataset() -> None:
                         trigger_id,
                         keys,
                     )
+                    gc.collect()
 
 
 def main() -> None:
