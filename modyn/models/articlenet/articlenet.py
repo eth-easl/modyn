@@ -1,3 +1,4 @@
+# pylint: disable=W0223
 from typing import Any
 
 import torch
@@ -19,7 +20,6 @@ class ArticleNet:
         self.model.to(device)
 
 
-# Pylint complaints about problem in transformers DistilBertModel
 class DistilBertFeaturizer(DistilBertModel):  # pylint: disable=abstract-method
     def __init__(self, config: Any) -> None:
         super().__init__(config)

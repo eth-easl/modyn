@@ -31,6 +31,19 @@ def setup_argparser_wildtime(dataset: str) -> argparse.ArgumentParser:
         "--dir", type=pathlib.Path, action="store", help="Path to data directory"
     )
 
+    parser_.add_argument(
+        "--all", action="store_true", help="Store all the available data, including the validation and test sets."
+    )
+    parser_.add_argument(
+        "--dummyyear", action="store_true", help="Add a final dummy year to train also on the last trigger in Modyn"
+    )
+
+    if dataset == "fMoW":
+        parser_.add_argument(
+            "--daily", action="store_true", help="If specified, data is stored with real timestamps (dd/mm/yy)."
+                                                 "Otherwise, only the year is considered (as done in the other "
+                                                 "datasets).")
+
     return parser_
 
 
