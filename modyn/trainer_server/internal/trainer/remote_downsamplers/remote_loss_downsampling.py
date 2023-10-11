@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
@@ -7,10 +7,23 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 
 
 class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
+    """
+    Method inspired by
+    Not All Samples Are Created Equal: Deep Learning with Importance Sampling (Katharopoulos, Fleuret)
+    Instead of computing the last layer gradient (as GradNorm does), here, the selection proxy is the loss. Hence,
+    a higher loss means a higher probability of being selected. This version is cheaper but less accurate.
+    """
+
     def __init__(
-        self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, per_sample_loss: Any
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        batch_size: int,
+        params_from_selector: dict,
+        per_sample_loss: Any,
+        device: str,
     ) -> None:
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector)
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
 
         self.per_sample_loss_fct = per_sample_loss
         self.probabilities: list[torch.Tensor] = []
@@ -25,14 +38,21 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         self.index_sampleid_map: list[int] = []
         self.number_of_points_seen = 0
 
-    def inform_samples(self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor) -> None:
+    def inform_samples(
+        self,
+        sample_ids: list[int],
+        forward_output: torch.Tensor,
+        target: torch.Tensor,
+        embedding: Optional[torch.Tensor] = None,
+    ) -> None:
         scores = self.get_scores(forward_output, target)
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
         self.index_sampleid_map += sample_ids
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
-        target_size = int(self.downsampling_ratio * self.number_of_points_seen / 100)
+        # select always at least 1 point
+        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / 100), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
         probabilities = probabilities / probabilities.sum()

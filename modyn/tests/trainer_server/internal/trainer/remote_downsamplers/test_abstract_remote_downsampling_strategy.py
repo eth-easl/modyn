@@ -11,7 +11,7 @@ def test_batch_then_sample_general():
     downsampling_ratio = 50
 
     params_from_selector = {"downsampling_ratio": downsampling_ratio}
-    sampler = AbstractRemoteDownsamplingStrategy(154, 128, 64, params_from_selector)
+    sampler = AbstractRemoteDownsamplingStrategy(154, 128, 64, params_from_selector, "cpu")
 
     assert hasattr(sampler, "downsampling_ratio")
     assert sampler.downsampling_ratio == 50

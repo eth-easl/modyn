@@ -59,6 +59,7 @@ ignore-paths=^modyn/trainer_server/internal/grpc/generated/.*$,
              ^modyn/models/dlrm/cuda_src/.*$,
              ^modyn/models/dlrm/utils/.*$,
              ^modyn/models/dlrm/nn/.*$,
+             ^modyn/trainer_server/internal/trainer/remote_downsamplers/deepcore_utils/.*$,
 
 # Files or directories matching the regex patterns are skipped. The regex
 # matches against base names, not paths. The default value ignores Emacs file
