@@ -13,8 +13,8 @@ from modyn.utils import MAX_MESSAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
-PROCESS_THREAD_WORKERS = 16
-NUM_GPRC_PROCESSES = 64
+PROCESS_THREAD_WORKERS = 4
+NUM_GPRC_PROCESSES = 2
 
 
 @contextlib.contextmanager
