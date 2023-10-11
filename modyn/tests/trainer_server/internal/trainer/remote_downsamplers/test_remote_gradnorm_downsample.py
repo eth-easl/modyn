@@ -14,7 +14,7 @@ def test_sample_shape_ce():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
-    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,))
@@ -42,7 +42,7 @@ def test_sample_shape_other_losses():
     per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
 
     params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
-    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
 
     data = torch.randn(8, 10)
     target = torch.randint(2, size=(8,), dtype=torch.float32).unsqueeze(1)
@@ -81,13 +81,13 @@ def test_sampling_crossentropy():
     }
 
     # Here we use autograd since the number of classes is not provided
-    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
     forward_outputs = model(data)
 
     sampler.inform_samples(ids, forward_outputs, target)
     _, autograd_weights = sampler.select_points()
     # Here we use the closed form shortcut
-    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
 
     sampler.inform_samples(ids, forward_outputs, target)
     _, closed_form_weights = sampler.select_points()
@@ -125,7 +125,7 @@ def test_sample_dict_input():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False}
-    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct)
+    sampler = RemoteGradNormDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
 
     forward_outputs = model(data)
 

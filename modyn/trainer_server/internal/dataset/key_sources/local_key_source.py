@@ -15,6 +15,8 @@ class LocalKeySource(AbstractKeySource):
         path = self._trigger_sample_storage.get_file_path(self._pipeline_id, self._trigger_id, partition_id, worker_id)
         tuples_list = self._trigger_sample_storage._parse_file(path)
 
+        if len(tuples_list) == 0:
+            return [], []
         keys, weights = zip(*tuples_list)
 
         return list(keys), list(weights)
