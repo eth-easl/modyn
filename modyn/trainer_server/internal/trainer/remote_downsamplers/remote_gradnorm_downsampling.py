@@ -33,8 +33,11 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
                 # softmax to the forward output to obtain the probabilities
                 probs = torch.nn.functional.softmax(forward_output, dim=1)
                 num_classes = forward_output.shape[-1]
-                # pylint: disable=E1102
-                one_hot_targets = torch.nn.functional.one_hot(target, num_classes=num_classes)
+                # Pylint complains torch.nn.functional.one_hot is not callable for whatever reason
+                one_hot_targets = torch.nn.functional.one_hot(  # pylint: disable=not-callable
+                    target, num_classes=num_classes
+                )
+
                 scores = torch.norm(probs - one_hot_targets, dim=-1)
         else:
             sample_losses = self.per_sample_loss_fct(forward_output, target)
