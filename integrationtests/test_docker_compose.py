@@ -28,6 +28,9 @@ def storage_running() -> bool:
     if not grpc_connection_established(storage_channel):
         print(f"Could not establish gRPC connection to storage at {storage_address}. Retrying.")
         return False
+    
+    print("Sucessfully connected to storage!")
+
 
     return True
 
@@ -41,6 +44,9 @@ def model_storage_running() -> bool:
     if not grpc_connection_established(model_storage_channel):
         print(f"Could not establish gRPC connection to model storage at {model_storage_address}. Retrying.")
         return False
+    
+    print("Sucessfully connected to model storage!")
+
 
     return True
 
@@ -54,6 +60,8 @@ def evaluator_running() -> bool:
     if not grpc_connection_established(evaluator_channel):
         print(f"Could not establish gRPC connection to evaluator at {evaluator_address}. Retrying.")
         return False
+    
+    print("Sucessfully connected to evaluator!")
 
     return True
 
@@ -67,6 +75,9 @@ def trainer_server_running() -> bool:
     if not grpc_connection_established(trainer_server_channel):
         print(f"Could not establish gRPC connection to trainer server at {trainer_server_address}. Retrying.")
         return False
+    
+    print("Sucessfully connected to trainer server!")
+
 
     return True
 
@@ -82,6 +93,8 @@ def storage_db_running() -> bool:
             password=config["storage"]["database"]["password"],
             connect_timeout=5,
         )
+
+        print("Sucessfully connected to storage database!")
 
         return True
     except (Exception, psycopg2.DatabaseError) as error:
@@ -101,6 +114,8 @@ def metadata_db_running() -> bool:
             connect_timeout=5,
         )
 
+        print("Sucessfully connected to metadata database!")
+
         return True
     except (Exception, psycopg2.DatabaseError) as error:
         print("Error while connecting to the database: " + str(error))
@@ -116,6 +131,8 @@ def selector_running() -> bool:
     if not grpc_connection_established(selector_channel):
         print(f"Could not establish gRPC connection to selector at {selector_address}. Retrying.")
         return False
+    
+    print("Sucessfully connected to selector!")
 
     return True
 
