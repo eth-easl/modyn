@@ -196,7 +196,8 @@ void StorageServiceImpl::send_get_new_data_since_response(
   int64_t number_of_samples;
   session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
   soci::rowset<soci::row> rs =
-      (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
+      (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id",
+       soci::use(file_id));
 
   modyn::storage::GetNewDataSinceResponse response;
   for (auto it = rs.begin(); it != rs.end(); ++it) {

@@ -114,10 +114,11 @@ target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic -Wno-depreca
 message(STATUS "Making gRPC available (this may take a while).")
 
 set(gRPC_PROTOBUF_PROVIDER "module" CACHE BOOL "" FORCE)
+set(ABSL_ENABLE_INSTALL ON)  # https://github.com/protocolbuffers/protobuf/issues/12185
 FetchContent_Declare(
   gRPC
   GIT_REPOSITORY https://github.com/grpc/grpc
-  GIT_TAG        v1.59.1
+  GIT_TAG        v1.54.0
   GIT_SHALLOW TRUE
 )
 set(gRPC_BUILD_TESTS OFF CACHE BOOL "" FORCE)
