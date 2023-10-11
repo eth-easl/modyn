@@ -136,13 +136,13 @@ jobs:
   integrationtests:
     timeout-minutes: 90
     runs-on: ubuntu-latest
-    needs:
-      - flake8
-      - mypy-typechecking
-      - pylint
-      - unittests
-      - isort
-      - black
+#    needs:
+#      - flake8
+#      - mypy-typechecking
+#      - pylint
+#      - unittests
+#      - isort
+#      - black
 
     steps:
       - name: Check out code
