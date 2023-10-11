@@ -76,8 +76,13 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         assert embedding is not None
 
         # Slightly different implementation for BTS and STB since in STB points are supplied class by class while in
-        # BTS are not. STB will always use the first branch, STB will typically (might use the first if all the points
+        # BTS are not. STB will always use the first branch, BTS will typically (might use the first if all the points
         # belong to the same class) use the second one
+        # The problem with CRAIG is that the algorithm considers class when selecting points. This is not a problem in
+        # STB since there is a dedicated dataloader to receive the samples as desired. In BTS it is different because
+        # potentially in the same batch, there could be samples from different classes. If this happens, the algorithm
+        # is used in a different way (receiving samples class by class, emulating what happens in STB).
+
         different_targets_in_this_batch = target.unique()
         if len(different_targets_in_this_batch) == 1:
             self._inform_samples_single_class(sample_ids, forward_output, target, embedding)
