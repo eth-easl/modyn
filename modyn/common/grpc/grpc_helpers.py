@@ -14,7 +14,10 @@ from modyn.utils import MAX_MESSAGE_SIZE
 logger = logging.getLogger(__name__)
 
 # Minimum 2 processes and 4 threads per process, currently max 64 processes
-NUM_GPRC_PROCESSES = max(2, min(64, os.cpu_count()))
+CPU_CORES = os.cpu_count()
+if CPU_CORES is None:  # cannot do that in single expression due to mypy...
+    CPU_CORES = 64
+NUM_GPRC_PROCESSES = max(2, min(64, CPU_CORES))
 PROCESS_THREAD_WORKERS = max(4, int(NUM_GPRC_PROCESSES / 4))
 
 

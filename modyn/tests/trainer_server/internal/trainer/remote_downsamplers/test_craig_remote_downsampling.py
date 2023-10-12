@@ -1,3 +1,4 @@
+# pylint: disable=too-many-locals
 import numpy as np
 import torch
 from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import (
@@ -471,5 +472,5 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
     assert len(selected_weights) == 5
 
     # Allow for flakyness with two options
-    assert selected_samples_deepcore == selected_samples or selected_samples_deepcore2 == selected_samples
+    assert selected_samples in (selected_samples_deepcore, selected_samples_deepcore2)
     assert selected_weights_deepcore == selected_weights.tolist()
