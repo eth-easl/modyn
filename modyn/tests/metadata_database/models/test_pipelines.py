@@ -19,9 +19,7 @@ def session():
 
 
 def test_add_pipeline(session):
-    pipeline = Pipeline(
-        num_workers=10,
-    )
+    pipeline = Pipeline(num_workers=10, selection_strategy="{}")
     session.add(pipeline)
     session.commit()
 
@@ -30,9 +28,7 @@ def test_add_pipeline(session):
 
 
 def test_update_pipeline(session):
-    pipeline = Pipeline(
-        num_workers=10,
-    )
+    pipeline = Pipeline(num_workers=10, selection_strategy="{}")
     session.add(pipeline)
     session.commit()
 
@@ -41,12 +37,11 @@ def test_update_pipeline(session):
 
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first() is not None
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().num_workers == 20
+    assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().selection_strategy == "{}"
 
 
 def test_delete_pipeline(session):
-    pipeline = Pipeline(
-        num_workers=10,
-    )
+    pipeline = Pipeline(num_workers=10, selection_strategy="{}")
     session.add(pipeline)
     session.commit()
 

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from modyn.storage.internal.database.storage_database_connection import StorageDatabaseConnection
-from modyn.storage.internal.grpc.grpc_server import GRPCServer
+from modyn.storage.internal.grpc.grpc_server import StorageGRPCServer
 from modyn.storage.storage import Storage
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -76,7 +76,7 @@ class MockGRPCInstance:
         return
 
 
-class MockGRPCServer(GRPCServer):
+class MockGRPCServer(StorageGRPCServer):
     def __enter__(self):
         return MockGRPCInstance()
 
@@ -94,7 +94,7 @@ def test_validate_config():
     assert storage._validate_config()[0]
 
 
-@patch("modyn.storage.storage.GRPCServer", MockGRPCServer)
+@patch("modyn.storage.storage.StorageGRPCServer", MockGRPCServer)
 def test_run():
     with StorageDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()

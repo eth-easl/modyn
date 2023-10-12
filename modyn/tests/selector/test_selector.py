@@ -21,15 +21,16 @@ class MockStrategy(AbstractSelectionStrategy):
 
 
 def test_init():
-    selec = Selector(MockStrategy(), 42, 2)
+    selec = Selector(MockStrategy(), 42, 2, {})
     assert selec._pipeline_id == 42
     assert selec._num_workers == 2
 
 
 def test_get_sample_keys_and_weight_cached():
-    selector = Selector(MockStrategy(), 42, 3)
+    selector = Selector(MockStrategy(), 42, 3, {})
     selector._trigger_cache[42] = [[(10, 1.0), (11, 1.0)], [(12, 1.0), (13, 1.0)]]
     selector._trigger_partition_cache[42] = 2
+    selector._trigger_size_cache[42] = 4
 
     result = selector.get_sample_keys_and_weights(42, 0, 0)
     assert result == [(10, 1.0)]
@@ -46,9 +47,10 @@ def test_get_sample_keys_and_weight_cached():
 
 @patch.object(MockStrategy, "get_trigger_partition_keys")
 def test_get_sample_keys_and_weight_no_cache(test_get_trigger_partition_keys: MagicMock):
-    selector = Selector(MockStrategy(), 42, 3)
+    selector = Selector(MockStrategy(), 42, 3, {})
     selector._trigger_partition_cache[42] = 2
     test_get_trigger_partition_keys.return_value = [(10, 1.0), (11, 1.0)]
+    selector._trigger_size_cache[42] = 2
 
     result = selector.get_sample_keys_and_weights(42, 2, 0)
     assert result == [(10, 1.0), (11, 1.0)]
@@ -59,7 +61,7 @@ def test_get_sample_keys_and_weight_no_cache(test_get_trigger_partition_keys: Ma
 
 @patch.object(MockStrategy, "inform_data")
 def test_inform_data(test_inform_data: MagicMock):
-    selector = Selector(MockStrategy(), 42, 3)
+    selector = Selector(MockStrategy(), 42, 3, {})
     selector.inform_data([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
 
     test_inform_data.assert_called_once_with([10, 11, 12], [0, 1, 2], ["cat", "dog", "cat"])
@@ -71,7 +73,7 @@ def test_inform_data(test_inform_data: MagicMock):
 def test_inform_data_and_trigger_caching(
     test_get_trigger_partition_keys: MagicMock, test_trigger: MagicMock, test_inform_data: MagicMock
 ):
-    selector = Selector(MockStrategy(), 42, 3)
+    selector = Selector(MockStrategy(), 42, 3, {})
     assert selector._current_keys_in_cache == 0
 
     test_trigger.return_value = (42, 2, 2, {})  # 2 keys in trigger, 2 partitions
@@ -88,6 +90,7 @@ def test_inform_data_and_trigger_caching(
     # This test configures the selector to store the partitions in memory
     assert selector._trigger_cache[42] == [[(10, 1.0)], [(10, 1.0)]]
     assert selector._trigger_partition_cache[42] == 2
+    assert selector._trigger_size_cache[42] == 2
 
 
 @patch.object(MockStrategy, "inform_data")
@@ -96,7 +99,7 @@ def test_inform_data_and_trigger_caching(
 def test_inform_data_and_trigger_nocaching(
     test_get_trigger_partition_keys: MagicMock, test_trigger: MagicMock, test_inform_data: MagicMock
 ):
-    selector = Selector(MockStrategy(), 42, 3)
+    selector = Selector(MockStrategy(), 42, 3, {})
     assert selector._current_keys_in_cache == 0
 
     test_trigger.return_value = (42, 2, 2, {})  # 2 keys in trigger, 2 partitions
@@ -116,8 +119,9 @@ def test_inform_data_and_trigger_nocaching(
 
 
 def test_get_number_of_samples():
-    selector = Selector(MockStrategy(), 42, 3)
+    selector = Selector(MockStrategy(), 42, 3, {})
     selector._trigger_size_cache[42] = 2
+    selector._trigger_partition_cache[42] = 1
 
     assert selector.get_number_of_samples(42) == 2
 
@@ -126,8 +130,9 @@ def test_get_number_of_samples():
 
 
 def test_get_number_of_partitions():
-    selector = Selector(MockStrategy(), 42, 3)
+    selector = Selector(MockStrategy(), 42, 3, {})
     selector._trigger_partition_cache[42] = 2
+    selector._trigger_size_cache[42] = 2
 
     assert selector.get_number_of_partitions(42) == 2
 

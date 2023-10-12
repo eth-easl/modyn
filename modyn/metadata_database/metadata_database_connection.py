@@ -67,16 +67,17 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         """
         MetadataBase.metadata.create_all(self.engine)
 
-    def register_pipeline(self, num_workers: int) -> int:
+    def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """Register a new pipeline in the database.
 
         Args:
             num_workers (int): Number of workers in the pipeline.
+            selection_strategy (str): The selection strategy to use
 
         Returns:
             int: Id of the newly created pipeline.
         """
-        pipeline = Pipeline(num_workers=num_workers)
+        pipeline = Pipeline(num_workers=num_workers, selection_strategy=selection_strategy)
         self.session.add(pipeline)
         self.session.commit()
         pipeline_id = pipeline.pipeline_id

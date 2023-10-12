@@ -43,13 +43,13 @@ def setup():
     with MetadataDatabaseConnection(get_modyn_config()) as database:
         database.create_tables()
 
-        pipeline_id = database.register_pipeline(1)
+        pipeline_id = database.register_pipeline(1, "{}")
         trigger = Trigger(trigger_id=10, pipeline_id=pipeline_id)
 
         database.session.add(trigger)
         database.session.commit()
 
-        pipeline2 = database.register_pipeline(4)
+        pipeline2 = database.register_pipeline(4, "{}")
         trigger2 = Trigger(trigger_id=50, pipeline_id=pipeline2)
 
         database.session.add(trigger2)

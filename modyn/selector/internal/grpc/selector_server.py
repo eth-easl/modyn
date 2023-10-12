@@ -1,41 +1,44 @@
 import logging
-from concurrent import futures
+from typing import Any
 
-import grpc
+from modyn.common.grpc import GenericGRPCServer
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import add_SelectorServicer_to_server  # noqa: E402, E501
 from modyn.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
 from modyn.selector.internal.selector_manager import SelectorManager
-from modyn.utils import MAX_MESSAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
 
-class SelectorServer:
+class SelectorGRPCServer(GenericGRPCServer):
+    @staticmethod
+    def callback(modyn_config: dict, server: Any, selector_manager: SelectorManager) -> None:
+        add_SelectorServicer_to_server(
+            SelectorGRPCServicer(selector_manager, modyn_config["selector"]["sample_batch_size"]), server
+        )
+
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
         self.selector_manager = SelectorManager(modyn_config)
-        self.grpc_servicer = SelectorGRPCServicer(
-            self.selector_manager, self.modyn_config["selector"]["sample_batch_size"]
-        )
-        self._add_servicer_to_server_func = add_SelectorServicer_to_server
 
-    def prepare_server(self) -> grpc.server:
-        server = grpc.server(
-            futures.ThreadPoolExecutor(max_workers=10),
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
-        self._add_servicer_to_server_func(self.grpc_servicer, server)
-        return server
+        callback_kwargs = {"selector_manager": self.selector_manager}
+        super().__init__(modyn_config, modyn_config["selector"]["port"], SelectorGRPCServer.callback, callback_kwargs)
 
-    def run(self) -> None:
-        server = self.prepare_server()
-        logger.info(f"Starting server. Listening on port {self.modyn_config['selector']['port']}.")
-        server.add_insecure_port("[::]:" + self.modyn_config["selector"]["port"])
-        server.start()
-        server.wait_for_termination()
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        if "add_servicer_callback" in state:
+            del state["add_servicer_callback"]
+
+        return state
+
+    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
+        """Exit the context manager.
+
+        Args:
+            exc_type (type): exception type
+            exc_val (Exception): exception value
+            exc_tb (Exception): exception traceback
+        """
+        super().__exit__(exc_type, exc_val, exc_tb)
         if (
             "cleanup_trigger_samples_after_shutdown" in self.modyn_config["selector"]
             and self.modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"]

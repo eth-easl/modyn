@@ -271,7 +271,7 @@ def test_storage() -> None:
 
     add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
 
-    for i in range(20):
+    for i in range(60):
         responses = list(get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1))
         assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
         if len(responses) == 1:

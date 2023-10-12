@@ -68,7 +68,7 @@ def delete_dummy_file_from_trainer(config: dict):
 
 def insert_trigger_into_database(config: dict) -> (int, int):
     with MetadataDatabaseConnection(config) as database:
-        pipeline_id = database.register_pipeline(2)
+        pipeline_id = database.register_pipeline(2, "{}")
 
         trigger = Trigger(trigger_id=10, pipeline_id=pipeline_id)
         database.session.add(trigger)

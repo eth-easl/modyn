@@ -44,7 +44,6 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
                 one_hot_targets = torch.nn.functional.one_hot(  # pylint: disable=not-callable
                     target, num_classes=num_classes
                 )
-
                 scores = torch.norm(probs - one_hot_targets, dim=-1)
         else:
             sample_losses = self.per_sample_loss_fct(forward_output, target)
