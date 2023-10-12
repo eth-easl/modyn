@@ -25,15 +25,16 @@ set(
 
   unit/storage_test.cpp
   unit/internal/file_watcher/file_watcher_test.cpp
-  unit/internal/file_watcher/file_watchdog_test.cpp
+  unit/internal/file_watcher/file_watcher_watchdog_test.cpp
   unit/internal/database/storage_database_connection_test.cpp
   unit/internal/file_wrapper/single_sample_file_wrapper_test.cpp
   unit/internal/file_wrapper/mock_file_wrapper.hpp
   unit/internal/file_wrapper/binary_file_wrapper_test.cpp
   unit/internal/file_wrapper/csv_file_wrapper_test.cpp
-  unit/internal/utils/utils_test.cpp
+  unit/internal/file_wrapper/file_wrapper_utils_test.cpp
   unit/internal/filesystem_wrapper/local_filesystem_wrapper_test.cpp
   unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp
+  unit/internal/filesystem_wrapper/filesystem_wrapper_utils_test.cpp
   unit/internal/grpc/storage_service_impl_test.cpp
 )
 

@@ -4,6 +4,7 @@
 
 #include "test_utils.hpp"
 
+using namespace storage::test;
 using namespace storage;
 
 class StorageTest : public ::testing::Test {
@@ -15,6 +16,6 @@ class StorageTest : public ::testing::Test {
 
 TEST_F(StorageTest, TestStorage) {
   const std::string config_file = "config.yaml";
-  storage::Storage storage(config_file);
+  Storage storage(config_file);
   storage.run();
 }

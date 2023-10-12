@@ -17,7 +17,7 @@ void Storage::run() {
   std::thread file_watcher_watchdog_thread(&file_watcher::FileWatcherWatchdog::run, &file_watcher_watchdog_);
 
   // Start the storage grpc server
-  std::thread grpc_server_thread(&storage::grpc::StorageGrpcServer::run, &grpc_server_);
+  std::thread grpc_server_thread(&grpc::StorageGrpcServer::run, &grpc_server_);
 
   // Create a condition variable to wait for the file watcher watchdog or gRPC server to exit.
   std::condition_variable cv;

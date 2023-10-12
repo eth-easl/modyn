@@ -44,6 +44,9 @@ class FileWatcher {
     if (config_["storage"]["sample_dbinsertion_batchsize"]) {
       sample_dbinsertion_batchsize_ = config_["storage"]["sample_dbinsertion_batchsize"].as<int64_t>();
     }
+    if (config["storage"]["force_fallback"]) {
+      force_fallback_ = config["storage"]["force_fallback"].as<bool>();
+    }
     soci::session session = storage_database_connection_.get_session();
 
     std::string dataset_path;
@@ -84,10 +87,11 @@ class FileWatcher {
                                 const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
                                 const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
                                 const int64_t dataset_id, const YAML::Node& file_wrapper_config,
-                                const YAML::Node& config, const int64_t sample_dbinsertion_batchsize);
+                                const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
+                                const bool force_fallback);
   void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
   static void insert_file_frame(storage::database::StorageDatabaseConnection storage_database_connection,
-                                const std::vector<FileFrame>& file_frame);
+                                const std::vector<FileFrame>& file_frame, const bool force_fallback);
   void seek_dataset();
   void seek();
   static bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
@@ -105,6 +109,7 @@ class FileWatcher {
   int16_t insertion_threads_;
   bool disable_multithreading_;
   int64_t sample_dbinsertion_batchsize_ = 1000000;
+  bool force_fallback_ = false;
   storage::database::StorageDatabaseConnection storage_database_connection_;
   std::string dataset_path_;
   storage::filesystem_wrapper::FilesystemWrapperType filesystem_wrapper_type_;

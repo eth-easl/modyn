@@ -60,7 +60,7 @@ properties:
       force_fallback_insert:
         type: boolean
         description: |
-          When enabled, always use SQLAlchemy insert functionality instead of potentially optimized techniques.
+          When enabled, always use fallback insert functionality instead of potentially optimized techniques.
       datasets:
         type: array
         items:

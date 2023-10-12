@@ -67,6 +67,10 @@ void StorageDatabaseConnection::create_tables() const {
   session << file_table_sql;
 
   session << sample_table_sql;
+
+  if (drivername_ == DatabaseDriver::POSTGRESQL && sample_table_unlogged_) {
+    session << "ALTER TABLE samples SET UNLOGGED";
+  }
 }
 
 bool StorageDatabaseConnection::add_dataset(

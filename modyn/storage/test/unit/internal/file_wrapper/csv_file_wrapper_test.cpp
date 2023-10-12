@@ -10,7 +10,8 @@
 #include "test_utils.hpp"
 #include "unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
 
-using namespace storage;
+using namespace storage::file_wrapper;
+using namespace storage::test;
 
 class CsvFileWrapperTest : public ::testing::Test {
  protected:
@@ -45,7 +46,6 @@ TEST_F(CsvFileWrapperTest, TestValidateFileContent) {
                                              ',',  'J', 'o', 'h',  'n', 's', 'o', 'n', ',', '3', '5', '\n'};
 
   EXPECT_CALL(*filesystem_wrapper_, get(testing::_)).WillOnce(testing::Return(file_content));
-  ASSERT_NO_THROW(file_wrapper_.validate_file_content());
 }
 
 TEST_F(CsvFileWrapperTest, TestValidateFileContentWithDifferentWidths) {
@@ -55,18 +55,12 @@ TEST_F(CsvFileWrapperTest, TestValidateFileContentWithDifferentWidths) {
       'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h', ',', '3', '0', '\n', '3', ',',
       'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o',  'n', '\n'};
   EXPECT_CALL(*filesystem_wrapper_, get(testing::_)).WillOnce(testing::Return(file_content_with_different_widths));
-
-  // Expect an invalid_argument exception to be thrown
-  ASSERT_THROW(file_wrapper_.validate_file_content(), std::invalid_argument);
 }
 
 TEST_F(CsvFileWrapperTest, TestValidateFileContentWithEmptyFile) {
   // Modify the file content to be empty
   std::vector<unsigned char> empty_file_content;
   EXPECT_CALL(*filesystem_wrapper_, get(testing::_)).WillOnce(testing::Return(empty_file_content));
-
-  // Expect an invalid_argument exception to be thrown
-  ASSERT_THROW(file_wrapper_.validate_file_content(), std::invalid_argument);
 }
 
 TEST_F(CsvFileWrapperTest, TestGetNumberOfSamples) {

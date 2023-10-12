@@ -88,7 +88,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   if (disable_multithreading_) {
     FileWatcher::handle_file_paths(file_paths, data_file_extension, file_wrapper_type, timestamp,
                                    filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
-                                   sample_dbinsertion_batchsize_);
+                                   sample_dbinsertion_batchsize_, force_fallback_);
   } else {
     std::vector<std::thread> threads(insertion_threads_);
     const int16_t chunk_size = file_paths.size() / insertion_threads_;
@@ -103,7 +103,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
                                         &file_wrapper_config_node]() mutable {
         FileWatcher::handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
                                        filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
-                                       sample_dbinsertion_batchsize_);
+                                       sample_dbinsertion_batchsize_, force_fallback_);
       }));
     }
 
@@ -170,7 +170,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
                                     const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
                                     const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
                                     const int64_t dataset_id, const YAML::Node& file_wrapper_config,
-                                    const YAML::Node& config, const int64_t sample_dbinsertion_batchsize) {
+                                    const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
+                                    const bool force_fallback) {
   storage::database::StorageDatabaseConnection storage_database_connection(config);
   soci::session session = storage_database_connection.get_session();
 
@@ -217,7 +218,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       int32_t index = 0;
       for (const auto& label : labels) {
         if (inserted_samples == sample_dbinsertion_batchsize) {
-          insert_file_frame(storage_database_connection, file_frame);
+          insert_file_frame(storage_database_connection, std::move(file_frame), force_fallback);
           file_frame.clear();
           inserted_samples = 0;
         }
@@ -229,13 +230,13 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
     if (!file_frame.empty()) {
       // Move the file_frame vector into the insertion function.
-      insert_file_frame(storage_database_connection, std::move(file_frame));
+      insert_file_frame(storage_database_connection, std::move(file_frame), force_fallback);
     }
   }
 }
 
 void FileWatcher::insert_file_frame(storage::database::StorageDatabaseConnection storage_database_connection,
-                                    const std::vector<FileFrame>& file_frame) {
+                                    const std::vector<FileFrame>& file_frame, const bool force_fallback) {
   switch (storage_database_connection.get_drivername()) {
     case storage::database::DatabaseDriver::POSTGRESQL:
       postgres_copy_insertion(file_frame, storage_database_connection);

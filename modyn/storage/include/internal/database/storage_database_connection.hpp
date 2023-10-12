@@ -29,6 +29,9 @@ class StorageDatabaseConnection {
     if (config["storage"]["database"]["hash_partition_modulus"]) {
       hash_partition_modulus_ = config["storage"]["database"]["hash_partition_modulus"].as<int16_t>();
     }
+    if (config["storage"]["sample_table_unlogged"]) {
+      sample_table_unlogged_ = config["storage"]["sample_table_unlogged"].as<bool>();
+    }
   }
   void create_tables() const;
   bool add_dataset(const std::string& name, const std::string& base_path,
@@ -47,6 +50,7 @@ class StorageDatabaseConnection {
   std::string host_;
   std::string port_;
   std::string database_;
+  bool sample_table_unlogged_ = false;
   int16_t hash_partition_modulus_ = 8;
   DatabaseDriver drivername_;
   static DatabaseDriver get_drivername(const YAML::Node& config);

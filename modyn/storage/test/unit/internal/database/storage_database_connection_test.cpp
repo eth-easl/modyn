@@ -8,7 +8,8 @@
 
 #include "test_utils.hpp"
 
-using namespace storage;
+using namespace storage::database;
+using namespace storage::test;
 
 class StorageDatabaseConnectionTest : public ::testing::Test {
  protected:
@@ -21,23 +22,23 @@ class StorageDatabaseConnectionTest : public ::testing::Test {
 
 TEST_F(StorageDatabaseConnectionTest, TestGetSession) {
   YAML::Node config = TestUtils::get_dummy_config();  // NOLINT
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.get_session());
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestWrongParameterGetSession) {
   YAML::Node config = TestUtils::get_dummy_config();  // NOLINT
   config["storage"]["database"]["drivername"] = "invalid";
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_THROW(connection.get_session(), std::runtime_error);
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
   const YAML::Node config = TestUtils::get_dummy_config();
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
-  const storage::StorageDatabaseConnection connection2 = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection2(config);
   soci::session session = connection2.get_session();
 
   const soci::rowset<soci::row> tables = (session.prepare << "SELECT name FROM sqlite_master WHERE type='table';");
@@ -53,23 +54,23 @@ TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
 TEST_F(StorageDatabaseConnectionTest, TestCreateTablesInvalidDriver) {
   YAML::Node config = TestUtils::get_dummy_config();  // NOLINT
   config["storage"]["database"]["drivername"] = "invalid";
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_THROW(connection.create_tables(), std::runtime_error);
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestAddSampleDatasetPartitionInvalidDriver) {
   YAML::Node config = TestUtils::get_dummy_config();  // NOLINT
   config["storage"]["database"]["drivername"] = "invalid";
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_THROW(connection.add_sample_dataset_partition("test_dataset"), std::runtime_error);
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
   const YAML::Node config = TestUtils::get_dummy_config();
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
-  const storage::StorageDatabaseConnection connection2 = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection2(config);
   soci::session session = connection2.get_session();
 
   // Assert no datasets exist
@@ -78,9 +79,10 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
   ASSERT_EQ(number_of_datasets, 0);
 
   // Add dataset
-  ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
-                                      FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
-                                      "test_file_wrapper_config", false, 0));
+  ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path",
+                                      storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+                                      storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                      "test_version", "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists
   session << "SELECT COUNT(*) FROM datasets;", soci::into(number_of_datasets);
@@ -92,18 +94,20 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
 
 TEST_F(StorageDatabaseConnectionTest, TestAddExistingDataset) {
   const YAML::Node config = TestUtils::get_dummy_config();
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
   // Add dataset
-  ASSERT_TRUE(connection.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
-                                     FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
-                                     "test_file_wrapper_config", false, 0));
+  ASSERT_TRUE(connection.add_dataset("test_dataset", "test_base_path",
+                                     storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+                                     storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                     "test_version", "test_file_wrapper_config", false, 0));
 
   // Add existing dataset
-  ASSERT_TRUE(connection.add_dataset("test_dataset", "test_base_path2", FilesystemWrapperType::LOCAL,
-                                     FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
-                                     "test_file_wrapper_config", false, 0));
+  ASSERT_TRUE(connection.add_dataset("test_dataset", "test_base_path2",
+                                     storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+                                     storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                     "test_version", "test_file_wrapper_config", false, 0));
 
   soci::session session = connection.get_session();
   std::string base_path;
@@ -113,10 +117,10 @@ TEST_F(StorageDatabaseConnectionTest, TestAddExistingDataset) {
 
 TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
   const YAML::Node config = TestUtils::get_dummy_config();
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
-  const storage::StorageDatabaseConnection connection2 = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection2(config);
   soci::session session = connection2.get_session();
 
   // Assert no datasets exist
@@ -125,9 +129,10 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
   ASSERT_EQ(number_of_datasets, 0);
 
   // Add dataset
-  ASSERT_NO_THROW(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
-                                          FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
-                                          "test_file_wrapper_config", false, 0));
+  ASSERT_NO_THROW(connection2.add_dataset("test_dataset", "test_base_path",
+                                          storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+                                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                          "test_version", "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists
   session << "SELECT COUNT(*) FROM datasets;", soci::into(number_of_datasets);
@@ -147,7 +152,7 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
 
 TEST_F(StorageDatabaseConnectionTest, TestDeleteNonExistingDataset) {
   const YAML::Node config = TestUtils::get_dummy_config();
-  const storage::StorageDatabaseConnection connection = storage::StorageDatabaseConnection(config);
+  const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
   // Delete non-existing dataset

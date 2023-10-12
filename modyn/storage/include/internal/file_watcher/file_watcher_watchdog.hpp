@@ -13,6 +13,7 @@
 #include "internal/utils/utils.hpp"
 
 namespace storage::file_watcher {
+  
 class FileWatcherWatchdog {
  public:
   FileWatcherWatchdog(const YAML::Node& config, std::atomic<bool>* stop_file_watcher_watchdog)

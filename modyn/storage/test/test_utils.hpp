@@ -5,7 +5,7 @@
 
 #include <fstream>
 
-namespace storage {
+namespace storage::test {
 class TestUtils {
  public:
   static void create_dummy_yaml();
