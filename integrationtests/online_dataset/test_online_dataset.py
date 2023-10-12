@@ -1,3 +1,4 @@
+import gc
 import json
 import math
 import os
@@ -5,7 +6,6 @@ import pathlib
 import random
 import shutil
 import time
-import gc
 from typing import Iterable, Tuple
 
 import grpc
