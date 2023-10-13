@@ -58,7 +58,7 @@ std::vector<int64_t> CsvFileWrapper::get_all_labels() {
   return labels;
 }
 
-int64_t CsvFileWrapper::get_number_of_samples() { return doc_.GetRowCount() - (ignore_first_line_ ? 1 : 0); }
+int64_t CsvFileWrapper::get_number_of_samples() { return doc_.GetRowCount(); }
 
 void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) {
   ASSERT(std::all_of(indices.begin(), indices.end(),

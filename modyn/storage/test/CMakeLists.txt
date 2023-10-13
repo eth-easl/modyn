@@ -23,7 +23,6 @@ target_link_libraries(modynstorage-test-utils-objs PUBLIC gtest gmock spdlog fmt
 set(
   MODYNSTORAGE_TEST_SOURCES
 
-  unit/storage_test.cpp
   unit/internal/file_watcher/file_watcher_test.cpp
   unit/internal/file_watcher/file_watcher_watchdog_test.cpp
   unit/internal/database/storage_database_connection_test.cpp

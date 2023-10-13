@@ -15,6 +15,6 @@ class TestUtils {
   static std::string get_dummy_file_wrapper_config_inline();
   static std::string join(const std::vector<std::string>& strings, const std::string& delimiter = "");
 };
-}  // namespace storage
+}  // namespace storage::test
 
 #endif

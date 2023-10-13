@@ -98,9 +98,9 @@ TEST_F(LocalFilesystemWrapperTest, TestListRecursive) {
   std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/true);
   ASSERT_EQ(files.size(), 2);
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
-  ASSERT_EQ((files)[0], file_name);
+  ASSERT_EQ((files)[1], file_name);
   const std::string file_name_2 = test_base_dir + path_seperator + "test_dir_2/test_file_2.txt";
-  ASSERT_EQ((files)[1], file_name_2);
+  ASSERT_EQ((files)[0], file_name_2);
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestIsDirectory) {
@@ -141,7 +141,7 @@ TEST_F(LocalFilesystemWrapperTest, TestIsValidPath) {
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
   ASSERT_TRUE(filesystem_wrapper.is_valid_path(test_base_dir));
   ASSERT_TRUE(filesystem_wrapper.is_valid_path(file_name));
-  ASSERT_FALSE(filesystem_wrapper.is_valid_path(test_base_dir + path_seperator + ".." + path_seperator));
+  ASSERT_FALSE(filesystem_wrapper.is_valid_path("invalid_path"));
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestRemove) {

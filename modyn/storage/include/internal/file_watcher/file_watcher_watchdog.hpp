@@ -13,7 +13,7 @@
 #include "internal/utils/utils.hpp"
 
 namespace storage::file_watcher {
-  
+
 class FileWatcherWatchdog {
  public:
   FileWatcherWatchdog(const YAML::Node& config, std::atomic<bool>* stop_file_watcher_watchdog)
@@ -26,6 +26,12 @@ class FileWatcherWatchdog {
     if (stop_file_watcher_watchdog_ == nullptr) {
       FAIL("stop_file_watcher_watchdog_ is nullptr.");
     }
+
+    if (config_["storage"]["file_watcher_watchdog_sleep_time_s"]) {
+      file_watcher_watchdog_sleep_time_s_ = config_["storage"]["file_watcher_watchdog_sleep_time_s"].as<int64_t>();
+    }
+
+    ASSERT(config_["storage"]["insertion_threads"], "Config does not contain insertion_threads");
   }
   void watch_file_watcher_threads();
   void start_file_watcher_thread(int64_t dataset_id, int16_t retries);
@@ -35,6 +41,7 @@ class FileWatcherWatchdog {
 
  private:
   YAML::Node config_;
+  int64_t file_watcher_watchdog_sleep_time_s_ = 3;
   std::map<int64_t, std::thread> file_watcher_threads_;
   std::map<int64_t, int16_t> file_watcher_dataset_retries_;
   std::map<int64_t, std::atomic<bool>> file_watcher_thread_stop_flags_;

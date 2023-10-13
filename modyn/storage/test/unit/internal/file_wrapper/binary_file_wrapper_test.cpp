@@ -2,6 +2,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
 #include <fstream>
@@ -41,7 +42,7 @@ TEST(BinaryFileWrapperTest, TestValidateRequestIndices) {
   ASSERT_NO_THROW(file_wrapper.get_sample(0));
   EXPECT_CALL(*filesystem_wrapper, get_file_size(testing::_)).WillOnce(testing::Return(8));
   BinaryFileWrapper file_wrapper2(file_name, config, filesystem_wrapper);
-  ASSERT_THROW(file_wrapper2.get_sample(8), std::out_of_range);
+  ASSERT_THROW(file_wrapper2.get_sample(8), storage::utils::ModynException);
 }
 
 TEST(BinaryFileWrapperTest, TestGetLabel) {
@@ -129,7 +130,7 @@ TEST(BinaryFileWrapperTest, TestGetSamples) {
   ASSERT_EQ(samples.size(), 1);
   ASSERT_EQ((samples)[0][0], 8);
 
-  ASSERT_THROW(file_wrapper.get_samples(4, 3), std::out_of_range);
+  ASSERT_THROW(file_wrapper.get_samples(4, 3), storage::utils::ModynException);
 
   samples = file_wrapper.get_samples(1, 2);
   ASSERT_EQ(samples.size(), 2);

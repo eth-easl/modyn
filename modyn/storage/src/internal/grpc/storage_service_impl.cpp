@@ -50,10 +50,8 @@ using namespace storage::grpc;
       send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type);
     }
   } else {
-    std::vector<std::thread> threads(retrieval_threads_);
-
     for (uint64_t i = 0; i < retrieval_threads_; i++) {
-      threads[i] = std::thread([&, i, keys_size, request_keys]() {
+      retrieval_threads_vector_[i] = std::thread([&, i, keys_size, request_keys]() {
         std::map<int64_t, SampleData> file_id_to_sample_data;
         // Get the sample data for the current thread
         uint64_t start_index = i * (keys_size / retrieval_threads_);
@@ -88,7 +86,7 @@ using namespace storage::grpc;
       });
     }
 
-    for (auto& thread : threads) {
+    for (auto& thread : retrieval_threads_vector_) {
       thread.join();
     }
   }
@@ -168,10 +166,8 @@ void StorageServiceImpl::send_get_response(
       send_get_new_data_since_response(writer, file_id);
     }
   } else {
-    std::vector<std::thread> threads(retrieval_threads_);
-
     for (uint64_t i = 0; i < retrieval_threads_; i++) {
-      threads[i] = std::thread([&, i, number_of_files, file_ids]() {
+      retrieval_threads_vector_[i] = std::thread([&, i, number_of_files, file_ids]() {
         uint64_t start_index = i * (number_of_files / retrieval_threads_);
         uint64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
         if (end_index > number_of_files) {
@@ -183,7 +179,7 @@ void StorageServiceImpl::send_get_response(
       });
     }
 
-    for (auto& thread : threads) {
+    for (auto& thread : retrieval_threads_vector_) {
       thread.join();
     }
   }
@@ -234,10 +230,8 @@ void StorageServiceImpl::send_get_new_data_since_response(
       send_get_new_data_in_interval_response(writer, file_id);
     }
   } else {
-    std::vector<std::thread> threads(retrieval_threads_);
-
     for (uint64_t i = 0; i < retrieval_threads_; i++) {
-      threads[i] = std::thread([&, i, number_of_files, file_ids]() {
+      retrieval_threads_vector_[i] = std::thread([&, i, number_of_files, file_ids]() {
         uint64_t start_index = i * (number_of_files / retrieval_threads_);
         uint64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
         if (end_index > number_of_files) {
@@ -249,7 +243,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
       });
     }
 
-    for (auto& thread : threads) {
+    for (auto& thread : retrieval_threads_vector_) {
       thread.join();
     }
   }

@@ -44,7 +44,7 @@ class FileWatcher {
     if (config_["storage"]["sample_dbinsertion_batchsize"]) {
       sample_dbinsertion_batchsize_ = config_["storage"]["sample_dbinsertion_batchsize"].as<int64_t>();
     }
-    if (config["storage"]["force_fallback"]) {
+    if (config_["storage"]["force_fallback"]) {
       force_fallback_ = config["storage"]["force_fallback"].as<bool>();
     }
     soci::session session = storage_database_connection_.get_session();
@@ -58,9 +58,9 @@ class FileWatcher {
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error while reading dataset path and filesystem wrapper type from database: {}", e.what());
       stop_file_watcher_->store(true);
-      // This is for testing purposes
-      filesystem_wrapper_type_int = 1;
+      return;
     }
+
     const auto filesystem_wrapper_type =
         static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type_int);
 
@@ -79,6 +79,10 @@ class FileWatcher {
       SPDLOG_ERROR("Dataset path {} does not exist or is not a directory.", dataset_path);
       stop_file_watcher_->store(true);
       return;
+    }
+
+    if (!disable_multithreading_) {
+      insertion_thread_pool_ = std::vector<std::thread>(insertion_threads_);
     }
   }
   std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper;
@@ -108,6 +112,7 @@ class FileWatcher {
   int64_t dataset_id_;
   int16_t insertion_threads_;
   bool disable_multithreading_;
+  std::vector<std::thread> insertion_thread_pool_;
   int64_t sample_dbinsertion_batchsize_ = 1000000;
   bool force_fallback_ = false;
   storage::database::StorageDatabaseConnection storage_database_connection_;

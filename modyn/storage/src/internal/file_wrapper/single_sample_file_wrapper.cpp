@@ -10,7 +10,7 @@
 using namespace storage::file_wrapper;
 
 int64_t SingleSampleFileWrapper::get_number_of_samples() {
-  ASSERT(!file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a file extension");
+  ASSERT(file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a file extension");
   const auto file_extension = file_wrapper_config_["file_extension"].as<std::string>();
 
   if (file_path_.find(file_extension) == std::string::npos) {
@@ -20,7 +20,7 @@ int64_t SingleSampleFileWrapper::get_number_of_samples() {
 }
 
 int64_t SingleSampleFileWrapper::get_label(int64_t /* index */) {
-  ASSERT(!file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a label file extension");
+  ASSERT(file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a label file extension");
   const auto label_file_extension = file_wrapper_config_["label_file_extension"].as<std::string>();
   auto label_path = std::filesystem::path(file_path_).replace_extension(label_file_extension);
 
@@ -55,7 +55,7 @@ std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples_fro
 }
 
 void SingleSampleFileWrapper::validate_file_extension() {
-  ASSERT(!file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a file extension");
+  ASSERT(file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a file extension");
 
   const auto file_extension = file_wrapper_config_["file_extension"].as<std::string>();
   if (file_path_.find(file_extension) == std::string::npos) {
@@ -64,7 +64,6 @@ void SingleSampleFileWrapper::validate_file_extension() {
 }
 
 void SingleSampleFileWrapper::delete_samples(const std::vector<int64_t>& /* indices */) {
-  filesystem_wrapper_->remove(file_path_);
-}
+}  // The file will be deleted at a higher level
 
 FileWrapperType SingleSampleFileWrapper::get_type() { return FileWrapperType::SINGLE_SAMPLE; }

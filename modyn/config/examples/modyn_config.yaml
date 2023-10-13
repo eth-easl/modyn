@@ -11,6 +11,7 @@ storage:
   insertion_threads: 8
   retrieval_threads: 8
   sample_table_unlogged: true
+  file_watcher_watchdog_sleep_time_s: 5
   datasets:
     [
       {

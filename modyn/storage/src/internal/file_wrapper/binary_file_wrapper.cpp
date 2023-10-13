@@ -99,7 +99,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
   for (int64_t i = record_start; i < record_end; i += record_size_) {
     unsigned char* sample_begin = data + i + label_size_;
     unsigned char* sample_end = sample_begin + sample_size_;
-    samples[i - record_start] = {sample_begin, sample_end};
+    samples[(i - record_start) / record_size_] = {sample_begin, sample_end};
   }
 
   return samples;

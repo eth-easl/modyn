@@ -29,8 +29,9 @@ class StorageServiceImplTest : public ::testing::Test {
     connection.create_tables();
 
     // Add a dataset to the database
-    connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL, storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE,
-                           "test description", "0.0.0", TestUtils::get_dummy_file_wrapper_config_inline(), true);
+    connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+                           storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                           TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
     soci::session session = connection.get_session();
     session << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'tmp/test_file.txt', "

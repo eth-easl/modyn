@@ -5,6 +5,9 @@
 #include <filesystem>
 #include <thread>
 
+#include "internal/file_watcher/file_watcher_watchdog.hpp"
+#include "internal/grpc/storage_grpc_server.hpp"
+
 using namespace storage;
 
 void Storage::run() {

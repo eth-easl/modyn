@@ -24,7 +24,7 @@ void StorageGrpcServer::run() {
   builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
 
-  grpc::Server server(builder.BuildAndStart());
+  auto server = builder.BuildAndStart();
   SPDLOG_INFO("Server listening on {}", server_address);
 
   {

@@ -37,6 +37,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       SPDLOG_INFO("Multithreading disabled.");
     } else {
       SPDLOG_INFO("Multithreading enabled.");
+      retrieval_threads_vector_ = std::vector<std::thread>(retrieval_threads_);
     }
   }
   ::grpc::Status Get(::grpc::ServerContext* context, const modyn::storage::GetRequest* request,
@@ -72,6 +73,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   uint64_t sample_batch_size_;
   uint64_t retrieval_threads_;
   bool disable_multithreading_;
+  std::vector<std::thread> retrieval_threads_vector_;
   storage::database::StorageDatabaseConnection storage_database_connection_;
   void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
                        std::map<int64_t, SampleData>& file_id_to_sample_data);

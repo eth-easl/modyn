@@ -61,6 +61,10 @@ properties:
         type: boolean
         description: |
           When enabled, always use fallback insert functionality instead of potentially optimized techniques.
+      file_watcher_watchdog_sleep_time_s:
+        type: number
+        description: |
+          The time in seconds the file watcher watchdog sleeps between checking if the file watchers are still alive.
       datasets:
         type: array
         items:

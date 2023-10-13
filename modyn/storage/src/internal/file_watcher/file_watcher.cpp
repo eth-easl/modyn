@@ -81,6 +81,14 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   const auto file_wrapper_type = static_cast<storage::file_wrapper::FileWrapperType>(file_wrapper_type_id);
 
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
+
+  if (!file_wrapper_config_node["file_extension"]) {
+    // Check this regularly, as it is a required field and should always be present.
+    SPDLOG_ERROR("Config does not contain file_extension");
+    stop_file_watcher_->store(true);
+    return;
+  }
+
   const auto data_file_extension = file_wrapper_config_node["file_extension"].as<std::string>();
 
   std::vector<std::string> file_paths = filesystem_wrapper->list(directory_path, /*recursive=*/true);
@@ -90,7 +98,6 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
                                    filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
                                    sample_dbinsertion_batchsize_, force_fallback_);
   } else {
-    std::vector<std::thread> threads(insertion_threads_);
     const int16_t chunk_size = file_paths.size() / insertion_threads_;
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
@@ -99,16 +106,15 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 
       std::vector<std::string> file_paths_thread(begin, end);
 
-      threads.emplace_back(std::thread([this, file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp,
-                                        &file_wrapper_config_node]() mutable {
-        FileWatcher::handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
-                                       filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
-                                       sample_dbinsertion_batchsize_, force_fallback_);
-      }));
+      insertion_thread_pool_[i] = std::thread(
+          [this, file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp, &file_wrapper_config_node]() {
+            FileWatcher::handle_file_paths(file_paths_thread, data_file_extension, file_wrapper_type, timestamp,
+                                           filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
+                                           sample_dbinsertion_batchsize_, force_fallback_);
+          });
     }
 
-    // join all threads
-    for (auto& thread : threads) {
+    for (auto& thread : insertion_thread_pool_) {
       thread.join();
     }
   }
@@ -172,6 +178,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
                                     const int64_t dataset_id, const YAML::Node& file_wrapper_config,
                                     const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
                                     const bool force_fallback) {
+  if (file_paths.empty()) {
+    return;
+  }
+
   storage::database::StorageDatabaseConnection storage_database_connection(config);
   soci::session session = storage_database_connection.get_session();
 
@@ -185,8 +195,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       valid_files.push_back(file_path);
     }
   }
-
-  SPDLOG_INFO("Found {} valid files", valid_files.size());
 
   if (!valid_files.empty()) {
     std::string file_path = valid_files.front();

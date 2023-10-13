@@ -51,6 +51,13 @@ std::string TestUtils::get_dummy_file_wrapper_config_inline() {
   std::string test_config = R"(
 file_extension: ".txt"
 label_file_extension: ".lbl"
+label_size: 1
+record_size: 2
+label_index: 0
+encoding: "utf-8"
+validate_file_content: false
+ignore_first_line: false
+separator: ','
 )";
   return test_config;
 }

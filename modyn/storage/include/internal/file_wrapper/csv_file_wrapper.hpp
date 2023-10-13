@@ -30,14 +30,20 @@ class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
       FAIL("The label_index must be a non-negative integer.");
     }
 
+    bool ignore_first_line = false;
     if (file_wrapper_config_["ignore_first_line"]) {
-      ignore_first_line_ = file_wrapper_config_["ignore_first_line"].as<bool>();
+      ignore_first_line = file_wrapper_config_["ignore_first_line"].as<bool>();
     } else {
-      ignore_first_line_ = false;
+      ignore_first_line = false;
     }
 
-    rapidcsv::Document doc_(path, rapidcsv::LabelParams(), rapidcsv::SeparatorParams(separator_, false, true),
-                            rapidcsv::ConverterParams());
+    ASSERT(filesystem_wrapper_->exists(path), "The file does not exist.");
+
+    rapidcsv::LabelParams label_params(ignore_first_line ? 1 : 0);
+
+    std::ifstream stream = filesystem_wrapper_->get_stream(path);
+
+    rapidcsv::Document doc_(stream, label_params, rapidcsv::SeparatorParams(separator_));
 
     validate_file_extension();
   }
@@ -56,7 +62,6 @@ class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
  private:
   char separator_;
   int64_t label_index_;
-  bool ignore_first_line_;
   rapidcsv::Document doc_;
 };
 }  // namespace storage::file_wrapper

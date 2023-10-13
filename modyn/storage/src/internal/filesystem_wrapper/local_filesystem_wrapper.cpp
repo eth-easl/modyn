@@ -23,10 +23,20 @@ std::vector<unsigned char> LocalFilesystemWrapper::get(const std::string& path) 
   return buffer;
 }
 
+std::ifstream LocalFilesystemWrapper::get_stream(const std::string& path) {
+  std::ifstream file;
+  file.open(path, std::ios::binary);
+  return file;
+}
+
 bool LocalFilesystemWrapper::exists(const std::string& path) { return std::filesystem::exists(path); }
 
 std::vector<std::string> LocalFilesystemWrapper::list(const std::string& path, bool recursive) {
   std::vector<std::string> paths = std::vector<std::string>();
+
+  if (!std::filesystem::exists(path)) {
+    return paths;
+  }
 
   if (recursive) {
     for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {

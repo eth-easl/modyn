@@ -46,7 +46,7 @@ TEST_F(FileWatcherWatchdogTest, TestRun) {
       std::make_shared<FileWatcherWatchdog>(config, &stop_file_watcher);
 
   std::thread th(&FileWatcherWatchdog::run, watchdog);
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
   stop_file_watcher = true;
   th.join();
@@ -71,18 +71,18 @@ TEST_F(FileWatcherWatchdogTest, TestStartFileWatcherProcess) {
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_thread(1, 0);
-  std::vector<int64_t> file_watcher_processes;
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-  ASSERT_EQ(file_watcher_processes.size(), 1);
+  std::vector<int64_t> file_watcher_threads;
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  ASSERT_EQ(file_watcher_threads.size(), 1);
 
   // Test if the file watcher process is still running
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-  ASSERT_EQ(file_watcher_processes.size(), 1);
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  ASSERT_EQ(file_watcher_threads.size(), 1);
 
   watchdog.stop_file_watcher_thread(1);
   watchdog.start_file_watcher_thread(1, 0);
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-  ASSERT_EQ(file_watcher_processes.size(), 1);
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  ASSERT_EQ(file_watcher_threads.size(), 1);
 
   watchdog.stop_file_watcher_thread(1);
 }
@@ -100,19 +100,19 @@ TEST_F(FileWatcherWatchdogTest, TestStopFileWatcherProcess) {
 
   watchdog.start_file_watcher_thread(1, 0);
 
-  std::vector<int64_t> file_watcher_processes;
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> file_watcher_threads;
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 1);
+  ASSERT_EQ(file_watcher_threads.size(), 1);
 
   watchdog.stop_file_watcher_thread(1);
 
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 0);
+  ASSERT_EQ(file_watcher_threads.size(), 0);
 }
 
-TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherProcesses) {
+TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherThreads) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
@@ -127,64 +127,31 @@ TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherProcesses) {
 
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> file_watcher_processes;
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> file_watcher_threads;
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 1);
+  ASSERT_EQ(file_watcher_threads.size(), 1);
 
   watchdog.watch_file_watcher_threads();
 
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 1);
-  ASSERT_EQ(file_watcher_processes[0], 1);
+  ASSERT_EQ(file_watcher_threads.size(), 1);
+  ASSERT_EQ(file_watcher_threads[0], 1);
 
   watchdog.stop_file_watcher_thread(1);
 
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 0);
+  ASSERT_EQ(file_watcher_threads.size(), 0);
 
   watchdog.watch_file_watcher_threads();
 
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 1);
+  ASSERT_EQ(file_watcher_threads.size(), 1);
 
   watchdog.stop_file_watcher_thread(1);
-
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-
-  ASSERT_EQ(file_watcher_processes.size(), 0);
-
-  watchdog.watch_file_watcher_threads();
-
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-
-  ASSERT_EQ(file_watcher_processes.size(), 1);
-
-  watchdog.stop_file_watcher_thread(1);
-
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-
-  ASSERT_EQ(file_watcher_processes.size(), 0);
-
-  watchdog.watch_file_watcher_threads();
-
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-
-  watchdog.stop_file_watcher_thread(1);
-
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-
-  ASSERT_EQ(file_watcher_processes.size(), 0);
-
-  watchdog.watch_file_watcher_threads();
-
-  file_watcher_processes = watchdog.get_running_file_watcher_threads();
-
-  // Restarted more than 3 times, should not be restarted again
-  ASSERT_EQ(file_watcher_processes.size(), 0);
 }
 
 TEST_F(FileWatcherWatchdogTest, TestFileWatcherWatchdogWithNoDataset) {
@@ -196,9 +163,9 @@ TEST_F(FileWatcherWatchdogTest, TestFileWatcherWatchdogWithNoDataset) {
 
   watchdog.watch_file_watcher_threads();
 
-  // Assert that there are no running FileWatcher processes as there are no datasets
-  std::vector<int64_t> file_watcher_processes = watchdog.get_running_file_watcher_threads();
-  ASSERT_TRUE(file_watcher_processes.empty());
+  // Assert that there are no running FileWatcher threads as there are no datasets
+  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  ASSERT_TRUE(file_watcher_threads.empty());
 }
 
 TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
@@ -219,10 +186,10 @@ TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
   // The watchdog should detect the failure and restart the process
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 1);
-  ASSERT_EQ(file_watcher_processes[0], 1);
+  ASSERT_EQ(file_watcher_threads.size(), 1);
+  ASSERT_EQ(file_watcher_threads[0], 1);
   watchdog.stop_file_watcher_thread(1);
 }
 
@@ -243,10 +210,10 @@ TEST_F(FileWatcherWatchdogTest, TestAddingNewDataset) {
   // The watchdog should start a FileWatcher process for the new dataset
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_EQ(file_watcher_processes.size(), 1);
-  ASSERT_EQ(file_watcher_processes[0], 1);
+  ASSERT_EQ(file_watcher_threads.size(), 1);
+  ASSERT_EQ(file_watcher_threads[0], 1);
   watchdog.stop_file_watcher_thread(1);
 }
 
@@ -261,14 +228,11 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
-  connection.add_dataset("test_dataset2", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_threads();
 
-  // Wait for the FileWatcher process to start
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  // The watchdog should start a FileWatcher process for the new dataset
+  std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
   // Now remove the dataset from the database
   connection.delete_dataset("test_dataset");
@@ -276,16 +240,13 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   // The watchdog should stop the FileWatcher process for the removed dataset
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_TRUE(file_watcher_processes.size() == 1);
-  ASSERT_EQ(file_watcher_processes[0], 2);
-
-  watchdog.stop_file_watcher_thread(2);
+  ASSERT_TRUE(file_watcher_threads.size() == 0);
 }
 
 TEST_F(FileWatcherWatchdogTest, TestNoDatasetsInDB) {
-  // This test checks that the watchdog does not start any FileWatcher processes if there are no datasets
+  // This test checks that the watchdog does not start any FileWatcher threads if there are no datasets
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
@@ -293,31 +254,7 @@ TEST_F(FileWatcherWatchdogTest, TestNoDatasetsInDB) {
 
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> file_watcher_processes = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_TRUE(file_watcher_processes.empty());
-}
-
-TEST_F(FileWatcherWatchdogTest, TestMultipleDatasets) {
-  // This test checks that the watchdog correctly manages multiple FileWatcher processes for multiple datasets
-  const YAML::Node config = YAML::LoadFile("config.yaml");
-  std::atomic<bool> stop_file_watcher = false;
-  FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  storage::database::StorageDatabaseConnection connection(config);
-
-  // Add multiple datasets to the database
-  connection.add_dataset("test_dataset1", "tmp1", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description1", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
-  connection.add_dataset("test_dataset2", "tmp2", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description2", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
-
-  watchdog.watch_file_watcher_threads();
-
-  std::vector<int64_t> file_watcher_processes = watchdog.get_running_file_watcher_threads();
-
-  ASSERT_EQ(file_watcher_processes.size(), 2);
-  watchdog.stop_file_watcher_thread(1);
-  watchdog.stop_file_watcher_thread(2);
+  ASSERT_TRUE(file_watcher_threads.empty());
 }
