@@ -31,16 +31,24 @@ def setup_argparser() -> argparse.ArgumentParser:
         "dir", type=pathlib.Path, action="store", help="Path to data directory"
     )
     parser_.add_argument(
-        "--dummyyear", action="store_true", help="Add a final dummy year to train also on the last trigger in Modyn"
+        "--dummyyear",
+        action="store_true",
+        help="Add a final dummy year to train also on the last trigger in Modyn",
     )
     parser_.add_argument(
-        "--all", action="store_true", help="Store all the available data, including the validation and test sets."
+        "--all",
+        action="store_true",
+        help="Store all the available data, including the validation and test sets.",
     )
     parser_.add_argument(
-        "--test", action="store_true", help="Enable test mode (just download one zip file)"
+        "--test",
+        action="store_true",
+        help="Enable test mode (just download one zip file)",
     )
     parser_.add_argument(
-        "--skip_download", action="store_true", help="Skips the download and only (re)creates labels and timestamps."
+        "--skip_download",
+        action="store_true",
+        help="Skips the download and only (re)creates labels and timestamps.",
     )
     return parser_
 
@@ -51,13 +59,13 @@ def main():
 
     logger.info(f"Destination is {args.dir}")
 
-    downloader = CLDatasets(str(args.dir), test_mode = args.test)
+    downloader = CLDatasets(str(args.dir), test_mode=args.test)
     if not args.skip_download:
         logger.info("Starting download and extraction.")
         downloader.download_and_extract()
 
     downloader.convert_labels_and_timestamps()
-    
+
     if args.dummyyear:
         downloader.add_dummy_year()
 
@@ -100,15 +108,24 @@ class CLDatasets:
             self.unzip_data_files(self.directory + "/CLOC/data")
 
     def convert_labels_and_timestamps(self):
-        self.convert_labels_and_timestamps_impl(self.directory + "/CLOC_torchsave_order_files/train_store_loc.torchSave", self.directory + "/CLOC_torchsave_order_files/train_labels.torchSave", self.directory + "/CLOC_torchsave_order_files/train_time.torchSave")
-        self.convert_labels_and_timestamps_impl(self.directory + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave", self.directory + "/CLOC_torchsave_order_files/cross_val_labels.torchSave", self.directory + "/CLOC_torchsave_order_files/cross_val_time.torchSave")
+        self.convert_labels_and_timestamps_impl(
+            self.directory + "/CLOC_torchsave_order_files/train_store_loc.torchSave",
+            self.directory + "/CLOC_torchsave_order_files/train_labels.torchSave",
+            self.directory + "/CLOC_torchsave_order_files/train_time.torchSave",
+        )
+        self.convert_labels_and_timestamps_impl(
+            self.directory
+            + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave",
+            self.directory + "/CLOC_torchsave_order_files/cross_val_labels.torchSave",
+            self.directory + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
+        )
         self.remove_images_without_label()
 
     def remove_images_without_label(self):
         print("Removing images without label...")
         removed_files = 0
 
-        for filename in glob.iglob(self.directory + '**/*.jpg', recursive=True):
+        for filename in glob.iglob(self.directory + "**/*.jpg", recursive=True):
             file_path = pathlib.Path(filename)
             label_path = pathlib.Path(file_path.parent / f"{file_path.stem}.label")
 
@@ -118,7 +135,9 @@ class CLDatasets:
 
         print(f"Removed {removed_files} images that do not have a label.")
 
-    def convert_labels_and_timestamps_impl(self, store_loc_path, labels_path, timestamps_path):
+    def convert_labels_and_timestamps_impl(
+        self, store_loc_path, labels_path, timestamps_path
+    ):
         logger.info("Loading labels and timestamps.")
         store_loc = torch.load(store_loc_path)
         labels = torch.load(labels_path)
@@ -130,14 +149,22 @@ class CLDatasets:
         warned_once = False
 
         logger.info("Labels and timestamps loaded, applying")
-        for store_location, label, timestamp in tqdm(zip(store_loc, labels, timestamps), total=len(store_loc)):
-            path = pathlib.Path(self.directory + "/CLOC/data/" + store_location.strip().replace("\n", ""))
-            
+        for store_location, label, timestamp in tqdm(
+            zip(store_loc, labels, timestamps), total=len(store_loc)
+        ):
+            path = pathlib.Path(
+                self.directory
+                + "/CLOC/data/"
+                + store_location.strip().replace("\n", "")
+            )
+
             if not path.exists():
                 if not self.test_mode:
                     raise FileExistsError(f"Cannot find file {store_location}")
                 if not warned_once:
-                    logger.warning(f"Cannot find file {store_location}, but we are in test mode. Will not repeat this warning.")
+                    logger.warning(
+                        f"Cannot find file {store_location}, but we are in test mode. Will not repeat this warning."
+                    )
                     warned_once = True
                 continue
 
@@ -158,18 +185,17 @@ class CLDatasets:
         dummy_path = pathlib.Path(self.directory + "/CLOC/data/dummy.jpg")
         dummy_label_path = pathlib.Path(self.directory + "/CLOC/data/dummy.label")
 
-        assert not dummy_path.exists() and not dummy_label_path.exists()    
+        assert not dummy_path.exists() and not dummy_label_path.exists()
 
-        copy(self.example_path, dummy_path)                      
+        copy(self.example_path, dummy_path)
         copy(self.example_label_path, dummy_label_path)
         # Two years in the future
         dummy_timestamp = self.max_timestamp + (DAY_LENGTH_SECONDS * 365 * 2)
 
         os.utime(dummy_path, (dummy_timestamp, dummy_timestamp))
 
-
     def download_directory_from_gcloud(self, prefix):
-        bucket_name = 'cl-datasets'
+        bucket_name = "cl-datasets"
         dl_dir = pathlib.Path(self.directory)
         storage_client = storage.Client.create_anonymous_client()
         bucket = storage_client.bucket(bucket_name=bucket_name)
@@ -184,14 +210,14 @@ class CLDatasets:
                     continue
                 else:
                     first_zip_downloaded = True
-                
+
             file_split = blob.name.split("/")
             directory = "/".join(file_split[0:-1])
             pathlib.Path(dl_dir / directory).mkdir(parents=True, exist_ok=True)
             target = dl_dir / blob.name
 
             if not target.exists():
-                blob.download_to_filename(dl_dir / blob.name) 
+                blob.download_to_filename(dl_dir / blob.name)
             else:
                 print(f"Skipping {target} as it already exists")
 
@@ -201,7 +227,7 @@ class CLDatasets:
         """
         print("Order files are being downloaded...")
         start_time = time.time()
-        
+
         self.download_directory_from_gcloud(self.dataset)
 
         elapsed_time = time.time() - start_time
@@ -218,17 +244,15 @@ class CLDatasets:
             None
         """
 
-        zip_files = [file for file in os.listdir(directory) if file.endswith('.zip')]
+        zip_files = [file for file in os.listdir(directory) if file.endswith(".zip")]
 
         def extract_single_zip(zip_file: str) -> None:
-
             zip_path = os.path.join(directory, zip_file)
-            output_dir = os.path.join(
-                directory, os.path.splitext(zip_file)[0])
+            output_dir = os.path.join(directory, os.path.splitext(zip_file)[0])
 
             os.makedirs(output_dir, exist_ok=True)
 
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(output_dir)
 
         with ThreadPoolExecutor() as executor, tqdm(total=len(zip_files)) as pbar:
@@ -245,6 +269,7 @@ class CLDatasets:
         # Remove zip files
         remove_command = f"rm {self.directory}/{self.dataset}/data/*.zip"
         os.system(remove_command)
+
 
 if __name__ == "__main__":
     main()
