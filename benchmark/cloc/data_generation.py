@@ -64,7 +64,7 @@ def main():
         logger.info("Starting download and extraction.")
         downloader.download_and_extract()
 
-    downloader.convert_labels_and_timestamps()
+    downloader.convert_labels_and_timestamps(args.all)
 
     if args.dummyyear:
         downloader.add_dummy_year()
@@ -107,18 +107,22 @@ class CLDatasets:
         if self.unzip:
             self.unzip_data_files(self.directory + "/CLOC/data")
 
-    def convert_labels_and_timestamps(self):
+    def convert_labels_and_timestamps(self, all_data: bool):
         self.convert_labels_and_timestamps_impl(
             self.directory + "/CLOC_torchsave_order_files/train_store_loc.torchSave",
             self.directory + "/CLOC_torchsave_order_files/train_labels.torchSave",
             self.directory + "/CLOC_torchsave_order_files/train_time.torchSave",
         )
-        self.convert_labels_and_timestamps_impl(
-            self.directory
-            + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave",
-            self.directory + "/CLOC_torchsave_order_files/cross_val_labels.torchSave",
-            self.directory + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
-        )
+
+        if all_data:
+            logger.info("Converting all data")
+            self.convert_labels_and_timestamps_impl(
+                self.directory
+                + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave",
+                self.directory + "/CLOC_torchsave_order_files/cross_val_labels.torchSave",
+                self.directory + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
+            )
+
         self.remove_images_without_label()
 
     def remove_images_without_label(self):
