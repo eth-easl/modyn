@@ -56,11 +56,14 @@ int64_t BinaryFileWrapper::get_label(int64_t index) {
   ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
 
   const int64_t record_start = index * record_size_;
-  std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
-  unsigned char* data = data_vec.data();
-  unsigned char* label_begin = data + record_start;
-  unsigned char* label_end = label_begin + label_size_;
-  return int_from_bytes(label_begin, label_end);
+  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
+
+  stream.seekg(record_start, std::ios::beg);
+
+  std::vector<unsigned char> label_vec(label_size_);
+  stream.read((char*)label_vec.data(), label_size_);
+
+  return int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0';
 }
 
 /*
@@ -70,13 +73,18 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
   const int64_t num_samples = get_number_of_samples();
   std::vector<int64_t> labels = std::vector<int64_t>();
   labels.reserve(num_samples);
-  std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
-  unsigned char* data = data_vec.data();
+
+  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
+
   for (int64_t i = 0; i < num_samples; i++) {
-    unsigned char* label_begin = data + (i * record_size_);
-    unsigned char* label_end = label_begin + label_size_;
-    labels.push_back(int_from_bytes(label_begin, label_end));
+    stream.seekg(i * record_size_, std::ios::beg);
+
+    std::vector<unsigned char> label_vec(label_size_);
+    stream.read((char*)label_vec.data(), label_size_);
+
+    labels.push_back(int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0');
   }
+
   return labels;
 }
 
@@ -90,16 +98,19 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
   ASSERT(start >= 0 && end >= start && end <= get_number_of_samples(), "Invalid indices");
 
   const int64_t num_samples = end - start + 1;
-  const int64_t record_start = start * record_size_;
-  const int64_t record_end = record_start + num_samples * record_size_;
-  std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
-  unsigned char* data = data_vec.data();
-  std::vector<std::vector<unsigned char>> samples(num_samples);
 
-  for (int64_t i = record_start; i < record_end; i += record_size_) {
-    unsigned char* sample_begin = data + i + label_size_;
-    unsigned char* sample_end = sample_begin + sample_size_;
-    samples[(i - record_start) / record_size_] = {sample_begin, sample_end};
+  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
+
+  std::vector<std::vector<unsigned char>> samples(num_samples);
+  int64_t record_start = start * record_size_;
+  for (int64_t index = 0; index < num_samples; index++) {
+    record_start = (start + index) * record_size_;
+    stream.seekg(record_start + label_size_, std::ios::beg);
+
+    std::vector<unsigned char> sample_vec(sample_size_);
+    stream.read((char*)sample_vec.data(), sample_size_);
+
+    samples[index] = sample_vec;
   }
 
   return samples;
@@ -114,12 +125,15 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
   ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
 
   const int64_t record_start = index * record_size_;
-  std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
-  unsigned char* data = data_vec.data();
-  unsigned char* sample_begin = data + record_start + label_size_;
-  unsigned char* sample_end = sample_begin + sample_size_;
 
-  return std::vector(sample_begin, sample_end);
+  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
+
+  stream.seekg(record_start + label_size_, std::ios::beg);
+
+  std::vector<unsigned char> sample_vec(sample_size_);
+  stream.read((char*)sample_vec.data(), sample_size_);
+
+  return sample_vec;
 }
 
 /*
@@ -135,15 +149,18 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
 
   std::vector<std::vector<unsigned char>> samples;
   samples.reserve(indices.size());
-  std::vector<unsigned char> data_vec = filesystem_wrapper_->get(file_path_);
-  unsigned char* data = data_vec.data();
 
+  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
+  int64_t record_start = 0;
   for (const int64_t index : indices) {
-    const int64_t record_start = index * record_size_;
-    unsigned char* sample_begin = data + record_start + label_size_;
-    unsigned char* sample_end = sample_begin + sample_size_;
+    record_start = index * record_size_;
 
-    samples.push_back(std::vector(sample_begin, sample_end));
+    stream.seekg(record_start + label_size_, std::ios::beg);
+
+    std::vector<unsigned char> sample_vec(sample_size_);
+    stream.read((char*)sample_vec.data(), sample_size_);
+
+    samples.push_back(sample_vec);
   }
 
   return samples;

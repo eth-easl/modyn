@@ -22,7 +22,7 @@ class BinaryFileWrapper : public storage::file_wrapper::FileWrapper {
   BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,
                     std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper)
       : storage::file_wrapper::FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
-    assert(filesystem_wrapper_ != nullptr);
+    ASSERT(filesystem_wrapper_ != nullptr, "Filesystem wrapper cannot be null.");
 
     if (!fw_config["record_size"]) {
       FAIL("record_size_must be specified in the file wrapper config.");

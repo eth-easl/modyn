@@ -39,13 +39,13 @@ class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
 
     ASSERT(filesystem_wrapper_->exists(path), "The file does not exist.");
 
-    rapidcsv::LabelParams label_params(ignore_first_line ? 1 : 0);
-
-    std::ifstream stream = filesystem_wrapper_->get_stream(path);
-
-    rapidcsv::Document doc_(stream, label_params, rapidcsv::SeparatorParams(separator_));
-
     validate_file_extension();
+
+    rapidcsv::LabelParams label_params(ignore_first_line ? 0 : -1);
+
+    std::ifstream& stream = filesystem_wrapper_->get_stream(path);
+
+    doc_ = rapidcsv::Document(stream, label_params, rapidcsv::SeparatorParams(separator_));
   }
 
   std::vector<unsigned char> get_sample(int64_t index) override;

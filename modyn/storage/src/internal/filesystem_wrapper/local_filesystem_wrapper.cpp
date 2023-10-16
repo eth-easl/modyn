@@ -23,10 +23,11 @@ std::vector<unsigned char> LocalFilesystemWrapper::get(const std::string& path) 
   return buffer;
 }
 
-std::ifstream LocalFilesystemWrapper::get_stream(const std::string& path) {
-  std::ifstream file;
-  file.open(path, std::ios::binary);
-  return file;
+std::ifstream& LocalFilesystemWrapper::get_stream(const std::string& path) {
+  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
+  file->open(path, std::ios::binary);
+  std::ifstream& reference = *file;
+  return reference;
 }
 
 bool LocalFilesystemWrapper::exists(const std::string& path) { return std::filesystem::exists(path); }

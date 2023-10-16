@@ -42,7 +42,7 @@ YAML::Node TestUtils::get_dummy_file_wrapper_config() {
   config["label_index"] = 0;
   config["encoding"] = "utf-8";
   config["validate_file_content"] = false;
-  config["ignore_first_line"] = false;
+  config["ignore_first_line"] = true;
   config["separator"] = ',';
   return config;
 }

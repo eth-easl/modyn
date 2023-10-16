@@ -14,7 +14,7 @@ class LocalFilesystemWrapper : public FilesystemWrapper {
   int64_t get_file_size(const std::string& path) override;
   int64_t get_modified_time(const std::string& path) override;
   bool is_valid_path(const std::string& path) override;
-  std::ifstream get_stream(const std::string& path) override;
+  std::ifstream& get_stream(const std::string& path) override;
   FilesystemWrapperType get_type() override;
   bool remove(const std::string& path) override;
   ~LocalFilesystemWrapper() override = default;

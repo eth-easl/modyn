@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
   std::string config_file = parser.get<std::string>("config");
 
-  assert(std::filesystem::exists(config_file));
+  ASSERT(std::filesystem::exists(config_file), "Config file does not exist.");
   if (!std::filesystem::exists(config_file)) {
     FAIL("Config file does not exist.");
   }

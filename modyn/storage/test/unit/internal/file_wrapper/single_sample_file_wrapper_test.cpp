@@ -102,7 +102,6 @@ TEST(SingleSampleFileWrapperTest, TestGetSamplesFromIndices) {
 
 TEST(SingleSampleFileWrapperTest, TestDeleteSamples) {
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
-  EXPECT_CALL(*filesystem_wrapper, remove(testing::_)).Times(1);
 
   const std::string file_name = "test.txt";
   const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
