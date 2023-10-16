@@ -2,17 +2,17 @@
 # We thank the authors for their work and hosting the data.
 
 import argparse
-import pathlib
-from shutil import which
+import glob
+import logging
 import os
+import pathlib
 import time
 import zipfile
-import logging
-import torch
-import glob
 from concurrent.futures import ThreadPoolExecutor
-from google.cloud import storage
+from shutil import copy, which
 
+import torch
+from google.cloud import storage
 from tqdm import tqdm
 
 logging.basicConfig(
@@ -21,6 +21,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d:%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+DAY_LENGTH_SECONDS = 24 * 60 * 60
 
 
 def setup_argparser() -> argparse.ArgumentParser:
@@ -59,8 +61,7 @@ def main():
     if args.dummyyear:
         downloader.add_dummy_year()
 
-    logger.info("Cleaning up")
-    downloader.cleanup()
+    logger.info("Done.")
 
 
 def is_tool(name):
@@ -86,6 +87,8 @@ class CLDatasets:
         self.unzip = unzip
         self.test_mode = test_mode
         self.max_timestamp = 0
+        self.example_path = ""
+        self.example_label_path = ""
 
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
@@ -145,14 +148,25 @@ class CLDatasets:
             # Note: The timestamps obtained in the hd5 file are (very likely) seconds since 2004 (1072911600 GMT timestamp)
             actual_timestamp = timestamp + 1072911600
             self.max_timestamp = max(self.max_timestamp, actual_timestamp)
-            
+
+            self.example_label_path = label_path
+            self.example_path = path
+
             os.utime(path, (actual_timestamp, actual_timestamp))
 
     def add_dummy_year(self):
-        pass
+        dummy_path = pathlib.Path(self.directory + "/CLOC/data/dummy.jpg")
+        dummy_label_path = pathlib.Path(self.directory + "/CLOC/data/dummy.label")
 
-    def cleanup(self):
-        pass
+        assert not dummy_path.exists() and not dummy_label_path.exists()    
+
+        copy(self.example_path, dummy_path)                      
+        copy(self.example_label_path, dummy_label_path)
+        # Two years in the future
+        dummy_timestamp = self.max_timestamp + (DAY_LENGTH_SECONDS * 365 * 2)
+
+        os.utime(dummy_path, (dummy_timestamp, dummy_timestamp))
+
 
     def download_directory_from_gcloud(self, prefix):
         bucket_name = 'cl-datasets'
