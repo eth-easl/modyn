@@ -13,7 +13,8 @@ RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; 
 RUN ls -la ~/
 
 # Move CMake to an opt folder
-RUN mv cmake-${CMAKE_VERSION}-Linux-${ARCHITECTURE} $CMAKE_DIR
+RUN if [ "$(dpkg --print-architecture)" = "arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=x86_64; fi \
+    mv cmake-${CMAKE_VERSION}-Linux-${ARCHITECTURE} $CMAKE_DIR
 
 RUN ls -la $CMAKE_DIR
 

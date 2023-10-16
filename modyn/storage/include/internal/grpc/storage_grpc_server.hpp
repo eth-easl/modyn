@@ -5,6 +5,8 @@
 #include <grpcpp/health_check_service_interface.h>
 #include <yaml-cpp/yaml.h>
 
+#include <condition_variable>
+
 namespace storage::grpc {
 
 class StorageGrpcServer {
