@@ -17,7 +17,7 @@ def main():
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = YearbookDownloader(args.dir)
-    downloader.store_data()
+    downloader.store_data(args.all, args.dummyyear)
 
 
 class YearbookDownloader(Dataset):
@@ -38,34 +38,43 @@ class YearbookDownloader(Dataset):
         self._dataset = datasets
         self.data_dir = data_dir
 
-    def _get_year_data(self, year: int) -> list[Tuple]:
+    def _get_year_data(self, year: int, store_all_data: bool) -> list[Tuple]:
+        splits = [0, 1] if store_all_data else [0]
         images = torch.FloatTensor(
             np.array(
                 [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
                     # Pytorch requires CHW format
-                    img.transpose(2, 0, 1)[0].reshape(*self.input_dim)
-                    # _dataset has 3 dimensions [years][train=0,valid=1]["images"/"labels"]
-                    for img in self._dataset[year][0]["images"]
+                    img.transpose(2, 0, 1)[split].reshape(*self.input_dim)
+                    # _dataset has 3 dimensions [years][train=0,valid=1,test=2]["images"/"labels"]
+                    for split in splits # just train if --all not specified, else test, train and val
+                    for img in self._dataset[year][split]["images"]
                 ]
             )
         )
-        labels = torch.LongTensor(self._dataset[year][0]["labels"])
+        labels = torch.cat([torch.LongTensor(self._dataset[year][split]["labels"]) for split in splits])
         return [(images[i], labels[i]) for i in range(len(images))]
 
     def __len__(self) -> int:
         return len(self._dataset["labels"])
 
-    def store_data(self) -> None:
+    def store_data(self, store_all_data: bool, add_final_dummy_year: bool) -> None:
         # create directories
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
 
         for year in self.time_steps:
             print(f"Saving data for year {year}")
-            ds = self._get_year_data(year)
+            ds = self._get_year_data(year, store_all_data)
             self.create_binary_file(ds,
                                     os.path.join(self.data_dir, f"{year}.bin"),
                                     create_fake_timestamp(year, base_year=1930))
+
+        if add_final_dummy_year:
+            dummy_year = year + 1
+            dummy_data = [ ds[0] ] # get one sample from the previous year
+            self.create_binary_file(dummy_data,
+                                    os.path.join(self.data_dir, f"{dummy_year}.bin"),
+                                    create_fake_timestamp(dummy_year, base_year=1930))
 
         os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
 

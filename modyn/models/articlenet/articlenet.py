@@ -1,3 +1,4 @@
+# pylint: disable=W0223
 from typing import Any
 
 import torch
@@ -19,7 +20,7 @@ class ArticleNet:
         self.model.to(device)
 
 
-class DistilBertFeaturizer(DistilBertModel):
+class DistilBertFeaturizer(DistilBertModel):  # pylint: disable=abstract-method
     def __init__(self, config: Any) -> None:
         super().__init__(config)
         self.d_out = config.hidden_size

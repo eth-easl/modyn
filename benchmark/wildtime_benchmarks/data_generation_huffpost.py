@@ -15,7 +15,7 @@ def main():
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
-    HuffpostDownloader(args.dir).store_data()
+    HuffpostDownloader(args.dir).store_data(args.all, args.dummyyear)
 
 
 class HuffpostDownloader(Dataset):
@@ -44,15 +44,17 @@ class HuffpostDownloader(Dataset):
         self._dataset = datasets
         self.path = data_dir
 
-    def store_data(self) -> None:
+    def store_data(self, store_all_data: bool, add_final_dummy_year: bool) -> None:
         for year in tqdm(self._dataset):
             year_timestamp = create_timestamp(year=1970, month=1, day=year-2011)
             year_rows = []
-            for i in range(len(self._dataset[year][0]["headline"])):
-                text = self._dataset[year][0]["headline"][i]
-                label = self._dataset[year][0]["category"][i]
-                csv_row = f"{text}\t{label}"
-                year_rows.append(csv_row)
+            splits = [0, 1] if store_all_data else [0]
+            for split in splits:
+                for i in range(len(self._dataset[year][split]["headline"])):
+                    text = self._dataset[year][split]["headline"][i]
+                    label = self._dataset[year][split]["category"][i]
+                    csv_row = f"{text}\t{label}"
+                    year_rows.append(csv_row)
 
             # store the sentences
             text_file = os.path.join(self.path, f"{year}.csv")
@@ -61,6 +63,17 @@ class HuffpostDownloader(Dataset):
 
             # set timestamp
             os.utime(text_file, (year_timestamp, year_timestamp))
+
+        if add_final_dummy_year:
+            dummy_year = year + 1
+            year_timestamp = create_timestamp(year=1970, month=1, day= dummy_year - 2011)
+            text_file = os.path.join(self.path, f"{dummy_year}.csv")
+            with open(text_file, "w", encoding="utf-8") as f:
+                f.write("\n".join(["dummy\t0"]))
+
+            # set timestamp
+            os.utime(text_file, (year_timestamp, year_timestamp))
+
 
         os.remove(os.path.join(self.path, "huffpost.pkl"))
 

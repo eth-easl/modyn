@@ -232,6 +232,13 @@ class TriggerSampleStorage:
         Returns:
             list[tuple[int, float]]: List of trigger samples.
         """
+
+        # When there are few samples, it may happen that some workers don't have any samples to store.
+        # Therefore, they do not write anything; you get an error if you try to read their file.
+        # This way, it returns an empty array if the worker has not written anything.
+        if not os.path.isfile(file_path):
+            return np.ndarray(0, dtype="i8,f8")
+
         return np.load(file_path, allow_pickle=False, fix_imports=False)
 
     def _parse_file_subset(self, file_path: Path, start_index: int, end_index: int) -> np.memmap:

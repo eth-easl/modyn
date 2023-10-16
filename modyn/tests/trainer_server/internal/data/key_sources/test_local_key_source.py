@@ -1,6 +1,5 @@
 import math
 
-import pytest
 import torch
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
@@ -75,9 +74,9 @@ def test_read_dirty_directory():
     write_directory(other_pipeline, 1, TMP_PATH_TEST, number_of_files=10, maximum_keys_in_memory=maximum_keys_in_memory)
 
     keysource = LocalKeySource(pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
+
     assert keysource.get_num_data_partitions() == 0
-    with pytest.raises(FileNotFoundError):
-        keysource.get_keys_and_weights(0, 0)
+    assert keysource.get_keys_and_weights(0, 0) == ([], [])
 
     write_directory(
         current_pipeline, 1, TMP_PATH_TEST, number_of_files=4, maximum_keys_in_memory=maximum_keys_in_memory

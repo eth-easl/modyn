@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import threading
 from typing import Iterable
 
 import grpc
@@ -59,8 +61,11 @@ class SelectorGRPCServicer(SelectorServicer):
             request.worker_id,
             request.partition_id,
         )
+        tid = threading.get_native_id()
+        pid = os.getpid()
+
         logger.info(
-            f"[Pipeline {pipeline_id}]: Fetching samples for trigger id {trigger_id}"
+            f"[{pid}][{tid}][Pipeline {pipeline_id}]: Fetching samples for trigger id {trigger_id}"
             + f" and worker id {worker_id} and partition id {partition_id}"
         )
 

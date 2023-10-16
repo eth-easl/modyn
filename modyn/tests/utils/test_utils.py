@@ -185,6 +185,7 @@ def test_instantiate_class_existing():
         64,
         {"downsampling_ratio": 67},
         {},
+        "cpu",
     )
     assert isinstance(remote_downsampler, RemoteLossDownsampling)
     assert remote_downsampler.downsampling_ratio == 67

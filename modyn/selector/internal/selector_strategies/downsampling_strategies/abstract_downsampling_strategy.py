@@ -49,6 +49,7 @@ class AbstractDownsamplingStrategy(ABC):
 
         self.requires_remote_computation = True
         self.maximum_keys_in_memory = maximum_keys_in_memory
+        self.downsampling_config = downsampling_config
         self.downsampling_params = self._build_downsampling_params()
         self.status_bar_scale = self._compute_status_bar_scale()
 

@@ -24,16 +24,16 @@ def test_database_connection():
 def test_register_pipeline():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        pipeline_id = database.register_pipeline(1)
+        pipeline_id = database.register_pipeline(1, "{}")
         assert pipeline_id == 1
-        pipeline_id = database.register_pipeline(1)
+        pipeline_id = database.register_pipeline(1, "{}")
         assert pipeline_id == 2
 
 
 def test_add_trained_model():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
-        pipeline_id = database.register_pipeline(1)
+        pipeline_id = database.register_pipeline(1, "{}")
         trigger = Trigger(pipeline_id=pipeline_id, trigger_id=5)
 
         database.session.add(trigger)

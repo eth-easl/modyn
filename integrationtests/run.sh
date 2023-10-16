@@ -7,6 +7,7 @@ echo "Running as user $USER"
 
 echo "Running basic availability tests"
 python $SCRIPT_DIR/test_docker_compose.py
+echo "Running FTP availability tests"
 python $SCRIPT_DIR/test_ftp_connections.py
 echo "Running storage integration tests"
 python $SCRIPT_DIR/storage/integrationtest_storage.py
@@ -14,6 +15,8 @@ python $SCRIPT_DIR/storage/integrationtest_storage_csv.py
 python $SCRIPT_DIR/storage/integrationtest_storage_binary.py
 echo "Running selector integration tests"
 python $SCRIPT_DIR/selector/integrationtest_selector.py
+echo "Running online datasets integration tests"
+python $SCRIPT_DIR/online_dataset/test_online_dataset.py
 echo "Running model storage integration tests"
 python $SCRIPT_DIR/model_storage/integrationtest_model_storage.py
 echo "Successfuly ran all integration tests."

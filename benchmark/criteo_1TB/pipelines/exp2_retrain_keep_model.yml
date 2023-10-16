@@ -44,7 +44,9 @@ training:
   gpus: 1
   device: "cuda:0"
   amp: True
-  dataloader_workers: 8
+  dataloader_workers: 16
+  num_prefetched_partitions: 4
+  parallel_prefetch_requests: 2
   use_previous_model: True
   initial_model: random
   initial_pass:

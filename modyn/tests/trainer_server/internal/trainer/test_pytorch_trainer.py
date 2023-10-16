@@ -126,6 +126,8 @@ def mock_get_dataloaders(
     storage_address,
     selector_address,
     training_id,
+    prefetched_partitions,
+    num_parallel_requests,
     tokenizer,
     log_path,
 ):

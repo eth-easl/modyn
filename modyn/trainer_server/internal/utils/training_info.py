@@ -27,6 +27,8 @@ class TrainingInfo:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id
         self.training_id = training_id
+        self.num_prefetched_partitions = request.num_prefetched_partitions
+        self.parallel_prefetch_requests = request.parallel_prefetch_requests
 
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders

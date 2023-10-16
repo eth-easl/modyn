@@ -4,10 +4,13 @@ import json
 import logging
 import os
 import shutil
+from multiprocessing import Manager
+from multiprocessing.managers import DictProxy
 from pathlib import Path
-from threading import Lock
+from typing import Any, Optional
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models.pipelines import Pipeline
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
 from modyn.utils.utils import dynamic_module_import, is_directory_writable
@@ -18,13 +21,24 @@ logger = logging.getLogger(__name__)
 class SelectorManager:
     def __init__(self, modyn_config: dict) -> None:
         self._modyn_config = modyn_config
+        self._manager = Manager()
         self._selectors: dict[int, Selector] = {}
-        self._selector_locks: dict[int, Lock] = {}
-        self._next_pipeline_lock = Lock()
+        self._selector_locks: DictProxy[int, Any] = self._manager.dict()
+        self._next_pipeline_lock = self._manager.Lock()
         self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
+
+        # TODO(309): currently we have to prepare N locks and then share.
+        # This is because we cannot share the manager with subprocesses.
+        # For now not a big problem since we mostly run one pipeline but we might want to redesign this.
+        self._prepared_locks = [self._manager.Lock() for _ in range(64)]
 
         self.init_metadata_db()
         self._init_trigger_sample_directory()
+
+    def __getstate__(self) -> dict:
+        state = self.__dict__.copy()
+        del state["_manager"]
+        return state
 
     def init_metadata_db(self) -> None:
         with MetadataDatabaseConnection(self._modyn_config) as database:
@@ -57,6 +71,30 @@ class SelectorManager:
                 + f"Directory info: {os.stat(trigger_sample_directory)}"
             )
 
+    def _populate_pipeline_if_exists(self, pipeline_id: int) -> None:
+        if pipeline_id in self._selectors:
+            return
+
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            pipeline: Optional[Pipeline] = database.session.get(Pipeline, pipeline_id)
+            if pipeline is None:
+                return
+            logging.info(
+                "[%d] Instantiating new selector for pipeline %d"
+                + " that was in the DB but previously unknown to this process",
+                os.getpid(),
+                pipeline_id,
+            )
+            self._selector_locks[pipeline_id] = self._prepared_locks[pipeline_id % len(self._prepared_locks)]
+
+            self._instantiate_selector(pipeline_id, pipeline.num_workers, pipeline.selection_strategy)
+
+    def _instantiate_selector(self, pipeline_id: int, num_workers: int, selection_strategy: str) -> None:
+        assert pipeline_id in self._selector_locks, f"Trying to register pipeline {pipeline_id} without existing lock!"
+        selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
+        selector = Selector(selection_strategy, pipeline_id, num_workers, self._modyn_config, self._selector_cache_size)
+        self._selectors[pipeline_id] = selector
+
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """
         Registers a new pipeline at the Selector.
@@ -70,12 +108,11 @@ class SelectorManager:
 
         with self._next_pipeline_lock:
             with MetadataDatabaseConnection(self._modyn_config) as database:
-                pipeline_id = database.register_pipeline(num_workers)
+                pipeline_id = database.register_pipeline(num_workers, selection_strategy)
 
-        selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
-        selector = Selector(selection_strategy, pipeline_id, num_workers, self._selector_cache_size)
-        self._selectors[pipeline_id] = selector
-        self._selector_locks[pipeline_id] = Lock()
+        self._selector_locks[pipeline_id] = self._prepared_locks[pipeline_id % len(self._prepared_locks)]
+        self._instantiate_selector(pipeline_id, num_workers, selection_strategy)
+
         return pipeline_id
 
     def get_sample_keys_and_weights(
@@ -92,6 +129,8 @@ class SelectorManager:
             List of tuples for the samples to be returned to that particular worker. The first
             index of the tuple will be the key, and the second index will be that sample's weight.
         """
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested keys from pipeline {pipeline_id} which does not exist!")
 
@@ -104,6 +143,8 @@ class SelectorManager:
     def inform_data(
         self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]
     ) -> dict[str, object]:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data. Pipeline does not exist!")
 
@@ -113,6 +154,8 @@ class SelectorManager:
     def inform_data_and_trigger(
         self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]
     ) -> tuple[int, dict[str, object]]:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Informing pipeline {pipeline_id} of data and triggering. Pipeline does not exist!")
 
@@ -120,30 +163,40 @@ class SelectorManager:
             return self._selectors[pipeline_id].inform_data_and_trigger(keys, timestamps, labels)
 
     def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested number of samples from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_number_of_samples(trigger_id)
 
     def get_status_bar_scale(self, pipeline_id: int) -> int:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested status bar scale from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_status_bar_scale()
 
     def get_number_of_partitions(self, pipeline_id: int, trigger_id: int) -> int:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested number of partitions from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_number_of_partitions(trigger_id)
 
     def get_available_labels(self, pipeline_id: int) -> list[int]:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested available labels from pipeline {pipeline_id} which does not exist!")
 
         return self._selectors[pipeline_id].get_available_labels()
 
     def uses_weights(self, pipeline_id: int) -> bool:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested whether the pipeline {pipeline_id} uses weights but it does not exist!")
 
@@ -169,6 +222,8 @@ class SelectorManager:
         return strategy_handler(config, self._modyn_config, pipeline_id, maximum_keys_in_memory)
 
     def get_selection_strategy_remote(self, pipeline_id: int) -> tuple[bool, str, dict]:
+        self._populate_pipeline_if_exists(pipeline_id)
+
         if pipeline_id not in self._selectors:
             raise ValueError(f"Requested selection strategy for pipeline {pipeline_id} which does not exist!")
 
