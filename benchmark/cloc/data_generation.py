@@ -9,6 +9,7 @@ import time
 import zipfile
 import logging
 import torch
+import glob
 from concurrent.futures import ThreadPoolExecutor
 from google.cloud import storage
 
@@ -53,8 +54,7 @@ def main():
         logger.info("Starting download and extraction.")
         downloader.download_and_extract()
 
-    downloader.convert_labels()
-    downloader.update_timestamps()
+    downloader.convert_labels_and_timestamps()
     
     if args.dummyyear:
         downloader.add_dummy_year()
@@ -85,6 +85,7 @@ class CLDatasets:
         self.directory = directory
         self.unzip = unzip
         self.test_mode = test_mode
+        self.max_timestamp = 0
 
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
@@ -95,17 +96,38 @@ class CLDatasets:
         if self.unzip:
             self.unzip_data_files(self.directory + "/CLOC/data")
 
-    def convert_labels(self):
+    def convert_labels_and_timestamps(self):
+        self.convert_labels_and_timestamps_impl(self.directory + "/CLOC_torchsave_order_files/train_store_loc.torchSave", self.directory + "/CLOC_torchsave_order_files/train_labels.torchSave", self.directory + "/CLOC_torchsave_order_files/train_time.torchSave")
+        self.convert_labels_and_timestamps_impl(self.directory + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave", self.directory + "/CLOC_torchsave_order_files/cross_val_labels.torchSave", self.directory + "/CLOC_torchsave_order_files/cross_val_time.torchSave")
+        self.remove_images_without_label()
+
+    def remove_images_without_label(self):
+        print("Removing images without label...")
+        removed_files = 0
+
+        for filename in glob.iglob(self.directory + '**/*.jpg', recursive=True):
+            file_path = pathlib.Path(filename)
+            label_path = pathlib.Path(file_path.parent / f"{file_path.stem}.label")
+
+            if not label_path.exists():
+                removed_files += 1
+                file_path.unlink()
+
+        print(f"Removed {removed_files} images that do not have a label.")
+
+    def convert_labels_and_timestamps_impl(self, store_loc_path, labels_path, timestamps_path):
         logger.info("Loading labels and timestamps.")
-        store_loc = torch.load(self.directory + "/CLOC_torchsave_order_files/train_store_loc.torchSave")
-        labels = torch.load(self.directory + "/CLOC_torchsave_order_files/train_labels.torchSave")
-        timestamps = torch.load(self.directory + "/CLOC_torchsave_order_files/train_time.torchSave")
+        store_loc = torch.load(store_loc_path)
+        labels = torch.load(labels_path)
+        timestamps = torch.load(timestamps_path)
+
+        assert len(store_loc) == len(labels)
+        assert len(store_loc) == len(timestamps)
 
         warned_once = False
 
         logger.info("Labels and timestamps loaded, applying")
         for store_location, label, timestamp in tqdm(zip(store_loc, labels, timestamps), total=len(store_loc)):
-
             path = pathlib.Path(self.directory + "/CLOC/data/" + store_location.strip().replace("\n", ""))
             
             if not path.exists():
@@ -116,21 +138,15 @@ class CLDatasets:
                     warned_once = True
                 continue
 
-
             label_path = pathlib.Path(path.parent / f"{path.stem}.label")
             with open(label_path, "w+", encoding="utf-8") as file:
                 file.write(str(int(label)))
 
             # Note: The timestamps obtained in the hd5 file are (very likely) seconds since 2004 (1072911600 GMT timestamp)
             actual_timestamp = timestamp + 1072911600
-            os.utime(path, (actual_timestamp, actual_timestamp))
-
+            self.max_timestamp = max(self.max_timestamp, actual_timestamp)
             
-
-
-    def update_timestamps(self):
-        
-        pass
+            os.utime(path, (actual_timestamp, actual_timestamp))
 
     def add_dummy_year(self):
         pass
