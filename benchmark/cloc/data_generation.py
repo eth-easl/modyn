@@ -1,5 +1,6 @@
 # This code is partially adapted from https://github.com/hammoudhasan/CLDatasets/blob/main/src/downloader.py which is provided license-free
 # We thank the authors for their work and hosting the data.
+# This code requires the pip google-cloud-storage package
 
 import argparse
 import glob
