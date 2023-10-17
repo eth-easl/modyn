@@ -63,3 +63,6 @@ Dockerfile.original
 
 # Experimental things
 plots/
+
+# Unity build files
+cmake-build-debug 

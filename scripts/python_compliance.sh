@@ -1,5 +1,9 @@
 echo "Running compilance check"
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+
+pushd $DIR
+
 if ! command -v mamba &> /dev/null
 then
     echo "Cannot find mamba."
@@ -74,3 +78,5 @@ else
 fi
 
 echo "Successful compliance check"
+
+popd
