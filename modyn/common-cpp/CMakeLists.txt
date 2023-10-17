@@ -4,11 +4,11 @@ set(MODYN_SOURCES
 
 # Explicitly set all header files so that IDEs will recognize them as part of the project
 set(MODYN_HEADERS
-    include/utils/utils.hpp
+    ./include/modyn/utils/utils.hpp
 )
 
 target_sources(modyn PRIVATE ${MODYN_HEADERS} ${MODYN_SOURCES})
-target_include_directories(modyn PUBLIC ../include)
+target_include_directories(modyn PUBLIC include)
 target_compile_options(modyn PRIVATE ${MODYN_COMPILE_OPTIONS})
 
 target_link_libraries(modyn PUBLIC spdlog fmt)

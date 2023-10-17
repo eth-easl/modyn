@@ -45,7 +45,10 @@ function run_tidy() {
         -quiet \
         ${additional_args} \
         "${BUILD_DIR}"/CMakeFiles/modyn.dir/Unity/*.cxx \
-        "${BUILD_DIR}"/modyn/playground/CMakeFiles/playground.dir/Unity/*.cxx \
+        "${BUILD_DIR}"/modyn/*/*/Unity/*.cxx \
+        "${BUILD_DIR}"/modyn/*/*/*/Unity/*.cxx \
+        "${BUILD_DIR}"/modyn/*/*/*/*/Unity/*.cxx \
+        "${BUILD_DIR}"/modyn/*/*/*/*/*Unity/*.cxx \
         "${BUILD_DIR}"/tests/CMakeFiles/modyn-all-test-sources-for-tidy.dir/Unity/*.cxx # TODO(MaxiBoether): fix when we have tests
     set +x
 }

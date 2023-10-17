@@ -9,6 +9,7 @@
 #include <random>
 #include <string>
 
+
 #define FAIL(msg)                                                                                        \
   throw modyn::utils::ModynException("ERROR at " __FILE__ ":" + std::to_string(__LINE__) + " " + (msg) + \
                                      "\nExecution failed.")

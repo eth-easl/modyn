@@ -46,6 +46,7 @@ Checks: >
   -cppcoreguidelines-explicit-virtual-functions,
   -cppcoreguidelines-macro-to-enum,
   -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
   -bugprone-easily-swappable-parameters,
   -bugprone-exception-escape,
   -bugprone-unchecked-optional-access,
@@ -104,6 +105,7 @@ Checks: >
 # cppcoreguidelines-pro-bounds-pointer-arithmetic     Pointer arithmetic is fine and required for void* array access
 # cppcoreguidelines-pro-type-reinterpret-cast         We use reinterpret_cast
 # cppcoreguidelines-pro-type-static-cast-downcast     We do allow static downcasts for performance reasons
+# cppcoreguidelines-avoid-const-or-ref-data-members   We want to allow const class members
 # google-build-using-namespace                        While we discourage its use, in some cases, using namespace makes sense
 # misc-no-recursion                                   We allow recursion
 # misc-non-private-member-variables-in-classes        We allow this
