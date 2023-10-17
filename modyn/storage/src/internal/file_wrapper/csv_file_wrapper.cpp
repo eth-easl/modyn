@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <numeric>
-#include <span>
 #include <stdexcept>
 
 using namespace storage::file_wrapper;

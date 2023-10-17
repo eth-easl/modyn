@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <numeric>
-#include <span>
 #include <vector>
 
 using namespace storage::file_wrapper;
