@@ -12,12 +12,15 @@ function run_build() {
 
     mkdir -p "${BUILD_DIR}"
     cmake -B "${BUILD_DIR}"
-    cmake -S . -B "${BUILD_DIR}"
-
-    # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
-    ln -fs "${PWD}"/tests/.clang-tidy "${BUILD_DIR}"/tests/
+    cmake -S . -B "${BUILD_DIR}" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_UNITY_BUILD=ON \
+        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
 
     # TODO(MaxiBoether): add when merging storage
+    # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
+    #ln -fs "${PWD}"/tests/.clang-tidy "${BUILD_DIR}"/tests/
+
     #make -j8 -C "${BUILD_DIR}" modynstorage-proto
 
     set +x
@@ -42,7 +45,8 @@ function run_tidy() {
         -quiet \
         ${additional_args} \
         "${BUILD_DIR}"/CMakeFiles/modyn.dir/Unity/*.cxx \
-        "${BUILD_DIR}"/tests/CMakeFiles/modyn-all-test-sources-for-tidy.dir/Unity/*.cxx
+        "${BUILD_DIR}"/modyn/playground/CMakeFiles/playground.dir/Unity/*.cxx \
+        "${BUILD_DIR}"/tests/CMakeFiles/modyn-all-test-sources-for-tidy.dir/Unity/*.cxx # TODO(MaxiBoether): fix when we have tests
     set +x
 }
 
