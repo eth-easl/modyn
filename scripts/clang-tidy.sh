@@ -40,7 +40,7 @@ function run_tidy() {
 
     ${RUN_CLANG_TIDY} -p "${BUILD_DIR}" \
         -clang-tidy-binary="${CLANG_TIDY}" \
-        -header-filter='(.*modyn/storage/.*)|(.*modyn/common-cpp/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)' \
+        -header-filter='(.*modyn/storage/.*)|(.*modyn/common/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)' \
         -checks='-bugprone-suspicious-include,-google-global-names-in-headers' \
         -quiet \
         ${additional_args} \

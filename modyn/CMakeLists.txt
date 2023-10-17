@@ -1,6 +1,6 @@
 
 ##### Common Files for Modyn Library #####
-add_subdirectory("common-cpp")
+add_subdirectory("common")
 
 ##### MODYN STORAGE BINARY #####
 # TODO(MaxiBoether): add while merging storage PR
