@@ -12,7 +12,10 @@ function run_build() {
 
     mkdir -p "${BUILD_DIR}"
 
-    cmake -B "${BUILD_DIR}"
+    cmake -S . -B "${BUILD_DIR}" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_UNITY_BUILD=ON \
+        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
 
     cmake -S . -B "${BUILD_DIR}"
 
