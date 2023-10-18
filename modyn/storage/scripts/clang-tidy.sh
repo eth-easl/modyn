@@ -20,7 +20,7 @@ function run_build() {
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
     ln -fs "${PWD}"/test/.clang-tidy "${BUILD_DIR}"/test/
 
-    make -j8 -C "${BUILD_DIR}" modynstorage-proto
+    #make -j8 -C "${BUILD_DIR}" modynstorage-proto
 
     set +x
 }

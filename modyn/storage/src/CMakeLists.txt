@@ -42,19 +42,13 @@ file(MAKE_DIRECTORY ${PROTO_BINARY_DIR})
 protobuf_generate(
     TARGET modynstorage-proto
     OUT_VAR PROTO_GENERATED_FILES
-    IMPORT_DIRS ../../protos
-    PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
-set_source_files_properties(${PROTO_GENERATED_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION on)
-protobuf_generate(
-    TARGET modynstorage-proto
-    OUT_VAR PROTO_GENERATED_FILES
     LANGUAGE grpc
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
     PLUGIN "protoc-gen-grpc=\$<TARGET_FILE:grpc_cpp_plugin>"
     # PLUGIN_OPTIONS "generate_mock_code=true"
     IMPORT_DIRS ../../protos
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
-set_source_files_properties(${PROTO_GENERATED_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION on)
+#set_source_files_properties(${PROTO_GENERATED_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION on)
 
 target_include_directories(modynstorage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 

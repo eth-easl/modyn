@@ -95,8 +95,8 @@ using namespace storage::grpc;
 }
 
 void StorageServiceImpl::get_sample_data(soci::session& session, int64_t dataset_id,
-                                                const std::vector<int64_t>& sample_ids,
-                                                std::map<int64_t, SampleData>& file_id_to_sample_data) {
+                                         const std::vector<int64_t>& sample_ids,
+                                         std::map<int64_t, SampleData>& file_id_to_sample_data) {
   std::vector<int64_t> sample_ids_found(sample_ids.size());
   std::vector<int64_t> sample_file_ids(sample_ids.size());
   std::vector<int64_t> sample_indices(sample_ids.size());
@@ -473,7 +473,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
 ::grpc::Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request,
-    ::grpc::ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {
+    ::grpc::ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {  // NOLINT misc-const-correctness
   soci::session session = storage_database_connection_.get_session();
 
   // Check if the dataset exists
@@ -484,7 +484,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
 
-  int64_t total_keys = 0;
+  int64_t total_keys = 0;  // NOLINT misc-const-correctness
   soci::statement count_stmt = (session.prepare << "SELECT COUNT(*) FROM Sample WHERE dataset_id = :dataset_id",
                                 soci::into(total_keys), soci::use(dataset_id));
   count_stmt.execute();
@@ -546,7 +546,7 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
 
 ::grpc::Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
-    modyn::storage::GetDatasetSizeResponse* response) {
+    modyn::storage::GetDatasetSizeResponse* response) {  // NOLINT misc-const-correctness
   soci::session session = storage_database_connection_.get_session();
 
   // Check if the dataset exists
@@ -567,14 +567,14 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
 }
 
 int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci::session& session) {
-  int64_t dataset_id = -1;
+  int64_t dataset_id = -1;  // NOLINT misc-const-correctness
   session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
 
   return dataset_id;
 }
 
 int64_t StorageServiceImpl::get_number_of_files(int64_t dataset_id, soci::session& session) {
-  int64_t number_of_files = -1;
+  int64_t number_of_files = -1;  // NOLINT misc-const-correctness
   session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
       soci::use(dataset_id);
 
