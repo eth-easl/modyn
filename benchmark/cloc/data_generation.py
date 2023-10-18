@@ -209,7 +209,6 @@ class CLDatasets:
         blobs_to_download = []
 
         for blob in blobs:
-            print(blob.name)
             if blob.name.endswith("/"):
                 continue
             if blob.name.endswith("zip"):
