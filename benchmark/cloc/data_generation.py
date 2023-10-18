@@ -206,6 +206,8 @@ class CLDatasets:
         bucket = storage_client.bucket(bucket_name=bucket_name)
         blobs = bucket.list_blobs(prefix=prefix)  # Get list of files
         first_zip_downloaded = False
+        blobs_to_download = []
+
         for blob in blobs:
             print(blob.name)
             if blob.name.endswith("/"):
@@ -222,9 +224,22 @@ class CLDatasets:
             target = dl_dir / blob.name
 
             if not target.exists():
-                blob.download_to_filename(dl_dir / blob.name)
+                blobs_to_download.append((dl_dir / blob.name, blob))
             else:
                 print(f"Skipping {target} as it already exists")
+
+        with ThreadPoolExecutor(max_workers=8) as executor, tqdm(total=len(blobs_to_download)) as pbar:
+            futures_list = []
+            download_blob = lambda target, blob: blob.download_to_filename(target)
+
+            for blob in blobs_to_download:
+                future = executor.submit(download_blob, *blob)
+                future.add_done_callback(lambda p: pbar.update(1))
+                futures_list.append(future)
+
+            # Wait for all tasks to complete
+            for future in futures_list:
+                future.result()
 
     def download_dataset(self):
         """
