@@ -28,6 +28,8 @@ void Storage::run() {
   // Create a mutex to protect the `stop_grpc_server_` and `stop_file_watcher_watchdog_` variables.
   std::mutex stop_mutex;
 
+  SPDLOG_INFO("Storage service running and ready to accept requests.");
+
   {
     std::unique_lock<std::mutex> lk(stop_mutex);
     cv.wait(lk, [&] { return stop_grpc_server_.load() || stop_file_watcher_watchdog_.load(); });
