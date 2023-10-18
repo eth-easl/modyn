@@ -233,7 +233,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
           file_frame.clear();
           inserted_samples = 0;
         }
-        file_frame.push_back({dataset_id, static_cast<int64-t>(file_id), index, label});
+        file_frame.push_back({dataset_id, static_cast<int64_t>(file_id), index, label});
         index++;
         inserted_samples++;
       }
