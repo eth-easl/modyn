@@ -16,8 +16,12 @@ void Storage::run() {
 
   connection_.create_tables();
 
+  SPDLOG_INFO("Starting file watcher watchdog.");
+
   // Start the file watcher watchdog
   std::thread file_watcher_watchdog_thread(&file_watcher::FileWatcherWatchdog::run, &file_watcher_watchdog_);
+
+  SPDLOG_INFO("Starting storage gRPC server.");
 
   // Start the storage grpc server
   std::thread grpc_server_thread(&grpc::StorageGrpcServer::run, &grpc_server_);
