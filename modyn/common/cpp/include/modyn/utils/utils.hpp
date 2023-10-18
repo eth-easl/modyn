@@ -22,6 +22,8 @@
 
 namespace modyn::utils {
 
+bool is_power_of_two(uint64_t value);
+
 class ModynException : public std::exception {
  public:
   explicit ModynException(std::string msg) : msg_{std::move(msg)} {}
