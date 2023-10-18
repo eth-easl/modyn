@@ -216,7 +216,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
           soci::use(dataset_id), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
 
       // Check if the insert was successful.
-      int64_t file_id;
+      static_assert(sizeof(long long) == sizeof(int64_t));
+      long long file_id;
       if (!session.get_last_insert_id("files", file_id)) {
         // The insert was not successful.
         SPDLOG_ERROR("Failed to insert file into database");
@@ -232,7 +233,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
           file_frame.clear();
           inserted_samples = 0;
         }
-        file_frame.push_back({dataset_id, file_id, index, label});
+        file_frame.push_back({dataset_id, static_cast<int64-t>(file_id), index, label});
         index++;
         inserted_samples++;
       }
