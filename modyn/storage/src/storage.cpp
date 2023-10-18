@@ -16,8 +16,12 @@ void Storage::run() {
 
   connection_.create_tables();
 
+  SPDLOG_INFO("Starting file watcher watchdog.");
+
   // Start the file watcher watchdog
   std::thread file_watcher_watchdog_thread(&file_watcher::FileWatcherWatchdog::run, &file_watcher_watchdog_);
+
+  SPDLOG_INFO("Starting storage gRPC server.");
 
   // Start the storage grpc server
   std::thread grpc_server_thread(&grpcs::StorageGrpcServer::run, &grpc_server_);
@@ -27,6 +31,8 @@ void Storage::run() {
 
   // Create a mutex to protect the `stop_grpc_server_` and `stop_file_watcher_watchdog_` variables.
   std::mutex stop_mutex;
+
+  SPDLOG_INFO("Storage service running and ready to accept requests.");
 
   {
     std::unique_lock<std::mutex> lk(stop_mutex);

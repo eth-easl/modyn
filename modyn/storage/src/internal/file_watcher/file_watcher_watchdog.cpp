@@ -113,7 +113,7 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
 }
 
 void FileWatcherWatchdog::run() {
-  SPDLOG_INFO("FileWatchdog running");
+  SPDLOG_INFO("FileWatchdog started.");
 
   while (true) {
     if (stop_file_watcher_watchdog_->load()) {

@@ -3,6 +3,8 @@ FROM nvidia/cuda:11.7.1-devel-ubuntu22.04
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Setup basic system
 RUN apt-get update -yq \
   && apt-get upgrade -yq \
@@ -22,6 +24,11 @@ RUN apt-get update -yq \
     gdb \
     libdw-dev \
     libelf-dev \
+    cmake \
+    ca-certificates \
+    libpq-dev \
+    postgresql-server-dev-all \
+    libsqlite3-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
