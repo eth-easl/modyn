@@ -15,7 +15,7 @@
 #include "test_utils.hpp"
 #include "unit/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
 
-using namespace storage::grpc;
+using namespace storage::grpcs;
 using namespace storage::test;
 
 class StorageServiceImplTest : public ::testing::Test {

@@ -7,7 +7,7 @@
 
 #include <condition_variable>
 
-namespace storage::grpc {
+namespace storage::grpcs {
 
 class StorageGrpcServer {
  public:
@@ -22,4 +22,4 @@ class StorageGrpcServer {
   std::condition_variable cv_;
 };
 
-}  // namespace storage::grpc
+}  // namespace storage::grpcs

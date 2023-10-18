@@ -22,6 +22,6 @@ class Storage {
   std::atomic<bool> stop_file_watcher_watchdog_ = false;
   std::atomic<bool> stop_grpc_server_ = false;
   storage::file_watcher::FileWatcherWatchdog file_watcher_watchdog_;
-  storage::grpc::StorageGrpcServer grpc_server_;
+  storage::grpcs::StorageGrpcServer grpc_server_;
 };
 }  // namespace storage

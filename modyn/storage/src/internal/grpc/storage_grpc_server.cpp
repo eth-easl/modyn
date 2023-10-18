@@ -2,7 +2,7 @@
 
 #include "internal/grpc/storage_service_impl.hpp"
 
-using namespace storage::grpc;
+using namespace storage::grpcs;
 
 void StorageGrpcServer::run() {
   if (!config_["storage"]["port"]) {

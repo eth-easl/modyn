@@ -4,7 +4,7 @@
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
 
-using namespace storage::grpc;
+using namespace storage::grpcs;
 
 ::grpc::Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetRequest* request,

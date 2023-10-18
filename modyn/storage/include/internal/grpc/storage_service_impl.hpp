@@ -11,7 +11,7 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "storage.grpc.pb.h"
 
-namespace storage::grpc {
+namespace storage::grpcs {
 
 struct SampleData {
   std::vector<int64_t> ids{};
@@ -88,4 +88,4 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static int64_t get_number_of_files(int64_t dataset_id, soci::session& session);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
 };
-}  // namespace storage::grpc
+}  // namespace storage::grpcs

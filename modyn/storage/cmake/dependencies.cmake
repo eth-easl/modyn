@@ -72,7 +72,7 @@ set(SOCI_HAVE_BOOST OFF CACHE BOOL "configuration" FORCE)
 FetchContent_GetProperties(soci)
 if(NOT soci_POPULATED)
     FetchContent_Populate(soci)
-    add_subdirectory(${soci_SOURCE_DIR})
+    add_subdirectory(${soci_SOURCE_DIR} _deps)
 endif()
 
 # Function to help us fix compiler warnings for all soci targets

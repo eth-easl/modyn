@@ -44,7 +44,7 @@ protobuf_generate(
     OUT_VAR PROTO_GENERATED_FILES
     IMPORT_DIRS ../../protos
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
-set_source_files_properties(${PROTO_GENERATED_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION on)
+
 protobuf_generate(
     TARGET modynstorage-proto
     OUT_VAR PROTO_GENERATED_FILES
@@ -54,7 +54,8 @@ protobuf_generate(
     # PLUGIN_OPTIONS "generate_mock_code=true"
     IMPORT_DIRS ../../protos
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
-set_source_files_properties(${PROTO_GENERATED_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION on)
+
+message(STATUS "Proto generated files in ${PROTO_BINARY_DIR}: ${PROTO_GENERATED_FILES}")
 
 target_include_directories(modynstorage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
@@ -62,7 +63,7 @@ target_link_libraries(modynstorage-proto PUBLIC libprotobuf grpc++)
 target_compile_options(modynstorage-proto INTERFACE -Wno-unused-parameter -Wno-c++98-compat-extra-semi -Wno-conditional-uninitialized -Wno-documentation)
 
 target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
-target_include_directories(modynstorage PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../cmake-build-debug/clang-tidy-build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
+target_include_directories(modynstorage PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../cmake-build-debug/clang-tidy-build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../_deps/include  ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
 target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
 
 target_link_libraries(modynstorage PUBLIC spdlog fmt argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_postgresql soci_sqlite3 soci_core grpc++ grpc++_reflection modynstorage-proto rapidcsv)

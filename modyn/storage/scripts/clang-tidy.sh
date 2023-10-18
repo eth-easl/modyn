@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 RUN_CLANG_TIDY=${RUN_CLANG_TIDY:-run-clang-tidy}
 CLANG_TIDY=${CLANG_TIDY:-clang-tidy}
 BUILD_DIR=${BUILD_DIR:-cmake-build-debug/clang-tidy-build}
@@ -11,16 +12,21 @@ function run_build() {
     set -x
 
     mkdir -p "${BUILD_DIR}"
-    cmake -B "${BUILD_DIR}"
-    cmake -S . -B "${BUILD_DIR}" \
+    cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_UNITY_BUILD=OFF
+
+    pushd ${BUILD_DIR}
+    make -j8 modynstorage-proto
+    popd
+
+    cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_UNITY_BUILD=ON \
         -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
 
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
-    ln -fs "${PWD}"/test/.clang-tidy "${BUILD_DIR}"/test/
-
-    make -j8 -C "${BUILD_DIR}" modynstorage-proto
+    ln -fs "${SCRIPT_DIR}"/../test/.clang-tidy "${BUILD_DIR}"/test/
 
     set +x
 }
@@ -39,14 +45,24 @@ function run_tidy() {
 
     ${RUN_CLANG_TIDY} -p "${BUILD_DIR}" \
         -clang-tidy-binary="${CLANG_TIDY}" \
-        -header-filter='(.*modyn/modyn/storage/src/.*)|(.*modyn/modyn/storage/include/.*)|(.*modyn/modyn/storage/test/.*)' \
+        -header-filter='(.*modyn/storage/.*)' \
         -checks='-bugprone-suspicious-include,-google-global-names-in-headers' \
+        -config-file="${SCRIPT_DIR}/../.clang-tidy" \
         -quiet \
         ${additional_args} \
         "${BUILD_DIR}"/CMakeFiles/modynstorage.dir/Unity/*.cxx \
-        "${BUILD_DIR}"/test/CMakeFiles/modynstorage-all-test-sources-for-tidy.dir/Unity/*.cxx
+        "${BUILD_DIR}"/CMakeFiles/modyn-storage.dir/Unity/*.cxx \
+        "${BUILD_DIR}"/test/CMakeFiles/modynstorage-all-test-sources-for-tidy.dir/Unity/*.cxx 
+
     set +x
 }
+
+echo $PWD
+if [[ $PWD =~ "modyn/storage" ]]; then
+    # The problem is in the --header-filter option above in RUN_CLANG_TIDY: otherwise, we will match dependency headers as well.
+    echo "Please do not run this script from a directory that has modyn/storage in its path. Current path is ${PWD}."
+    exit -1
+fi
 
 case $1 in
     "build")
