@@ -42,6 +42,12 @@ file(MAKE_DIRECTORY ${PROTO_BINARY_DIR})
 protobuf_generate(
     TARGET modynstorage-proto
     OUT_VAR PROTO_GENERATED_FILES
+    IMPORT_DIRS ../../protos
+    PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
+
+protobuf_generate(
+    TARGET modynstorage-proto
+    OUT_VAR PROTO_GENERATED_FILES
     LANGUAGE grpc
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
     PLUGIN "protoc-gen-grpc=\$<TARGET_FILE:grpc_cpp_plugin>"
