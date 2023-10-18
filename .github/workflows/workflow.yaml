@@ -168,7 +168,7 @@ jobs:
             build-type: Asan
         exclude:
           # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
-          - os: { c: gcc, cxx: g++, version: 12 }
+          - compiler: { c: gcc, cxx: g++, version: 12 }
             build-type: Release
 
     env:
