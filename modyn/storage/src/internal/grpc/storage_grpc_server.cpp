@@ -28,8 +28,8 @@ void StorageGrpcServer::run() {
   SPDLOG_INFO("Server listening on {}", server_address);
 
   {
-    std::unique_lock<std::mutex> const lock(mtx_);
-    cv_.wait(lock, [&] { return stop_grpc_server_->load(); });
+    std::unique_lock<std::mutex> lock(mtx_);
+    cv_.wait(lock, [&]{return stop_grpc_server_->load();});
   }
 
   server->Shutdown();

@@ -33,7 +33,7 @@ class StorageServiceImplTest : public ::testing::Test {
                            storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                            TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-    soci::session const session = connection.get_session();
+    soci::session session = connection.get_session();
     session << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'tmp/test_file.txt', "
                "0, 1)";
 
@@ -80,7 +80,7 @@ TEST_F(StorageServiceImplTest, TestCheckAvailability) {
   modyn::storage::DatasetAvailableResponse response;
 
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl const storage_service(config);
+  ::StorageServiceImpl storage_service(config);
 
   ::grpc::Status status = storage_service.CheckAvailability(&context, &request, &response);
 
@@ -104,7 +104,7 @@ TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
   modyn::storage::GetCurrentTimestampResponse response;
 
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl const storage_service(config);
+  ::StorageServiceImpl storage_service(config);
 
   ::grpc::Status status = storage_service.GetCurrentTimestamp(&context, &request, &response);
 
@@ -114,11 +114,11 @@ TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
 
 TEST_F(StorageServiceImplTest, TestDeleteDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl const storage_service(config);
+  ::StorageServiceImpl storage_service(config);
 
   const storage::database::StorageDatabaseConnection connection(config);
 
-  soci::session const session = connection.get_session();
+  soci::session session = connection.get_session();
 
   modyn::storage::DatasetAvailableRequest request;
   request.set_dataset_id("test_dataset");
@@ -146,7 +146,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
 
 TEST_F(StorageServiceImplTest, TestDeleteData) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl const storage_service(config);
+  ::StorageServiceImpl storage_service(config);
 
   modyn::storage::DeleteDataRequest request;
   request.set_dataset_id("test_dataset");
@@ -154,7 +154,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
   // Add an additional sample for file 1 to the database
   const storage::database::StorageDatabaseConnection connection(config);
-  soci::session const session = connection.get_session();
+  soci::session session = connection.get_session();
   session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 1, 0)";
 
   modyn::storage::DeleteDataResponse response;
@@ -203,7 +203,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
 TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl const storage_service(config);
+  ::StorageServiceImpl storage_service(config);
 
   modyn::storage::DeleteDataRequest request;
   modyn::storage::DeleteDataResponse response;
@@ -228,7 +228,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   // Test case when no files found for the samples
   // Here we create a sample that doesn't link to a file.
   const storage::database::StorageDatabaseConnection connection(config);
-  soci::session const session = connection.get_session();
+  soci::session session = connection.get_session();
   session
       << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file
                                                                                                     // with this id

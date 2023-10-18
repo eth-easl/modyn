@@ -75,7 +75,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   bool disable_multithreading_;
   std::vector<std::thread> retrieval_threads_vector_{};
   storage::database::StorageDatabaseConnection storage_database_connection_;
-  void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
+  static void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
                        std::map<int64_t, SampleData>& file_id_to_sample_data);
   void send_get_response(::grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
                          SampleData sample_data, const YAML::Node& file_wrapper_config,

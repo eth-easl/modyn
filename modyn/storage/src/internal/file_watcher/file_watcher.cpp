@@ -187,7 +187,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   soci::session session = storage_database_connection.get_session();
 
   std::vector<std::string> valid_files;
-  std::string& file_path = file_paths.front();
+  const std::string& file_path = file_paths.front();
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(file_path, filesystem_wrapper_type);
 
   for (const auto& file_path : file_paths) {
