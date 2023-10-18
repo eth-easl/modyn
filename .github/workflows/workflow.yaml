@@ -157,7 +157,6 @@ jobs:
         compiler:
           - { c: gcc, cxx: g++, version: 11 }
           - { c: gcc, cxx: g++, version: 12 }
-          - { c: gcc, cxx: g++, version: 13 }
           - { c: clang, cxx: clang++, version: 14 }
           - { c: clang, cxx: clang++, version: 16, coverage: true }
         include:
@@ -167,6 +166,11 @@ jobs:
             build-type: Tsan
           - compiler: {c: clang, cxx: clang++, version: 14}
             build-type: Asan
+        exclude:
+          # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
+          - os: { c: gcc, cxx: g++, version: 12 }
+            build-type: Release
+
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
       CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
