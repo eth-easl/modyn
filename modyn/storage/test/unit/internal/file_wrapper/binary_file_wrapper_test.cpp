@@ -198,7 +198,7 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
 
-  std::vector<int64_t> label_indices{0, 1, 2, 3};
+  std::vector<int64_t> const label_indices{0, 1, 2, 3};
 
   ASSERT_NO_THROW(file_wrapper.delete_samples(label_indices));
 }

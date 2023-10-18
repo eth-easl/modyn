@@ -117,7 +117,7 @@ TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherThreads) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
 
-  storage::database::StorageDatabaseConnection connection(config);
+  storage::database::StorageDatabaseConnection const connection(config);
 
   watchdog.watch_file_watcher_threads();
 
@@ -159,12 +159,12 @@ TEST_F(FileWatcherWatchdogTest, TestFileWatcherWatchdogWithNoDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  storage::database::StorageDatabaseConnection connection(config);
+  storage::database::StorageDatabaseConnection const connection(config);
 
   watchdog.watch_file_watcher_threads();
 
   // Assert that there are no running FileWatcher threads as there are no datasets
-  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> const file_watcher_threads = watchdog.get_running_file_watcher_threads();
   ASSERT_TRUE(file_watcher_threads.empty());
 }
 
@@ -173,7 +173,7 @@ TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  storage::database::StorageDatabaseConnection connection(config);
+  storage::database::StorageDatabaseConnection const connection(config);
 
   connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
@@ -198,7 +198,7 @@ TEST_F(FileWatcherWatchdogTest, TestAddingNewDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  storage::database::StorageDatabaseConnection connection(config);
+  storage::database::StorageDatabaseConnection const connection(config);
 
   watchdog.watch_file_watcher_threads();
 
@@ -222,7 +222,7 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  storage::database::StorageDatabaseConnection connection(config);
+  storage::database::StorageDatabaseConnection const connection(config);
 
   // Add a new dataset to the database
   connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
@@ -240,9 +240,9 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   // The watchdog should stop the FileWatcher process for the removed dataset
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> const file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
-  ASSERT_TRUE(file_watcher_threads.size() == 0);
+  ASSERT_TRUE(file_watcher_threads.empty());
 }
 
 TEST_F(FileWatcherWatchdogTest, TestNoDatasetsInDB) {
@@ -250,11 +250,11 @@ TEST_F(FileWatcherWatchdogTest, TestNoDatasetsInDB) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  storage::database::StorageDatabaseConnection connection(config);
+  storage::database::StorageDatabaseConnection const connection(config);
 
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  std::vector<int64_t> const file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
   ASSERT_TRUE(file_watcher_threads.empty());
 }

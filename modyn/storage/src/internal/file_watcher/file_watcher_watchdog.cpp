@@ -69,7 +69,7 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
 
   if (number_of_datasets == 0) {
-    if (file_watcher_threads_.size() == 0) {
+    if (file_watcher_threads_.empty()) {
       // There are no FileWatcher threads running, nothing to do
       return;
     }
@@ -89,7 +89,7 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
   std::vector<int64_t> dataset_ids(number_of_datasets);
   session << "SELECT dataset_id FROM datasets", soci::into(dataset_ids);
 
-  std::vector<int64_t> running_file_watcher_threads = get_running_file_watcher_threads();
+  std::vector<int64_t> const running_file_watcher_threads = get_running_file_watcher_threads();
   for (const auto& dataset_id : running_file_watcher_threads) {
     if (std::find(dataset_ids.begin(), dataset_ids.end(), dataset_id) == dataset_ids.end()) {
       // There is a FileWatcher thread running for a dataset that was deleted

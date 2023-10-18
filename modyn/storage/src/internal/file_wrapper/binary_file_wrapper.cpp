@@ -7,7 +7,7 @@
 using namespace storage::file_wrapper;
 
 void BinaryFileWrapper::validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices) {
-  for (int64_t index : indices) {
+  for (int64_t const index : indices) {
     if (index < 0 || index > (total_samples - 1)) {
       FAIL("Requested index " + std::to_string(index) + " is out of bounds.");
     }
@@ -60,7 +60,7 @@ int64_t BinaryFileWrapper::get_label(int64_t index) {
   stream.seekg(record_start, std::ios::beg);
 
   std::vector<unsigned char> label_vec(label_size_);
-  stream.read((char*)label_vec.data(), label_size_);
+  stream.read(reinterpret_cast<char*>(label_vec.data()), label_size_);
 
   return int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0';
 }
@@ -79,7 +79,7 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
     stream.seekg(i * record_size_, std::ios::beg);
 
     std::vector<unsigned char> label_vec(label_size_);
-    stream.read((char*)label_vec.data(), label_size_);
+    stream.read(reinterpret_cast<char*>(label_vec.data()), label_size_);
 
     labels.push_back(int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0');
   }
@@ -107,7 +107,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
     stream.seekg(record_start + label_size_, std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
-    stream.read((char*)sample_vec.data(), sample_size_);
+    stream.read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
 
     samples[index] = sample_vec;
   }
@@ -130,7 +130,7 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
   stream.seekg(record_start + label_size_, std::ios::beg);
 
   std::vector<unsigned char> sample_vec(sample_size_);
-  stream.read((char*)sample_vec.data(), sample_size_);
+  stream.read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
 
   return sample_vec;
 }
@@ -157,7 +157,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
     stream.seekg(record_start + label_size_, std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
-    stream.read((char*)sample_vec.data(), sample_size_);
+    stream.read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
 
     samples.push_back(sample_vec);
   }

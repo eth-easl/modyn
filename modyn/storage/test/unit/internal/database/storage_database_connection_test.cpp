@@ -80,7 +80,7 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
 
 TEST_F(StorageDatabaseConnectionTest, TestAddExistingDataset) {
   const YAML::Node config = TestUtils::get_dummy_config();
-  StorageDatabaseConnection connection(config);
+  StorageDatabaseConnection const connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
   // Add dataset

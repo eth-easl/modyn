@@ -60,13 +60,15 @@ bool LocalFilesystemWrapper::is_directory(const std::string& path) { return std:
 
 bool LocalFilesystemWrapper::is_file(const std::string& path) { return std::filesystem::is_regular_file(path); }
 
-int64_t LocalFilesystemWrapper::get_file_size(const std::string& path) { return std::filesystem::file_size(path); }
+int64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
+  return static_cast<int64_t>(std::filesystem::file_size(path));
+}
 
 int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
 
-  std::filesystem::file_time_type time = std::filesystem::last_write_time(path);
+  std::filesystem::file_time_type const time = std::filesystem::last_write_time(path);
   return std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count();
 }
 

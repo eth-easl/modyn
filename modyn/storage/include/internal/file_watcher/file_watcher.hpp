@@ -26,16 +26,16 @@ struct FileFrame {
 };
 class FileWatcher {
  public:
-  std::atomic<bool>* stop_file_watcher_;
+  std::atomic<bool>* stop_file_watcher;
   explicit FileWatcher(const YAML::Node& config, const int64_t& dataset_id, std::atomic<bool>* stop_file_watcher,
                        int16_t insertion_threads = 1)
-      : stop_file_watcher_{stop_file_watcher},
+      : stop_file_watcher{stop_file_watcher},
         config_{config},
         dataset_id_{dataset_id},
         insertion_threads_{insertion_threads},
         disable_multithreading_{insertion_threads <= 1},
         storage_database_connection_{storage::database::StorageDatabaseConnection(config)} {
-    if (stop_file_watcher_ == nullptr) {
+    if (stop_file_watcher == nullptr) {
       FAIL("stop_file_watcher_ is nullptr.");
     }
 
@@ -57,7 +57,7 @@ class FileWatcher {
           soci::into(dataset_path), soci::into(filesystem_wrapper_type_int), soci::use(dataset_id_);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error while reading dataset path and filesystem wrapper type from database: {}", e.what());
-      stop_file_watcher_->store(true);
+      stop_file_watcher->store(true);
       return;
     }
 
@@ -66,7 +66,7 @@ class FileWatcher {
 
     if (dataset_path.empty()) {
       SPDLOG_ERROR("Dataset with id {} not found.", dataset_id_);
-      stop_file_watcher_->store(true);
+      stop_file_watcher->store(true);
       return;
     }
 
@@ -77,7 +77,7 @@ class FileWatcher {
 
     if (!filesystem_wrapper->exists(dataset_path) || !filesystem_wrapper->is_directory(dataset_path)) {
       SPDLOG_ERROR("Dataset path {} does not exist or is not a directory.", dataset_path);
-      stop_file_watcher_->store(true);
+      stop_file_watcher->store(true);
       return;
     }
 
@@ -90,22 +90,22 @@ class FileWatcher {
   static void handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
                                 const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
                                 const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
-                                const int64_t dataset_id, const YAML::Node& file_wrapper_config,
-                                const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
-                                const bool force_fallback);
+                                int64_t dataset_id, const YAML::Node& file_wrapper_config,
+                                const YAML::Node& config, int64_t sample_dbinsertion_batchsize,
+                                bool force_fallback);
   void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
-  static void insert_file_frame(storage::database::StorageDatabaseConnection storage_database_connection,
-                                const std::vector<FileFrame>& file_frame, const bool force_fallback);
+  static void insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
+                                const std::vector<FileFrame>& file_frame, bool force_fallback);
   void seek_dataset();
   void seek();
   static bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
                                bool ignore_last_timestamp, int64_t timestamp,
                                storage::database::StorageDatabaseConnection& storage_database_connection,
-                               std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper);
+                               const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper);
   static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
-                                      storage::database::StorageDatabaseConnection storage_database_connection);
+                                      const storage::database::StorageDatabaseConnection& storage_database_connection);
   static void fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                 storage::database::StorageDatabaseConnection storage_database_connection);
+                                 const storage::database::StorageDatabaseConnection& storage_database_connection);
 
  private:
   YAML::Node config_;

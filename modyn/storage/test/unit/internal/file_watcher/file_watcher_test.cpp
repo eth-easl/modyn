@@ -150,7 +150,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
+  std::shared_ptr<MockFilesystemWrapper> const filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   watcher.filesystem_wrapper = filesystem_wrapper;
 
   // Add a file to the temporary directory
@@ -187,7 +187,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   std::atomic<bool> stop_file_watcher = false;
   const FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  storage::database::StorageDatabaseConnection connection(config);
+  storage::database::StorageDatabaseConnection const connection(config);
 
   soci::session session = connection.get_session();
 
@@ -292,7 +292,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
 TEST_F(FileWatcherTest, TestConstructorWithInvalidInterval) {
   std::atomic<bool> stop_file_watcher = false;
   const FileWatcher watcher(YAML::LoadFile("config.yaml"), -1, &stop_file_watcher);
-  ASSERT_TRUE(watcher.stop_file_watcher_->load());
+  ASSERT_TRUE(watcher.stop_file_watcher->load());
 }
 
 TEST_F(FileWatcherTest, TestConstructorWithNullStopFileWatcher) {
@@ -311,7 +311,7 @@ TEST_F(FileWatcherTest, TestSeekWithNonExistentDirectory) {
 TEST_F(FileWatcherTest, TestSeekDatasetWithNonExistentDirectory) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
-  FileWatcher watcher(config, 1, &stop_file_watcher);
+  FileWatcher const watcher(config, 1, &stop_file_watcher);
   std::filesystem::remove_all("tmp");
 }
 
@@ -329,7 +329,7 @@ TEST_F(FileWatcherTest, TestCheckValidFileWithInvalidPath) {
 TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
 
-  std::vector<FileFrame> files;
+  std::vector<FileFrame> const files;
 
   const storage::database::StorageDatabaseConnection connection(config);
 
@@ -339,7 +339,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {
 TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
 
-  std::vector<std::string> files;
+  std::vector<std::string> const files;
 
   const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
 
@@ -353,7 +353,7 @@ TEST_F(FileWatcherTest, TestMultipleFileHandling) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  int16_t number_of_files = 10;
+  int16_t const number_of_files = 10;
 
   // Add several files to the temporary directory
   for (int i = 0; i < number_of_files; i++) {

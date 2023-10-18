@@ -26,10 +26,10 @@ void Storage::run() {
   std::condition_variable cv;
 
   // Create a mutex to protect the `stop_grpc_server_` and `stop_file_watcher_watchdog_` variables.
-  std::mutex m;
+  std::mutex stop_mutex;
 
   {
-    std::unique_lock<std::mutex> lk(m);
+    std::unique_lock<std::mutex> lk(stop_mutex);
     cv.wait(lk, [&] { return stop_grpc_server_.load() || stop_file_watcher_watchdog_.load(); });
   }
 

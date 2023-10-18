@@ -151,11 +151,10 @@ DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& confi
   const auto drivername = config["storage"]["database"]["drivername"].as<std::string>();
   if (drivername == "postgresql") {
     return DatabaseDriver::POSTGRESQL;
-  } else if (drivername == "sqlite3") {
+  } if (drivername == "sqlite3") {
     return DatabaseDriver::SQLITE3;
-  } else {
-    FAIL("Unsupported database driver: " + drivername);
-  }
+  }     FAIL("Unsupported database driver: " + drivername);
+ 
 }
 
 bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {

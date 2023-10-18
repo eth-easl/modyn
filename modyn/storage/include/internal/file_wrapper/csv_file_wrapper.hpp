@@ -41,27 +41,28 @@ class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
 
     validate_file_extension();
 
-    rapidcsv::LabelParams label_params(ignore_first_line ? 0 : -1);
+    label_params_ = rapidcsv::LabelParams(ignore_first_line ? 0 : -1);
 
     std::ifstream& stream = filesystem_wrapper_->get_stream(path);
 
-    doc_ = rapidcsv::Document(stream, label_params, rapidcsv::SeparatorParams(separator_));
+    doc_ = rapidcsv::Document(stream, label_params_, rapidcsv::SeparatorParams(separator_));
   }
 
+  int64_t get_number_of_samples() override;
+  int64_t get_label(int64_t index) override;
+  std::vector<int64_t> get_all_labels() override;
   std::vector<unsigned char> get_sample(int64_t index) override;
   std::vector<std::vector<unsigned char>> get_samples(int64_t start, int64_t end) override;
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<int64_t>& indices) override;
-  int64_t get_label(int64_t index) override;
-  std::vector<int64_t> get_all_labels() override;
-  int64_t get_number_of_samples() override;
-  void delete_samples(const std::vector<int64_t>& indices) override;
-  FileWrapperType get_type() override;
-  ~CsvFileWrapper() override = default;
   void validate_file_extension() override;
+  void delete_samples(const std::vector<int64_t>& indices) override;
+  void set_file_path(const std::string& path) override;
+  FileWrapperType get_type() override;
 
  private:
   char separator_;
   int64_t label_index_;
   rapidcsv::Document doc_;
+  rapidcsv::LabelParams label_params_;
 };
 }  // namespace storage::file_wrapper
