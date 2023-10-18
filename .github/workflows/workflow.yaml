@@ -137,11 +137,11 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}
-        run: bash scripts/clang-tidy.sh build
+        run: bash modyn/storage/scripts/clang-tidy.sh build
 
       - name: Run clang-tidy
         working-directory: ${{github.workspace}}
-        run: bash scripts/clang-tidy.sh run_tidy
+        run: bash modyn/storage/scripts/clang-tidy.sh run_tidy
 
   cpp_build_and_test:
     name: Build + Test (C++)
