@@ -68,8 +68,15 @@ int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
 
-  const std::filesystem::file_time_type time = std::filesystem::last_write_time(path);
-  return std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count();
+  // For the most system reliable way to get the file timestamp, we use stat
+  struct stat file_stat;
+  if (stat(path.c_str(), &file_stat) != 0) {
+    FAIL(fmt::format("File timestamp not readable: {}", path));
+  }
+
+  time_t file_timestamp = file_stat.st_mtime;
+  int64_t int64_file_timestamp = static_cast<int64_t>(file_timestamp);
+  return int64_file_timestamp;
 }
 
 bool LocalFilesystemWrapper::is_valid_path(const std::string& path) { return std::filesystem::exists(path); }

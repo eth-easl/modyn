@@ -93,9 +93,9 @@ TEST_F(LocalFilesystemWrapperTest, TestListRecursive) {
   std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/true);
   ASSERT_EQ(files.size(), 2);
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
-  ASSERT_EQ((files)[1], file_name);
   const std::string file_name_2 = test_base_dir + path_seperator + "test_dir_2/test_file_2.txt";
-  ASSERT_EQ((files)[0], file_name_2);
+  ASSERT_TRUE(std::find(files.begin(), files.end(), file_name) != files.end());
+  ASSERT_TRUE(std::find(files.begin(), files.end(), file_name_2) != files.end());
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestIsDirectory) {
