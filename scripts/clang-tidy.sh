@@ -1,27 +1,34 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 RUN_CLANG_TIDY=${RUN_CLANG_TIDY:-run-clang-tidy}
 CLANG_TIDY=${CLANG_TIDY:-clang-tidy}
-BUILD_DIR=${BUILD_DIR:-cmake-build-debug/clang-tidy-build}
+BUILD_DIR_REL="${SCRIPT_DIR}/../clang-tidy-build"
+BUILD_DIR=$(realpath ${BUILD_DIR_REL})
 APPLY_REPLACEMENTS_BINARY=${APPLY_REPLACEMENTS_BINARY:-clang-apply-replacements}
 
 function run_build() {
     echo "Running cmake build..."
     set -x
 
-    mkdir -p "${BUILD_DIR}"
-    cmake -B "${BUILD_DIR}"
-    cmake -S . -B "${BUILD_DIR}" \
+    # TODO(MaxiBoether): add this when merging into storage PR
+    #mkdir -p "${BUILD_DIR}"
+    #cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
+    #    -DCMAKE_BUILD_TYPE=Debug \
+    #    -DCMAKE_UNITY_BUILD=OFF
+
+    #pushd ${BUILD_DIR}
+    #make -j8 modynstorage-proto
+    #popd
+
+    cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_UNITY_BUILD=ON \
         -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
 
-    # TODO(MaxiBoether): add when merging storage
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
-    #ln -fs "${PWD}"/tests/.clang-tidy "${BUILD_DIR}"/tests/
-
-    #make -j8 -C "${BUILD_DIR}" modynstorage-proto
+    # ln -fs "${SCRIPT_DIR}"/../modyn/tests/.clang-tidy "${BUILD_DIR}"/modyn/tests/
 
     set +x
 }
@@ -40,11 +47,11 @@ function run_tidy() {
 
     ${RUN_CLANG_TIDY} -p "${BUILD_DIR}" \
         -clang-tidy-binary="${CLANG_TIDY}" \
-        -header-filter='(.*modyn/storage/.*)|(.*modyn/common/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)' \
-        -checks='-bugprone-suspicious-include,-google-global-names-in-headers' \
+        -config-file="${SCRIPT_DIR}/../.clang-tidy" \
         -quiet \
+        -checks='-bugprone-suspicious-include,-google-global-names-in-headers' \
+        -header-filter='(.*modyn/storage/.*)|(.*modyn/common/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)|(.*modyn/tests.*)' \
         ${additional_args} \
-        "${BUILD_DIR}"/CMakeFiles/modyn.dir/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/*/Unity/*.cxx \
@@ -57,9 +64,27 @@ function run_tidy() {
         "${BUILD_DIR}"/modyn/*/*/*/*/*/*/*/*/*/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/*/*/*/*/*/*/*/*/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/*/*/*/*/*/*/*/*/*/*/Unity/*.cxx \
-        "${BUILD_DIR}"/tests/CMakeFiles/modyn-all-test-sources-for-tidy.dir/Unity/*.cxx # TODO(MaxiBoether): fix when we have tests
+        "${BUILD_DIR}"/modyn/tests/CMakeFiles/modyn-all-test-sources-for-tidy.dir/Unity/*.cxx # TODO(MaxiBoether): fix storage path when merging
+        "${BUILD_DIR}"/CMakeFiles/modyn.dir/Unity/*.cxx
+
     set +x
 }
+
+# The problem is in the --header-filter option above in RUN_CLANG_TIDY: otherwise, we will match dependency headers as well.
+if [[ $PWD =~ "modyn/storage" ]]; then
+    echo "Please do not run this script from a directory that has modyn/storage in its path. Current path is ${PWD}."
+    exit -1
+fi
+
+if [[ $PWD =~ "modyn/selector" ]]; then
+    echo "Please do not run this script from a directory that has modyn/selector in its path. Current path is ${PWD}."
+    exit -1
+fi
+
+if [[ $PWD =~ "modyn/common" ]]; then
+    echo "Please do not run this script from a directory that has modyn/common in its path. Current path is ${PWD}."
+    exit -1
+fi
 
 case $1 in
     "build")

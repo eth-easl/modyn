@@ -26,7 +26,7 @@ bool is_power_of_two(uint64_t value);
 
 class ModynException : public std::exception {
  public:
-  explicit ModynException(std::string msg) : msg_{std::move(msg)} {}
+  explicit ModynException(const std::string& msg) : msg_{std::move(msg)} {}
   const char* what() const noexcept override { return msg_.c_str(); }
 
  private:
