@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
 
   parser.parse_args(argc, argv);
 
-  std::string config_file = parser.get<std::string>("config");
+  std::string config_file = parser.get<std::string>("config");  // NOLINT misc-const-correctness
 
   ASSERT(std::filesystem::exists(config_file), "Config file does not exist.");
   if (!std::filesystem::exists(config_file)) {
@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Verify that the config file exists and is readable.
-  YAML::Node config = YAML::LoadFile(config_file);
+  const YAML::Node config = YAML::LoadFile(config_file);
 
   SPDLOG_INFO("Initializing storage.");
   Storage storage(config_file);

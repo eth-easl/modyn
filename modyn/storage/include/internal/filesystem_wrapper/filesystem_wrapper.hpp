@@ -31,6 +31,10 @@ class FilesystemWrapper {
     return FILESYSTEM_WRAPPER_TYPE_MAP.at(type);
   }
   virtual ~FilesystemWrapper() = default;
+  FilesystemWrapper(const FilesystemWrapper&) = default;
+  FilesystemWrapper& operator=(const FilesystemWrapper&) = default;
+  FilesystemWrapper(FilesystemWrapper&&) = default;
+  FilesystemWrapper& operator=(FilesystemWrapper&&) = default;
 
  protected:
   std::string base_path_;

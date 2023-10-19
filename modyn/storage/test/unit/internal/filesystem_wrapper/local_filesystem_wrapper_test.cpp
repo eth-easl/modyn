@@ -14,15 +14,10 @@
 using namespace storage::filesystem_wrapper;
 using namespace storage::test;
 
-const char path_seperator =
-#ifdef _WIN32
-    '\\';
-#else
-    '/';
-#endif
+const char path_seperator = '/';
 
-std::string current_dir = std::filesystem::current_path();
-std::string test_base_dir = current_dir + path_seperator + "test_dir";
+const std::string current_dir = std::filesystem::current_path();              // NOLINT cert-err58-cpp
+const std::string test_base_dir = current_dir + path_seperator + "test_dir";  // NOLINT cert-err58-cpp
 
 class LocalFilesystemWrapperTest : public ::testing::Test {
  protected:

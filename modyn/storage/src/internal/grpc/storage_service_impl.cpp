@@ -27,9 +27,9 @@ using namespace storage::grpcs;
       soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
       soci::into(file_wrapper_config), soci::use(request->dataset_id());
 
-  uint64_t keys_size = request->keys_size();
+  const int64_t keys_size = request->keys_size();
   std::vector<int64_t> request_keys(keys_size);
-  for (uint64_t i = 0; i < keys_size; i++) {
+  for (int64_t i = 0; i < keys_size; i++) {
     request_keys[i] = request->keys(i);
   }
 
@@ -43,7 +43,7 @@ using namespace storage::grpcs;
         base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
     const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
 
-    if (file_id_to_sample_data.size() == 0) {
+    if (file_id_to_sample_data.empty()) {
       SPDLOG_ERROR("No samples found in dataset {}.", request->dataset_id());
       return {::grpc::StatusCode::NOT_FOUND, "No samples found."};
     }
@@ -51,21 +51,21 @@ using namespace storage::grpcs;
       send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type);
     }
   } else {
-    for (uint64_t i = 0; i < retrieval_threads_; i++) {
+    for (int64_t i = 0; i < retrieval_threads_; i++) {
       retrieval_threads_vector_[i] = std::thread([&, i, keys_size, request_keys]() {
         std::map<int64_t, SampleData> file_id_to_sample_data;
         // Get the sample data for the current thread
-        uint64_t start_index = i * (keys_size / retrieval_threads_);
-        uint64_t end_index = (i + 1) * (keys_size / retrieval_threads_);
+        const int64_t start_index = i * (keys_size / retrieval_threads_);
+        int64_t end_index = (i + 1) * (keys_size / retrieval_threads_);
         if (end_index > keys_size) {
           end_index = keys_size;
         }
-        uint64_t samples_prepared = 0;
+        int64_t samples_prepared = 0;
         auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
             base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
         const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
 
-        for (uint64_t j = start_index; j < end_index; j++) {
+        for (int64_t j = start_index; j < end_index; j++) {
           if (samples_prepared == sample_batch_size_) {
             for (auto& [file_id, sample_data] : file_id_to_sample_data) {
               send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper,
@@ -107,7 +107,8 @@ void StorageServiceImpl::get_sample_data(soci::session& session, int64_t dataset
       soci::into(sample_ids_found), soci::into(sample_file_ids), soci::into(sample_indices), soci::into(sample_labels),
       soci::use(dataset_id), soci::use(sample_ids);
 
-  for (uint64_t i = 0; i < sample_ids_found.size(); i++) {
+  const auto number_of_samples = static_cast<int64_t>(sample_ids_found.size());
+  for (int64_t i = 0; i < number_of_samples; i++) {
     file_id_to_sample_data[sample_file_ids[i]].ids.push_back(sample_ids_found[i]);
     file_id_to_sample_data[sample_file_ids[i]].indices.push_back(sample_indices[i]);
     file_id_to_sample_data[sample_file_ids[i]].labels.push_back(sample_labels[i]);
@@ -115,7 +116,7 @@ void StorageServiceImpl::get_sample_data(soci::session& session, int64_t dataset
 }
 
 void StorageServiceImpl::send_get_response(
-    ::grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id, const SampleData sample_data,
+    ::grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id, const SampleData& sample_data,
     const YAML::Node& file_wrapper_config,
     const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
     int64_t file_wrapper_type) {
@@ -132,7 +133,8 @@ void StorageServiceImpl::send_get_response(
 
   // Send the data to the client
   modyn::storage::GetResponse response;
-  for (uint64_t i = 0; i < samples.size(); i++) {
+  const auto number_of_samples = static_cast<int64_t>(samples.size());
+  for (int64_t i = 0; i < number_of_samples; i++) {
     response.add_keys(sample_data.ids[i]);
     std::vector<uint8_t> sample_bytes(samples[i].begin(), samples[i].end());
     response.add_samples(std::string(sample_bytes.begin(), sample_bytes.end()));
@@ -154,7 +156,7 @@ void StorageServiceImpl::send_get_response(
     return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
 
-  const uint64_t number_of_files = get_number_of_files(dataset_id, session);
+  const int64_t number_of_files = get_number_of_files(dataset_id, session);
 
   // Get the file ids
   std::vector<int64_t> file_ids(number_of_files);
@@ -163,18 +165,18 @@ void StorageServiceImpl::send_get_response(
       soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->timestamp());
 
   if (disable_multithreading_) {
-    for (int64_t file_id : file_ids) {
+    for (const int64_t file_id : file_ids) {
       send_get_new_data_since_response(writer, file_id);
     }
   } else {
-    for (uint64_t i = 0; i < retrieval_threads_; i++) {
+    for (int64_t i = 0; i < retrieval_threads_; i++) {
       retrieval_threads_vector_[i] = std::thread([&, i, number_of_files, file_ids]() {
-        uint64_t start_index = i * (number_of_files / retrieval_threads_);
-        uint64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
+        const int64_t start_index = i * (number_of_files / retrieval_threads_);
+        int64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
         if (end_index > number_of_files) {
           end_index = number_of_files;
         }
-        for (uint64_t j = start_index; j < end_index; j++) {
+        for (int64_t j = start_index; j < end_index; j++) {
           send_get_new_data_since_response(writer, file_ids[j]);
         }
       });
@@ -192,13 +194,13 @@ void StorageServiceImpl::send_get_new_data_since_response(
   soci::session session = storage_database_connection_.get_session();
   int64_t number_of_samples;
   session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
-  soci::rowset<soci::row> rs =
+  soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
       (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
 
   modyn::storage::GetNewDataSinceResponse response;
-  for (auto it = rs.begin(); it != rs.end(); ++it) {
-    response.add_keys(it->get<int64_t>(0));
-    response.add_labels(it->get<int64_t>(1));
+  for (auto & row : rs) {
+    response.add_keys(row.get<int64_t>(0));
+    response.add_labels(row.get<int64_t>(1));
   }
   writer->Write(response);
 }
@@ -216,7 +218,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
     return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
   }
 
-  const uint64_t number_of_files = get_number_of_files(dataset_id, session);
+  const int64_t number_of_files = get_number_of_files(dataset_id, session);
 
   // Get the file ids
   std::vector<int64_t> file_ids(number_of_files);
@@ -227,18 +229,18 @@ void StorageServiceImpl::send_get_new_data_since_response(
       soci::use(request->end_timestamp());
 
   if (disable_multithreading_) {
-    for (int64_t file_id : file_ids) {
+    for (const int64_t file_id : file_ids) {
       send_get_new_data_in_interval_response(writer, file_id);
     }
   } else {
-    for (uint64_t i = 0; i < retrieval_threads_; i++) {
+    for (int64_t i = 0; i < retrieval_threads_; i++) {
       retrieval_threads_vector_[i] = std::thread([&, i, number_of_files, file_ids]() {
-        uint64_t start_index = i * (number_of_files / retrieval_threads_);
-        uint64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
+        const int64_t start_index = i * (number_of_files / retrieval_threads_);
+        int64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
         if (end_index > number_of_files) {
           end_index = number_of_files;
         }
-        for (uint64_t j = start_index; j < end_index; j++) {
+        for (int64_t j = start_index; j < end_index; j++) {
           send_get_new_data_in_interval_response(writer, file_ids[j]);
         }
       });
@@ -256,13 +258,13 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   soci::session session = storage_database_connection_.get_session();
   int64_t number_of_samples;
   session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
-  soci::rowset<soci::row> rs =
+  soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
       (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
 
   modyn::storage::GetDataInIntervalResponse response;
-  for (auto it = rs.begin(); it != rs.end(); ++it) {
-    response.add_keys(it->get<int64_t>(0));
-    response.add_labels(it->get<int64_t>(1));
+  for (auto & row : rs) {
+    response.add_keys(row.get<int64_t>(0));
+    response.add_labels(row.get<int64_t>(1));
   }
   writer->Write(response);
 }
@@ -273,7 +275,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   soci::session session = storage_database_connection_.get_session();
 
   // Check if the dataset exists
-  int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+  const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
   SPDLOG_INFO("Dataset {} exists: {}", request->dataset_id(), dataset_id != -1);
 
@@ -292,7 +294,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 ::grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::RegisterNewDatasetRequest* request,
     modyn::storage::RegisterNewDatasetResponse* response) {
-  bool success = storage_database_connection_.add_dataset(
+  bool success = storage_database_connection_.add_dataset(  // NOLINT misc-const-correctness
       request->dataset_id(), request->base_path(),
       storage::filesystem_wrapper::FilesystemWrapper::get_filesystem_wrapper_type(request->filesystem_wrapper_type()),
       storage::file_wrapper::FileWrapper::get_file_wrapper_type(request->file_wrapper_type()), request->description(),
@@ -342,7 +344,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     }
   }
 
-  bool success = storage_database_connection_.delete_dataset(request->dataset_id());
+  bool success = storage_database_connection_.delete_dataset(request->dataset_id());  // NOLINT misc-const-correctness
   response->set_success(success);
   ::grpc::Status status;
   if (success) {
@@ -380,9 +382,8 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   }
 
   std::vector<int64_t> sample_ids;
-  uint64_t keys_size = request->keys_size();
-  for (uint64_t i = 0; i < keys_size; i++) {
-    sample_ids.push_back(request->keys(i));
+  for (int index = 0; index < request->keys_size(); index++) {
+    sample_ids.push_back(request->keys(index));
   }
 
   int64_t number_of_files = 0;
@@ -407,7 +408,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
                     sample_placeholders);
   session << sql, soci::into(file_ids), soci::use(dataset_id);
 
-  if (file_ids.size() == 0) {
+  if (file_ids.empty()) {
     SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
     return {::grpc::StatusCode::NOT_FOUND, "No files found."};
   }
@@ -534,13 +535,13 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
   if (threshold > 0) {
     if (worker_id < threshold) {
       worker_subset_size += 1;
-      int64_t start_index = worker_id * (subset_size + 1);
+      const int64_t start_index = worker_id * (subset_size + 1);
       return {start_index, worker_subset_size};
     }
-    int64_t start_index = threshold * (subset_size + 1) + (worker_id - threshold) * subset_size;
+    const int64_t start_index = threshold * (subset_size + 1) + (worker_id - threshold) * subset_size;
     return {start_index, worker_subset_size};
   }
-  int64_t start_index = worker_id * subset_size;
+  const int64_t start_index = worker_id * subset_size;
   return {start_index, worker_subset_size};
 }
 

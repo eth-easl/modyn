@@ -99,14 +99,15 @@ TEST_F(StorageServiceImplTest, TestCheckAvailability) {
 TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
   ::grpc::ServerContext context;
 
-  modyn::storage::GetCurrentTimestampRequest request;
+  modyn::storage::GetCurrentTimestampRequest request;  // NOLINT misc-const-correctness
 
   modyn::storage::GetCurrentTimestampResponse response;
 
   const YAML::Node config = YAML::LoadFile("config.yaml");
   ::StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
 
-  ::grpc::Status status = storage_service.GetCurrentTimestamp(&context, &request, &response);
+  ::grpc::Status status =  // NOLINT misc-const-correctness
+      storage_service.GetCurrentTimestamp(&context, &request, &response);
 
   EXPECT_TRUE(status.ok());
   EXPECT_GE(response.timestamp(), 0);
@@ -132,7 +133,8 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
 
   ASSERT_TRUE(dataset_exists);
 
-  ::grpc::Status status = storage_service.DeleteDataset(&context, &request, &response);
+  ::grpc::Status status =  // NOLINT misc-const-correctness
+      storage_service.DeleteDataset(&context, &request, &response);
 
   ASSERT_TRUE(status.ok());
 

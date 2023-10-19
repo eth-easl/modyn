@@ -35,6 +35,10 @@ class FileWrapper {
     return FILE_WRAPPER_TYPE_MAP.at(type);
   }
   virtual ~FileWrapper() = default;
+  FileWrapper(const FileWrapper&) = default;
+  FileWrapper& operator=(const FileWrapper&) = default;
+  FileWrapper(FileWrapper&&) = default;
+  FileWrapper& operator=(FileWrapper&&) = default;
 
  protected:
   std::string file_path_;

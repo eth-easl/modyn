@@ -21,8 +21,8 @@ struct SampleData {
 
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
  public:
-  explicit StorageServiceImpl(const YAML::Node& config, uint64_t retrieval_threads = 1)
-      : Service(),
+  explicit StorageServiceImpl(const YAML::Node& config, int64_t retrieval_threads = 1)
+      : Service(),  // NOLINT readability-redundant-member-init
         config_{config},
         retrieval_threads_{retrieval_threads},
         disable_multithreading_{retrieval_threads <= 1},
@@ -31,7 +31,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       SPDLOG_ERROR("No sample_batch_size specified in config.yaml");
       return;
     }
-    sample_batch_size_ = config_["storage"]["sample_batch_size"].as<uint64_t>();
+    sample_batch_size_ = config_["storage"]["sample_batch_size"].as<int64_t>();
 
     if (disable_multithreading_) {
       SPDLOG_INFO("Multithreading disabled.");
@@ -70,15 +70,15 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
  private:
   YAML::Node config_;
-  uint64_t sample_batch_size_{};
-  uint64_t retrieval_threads_;
+  int64_t sample_batch_size_{};
+  int64_t retrieval_threads_;
   bool disable_multithreading_;
   std::vector<std::thread> retrieval_threads_vector_{};
   storage::database::StorageDatabaseConnection storage_database_connection_;
   static void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
                               std::map<int64_t, SampleData>& file_id_to_sample_data);
   void send_get_response(::grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
-                         SampleData sample_data, const YAML::Node& file_wrapper_config,
+                         const SampleData& sample_data, const YAML::Node& file_wrapper_config,
                          const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
                          int64_t file_wrapper_type);
   void send_get_new_data_since_response(::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
