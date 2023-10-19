@@ -30,7 +30,7 @@ RUN apt-get update -yq \
     postgresql-server-dev-all \
     libsqlite3-dev \
     software-properties-common
-RUN add-apt-repository ppa:ubuntu-toolchain-r/ppa -y \
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y \
   && apt-get update -yq \
   && apt-get install -qy g++-13 gcc-13 \
   && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13 --slave /usr/bin/gcov gcov /usr/bin/gcov-13 \
