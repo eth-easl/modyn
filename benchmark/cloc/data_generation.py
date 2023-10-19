@@ -51,6 +51,11 @@ def setup_argparser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skips the download and only (re)creates labels and timestamps.",
     )
+    parser_.add_argument(
+        "--skip_unzip",
+        action="store_true",
+        help="Skips the unzipping and only (re)creates labels and timestamps.",
+    )
     return parser_
 
 
@@ -62,8 +67,12 @@ def main():
 
     downloader = CLDatasets(str(args.dir), test_mode=args.test)
     if not args.skip_download:
-        logger.info("Starting download and extraction.")
-        downloader.download_and_extract()
+        logger.info("Starting download")
+        downloader.download_dataset()
+
+    if not args.skip_unzip:
+        logger.info("Starting extraction")
+        downloader.extract()
 
     downloader.convert_labels_and_timestamps(args.all)
 
@@ -102,9 +111,7 @@ class CLDatasets:
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
 
-    def download_and_extract(self):
-        self.download_dataset()
-
+    def extract(self):
         if self.unzip:
             self.unzip_data_files(self.directory + "/CLOC/data")
 
