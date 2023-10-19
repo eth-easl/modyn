@@ -29,7 +29,9 @@ RUN apt-get update -yq \
     libpq-dev \
     postgresql-server-dev-all \
     libsqlite3-dev \
-  && rm -rf /var/lib/apt/lists/*
+    software-properties-common \
+  && rm -rf /var/lib/apt/lists/* \
+  && gcc --version && g++ --version && cmake --version
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
