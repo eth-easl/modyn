@@ -515,7 +515,7 @@ class Supervisor:
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
-        self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
+        self.pipeline_id = self.grpc.register_pipeline(self.pipeline_config)
         self.status_bar.update(demo="Initial Pass")
 
         self.initial_pass()
@@ -529,5 +529,5 @@ class Supervisor:
 
         self.status_bar.update(demo="Cleanup")
         logger.info("Pipeline done, unregistering.")
-        self.grpc.unregister_pipeline_at_selector(self.pipeline_id)
+        self.grpc.unregister_pipeline(self.pipeline_id)
         self._persist_pipeline_log()

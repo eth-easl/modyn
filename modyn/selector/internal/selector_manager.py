@@ -32,7 +32,7 @@ class SelectorManager:
         # For now not a big problem since we mostly run one pipeline but we might want to redesign this.
         self._prepared_locks = [self._manager.Lock() for _ in range(64)]
 
-        self.init_metadata_db()
+        # self.init_metadata_db()
         self._init_trigger_sample_directory()
 
     def __getstate__(self) -> dict:
@@ -40,9 +40,9 @@ class SelectorManager:
         del state["_manager"]
         return state
 
-    def init_metadata_db(self) -> None:
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            database.create_tables()
+    # def init_metadata_db(self) -> None:
+    #     with MetadataDatabaseConnection(self._modyn_config) as database:
+    #         database.create_tables()
 
     def _init_trigger_sample_directory(self) -> None:
         ignore_existing_trigger_samples = (
@@ -95,6 +95,7 @@ class SelectorManager:
         selector = Selector(selection_strategy, pipeline_id, num_workers, self._modyn_config, self._selector_cache_size)
         self._selectors[pipeline_id] = selector
 
+    # TODO(#302): remove this grpc call
     def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
         """
         Registers a new pipeline at the Selector.

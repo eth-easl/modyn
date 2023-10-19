@@ -62,6 +62,8 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models.pipelines import Pipeline
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
 
 logger = logging.getLogger(__name__)
@@ -81,9 +83,10 @@ class GRPCHandler:
 
         self.init_storage()
         self.init_selector()
+        self.init_metadata_db()
         self.init_trainer_server()
         self.init_evaluator()
-
+        
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
@@ -143,6 +146,10 @@ class GRPCHandler:
         self.evaluator = EvaluatorStub(self.evaluator_channel)
         logger.info("Successfully connected to evaluator.")
         self.connected_to_evaluator = True
+    
+    def init_metadata_db(self) -> None:
+        with MetadataDatabaseConnection(self.config) as database:
+            database.create_tables()
 
     def dataset_available(self, dataset_id: str) -> bool:
         assert self.connected_to_storage, "Tried to check for dataset availability, but no storage connection."
@@ -196,25 +203,50 @@ class GRPCHandler:
 
         return response.timestamp
 
-    def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
-        if not self.connected_to_selector:
-            raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
+    # def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
+    #     if not self.connected_to_selector:
+    #         raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
 
-        pipeline_id = self.selector.register_pipeline(
-            RegisterPipelineRequest(
-                num_workers=pipeline_config["training"]["dataloader_workers"],
-                selection_strategy=SelectorJsonString(
-                    value=json.dumps(pipeline_config["training"]["selection_strategy"])
-                ),
-            )
-        ).pipeline_id
+    #     pipeline_id = self.selector.register_pipeline(
+    #         RegisterPipelineRequest(
+    #             num_workers=pipeline_config["training"]["dataloader_workers"],
+    #             selection_strategy=SelectorJsonString(
+    #                 value=json.dumps(pipeline_config["training"]["selection_strategy"])
+    #             ),
+    #         )
+    #     ).pipeline_id
 
-        logger.info(f"Registered pipeline {pipeline_config['pipeline']['name']} at selector with ID {pipeline_id}")
+    #     logger.info(f"Registered pipeline {pipeline_config['pipeline']['name']} at selector with ID {pipeline_id}")
+    #     return pipeline_id
+
+    # # pylint: disable-next=unused-argument
+    # def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
+    #     #  # TODO(#64,#124): Implement.
+    #     pass
+
+    def register_pipeline(self, pipeline_config: dict) -> int:
+        """
+        Registers a new pipeline in the metadata database.
+        Returns:
+            The id of the newly created training object
+        Throws:
+            ValueError if num_workers is not positive.
+        """
+        num_workers: int = pipeline_config["training"]["dataloader_workers"]
+        selection_strategy: str = json.dumps(pipeline_config["training"]["selection_strategy"])
+
+        if num_workers < 0:
+            raise ValueError(f"Tried to register training with {num_workers} workers.")
+
+        # TODO (#317): add the lock back after making supervisor a server
+        # with self._next_pipeline_lock:
+        with MetadataDatabaseConnection(self.config) as database:
+            pipeline_id = database.register_pipeline(num_workers, selection_strategy)
+
         return pipeline_id
 
-    # pylint: disable-next=unused-argument
-    def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
-        #  # TODO(#64,#124): Implement.
+    def unregister_pipeline(self, pipeline_id: int) -> None:
+        # TODO(#64,#124,#302): Implement.
         pass
 
     def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> dict[str, Any]:

@@ -38,7 +38,7 @@ from modyn.utils import seed_everything
 logger = logging.getLogger(__name__)
 
 # TODO(#124): Add a function to unregister a pipeline
-
+# TODO(#302): Remove register_pipeline from proto
 
 class SelectorGRPCServicer(SelectorServicer):
     """Provides methods that implement functionality of the selector."""
