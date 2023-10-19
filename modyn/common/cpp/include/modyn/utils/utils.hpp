@@ -27,7 +27,7 @@ bool is_power_of_two(uint64_t value);
 class ModynException : public std::exception {
  public:
   // If we make msg a const-reference, clang-tidy asks us to move instead...
-  explicit ModynException(std::string msg) : msg_{std::move(msg)} {} // NOLINT(performance-unnecessary-value-param)
+  explicit ModynException(std::string msg) : msg_{std::move(msg)} {} 
   const char* what() const noexcept override { return msg_.c_str(); }
 
  private:
