@@ -68,7 +68,7 @@ int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
 
-  std::filesystem::file_time_type const time = std::filesystem::last_write_time(path);
+  const std::filesystem::file_time_type time = std::filesystem::last_write_time(path);
   return std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count();
 }
 

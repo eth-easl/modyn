@@ -187,7 +187,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   std::atomic<bool> stop_file_watcher = false;
   const FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  storage::database::StorageDatabaseConnection const connection(config);
+  const storage::database::StorageDatabaseConnection connection(config);
 
   soci::session session = connection.get_session();
 

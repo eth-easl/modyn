@@ -415,7 +415,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
       base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
-  YAML::Node const file_wrapper_config_node = YAML::Load(file_wrapper_config);
+  const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
   std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
   std::string index_placeholders;
 
