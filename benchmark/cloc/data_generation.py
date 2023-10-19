@@ -9,7 +9,7 @@ import os
 import pathlib
 import time
 import zipfile
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from shutil import copy, which
 
 import torch
@@ -234,7 +234,7 @@ class CLDatasets:
             else:
                 print(f"Skipping {target} as it already exists")
 
-        with ThreadPoolExecutor(max_workers=8) as executor, tqdm(total=len(blobs_to_download)) as pbar:
+        with ThreadPoolExecutor(max_workers=16) as executor, tqdm(total=len(blobs_to_download)) as pbar:
             futures_list = []
             download_blob = lambda target, blob: blob.download_to_filename(target)
 
@@ -281,7 +281,7 @@ class CLDatasets:
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(output_dir)
 
-        with ThreadPoolExecutor() as executor, tqdm(total=len(zip_files)) as pbar:
+        with ProcessPoolExecutor(max_workers=32) as executor, tqdm(total=len(zip_files)) as pbar:
             futures_list = []
             for zip_file in zip_files:
                 future = executor.submit(extract_single_zip, zip_file)
