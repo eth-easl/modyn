@@ -4,7 +4,12 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 
 function run_format() {
     local subdir=$1
-    find "${DIR}"/"${subdir}" \( -iname '*.hpp' -o -iname '*.cpp' \) -print0 | xargs -0 clang-format -i
+    find "${DIR}"/"${subdir}" \( -iname '*.hpp' -o -iname '*.cpp' \) -print | awk '!/build/' | xargs clang-format -i
 }
 
-run_format "modyn"
+echo "Running on storage directory"
+run_format "modyn/storage"
+echo "Running on tests directory"
+run_format "modyn/tests"
+echo "Running on common directory"
+run_format "modyn/common"

@@ -8,15 +8,6 @@
 #include <iostream>
 #include <random>
 #include <string>
-#include <stdlib.h>
-
-int string_to_int(const char *num) {
-  return atoi(num);
-}
-
-void ls() {
-  system("ls");
-}
 
 #define FAIL(msg)                                                                                        \
   throw modyn::utils::ModynException("ERROR at " __FILE__ ":" + std::to_string(__LINE__) + " " + (msg) + \
@@ -34,8 +25,7 @@ bool is_power_of_two(uint64_t value);
 
 class ModynException : public std::exception {
  public:
-  // If we make msg a const-reference, clang-tidy asks us to move instead...
-  explicit ModynException(std::string msg) : msg_{std::move(msg)} {} 
+  explicit ModynException(std::string msg) : msg_{std::move(msg)} {}
   const char* what() const noexcept override { return msg_.c_str(); }
 
  private:
