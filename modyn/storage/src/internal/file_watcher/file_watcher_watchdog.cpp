@@ -68,21 +68,28 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
   int64_t number_of_datasets = 0;
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
 
+  SPDLOG_INFO("Number of datasets in database: {}", number_of_datasets);
+
   if (number_of_datasets == 0) {
     if (file_watcher_threads_.empty()) {
       // There are no FileWatcher threads running, nothing to do
+      SPDLOG_INFO("No FileWatcher threads running");
       return;
     }
     // There are no datasets in the database, stop all FileWatcher threads
+    SPDLOG_INFO("Stopping all FileWatcher threads");
     for (auto& file_watcher_thread_flag : file_watcher_thread_stop_flags_) {
       file_watcher_thread_flag.second.store(true);
     }
+    SPDLOG_INFO("Waiting for all FileWatcher threads to stop");
     for (auto& file_watcher_thread : file_watcher_threads_) {
       file_watcher_thread.second.join();
     }
+    SPDLOG_INFO("All FileWatcher threads stopped");
     file_watcher_threads_.clear();
     file_watcher_dataset_retries_.clear();
     file_watcher_thread_stop_flags_.clear();
+    SPDLOG_INFO("FileWatcher threads cleared");
     return;
   }
 
@@ -132,7 +139,7 @@ void FileWatcherWatchdog::run() {
 }
 
 std::vector<int64_t> FileWatcherWatchdog::get_running_file_watcher_threads() {
-  std::vector<int64_t> running_file_watcher_threads;
+  std::vector<int64_t> running_file_watcher_threads = {};
   for (const auto& pair : file_watcher_threads_) {
     if (pair.second.joinable()) {
       running_file_watcher_threads.push_back(pair.first);
