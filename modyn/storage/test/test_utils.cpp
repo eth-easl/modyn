@@ -4,19 +4,19 @@ using namespace storage::test;
 
 void TestUtils::create_dummy_yaml() {
   std::ofstream out("config.yaml");
-  out << "storage:" << std::endl;
-  out << "  port: 50042" << std::endl;
-  out << "  sample_batch_size: 5" << std::endl;
-  out << "  sample_dbinsertion_batchsize: 10" << std::endl;
-  out << "  insertion_threads: 1" << std::endl;
-  out << "  retrieval_threads: 1" << std::endl;
-  out << "  database:" << std::endl;
-  out << "    drivername: sqlite3" << std::endl;
-  out << "    database: test.db" << std::endl;
-  out << "    username: ''" << std::endl;
-  out << "    password: ''" << std::endl;
-  out << "    host: ''" << std::endl;
-  out << "    port: ''" << std::endl;
+  out << "storage:" << '\n';
+  out << "  port: 50042" << '\n';
+  out << "  sample_batch_size: 5" << '\n';
+  out << "  sample_dbinsertion_batchsize: 10" << '\n';
+  out << "  insertion_threads: 1" << '\n';
+  out << "  retrieval_threads: 1" << '\n';
+  out << "  database:" << '\n';
+  out << "    drivername: sqlite3" << '\n';
+  out << "    database: test.db" << '\n';
+  out << "    username: ''" << '\n';
+  out << "    password: ''" << '\n';
+  out << "    host: ''" << '\n';
+  out << "    port: ''" << '\n';
   out.close();
 }
 

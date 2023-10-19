@@ -17,6 +17,5 @@ class LocalFilesystemWrapper : public FilesystemWrapper {
   std::ifstream& get_stream(const std::string& path) override;
   FilesystemWrapperType get_type() override;
   bool remove(const std::string& path) override;
-  ~LocalFilesystemWrapper() override = default;
 };
 }  // namespace storage::filesystem_wrapper

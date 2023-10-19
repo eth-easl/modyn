@@ -19,10 +19,11 @@ std::vector<unsigned char> CsvFileWrapper::get_sample(int64_t index) {
 
   std::vector<std::string> row = doc_.GetRow<std::string>(index);
   row.erase(row.begin() + label_index_);
-  std::string row_string =
-      std::accumulate(row.begin(), row.end(), std::string(),
-                      [&](const std::string& first, const std::string& second) { return first + separator_ + second; });
-  row_string.erase(row_string.begin());
+  std::string row_string;
+  for (const auto& cell : row) {
+    row_string += cell + separator_;
+  }
+  row_string.pop_back();
   return {row_string.begin(), row_string.end()};
 }
 
@@ -35,10 +36,11 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(int64_t star
   for (size_t i = start_t; i < end_t; i++) {
     std::vector<std::string> row = doc_.GetRow<std::string>(i);
     row.erase(row.begin() + label_index_);
-    std::string row_string = std::accumulate(
-        row.begin(), row.end(), std::string(),
-        [&](const std::string& first, const std::string& second) { return first + separator_ + second; });
-    row_string.erase(row_string.begin());
+    std::string row_string;
+    for (const auto& cell : row) {
+      row_string += cell + separator_;
+    }
+    row_string.pop_back();
     samples.emplace_back(row_string.begin(), row_string.end());
   }
 
@@ -54,13 +56,13 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
   for (const size_t index : indices) {
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
     row.erase(row.begin() + label_index_);
-    std::string row_string = std::accumulate(
-        row.begin(), row.end(), std::string(),
-        [&](const std::string& first, const std::string& second) { return first + separator_ + second; });
-    row_string.erase(row_string.begin());
+    std::string row_string;
+    for (const auto& cell : row) {
+      row_string += cell + separator_;
+    }
+    row_string.pop_back();
     samples.emplace_back(row_string.begin(), row_string.end());
   }
-
   return samples;
 }
 

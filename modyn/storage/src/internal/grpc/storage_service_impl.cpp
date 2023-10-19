@@ -27,9 +27,9 @@ using namespace storage::grpcs;
       soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
       soci::into(file_wrapper_config), soci::use(request->dataset_id());
 
-  const int64_t keys_size = request->keys_size();
+  const int keys_size = request->keys_size();
   std::vector<int64_t> request_keys(keys_size);
-  for (int64_t i = 0; i < keys_size; i++) {
+  for (int i = 0; i < keys_size; i++) {
     request_keys[i] = request->keys(i);
   }
 
@@ -198,7 +198,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
       (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
 
   modyn::storage::GetNewDataSinceResponse response;
-  for (auto & row : rs) {
+  for (auto& row : rs) {
     response.add_keys(row.get<int64_t>(0));
     response.add_labels(row.get<int64_t>(1));
   }
@@ -262,7 +262,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
       (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
 
   modyn::storage::GetDataInIntervalResponse response;
-  for (auto & row : rs) {
+  for (auto& row : rs) {
     response.add_keys(row.get<int64_t>(0));
     response.add_labels(row.get<int64_t>(1));
   }
@@ -381,9 +381,9 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     return {::grpc::StatusCode::INVALID_ARGUMENT, "No keys provided."};
   }
 
-  std::vector<int64_t> sample_ids;
+  std::vector<int64_t> sample_ids(request->keys_size());
   for (int index = 0; index < request->keys_size(); index++) {
-    sample_ids.push_back(request->keys(index));
+    sample_ids[index] = request->keys(index);
   }
 
   int64_t number_of_files = 0;

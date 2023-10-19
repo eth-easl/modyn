@@ -99,10 +99,10 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
                                    filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node, config_,
                                    sample_dbinsertion_batchsize_, force_fallback_);
   } else {
-    const int16_t chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
+    const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
-      auto begin = file_paths.begin() + i * chunk_size;
+      auto begin = file_paths.begin() + static_cast<long long>(i * chunk_size);  // NOLINT google-runtime-int
       auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
       const std::vector<std::string> file_paths_thread(begin, end);
@@ -215,8 +215,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
           soci::use(dataset_id), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time);
 
       // Check if the insert was successful.
-      static_assert(sizeof(long long) == sizeof(int64_t));
-      long long file_id;
+      static_assert(sizeof(long long) == sizeof(int64_t));  // NOLINT google-runtime-int
+      long long file_id;                                    // NOLINT google-runtime-int
       if (!session.get_last_insert_id("files", file_id)) {
         // The insert was not successful.
         SPDLOG_ERROR("Failed to insert file into database");

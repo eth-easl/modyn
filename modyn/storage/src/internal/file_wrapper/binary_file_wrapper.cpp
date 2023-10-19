@@ -18,11 +18,11 @@ int64_t BinaryFileWrapper::int_from_bytes(const unsigned char* begin, const unsi
   int64_t value = 0;
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  value = std::accumulate(begin, end, 0LL, [](int64_t acc, unsigned char byte) { return (acc << 8u) | byte; });
+  value = std::accumulate(begin, end, 0LL, [](uint64_t acc, unsigned char byte) { return (acc << 8u) | byte; });
 #elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   const std::reverse_iterator<const unsigned char*> rbegin(end);
   const std::reverse_iterator<const unsigned char*> rend(begin);
-  value = std::accumulate(rbegin, rend, 0LL, [](int64_t acc, unsigned char byte) { return (acc << 8u) | byte; });
+  value = std::accumulate(rbegin, rend, 0LL, [](uint64_t acc, unsigned char byte) { return (acc << 8u) | byte; });
 #else
 #error "Unknown byte order"
 #endif
@@ -93,7 +93,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
   std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
 
   std::vector<std::vector<unsigned char>> samples(num_samples);
-  int64_t record_start = start * record_size_;
+  int64_t record_start;
   for (int64_t index = 0; index < num_samples; index++) {
     record_start = (start + index) * record_size_;
     stream.seekg(record_start + label_size_, std::ios::beg);
