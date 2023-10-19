@@ -122,6 +122,12 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
 
   ASSERT_NO_THROW(watcher.seek_dataset());
 
+  // Read from file to verify that the file has been written
+  file = std::ofstream(tmp_dir_ + "/test_file.txt");
+  std::string line;
+  std::getline(file, line);
+  ASSERT_EQ(line, "test");
+
   // Check if the file is added to the database
   const std::string file_path = tmp_dir_ + "/test_file.txt";
   std::vector<std::string> file_paths = std::vector<std::string>(1);
