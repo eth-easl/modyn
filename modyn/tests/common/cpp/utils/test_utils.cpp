@@ -3,7 +3,6 @@
 
 #include "modyn/utils/utils.hpp"
 
-
 TEST(CommonUtilsTest, TestGetSession) {
   ASSERT_TRUE(::modyn::utils::is_power_of_two(1));
   ASSERT_TRUE(::modyn::utils::is_power_of_two(2));
@@ -15,5 +14,4 @@ TEST(CommonUtilsTest, TestGetSession) {
   ASSERT_FALSE(::modyn::utils::is_power_of_two(3));
   ASSERT_FALSE(::modyn::utils::is_power_of_two(5));
   ASSERT_FALSE(::modyn::utils::is_power_of_two(6));
-
 }
