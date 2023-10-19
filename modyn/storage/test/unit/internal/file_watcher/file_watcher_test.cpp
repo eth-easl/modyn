@@ -64,10 +64,16 @@ TEST_F(FileWatcherTest, TestSeek) {
   std::ofstream file(tmp_dir_ + "/test_file.txt");
   file << "test";
   file.close();
+  if (!file) {
+    SPDLOG_ERROR("Could not create file");
+  }
 
   file = std::ofstream(tmp_dir_ + "/test_file.lbl");
   file << "1";
   file.close();
+  if (!file) {
+    SPDLOG_ERROR("Could not create file");
+  }
 
   // Seek the temporary directory
   ASSERT_NO_THROW(watcher.seek());
@@ -103,10 +109,16 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   std::ofstream file(tmp_dir_ + "/test_file.txt");
   file << "test";
   file.close();
+  if (!file) {
+    SPDLOG_ERROR("Could not create file");
+  }
 
   file = std::ofstream(tmp_dir_ + "/test_file.lbl");
   file << "1";
   file.close();
+  if (!file) {
+    SPDLOG_ERROR("Could not create file");
+  }
 
   ASSERT_NO_THROW(watcher.seek_dataset());
 
