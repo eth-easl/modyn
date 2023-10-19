@@ -107,6 +107,211 @@ jobs:
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
 
+  format:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: DoozyX/clang-format-lint-action@v0.16.2
+        with:
+          source: 'modyn'
+          extensions: 'hpp,cpp'
+          clangFormatVersion: 16
+
+  tidy:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    env:
+      CLANG_TIDY: clang-tidy-15
+      RUN_CLANG_TIDY: run-clang-tidy-15
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install clang-tidy
+        run: |
+          sudo apt update
+          sudo apt install -y clang-tidy-15
+          cmake --version
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}
+        run: bash scripts/clang-tidy.sh build
+
+      - name: Run clang-tidy
+        working-directory: ${{github.workspace}}
+        run: bash scripts/clang-tidy.sh run_tidy
+
+  cpp_build_and_test:
+    name: Build + Test (C++)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      line-coverage: ${{steps.run_test_with_coverage.outputs.LINE_COVERAGE}}
+      branch-coverage: ${{steps.run_test_with_coverage.outputs.BRANCH_COVERAGE}}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [ Release, Debug ]
+        compiler:
+          - { c: gcc, cxx: g++, version: 11 }
+          - { c: gcc, cxx: g++, version: 12 }
+          - { c: clang, cxx: clang++, version: 14 }
+          - { c: clang, cxx: clang++, version: 17, coverage: true }
+        include:
+          # Currently, there is a linking error with zlib if we use clang 16 for sanitizers
+          # Let's investigate this when clang > 14 is os default - one problem could be the external clang installation
+          - compiler: {c: clang, cxx: clang++, version: 14}
+            build-type: Tsan
+          - compiler: {c: clang, cxx: clang++, version: 14}
+            build-type: Asan
+        exclude:
+          # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
+          - compiler: { c: gcc, cxx: g++, version: 12 }
+            build-type: Release
+
+    env:
+      CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
+      CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
+      CCACHE_BASEDIR: ${{github.workspace}}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install ccache
+        run: |
+          sudo apt update
+          sudo apt install -y ccache
+
+      - name: Install clang version
+        if: ${{ matrix.compiler.version > 14 }}
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: ${{ matrix.compiler.version }}.0
+          env: true
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}//build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
+        run: >
+          cmake ${{github.workspace}}
+          -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
+          -DMODYN_BUILD_PLAYGROUND=ON
+          -DMODYN_BUILD_TESTS=ON
+          -DMODYN_BUILD_STORAGE=ON
+          -DMODYN_TEST_COVERAGE=${{matrix.compiler.coverage && 'ON' || 'OFF'}}
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --target modyn modyn-test playground --config ${{matrix.build-type}} -- -j8
+
+      - name: Run tests
+        timeout-minutes: 20
+        working-directory: ${{github.workspace}}/build/modyn/tests
+        shell: bash
+        env: {"TSAN_OPTIONS": "halt_on_error=1", "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"}
+        run: ./modyn-test
+
+        # The next two steps are solely related to creating coverage reports and will only run coverage in the compiler matrix is set to true
+
+      - name: Create Coverage Report
+        if: ${{ matrix.compiler.coverage && matrix.build-type == 'Debug' }}
+        working-directory: ${{github.workspace}}/build/modyn/tests
+        run: |
+          llvm-profdata-14 merge -sparse default.profraw -o tests.profdata
+          llvm-cov-14 report -instr-profile tests.profdata -object modyn-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
+          llvm-cov-14 show -instr-profile tests.profdata -object modyn-test -format=html -output-dir=coverage -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false
+          echo ::set-output name=LINE_COVERAGE::"$(cat output.txt | cut -d ' ' -f 7)"
+          echo ::set-output name=BRANCH_COVERAGE::"$(cat output.txt | cut -d ' ' -f 10)"
+        id: run_test_with_coverage
+
+      - name: Upload HTML coverage report
+        if: ${{ matrix.compiler.coverage && matrix.build-type == 'Debug' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-results
+          path: ${{github.workspace}}/build/modyn/tests/coverage
+
+  cpp_coverage_main:
+    name: C++ Test Coverage (gets coverage of main branch, currently not main branch because no C++ on main)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CC: clang-17
+      CXX: clang++-17
+    outputs:
+      line-coverage: ${{steps.run_main_test_with_coverage.outputs.LINE_COVERAGE}}
+      branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
+    steps:
+      - uses: actions/checkout@v2
+        #with: TODO(MaxiBoether): add after merge.
+        #  ref: main 
+
+      - name: Install clang 17
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: 17.0
+          env: true
+
+      - name: Create Build Environment
+        run: |
+          cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: >
+          cmake ${{github.workspace}} -DCMAKE_BUILD_TYPE=Debug
+          -DMODYN_BUILD_PLAYGROUND=ON -DMODYN_BUILD_TESTS=ON -DMODYN_BUILD_STORAGE=ON -DMODYN_TEST_COVERAGE=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --config Debug --target modyn modyn-test -- -j8
+
+      - name: Run tests
+        working-directory: ${{github.workspace}}/build/modyn/tests
+        shell: bash
+        run: ./modyn-test
+
+      - name: Create Coverage Report for main branch
+        working-directory: ${{github.workspace}}/build/modyn/tests
+        run: |
+          llvm-profdata-14 merge -sparse default.profraw -o tests.profdata
+          llvm-cov-14 report -instr-profile tests.profdata -object modyn-test -ignore-filename-regex="build\/" -ignore-filename-regex="\/test\/" -show-region-summary=false | tail -1 | sed 's/%//g' | tr -s " " > output.txt
+          echo ::set-output name=LINE_COVERAGE::"$(cat output.txt | cut -d ' ' -f 7)"
+          echo ::set-output name=BRANCH_COVERAGE::"$(cat output.txt | cut -d ' ' -f 10)"
+        id: run_main_test_with_coverage
+
+  cpp_comment_on_pr:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: self-hosted
+    name: Comment Coverage Results
+    needs: [ cpp_build_and_test, cpp_coverage_main ]
+    timeout-minutes: 5
+    steps:
+      - name: Calculate changes
+        shell: bash
+        run: |
+          echo ::set-output name=line-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.line-coverage }}-${{ needs.cpp_coverage_main.outputs.line-coverage }}; exit}')"
+          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.branch-coverage }}-${{ needs.cpp_coverage_main.outputs.branch-coverage }}; exit}')"        
+        id: calculation
+
+      - name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            ![Line Coverage: ${{ needs.cpp_build_and_test.outputs.line-coverage }}%](https://img.shields.io/badge/Line_Coverage-${{ needs.cpp_build_and_test.outputs.line-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.line-changes }} % to main)</sup>
+            ![Branch Coverage: ${{ needs.cpp_build_and_test.outputs.branch-coverage }}%](https://img.shields.io/badge/Branch_Coverage-${{ needs.cpp_build_and_test.outputs.branch-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.branch-changes }} % to main)</sup>
+
 ### Integration Tests ###
 # We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
 
@@ -121,6 +326,9 @@ jobs:
       - unittests
       - isort
       - black
+      - cpp_build_and_test
+      - tidy
+      - format
 
     steps:
     - name: Check out code
@@ -134,7 +342,7 @@ jobs:
 
 
   integrationtests:
-    timeout-minutes: 60
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     needs:
       - flake8
@@ -143,6 +351,7 @@ jobs:
       - unittests
       - isort
       - black
+      - cpp_build_and_test
 
     steps:
       - name: Check out code

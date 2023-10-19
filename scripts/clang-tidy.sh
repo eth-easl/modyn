@@ -64,7 +64,7 @@ function run_tidy() {
         "${BUILD_DIR}"/modyn/*/*/*/*/*/*/*/*/*/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/*/*/*/*/*/*/*/*/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/*/*/*/*/*/*/*/*/*/*/Unity/*.cxx \
-        "${BUILD_DIR}"/modyn/tests/CMakeFiles/modyn-all-test-sources-for-tidy.dir/Unity/*.cxx # TODO(MaxiBoether): fix storage path when merging
+        "${BUILD_DIR}"/modyn/tests/CMakeFiles/modyn-all-test-sources-for-tidy.dir/Unity/*.cxx \
         "${BUILD_DIR}"/CMakeFiles/modyn.dir/Unity/*.cxx
 
     set +x

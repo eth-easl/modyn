@@ -31,6 +31,7 @@ set(CMAKE_EXE_LINKER_FLAGS_TSAN "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsani
 ##### PUBLIC OPTIONS #####
 option(MODYN_BUILD_PLAYGROUND "Set ON to build playground" ON)
 option(MODYN_BUILD_TESTS "Set ON to build tests" ON)
+option(MODYN_BUILD_STORAGE "Set ON to build storage components" OFF) # TODO(MaxiBoether): use this flag when merging into storage PR
 option(MODYN_TEST_COVERAGE "Set ON to add test coverage" OFF)
 
 #### INTERNAL OPTIONS ####
