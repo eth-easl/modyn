@@ -31,8 +31,12 @@ def extract_single_zip(directory: str, zip_file: str) -> None:
 
     os.makedirs(output_dir, exist_ok=True)
 
-    with zipfile.ZipFile(zip_path, "r") as zip_ref:
-        zip_ref.extractall(output_dir)
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(output_dir)
+    except Exception as e:
+        logger.error(f"Error while extracing file {zip_path}")
+        logger.error(e) 
 
 def setup_argparser() -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description=f"CLOC Benchmark Storage Script")
