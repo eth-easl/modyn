@@ -29,7 +29,7 @@ void StorageGrpcServer::run() {
 
   {
     std::unique_lock<std::mutex> lock(mtx_);
-    cv_.wait(lock, [&]{return stop_grpc_server_->load();});
+    cv_.wait(lock, [&] { return stop_grpc_server_->load(); });
   }
 
   server->Shutdown();

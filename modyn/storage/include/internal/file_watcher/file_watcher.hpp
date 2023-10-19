@@ -90,18 +90,17 @@ class FileWatcher {
   static void handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
                                 const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
                                 const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
-                                int64_t dataset_id, const YAML::Node& file_wrapper_config,
-                                const YAML::Node& config, int64_t sample_dbinsertion_batchsize,
-                                bool force_fallback);
+                                int64_t dataset_id, const YAML::Node& file_wrapper_config, const YAML::Node& config,
+                                int64_t sample_dbinsertion_batchsize, bool force_fallback);
   void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
   static void insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
                                 const std::vector<FileFrame>& file_frame, bool force_fallback);
   void seek_dataset();
   void seek();
-  static bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
-                               bool ignore_last_timestamp, int64_t timestamp,
-                               storage::database::StorageDatabaseConnection& storage_database_connection,
-                               const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper);
+  static bool check_valid_file(
+      const std::string& file_path, const std::string& data_file_extension, bool ignore_last_timestamp,
+      int64_t timestamp, storage::database::StorageDatabaseConnection& storage_database_connection,
+      const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper);
   static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
                                       const storage::database::StorageDatabaseConnection& storage_database_connection);
   static void fallback_insertion(const std::vector<FileFrame>& file_frame,

@@ -6,7 +6,6 @@
 
 using namespace storage::file_wrapper;
 
-
 /*
  * Transforms a vector of bytes into an int64_t.
  *

@@ -15,7 +15,6 @@
 
 using namespace storage::file_watcher;
 
-
 /*
  * Checks if the file is valid for the dataset.
  *
@@ -30,10 +29,10 @@ using namespace storage::file_watcher;
  * @param timestamp The last modified timestamp of the file.
  * @return True if the file is valid, false otherwise.
  */
-bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
-                                   bool ignore_last_timestamp, int64_t timestamp,
-                                   storage::database::StorageDatabaseConnection& storage_database_connection,
-                                   const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper) {
+bool FileWatcher::check_valid_file(
+    const std::string& file_path, const std::string& data_file_extension, bool ignore_last_timestamp, int64_t timestamp,
+    storage::database::StorageDatabaseConnection& storage_database_connection,
+    const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper) {
   if (file_path.empty()) {
     return false;
   }
@@ -106,7 +105,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
       auto begin = file_paths.begin() + i * chunk_size;
       auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
-      std::vector<std::string> const file_paths_thread(begin, end);
+      const std::vector<std::string> file_paths_thread(begin, end);
 
       insertion_thread_pool_[i] = std::thread(
           [this, file_paths_thread, &data_file_extension, &file_wrapper_type, &timestamp, &file_wrapper_config_node]() {
@@ -202,8 +201,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     std::string const file_path = valid_files.front();
     int64_t number_of_samples;
     std::vector<FileFrame> file_frame(sample_dbinsertion_batchsize);
-    auto file_wrapper = storage::file_wrapper::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config,
-                                                                filesystem_wrapper);
+    auto file_wrapper =
+        storage::file_wrapper::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
 
     int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
@@ -247,7 +246,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 }
 
 void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
-                                    const std::vector<FileFrame>& file_frame, const bool  /*force_fallback*/) {
+                                    const std::vector<FileFrame>& file_frame, const bool /*force_fallback*/) {
   switch (storage_database_connection.get_drivername()) {
     case storage::database::DatabaseDriver::POSTGRESQL:
       postgres_copy_insertion(file_frame, storage_database_connection);
@@ -268,8 +267,9 @@ void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConn
  *
  * @param file_frame The file frame to be inserted.
  */
-void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
-                                          const storage::database::StorageDatabaseConnection& storage_database_connection) {
+void FileWatcher::postgres_copy_insertion(
+    const std::vector<FileFrame>& file_frame,
+    const storage::database::StorageDatabaseConnection& storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   int64_t dataset_id = file_frame.front().dataset_id;
   const std::string table_name = fmt::format("samples__did{}", dataset_id);

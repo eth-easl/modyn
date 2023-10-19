@@ -164,7 +164,7 @@ TEST_F(FileWatcherWatchdogTest, TestFileWatcherWatchdogWithNoDataset) {
   watchdog.watch_file_watcher_threads();
 
   // Assert that there are no running FileWatcher threads as there are no datasets
-  std::vector<int64_t> const file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  const std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
   ASSERT_TRUE(file_watcher_threads.empty());
 }
 
@@ -240,7 +240,7 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   // The watchdog should stop the FileWatcher process for the removed dataset
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> const file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  const std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
   ASSERT_TRUE(file_watcher_threads.empty());
 }
@@ -254,7 +254,7 @@ TEST_F(FileWatcherWatchdogTest, TestNoDatasetsInDB) {
 
   watchdog.watch_file_watcher_threads();
 
-  std::vector<int64_t> const file_watcher_threads = watchdog.get_running_file_watcher_threads();
+  const std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
 
   ASSERT_TRUE(file_watcher_threads.empty());
 }
