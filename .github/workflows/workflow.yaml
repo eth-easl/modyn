@@ -293,7 +293,7 @@ jobs:
 
   cpp_comment_on_pr:
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Comment Coverage Results
     needs: [ cpp_build_and_test, cpp_coverage_main ]
     timeout-minutes: 5
