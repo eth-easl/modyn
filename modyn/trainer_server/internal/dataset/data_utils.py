@@ -8,6 +8,8 @@ from modyn.trainer_server.internal.dataset.per_class_online_dataset import PerCl
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=too-many-locals
+
 
 def prepare_dataloaders(
     pipeline_id: int,
@@ -20,6 +22,8 @@ def prepare_dataloaders(
     storage_address: str,
     selector_address: str,
     training_id: int,
+    num_prefetched_partitions: int,
+    parallel_prefetch_requests: int,
     tokenizer: Optional[str],
     log_path: Optional[pathlib.Path],
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
@@ -52,6 +56,8 @@ def prepare_dataloaders(
         storage_address,
         selector_address,
         training_id,
+        num_prefetched_partitions,
+        parallel_prefetch_requests,
         tokenizer,
         log_path,
     )
@@ -77,6 +83,8 @@ def prepare_per_class_dataloader_from_online_dataset(
         online_dataset._selector_address,
         online_dataset._training_id,
         initial_filtered_label,
+        online_dataset._num_prefetched_partitions,
+        online_dataset._parallel_prefetch_requests,
         online_dataset._tokenizer_name,
     )
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)

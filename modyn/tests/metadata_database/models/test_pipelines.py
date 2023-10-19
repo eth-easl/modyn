@@ -26,6 +26,7 @@ def test_add_pipeline(session):
         model_class_name="ResNet18",
         model_config=json.dumps({"num_classes": 10}),
         amp=True,
+        selection_strategy="{}",
         full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)
@@ -50,6 +51,7 @@ def test_update_pipeline(session):
         model_class_name="ResNet18",
         model_config="{}",
         amp=True,
+        selection_strategy="{}",
         full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)
@@ -61,6 +63,7 @@ def test_update_pipeline(session):
 
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first() is not None
     assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().num_workers == 20
+    assert session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().selection_strategy == "{}"
     assert not session.query(Pipeline).filter(Pipeline.pipeline_id == 1).first().amp
 
     pipeline.model_class_name = "test_model"
@@ -75,6 +78,7 @@ def test_delete_pipeline(session):
         model_class_name="ResNet18",
         model_config="{}",
         amp=False,
+        selection_strategy="{}",
         full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)

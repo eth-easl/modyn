@@ -86,7 +86,7 @@ def insert_triggers_into_database(
 ) -> (int, int):
     with MetadataDatabaseConnection(modyn_config) as database:
         pipeline_id = database.register_pipeline(
-            2, "ResNet18", json.dumps({"num_classes": 10}), False, full_strategy, inc_strategy, full_model_interval
+            2, "ResNet18", json.dumps({"num_classes": 10}), False, "{}", full_strategy, inc_strategy, full_model_interval
         )
 
         trigger_parent = Trigger(trigger_id=0, pipeline_id=pipeline_id)

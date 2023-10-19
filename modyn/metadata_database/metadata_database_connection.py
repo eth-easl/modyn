@@ -75,6 +75,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         model_class_name: str,
         model_config: str,
         amp: bool,
+        selection_strategy: str,
         full_model_strategy: ModelStorageStrategyConfig,
         incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
         full_model_interval: Optional[int] = None,
@@ -86,6 +87,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             model_class_name (str): the model class name that is used by the pipeline.
             model_config (str): the serialized model configuration options.
             amp (bool): whether amp is enabled for the model.
+            selection_strategy (str): The selection strategy to use
             full_model_strategy: the strategy used to store full models.
             incremental_model_strategy: the (optional) strategy used to store models incrementally.
             full_model_interval: the (optional) interval between which the full model strategy is used. If not set,
@@ -99,6 +101,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             model_class_name=model_class_name,
             model_config=model_config,
             amp=amp,
+            selection_strategy=selection_strategy,
             full_model_strategy_name=full_model_strategy.name,
             full_model_strategy_zip=full_model_strategy.zip,
             full_model_strategy_zip_algorithm=full_model_strategy.zip_algorithm,

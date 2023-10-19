@@ -44,6 +44,7 @@ class MockStrategy(AbstractSelectionStrategy):
 class MockDatabaseConnection:
     def __init__(self, modyn_config: dict):  # pylint: disable=super-init-not-called,unused-argument
         self.current_pipeline_id = 0
+        self.session = MockSession()
 
     # pylint: disable=unused-argument
     def register_pipeline(
@@ -52,6 +53,7 @@ class MockDatabaseConnection:
         model_id: int,
         model_config: dict,
         amp: bool,
+        selection_strategy: str,
         full_model_strategy: ModelStorageStrategyConfig,
         incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
         full_model_interval: Optional[int] = None,
@@ -65,6 +67,11 @@ class MockDatabaseConnection:
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception):
         pass
+
+
+class MockSession:
+    def get(self, some_type, pipeline_id):  # pylint: disable=unused-argument
+        return None
 
 
 def noop_init_metadata_db(self):  # pylint: disable=unused-argument

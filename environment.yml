@@ -20,7 +20,7 @@ dependencies:
   - conda-forge::enlighten
   - protobuf
   - pip:
-    - grpcio
+    - grpcio==1.59.0
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
@@ -29,6 +29,7 @@ dependencies:
   - pandas
   - bitstring
   - tensorboard
+  - scipy
   - pyftpdlib
   - types-protobuf
   - types-psycopg2

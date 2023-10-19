@@ -1,7 +1,7 @@
 """Pipeline model."""
 
 from modyn.metadata_database.metadata_base import MetadataBase
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy import Boolean, Column, Integer, String, Text
 
 
 class Pipeline(MetadataBase):
@@ -12,6 +12,7 @@ class Pipeline(MetadataBase):
     __table_args__ = {"extend_existing": True}
     pipeline_id = Column("pipeline_id", Integer, primary_key=True)
     num_workers = Column("num_workers", Integer, nullable=False)
+    selection_strategy = Column("selection_strategy", Text, nullable=False)
     model_class_name = Column("model_class_name", String(length=50), nullable=False)
     model_config = Column("model_config", String(length=500), nullable=False)
     amp = Column("amp", Boolean, nullable=False)

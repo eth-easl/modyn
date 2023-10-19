@@ -50,8 +50,10 @@ message StartTrainingRequest {
   PythonString label_transformer = 16;
   JsonString grad_scaler_configuration = 17;
   int32 epochs_per_trigger = 18;
-  optional int32 seed = 19;
-  optional PythonString tokenizer = 20;
+  int32 num_prefetched_partitions = 19;
+  int32 parallel_prefetch_requests = 20;
+  optional int32 seed = 21;
+  optional PythonString tokenizer = 22;
 }
 
 message StartTrainingResponse {

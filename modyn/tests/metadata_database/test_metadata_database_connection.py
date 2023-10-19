@@ -28,11 +28,11 @@ def test_register_pipeline():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
         pipeline_id = database.register_pipeline(
-            1, "ResNet18", "{}", True, ModelStorageStrategyConfig(name="PyTorchFullModel")
+            1, "ResNet18", "{}", True, "{}", ModelStorageStrategyConfig(name="PyTorchFullModel")
         )
         assert pipeline_id == 1
         pipeline_id = database.register_pipeline(
-            1, "ResNet18", "{}", False, ModelStorageStrategyConfig(name="PyTorchFullModel")
+            1, "ResNet18", "{}", False, "{}", ModelStorageStrategyConfig(name="PyTorchFullModel")
         )
         assert pipeline_id == 2
 
@@ -41,7 +41,7 @@ def test_add_trained_model():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
         pipeline_id = database.register_pipeline(
-            1, "ResNet18", "{}", True, ModelStorageStrategyConfig(name="PyTorchFullModel")
+            1, "ResNet18", "{}", True, "{}", ModelStorageStrategyConfig(name="PyTorchFullModel")
         )
         trigger = Trigger(pipeline_id=pipeline_id, trigger_id=5)
 

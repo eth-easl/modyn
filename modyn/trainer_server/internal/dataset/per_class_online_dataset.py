@@ -20,6 +20,8 @@ class PerClassOnlineDataset(OnlineDataset):
         selector_address: str,
         training_id: int,
         initial_filtered_label: int,
+        num_prefetched_partitions: int,
+        parallel_prefetch_requests: int,
         tokenizer: Optional[str],
     ):
         super().__init__(
@@ -31,15 +33,19 @@ class PerClassOnlineDataset(OnlineDataset):
             storage_address,
             selector_address,
             training_id,
+            num_prefetched_partitions,
+            parallel_prefetch_requests,
             tokenizer,
             None,
         )
         assert initial_filtered_label is not None
         self.filtered_label = initial_filtered_label
 
-    def _get_data_tuple(self, key: int, sample: bytes, label: int, weight: Optional[float]) -> Optional[Tuple]:
+    def _get_transformed_data_tuple(
+        self, key: int, sample: bytes, label: int, weight: Optional[float]
+    ) -> Optional[Tuple]:
         assert self.filtered_label is not None
 
         if self.filtered_label != label:
             return None
-        return super()._get_data_tuple(key, sample, label, weight)
+        return super()._get_transformed_data_tuple(key, sample, label, weight)
