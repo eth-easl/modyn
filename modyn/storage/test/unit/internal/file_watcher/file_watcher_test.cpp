@@ -18,16 +18,20 @@ using namespace storage::test;
 
 class FileWatcherTest : public ::testing::Test {
  protected:
+  std::string tmp_dir_;
+
+  FileWatcherTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_test"} {}
+
   void SetUp() override {
     TestUtils::create_dummy_yaml();
     // Create temporary directory
-    std::filesystem::create_directory("tmp");
+    std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
     const storage::database::StorageDatabaseConnection connection(config);
     connection.create_tables();
 
     // Add a dataset to the database
-    connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+    connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                            storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                            TestUtils::get_dummy_file_wrapper_config_inline(), true);
   }
@@ -38,7 +42,7 @@ class FileWatcherTest : public ::testing::Test {
       std::filesystem::remove("'test.db'");
     }
     // Remove temporary directory
-    std::filesystem::remove_all("tmp");
+    std::filesystem::remove_all(tmp_dir_);
   }
 };
 
@@ -57,11 +61,11 @@ TEST_F(FileWatcherTest, TestSeek) {
   soci::session session = connection.get_session();
 
   // Add a file to the temporary directory
-  std::ofstream file("tmp/test_file.txt");
+  std::ofstream file(tmp_dir_ + "/test_file.txt");
   file << "test";
   file.close();
 
-  file = std::ofstream("tmp/test_file.lbl");
+  file = std::ofstream(tmp_dir_ + "/test_file.lbl");
   file << "1";
   file.close();
 
@@ -69,7 +73,7 @@ TEST_F(FileWatcherTest, TestSeek) {
   ASSERT_NO_THROW(watcher.seek());
 
   // Check if the file is added to the database
-  const std::string file_path = "tmp/test_file.txt";
+  const std::string file_path = tmp_dir_ + "/test_file.txt";
   std::vector<std::string> file_paths(1);
   session << "SELECT path FROM files", soci::into(file_paths);
   ASSERT_EQ(file_paths[0], file_path);
@@ -96,18 +100,18 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   const storage::database::StorageDatabaseConnection connection(config);
 
   // Add a file to the temporary directory
-  std::ofstream file("tmp/test_file.txt");
+  std::ofstream file(tmp_dir_ + "/test_file.txt");
   file << "test";
   file.close();
 
-  file = std::ofstream("tmp/test_file.lbl");
+  file = std::ofstream(tmp_dir_ + "/test_file.lbl");
   file << "1";
   file.close();
 
   ASSERT_NO_THROW(watcher.seek_dataset());
 
   // Check if the file is added to the database
-  const std::string file_path = "tmp/test_file.txt";
+  const std::string file_path = tmp_dir_ + "/test_file.txt";
   std::vector<std::string> file_paths = std::vector<std::string>(1);
   soci::session session = connection.get_session();
   session << "SELECT path FROM files", soci::into(file_paths);
@@ -154,24 +158,24 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   watcher.filesystem_wrapper = filesystem_wrapper;
 
   // Add a file to the temporary directory
-  std::ofstream file("tmp/test.txt");
+  std::ofstream file(tmp_dir_ + "/test.txt");
   file << "test";
   file.close();
 
-  file = std::ofstream("tmp/test.lbl");
+  file = std::ofstream(tmp_dir_ + "/test.lbl");
   file << "1";
   file.close();
 
   std::vector<std::string> files = std::vector<std::string>();
-  files.emplace_back("tmp/test.txt");
-  files.emplace_back("tmp/test.lbl");
+  files.emplace_back(tmp_dir_ + "/test.txt");
+  files.emplace_back(tmp_dir_ + "/test.lbl");
 
   EXPECT_CALL(*filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
   EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
   ON_CALL(*filesystem_wrapper, exists(testing::_)).WillByDefault(testing::Return(true));
   ON_CALL(*filesystem_wrapper, is_valid_path(testing::_)).WillByDefault(testing::Return(true));
 
-  ASSERT_NO_THROW(watcher.update_files_in_directory("tmp", 0));
+  ASSERT_NO_THROW(watcher.update_files_in_directory(tmp_dir_, 0));
 
   const storage::database::StorageDatabaseConnection connection(config);
 
@@ -179,7 +183,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
 
   std::vector<std::string> file_paths = std::vector<std::string>(1);
   session << "SELECT path FROM files", soci::into(file_paths);
-  ASSERT_EQ(file_paths[0], "tmp/test.txt");
+  ASSERT_EQ(file_paths[0], tmp_dir_ + "/test.txt");
 }
 
 TEST_F(FileWatcherTest, TestFallbackInsertion) {
@@ -224,27 +228,27 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
   // Add a file to the temporary directory
-  std::ofstream file("tmp/test.txt");
+  std::ofstream file(tmp_dir_ + "/test.txt");
   file << "test";
   file.close();
 
-  file = std::ofstream("tmp/test.lbl");
+  file = std::ofstream(tmp_dir_ + "/test.lbl");
   file << "1";
   file.close();
 
-  file = std::ofstream("tmp/test2.txt");
+  file = std::ofstream(tmp_dir_ + "/test2.txt");
   file << "test";
   file.close();
 
-  file = std::ofstream("tmp/test2.lbl");
+  file = std::ofstream(tmp_dir_ + "/test2.lbl");
   file << "2";
   file.close();
 
   std::vector<std::string> files = std::vector<std::string>();
-  files.emplace_back("tmp/test.txt");
-  files.emplace_back("tmp/test.lbl");
-  files.emplace_back("tmp/test2.txt");
-  files.emplace_back("tmp/test2.lbl");
+  files.emplace_back(tmp_dir_ + "/test.txt");
+  files.emplace_back(tmp_dir_ + "/test.lbl");
+  files.emplace_back(tmp_dir_ + "/test2.txt");
+  files.emplace_back(tmp_dir_ + "/test2.lbl");
 
   const storage::database::StorageDatabaseConnection connection(config);
 
@@ -303,7 +307,7 @@ TEST_F(FileWatcherTest, TestSeekWithNonExistentDirectory) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
-  std::filesystem::remove_all("tmp");
+  std::filesystem::remove_all(tmp_dir_);
 
   watcher.seek();
 }
@@ -312,7 +316,7 @@ TEST_F(FileWatcherTest, TestSeekDatasetWithNonExistentDirectory) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   const FileWatcher watcher(config, 1, &stop_file_watcher);
-  std::filesystem::remove_all("tmp");
+  std::filesystem::remove_all(tmp_dir_);
 }
 
 TEST_F(FileWatcherTest, TestCheckValidFileWithInvalidPath) {
@@ -357,11 +361,11 @@ TEST_F(FileWatcherTest, TestMultipleFileHandling) {
 
   // Add several files to the temporary directory
   for (int i = 0; i < number_of_files; i++) {
-    std::ofstream file("tmp/test_file" + std::to_string(i) + ".txt");
+    std::ofstream file(tmp_dir_ + "/test_file" + std::to_string(i) + ".txt");
     file << "test";
     file.close();
 
-    file = std::ofstream("tmp/test_file" + std::to_string(i) + ".lbl");
+    file = std::ofstream(tmp_dir_ + "/test_file" + std::to_string(i) + ".lbl");
     file << i;
     file.close();
   }
@@ -378,7 +382,7 @@ TEST_F(FileWatcherTest, TestMultipleFileHandling) {
 
   // Make sure all files were detected and processed
   for (int i = 0; i < number_of_files; i++) {
-    ASSERT_TRUE(std::find(file_paths.begin(), file_paths.end(), "tmp/test_file" + std::to_string(i) + ".txt") !=
+    ASSERT_TRUE(std::find(file_paths.begin(), file_paths.end(), tmp_dir_ + "/test_file" + std::to_string(i) + ".txt") !=
                 file_paths.end());
   }
 }
@@ -396,10 +400,10 @@ TEST_F(FileWatcherTest, TestDirectoryUpdateWhileRunning) {
   });
 
   // Add a file to the temporary directory
-  std::ofstream file("tmp/test_file1.txt");
+  std::ofstream file(tmp_dir_ + "/test_file1.txt");
   file << "test";
   file.close();
-  file = std::ofstream("tmp/test_file1.lbl");
+  file = std::ofstream(tmp_dir_ + "/test_file1.lbl");
   file << "1";
   file.close();
 
@@ -411,13 +415,13 @@ TEST_F(FileWatcherTest, TestDirectoryUpdateWhileRunning) {
   // Check if the file is added to the database
   std::string file_path;
   session << "SELECT path FROM files WHERE file_id=1", soci::into(file_path);
-  ASSERT_EQ(file_path, "tmp/test_file1.txt");
+  ASSERT_EQ(file_path, tmp_dir_ + "/test_file1.txt");
 
   // Add another file to the temporary directory
-  file = std::ofstream("tmp/test_file2.txt");
+  file = std::ofstream(tmp_dir_ + "/test_file2.txt");
   file << "test";
   file.close();
-  file = std::ofstream("tmp/test_file2.lbl");
+  file = std::ofstream(tmp_dir_ + "/test_file2.lbl");
   file << "2";
   file.close();
 
@@ -425,7 +429,7 @@ TEST_F(FileWatcherTest, TestDirectoryUpdateWhileRunning) {
 
   // Check if the second file is added to the database
   session << "SELECT path FROM files WHERE file_id=2", soci::into(file_path);
-  ASSERT_EQ(file_path, "tmp/test_file2.txt");
+  ASSERT_EQ(file_path, tmp_dir_ + "/test_file2.txt");
 
   stop_file_watcher = true;
   watcher_thread.join();

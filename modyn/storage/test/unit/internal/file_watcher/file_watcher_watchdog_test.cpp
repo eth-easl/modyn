@@ -12,10 +12,15 @@ using namespace storage::test;
 
 class FileWatcherWatchdogTest : public ::testing::Test {
  protected:
+  std::string tmp_dir_;
+
+  FileWatcherWatchdogTest()
+      : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_watchdog_test"} {}
+
   void SetUp() override {
     TestUtils::create_dummy_yaml();
     // Create temporary directory
-    std::filesystem::create_directory("tmp");
+    std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
     const storage::database::StorageDatabaseConnection connection(config);
     connection.create_tables();
@@ -27,7 +32,7 @@ class FileWatcherWatchdogTest : public ::testing::Test {
       std::filesystem::remove("'test.db'");
     }
     // Remove temporary directory
-    std::filesystem::remove_all("tmp");
+    std::filesystem::remove_all(tmp_dir_);
   }
 };
 
@@ -63,10 +68,10 @@ TEST_F(FileWatcherWatchdogTest, TestStartFileWatcherProcess) {
   const storage::database::StorageDatabaseConnection connection(config);
 
   // Add two dataset to the database
-  connection.add_dataset("test_dataset1", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+  connection.add_dataset("test_dataset1", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
-  connection.add_dataset("test_dataset2", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+  connection.add_dataset("test_dataset2", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
@@ -94,7 +99,7 @@ TEST_F(FileWatcherWatchdogTest, TestStopFileWatcherProcess) {
 
   const storage::database::StorageDatabaseConnection connection(config);
 
-  connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
@@ -121,7 +126,7 @@ TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherThreads) {
 
   watchdog.watch_file_watcher_threads();
 
-  connection.add_dataset("test_dataset1", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+  connection.add_dataset("test_dataset1", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
@@ -175,7 +180,7 @@ TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
   const storage::database::StorageDatabaseConnection connection(config);
 
-  connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
@@ -203,7 +208,7 @@ TEST_F(FileWatcherWatchdogTest, TestAddingNewDataset) {
   watchdog.watch_file_watcher_threads();
 
   // Add a new dataset to the database
-  connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
@@ -225,7 +230,7 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   const storage::database::StorageDatabaseConnection connection(config);
 
   // Add a new dataset to the database
-  connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 

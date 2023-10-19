@@ -20,50 +20,61 @@ using namespace storage::test;
 
 class StorageServiceImplTest : public ::testing::Test {
  protected:
+  std::string tmp_dir_;
+
+  StorageServiceImplTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/storage_service_impl_test"} {}
+
   void SetUp() override {
     TestUtils::create_dummy_yaml();
     // Create temporary directory
-    std::filesystem::create_directory("tmp");
+    std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
     const storage::database::StorageDatabaseConnection connection(config);
     connection.create_tables();
 
     // Add a dataset to the database
-    connection.add_dataset("test_dataset", "tmp", storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
+    connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
                            storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                            TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
     soci::session session = connection.get_session();  // NOLINT misc-const-correctness
-    session << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'tmp/test_file.txt', "
-               "0, 1)";
+    std::string sql_expression = fmt::format(
+        "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/test_file.txt', 100, "
+        "1)",
+        tmp_dir_);
+    session << sql_expression;
 
     session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 0, 0)";
 
-    session << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'tmp/test_file2.txt', "
-               "100, 1)";
+    sql_expression = fmt::format(
+        "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/test_file2.txt', "
+        "100, 1)",
+        tmp_dir_);
+    session << sql_expression;
+
     session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 2, 0, 1)";
 
     // Create dummy files
-    std::ofstream file("tmp/test_file.txt");
+    std::ofstream file(tmp_dir_ + "/test_file.txt");
     file << "test";
     file.close();
 
-    file = std::ofstream("tmp/test_file.lbl");
+    file = std::ofstream(tmp_dir_ + "/test_file.lbl");
     file << "1";
     file.close();
 
-    file = std::ofstream("tmp/test_file2.txt");
+    file = std::ofstream(tmp_dir_ + "/test_file2.txt");
     file << "test";
     file.close();
 
-    file = std::ofstream("tmp/test_file2.lbl");
+    file = std::ofstream(tmp_dir_ + "/test_file2.lbl");
     file << "2";
     file.close();
   }
 
   void TearDown() override {
     // Remove temporary directory
-    std::filesystem::remove_all("tmp");
+    std::filesystem::remove_all(tmp_dir_);
     std::filesystem::remove("config.yaml");
     if (std::filesystem::exists("'test.db'")) {
       std::filesystem::remove("'test.db'");
@@ -173,9 +184,9 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
   ASSERT_EQ(number_of_samples, 2);
 
-  ASSERT_FALSE(std::filesystem::exists("tmp/test_file.txt"));
+  ASSERT_FALSE(std::filesystem::exists(tmp_dir_ + "/test_file.txt"));
 
-  ASSERT_TRUE(std::filesystem::exists("tmp/test_file2.txt"));
+  ASSERT_TRUE(std::filesystem::exists(tmp_dir_ + "/test_file2.txt"));
 
   request.clear_keys();
 

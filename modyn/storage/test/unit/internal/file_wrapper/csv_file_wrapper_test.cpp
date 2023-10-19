@@ -19,14 +19,16 @@ class CsvFileWrapperTest : public ::testing::Test {
   std::string file_name_;
   YAML::Node config_;
   std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper_;
+  std::string tmp_dir_ = std::filesystem::temp_directory_path().string() + "/csv_file_wrapper_test";
 
   CsvFileWrapperTest()
-      : file_name_{"tmp/test.csv"},
-        config_{TestUtils::get_dummy_file_wrapper_config()},
-        filesystem_wrapper_{std::make_shared<MockFilesystemWrapper>()} {}
+      : config_{TestUtils::get_dummy_file_wrapper_config()},
+        filesystem_wrapper_{std::make_shared<MockFilesystemWrapper>()} {
+    file_name_ = tmp_dir_ + "/test.csv";
+  }
 
   void SetUp() override {
-    std::filesystem::create_directory("tmp");
+    std::filesystem::create_directory(tmp_dir_);
 
     std::ofstream file(file_name_);
     file << "id,first_name,last_name,age\n";
