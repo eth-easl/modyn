@@ -25,6 +25,14 @@ logger = logging.getLogger(__name__)
 
 DAY_LENGTH_SECONDS = 24 * 60 * 60
 
+def extract_single_zip(directory: str, zip_file: str) -> None:
+    zip_path = os.path.join(directory, zip_file)
+    output_dir = os.path.join(directory, os.path.splitext(zip_file)[0])
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(output_dir)
 
 def setup_argparser() -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description=f"CLOC Benchmark Storage Script")
@@ -272,19 +280,12 @@ class CLDatasets:
 
         zip_files = [file for file in os.listdir(directory) if file.endswith(".zip")]
 
-        def extract_single_zip(zip_file: str) -> None:
-            zip_path = os.path.join(directory, zip_file)
-            output_dir = os.path.join(directory, os.path.splitext(zip_file)[0])
 
-            os.makedirs(output_dir, exist_ok=True)
-
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall(output_dir)
 
         with ProcessPoolExecutor(max_workers=32) as executor, tqdm(total=len(zip_files)) as pbar:
             futures_list = []
             for zip_file in zip_files:
-                future = executor.submit(extract_single_zip, zip_file)
+                future = executor.submit(extract_single_zip, directory, zip_file)
                 future.add_done_callback(lambda p: pbar.update(1))
                 futures_list.append(future)
 
