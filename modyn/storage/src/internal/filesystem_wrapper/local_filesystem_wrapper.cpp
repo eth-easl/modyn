@@ -69,13 +69,13 @@ int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
 
   // For the most system reliable way to get the file timestamp, we use stat
-  struct stat file_stat;
+  struct stat file_stat = {};
   if (stat(path.c_str(), &file_stat) != 0) {
     FAIL(fmt::format("File timestamp not readable: {}", path));
   }
 
-  time_t file_timestamp = file_stat.st_mtime;
-  int64_t int64_file_timestamp = static_cast<int64_t>(file_timestamp);
+  const time_t file_timestamp = file_stat.st_mtime;
+  const auto int64_file_timestamp = static_cast<int64_t>(file_timestamp);
   return int64_file_timestamp;
 }
 
