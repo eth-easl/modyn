@@ -30,7 +30,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
-    RegisterPipelineRequest,
     SeedSelectorRequest,
     StatusBarScaleResponse,
     TriggerResponse,
@@ -202,27 +201,6 @@ class GRPCHandler:
         )
 
         return response.timestamp
-
-    # def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
-    #     if not self.connected_to_selector:
-    #         raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
-
-    #     pipeline_id = self.selector.register_pipeline(
-    #         RegisterPipelineRequest(
-    #             num_workers=pipeline_config["training"]["dataloader_workers"],
-    #             selection_strategy=SelectorJsonString(
-    #                 value=json.dumps(pipeline_config["training"]["selection_strategy"])
-    #             ),
-    #         )
-    #     ).pipeline_id
-
-    #     logger.info(f"Registered pipeline {pipeline_config['pipeline']['name']} at selector with ID {pipeline_id}")
-    #     return pipeline_id
-
-    # # pylint: disable-next=unused-argument
-    # def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
-    #     #  # TODO(#64,#124): Implement.
-    #     pass
 
     def register_pipeline(self, pipeline_config: dict) -> int:
         """

@@ -32,17 +32,12 @@ class SelectorManager:
         # For now not a big problem since we mostly run one pipeline but we might want to redesign this.
         self._prepared_locks = [self._manager.Lock() for _ in range(64)]
 
-        # self.init_metadata_db()
         self._init_trigger_sample_directory()
 
     def __getstate__(self) -> dict:
         state = self.__dict__.copy()
         del state["_manager"]
         return state
-
-    # def init_metadata_db(self) -> None:
-    #     with MetadataDatabaseConnection(self._modyn_config) as database:
-    #         database.create_tables()
 
     def _init_trigger_sample_directory(self) -> None:
         ignore_existing_trigger_samples = (
@@ -94,27 +89,6 @@ class SelectorManager:
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
         selector = Selector(selection_strategy, pipeline_id, num_workers, self._modyn_config, self._selector_cache_size)
         self._selectors[pipeline_id] = selector
-
-    # TODO(#302): remove this grpc call
-    def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
-        """
-        Registers a new pipeline at the Selector.
-        Returns:
-            The id of the newly created training object
-        Throws:
-            ValueError if num_workers is not positive.
-        """
-        if num_workers < 0:
-            raise ValueError(f"Tried to register training with {num_workers} workers.")
-
-        with self._next_pipeline_lock:
-            with MetadataDatabaseConnection(self._modyn_config) as database:
-                pipeline_id = database.register_pipeline(num_workers, selection_strategy)
-
-        self._selector_locks[pipeline_id] = self._prepared_locks[pipeline_id % len(self._prepared_locks)]
-        self._instantiate_selector(pipeline_id, num_workers, selection_strategy)
-
-        return pipeline_id
 
     def get_sample_keys_and_weights(
         self, pipeline_id: int, trigger_id: int, worker_id: int, partition_id: int

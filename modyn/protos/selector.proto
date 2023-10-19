@@ -3,7 +3,6 @@ syntax = "proto3";
 package selector;
 
 service Selector {
-  rpc register_pipeline(RegisterPipelineRequest) returns (PipelineResponse) {}
   rpc get_sample_keys_and_weights(GetSamplesRequest)
       returns (stream SamplesResponse) {}
   rpc inform_data(DataInformRequest) returns (DataInformResponse) {}
@@ -39,13 +38,6 @@ message TriggerResponse {
   int32 trigger_id = 1;
   JsonString log = 2;
 }
-
-message RegisterPipelineRequest {
-  int32 num_workers = 1;
-  JsonString selection_strategy = 2;
-}
-
-message PipelineResponse { int32 pipeline_id = 1; }
 
 message GetSamplesRequest {
   int32 pipeline_id = 1;

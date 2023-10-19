@@ -20,8 +20,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetStatusBarScaleRequest,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
-    PipelineResponse,
-    RegisterPipelineRequest,
     SamplesResponse,
     SeedSelectorRequest,
     SeedSelectorResponse,
@@ -38,7 +36,6 @@ from modyn.utils import seed_everything
 logger = logging.getLogger(__name__)
 
 # TODO(#124): Add a function to unregister a pipeline
-# TODO(#302): Remove register_pipeline from proto
 
 class SelectorGRPCServicer(SelectorServicer):
     """Provides methods that implement functionality of the selector."""
@@ -46,11 +43,6 @@ class SelectorGRPCServicer(SelectorServicer):
     def __init__(self, selector_manager: SelectorManager, sample_batch_size: int):
         self.selector_manager = selector_manager
         self._sample_batch_size = sample_batch_size
-
-    def register_pipeline(self, request: RegisterPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
-        logger.info(f"Registering pipeline with request - {str(request)}")
-        pipeline_id = self.selector_manager.register_pipeline(request.num_workers, request.selection_strategy.value)
-        return PipelineResponse(pipeline_id=pipeline_id)
 
     def get_sample_keys_and_weights(  # pylint: disable-next=unused-argument
         self, request: GetSamplesRequest, context: grpc.ServicerContext

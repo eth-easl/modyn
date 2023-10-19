@@ -106,41 +106,6 @@ class TriggerResponse(google.protobuf.message.Message):
 global___TriggerResponse = TriggerResponse
 
 @typing_extensions.final
-class RegisterPipelineRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    NUM_WORKERS_FIELD_NUMBER: builtins.int
-    SELECTION_STRATEGY_FIELD_NUMBER: builtins.int
-    num_workers: builtins.int
-    @property
-    def selection_strategy(self) -> global___JsonString: ...
-    def __init__(
-        self,
-        *,
-        num_workers: builtins.int = ...,
-        selection_strategy: global___JsonString | None = ...,
-    ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["selection_strategy", b"selection_strategy"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["num_workers", b"num_workers", "selection_strategy", b"selection_strategy"]) -> None: ...
-
-global___RegisterPipelineRequest = RegisterPipelineRequest
-
-@typing_extensions.final
-class PipelineResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    PIPELINE_ID_FIELD_NUMBER: builtins.int
-    pipeline_id: builtins.int
-    def __init__(
-        self,
-        *,
-        pipeline_id: builtins.int = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
-
-global___PipelineResponse = PipelineResponse
-
-@typing_extensions.final
 class GetSamplesRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
