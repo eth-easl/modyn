@@ -237,7 +237,7 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   watchdog.watch_file_watcher_threads();
 
   // The watchdog should start a FileWatcher process for the new dataset
-  std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  std::this_thread::sleep_for(std::chrono::seconds(2));
 
   SPDLOG_INFO("Sleeping done.");
 
