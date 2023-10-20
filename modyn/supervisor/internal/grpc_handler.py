@@ -21,14 +21,12 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as 
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     DataInformResponse,
     GetNumberOfSamplesRequest,
     GetStatusBarScaleRequest,
-)
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
-from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     SeedSelectorRequest,
     StatusBarScaleResponse,
@@ -61,8 +59,6 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models.pipelines import Pipeline
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
 
 logger = logging.getLogger(__name__)
@@ -85,7 +81,7 @@ class GRPCHandler:
         self.init_metadata_db()
         self.init_trainer_server()
         self.init_evaluator()
-        
+
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
@@ -145,7 +141,7 @@ class GRPCHandler:
         self.evaluator = EvaluatorStub(self.evaluator_channel)
         logger.info("Successfully connected to evaluator.")
         self.connected_to_evaluator = True
-    
+
     def init_metadata_db(self) -> None:
         with MetadataDatabaseConnection(self.config) as database:
             database.create_tables()
@@ -216,8 +212,7 @@ class GRPCHandler:
         if num_workers < 0:
             raise ValueError(f"Tried to register training with {num_workers} workers.")
 
-        # TODO (#317): add the lock back after making supervisor a server
-        # with self._next_pipeline_lock:
+        # TODO(#317): add the lock back after making supervisor a server: with self._next_pipeline_lock:
         with MetadataDatabaseConnection(self.config) as database:
             pipeline_id = database.register_pipeline(num_workers, selection_strategy)
 

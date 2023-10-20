@@ -24,7 +24,6 @@ class SelectorManager:
         self._manager = Manager()
         self._selectors: dict[int, Selector] = {}
         self._selector_locks: DictProxy[int, Any] = self._manager.dict()
-        self._next_pipeline_lock = self._manager.Lock()
         self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
         # TODO(309): currently we have to prepare N locks and then share.

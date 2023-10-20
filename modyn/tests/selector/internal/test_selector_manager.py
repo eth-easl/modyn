@@ -64,12 +64,7 @@ class MockSession:
         return None
 
 
-def noop_init_metadata_db(self):  # pylint: disable=unused-argument
-    pass
-
-
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     with tempfile.TemporaryDirectory() as tmp_dir:
         config = get_modyn_config()
@@ -78,36 +73,12 @@ def test_init():
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init_throws_non_existing_dir():
     with pytest.raises(ValueError):
         SelectorManager(get_modyn_config())
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
-@patch.object(SelectorManager, "_instantiate_strategy")
-def test_register_pipeline(test__instantiate_strategy: MagicMock):
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        config = get_modyn_config()
-        config["selector"]["trigger_sample_directory"] = tmp_dir
-        selec = SelectorManager(config)
-
-        test__instantiate_strategy.return_value = MockStrategy()
-
-        assert len(selec._selectors) == 0
-
-        assert selec.register_pipeline(42, "{}") == 0
-        assert len(selec._selectors) == 1
-
-        assert isinstance(selec._selectors[0]._strategy, MockStrategy)
-
-        with pytest.raises(ValueError):
-            selec.register_pipeline(0, "strat")
-
-
-@patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights(
@@ -137,7 +108,6 @@ def test_get_sample_keys_and_weights(
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "inform_data")
 def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy: MagicMock):
@@ -159,7 +129,6 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "inform_data_and_trigger")
 def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, test__instantiate_strategy: MagicMock):
@@ -181,7 +150,6 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "get_available_labels")
 def test_get_available_labels(selector_get_available_labels: MagicMock, test__instantiate_strategy: MagicMock):
@@ -202,7 +170,6 @@ def test_get_available_labels(selector_get_available_labels: MagicMock, test__in
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init_selector_manager_with_existing_trigger_dir():
     with tempfile.TemporaryDirectory() as tmp_dir:
         with open(os.path.join(tmp_dir, "test"), "w", encoding="utf-8") as file:
@@ -216,13 +183,11 @@ def test_init_selector_manager_with_existing_trigger_dir():
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test__instantiate_strategy():
     pass  # TODO(MaxiBoether): Implement this at a later point
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "get_number_of_samples")
 def test_get_number_of_samples(selector_get_number_of_samples: MagicMock, test__instantiate_strategy: MagicMock):

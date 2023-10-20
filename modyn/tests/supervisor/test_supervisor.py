@@ -685,19 +685,19 @@ def test_replay_data_open_interval_batched(test__handle_new_data: MagicMock, tes
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
-@patch.object(GRPCHandler, "register_pipeline_at_selector", return_value=42)
+@patch.object(GRPCHandler, "register_pipeline", return_value=42)
 @patch.object(Supervisor, "get_dataset_selector_batch_size")
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(GRPCHandler, "unregister_pipeline_at_selector")
+@patch.object(GRPCHandler, "unregister_pipeline")
 def test_non_experiment_pipeline(
-    test_unregister_pipeline_at_selector: MagicMock,
+    test_unregister_pipeline: MagicMock,
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
-    test_register_pipeline_at_selector: MagicMock,
+    test_register_pipeline: MagicMock,
     test_get_time_at_storage: MagicMock,
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -705,28 +705,28 @@ def test_non_experiment_pipeline(
     sup.pipeline()
 
     test_get_time_at_storage.assert_called_once()
-    test_register_pipeline_at_selector.assert_called_once()
+    test_register_pipeline.assert_called_once()
     test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_called_once_with(21)
     test_replay_data.assert_not_called()
-    test_unregister_pipeline_at_selector.assert_called_once_with(42)
+    test_unregister_pipeline.assert_called_once_with(42)
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
-@patch.object(GRPCHandler, "register_pipeline_at_selector", return_value=42)
+@patch.object(GRPCHandler, "register_pipeline", return_value=42)
 @patch.object(Supervisor, "get_dataset_selector_batch_size")
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(GRPCHandler, "unregister_pipeline_at_selector")
+@patch.object(GRPCHandler, "unregister_pipeline")
 def test_experiment_pipeline(
-    test_unregister_pipeline_at_selector: MagicMock,
+    test_unregister_pipeline: MagicMock,
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
-    test_register_pipeline_at_selector: MagicMock,
+    test_register_pipeline: MagicMock,
     test_get_time_at_storage: MagicMock,
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -734,9 +734,9 @@ def test_experiment_pipeline(
     sup.pipeline()
 
     test_get_time_at_storage.assert_called_once()
-    test_register_pipeline_at_selector.assert_called_once()
+    test_register_pipeline.assert_called_once()
     test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_not_called()
     test_replay_data.assert_called_once()
-    test_unregister_pipeline_at_selector.assert_called_once_with(42)
+    test_unregister_pipeline.assert_called_once_with(42)

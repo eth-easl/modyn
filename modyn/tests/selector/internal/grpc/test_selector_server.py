@@ -1,13 +1,8 @@
 # pylint: disable=unused-argument,redefined-outer-name
 import tempfile
-from unittest.mock import patch
 
 from modyn.selector.internal.grpc.selector_server import SelectorGRPCServer
 from modyn.selector.internal.selector_manager import SelectorManager
-
-
-def noop_init_metadata_db(self):
-    pass
 
 
 def get_modyn_config():
@@ -21,7 +16,6 @@ def get_modyn_config():
     }
 
 
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     with tempfile.TemporaryDirectory() as tmp_dir:
         config = get_modyn_config()
