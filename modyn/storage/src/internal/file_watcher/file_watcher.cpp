@@ -71,7 +71,7 @@ bool FileWatcher::check_valid_file(
  * @param timestamp The last modified timestamp of the file.
  */
 void FileWatcher::update_files_in_directory(const std::string& directory_path, int64_t timestamp) {
-  std::string file_wrapper_config = "";
+  std::string file_wrapper_config;
   int64_t file_wrapper_type_id = -1;
 
   soci::session session = storage_database_connection_.get_session();
@@ -172,9 +172,15 @@ void FileWatcher::seek() {
 void FileWatcher::run() {
   soci::session session = storage_database_connection_.get_session();
 
-  int64_t file_watcher_interval;
+  int64_t file_watcher_interval = -1;
   session << "SELECT file_watcher_interval FROM datasets WHERE dataset_id = :dataset_id",
       soci::into(file_watcher_interval), soci::use(dataset_id_);
+
+  if (file_watcher_interval == -1) {
+    SPDLOG_ERROR("Failed to get file watcher interval");
+    stop_file_watcher->store(true);
+    return;
+  }
 
   while (true) {
     seek();

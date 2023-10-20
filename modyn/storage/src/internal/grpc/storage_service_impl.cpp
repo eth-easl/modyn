@@ -277,8 +277,6 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   // Check if the dataset exists
   const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  SPDLOG_INFO("Dataset {} exists: {}", request->dataset_id(), dataset_id != -1);
-
   ::grpc::Status status;
   if (dataset_id == -1) {
     response->set_available(false);

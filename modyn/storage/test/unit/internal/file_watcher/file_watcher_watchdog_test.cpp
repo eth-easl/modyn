@@ -234,13 +234,7 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
                          TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  SPDLOG_INFO("Added dataset to database.");
-
   watchdog.watch_file_watcher_threads();
-
-  SPDLOG_INFO("Watched file watcher threads.");
-
-  SPDLOG_INFO("Sleeping for 2ms.");
 
   // The watchdog should start a FileWatcher process for the new dataset
   std::this_thread::sleep_for(std::chrono::milliseconds(2));
