@@ -24,5 +24,6 @@ class PyTorchFullModel(AbstractFullModelStrategy):
     def _store_model(self, model_state: dict, file_path: pathlib.Path) -> None:
         torch.save(model_state, file_path)
 
-    def _load_model(self, base_model_state: dict, file_path: pathlib.Path) -> None:
+    def _load_model(self, base_model_state: dict, file_path: pathlib.Path) -> dict:
         base_model_state.update(torch.load(file_path))
+        return base_model_state

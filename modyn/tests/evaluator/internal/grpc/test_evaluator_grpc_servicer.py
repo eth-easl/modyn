@@ -48,8 +48,7 @@ def get_modyn_config():
 
 
 def setup():
-    if os.path.exists(DATABASE):
-        os.remove(DATABASE)
+    DATABASE.unlink(True)
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
         database.create_tables()
@@ -59,6 +58,7 @@ def setup():
             "ResNet18",
             json.dumps({}),
             True,
+            "{}",
             ModelStorageStrategyConfig(name="PyTorchFullModel"),
             incremental_model_strategy=None,
             full_model_interval=None,
@@ -68,7 +68,7 @@ def setup():
 
 
 def teardown():
-    os.remove(DATABASE)
+    DATABASE.unlink()
 
 
 class DummyModelWrapper:

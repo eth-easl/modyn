@@ -97,11 +97,8 @@ class ModelStorageManager:
         ):
             parent_model_id: Optional[int] = self._get_parent_model_id(pipeline_id, trigger_id)
             if parent_model_id is not None:
-                # store the model according to the incremental model strategy.
-                parent_model_state = self._get_base_model_state(pipeline_id)
-
                 # load model state of the parent model.
-                parent_model_state = self._reconstruct_model_state(parent_model_id, parent_model_state, policy)
+                parent_model_state = self._reconstruct_model_state(parent_model_id, policy)
 
                 # finally store the model delta.
                 policy.incremental_model_strategy.store_model(state_dict, parent_model_state, model_path)
@@ -112,6 +109,33 @@ class ModelStorageManager:
         # store the model in its entirety.
         policy.full_model_strategy.store_model(state_dict, model_path)
         return None
+
+    def _reconstruct_model_state(self, model_id: int, policy: ModelStoragePolicy) -> dict:
+        """
+        Reconstruct a given model according to the model storage policy.
+        The function recursively calls itself whenever the model is stored as a delta.
+        Otherwise it is stored according to a full model strategy and the model state can be retrieved.
+
+        Args:
+            model_id: the identifier of the model to be reconstructed.
+            policy: the model storage policy of the pipeline.
+        Returns:
+            dict: the reconstructed model state. Refers to the same object as model_state.
+        """
+
+        # we recursively overwrite the model state.
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            model: TrainedModel = database.session.get(TrainedModel, model_id)
+        if not model.parent_model:
+            # base case: we can load a fully stored model.
+            model_state = self._get_base_model_state(model.pipeline_id)
+            return policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
+
+        # recursive step: we recurse to load the model state of the parent model.
+        model_state = self._reconstruct_model_state(model.parent_model, policy)
+
+        # we apply the incremental strategy to load our model state.
+        return policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
     def _get_base_model_state(self, pipeline_id: int) -> dict:
         """
@@ -130,37 +154,6 @@ class ModelStorageManager:
 
         model_handler = getattr(model_module, model_class_name)
         return model_handler(json.loads(model_config), "cpu", amp).model.state_dict()
-
-    def _reconstruct_model_state(self, model_id: int, model_state: dict, policy: ModelStoragePolicy) -> dict:
-        """
-        Reconstruct a given model according to the model storage policy.
-        The function recursively calls itself whenever the model is stored as a delta.
-        Otherwise it is stored according to a full model strategy and the model state can be retrieved.
-        Finally, the model_state is overwritten by the state of the inquired model.
-
-        Args:
-            model_id: the identifier of the model to be reconstructed.
-            model_state: a random model state (or the loaded parent model state).
-            policy: the model storage policy of the pipeline.
-        Returns:
-            dict: the reconstructed model state. Refers to the same object as model_state.
-        """
-
-        # we recursively overwrite the model state.
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            model: TrainedModel = database.session.get(TrainedModel, model_id)
-        if not model.parent_model:
-            # base case: we can load a fully stored model.
-            policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
-            return model_state
-
-        # recursive step: we recurse to load the model state of the parent model.
-        model_state = self._reconstruct_model_state(model.parent_model, model_state, policy)
-
-        # we apply the incremental strategy to load our model state.
-        policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
-
-        return model_state
 
     def _get_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
         """
@@ -205,8 +198,8 @@ class ModelStorageManager:
         policy = self.get_model_storage_policy(model.pipeline_id)
 
         # retrieve the model by loading its state dictionary.
-        model_state = self._get_base_model_state(model.pipeline_id)
-        model_dict = {"model": self._reconstruct_model_state(model_id, model_state, policy)}
+        model_state = self._reconstruct_model_state(model_id, policy)
+        model_dict = {"model": model_state}
 
         # append the metadata to the dictionary if specified.
         if metadata:

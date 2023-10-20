@@ -75,7 +75,12 @@ def test_get_model_configuration():
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         database.create_tables()
         pipeline_id = database.register_pipeline(
-            1, "ResNet18", json.dumps({"num_classes": 10}), True, ModelStorageStrategyConfig(name="PyTorchFullModel")
+            1,
+            "ResNet18",
+            json.dumps({"num_classes": 10}),
+            True,
+            "{}",
+            ModelStorageStrategyConfig(name="PyTorchFullModel"),
         )
 
         assert pipeline_id == 1

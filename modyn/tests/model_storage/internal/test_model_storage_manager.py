@@ -44,7 +44,7 @@ def setup():
         inc_model_strategy.zip = False
         inc_model_strategy.config = json.dumps({"operator": "sub"})
         database.register_pipeline(
-            1, "ResNet18", json.dumps({"num_classes": 10}), True, full_model_strategy, inc_model_strategy, 5
+            1, "ResNet18", json.dumps({"num_classes": 10}), True, "{}", full_model_strategy, inc_model_strategy, 5
         )
 
 
@@ -92,7 +92,8 @@ def test__get_base_model_state():
     assert len(model_state) == 122
 
 
-def test__reconstruct_model():
+@patch.object(ModelStorageManager, "_get_base_model_state", return_value=MockModel().state_dict())
+def test__reconstruct_model(base_model_state_mock: MagicMock):
     mock_model = MockModel()
     model_state = mock_model.state_dict()
     full_model_strategy = PyTorchFullModel(
@@ -120,9 +121,7 @@ def test__reconstruct_model():
                 15, 4, difference_model_file_name, "model.metadata", parent_model=prev_model_id
             )
 
-        reconstructed_state = manager._reconstruct_model_state(
-            curr_model_id, model_state, manager.get_model_storage_policy(1)
-        )
+        reconstructed_state = manager._reconstruct_model_state(curr_model_id, manager.get_model_storage_policy(1))
 
         assert reconstructed_state["_weight"].item() == 3  # pylint: disable=unsubscriptable-object
 
@@ -146,12 +145,9 @@ def test__handle_new_model_full():
         assert loaded_state["_weight"].item() == 1
 
 
-@patch.object(ModelStorageManager, "_get_base_model_state", return_value=MockModel().state_dict())
 @patch.object(ModelStorageManager, "_reconstruct_model_state", return_value=MockModel().state_dict())
 @patch.object(ModelStorageManager, "_get_parent_model_id", return_value=101)
-def test__handle_new_model_incremental(
-    previous_model_mock, reconstruct_model_mock: MagicMock, base_model_state_mock: MagicMock
-):
+def test__handle_new_model_incremental(previous_model_mock, reconstruct_model_mock: MagicMock):
     manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
 
     with tempfile.NamedTemporaryFile() as temporary_file:
@@ -166,7 +162,7 @@ def test__handle_new_model_incremental(
         with open(temp_file_path, "rb") as model_file:
             assert model_file.read() == b"\x00\x00\x00\x40"
 
-        base_model_state_mock.assert_called_once_with(5)
+        reconstruct_model_mock.assert_called_once()
         previous_model_mock.assert_called_once_with(5, 4)
 
 
@@ -177,6 +173,7 @@ def test_get_model_storage_policy():
             "ResNet18",
             json.dumps({"num_classes": 10}),
             True,
+            "{}",
             ModelStorageStrategyConfig(name="PyTorchFullModel"),
             None,
             None,
@@ -188,7 +185,7 @@ def test_get_model_storage_policy():
         inc_model_strategy.zip = True
         inc_model_strategy.config = json.dumps({"operator": "sub"})
         complex_pipeline = database.register_pipeline(
-            75, "ResNet18", json.dumps({"num_classes": 10}), True, full_model_strategy, inc_model_strategy, 10
+            75, "ResNet18", json.dumps({"num_classes": 10}), True, "{}", full_model_strategy, inc_model_strategy, 10
         )
 
     manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
@@ -250,7 +247,7 @@ def test_store_model_resnet():
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
         pipeline_id = database.register_pipeline(
-            1, "ResNet18", json.dumps({"num_classes": 10}), True, full_model_strategy
+            1, "ResNet18", json.dumps({"num_classes": 10}), True, "{}", full_model_strategy
         )
 
     resnet = ResNet18(model_configuration={"num_classes": 10}, device="cpu", amp=False)

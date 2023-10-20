@@ -18,8 +18,9 @@ class BinaryFullModel(AbstractFullModelStrategy):
             for tensor in model_state.values():
                 file.write(tensor.numpy().tobytes())
 
-    def _load_model(self, base_model_state: dict, file_path: pathlib.Path) -> None:
+    def _load_model(self, base_model_state: dict, file_path: pathlib.Path) -> dict:
         with open(file_path, "rb") as file:
             for layer, tensor in base_model_state.items():
                 num_bytes = get_tensor_byte_size(tensor)
                 base_model_state[layer] = reconstruct_tensor_from_bytes(tensor, file.read(num_bytes))
+        return base_model_state

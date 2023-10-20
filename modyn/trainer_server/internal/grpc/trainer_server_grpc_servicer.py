@@ -371,7 +371,7 @@ class TrainerServerGRPCServicer:
             if not register_response.success:
                 logger.error(f"Could not store final model from training id {training_id} at model storage.")
                 return StoreFinalModelResponse(valid_state=False)
-            os.remove(final_checkpoint_path)
+            final_checkpoint_path.unlink()
             logger.info(f"Deleted final model on path {final_checkpoint_path}")
 
             return StoreFinalModelResponse(valid_state=True, model_id=register_response.model_id)

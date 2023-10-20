@@ -95,13 +95,12 @@ def test_load_model():
             stored_model_file.write(b"\x00\x00\x80\x3f\x00\x00\x80\x3f")
 
         for operator in ["xor", "sub"]:
-            model = MockModel()
-            model_state = model.state_dict()
             incremental_strategy = WeightsDifference(
                 zipping_dir=pathlib.Path(), zip_activated=False, zip_algorithm_name="", config={"operator": operator}
             )
 
-            incremental_strategy.load_model(model_state, temp_file_path)
+            model = MockModel()
+            model_state = incremental_strategy.load_model(model.state_dict(), temp_file_path)
 
             assert model_state["_weight"][0] == 1  # pylint: disable=unsubscriptable-object
 
@@ -160,7 +159,7 @@ def test_store_then_load_model():
             # xor difference of the remaining float32 bytes.
             assert stored_model_file.read(8) == b"\x00\x00\x00\x00\x00\x00"
 
-        incremental_strategy.load_model(before_state, temp_file_path)
+        state_dict = incremental_strategy.load_model(before_state, temp_file_path)
 
-        assert before_state["_bias"][0].item() == 1  # pylint: disable=unsubscriptable-object
-        assert before_state["_weight"][0].item() == 2  # pylint: disable=unsubscriptable-object
+        assert state_dict["_bias"][0].item() == 1  # pylint: disable=unsubscriptable-object
+        assert state_dict["_weight"][0].item() == 2  # pylint: disable=unsubscriptable-object

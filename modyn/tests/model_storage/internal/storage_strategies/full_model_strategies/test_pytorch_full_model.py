@@ -40,8 +40,7 @@ def test_load_model():
         torch.save(model.state_dict(), temp_file_path)
 
         model._weight = torch.nn.Parameter(torch.ones(2, dtype=torch.float32) * 2)
-        state_dict = model.state_dict()
-        full_model_strategy.load_model(state_dict, temp_file_path)
+        state_dict = full_model_strategy.load_model(model.state_dict(), temp_file_path)
 
         assert state_dict["_weight"][0] == 1.0  # pylint: disable=unsubscriptable-object
 
@@ -57,7 +56,6 @@ def test_store_then_load():
         full_model_strategy.store_model(model.state_dict(), temp_file_path)
 
         model._weight = torch.nn.Parameter(torch.ones(2, dtype=torch.float32) * 2)
-        state_dict = model.state_dict()
-        full_model_strategy.load_model(state_dict, temp_file_path)
+        state_dict = full_model_strategy.load_model(model.state_dict(), temp_file_path)
 
         assert state_dict["_weight"][0] == 1.0  # pylint: disable=unsubscriptable-object

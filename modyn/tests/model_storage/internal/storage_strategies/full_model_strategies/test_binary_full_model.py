@@ -39,7 +39,6 @@ def test_load_model():
         with open(temp_file_path, "wb") as stored_model_file:
             assert stored_model_file.write(b"\x00\x00\x00\x3f\x00\x00\x00\x3f")
 
-        state_dict = model.state_dict()
-        full_model_strategy.load_model(state_dict, temp_file_path)
+        state_dict = full_model_strategy.load_model(model.state_dict(), temp_file_path)
 
         assert state_dict["_weight"][0] == 0.5  # pylint: disable=unsubscriptable-object

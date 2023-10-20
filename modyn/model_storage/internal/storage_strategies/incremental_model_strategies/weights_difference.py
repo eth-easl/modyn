@@ -61,16 +61,16 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
                 file.write(exponents)
             file.write(bytestream.getbuffer().tobytes())
 
-    def _load_model(self, prev_model_state: dict, file_path: pathlib.Path) -> None:
+    def _load_model(self, prev_model_state: dict, file_path: pathlib.Path) -> dict:
         with open(file_path, "rb") as file:
             if not self.split_exponent:
                 for layer_name, tensor in prev_model_state.items():
                     num_bytes = get_tensor_byte_size(tensor)
                     prev_model_state[layer_name] = self.difference_operator.restore(tensor, file.read(num_bytes))
-            else:
-                self._load_model_split_exponent(prev_model_state, file)
+                return prev_model_state
+            return self._load_model_split_exponent(prev_model_state, file)
 
-    def _load_model_split_exponent(self, prev_model_state: dict, file: BinaryIO) -> None:
+    def _load_model_split_exponent(self, prev_model_state: dict, file: BinaryIO) -> dict:
         exponent_bytes_amount = int.from_bytes(file.read(8), byteorder="big")
 
         with io.BytesIO() as exponent_bytes:
@@ -91,6 +91,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
                     prev_model_state[layer_name] = self.difference_operator.restore(tensor, self.reorder_buffer(buffer))
                 else:
                     prev_model_state[layer_name] = self.difference_operator.restore(tensor, file.read(num_bytes))
+        return prev_model_state
 
     @staticmethod
     def reorder_buffer(buffer: Union[bytes, bytearray]) -> bytes:
