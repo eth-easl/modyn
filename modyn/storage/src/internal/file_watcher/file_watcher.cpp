@@ -71,15 +71,28 @@ bool FileWatcher::check_valid_file(
  * @param timestamp The last modified timestamp of the file.
  */
 void FileWatcher::update_files_in_directory(const std::string& directory_path, int64_t timestamp) {
-  std::string file_wrapper_config;
-  int64_t file_wrapper_type_id = 0;
+  std::string file_wrapper_config = "";
+  int64_t file_wrapper_type_id = -1;
 
   soci::session session = storage_database_connection_.get_session();
 
   session << "SELECT file_wrapper_type, file_wrapper_config FROM datasets "
              "WHERE dataset_id = :dataset_id",
       soci::into(file_wrapper_type_id), soci::into(file_wrapper_config), soci::use(dataset_id_);
+
+  if (file_wrapper_type_id == -1) {
+    SPDLOG_ERROR("Failed to get file wrapper type");
+    stop_file_watcher->store(true);
+    return;
+  }
+
   const auto file_wrapper_type = static_cast<storage::file_wrapper::FileWrapperType>(file_wrapper_type_id);
+
+  if (file_wrapper_config.empty()) {
+    SPDLOG_ERROR("Failed to get file wrapper config");
+    stop_file_watcher->store(true);
+    return;
+  }
 
   YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
 
@@ -127,7 +140,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 void FileWatcher::seek_dataset() {
   soci::session session = storage_database_connection_.get_session();
 
-  int64_t last_timestamp;
+  int64_t last_timestamp = -1;
 
   session << "SELECT last_timestamp FROM datasets "
              "WHERE dataset_id = :dataset_id",
@@ -144,7 +157,7 @@ void FileWatcher::seek() {
 
   seek_dataset();
 
-  int64_t last_timestamp;
+  int64_t last_timestamp = -1;
   session << "SELECT updated_at FROM files WHERE dataset_id = :dataset_id ORDER "
              "BY updated_at DESC LIMIT 1",
       soci::into(last_timestamp), soci::use(dataset_id_);

@@ -165,7 +165,11 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
     return false;
   }
 
+  SPDLOG_INFO("Deleting dataset {}", name);
+
   soci::session session = get_session();
+
+  SPDLOG_INFO("Deleting dataset {} from database", name);
 
   // Delete all samples for this dataset
   session << "DELETE FROM samples WHERE dataset_id = :dataset_id", soci::use(dataset_id);
