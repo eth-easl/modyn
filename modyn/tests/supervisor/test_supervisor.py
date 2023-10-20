@@ -64,6 +64,10 @@ def noop_constructor_mock(
     pass
 
 
+def noop_init_metadata_db(self) -> None:
+    pass
+
+
 def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
@@ -82,6 +86,7 @@ def teardown():
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
@@ -107,6 +112,7 @@ def test_initialization() -> None:
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=False)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
@@ -127,6 +133,7 @@ def test_constructor_throws_on_invalid_system_config(
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
@@ -144,6 +151,7 @@ def test_constructor_throws_on_invalid_pipeline_config(
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_validate_pipeline_config_schema():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -163,6 +171,7 @@ def test_validate_pipeline_config_schema():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test__validate_training_options():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -217,6 +226,7 @@ def test__validate_training_options():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test__validate_evaluation_options():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -242,6 +252,7 @@ def test__validate_evaluation_options():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_validate_pipeline_config_content():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -273,6 +284,7 @@ def test_validate_pipeline_config_content():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_validate_pipeline_config():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -627,6 +639,7 @@ def test__run_training_with_evaluation(
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_initial_pass():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
