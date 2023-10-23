@@ -82,9 +82,15 @@ bool StorageDatabaseConnection::add_dataset(
     soci::session session = get_session();
 
     SPDLOG_INFO("Adding dataset {} to database", name);
+    SPDLOG_INFO("Filesystem wrapper type: {}", filesystem_wrapper_type);
+    SPDLOG_INFO("File wrapper type: {}", file_wrapper_type);
     auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);
     auto file_wrapper_type_int = static_cast<int64_t>(file_wrapper_type);
     std::string boolean_string = ignore_last_timestamp ? "true" : "false";
+
+    SPDLOG_INFO("Adding dataset {} to database", name);
+    SPDLOG_INFO("Filesystem wrapper type: {}", filesystem_wrapper_type_int);
+    SPDLOG_INFO("File wrapper type: {}", file_wrapper_type_int);
     if (get_dataset_id(name) != -1) {
       SPDLOG_ERROR("Dataset {} already exists", name);
       return false;
