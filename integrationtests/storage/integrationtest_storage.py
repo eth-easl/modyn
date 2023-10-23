@@ -139,6 +139,8 @@ def check_get_current_timestamp() -> None:
 
     response = storage.GetCurrentTimestamp(empty)
 
+    print("Current timestamp:", response.timestamp)
+
     assert response.timestamp > 0, "Timestamp is not valid."
 
 
