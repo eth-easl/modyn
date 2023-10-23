@@ -26,7 +26,7 @@ class FilesystemWrapper {
   virtual bool remove(const std::string& path) = 0;
   static FilesystemWrapperType get_filesystem_wrapper_type(const std::string& type) {
     static const std::unordered_map<std::string, FilesystemWrapperType> FILESYSTEM_WRAPPER_TYPE_MAP = {
-        {"local", FilesystemWrapperType::LOCAL},
+        {"LocalFilesystemWrapper", FilesystemWrapperType::LOCAL},
     };
     return FILESYSTEM_WRAPPER_TYPE_MAP.at(type);
   }

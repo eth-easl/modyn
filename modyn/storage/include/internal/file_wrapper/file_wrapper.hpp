@@ -29,9 +29,9 @@ class FileWrapper {
   virtual FileWrapperType get_type() = 0;
   static FileWrapperType get_file_wrapper_type(const std::string& type) {
     static const std::unordered_map<std::string, FileWrapperType> FILE_WRAPPER_TYPE_MAP = {
-        {"single_sample", FileWrapperType::SINGLE_SAMPLE},
-        {"binary", FileWrapperType::BINARY},
-        {"csv", FileWrapperType::CSV}};
+        {"SingleSampleFileWrapper", FileWrapperType::SINGLE_SAMPLE},
+        {"BinaryFileWrapper", FileWrapperType::BINARY},
+        {"CsvFileWrapper", FileWrapperType::CSV}};
     return FILE_WRAPPER_TYPE_MAP.at(type);
   }
   virtual ~FileWrapper() = default;

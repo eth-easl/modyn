@@ -79,9 +79,9 @@ bool StorageDatabaseConnection::add_dataset(
     const storage::file_wrapper::FileWrapperType& file_wrapper_type, const std::string& description,
     const std::string& version, const std::string& file_wrapper_config, const bool& ignore_last_timestamp,
     const int& file_watcher_interval) const {
-  try {
     soci::session session = get_session();
 
+    SPDLOG_INFO("Adding dataset {} to database", name);
     auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);
     auto file_wrapper_type_int = static_cast<int64_t>(file_wrapper_type);
     std::string boolean_string = ignore_last_timestamp ? "true" : "false";
@@ -128,11 +128,7 @@ bool StorageDatabaseConnection::add_dataset(
 
     // Create partition table for samples
     add_sample_dataset_partition(name);
-  } catch (const std::exception& e) {
-    SPDLOG_ERROR("Error adding dataset {}: {}", name, e.what());
-    return false;
-  }
-  return true;
+    return true;
 }
 
 int64_t StorageDatabaseConnection::get_dataset_id(const std::string& name) const {
