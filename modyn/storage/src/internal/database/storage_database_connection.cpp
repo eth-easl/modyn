@@ -132,8 +132,11 @@ bool StorageDatabaseConnection::add_dataset(
         return false;
     }
 
+    SPDLOG_INFO("Added dataset {} to database", name);
+
     // Create partition table for samples
     add_sample_dataset_partition(name);
+    SPDLOG_INFO("Added sample partition for dataset {}", name);
     return true;
 }
 
@@ -184,12 +187,14 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
 void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& dataset_name) const {
   soci::session session = get_session();
   int64_t dataset_id = get_dataset_id(dataset_name);
+  SPDLOG_INFO("Adding sample partition for dataset {} with id {}", dataset_name, dataset_id);
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} not found", dataset_name);
     return;
   }
   switch (drivername_) {
     case DatabaseDriver::POSTGRESQL: {
+      SPDLOG_INFO("Adding sample partition for dataset {} with id {}", dataset_name, dataset_id);
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
       session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
                  "PARTITION OF samples "
@@ -206,6 +211,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
             soci::use(hash_partition_name), soci::use(dataset_partition_table_name), soci::use(hash_partition_modulus_),
             soci::use(i);
       }
+      SPDLOG_INFO("Added sample partition for dataset {} with id {}", dataset_name, dataset_id);
       break;
     }
     case DatabaseDriver::SQLITE3: {
