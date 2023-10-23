@@ -10,7 +10,7 @@ void StorageGrpcServer::run() {
     return;
   }
   auto port = config_["storage"]["port"].as<int64_t>();
-  std::string server_address = fmt::format("0.0.0.0:{}", port);
+  std::string server_address = fmt::format("[::]:{}", port);
   if (!config_["storage"]["retrieval_threads"]) {
     SPDLOG_ERROR("No retrieval_threads specified in config.yaml");
     return;
