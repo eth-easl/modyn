@@ -97,6 +97,9 @@ bool StorageDatabaseConnection::add_dataset(
     }
     switch (drivername_) {
       case DatabaseDriver::POSTGRESQL:
+        SPDLOG_INFO("Adding dataset {} to database", name);
+        SPDLOG_INFO("File Wrapper Config: {}", file_wrapper_config);
+        try {
         session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
                    "file_wrapper_type, description, version, file_wrapper_config, "
                    "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
@@ -114,6 +117,11 @@ bool StorageDatabaseConnection::add_dataset(
             soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
             soci::use(file_wrapper_type_int), soci::use(description), soci::use(version),
             soci::use(file_wrapper_config), soci::use(boolean_string), soci::use(file_watcher_interval);
+        } catch (const std::exception& e) {
+          SPDLOG_INFO("Error adding dataset: {}", e.what());
+          return false;
+        }
+        SPDLOG_INFO("Added dataset {} to database", name);
         break;
       case DatabaseDriver::SQLITE3:
         session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
