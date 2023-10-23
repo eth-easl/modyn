@@ -79,51 +79,19 @@ bool StorageDatabaseConnection::add_dataset(
     const storage::file_wrapper::FileWrapperType& file_wrapper_type, const std::string& description,
     const std::string& version, const std::string& file_wrapper_config, const bool& ignore_last_timestamp,
     const int& file_watcher_interval) const {
-    soci::session session = get_session();
+  soci::session session = get_session();
 
-    SPDLOG_INFO("Adding dataset {} to database", name);
-    SPDLOG_INFO("Filesystem wrapper type: {}", filesystem_wrapper_type);
-    SPDLOG_INFO("File wrapper type: {}", file_wrapper_type);
-    auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);
-    auto file_wrapper_type_int = static_cast<int64_t>(file_wrapper_type);
-    std::string boolean_string = ignore_last_timestamp ? "true" : "false";
+  auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);
+  auto file_wrapper_type_int = static_cast<int64_t>(file_wrapper_type);
+  std::string boolean_string = ignore_last_timestamp ? "true" : "false";
 
-    SPDLOG_INFO("Adding dataset {} to database", name);
-    SPDLOG_INFO("Filesystem wrapper type: {}", filesystem_wrapper_type_int);
-    SPDLOG_INFO("File wrapper type: {}", file_wrapper_type_int);
-    if (get_dataset_id(name) != -1) {
-      SPDLOG_ERROR("Dataset {} already exists", name);
-      return false;
-    }
-    switch (drivername_) {
-      case DatabaseDriver::POSTGRESQL:
-        SPDLOG_INFO("Adding dataset {} to database", name);
-        SPDLOG_INFO("File Wrapper Config: {}", file_wrapper_config);
-        try {
-        session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
-                   "file_wrapper_type, description, version, file_wrapper_config, "
-                   "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
-                   "VALUES (:name, "
-                   ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
-                   ":description, :version, :file_wrapper_config, "
-                   ":ignore_last_timestamp, :file_watcher_interval, 0) "
-                   "ON DUPLICATE KEY UPDATE base_path = :base_path, "
-                   "filesystem_wrapper_type = :filesystem_wrapper_type, "
-                   "file_wrapper_type = :file_wrapper_type, description = "
-                   ":description, version = :version, file_wrapper_config = "
-                   ":file_wrapper_config, ignore_last_timestamp = "
-                   ":ignore_last_timestamp, file_watcher_interval = "
-                   ":file_watcher_interval, last_timestamp=0",
-            soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
-            soci::use(file_wrapper_type_int), soci::use(description), soci::use(version),
-            soci::use(file_wrapper_config), soci::use(boolean_string), soci::use(file_watcher_interval);
-        } catch (const std::exception& e) {
-          SPDLOG_INFO("Error adding dataset: {}", e.what());
-          return false;
-        }
-        SPDLOG_INFO("Added dataset {} to database", name);
-        break;
-      case DatabaseDriver::SQLITE3:
+  if (get_dataset_id(name) != -1) {
+    SPDLOG_ERROR("Dataset {} already exists", name);
+    return false;
+  }
+  switch (drivername_) {
+    case DatabaseDriver::POSTGRESQL:
+      try {
         session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
                    "file_wrapper_type, description, version, file_wrapper_config, "
                    "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
@@ -134,18 +102,32 @@ bool StorageDatabaseConnection::add_dataset(
             soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
             soci::use(file_wrapper_type_int), soci::use(description), soci::use(version),
             soci::use(file_wrapper_config), soci::use(boolean_string), soci::use(file_watcher_interval);
-        break;
-      default:
-        SPDLOG_ERROR("Error adding dataset: Unsupported database driver.");
+      } catch (const std::exception& e) {
+        SPDLOG_ERROR("Error adding dataset: {}", e.what());
         return false;
-    }
+      }
+      SPDLOG_INFO("Added dataset {} to database", name);
+      break;
+    case DatabaseDriver::SQLITE3:
+      session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
+                 "file_wrapper_type, description, version, file_wrapper_config, "
+                 "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
+                 "VALUES (:name, "
+                 ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
+                 ":description, :version, :file_wrapper_config, "
+                 ":ignore_last_timestamp, :file_watcher_interval, 0)",
+          soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
+          soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
+          soci::use(boolean_string), soci::use(file_watcher_interval);
+      break;
+    default:
+      SPDLOG_ERROR("Error adding dataset: Unsupported database driver.");
+      return false;
+  }
 
-    SPDLOG_INFO("Added dataset {} to database", name);
-
-    // Create partition table for samples
-    add_sample_dataset_partition(name);
-    SPDLOG_INFO("Added sample partition for dataset {}", name);
-    return true;
+  // Create partition table for samples
+  add_sample_dataset_partition(name);
+  return true;
 }
 
 int64_t StorageDatabaseConnection::get_dataset_id(const std::string& name) const {
@@ -181,13 +163,28 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
   soci::session session = get_session();
 
   // Delete all samples for this dataset
-  session << "DELETE FROM samples WHERE dataset_id = :dataset_id", soci::use(dataset_id);
+  try {
+    session << "DELETE FROM samples WHERE dataset_id = :dataset_id", soci::use(dataset_id);
+  } catch (const std::exception& e) {
+    SPDLOG_ERROR("Error deleting samples for dataset {}: {}", name, e.what());
+    return false;
+  }
 
   // Delete all files for this dataset
-  session << "DELETE FROM files WHERE dataset_id = :dataset_id", soci::use(dataset_id);
+  try {
+    session << "DELETE FROM files WHERE dataset_id = :dataset_id", soci::use(dataset_id);
+  } catch (const std::exception& e) {
+    SPDLOG_ERROR("Error deleting files for dataset {}: {}", name, e.what());
+    return false;
+  }
 
   // Delete the dataset
-  session << "DELETE FROM datasets WHERE name = :name", soci::use(name);
+  try {
+    session << "DELETE FROM datasets WHERE name = :name", soci::use(name);
+  } catch (const std::exception& e) {
+    SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
+    return false;
+  }
 
   return true;
 }
@@ -195,31 +192,38 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
 void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& dataset_name) const {
   soci::session session = get_session();
   int64_t dataset_id = get_dataset_id(dataset_name);
-  SPDLOG_INFO("Adding sample partition for dataset {} with id {}", dataset_name, dataset_id);
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} not found", dataset_name);
     return;
   }
   switch (drivername_) {
     case DatabaseDriver::POSTGRESQL: {
-      SPDLOG_INFO("Adding sample partition for dataset {} with id {}", dataset_name, dataset_id);
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
-      session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
-                 "PARTITION OF samples "
-                 "FOR VALUES IN (:dataset_id) "
-                 "PARTITION BY HASH (sample_id)",
-          soci::use(dataset_partition_table_name), soci::use(dataset_id);
-
-      for (int64_t i = 0; i < hash_partition_modulus_; i++) {
-        std::string hash_partition_name = dataset_partition_table_name + "_part" + std::to_string(i);
-        session << "CREATE TABLE IF NOT EXISTS :hash_partition_name PARTITION "
-                   "OF :dataset_partition_table_name "
-                   "FOR VALUES WITH (modulus :hash_partition_modulus, "
-                   "REMAINDER :i)",
-            soci::use(hash_partition_name), soci::use(dataset_partition_table_name), soci::use(hash_partition_modulus_),
-            soci::use(i);
+      try {
+        session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
+                   "PARTITION OF samples "
+                   "FOR VALUES IN (:dataset_id) "
+                   "PARTITION BY HASH (sample_id)",
+            soci::use(dataset_partition_table_name), soci::use(dataset_id);
+      } catch (const std::exception& e) {
+        SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
+        throw e;
       }
-      SPDLOG_INFO("Added sample partition for dataset {} with id {}", dataset_name, dataset_id);
+
+      try {
+        for (int64_t i = 0; i < hash_partition_modulus_; i++) {
+          std::string hash_partition_name = dataset_partition_table_name + "_part" + std::to_string(i);
+          session << "CREATE TABLE IF NOT EXISTS :hash_partition_name PARTITION "
+                     "OF :dataset_partition_table_name "
+                     "FOR VALUES WITH (modulus :hash_partition_modulus, "
+                     "REMAINDER :i)",
+              soci::use(hash_partition_name), soci::use(dataset_partition_table_name),
+              soci::use(hash_partition_modulus_), soci::use(i);
+        }
+      } catch (const std::exception& e) {
+        SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
+        throw e;
+      }
       break;
     }
     case DatabaseDriver::SQLITE3: {
