@@ -346,7 +346,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
       for (const auto& file_path : file_paths) {
         filesystem_wrapper->remove(file_path);
       }
-    } catch (const ModynException& e) {
+    } catch (const storage::utils::ModynException& e) {
       SPDLOG_ERROR("Error deleting dataset: {}", e.what());
       return {::grpc::StatusCode::INTERNAL, "Error deleting dataset."};
     }
