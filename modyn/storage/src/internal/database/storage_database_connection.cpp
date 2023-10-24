@@ -106,7 +106,6 @@ bool StorageDatabaseConnection::add_dataset(
         SPDLOG_ERROR("Error adding dataset: {}", e.what());
         return false;
       }
-      SPDLOG_INFO("Added dataset {} to database", name);
       break;
     case DatabaseDriver::SQLITE3:
       session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "

@@ -25,6 +25,12 @@ void FileWatcherWatchdog::start_file_watcher_thread(int64_t dataset_id, int16_t 
   std::unique_ptr<FileWatcher> file_watcher =
       std::make_unique<FileWatcher>(config_, dataset_id, &file_watcher_thread_stop_flags_[dataset_id],
                                     config_["storage"]["insertion_threads"].as<int16_t>());
+  SPDLOG_INFO("FileWatcher thread for dataset {} created", dataset_id);
+  if (file_watcher == nullptr || file_watcher_thread_stop_flags_[dataset_id]->load()) {
+    SPDLOG_ERROR("Failed to create FileWatcher for dataset {}", dataset_id);
+    file_watcher_dataset_retries_[dataset_id] = retries + 1;
+    return;
+  }
   std::thread th(&FileWatcher::run, std::move(file_watcher));
   file_watcher_threads_[dataset_id] = std::move(th);
   file_watcher_dataset_retries_[dataset_id] = retries;
@@ -47,13 +53,25 @@ void FileWatcherWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
       file_watcher_threads_[dataset_id].join();
     }
     auto file_watcher_thread_it = file_watcher_threads_.find(dataset_id);
-    file_watcher_threads_.erase(file_watcher_thread_it);
+    if (file_watcher_thread_it == file_watcher_threads_.end()) {
+      SPDLOG_ERROR("FileWatcher thread for dataset {} not found", dataset_id);
+    } else {
+      file_watcher_threads_.erase(file_watcher_thread_it);
+    }
 
     auto file_watcher_dataset_retries_it = file_watcher_dataset_retries_.find(dataset_id);
-    file_watcher_dataset_retries_.erase(file_watcher_dataset_retries_it);
+    if (file_watcher_dataset_retries_it == file_watcher_dataset_retries_.end()) {
+      SPDLOG_ERROR("FileWatcher thread retries for dataset {} not found", dataset_id);
+    } else {
+      file_watcher_dataset_retries_.erase(file_watcher_dataset_retries_it);
+    }
 
     auto file_watcher_thread_stop_flags_it = file_watcher_thread_stop_flags_.find(dataset_id);
-    file_watcher_thread_stop_flags_.erase(file_watcher_thread_stop_flags_it);
+    if (file_watcher_thread_stop_flags_it == file_watcher_thread_stop_flags_.end()) {
+      SPDLOG_ERROR("FileWatcher thread stop flag for dataset {} not found", dataset_id);
+    } else {
+      file_watcher_thread_stop_flags_.erase(file_watcher_thread_stop_flags_it);
+    }
   } else {
     SPDLOG_ERROR("FileWatcher thread for dataset {} not found", dataset_id);
   }
@@ -63,14 +81,10 @@ void FileWatcherWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
  * Watch the FileWatcher threads and start/stop them as needed
  */
 void FileWatcherWatchdog::watch_file_watcher_threads() {
-  SPDLOG_INFO("Watching FileWatcher threads");
   soci::session session = storage_database_connection_.get_session();
 
   int64_t number_of_datasets = 0;
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
-
-  SPDLOG_INFO("Number of FileWatcher threads registered: {}", file_watcher_threads_.size());
-  SPDLOG_INFO("Number of datasets in database: {}", number_of_datasets);
 
   if (number_of_datasets == 0) {
     if (file_watcher_threads_.empty()) {
@@ -119,8 +133,6 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
 }
 
 void FileWatcherWatchdog::run() {
-  SPDLOG_INFO("FileWatchdog started.");
-
   while (true) {
     if (stop_file_watcher_watchdog_->load()) {
       break;
@@ -140,7 +152,6 @@ void FileWatcherWatchdog::run() {
 }
 
 std::vector<int64_t> FileWatcherWatchdog::get_running_file_watcher_threads() {
-  SPDLOG_INFO("Getting running FileWatcher threads");
   std::vector<int64_t> running_file_watcher_threads = {};
   for (const auto& pair : file_watcher_threads_) {
     if (pair.second.joinable()) {

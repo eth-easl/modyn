@@ -23,7 +23,7 @@ The storage abstraction is designed to be flexible and allow for different stora
 
 The following filesystem wrappers are currently implemented:
 
-- `local`: Accesses the local filesystem
+- `LocalFilesystemWrapper`: Accesses the local filesystem
 
 Future filesystem wrappers may include:
 
@@ -41,9 +41,9 @@ The class is defined in `modyn/storage/include/internal/filesystem_wrapper/files
 
 The following file wrappers are currently implemented:
 
-- `single_sample`: Each file contains a single sample
-- `binary`: Each file contains columns and row in a binary format
-- `csv`: Each file contains columns and rows in a csv format
+- `SingleSampleFileWrapper`: Each file contains a single sample
+- `BinaryFileWrapper`: Each file contains columns and row in a binary format
+- `CsvFileWrapper`: Each file contains columns and rows in a csv format
 
 Future file wrappers may include:
 

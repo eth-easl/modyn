@@ -239,17 +239,11 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   // The watchdog should start a FileWatcher process for the new dataset
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
-  SPDLOG_INFO("Sleeping done.");
-
   // Now remove the dataset from the database
   connection.delete_dataset("test_dataset");
 
-  SPDLOG_INFO("Deleted dataset from database.");
-
   // The watchdog should stop the FileWatcher process for the removed dataset
   watchdog.watch_file_watcher_threads();
-
-  SPDLOG_INFO("Watched file watcher threads.");
 
   const std::vector<int64_t> file_watcher_threads = watchdog.get_running_file_watcher_threads();
 

@@ -78,7 +78,6 @@ class FileWatcher {
     if (!filesystem_wrapper->exists(dataset_path) || !filesystem_wrapper->is_directory(dataset_path)) {
       SPDLOG_ERROR("Dataset path {} does not exist or is not a directory.", dataset_path);
       *stop_file_watcher = true;
-      SPDLOG_INFO("Stopping file watcher for dataset {}.", dataset_id_);
       return;
     }
 
