@@ -3,6 +3,7 @@
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
+#include "internal/utils/utils.hpp"
 
 using namespace storage::grpcs;
 
@@ -331,36 +332,35 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
   session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
       soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
-    
-  SPDLOG_INFO("Base path: {}", base_path);
 
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
       base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
 
   const int64_t number_of_files = get_number_of_files(dataset_id, session);
 
-  SPDLOG_INFO("Number of files: {}", number_of_files);
-
   if (number_of_files >= 0) {
     std::vector<std::string> file_paths(number_of_files);
     session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths), soci::use(dataset_id);
 
-    SPDLOG_INFO("File paths: {}", fmt::join(file_paths, ", "));
-
-    for (const auto& file_path : file_paths) {
-      filesystem_wrapper->remove(file_path);
+    try {
+      for (const auto& file_path : file_paths) {
+        filesystem_wrapper->remove(file_path);
+      }
+    } catch (const ModynException& e) {
+      SPDLOG_ERROR("Error deleting dataset: {}", e.what());
+      return {::grpc::StatusCode::INTERNAL, "Error deleting dataset."};
     }
   }
 
   bool success = storage_database_connection_.delete_dataset(request->dataset_id());  // NOLINT misc-const-correctness
-  
+
   SPDLOG_INFO("DeleteDataset request completed.");
-  
+
   response->set_success(success);
   if (success) {
     return ::grpc::Status::OK;
   } else {
-    return  {::grpc::StatusCode::INTERNAL, "Could not delete dataset."};
+    return {::grpc::StatusCode::INTERNAL, "Could not delete dataset."};
   }
 }
 

@@ -10,6 +10,7 @@
 #include <string>
 
 #define FAIL(msg)                                                                                          \
+  SPDLOG_ERROR(msg);                                                                                       \
   throw storage::utils::ModynException("ERROR at " __FILE__ ":" + std::to_string(__LINE__) + " " + (msg) + \
                                        "\nExecution failed.")
 
