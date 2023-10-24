@@ -50,7 +50,7 @@ The setup expects the base image to be built already; if you use the scripts, th
 The `tests` service runs integration tests, if started (e.g., in the Github Workflow).
 You can run `run_integrationtests.sh` to run the integration tests, and `run_modyn.sh` to run all containers required for end-to-end workflows.
 In case you encounter issues when running integration tests, you can try deleting the local postgres data folders.
-Note that you might want to update the `metadata_postgres.conf` and `storage_postgresql.conf` according to your machine.
+Note that you might want to update the `conf/metadata_postgres.conf` and `conf/storage_postgresql.conf` according to your machine.
 
 ### tmuxp Setup
 For local deployment, you can use tmuxp, which enables to load a tmux session from a file.
