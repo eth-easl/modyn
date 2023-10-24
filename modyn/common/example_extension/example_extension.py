@@ -25,7 +25,7 @@ class ExampleExtension:
 
     def __init__(self) -> None:
         ExampleExtension.__ensure_library_present()
-        self.extension = ctypes.CDLL(ExampleExtension.__get_library_path())
+        self.extension = ctypes.CDLL(str(ExampleExtension.__get_library_path()))
 
         self._sum_list_impl = self.extension.sum_list
         self._sum_list_impl.argtypes = [ctypes.POINTER(ctypes.c_uint64), ctypes.c_uint64]

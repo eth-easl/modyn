@@ -28,7 +28,7 @@ mamba activate modyn
 pip install -e .
 pip install -r dev-requirements.txt
 ```
-and then `./compliance_check.sh` to check that your local installation of Modyn is functioning.
+and then `./scripts/python_compliance.sh` to check that your local installation of Modyn is functioning.
 
 If you want to run all Modyn components, run
 ```bash

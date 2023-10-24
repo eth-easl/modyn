@@ -5,12 +5,18 @@ Please refer to the ­[Architecture Documentation](ARCHITECTURE.md) for an overv
 This document will deal with some more details of development and how to extend Modyn.
 
 ### Linting and Testing
-For an automatic execution of automatic formatting, linting, and testing, you can use the `compliance_check.sh` script in the project root. 
+For an automatic execution of automatic formatting, linting, and testing of the Python components, you can use the `scripts/python_compliance.sh` script in the project root. 
 This script runs isort, autopep8, black, mypy, pylint, and pytest.
 The script assumes that `mamba` is available and if not, tries to activate it on `zsh` and `bash`.
 Furthermore, you must have created a mamba environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
-
 To run linters/formatters/pytest manually, make sure to enable the mamba environment and then run the tools in your command line.
+
+To run clang-format and clang-tidy in order to lint the C++ part of the codebase, use the `scripts/clang-format.sh` and `scripts/clang-tidy.sh` scripts. 
+Clang-format automatically fixes everything, while clang-tidy gives hints on what needs to be fixed.
+To run C++ unit tests, create a `build` directory in the project root, run `cmake ..`, and then `make -j8 modyn-test` to build the test application.
+After building, run `modyn/tests/modyn-test` to execute the tests.
+Note you might want to enable `-DCMAKE_BUILD_TYPE=Debug` (or `asan` or `tsan`) in the `cmake` command to switch the build mode to debug, address sanitization, or thread sanitization, accordingly.
+
 To run integration tests, run the `./run_integrationtests.sh` script.
 This will take care of setting up all containers and running the tests.
 
@@ -27,6 +33,15 @@ Second, you can use a Docker container.
 We provide a Modyn base container where the mamba setup is already done. 
 You can find the Dockerfile in `docker/Base/Dockerfile` and build the image using `docker build -t modyn -f docker/Base/Dockerfile .`.
 Then, you can run a container for example using `docker run modyn /bin/bash`.
+
+### C++ Setup
+Modyn uses pure Python components, C++ extensions for Python, and also pure C++ components.
+We use CMake to manage the installation of extensions and components.
+The `setup.py` file builds the C++ extensions when Modyn is installed via CMake.
+When running Modyn using its Docker setup, the Dockerfile takes care of building the pure C++ components.
+In case you want to build extensions or components on your own, you need to create a `build` directory and use CMake to create the Makefiles.
+By default, we only build the extensions to avoid downloading the huge gRPC library.
+In case you want to build the storage C++ component, enable `-DMODYN_BUILD_STORAGE=On` when running CMake.
 
 ### Docker-Compose Setup
 We use docker-compose to manage the system setup.
