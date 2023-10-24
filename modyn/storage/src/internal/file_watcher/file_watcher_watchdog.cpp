@@ -63,10 +63,14 @@ void FileWatcherWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
  * Watch the FileWatcher threads and start/stop them as needed
  */
 void FileWatcherWatchdog::watch_file_watcher_threads() {
+  SPDLOG_INFO("Watching FileWatcher threads");
   soci::session session = storage_database_connection_.get_session();
 
   int64_t number_of_datasets = 0;
   session << "SELECT COUNT(dataset_id) FROM datasets", soci::into(number_of_datasets);
+
+  SPDLOG_INFO("Number of FileWatcher threads registered: {}", file_watcher_threads_.size());
+  SPDLOG_INFO("Number of datasets in database: {}", number_of_datasets);
 
   if (number_of_datasets == 0) {
     if (file_watcher_threads_.empty()) {
@@ -132,6 +136,7 @@ void FileWatcherWatchdog::run() {
 }
 
 std::vector<int64_t> FileWatcherWatchdog::get_running_file_watcher_threads() {
+  SPDLOG_INFO("Getting running FileWatcher threads");
   std::vector<int64_t> running_file_watcher_threads = {};
   for (const auto& pair : file_watcher_threads_) {
     if (pair.second.joinable()) {
