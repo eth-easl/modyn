@@ -123,7 +123,10 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
       // There have been more than 3 restart attempts for this dataset, we are not going to try again
     } else if (!file_watcher_threads_.contains(dataset_id)) {
       // There is no FileWatcher thread registered for this dataset. Start one.
-      start_file_watcher_thread(dataset_id, 0);
+      if (!file_watcher_dataset_retries_.contains(dataset_id)) {
+        file_watcher_dataset_retries_[dataset_id] = 0;
+      }
+      start_file_watcher_thread(dataset_id, file_watcher_dataset_retries_[dataset_id]);
     } else if (!file_watcher_threads_[dataset_id].joinable()) {
       // The FileWatcher thread is not running. Start it.
       start_file_watcher_thread(dataset_id, file_watcher_dataset_retries_[dataset_id]);
