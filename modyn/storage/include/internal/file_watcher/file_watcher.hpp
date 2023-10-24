@@ -57,7 +57,7 @@ class FileWatcher {
           soci::into(dataset_path), soci::into(filesystem_wrapper_type_int), soci::use(dataset_id_);
     } catch (const soci::soci_error& e) {
       SPDLOG_ERROR("Error while reading dataset path and filesystem wrapper type from database: {}", e.what());
-      stop_file_watcher->store(true);
+      *stop_file_watcher = true;
       return;
     }
 
@@ -66,7 +66,7 @@ class FileWatcher {
 
     if (dataset_path.empty()) {
       SPDLOG_ERROR("Dataset with id {} not found.", dataset_id_);
-      stop_file_watcher->store(true);
+      *stop_file_watcher = true;
       return;
     }
 
@@ -77,7 +77,7 @@ class FileWatcher {
 
     if (!filesystem_wrapper->exists(dataset_path) || !filesystem_wrapper->is_directory(dataset_path)) {
       SPDLOG_ERROR("Dataset path {} does not exist or is not a directory.", dataset_path);
-      stop_file_watcher->store(true);
+      *stop_file_watcher = true;
       return;
     }
 

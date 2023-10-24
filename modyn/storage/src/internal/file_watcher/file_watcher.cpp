@@ -82,7 +82,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 
   if (file_wrapper_type_id == -1) {
     SPDLOG_ERROR("Failed to get file wrapper type");
-    stop_file_watcher->store(true);
+    *stop_file_watcher = true;
     return;
   }
 
@@ -90,7 +90,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
 
   if (file_wrapper_config.empty()) {
     SPDLOG_ERROR("Failed to get file wrapper config");
-    stop_file_watcher->store(true);
+    *stop_file_watcher = true;
     return;
   }
 
@@ -99,7 +99,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   if (!file_wrapper_config_node["file_extension"]) {
     // Check this regularly, as it is a required field and should always be present.
     SPDLOG_ERROR("Config does not contain file_extension");
-    stop_file_watcher->store(true);
+    *stop_file_watcher = true;
     return;
   }
 
@@ -178,7 +178,7 @@ void FileWatcher::run() {
 
   if (file_watcher_interval == -1) {
     SPDLOG_ERROR("Failed to get file watcher interval");
-    stop_file_watcher->store(true);
+    *stop_file_watcher = true;
     return;
   }
 

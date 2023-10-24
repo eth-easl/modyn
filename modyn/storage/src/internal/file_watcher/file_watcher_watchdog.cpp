@@ -82,7 +82,9 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
       file_watcher_thread_flag.second.store(true);
     }
     for (auto& file_watcher_thread : file_watcher_threads_) {
-      file_watcher_thread.second.join();
+      if (file_watcher_thread.second.joinable()) {
+        file_watcher_thread.second.join();
+      }
     }
     file_watcher_threads_.clear();
     file_watcher_dataset_retries_.clear();
@@ -130,7 +132,9 @@ void FileWatcherWatchdog::run() {
     file_watcher_thread_flag.second.store(true);
   }
   for (auto& file_watcher_thread : file_watcher_threads_) {
-    file_watcher_thread.second.join();
+    if (file_watcher_thread.second.joinable()) {
+      file_watcher_thread.second.join();
+    }
   }
   stop_file_watcher_watchdog_->store(true);
 }
