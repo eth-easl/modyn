@@ -74,9 +74,8 @@ class CMakeBuild(build_ext):
             raise RuntimeError('Cannot find CMake executable')
 
         for ext in self.extensions:
-
-            cfg = 'Debug' if _get_env_variable('MODYN_DEBUG') == 'ON' else 'Release'
-
+            cfg = _get_env_variable('MODYN_BUILDTYPE', "Release")
+            print(f"Using build type {cfg} for Modyn.")
             cmake_args = [
                 '-DCMAKE_BUILD_TYPE=%s' % cfg,
                 "-DMODYN_BUILD_PLAYGROUND=Off",

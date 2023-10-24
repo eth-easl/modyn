@@ -1,6 +1,9 @@
 /bin/bash initial_setup.sh
 docker compose down
 
+BUILDTYPE=${1:-Release}
+echo "Using build type ${BUILDTYPE} for integrationtests."
+
 # When on Github CI, we use the default postgres config to not go OOM
 if [[ ! -z "$CI" ]]; then
     mv metadata_postgresql.conf metadata_postgresql.conf.bak
@@ -10,7 +13,7 @@ if [[ ! -z "$CI" ]]; then
 fi
 
 docker build -t modyndependencies -f docker/Dependencies/Dockerfile .
-docker build -t modynbase -f docker/Base/Dockerfile .
+docker build -t modynbase -f docker/Base/Dockerfile --build-arg MODYN_BUILDTYPE=$BUILDTYPE .
 docker compose up --build tests --abort-on-container-exit --exit-code-from tests
 exitcode=$?
 
