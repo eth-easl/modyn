@@ -26,7 +26,7 @@ void FileWatcherWatchdog::start_file_watcher_thread(int64_t dataset_id, int16_t 
       std::make_unique<FileWatcher>(config_, dataset_id, &file_watcher_thread_stop_flags_[dataset_id],
                                     config_["storage"]["insertion_threads"].as<int16_t>());
   SPDLOG_INFO("FileWatcher thread for dataset {} created", dataset_id);
-  if (file_watcher == nullptr || file_watcher_thread_stop_flags_[dataset_id]->load()) {
+  if (file_watcher == nullptr || file_watcher_thread_stop_flags_[dataset_id].load()) {
     SPDLOG_ERROR("Failed to create FileWatcher for dataset {}", dataset_id);
     file_watcher_dataset_retries_[dataset_id] = retries + 1;
     return;
