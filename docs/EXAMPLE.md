@@ -12,7 +12,7 @@ If you do not have a dataset yet, you can create an example MNIST dataset.
 In the `benchmark/mnist` subdirectory, run `python data_generation.py --timestamps INCREASING --dir /mnt/datasets/mnist` to download the dataset to `/mnst/datasets/mnist`.
 
 ### Running the initial setup
-Please run the `initial_setup.sh` file, if you have not configured Modyn already.
+Please run the `scripts/initial_setup.sh` file, if you have not configured Modyn already.
 This is necessary if you want to run model training on a GPU.
 This will ensure that we do not use the CPU, but CUDA version of PyTorch.
 If necessary, you can adjust the CUDA version in this file.
