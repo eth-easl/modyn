@@ -85,6 +85,8 @@ bool LocalFilesystemWrapper::remove(const std::string& path) {
   ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(!std::filesystem::is_directory(path), fmt::format("Path is a directory: {}", path));
 
+  SPDLOG_DEBUG("Removing file: {}", path);
+
   return std::filesystem::remove(path);
 }
 
