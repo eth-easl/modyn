@@ -153,11 +153,14 @@ DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& confi
 }
 
 bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
+  SPDLOG_INFO("Deleting dataset {}", name);
   int64_t dataset_id = get_dataset_id(name);
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} not found", name);
     return false;
   }
+
+  SPDLOG_INFO("Deleting dataset {} with id {}", name, dataset_id);
 
   soci::session session = get_session();
 

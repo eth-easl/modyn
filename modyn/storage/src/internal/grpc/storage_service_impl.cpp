@@ -296,22 +296,18 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 ::grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::RegisterNewDatasetRequest* request,
     modyn::storage::RegisterNewDatasetResponse* response) {
-  SPDLOG_INFO("RegisterNewDataset request received.");
   bool success = storage_database_connection_.add_dataset(  // NOLINT misc-const-correctness
       request->dataset_id(), request->base_path(),
       storage::filesystem_wrapper::FilesystemWrapper::get_filesystem_wrapper_type(request->filesystem_wrapper_type()),
       storage::file_wrapper::FileWrapper::get_file_wrapper_type(request->file_wrapper_type()), request->description(),
       request->version(), request->file_wrapper_config(), request->ignore_last_timestamp(),
       static_cast<int>(request->file_watcher_interval()));
-  SPDLOG_INFO("RegisterNewDataset request completed.");
   response->set_success(success);
-  ::grpc::Status status;
   if (success) {
-    status = ::grpc::Status::OK;
+    return ::grpc::Status::OK;
   } else {
-    status = ::grpc::Status(::grpc::StatusCode::INTERNAL, "Could not register dataset.");
+    return ::grpc::Status(::grpc::StatusCode::INTERNAL, "Could not register dataset.");
   }
-  return status;
 }
 
 ::grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT readability-identifier-naming
@@ -348,6 +344,8 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   if (number_of_files >= 0) {
     std::vector<std::string> file_paths(number_of_files);
     session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths), soci::use(dataset_id);
+
+    SPDLOG_INFO("File paths: {}", fmt::join(file_paths, ", "));
 
     for (const auto& file_path : file_paths) {
       filesystem_wrapper->remove(file_path);
