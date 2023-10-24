@@ -1,5 +1,11 @@
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+PARENT_DIR=$(realpath ${DIR}/../)
+CONFIGURED_FILE="${PARENT_DIR}/.modyn_configured"
+
+pushd $PARENT_DIR
+
 # Check whether Modyn has already been configured for this system
-if [[ -f ".modyn_configured" ]]; then
+if [[ -f "${CONFIGURED_FILE}" ]]; then
     exit 0
 fi
 
@@ -39,7 +45,8 @@ if [[ ! -z "$CI" ]]; then
     echo "FROM ${CI_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
     echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
     echo "Found CI server and set container to ${CI_CONTAINER}, exiting."
-    touch ".modyn_configured"
+    touch "${CONFIGURED_FILE}"
+    popd
     exit 0
 fi
 
@@ -139,4 +146,6 @@ if [ "$IS_MAC" != true ]; then
 fi
 
 echo "Successfully configured Modyn. Make sure to add mounts for datasets and fast temporary storage for the selector and enable the shm_size options, if required."
-touch ".modyn_configured"
+touch "${CONFIGURED_FILE}"
+
+popd

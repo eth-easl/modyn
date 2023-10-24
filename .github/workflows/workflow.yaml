@@ -379,7 +379,7 @@ jobs:
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Asan
 
-  integrationtests-Tsan:
+  integrationtests-tsan:
     timeout-minutes: 90
     runs-on: ubuntu-latest
     needs:

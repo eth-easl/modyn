@@ -1,4 +1,9 @@
-/bin/bash initial_setup.sh
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+PARENT_DIR=$(realpath ${DIR}/../)
+
+/bin/bash "${DIR}/initial_setup.sh"
+pushd $PARENT_DIR
+
 docker compose down
 
 BUILDTYPE=${1:-Release}
@@ -24,5 +29,7 @@ if [[ ! -z "$CI" ]]; then
     mv conf/metadata_postgresql.conf.bak conf/metadata_postgresql.conf
     mv conf/storage_postgresql.conf.bak conf/storage_postgresql.conf
 fi
+
+popd
 
 exit $exitcode
