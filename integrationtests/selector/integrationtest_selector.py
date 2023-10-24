@@ -1,5 +1,6 @@
 import json
 
+import enlighten
 import grpc
 from integrationtests.utils import get_modyn_config
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -8,14 +9,49 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     JsonString,
-    RegisterPipelineRequest,
     SamplesResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
+from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.utils import grpc_connection_established
 
 # TODO(54): Write more integration tests for different strategies.
 
+def get_grpc_handler() -> GRPCHandler:
+    progress_mgr = enlighten.get_manager()
+    status_bar = progress_mgr.status_bar(
+        status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
+        color="bold_underline_bright_white_on_lightslategray",
+        justify=enlighten.Justify.CENTER,
+        demo="Initializing",
+        autorefresh=True,
+        min_delta=0.5,
+    )
+    return GRPCHandler(get_modyn_config(), progress_mgr, status_bar)
+
+def get_minimal_pipeline_config(num_workers: int, strategy_config: dict) -> dict:
+    return {
+        "pipeline": {"name": "Test"},
+        "model": {"id": "ResNet18"},
+        "training": {
+            "gpus": 1,
+            "device": "cpu",
+            "dataloader_workers": num_workers,
+            "use_previous_model": True,
+            "initial_model": "random",
+            "initial_pass": {"activated": False},
+            "learning_rate": 0.1,
+            "batch_size": 42,
+            "optimizers": [
+                {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
+            ],
+            "optimization_criterion": {"name": "CrossEntropyLoss"},
+            "checkpointing": {"activated": False},
+            "selection_strategy": strategy_config,
+        },
+        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
+        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
+    }
 
 def connect_to_selector_servicer() -> grpc.Channel:
     config = get_modyn_config()
@@ -43,9 +79,9 @@ def test_label_balanced_presampling_huge() -> None:
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
@@ -123,9 +159,9 @@ def test_label_balanced_force_same_size():
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     # now we just have 2 classes with 4 samples each
     selector.inform_data(
@@ -207,9 +243,9 @@ def test_label_balanced_force_all_samples():
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     # same classes as before
     selector.inform_data(
@@ -297,9 +333,9 @@ def test_newdata() -> None:
         "config": {"limit": -1, "reset_after_trigger": True},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     selector.inform_data(
         DataInformRequest(
@@ -436,9 +472,9 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     selector.inform_data(
         DataInformRequest(
@@ -585,9 +621,9 @@ def test_empty_triggers() -> None:
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     selector.inform_data(
         DataInformRequest(
@@ -753,9 +789,9 @@ def test_many_samples_evenly_distributed():
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     selector.inform_data(
         DataInformRequest(
@@ -823,9 +859,9 @@ def test_many_samples_unevenly_distributed():
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     selector.inform_data(
         DataInformRequest(
@@ -894,9 +930,9 @@ def test_get_available_labels(reset_after_trigger: bool):
         "config": {"limit": -1, "reset_after_trigger": reset_after_trigger},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
-    ).pipeline_id
+    grpc_handler = get_grpc_handler()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
 
     selector.inform_data(
         DataInformRequest(
