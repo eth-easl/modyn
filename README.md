@@ -32,13 +32,13 @@ and then `./scripts/python_compliance.sh` to check that your local installation 
 
 If you want to run all Modyn components, run
 ```bash
-./run_modyn.sh
+./scripts/run_modyn.sh
 tmuxp load tmuxp.yaml # Assumes you have tmuxp, see above for link
 ```
 
 For running all integration tests, run
 ```bash
-./run_integrationtests.sh
+./scripts/run_integrationtests.sh
 ```
 
 > **_macOS Installation:_**: Make sure to run `./initial_setup.sh` as outlined above. If not, installation might fail due to PyTorch not being found. Unfortunately, the PyTorch channel currently does not support macOS.

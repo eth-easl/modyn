@@ -27,7 +27,7 @@ Optionally, you can uncomment the `.:/modyn_host` mount for all services to enab
 This is not required if you do not iterate.
 
 ### Starting the containers and the pipeline
-Next, run `./run_modyn.sh` to build the containers and start them. 
+Next, run `./scripts/run_modyn.sh` to build the containers and start them. 
 This may take several minutes for the first time.
 After building the containers, run `tmuxp load tmuxp.yaml` to have access to all container shells and logs.
 Switch to the supervisor pane (using regular tmux bindings).

@@ -17,7 +17,7 @@ To run C++ unit tests, create a `build` directory in the project root, run `cmak
 After building, run `modyn/tests/modyn-test` to execute the tests.
 Note you might want to enable `-DCMAKE_BUILD_TYPE=Debug` (or `asan` or `tsan`) in the `cmake` command to switch the build mode to debug, address sanitization, or thread sanitization, accordingly.
 
-To run integration tests, run the `./run_integrationtests.sh` script.
+To run integration tests, run the `./scripts/run_integrationtests.sh` script.
 This will take care of setting up all containers and running the tests.
 
 ### Mamba and Docker Setup
@@ -48,13 +48,13 @@ We use docker-compose to manage the system setup.
 The `docker-compose.yml` file describes our setup and includes comments explaining it.
 The setup expects the base image to be built already; if you use the scripts, these take care of that for you.
 The `tests` service runs integration tests, if started (e.g., in the Github Workflow).
-You can run `run_integrationtests.sh` to run the integration tests, and `run_modyn.sh` to run all containers required for end-to-end workflows.
+You can run `scripts/run_integrationtests.sh` to run the integration tests, and `scripts/run_modyn.sh` to run all containers required for end-to-end workflows.
 In case you encounter issues when running integration tests, you can try deleting the local postgres data folders.
 Note that you might want to update the `conf/metadata_postgres.conf` and `conf/storage_postgresql.conf` according to your machine.
 
 ### tmuxp Setup
 For local deployment, you can use tmuxp, which enables to load a tmux session from a file.
-After running `./run_modyn.sh`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
+After running `./scripts/run_modyn.sh`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
 You will have access to a supervisor container in which you can submit pipelines, to panes for administrating the databases, and to all gRPC components.
 To end the session, run CTRL+B (or your tmux modifier), and enter `:kill-session`.
 

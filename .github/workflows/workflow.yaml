@@ -358,7 +358,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Start docker compose and exit when tests run through
-        run: bash run_integrationtests.sh Debug
+        run: bash scripts/run_integrationtests.sh Debug
 
   integrationtests-asan:
     timeout-minutes: 90
@@ -377,7 +377,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Start docker compose and exit when tests run through
-        run: bash run_integrationtests.sh Asan
+        run: bash scripts/run_integrationtests.sh Asan
 
   integrationtests-Tsan:
     timeout-minutes: 90
@@ -396,7 +396,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Start docker compose and exit when tests run through
-        run: bash run_integrationtests.sh Tsan
+        run: bash scripts/run_integrationtests.sh Tsan
 
   integrationtests-release:
     timeout-minutes: 90
@@ -415,4 +415,4 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Start docker compose and exit when tests run through
-        run: bash run_integrationtests.sh Release
+        run: bash scripts/run_integrationtests.sh Release
