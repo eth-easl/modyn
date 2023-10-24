@@ -1,8 +1,8 @@
 echo "Running compilance check"
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+PARENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 
-pushd $DIR
+pushd $PARENT_DIR
 
 if ! command -v mamba &> /dev/null
 then
