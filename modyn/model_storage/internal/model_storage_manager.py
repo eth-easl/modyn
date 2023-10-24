@@ -95,7 +95,7 @@ class ModelStorageManager:
         if policy.incremental_model_strategy and (
             policy.full_model_interval is None or trigger_id % policy.full_model_interval != 0
         ):
-            parent_model_id: Optional[int] = self._get_parent_model_id(pipeline_id, trigger_id)
+            parent_model_id: Optional[int] = self._determine_parent_model_id(pipeline_id, trigger_id)
             if parent_model_id is not None:
                 # load model state of the parent model.
                 parent_model_state = self._reconstruct_model_state(parent_model_id, policy)
@@ -155,16 +155,17 @@ class ModelStorageManager:
         model_handler = getattr(model_module, model_class_name)
         return model_handler(json.loads(model_config), "cpu", amp).model.state_dict()
 
-    def _get_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
+    def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
         """
-        Get the id of the parent model given the trigger id of a pipeline.
+        Determines the id of the parent model given the trigger id of a pipeline. Usually, the last fully stored
+        model is identified as such. The function returns None whenever no parent model can be found.
 
         Args:
             pipeline_id: the pipeline that generated the model.
             trigger_id: the trigger associated with the model.
 
         Returns:
-            Optional[int]: the parent model id (if it exists).
+            Optional[int]: the parent model id (if it can be found).
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
             previous_model: TrainedModel = (
@@ -173,10 +174,13 @@ class ModelStorageManager:
                 .first()
             )
 
+        # whenever the previous model is not present, a parent model cannot be determined.
         if not previous_model:
             return None
+        # return the id of the previous model if its stored in its entirety.
         if previous_model.parent_model is None:
             return previous_model.model_id
+        # otherwise return the parent model of the previous model.
         return previous_model.parent_model
 
     def load_model(self, model_id: int, metadata: bool) -> Optional[dict]:

@@ -76,13 +76,13 @@ def test_init():
     assert manager._ftp_dir == pathlib.Path("ftp")
 
 
-def test__get_parent_model():
+def test__determine_parent_model_id():
     with MetadataDatabaseConnection(get_modyn_config()) as database:
         model_id = database.add_trained_model(10, 2, "model.modyn", "model.metadata")
 
     manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
-    assert manager._get_parent_model_id(10, 3) == model_id
-    assert manager._get_parent_model_id(10, 2) is None
+    assert manager._determine_parent_model_id(10, 3) == model_id
+    assert manager._determine_parent_model_id(10, 2) is None
 
 
 def test__get_base_model_state():
@@ -146,7 +146,7 @@ def test__handle_new_model_full():
 
 
 @patch.object(ModelStorageManager, "_reconstruct_model_state", return_value=MockModel().state_dict())
-@patch.object(ModelStorageManager, "_get_parent_model_id", return_value=101)
+@patch.object(ModelStorageManager, "_determine_parent_model_id", return_value=101)
 def test__handle_new_model_incremental(previous_model_mock, reconstruct_model_mock: MagicMock):
     manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
 
