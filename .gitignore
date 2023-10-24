@@ -65,4 +65,6 @@ Dockerfile.original
 plots/
 
 # Unity build files
-cmake-build-debug 
+cmake-build-debug/
+clang-tidy-build/
+libbuild/

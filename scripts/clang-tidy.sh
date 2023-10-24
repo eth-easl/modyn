@@ -5,6 +5,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 RUN_CLANG_TIDY=${RUN_CLANG_TIDY:-run-clang-tidy}
 CLANG_TIDY=${CLANG_TIDY:-clang-tidy}
 BUILD_DIR_REL="${SCRIPT_DIR}/../clang-tidy-build"
+mkdir -p "${BUILD_DIR_REL}"
 BUILD_DIR=$(realpath ${BUILD_DIR_REL})
 APPLY_REPLACEMENTS_BINARY=${APPLY_REPLACEMENTS_BINARY:-clang-apply-replacements}
 
