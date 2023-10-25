@@ -19,13 +19,11 @@ using namespace storage::file_watcher;
  * @param retries The number of retries left for the FileWatcher thread
  */
 void FileWatcherWatchdog::start_file_watcher_thread(int64_t dataset_id, int16_t retries) {
-  SPDLOG_INFO("Starting FileWatcher thread for dataset {}", dataset_id);
   // Start a new child thread of a FileWatcher
   file_watcher_thread_stop_flags_.emplace(dataset_id, false);
   std::unique_ptr<FileWatcher> file_watcher =
       std::make_unique<FileWatcher>(config_, dataset_id, &file_watcher_thread_stop_flags_[dataset_id],
                                     config_["storage"]["insertion_threads"].as<int16_t>());
-  SPDLOG_INFO("FileWatcher thread for dataset {} created", dataset_id);
   if (file_watcher == nullptr || file_watcher_thread_stop_flags_[dataset_id].load()) {
     SPDLOG_ERROR("Failed to create FileWatcher for dataset {}", dataset_id);
     file_watcher_dataset_retries_[dataset_id] = retries + 1;
@@ -44,7 +42,6 @@ void FileWatcherWatchdog::start_file_watcher_thread(int64_t dataset_id, int16_t 
  * @param dataset_id The id of the dataset to start a FileWatcher thread for
  */
 void FileWatcherWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
-  SPDLOG_INFO("Stopping FileWatcher thread for dataset {}", dataset_id);
   if (file_watcher_threads_.contains(dataset_id)) {
     // Set the stop flag for the FileWatcher thread
     file_watcher_thread_stop_flags_[dataset_id].store(true);

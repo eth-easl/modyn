@@ -185,7 +185,6 @@ void FileWatcher::run() {
   while (true) {
     seek();
     if (stop_file_watcher->load()) {
-      SPDLOG_INFO("File watcher for dataset {} is stopping", dataset_id_);
       break;
     }
     std::this_thread::sleep_for(std::chrono::seconds(file_watcher_interval));

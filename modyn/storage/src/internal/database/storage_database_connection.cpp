@@ -153,21 +153,18 @@ DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& confi
 }
 
 bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
-  SPDLOG_INFO("Deleting dataset {}", name);
   int64_t dataset_id = get_dataset_id(name);
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} not found", name);
     return false;
   }
 
-  SPDLOG_INFO("Deleting dataset {} with id {}", name, dataset_id);
-
   soci::session session = get_session();
 
   // Delete all samples for this dataset
   try {
     session << "DELETE FROM samples WHERE dataset_id = :dataset_id", soci::use(dataset_id);
-  } catch (const std::exception& e) {
+  } catch (const soci::soci_error& e) {
     SPDLOG_ERROR("Error deleting samples for dataset {}: {}", name, e.what());
     return false;
   }
@@ -175,7 +172,7 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
   // Delete all files for this dataset
   try {
     session << "DELETE FROM files WHERE dataset_id = :dataset_id", soci::use(dataset_id);
-  } catch (const std::exception& e) {
+  } catch (const soci::soci_error& e) {
     SPDLOG_ERROR("Error deleting files for dataset {}: {}", name, e.what());
     return false;
   }
@@ -183,7 +180,7 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
   // Delete the dataset
   try {
     session << "DELETE FROM datasets WHERE name = :name", soci::use(name);
-  } catch (const std::exception& e) {
+  } catch (const soci::soci_error& e) {
     SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
     return false;
   }
@@ -207,7 +204,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
                    "FOR VALUES IN (:dataset_id) "
                    "PARTITION BY HASH (sample_id)",
             soci::use(dataset_partition_table_name), soci::use(dataset_id);
-      } catch (const std::exception& e) {
+      } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
         throw e;
       }
@@ -222,7 +219,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
               soci::use(hash_partition_name), soci::use(dataset_partition_table_name),
               soci::use(hash_partition_modulus_), soci::use(i);
         }
-      } catch (const std::exception& e) {
+      } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
         throw e;
       }
