@@ -576,10 +576,9 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
   }
 
   int64_t total_keys = 0;
-  soci::statement count_stmt = (session.prepare << "SELECT COUNT(*) FROM Sample WHERE dataset_id = :dataset_id",
-                                soci::into(total_keys), soci::use(dataset_id));
+  session << "SELECT COUNT(*) FROM Sample WHERE dataset_id = :dataset_id", soci::into(total_keys),
+      soci::use(dataset_id);
 
-  count_stmt.execute();
   response->set_num_keys(total_keys);
   return {::grpc::StatusCode::OK, "Dataset size retrieved."};
 }
