@@ -333,11 +333,15 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
   session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
       soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
+  
+  SPDLOG_INFO("DeleteDataset request received. dataset_id: {}, base_path: {}, filesystem_wrapper_type: {}", dataset_id, base_path, filesystem_wrapper_type);
 
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
       base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
 
   const int64_t number_of_files = get_number_of_files(dataset_id, session);
+
+  SPDLOG_INFO("DeleteDataset request received. number_of_files: {}", number_of_files);
 
   if (number_of_files >= 0) {
     std::vector<std::string> file_paths(number_of_files);
@@ -352,6 +356,8 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
       return {::grpc::StatusCode::INTERNAL, "Error deleting dataset."};
     }
   }
+
+  SPDLOG_INFO("DeleteDataset request received. dataset_id: {}", dataset_id);
 
   bool success = storage_database_connection_.delete_dataset(request->dataset_id());  // NOLINT misc-const-correctness
 
