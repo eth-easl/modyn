@@ -6,6 +6,16 @@ model:
   id: ResNet18
   config:
     num_classes: 10
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+  incremental_model_strategy:
+    name: "WeightsDifference"
+    zip: True
+    zip_algorithm: ZIP_DEFLATED
+    config:
+      operator: xor
+    full_model_interval: 10
 training:
   gpus: 1
   device: "cpu"
@@ -63,7 +73,6 @@ trigger:
     data_points_for_trigger: 100
 evaluation:
   device: "cpu"
-  amp: False
   result_writers: ["json", "tensorboard"]
   datasets:
     - dataset_id: mnist

@@ -1,5 +1,5 @@
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
-from modyn.utils.utils import instantiate_class
+from modyn.utils import instantiate_class
 
 
 def instantiate_downsampler(config: dict, maximum_keys_in_memory: int) -> AbstractDownsamplingStrategy:

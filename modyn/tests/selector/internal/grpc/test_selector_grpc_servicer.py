@@ -11,12 +11,14 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402,
     GetSamplesRequest,
     GetSelectionStrategyRequest,
     JsonString,
+    ModelStoragePolicyInfo,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
     RegisterPipelineRequest,
     SamplesResponse,
     SelectionStrategyResponse,
+    StrategyConfig,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
@@ -49,13 +51,32 @@ def test_register_pipeline(test_register_pipeline: MagicMock):
         config["selector"]["trigger_sample_directory"] = tmp_dir
         mgr = SelectorManager(config)
         servicer = SelectorGRPCServicer(mgr, 8096)
-        request = RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value="strat"))
+        policy = ModelStoragePolicyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
+        request = RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value="strat"),
+            model_class_name="ResNet18",
+            model_configuration=JsonString(value="{}"),
+            amp=True,
+            model_storage_policy=policy,
+        )
         test_register_pipeline.return_value = 42
 
         response: PipelineResponse = servicer.register_pipeline(request, None)
 
         assert response.pipeline_id == 42
-        test_register_pipeline.assert_called_once_with(2, "strat")
+        test_register_pipeline.assert_called_once()
+
+        arguments = test_register_pipeline.call_args[0]
+        assert arguments[0] == 2
+        assert arguments[1] == "strat"
+        assert arguments[2] == "ResNet18"
+        assert arguments[3] == "{}"
+        assert arguments[4]
+        assert arguments[5].name == "PyTorchFullModel"
+        assert not arguments[5].zip
+        assert arguments[6] is None
+        assert arguments[7] is None
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)

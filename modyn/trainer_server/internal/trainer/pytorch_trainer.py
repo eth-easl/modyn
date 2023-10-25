@@ -48,10 +48,10 @@ from modyn.utils import (
     deserialize_function,
     dynamic_module_import,
     grpc_connection_established,
+    instantiate_class,
     package_available_and_can_be_imported,
     seed_everything,
 )
-from modyn.utils.utils import instantiate_class
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
 

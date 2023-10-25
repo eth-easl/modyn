@@ -71,6 +71,8 @@ services:
     build:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
+    volumes:
+      - model_storage-data:/tmp/models
   evaluator:
     restart: on-failure
     depends_on:
@@ -85,6 +87,7 @@ services:
       - storage
       - selector
       - model_storage
+      - metadata-db
     build:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
@@ -160,3 +163,4 @@ volumes:
   storage-data:
   selector-data:
   downsampling-data:
+  model_storage-data:

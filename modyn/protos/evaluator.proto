@@ -24,17 +24,14 @@ message MetricConfiguration {
 }
 
 message EvaluateModelRequest {
-  int32 trained_model_id  = 1;
+  int32 model_id  = 1;
   DatasetInfo dataset_info = 2;
   string device = 3;
-  bool amp = 4;
-  int32 batch_size = 5;
-  repeated MetricConfiguration metrics = 6;
-  string model_id = 7;
-  JsonString model_configuration = 8;
-  repeated string transform_list = 9;
-  PythonString bytes_parser = 10;
-  PythonString label_transformer = 11;
+  int32 batch_size = 4;
+  repeated MetricConfiguration metrics = 5;
+  repeated string transform_list = 6;
+  PythonString bytes_parser = 7;
+  PythonString label_transformer = 8;
 }
 
 message EvaluateModelResponse {

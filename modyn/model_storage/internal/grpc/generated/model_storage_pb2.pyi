@@ -23,11 +23,13 @@ class RegisterModelRequest(google.protobuf.message.Message):
     HOSTNAME_FIELD_NUMBER: builtins.int
     PORT_FIELD_NUMBER: builtins.int
     MODEL_PATH_FIELD_NUMBER: builtins.int
+    CHECKSUM_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     hostname: builtins.str
     port: builtins.int
     model_path: builtins.str
+    checksum: builtins.bytes
     def __init__(
         self,
         *,
@@ -36,8 +38,9 @@ class RegisterModelRequest(google.protobuf.message.Message):
         hostname: builtins.str = ...,
         port: builtins.int = ...,
         model_path: builtins.str = ...,
+        checksum: builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["hostname", b"hostname", "model_path", b"model_path", "pipeline_id", b"pipeline_id", "port", b"port", "trigger_id", b"trigger_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["checksum", b"checksum", "hostname", b"hostname", "model_path", b"model_path", "pipeline_id", b"pipeline_id", "port", b"port", "trigger_id", b"trigger_id"]) -> None: ...
 
 global___RegisterModelRequest = RegisterModelRequest
 
@@ -55,7 +58,7 @@ class RegisterModelResponse(google.protobuf.message.Message):
         success: builtins.bool = ...,
         model_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["model_id", b"model_id", "success", b"success"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_class_name", b"model_class_name", "success", b"success"]) -> None: ...
 
 global___RegisterModelResponse = RegisterModelResponse
 
@@ -64,13 +67,16 @@ class FetchModelRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     MODEL_ID_FIELD_NUMBER: builtins.int
+    LOAD_METADATA_FIELD_NUMBER: builtins.int
     model_id: builtins.int
+    load_metadata: builtins.bool
     def __init__(
         self,
         *,
         model_id: builtins.int = ...,
+        load_metadata: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["model_id", b"model_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["load_metadata", b"load_metadata", "model_class_name", b"model_class_name"]) -> None: ...
 
 global___FetchModelRequest = FetchModelRequest
 
@@ -80,15 +86,18 @@ class FetchModelResponse(google.protobuf.message.Message):
 
     SUCCESS_FIELD_NUMBER: builtins.int
     MODEL_PATH_FIELD_NUMBER: builtins.int
+    CHECKSUM_FIELD_NUMBER: builtins.int
     success: builtins.bool
     model_path: builtins.str
+    checksum: builtins.bytes
     def __init__(
         self,
         *,
         success: builtins.bool = ...,
         model_path: builtins.str = ...,
+        checksum: builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["model_path", b"model_path", "success", b"success"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["checksum", b"checksum", "model_path", b"model_path", "success", b"success"]) -> None: ...
 
 global___FetchModelResponse = FetchModelResponse
 
@@ -103,7 +112,7 @@ class DeleteModelRequest(google.protobuf.message.Message):
         *,
         model_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["model_id", b"model_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["model_class_name", b"model_class_name"]) -> None: ...
 
 global___DeleteModelRequest = DeleteModelRequest
 

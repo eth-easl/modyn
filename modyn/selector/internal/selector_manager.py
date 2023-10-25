@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models.pipelines import Pipeline
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
 from modyn.utils.utils import dynamic_module_import, is_directory_writable
@@ -95,7 +96,17 @@ class SelectorManager:
         selector = Selector(selection_strategy, pipeline_id, num_workers, self._modyn_config, self._selector_cache_size)
         self._selectors[pipeline_id] = selector
 
-    def register_pipeline(self, num_workers: int, selection_strategy: str) -> int:
+    def register_pipeline(
+        self,
+        num_workers: int,
+        selection_strategy: str,
+        model_class_name: str,
+        model_config: str,
+        amp: bool,
+        full_model_strategy: ModelStorageStrategyConfig,
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
+        full_model_interval: Optional[int] = None,
+    ) -> int:
         """
         Registers a new pipeline at the Selector.
         Returns:
@@ -108,7 +119,16 @@ class SelectorManager:
 
         with self._next_pipeline_lock:
             with MetadataDatabaseConnection(self._modyn_config) as database:
-                pipeline_id = database.register_pipeline(num_workers, selection_strategy)
+                pipeline_id = database.register_pipeline(
+                    num_workers,
+                    model_class_name,
+                    model_config,
+                    amp,
+                    selection_strategy,
+                    full_model_strategy,
+                    incremental_model_strategy,
+                    full_model_interval,
+                )
 
         self._selector_locks[pipeline_id] = self._prepared_locks[pipeline_id % len(self._prepared_locks)]
         self._instantiate_selector(pipeline_id, num_workers, selection_strategy)
