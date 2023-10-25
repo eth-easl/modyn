@@ -19,7 +19,7 @@ services:
 #    shm_size: 24gb
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
-      - ./metadata_postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -37,7 +37,7 @@ services:
 #    shm_size: 8gb
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
-      - ./storage_postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

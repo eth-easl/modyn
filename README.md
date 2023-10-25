@@ -22,28 +22,28 @@ curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Ma
 bash Mambaforge-$(uname)-$(uname -m).sh
 
 # Start here if you have Mamba already
-./initial_setup.sh
+./scripts/initial_setup.sh
 mamba env create -f ./environment.yml
 mamba activate modyn
 pip install -e .
 pip install -r dev-requirements.txt
 ```
-and then `./compliance_check.sh` to check that your local installation of Modyn is functioning.
+and then `./scripts/python_compliance.sh` to check that your local installation of Modyn is functioning.
 
 If you want to run all Modyn components, run
 ```bash
-./run_modyn.sh
+./scripts/run_modyn.sh
 tmuxp load tmuxp.yaml # Assumes you have tmuxp, see above for link
 ```
 
 For running all integration tests, run
 ```bash
-./run_integrationtests.sh
+./scripts/run_integrationtests.sh
 ```
 
-> **_macOS Installation:_**: Make sure to run `./initial_setup.sh` as outlined above. If not, installation might fail due to PyTorch not being found. Unfortunately, the PyTorch channel currently does not support macOS.
+> **_macOS Installation:_**: Make sure to run `./scripts/initial_setup.sh` as outlined above. If not, installation might fail due to PyTorch not being found. Unfortunately, the PyTorch channel currently does not support macOS.
 
-> **_GPU Installation:_**: If you want to use a GPU, make sure to install `nvidia-docker` and confirm to use CUDA on first run of `./initial_setup.sh`. Optionally, if you want to use Apex (require, e.g., for DLRM model), make sure to confirm to install Apex. In this case, having the NVIDIA docker runtime as Docker default runtime is required. The script will try to enable this, if we have sudo priviliges on the system. The CUDA version can be adjusted in the `initial_setup.sh` file.
+> **_GPU Installation:_**: If you want to use a GPU, make sure to install `nvidia-docker` and confirm to use CUDA on first run of `./scripts/initial_setup.sh`. Optionally, if you want to use Apex (require, e.g., for DLRM model), make sure to confirm to install Apex. In this case, having the NVIDIA docker runtime as Docker default runtime is required. The script will try to enable this, if we have sudo priviliges on the system. The CUDA version can be adjusted in the `scripts/initial_setup.sh` file.
 
 **Next Steps**.
 Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.
