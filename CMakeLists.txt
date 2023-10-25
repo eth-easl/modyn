@@ -51,8 +51,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # doesn't support aggregate-initialization with emplace_back yet
   list(APPEND MODYN_COMPILE_OPTIONS "-Wshadow-all" "-Wno-shadow-field-in-constructor")
 
-  # Without this, we get compilation errors for the chrono header
-  list(APPEND MODYN_COMPILE_OPTIONS "-stdlib=libc++")
+  # Without this, we get compilation errors for the chrono header. We need to set this globally
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++20")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
 endif()
 
 if (${MODYN_TEST_COVERAGE})
