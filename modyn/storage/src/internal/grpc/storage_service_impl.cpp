@@ -305,7 +305,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
       static_cast<int>(request->file_watcher_interval()));
   response->set_success(success);
   if (success) {
-    return ::grpc::Status::OK;
+    return {::grpc::StatusCode::OK, "Dataset registered."};
   } else {
     return ::grpc::Status(::grpc::StatusCode::INTERNAL, "Could not register dataset.");
   }
@@ -318,7 +318,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   response->set_timestamp(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
           .count());
-  return ::grpc::Status::OK;
+  return {::grpc::StatusCode::OK, "Timestamp retrieved."};
 }
 
 ::grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-naming
@@ -334,14 +334,10 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
       soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
   
-  SPDLOG_INFO("DeleteDataset request received. dataset_id: {}, base_path: {}, filesystem_wrapper_type: {}", dataset_id, base_path, filesystem_wrapper_type);
-
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
       base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
 
   const int64_t number_of_files = get_number_of_files(dataset_id, session);
-
-  SPDLOG_INFO("DeleteDataset request received. number_of_files: {}", number_of_files);
 
   if (number_of_files > 0) {
     std::vector<std::string> file_paths(number_of_files);
@@ -357,15 +353,12 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     }
   }
 
-  SPDLOG_INFO("DeleteDataset request received. dataset_id: {}", dataset_id);
-
   bool success = storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);  // NOLINT misc-const-correctness
 
-  SPDLOG_INFO("DeleteDataset request completed.");
-
   response->set_success(success);
+  SPDLOG_INFO("DeleteDataset request completed.");
   if (success) {
-    return ::grpc::Status::OK;
+    return {::grpc::StatusCode::OK, "Dataset deleted."};
   } else {
     return {::grpc::StatusCode::INTERNAL, "Could not delete dataset."};
   }
