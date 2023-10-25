@@ -17,7 +17,7 @@ using namespace storage::grpcs;
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-    return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+    return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
   std::string base_path;
   int64_t filesystem_wrapper_type;
@@ -47,7 +47,7 @@ using namespace storage::grpcs;
 
     if (file_id_to_sample_data.empty()) {
       SPDLOG_ERROR("No samples found in dataset {}.", request->dataset_id());
-      return {::grpc::StatusCode::NOT_FOUND, "No samples found."};
+      return {::grpc::StatusCode::OK, "No samples found."};
     }
     for (auto& [file_id, sample_data] : file_id_to_sample_data) {
       send_get_response(writer, file_id, sample_data, file_wrapper_config_node, filesystem_wrapper, file_wrapper_type);
@@ -93,7 +93,7 @@ using namespace storage::grpcs;
       thread.join();
     }
   }
-  return ::grpc::Status::OK;
+  return {::grpc::StatusCode::OK, "Data retrieved."};
 }
 
 void StorageServiceImpl::get_sample_data(soci::session& session, int64_t dataset_id,
@@ -156,7 +156,7 @@ void StorageServiceImpl::send_get_response(
 
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-    return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+    return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
   const int64_t number_of_files = get_number_of_files(dataset_id, session);
@@ -189,7 +189,7 @@ void StorageServiceImpl::send_get_response(
       thread.join();
     }
   }
-  return ::grpc::Status::OK;
+  return {::grpc::StatusCode::OK, "Data retrieved."};
 }
 
 void StorageServiceImpl::send_get_new_data_since_response(
@@ -219,7 +219,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
 
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-    return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+    return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
   const int64_t number_of_files = get_number_of_files(dataset_id, session);
@@ -254,7 +254,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
       thread.join();
     }
   }
-  return ::grpc::Status::OK;
+  return {::grpc::StatusCode::OK, "Data retrieved."};
 }
 
 void StorageServiceImpl::send_get_new_data_in_interval_response(
@@ -286,12 +286,11 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   if (dataset_id == -1) {
     response->set_available(false);
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-    status = ::grpc::Status(::grpc::StatusCode::NOT_FOUND, "Dataset does not exist.");
+    return {::grpc::StatusCode::OK, "Dataset does not exist."};
   } else {
     response->set_available(true);
-    status = ::grpc::Status::OK;
+    return {::grpc::StatusCode::OK, "Dataset exists."};
   }
-  return status;
 }
 
 ::grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier-naming
@@ -307,7 +306,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   if (success) {
     return {::grpc::StatusCode::OK, "Dataset registered."};
   } else {
-    return ::grpc::Status(::grpc::StatusCode::INTERNAL, "Could not register dataset.");
+    return ::grpc::Status(::grpc::StatusCode::OK, "Could not register dataset.");
   }
 }
 
@@ -349,7 +348,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
       }
     } catch (const storage::utils::ModynException& e) {
       SPDLOG_ERROR("Error deleting dataset: {}", e.what());
-      return {::grpc::StatusCode::INTERNAL, "Error deleting dataset."};
+      return {::grpc::StatusCode::OK, "Error deleting dataset."};
     }
   }
 
@@ -360,7 +359,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   if (success) {
     return {::grpc::StatusCode::OK, "Dataset deleted."};
   } else {
-    return {::grpc::StatusCode::INTERNAL, "Could not delete dataset."};
+    return {::grpc::StatusCode::OK, "Could not delete dataset."};
   }
 }
 
@@ -384,12 +383,12 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-    return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+    return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
   if (request->keys_size() == 0) {
     SPDLOG_ERROR("No keys provided.");
-    return {::grpc::StatusCode::INVALID_ARGUMENT, "No keys provided."};
+    return {::grpc::StatusCode::OK, "No keys provided."};
   }
 
   std::vector<int64_t> sample_ids(request->keys_size());
@@ -409,7 +408,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
   if (number_of_files == 0) {
     SPDLOG_ERROR("No samples found in dataset {}.", dataset_id);
-    return {::grpc::StatusCode::NOT_FOUND, "No samples found."};
+    return {::grpc::StatusCode::OK, "No samples found."};
   }
 
   // Get the file ids
@@ -421,7 +420,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
   if (file_ids.empty()) {
     SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
-    return {::grpc::StatusCode::NOT_FOUND, "No files found."};
+    return {::grpc::StatusCode::OK, "No files found."};
   }
 
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
@@ -436,7 +435,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     session << sql, soci::into(file_paths);
     if (file_paths.size() != file_ids.size()) {
       SPDLOG_ERROR("Error deleting data: Could not find all files.");
-      return {::grpc::StatusCode::INTERNAL, "Error deleting data."};
+      return {::grpc::StatusCode::OK, "Error deleting data."};
     }
 
     auto file_wrapper = storage::file_wrapper::get_file_wrapper(
@@ -477,10 +476,10 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     }
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error deleting data: {}", e.what());
-    return {::grpc::StatusCode::INTERNAL, "Error deleting data."};
+    return {::grpc::StatusCode::OK, "Error deleting data."};
   }
   response->set_success(true);
-  return ::grpc::Status::OK;
+  return {::grpc::StatusCode::OK, "Data deleted."};
 }
 
 ::grpc::Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-naming
@@ -494,7 +493,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-    return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+    return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
   int64_t total_keys = 0;  // NOLINT misc-const-correctness
@@ -531,7 +530,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     writer->Write(response, ::grpc::WriteOptions().set_last_message());
   }
 
-  return ::grpc::Status::OK;
+  return {::grpc::StatusCode::OK, "Data retrieved."};
 }
 
 std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_t worker_id, int64_t total_workers,
@@ -568,7 +567,7 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
 
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-    return {::grpc::StatusCode::NOT_FOUND, "Dataset does not exist."};
+    return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
   int64_t total_keys = 0;
@@ -577,7 +576,7 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
 
   count_stmt.execute();
   response->set_num_keys(total_keys);
-  return ::grpc::Status::OK;
+  return {::grpc::StatusCode::OK, "Dataset size retrieved."};
 }
 
 int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci::session& session) {
