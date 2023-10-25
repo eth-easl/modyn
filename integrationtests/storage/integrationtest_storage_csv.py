@@ -118,9 +118,10 @@ def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
 def test_storage() -> None:
     check_get_current_timestamp()  # Check if the storage service is available.
     create_dataset_dir()
-    add_files_to_dataset(0, 10, [], FIRST_ADDED_CSVS)  # Add samples to the dataset.
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
+
+    add_files_to_dataset(0, 10, [], FIRST_ADDED_CSVS)  # Add samples to the dataset.
 
     response = None
     for i in range(500):
