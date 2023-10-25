@@ -16,8 +16,6 @@ set_target_properties(example_extension
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
-
-
 target_sources(example_extension PRIVATE ${MODYN_EXAMPLEEXTENSION_HEADERS} ${MODYN_EXAMPLEEXTENSION_SOURCES})
 target_include_directories(example_extension PUBLIC include)
 target_compile_options(example_extension PRIVATE ${MODYN_COMPILE_OPTIONS} -Wno-unused-function)
