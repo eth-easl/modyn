@@ -95,6 +95,10 @@ class FileWatcher {
   void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
   static void insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
                                 const std::vector<FileFrame>& file_frame, bool force_fallback);
+  static int64_t insert_file(const std::string& file_path, const int64_t dataset_id,
+                             const storage::database::StorageDatabaseConnection& storage_database_connection,
+                             const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
+                             const std::shared_ptr<storage::file_wrapper::FileWrapper>& file_wrapper);
   void seek_dataset();
   void seek();
   static bool check_valid_file(

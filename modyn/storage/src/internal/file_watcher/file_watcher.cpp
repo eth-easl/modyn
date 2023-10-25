@@ -226,18 +226,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
       file_wrapper->set_file_path(file_path);
-      number_of_samples = file_wrapper->get_number_of_samples();
-      int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
-      session << "INSERT INTO files (dataset_id, path, number_of_samples, "
-                 "updated_at) VALUES (:dataset_id, :path, "
-                 ":updated_at, :number_of_samples)",
-          soci::use(dataset_id), soci::use(file_path), soci::use(modified_time), soci::use(number_of_samples);
+      int64_t file_id =
+          insert_file(file_path, dataset_id, storage_database_connection, filesystem_wrapper, file_wrapper);
 
-      // Check if the insert was successful.
-      static_assert(sizeof(long long) == sizeof(int64_t));  // NOLINT google-runtime-int
-      long long file_id = -1;                               // NOLINT google-runtime-int
-      if (!session.get_last_insert_id("files", file_id)) {
-        // The insert was not successful.
+      if (file_id == -1) {
         SPDLOG_ERROR("Failed to insert file into database");
         continue;
       }
@@ -251,7 +243,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
           file_frame.clear();
           inserted_samples = 0;
         }
-        file_frame.push_back({dataset_id, static_cast<int64_t>(file_id), index, label});
+        file_frame.push_back({dataset_id, file_id, index, label});
         index++;
         inserted_samples++;
       }
@@ -262,6 +254,49 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       insert_file_frame(storage_database_connection, file_frame, force_fallback);
     }
   }
+}
+
+int64_t FileWatcher::insert_file(
+    const std::string& file_path, const int64_t dataset_id,
+    const storage::database::StorageDatabaseConnection& storage_database_connection,
+    const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
+    const std::shared_ptr<storage::file_wrapper::FileWrapper>& file_wrapper) {
+  int64_t number_of_samples = 0;
+  number_of_samples = file_wrapper->get_number_of_samples();
+  int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
+  int64_t file_id = -1;
+
+  if (storage_database_connection.get_drivername() == storage::database::DatabaseDriver::SQLITE3) {
+    soci::session session = storage_database_connection.get_session();
+    session << "INSERT INTO files (dataset_id, path, number_of_samples, "
+               "updated_at) VALUES (:dataset_id, :path, "
+               ":updated_at, :number_of_samples)",
+        soci::use(dataset_id), soci::use(file_path), soci::use(modified_time), soci::use(number_of_samples);
+
+    // Check if the insert was successful.
+    static_assert(sizeof(long long) == sizeof(int64_t));  // NOLINT google-runtime-int
+    long long inner_file_id = -1;                         // NOLINT google-runtime-int
+    if (!session.get_last_insert_id("files", inner_file_id)) {
+      // The insert was not successful.
+      SPDLOG_ERROR("Failed to insert file into database");
+      return -1;
+    }
+    file_id = static_cast<int64_t>(inner_file_id);
+  } else if (storage_database_connection.get_drivername() == storage::database::DatabaseDriver::POSTGRESQL) {
+    soci::session session = storage_database_connection.get_session();
+    session << "INSERT INTO files (dataset_id, path, number_of_samples, "
+               "updated_at) VALUES (:dataset_id, :path, "
+               ":updated_at, :number_of_samples) RETURNING file_id",
+        soci::use(dataset_id), soci::use(file_path), soci::use(modified_time), soci::use(number_of_samples),
+        soci::into(file_id);
+
+    if (file_id == -1) {
+      // The insert was not successful.
+      SPDLOG_ERROR("Failed to insert file into database");
+      return -1;
+    }
+  }
+  return file_id;
 }
 
 void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
