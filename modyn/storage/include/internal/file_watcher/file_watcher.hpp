@@ -35,6 +35,7 @@ class FileWatcher {
         insertion_threads_{insertion_threads},
         disable_multithreading_{insertion_threads <= 1},
         storage_database_connection_{storage::database::StorageDatabaseConnection(config)} {
+    SPDLOG_INFO("Initializing file watcher for dataset {}.", dataset_id_);
     if (stop_file_watcher == nullptr) {
       FAIL("stop_file_watcher_ is nullptr.");
     }

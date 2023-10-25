@@ -235,8 +235,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
       // Check if the insert was successful.
       static_assert(sizeof(long long) == sizeof(int64_t));  // NOLINT google-runtime-int
-      long long file_id;                                    // NOLINT google-runtime-int
-      if (!session.get_last_insert_id("files", file_id)) {
+      long long file_id = -1;                               // NOLINT google-runtime-int
+      session.get_last_insert_id("files", file_id);
+      SPDLOG_INFO("Inserted file with id {}", file_id);
+      if (file_id == -1) {
         // The insert was not successful.
         SPDLOG_ERROR("Failed to insert file into database");
         continue;
