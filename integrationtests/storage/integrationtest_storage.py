@@ -255,6 +255,8 @@ def test_storage() -> None:
     check_dataset_availability()  # Check if the dataset is available.
     check_dataset_size_invalid()
 
+    time.sleep(10)  # Wait for the storage service to register the new dataset and add the images.
+
     response = None
     for i in range(20):
         responses = list(get_new_data_since(0))
