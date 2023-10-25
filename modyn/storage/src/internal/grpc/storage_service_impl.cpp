@@ -296,15 +296,13 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   // Check if the dataset exists
   const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  ::grpc::Status status;
   if (dataset_id == -1) {
     response->set_available(false);
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {::grpc::StatusCode::OK, "Dataset does not exist."};
-  } else {
-    response->set_available(true);
-    return {::grpc::StatusCode::OK, "Dataset exists."};
   }
+  response->set_available(true);
+  return {::grpc::StatusCode::OK, "Dataset exists."};
 }
 
 ::grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier-naming
@@ -317,11 +315,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
       request->version(), request->file_wrapper_config(), request->ignore_last_timestamp(),
       static_cast<int>(request->file_watcher_interval()));
   response->set_success(success);
-  if (success) {
-    return {::grpc::StatusCode::OK, "Dataset registered."};
-  } else {
-    return ::grpc::Status(::grpc::StatusCode::OK, "Could not register dataset.");
-  }
+  return ::grpc::Status::OK;
 }
 
 ::grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT readability-identifier-naming
@@ -368,11 +362,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
       storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);  // NOLINT misc-const-correctness
 
   response->set_success(success);
-  if (success) {
-    return {::grpc::StatusCode::OK, "Dataset deleted."};
-  } else {
-    return {::grpc::StatusCode::OK, "Could not delete dataset."};
-  }
+  return ::grpc::Status::OK;
 }
 
 ::grpc::Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming

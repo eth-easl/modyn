@@ -193,7 +193,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
     case DatabaseDriver::POSTGRESQL: {
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
       try {
-        std::string statement = fmt::format(
+        std::string statement = fmt::format(  // NOLINT misc-const-correctness
             "CREATE TABLE IF NOT EXISTS {} "
             "PARTITION OF samples "
             "FOR VALUES IN ({}) "
@@ -202,7 +202,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
         session << statement;
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
-        throw e;
+        FAIL(e.what());
       }
 
       try {
@@ -217,7 +217,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
         }
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
-        throw e;
+        FAIL(e.what());
       }
       break;
     }

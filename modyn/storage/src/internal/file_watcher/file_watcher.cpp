@@ -202,7 +202,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   }
 
   storage::database::StorageDatabaseConnection storage_database_connection(config);
-  soci::session session = storage_database_connection.get_session();
+  soci::session session = storage_database_connection.get_session();  // NOLINT misc-const-correctness
 
   std::vector<std::string> valid_files;
   const std::string& file_path = file_paths.front();
@@ -238,11 +238,11 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
       int32_t index = 0;
       for (const auto& label : labels) {
         if (inserted_samples == sample_dbinsertion_batchsize) {
-          insert_file_frame(storage_database_connection, file_frame, force_fallback);
+          insert_file_frame(storage_database_connection, file_frame, dataset_id, force_fallback);
           file_frame.clear();
           inserted_samples = 0;
         }
-        file_frame.push_back({dataset_id, file_id, index, label});
+        file_frame.push_back({file_id, index, label});
         index++;
         inserted_samples++;
       }
@@ -250,7 +250,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
     if (!file_frame.empty()) {
       // Move the file_frame vector into the insertion function.
-      insert_file_frame(storage_database_connection, file_frame, force_fallback);
+      insert_file_frame(storage_database_connection, file_frame, dataset_id, force_fallback);
     }
   }
 }
@@ -299,13 +299,14 @@ int64_t FileWatcher::insert_file(
 }
 
 void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
-                                    const std::vector<FileFrame>& file_frame, const bool /*force_fallback*/) {
+                                    const std::vector<FileFrame>& file_frame, const int64_t dataset_id,
+                                    const bool /*force_fallback*/) {
   switch (storage_database_connection.get_drivername()) {
     case storage::database::DatabaseDriver::POSTGRESQL:
-      postgres_copy_insertion(file_frame, storage_database_connection);
+      postgres_copy_insertion(file_frame, storage_database_connection, dataset_id);
       break;
     case storage::database::DatabaseDriver::SQLITE3:
-      fallback_insertion(file_frame, storage_database_connection);
+      fallback_insertion(file_frame, storage_database_connection, dataset_id);
       break;
     default:
       FAIL("Unsupported database driver");
@@ -322,9 +323,8 @@ void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConn
  */
 void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
-    const storage::database::StorageDatabaseConnection& storage_database_connection) {
+    const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
-  int64_t dataset_id = file_frame.front().dataset_id;
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
       fmt::format("COPY samples{} FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')", table_columns);
@@ -332,7 +332,7 @@ void FileWatcher::postgres_copy_insertion(
   // Create stringbuffer, dump data into file buffer csv and send to postgresql
   std::stringstream ss;
   for (const auto& frame : file_frame) {
-    ss << fmt::format("{},{},{},{}\n", frame.dataset_id, frame.file_id, frame.index, frame.label);
+    ss << fmt::format("{},{},{},{}\n", dataset_id, frame.file_id, frame.index, frame.label);
   }
 
   // Execute the COPY command using the temporary stream object
@@ -349,20 +349,20 @@ void FileWatcher::postgres_copy_insertion(
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                     const storage::database::StorageDatabaseConnection& storage_database_connection) {
+                                     const storage::database::StorageDatabaseConnection& storage_database_connection,
+                                     const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
   // Prepare query
   std::string query = "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES ";
 
   if (!file_frame.empty()) {
     for (auto frame = file_frame.cbegin(); frame != std::prev(file_frame.cend()); ++frame) {
-      query += fmt::format("({},{},{},{}),", frame->dataset_id, frame->file_id, frame->index, frame->label);
+      query += fmt::format("({},{},{},{}),", dataset_id, frame->file_id, frame->index, frame->label);
     }
 
     // Add the last tuple without the trailing comma
     const auto& last_frame = file_frame.back();
-    query +=
-        fmt::format("({},{},{},{})", last_frame.dataset_id, last_frame.file_id, last_frame.index, last_frame.label);
+    query += fmt::format("({},{},{},{})", dataset_id, last_frame.file_id, last_frame.index, last_frame.label);
 
     session << query;
   }

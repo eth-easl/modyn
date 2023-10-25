@@ -19,7 +19,6 @@
 namespace storage::file_watcher {
 
 struct FileFrame {
-  int64_t dataset_id;
   int64_t file_id;
   int64_t index;
   int64_t label;
@@ -94,11 +93,11 @@ class FileWatcher {
                                 int64_t sample_dbinsertion_batchsize, bool force_fallback);
   void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
   static void insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
-                                const std::vector<FileFrame>& file_frame, bool force_fallback);
-  static int64_t insert_file(const std::string& file_path, const int64_t dataset_id,
+                                const std::vector<FileFrame>& file_frame, int64_t dataset_id, bool force_fallback);
+  static int64_t insert_file(const std::string& file_path, int64_t dataset_id,
                              const storage::database::StorageDatabaseConnection& storage_database_connection,
                              const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
-                             const std::shared_ptr<storage::file_wrapper::FileWrapper>& file_wrapper);
+                             const std::unique_ptr<storage::file_wrapper::FileWrapper>& file_wrapper);
   void seek_dataset();
   void seek();
   static bool check_valid_file(
@@ -106,9 +105,11 @@ class FileWatcher {
       int64_t timestamp, storage::database::StorageDatabaseConnection& storage_database_connection,
       const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper);
   static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
-                                      const storage::database::StorageDatabaseConnection& storage_database_connection);
+                                      const storage::database::StorageDatabaseConnection& storage_database_connection,
+                                      int64_t dataset_id);
   static void fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                 const storage::database::StorageDatabaseConnection& storage_database_connection);
+                                 const storage::database::StorageDatabaseConnection& storage_database_connection,
+                                 int64_t dataset_id);
 
  private:
   YAML::Node config_;
