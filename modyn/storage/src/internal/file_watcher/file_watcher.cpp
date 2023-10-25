@@ -259,7 +259,7 @@ int64_t FileWatcher::insert_file(
     const std::string& file_path, const int64_t dataset_id,
     const storage::database::StorageDatabaseConnection& storage_database_connection,
     const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
-    const std::shared_ptr<storage::file_wrapper::FileWrapper>& file_wrapper) {
+    const std::unique_ptr<storage::file_wrapper::FileWrapper>& file_wrapper) {
   int64_t number_of_samples = 0;
   number_of_samples = file_wrapper->get_number_of_samples();
   int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
