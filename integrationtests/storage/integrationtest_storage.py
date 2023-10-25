@@ -30,7 +30,13 @@ from PIL import Image
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
-CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
+CONFIG_FILE = (
+    SCRIPT_PATH.parent.parent.parent
+    / "modyn"
+    / "config"
+    / "examples"
+    / "modyn_config.yaml"
+)
 # The following path leads to a directory that is mounted into the docker container and shared with the
 # storage container.
 DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
@@ -57,7 +63,9 @@ def connect_to_storage() -> grpc.Channel:
     storage_channel = grpc.insecure_channel(storage_address)
 
     if not grpc_connection_established(storage_channel) or storage_channel is None:
-        raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
+        raise ConnectionError(
+            f"Could not establish gRPC connection to storage at {storage_address}."
+        )
 
     return storage_channel
 
@@ -71,7 +79,9 @@ def register_new_dataset() -> None:
         base_path=str(DATASET_PATH),
         dataset_id="test_dataset",
         description="Test dataset for integration tests.",
-        file_wrapper_config=json.dumps({"file_extension": ".png", "label_file_extension": ".txt"}),
+        file_wrapper_config=json.dumps(
+            {"file_extension": ".png", "label_file_extension": ".txt"}
+        ),
         file_wrapper_type="SingleSampleFileWrapper",
         filesystem_wrapper_type="LocalFilesystemWrapper",
         version="0.1.0",
@@ -120,10 +130,16 @@ def check_data_per_worker() -> None:
     storage = StorageStub(storage_channel)
 
     for worker_id in range(6):
-        request = GetDataPerWorkerRequest(dataset_id="test_dataset", worker_id=worker_id, total_workers=6)
-        responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
+        request = GetDataPerWorkerRequest(
+            dataset_id="test_dataset", worker_id=worker_id, total_workers=6
+        )
+        responses: list[GetDataPerWorkerResponse] = list(
+            storage.GetDataPerWorker(request)
+        )
 
-        assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
+        assert (
+            len(responses) == 1
+        ), f"Received batched response or no response, shouldn't happen: {responses}"
 
         response_keys_size = len(responses[0].keys)
 
@@ -164,7 +180,9 @@ def cleanup_storage_database() -> None:
 
 def add_image_to_dataset(image: Image, name: str) -> None:
     image.save(DATASET_PATH / name)
-    IMAGE_UPDATED_TIME_STAMPS.append(int(round(os.path.getmtime(DATASET_PATH / name) * 1000)))
+    IMAGE_UPDATED_TIME_STAMPS.append(
+        int(round(os.path.getmtime(DATASET_PATH / name) * 1000))
+    )
 
 
 def create_random_image() -> Image:
@@ -181,7 +199,9 @@ def create_random_image() -> Image:
     return image
 
 
-def add_images_to_dataset(start_number: int, end_number: int, images_added: list[bytes]) -> None:
+def add_images_to_dataset(
+    start_number: int, end_number: int, images_added: list[bytes]
+) -> None:
     create_dataset_dir()
 
     for i in range(start_number, end_number):
@@ -207,7 +227,9 @@ def get_new_data_since(timestamp: int) -> Iterable[GetNewDataSinceResponse]:
     return responses
 
 
-def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> Iterable[GetDataInIntervalResponse]:
+def get_data_in_interval(
+    start_timestamp: int, end_timestamp: int
+) -> Iterable[GetDataInIntervalResponse]:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -241,8 +263,12 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
                 assert False, f"Could not get image with key {keys[i]}."
             image = Image.open(io.BytesIO(sample))
             if image.tobytes() not in expected_images:
-                raise ValueError(f"Image with key {keys[i]} is not present in the expected images.")
-    assert i == len(keys) - 1, f"Could not get all images. Images missing: keys: {keys} i: {i}"
+                raise ValueError(
+                    f"Image with key {keys[i]} is not present in the expected images."
+                )
+    assert (
+        i == len(keys) - 1
+    ), f"Could not get all images. Images missing: keys: {keys} i: {i}"
 
 
 def test_storage() -> None:
@@ -256,7 +282,9 @@ def test_storage() -> None:
     response = None
     for i in range(20):
         responses = list(get_new_data_since(0))
-        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
+        assert (
+            len(responses) < 2
+        ), f"Received batched response, shouldn't happen: {responses}"
         if len(responses) == 1:
             response = responses[0]
             if len(response.keys) == 10:
@@ -264,16 +292,22 @@ def test_storage() -> None:
         time.sleep(1)
 
     assert response is not None, "Did not get any response from Storage"
-    assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
+    assert (
+        len(response.keys) == 10
+    ), f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
     check_dataset_size(10)
 
-    add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
+    add_images_to_dataset(
+        10, 20, SECOND_ADDED_IMAGES
+    )  # Add more images to the dataset.
 
     for i in range(60):
         responses = list(get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1))
-        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
+        assert (
+            len(responses) < 2
+        ), f"Received batched response, shouldn't happen: {responses}"
         if len(responses) == 1:
             response = responses[0]
             if len(response.keys) == 10:
@@ -281,13 +315,17 @@ def test_storage() -> None:
         time.sleep(1)
 
     assert response is not None, "Did not get any response from Storage"
-    assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
+    assert (
+        len(response.keys) == 10
+    ), f"Not all images were returned. Images returned: {response.keys}"
 
     check_data(response.keys, SECOND_ADDED_IMAGES)
     check_dataset_size(20)
 
     responses = list(get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9]))
-    assert len(responses) == 1, f"Received batched/no response, shouldn't happen: {responses}"
+    assert (
+        len(responses) == 1
+    ), f"Received batched/no response, shouldn't happen: {responses}"
     response = responses[0]
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
@@ -301,8 +339,8 @@ def main() -> None:
     try:
         test_storage()
     finally:
-        cleanup_dataset_dir()
         cleanup_storage_database()
+        cleanup_dataset_dir()
 
 
 if __name__ == "__main__":
