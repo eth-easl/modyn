@@ -194,7 +194,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
       try {
         std::string statement = fmt::format(
-            "CREATE TABLE {} IF NOT EXISTS "
+            "CREATE TABLE IF NOT EXISTS {} "
             "PARTITION OF samples "
             "FOR VALUES IN ({}) "
             "PARTITION BY HASH (sample_id)",
@@ -209,7 +209,7 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
         for (int64_t i = 0; i < hash_partition_modulus_; i++) {
           std::string hash_partition_name = dataset_partition_table_name + "_part" + std::to_string(i);
           std::string statement = fmt::format(
-              "CREATE TABLE {} IF NOT EXISTS "
+              "CREATE TABLE IF NOT EXISTS {} "
               "PARTITION OF {} "
               "FOR VALUES WITH (modulus {}, REMAINDER {})",
               hash_partition_name, dataset_partition_table_name, hash_partition_modulus_, i);

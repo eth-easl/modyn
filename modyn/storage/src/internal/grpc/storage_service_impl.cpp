@@ -356,7 +356,6 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   bool success = storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);  // NOLINT misc-const-correctness
 
   response->set_success(success);
-  SPDLOG_INFO("DeleteDataset request completed.");
   if (success) {
     return {::grpc::StatusCode::OK, "Dataset deleted."};
   } else {
