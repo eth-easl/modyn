@@ -139,8 +139,6 @@ def check_get_current_timestamp() -> None:
 
     response = storage.GetCurrentTimestamp(empty)
 
-    print("Current timestamp:", response.timestamp)
-
     assert response.timestamp > 0, "Timestamp is not valid."
 
 
@@ -254,8 +252,6 @@ def test_storage() -> None:
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
     check_dataset_size_invalid()
-
-    time.sleep(10)  # Wait for the storage service to register the new dataset and add the images.
 
     response = None
     for i in range(20):

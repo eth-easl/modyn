@@ -276,7 +276,6 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 ::grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
     modyn::storage::DatasetAvailableResponse* response) {
-  SPDLOG_INFO("CheckAvailability request received.");
   soci::session session = storage_database_connection_.get_session();
 
   // Check if the dataset exists
@@ -313,7 +312,6 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 ::grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
     modyn::storage::GetCurrentTimestampResponse* response) {
-  SPDLOG_INFO("GetCurrentTimestamp request received.");
   response->set_timestamp(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
           .count());
@@ -324,7 +322,6 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     ::grpc::ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
     modyn::storage::DeleteDatasetResponse* response) {
   response->set_success(false);
-  SPDLOG_INFO("DeleteDataset request received.");
   std::string base_path;
   int64_t filesystem_wrapper_type;
 
@@ -367,7 +364,6 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     ::grpc::ServerContext* /*context*/, const modyn::storage::DeleteDataRequest* request,
     modyn::storage::DeleteDataResponse* response) {
   response->set_success(false);
-  SPDLOG_INFO("DeleteData request received.");
   soci::session session = storage_database_connection_.get_session();
 
   // Check if the dataset exists
