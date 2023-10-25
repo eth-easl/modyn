@@ -198,12 +198,12 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   std::vector<FileFrame> files(3);
 
   // Add some files to the vector
-  files.push_back({1, 1, 1, 1});
-  files.push_back({2, 2, 2, 2});
-  files.push_back({3, 3, 3, 3});
+  files.push_back({1, 1, 1});
+  files.push_back({2, 2, 2});
+  files.push_back({3, 3, 3});
 
   // Insert the files into the database
-  ASSERT_NO_THROW(FileWatcher::fallback_insertion(files, connection));
+  ASSERT_NO_THROW(FileWatcher::fallback_insertion(files, connection, 1));
 
   // Check if the files are added to the database
   int32_t file_id = 1;
@@ -337,7 +337,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {
 
   const storage::database::StorageDatabaseConnection connection(config);
 
-  ASSERT_NO_THROW(FileWatcher::fallback_insertion(files, connection));
+  ASSERT_NO_THROW(FileWatcher::fallback_insertion(files, connection, 1));
 }
 
 TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {

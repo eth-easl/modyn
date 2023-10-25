@@ -240,7 +240,7 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
   // Now remove the dataset from the database
-  connection.delete_dataset("test_dataset");
+  connection.delete_dataset("test_dataset", 1);
 
   // The watchdog should stop the FileWatcher process for the removed dataset
   watchdog.watch_file_watcher_threads();

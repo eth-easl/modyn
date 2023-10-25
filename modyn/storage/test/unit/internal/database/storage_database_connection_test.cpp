@@ -125,11 +125,12 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
   ASSERT_EQ(number_of_datasets, 1);
 
   std::string dataset_name;  // NOLINT
-  session << "SELECT name FROM datasets;", soci::into(dataset_name);
+  std::int64_t dataset_id;   // NOLINT
+  session << "SELECT name, dataset_id FROM datasets;", soci::into(dataset_name), soci::into(dataset_id);
   ASSERT_EQ(dataset_name, "test_dataset");
 
   // Delete dataset
-  ASSERT_TRUE(connection2.delete_dataset("test_dataset"));
+  ASSERT_TRUE(connection2.delete_dataset("test_dataset", dataset_id));
 
   // Assert no datasets exist
   session << "SELECT COUNT(*) FROM datasets;", soci::into(number_of_datasets);
@@ -142,5 +143,5 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteNonExistingDataset) {
   ASSERT_NO_THROW(connection.create_tables());
 
   // Delete non-existing dataset
-  ASSERT_FALSE(connection.delete_dataset("non_existing_dataset"));
+  ASSERT_FALSE(connection.delete_dataset("non_existing_dataset", 0));
 }

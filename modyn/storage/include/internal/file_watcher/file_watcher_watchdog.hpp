@@ -42,6 +42,7 @@ class FileWatcherWatchdog {
  private:
   YAML::Node config_;
   int64_t file_watcher_watchdog_sleep_time_s_ = 3;
+  int16_t additional_retry_ = 1;
   std::map<int64_t, std::thread> file_watcher_threads_;
   std::map<int64_t, int16_t> file_watcher_dataset_retries_;
   std::map<int64_t, std::atomic<bool>> file_watcher_thread_stop_flags_;
