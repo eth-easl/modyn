@@ -26,6 +26,20 @@ message Empty {}
 
 message JsonString { string value = 1; }
 
+message StrategyConfig {
+  string name = 1;
+  optional bool zip = 2;
+  optional string zip_algorithm = 3;
+  optional JsonString config = 4;
+}
+
+// TODO(#302): Remove this when reworking pipeline registration
+message ModelStoragePolicyInfo {
+  StrategyConfig full_model_strategy_config = 1;
+  optional StrategyConfig incremental_model_strategy_config = 2;
+  optional int32 full_model_interval = 3;
+}
+
 message DataInformRequest {
   int32 pipeline_id = 1;
   repeated int64 keys = 2;
@@ -43,6 +57,10 @@ message TriggerResponse {
 message RegisterPipelineRequest {
   int32 num_workers = 1;
   JsonString selection_strategy = 2;
+  string model_class_name = 3;
+  JsonString model_configuration = 4;
+  bool amp = 5;
+  ModelStoragePolicyInfo model_storage_policy = 6;
 }
 
 message PipelineResponse { int32 pipeline_id = 1; }

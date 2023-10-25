@@ -17,6 +17,9 @@ class TrainingInfo:
         self,
         request: StartTrainingRequest,
         training_id: int,
+        model_class_name: str,
+        model_config: str,
+        amp: bool,
         storage_address: str,
         selector_address: str,
         offline_dataset_path: str,
@@ -35,7 +38,7 @@ class TrainingInfo:
         self.epochs_per_trigger = request.epochs_per_trigger
 
         self.torch_optimizers_configuration = json.loads(request.torch_optimizers_configuration.value)
-        self.model_configuration_dict = json.loads(request.model_configuration.value)
+        self.model_configuration_dict = json.loads(model_config)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
         self.grad_scaler_configuration = json.loads(request.grad_scaler_configuration.value)
 
@@ -43,9 +46,9 @@ class TrainingInfo:
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
 
-        self.model_id = request.model_id
+        self.model_class_name = model_class_name
         model_module = dynamic_module_import("modyn.models")
-        self.model_handler = getattr(model_module, self.model_id)
+        self.model_handler = getattr(model_module, self.model_class_name)
 
         self.use_pretrained_model = request.use_pretrained_model
         self.load_optimizer_state = request.load_optimizer_state
@@ -57,7 +60,7 @@ class TrainingInfo:
 
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
-        self.amp = request.amp
+        self.amp = amp
 
         self.lr_scheduler = json.loads(request.lr_scheduler.value)
 

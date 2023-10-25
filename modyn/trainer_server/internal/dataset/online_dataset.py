@@ -14,7 +14,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disab
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource, SelectorKeySource
-from modyn.utils.utils import (
+from modyn.utils import (
     BYTES_PARSER_FUNC_NAME,
     MAX_MESSAGE_SIZE,
     deserialize_function,

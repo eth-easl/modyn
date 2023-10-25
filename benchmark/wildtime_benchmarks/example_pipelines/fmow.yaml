@@ -6,6 +6,9 @@ model:
   id: FmowNet
   config:
     num_classes: 62
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
 training:
   gpus: 1
   device: "cuda:0"
