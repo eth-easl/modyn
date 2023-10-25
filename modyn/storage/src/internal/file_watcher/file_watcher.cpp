@@ -336,7 +336,7 @@ void FileWatcher::postgres_copy_insertion(
   }
   tmp_file.close();
   // Execute the COPY command using the temporary stream object
-  const std::string cmd = fmt::format("COPY samples{} FROM {} WITH (DELIMITER ',');", table_columns, tmp_file_path);
+  const std::string cmd = fmt::format("COPY samples{} FROM '{}' WITH (DELIMITER ',');", table_columns, tmp_file_path);
   session << cmd;
   // Remove the temporary file
   std::filesystem::remove(tmp_file_path);
