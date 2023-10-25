@@ -218,7 +218,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
   if (!valid_files.empty()) {
     const std::string file_path = valid_files.front();
-    int64_t number_of_samples;
     std::vector<FileFrame> file_frame(sample_dbinsertion_batchsize);
     auto file_wrapper =
         storage::file_wrapper::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
