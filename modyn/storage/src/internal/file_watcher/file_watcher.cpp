@@ -218,7 +218,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
   if (!valid_files.empty()) {
     const std::string file_path = valid_files.front();
-    std::vector<FileFrame> file_frame(sample_dbinsertion_batchsize);
+    std::vector<FileFrame> file_frame = {};
     auto file_wrapper =
         storage::file_wrapper::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
 
@@ -325,7 +325,6 @@ void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
     const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
-  SPDLOG_INFO("Inserting {} samples into database", file_frame.size());
 
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
