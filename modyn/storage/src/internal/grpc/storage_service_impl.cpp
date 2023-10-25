@@ -165,6 +165,11 @@ void StorageServiceImpl::send_get_response(
 
   SPDLOG_INFO("Number of files: {}", number_of_files);
 
+  if (number_of_files == 0) {
+    SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
+    return {::grpc::StatusCode::OK, "No files found."};
+  }
+
   // Get the file ids
   std::vector<int64_t> file_ids(number_of_files);
   std::vector<int64_t> timestamps(number_of_files);
