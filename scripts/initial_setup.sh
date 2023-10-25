@@ -16,7 +16,6 @@ CUDA_CONTAINER=nvidia/cuda:11.7.1-devel-ubuntu22.04
 CI_CONTAINER=python:3.10-slim
 
 echo "This is the first time running Modyn, we're tweaking some nuts and bolts for your system."
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 cp environment.yml environment.yml.original
 
@@ -27,23 +26,23 @@ fi
 # If ARM, adjust environment.yml
 if [ "$IS_MAC" = true ] || [ "$(dpkg --print-architecture)" = "arm64" ] || [ "$(dpkg --print-architecture)" = "aarch64" ]; then
     echo "Detected ARM system, adjusting environment.yml"
-    sed -i '' -e '/- nvidia/d' $SCRIPT_DIR/environment.yml # Delete Nvidia Channel
-    sed -i '' -e 's/pytorch:://g' $SCRIPT_DIR/environment.yml # Do not use Pytorch Channel (broken)
+    sed -i '' -e '/- nvidia/d' $PARENT_DIR/environment.yml # Delete Nvidia Channel
+    sed -i '' -e 's/pytorch:://g' $PARENT_DIR/environment.yml # Do not use Pytorch Channel (broken)
 fi
 
 if [ "$IS_MAC" = true ]; then
     echo "Detected macOS, updating dev-requirements.txt to build grpcio from source"
     export GRPC_PYTHON_LDFLAGS=" -framework CoreFoundation"
-    sed -i '' -e 's/grpcio-tools/grpcio-tools --no-binary :all:/g' $SCRIPT_DIR/dev-requirements.txt 
-    sed -i '' -e 's/grpcio # Linux/grpcio --no-binary :all:/g' $SCRIPT_DIR/dev-requirements.txt 
+    sed -i '' -e 's/grpcio-tools/grpcio-tools --no-binary :all:/g' $PARENT_DIR/dev-requirements.txt 
+    sed -i '' -e 's/grpcio # Linux/grpcio --no-binary :all:/g' $PARENT_DIR/dev-requirements.txt 
 fi
 
 # On CI, we change the base image from CUDA to Python and stop here
 if [[ ! -z "$CI" ]]; then
-    dockerContent=$(tail -n "+2" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
-    mv $SCRIPT_DIR/docker/Dependencies/Dockerfile $SCRIPT_DIR/docker/Dependencies/Dockerfile.original
-    echo "FROM ${CI_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
-    echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
+    dockerContent=$(tail -n "+2" $PARENT_DIR/docker/Dependencies/Dockerfile)
+    mv $PARENT_DIR/docker/Dependencies/Dockerfile $PARENT_DIR/docker/Dependencies/Dockerfile.original
+    echo "FROM ${CI_CONTAINER}" > $PARENT_DIR/docker/Dependencies/Dockerfile
+    echo "$dockerContent" >> $PARENT_DIR/docker/Dependencies/Dockerfile
     echo "Found CI server and set container to ${CI_CONTAINER}, exiting."
     touch "${CONFIGURED_FILE}"
     popd
@@ -71,34 +70,34 @@ if [ "$IS_MAC" != true ]; then
     use_cuda () {
         USING_CUDA=true
         # Fix environment.yml
-        sed -i '/cpuonly/d' $SCRIPT_DIR/environment.yml # Delete cpuonly
-        sed -i "/nvidia::cudatoolkit/c\  - nvidia::cudatoolkit=$CUDA_VERSION" $SCRIPT_DIR/environment.yml # Enable cudatoolkit
-        sed -i "/pytorch-cuda/c\  - pytorch::pytorch-cuda=$CUDA_VERSION" $SCRIPT_DIR/environment.yml # Enable pytorch-cuda
+        sed -i '/cpuonly/d' $PARENT_DIR/environment.yml # Delete cpuonly
+        sed -i "/nvidia::cudatoolkit/c\  - nvidia::cudatoolkit=$CUDA_VERSION" $PARENT_DIR/environment.yml # Enable cudatoolkit
+        sed -i "/pytorch-cuda/c\  - pytorch::pytorch-cuda=$CUDA_VERSION" $PARENT_DIR/environment.yml # Enable pytorch-cuda
 
-        # Fix $SCRIPT_DIR/docker-compose.yml
-        startLine="$(grep -n "CUDASTART" $SCRIPT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
-        endLine="$(grep -n "CUDAEND" $SCRIPT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
-        fileLines="$(wc -l $SCRIPT_DIR/docker-compose.yml | awk '{ print $1 }')"
+        # Fix $PARENT_DIR/docker-compose.yml
+        startLine="$(grep -n "CUDASTART" $PARENT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
+        endLine="$(grep -n "CUDAEND" $PARENT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
+        fileLines="$(wc -l $PARENT_DIR/docker-compose.yml | awk '{ print $1 }')"
         
-        fileBegin=$(tail -n "+1" $SCRIPT_DIR/docker-compose.yml | head -n $((${startLine}-1+1)))
+        fileBegin=$(tail -n "+1" $PARENT_DIR/docker-compose.yml | head -n $((${startLine}-1+1)))
         let tmp=$fileLines-$endLine+2
-        fileEnd=$(tail -n "+${endLine}" $SCRIPT_DIR/docker-compose.yml | head -n $tmp)
+        fileEnd=$(tail -n "+${endLine}" $PARENT_DIR/docker-compose.yml | head -n $tmp)
         let trueStart=$startLine+1
         let tmp=$endLine-$trueStart
-        fileCuda=$(tail -n "+${trueStart}" $SCRIPT_DIR/docker-compose.yml | head -n $tmp)
+        fileCuda=$(tail -n "+${trueStart}" $PARENT_DIR/docker-compose.yml | head -n $tmp)
 
         cudaFixed=$(echo "$fileCuda" | sed "s/#//")
 
-        mv $SCRIPT_DIR/docker-compose.yml $SCRIPT_DIR/docker-compose.yml.original
-        echo "$fileBegin" > $SCRIPT_DIR/docker-compose.yml
-        echo "$cudaFixed" >> $SCRIPT_DIR/docker-compose.yml
-        echo "$fileEnd" >> $SCRIPT_DIR/docker-compose.yml
+        mv $PARENT_DIR/docker-compose.yml $PARENT_DIR/docker-compose.yml.original
+        echo "$fileBegin" > $PARENT_DIR/docker-compose.yml
+        echo "$cudaFixed" >> $PARENT_DIR/docker-compose.yml
+        echo "$fileEnd" >> $PARENT_DIR/docker-compose.yml
 
         # Fix Dockerfile
-        dockerContent=$(tail -n "+2" $SCRIPT_DIR/docker/Dependencies/Dockerfile)
-        mv $SCRIPT_DIR/docker/Dependencies/Dockerfile $SCRIPT_DIR/docker/Dependencies/Dockerfile.original
-        echo "FROM ${CUDA_CONTAINER}" > $SCRIPT_DIR/docker/Dependencies/Dockerfile
-        echo "$dockerContent" >> $SCRIPT_DIR/docker/Dependencies/Dockerfile
+        dockerContent=$(tail -n "+2" $PARENT_DIR/docker/Dependencies/Dockerfile)
+        mv $PARENT_DIR/docker/Dependencies/Dockerfile $PARENT_DIR/docker/Dependencies/Dockerfile.original
+        echo "FROM ${CUDA_CONTAINER}" > $PARENT_DIR/docker/Dependencies/Dockerfile
+        echo "$dockerContent" >> $PARENT_DIR/docker/Dependencies/Dockerfile
     }
 
     while true; do
@@ -111,8 +110,8 @@ if [ "$IS_MAC" != true ]; then
     done
 
     use_apex () {
-        cp $SCRIPT_DIR/docker/Trainer_Server/Dockerfile $SCRIPT_DIR/docker/Trainer_Server/Dockerfile.original
-        sed -i 's/# RUN/RUN/' $SCRIPT_DIR/docker/Trainer_Server/Dockerfile # Enable build of Apex
+        cp $PARENT_DIR/docker/Trainer_Server/Dockerfile $PARENT_DIR/docker/Trainer_Server/Dockerfile.original
+        sed -i 's/# RUN/RUN/' $PARENT_DIR/docker/Trainer_Server/Dockerfile # Enable build of Apex
 
         runtime=$(docker info | grep "Default Runtime")
         if [[ $runtime != *"nvidia"* ]]; then
