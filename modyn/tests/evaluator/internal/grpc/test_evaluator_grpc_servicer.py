@@ -1,9 +1,9 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import json
 import multiprocessing as mp
+import os
 import pathlib
 import platform
-import shutil
 import tempfile
 from time import sleep
 from unittest import mock
@@ -23,8 +23,12 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
 )
 from modyn.evaluator.internal.metrics import Accuracy, F1Score
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
+
+DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / "test_evaluator.database"
 
 
 def get_modyn_config():
@@ -32,7 +36,39 @@ def get_modyn_config():
         "evaluator": {"hostname": "localhost", "port": "50000"},
         "model_storage": {"hostname": "localhost", "port": "50051", "ftp_port": "5223"},
         "storage": {"hostname": "storage", "port": "50052"},
+        "metadata_database": {
+            "drivername": "sqlite",
+            "username": "",
+            "password": "",
+            "host": "",
+            "port": 0,
+            "database": f"{DATABASE}",
+        },
     }
+
+
+def setup():
+    DATABASE.unlink(True)
+
+    with MetadataDatabaseConnection(get_modyn_config()) as database:
+        database.create_tables()
+
+        database.register_pipeline(
+            1,
+            "ResNet18",
+            json.dumps({}),
+            True,
+            "{}",
+            ModelStorageStrategyConfig(name="PyTorchFullModel"),
+            incremental_model_strategy=None,
+            full_model_interval=None,
+        )
+        database.add_trained_model(1, 10, "trained_model.modyn", "trained_model.metadata")
+        database.add_trained_model(1, 11, "trained_model2.modyn", "trained_model.metadata")
+
+
+def teardown():
+    DATABASE.unlink()
 
 
 class DummyModelWrapper:
@@ -43,8 +79,8 @@ class DummyModelWrapper:
 class DummyModelStorageStub:
     # pylint: disable-next=invalid-name
     def FetchModel(self, request: FetchModelRequest) -> FetchModelResponse:
-        if request.model_id <= 10:
-            return FetchModelResponse(success=True, model_path="trained_model.modyn")
+        if request.model_id == 1:
+            return FetchModelResponse(success=True, model_path="trained_model.modyn", checksum=bytes(5))
         return FetchModelResponse(success=False)
 
 
@@ -86,12 +122,11 @@ def get_mock_evaluation_transformer():
     )
 
 
-def get_evaluate_model_request(valid_model: bool):
+def get_evaluate_model_request():
     return EvaluateModelRequest(
-        trained_model_id=5,
+        model_id=1,
         dataset_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=1),
         device="cpu",
-        amp=False,
         batch_size=4,
         metrics=[
             MetricConfiguration(
@@ -100,19 +135,20 @@ def get_evaluate_model_request(valid_model: bool):
                 evaluation_transformer=PythonString(value=""),
             )
         ],
-        model_id="ResNet18" if valid_model else "unknown",
-        model_configuration=JsonString(value=json.dumps({})),
         transform_list=[],
         bytes_parser=PythonString(value=get_mock_bytes_parser()),
         label_transformer=PythonString(value=""),
     )
 
 
-def get_evaluation_info(evaluation_id, valid_model: bool, model_path: pathlib.Path, config: dict):
+def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict):
     storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
     return EvaluationInfo(
-        request=get_evaluate_model_request(valid_model),
+        request=get_evaluate_model_request(),
         evaluation_id=evaluation_id,
+        model_class_name="ResNet18",
+        amp=False,
+        model_config="{}",
         storage_address=storage_address,
         metrics=[Accuracy("", {}), F1Score("", {"num_classes": 2})],
         model_path=model_path,
@@ -133,51 +169,68 @@ def test_init(test_connect_to_model_storage, test_connect_to_storage):
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_storage):
+@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.hasattr", return_value=False)
+def test_evaluate_model_invalid_model_id(test_has_attribute, test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
-        response = evaluator.evaluate_model(get_evaluate_model_request(False), None)
+        response = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not response.evaluation_started
         assert not evaluator._evaluation_dict
         assert evaluator._next_evaluation_id == 0
 
-        req = get_evaluate_model_request(True)
-        req.trained_model_id = 15
+
+@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_storage):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+        req = get_evaluate_model_request()
+        req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
 
-        req = get_evaluate_model_request(True)
+        req = get_evaluate_model_request()
         req.dataset_info.dataset_id = "unknown"
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert evaluator._next_evaluation_id == 0
 
+        req = get_evaluate_model_request()
+        req.model_id = 2
+        resp = evaluator.evaluate_model(req, None)
+        assert not resp.evaluation_started
 
-@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_file")
+
+@patch(
+    "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
+    return_value=pathlib.Path("downloaded_model.modyn"),
+)
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_file_mock: MagicMock):
+def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_model_mock: MagicMock):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
-        with open(pathlib.Path(modyn_temp) / "trained_model.modyn", "wb") as file:
-            file.write(b"Our trained model!")
+
         mock_start = mock.Mock()
 
         with patch("multiprocessing.Process.start", mock_start):
-            resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(True), None)
+            resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(), None)
 
             assert 0 in evaluator._evaluation_process_dict
             assert evaluator._next_evaluation_id == 1
 
-            download_file_mock.assert_called_once()
-            kwargs = download_file_mock.call_args.kwargs
-            remote_file_path = kwargs["remote_file_path"]
-            local_file_path = kwargs["local_file_path"]
+            download_model_mock.assert_called_once()
+            kwargs = download_model_mock.call_args.kwargs
+            remote_file_path = kwargs["remote_path"]
+            base_directory = kwargs["base_directory"]
+            identifier = kwargs["identifier"]
 
-            shutil.copyfile(pathlib.Path(modyn_temp) / remote_file_path, local_file_path)
-
-            with open(evaluator._evaluation_dict[resp.evaluation_id].model_path, "rb") as file:
-                assert file.read().decode("utf-8") == "Our trained model!"
+            assert str(remote_file_path) == "trained_model.modyn"
+            assert base_directory == evaluator._base_dir
+            assert identifier == 0
+            assert resp.evaluation_started
+            assert resp.evaluation_id == identifier
+            assert str(evaluator._evaluation_dict[resp.evaluation_id].model_path) == "downloaded_model.modyn"
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -396,7 +449,7 @@ def test_get_evaluation_result_missing_metric(test_is_alive, test_connect_to_mod
         evaluation_process_info = get_evaluation_process_info()
         evaluator._evaluation_process_dict[3] = evaluation_process_info
         config = get_modyn_config()
-        evaluator._evaluation_dict[3] = get_evaluation_info(3, True, pathlib.Path("trained.model"), config)
+        evaluator._evaluation_dict[3] = get_evaluation_info(3, pathlib.Path("trained.model"), config)
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=3), None)
         assert response.valid
         assert len(response.evaluation_data) == 0
@@ -413,7 +466,7 @@ def test_get_evaluation_result(
     with tempfile.TemporaryDirectory() as temp:
         config = get_modyn_config()
         evaluator = EvaluatorGRPCServicer(config, pathlib.Path(temp))
-        evaluator._evaluation_dict[1] = get_evaluation_info(1, True, pathlib.Path(temp) / "trained_model.modyn", config)
+        evaluator._evaluation_dict[1] = get_evaluation_info(1, pathlib.Path(temp) / "trained_model.modyn", config)
 
         assert len(evaluator._evaluation_dict[1].metrics) == 2
         assert isinstance(evaluator._evaluation_dict[1].metrics[0], Accuracy)

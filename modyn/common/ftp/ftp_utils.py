@@ -1,10 +1,11 @@
 # Utils file containing functions in order to simplify FTP server interactions.
+import logging
 import pathlib
 from ftplib import FTP
 from logging import Logger
 from typing import Any, Callable, Optional
 
-from modyn.utils import EMIT_MESSAGE_PERCENTAGES
+from modyn.utils import EMIT_MESSAGE_PERCENTAGES, calculate_checksum
 
 
 def download_file(
@@ -15,7 +16,8 @@ def download_file(
     remote_file_path: pathlib.Path,
     local_file_path: pathlib.Path,
     callback: Optional[Callable[[float], None]] = None,
-) -> None:
+    checksum: Optional[bytes] = None,
+) -> bool:
     """Downloads a file from a given host to the local filesystem. If the file already exists, it gets overwritten.
 
     Args:
@@ -26,9 +28,9 @@ def download_file(
         remote_file_path: path to the remote file.
         local_file_path: local path to the file.
         callback(float): function called every block of data with the current progress in [0, 1].
-
+        checksum: the expected hash of the file.
     Returns:
-
+        bool: whether the file was successfully downloaded.
     """
     ftp = FTP()
     ftp.connect(hostname, port, timeout=3)
@@ -53,6 +55,11 @@ def download_file(
         ftp.retrbinary(f"RETR {remote_file_path}", write_callback)
 
     ftp.close()
+
+    if checksum:
+        local_hash = calculate_checksum(local_file_path)
+        return local_hash == checksum
+    return True
 
 
 def upload_file(
@@ -121,3 +128,41 @@ def get_pretrained_model_callback(logger: Logger) -> Callable[[float], None]:
         last_progress = current_progress
 
     return download_callback
+
+
+def download_trained_model(
+    logger: logging.Logger,
+    model_storage_config: dict,
+    remote_path: pathlib.Path,
+    checksum: bytes,
+    identifier: int,
+    base_directory: pathlib.Path,
+) -> Optional[pathlib.Path]:
+    model_path = base_directory / f"trained_model_{identifier}.modyn"
+
+    success = download_file(
+        hostname=model_storage_config["hostname"],
+        port=int(model_storage_config["ftp_port"]),
+        user="modyn",
+        password="modyn",
+        remote_file_path=remote_path,
+        local_file_path=model_path,
+        callback=get_pretrained_model_callback(logger),
+        checksum=checksum,
+    )
+
+    if not success:
+        logger.error("Checksums did not match, evaluation cannot be started.")
+        return None
+
+    delete_file(
+        hostname=model_storage_config["hostname"],
+        port=int(model_storage_config["ftp_port"]),
+        user="modyn",
+        password="modyn",
+        remote_file_path=pathlib.Path(remote_path),
+    )
+
+    logger.info(f"Successfully downloaded trained model to {model_path}.")
+
+    return model_path

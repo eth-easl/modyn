@@ -29,10 +29,12 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
 )
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    ModelStoragePolicyInfo,
     NumberOfSamplesResponse,
     RegisterPipelineRequest,
     SeedSelectorRequest,
     StatusBarScaleResponse,
+    StrategyConfig,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -200,17 +202,51 @@ class GRPCHandler:
         if not self.connected_to_selector:
             raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
 
+        if "config" in pipeline_config["model"]:
+            model_config = json.dumps(pipeline_config["model"]["config"])
+        else:
+            model_config = "{}"
+
+        model_storage_config = pipeline_config["model_storage"]
+        incremental_model_strategy: Optional[StrategyConfig] = None
+        full_model_interval: Optional[int] = None
+        if "incremental_model_strategy" in model_storage_config:
+            incremental_strategy = model_storage_config["incremental_model_strategy"]
+            incremental_model_strategy = self.get_model_strategy(incremental_strategy)
+            full_model_interval = (
+                incremental_strategy["full_model_interval"] if "full_model_interval" in incremental_strategy else None
+            )
+
         pipeline_id = self.selector.register_pipeline(
             RegisterPipelineRequest(
                 num_workers=pipeline_config["training"]["dataloader_workers"],
                 selection_strategy=SelectorJsonString(
                     value=json.dumps(pipeline_config["training"]["selection_strategy"])
                 ),
+                model_class_name=pipeline_config["model"]["id"],
+                model_configuration=SelectorJsonString(value=model_config),
+                amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
+                model_storage_policy=ModelStoragePolicyInfo(
+                    full_model_strategy_config=self.get_model_strategy(model_storage_config["full_model_strategy"]),
+                    incremental_model_strategy_config=incremental_model_strategy,
+                    full_model_interval=full_model_interval,
+                ),
             )
         ).pipeline_id
 
         logger.info(f"Registered pipeline {pipeline_config['pipeline']['name']} at selector with ID {pipeline_id}")
         return pipeline_id
+
+    @staticmethod
+    def get_model_strategy(strategy_config: dict) -> StrategyConfig:
+        return StrategyConfig(
+            name=strategy_config["name"],
+            zip=strategy_config["zip"] if "zip" in strategy_config else None,
+            zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
+            config=SelectorJsonString(value=json.dumps(strategy_config["config"]))
+            if "config" in strategy_config
+            else None,
+        )
 
     # pylint: disable-next=unused-argument
     def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
@@ -267,11 +303,6 @@ class GRPCHandler:
     ) -> int:
         if not self.connected_to_trainer_server:
             raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
-
-        if "config" in pipeline_config["model"]:
-            model_config = json.dumps(pipeline_config["model"]["config"])
-        else:
-            model_config = "{}"
 
         optimizers_config = {}
         for optimizer in pipeline_config["training"]["optimizers"]:
@@ -353,8 +384,6 @@ class GRPCHandler:
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
-        amp = pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False
-
         if "grad_scaler_config" in pipeline_config["training"]:
             grad_scaler_config = pipeline_config["training"]["grad_scaler_config"]
         else:
@@ -364,9 +393,6 @@ class GRPCHandler:
             "pipeline_id": pipeline_id,
             "trigger_id": trigger_id,
             "device": pipeline_config["training"]["device"],
-            "amp": amp,
-            "model_id": pipeline_config["model"]["id"],
-            "model_configuration": TrainerServerJsonString(value=model_config),
             "use_pretrained_model": previous_model_id is not None,
             "pretrained_model_id": previous_model_id or -1,
             "load_optimizer_state": False,  # TODO(#137): Think about this.
@@ -506,27 +532,18 @@ class GRPCHandler:
 
         assert success, "Something went wrong while seeding the selector"
 
-    def start_evaluation(self, trained_model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusTracker]:
+    def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusTracker]:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
 
-        model_id = pipeline_config["model"]["id"]
-        if "config" in pipeline_config["model"]:
-            model_config = json.dumps(pipeline_config["model"]["config"])
-        else:
-            model_config = "{}"
-
         device = pipeline_config["evaluation"]["device"]
-        amp = pipeline_config["evaluation"]["amp"] if "amp" in pipeline_config["evaluation"] else False
 
         evaluations: dict[int, EvaluationStatusTracker] = {}
 
         for dataset in pipeline_config["evaluation"]["datasets"]:
             dataset_id = dataset["dataset_id"]
 
-            req = GRPCHandler._prepare_evaluation_request(
-                dataset, model_id, model_config, trained_model_id, device, amp
-            )
+            req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
             response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
 
             if not response.evaluation_started:
@@ -539,9 +556,7 @@ class GRPCHandler:
         return evaluations
 
     @staticmethod
-    def _prepare_evaluation_request(
-        dataset_config: dict, model_id: str, model_config: str, trained_model_id: int, device: str, amp: bool
-    ) -> EvaluateModelRequest:
+    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 
         if "transformations" in dataset_config:
@@ -579,22 +594,17 @@ class GRPCHandler:
             )
 
         start_evaluation_kwargs = {
-            "trained_model_id": trained_model_id,
+            "model_id": model_id,
             "dataset_info": DatasetInfo(dataset_id=dataset_id, num_dataloaders=dataloader_workers),
             "device": device,
-            "amp": amp,
             "batch_size": batch_size,
             "metrics": metrics,
-            "model_id": model_id,
-            "model_configuration": EvaluatorJsonString(value=model_config),
             "transform_list": transform_list,
             "bytes_parser": EvaluatorPythonString(value=bytes_parser_function),
             "label_transformer": EvaluatorPythonString(value=label_transformer),
         }
 
-        cleaned_kwargs = {k: v for k, v in start_evaluation_kwargs.items() if v is not None}
-
-        return EvaluateModelRequest(**cleaned_kwargs)
+        return EvaluateModelRequest(**start_evaluation_kwargs)
 
     def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
         if not self.connected_to_evaluator:

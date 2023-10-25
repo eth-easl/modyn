@@ -2,12 +2,12 @@ import json
 import logging
 import os
 import threading
-from typing import Iterable
+from typing import Iterable, Optional
 
 import grpc
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable=no-name-in-module
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString  # noqa: E402, E501
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     DataInformRequest,
@@ -18,6 +18,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetSamplesRequest,
     GetSelectionStrategyRequest,
     GetStatusBarScaleRequest,
+    JsonString,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
     PipelineResponse,
@@ -47,9 +48,40 @@ class SelectorGRPCServicer(SelectorServicer):
         self.selector_manager = selector_manager
         self._sample_batch_size = sample_batch_size
 
+    # TODO(#302): Remove this when reworking pipeline registration
     def register_pipeline(self, request: RegisterPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         logger.info(f"Registering pipeline with request - {str(request)}")
-        pipeline_id = self.selector_manager.register_pipeline(request.num_workers, request.selection_strategy.value)
+
+        full_model_strategy = ModelStorageStrategyConfig.from_config(
+            request.model_storage_policy.full_model_strategy_config
+        )
+
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
+        if (
+            request.model_storage_policy.HasField("incremental_model_strategy_config")
+            and request.model_storage_policy.incremental_model_strategy_config is not None
+        ):
+            incremental_model_strategy = ModelStorageStrategyConfig.from_config(
+                request.model_storage_policy.incremental_model_strategy_config
+            )
+
+        full_model_interval: Optional[int] = None
+        if (
+            request.model_storage_policy.HasField("full_model_interval")
+            and request.model_storage_policy.full_model_interval is not None
+        ):
+            full_model_interval = request.model_storage_policy.full_model_interval
+
+        pipeline_id = self.selector_manager.register_pipeline(
+            request.num_workers,
+            request.selection_strategy.value,
+            request.model_class_name,
+            request.model_configuration.value,
+            request.amp,
+            full_model_strategy,
+            incremental_model_strategy,
+            full_model_interval,
+        )
         return PipelineResponse(pipeline_id=pipeline_id)
 
     def get_sample_keys_and_weights(  # pylint: disable-next=unused-argument
