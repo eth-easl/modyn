@@ -359,7 +359,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
   SPDLOG_INFO("DeleteDataset request received. dataset_id: {}", dataset_id);
 
-  bool success = storage_database_connection_.delete_dataset(request->dataset_id());  // NOLINT misc-const-correctness
+  bool success = storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);  // NOLINT misc-const-correctness
 
   SPDLOG_INFO("DeleteDataset request completed.");
 

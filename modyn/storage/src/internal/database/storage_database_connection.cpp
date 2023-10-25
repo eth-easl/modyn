@@ -152,13 +152,7 @@ DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& confi
   FAIL("Unsupported database driver: " + drivername);
 }
 
-bool StorageDatabaseConnection::delete_dataset(const std::string& name) const {
-  int64_t dataset_id = get_dataset_id(name);
-  if (dataset_id == -1) {
-    SPDLOG_ERROR("Dataset {} not found", name);
-    return false;
-  }
-
+bool StorageDatabaseConnection::delete_dataset(const std::string& name, const int64_t& dataset_id) const {
   soci::session session = get_session();
 
   // Delete all samples for this dataset
