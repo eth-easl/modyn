@@ -325,10 +325,11 @@ void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
     const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
+  SPDLOG_INFO("Inserting {} samples into database", file_frame.size());
 
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
-      fmt::format("COPY samples{} FROM STDIN WITH (FORMAT CSV, HEADER FALSE, DELIMITER ',')", table_columns);
+      fmt::format("COPY samples{} FROM STDIN WITH (DELIMITER ',')", table_columns);
 
   // Create stringbuffer, dump data into file buffer csv and send to postgresql
   std::stringstream ss;
