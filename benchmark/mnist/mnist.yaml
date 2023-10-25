@@ -6,6 +6,9 @@ model:
   id: ResNet18
   config:
     num_classes: 10
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
 training:
   gpus: 1
   device: "cuda:0"
@@ -43,7 +46,6 @@ data:
     import io
     def bytes_parser_function(data: bytes) -> Image:
       return Image.open(io.BytesIO(data)).convert("RGB")
-
 trigger:
   id: DataAmountTrigger
   trigger_config:

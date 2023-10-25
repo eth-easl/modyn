@@ -27,6 +27,7 @@ dependencies:
   - pyaml
   - numpy
   - pandas
+  - bitstring
   - tensorboard
   - scipy
   - pyftpdlib

@@ -175,6 +175,7 @@ model_storage:
   hostname: "model_storage"
   port: "50059"
   ftp_port: "50060"
+  models_directory: "/tmp/models"
 
 evaluator:
   hostname: "evaluator"

@@ -6,6 +6,9 @@ model:
   id: ArticleNet
   config:
     num_classes: 172
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
 training:
   gpus: 1
   device: "cuda:0"

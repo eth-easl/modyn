@@ -8,8 +8,10 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     JsonString,
+    ModelStoragePolicyInfo,
     RegisterPipelineRequest,
     SamplesResponse,
+    StrategyConfig,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
@@ -29,6 +31,10 @@ def connect_to_selector_servicer() -> grpc.Channel:
     return selector_channel
 
 
+def get_model_storage_policy() -> ModelStoragePolicyInfo:
+    return ModelStoragePolicyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
+
+
 def test_label_balanced_presampling_huge() -> None:
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
@@ -44,7 +50,14 @@ def test_label_balanced_presampling_huge() -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     trigger_id = selector.inform_data_and_trigger(
@@ -124,7 +137,14 @@ def test_label_balanced_force_same_size():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     # now we just have 2 classes with 4 samples each
@@ -208,7 +228,14 @@ def test_label_balanced_force_all_samples():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     # same classes as before
@@ -298,7 +325,14 @@ def test_newdata() -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -437,7 +471,14 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -586,7 +627,14 @@ def test_empty_triggers() -> None:
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -754,7 +802,14 @@ def test_many_samples_evenly_distributed():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -824,7 +879,14 @@ def test_many_samples_unevenly_distributed():
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     selector.inform_data(
@@ -895,7 +957,14 @@ def test_get_available_labels(reset_after_trigger: bool):
     }
 
     pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(num_workers=2, selection_strategy=JsonString(value=json.dumps(strategy_config)))
+        RegisterPipelineRequest(
+            num_workers=2,
+            selection_strategy=JsonString(value=json.dumps(strategy_config)),
+            model_class_name="ResNet10",
+            model_configuration=JsonString(value="{}"),
+            amp=False,
+            model_storage_policy=get_model_storage_policy(),
+        )
     ).pipeline_id
 
     selector.inform_data(

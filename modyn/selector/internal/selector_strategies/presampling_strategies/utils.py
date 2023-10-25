@@ -1,5 +1,5 @@
 from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
-from modyn.utils.utils import instantiate_class
+from modyn.utils import instantiate_class
 
 
 def instantiate_presampler(config: dict, modyn_config: dict, pipeline_id: int) -> AbstractPresamplingStrategy:
