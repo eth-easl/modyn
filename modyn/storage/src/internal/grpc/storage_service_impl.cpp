@@ -154,6 +154,8 @@ void StorageServiceImpl::send_get_response(
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
+  SPDLOG_INFO("Dataset id: {}", dataset_id);
+
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {::grpc::StatusCode::OK, "Dataset does not exist."};
@@ -161,11 +163,15 @@ void StorageServiceImpl::send_get_response(
 
   const int64_t number_of_files = get_number_of_files(dataset_id, session);
 
+  SPDLOG_INFO("Number of files: {}", number_of_files);
+
   // Get the file ids
   std::vector<int64_t> file_ids(number_of_files);
   std::vector<int64_t> timestamps(number_of_files);
   session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp > :timestamp",
       soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->timestamp());
+
+  SPDLOG_INFO("File ids: {}", fmt::join(file_ids, ", "));
 
   if (disable_multithreading_) {
     for (const int64_t file_id : file_ids) {
@@ -173,21 +179,25 @@ void StorageServiceImpl::send_get_response(
     }
   } else {
     for (int64_t i = 0; i < retrieval_threads_; i++) {
+      SPDLOG_INFO("Starting thread {}", i);
       retrieval_threads_vector_[i] = std::thread([&, i, number_of_files, file_ids]() {
         const int64_t start_index = i * (number_of_files / retrieval_threads_);
         int64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
         if (end_index > number_of_files) {
           end_index = number_of_files;
         }
+        SPDLOG_INFO("Thread {} start index: {}, end index: {}", i, start_index, end_index);
         for (int64_t j = start_index; j < end_index; j++) {
           send_get_new_data_since_response(writer, file_ids[j]);
         }
       });
     }
 
+    SPDLOG_INFO("Waiting for threads to finish.");
     for (auto& thread : retrieval_threads_vector_) {
       thread.join();
     }
+    SPDLOG_INFO("Threads finished.");
   }
   return {::grpc::StatusCode::OK, "Data retrieved."};
 }
@@ -555,7 +565,6 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
 ::grpc::Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
     modyn::storage::GetDatasetSizeResponse* response) {  // NOLINT misc-const-correctness
-  SPDLOG_INFO("GetDatasetSize request received.");
   soci::session session = storage_database_connection_.get_session();
 
   // Check if the dataset exists

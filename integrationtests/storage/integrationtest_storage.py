@@ -278,6 +278,7 @@ def test_storage() -> None:
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
     check_dataset_size_invalid()
+    check_dataset_size(0)  # Check if the dataset is empty.
 
     response = None
     for i in range(20):
