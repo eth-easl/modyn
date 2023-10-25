@@ -291,11 +291,12 @@ def check_delete_data() -> None:
 def test_storage() -> None:
     check_get_current_timestamp()  # Check if the storage service is available.
     create_dataset_dir()
-    add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
     register_new_dataset()
-    check_dataset_availability()  # Check if the dataset is available.
-    check_dataset_size_invalid()
     check_dataset_size(0)  # Check if the dataset is empty.
+    check_dataset_size_invalid()
+    check_dataset_availability()  # Check if the dataset is available.
+
+    add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
 
     response = None
     for i in range(20):
