@@ -575,15 +575,12 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
     return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
-  SPDLOG_INFO("Dataset id: {}", dataset_id);
-
   int64_t total_keys = 0;
   session << "SELECT COUNT(*) FROM samples WHERE dataset_id = :dataset_id", soci::into(total_keys),
       soci::use(dataset_id);
 
-  SPDLOG_INFO("Total keys: {}", total_keys);
-
   response->set_num_keys(total_keys);
+  response->set_success(true);
   return {::grpc::StatusCode::OK, "Dataset size retrieved."};
 }
 
