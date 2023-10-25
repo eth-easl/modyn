@@ -333,7 +333,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
   session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
       soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
-  
+
   auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
       base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
 
@@ -353,7 +353,8 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     }
   }
 
-  bool success = storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);  // NOLINT misc-const-correctness
+  bool success =
+      storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);  // NOLINT misc-const-correctness
 
   response->set_success(success);
   if (success) {
