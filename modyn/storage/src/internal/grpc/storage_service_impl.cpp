@@ -343,7 +343,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 
   SPDLOG_INFO("DeleteDataset request received. number_of_files: {}", number_of_files);
 
-  if (number_of_files >= 0) {
+  if (number_of_files > 0) {
     std::vector<std::string> file_paths(number_of_files);
     session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths), soci::use(dataset_id);
 
