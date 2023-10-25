@@ -22,6 +22,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
     GetRequest,
     RegisterNewDatasetRequest,
+    DeleteDataRequest,
+    DeleteDataResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
@@ -271,6 +273,21 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
     ), f"Could not get all images. Images missing: keys: {keys} i: {i}"
 
 
+def check_delete_data() -> None:
+    storage_channel = connect_to_storage()
+
+    storage = StorageStub(storage_channel)
+
+    request = DeleteDataRequest(
+        dataset_id="test_dataset",
+        keys=FIRST_ADDED_IMAGES,
+    )
+
+    responses = storage.DeleteData(request)
+
+    assert responses.success, "Could not delete data."
+
+
 def test_storage() -> None:
     check_get_current_timestamp()  # Check if the storage service is available.
     create_dataset_dir()
@@ -332,6 +349,10 @@ def test_storage() -> None:
     check_data(response.keys, FIRST_ADDED_IMAGES)
 
     check_data_per_worker()
+
+    check_delete_data()
+
+    check_dataset_size(10)
 
     check_get_current_timestamp()  # Check if the storage service is still available.
 
