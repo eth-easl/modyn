@@ -325,7 +325,6 @@ void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
     const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
-  session << "LOCK TABLE samples IN EXCLUSIVE MODE";
 
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
   const std::string cmd =
@@ -338,8 +337,7 @@ void FileWatcher::postgres_copy_insertion(
   }
 
   // Execute the COPY command using the temporary stream object
-  session << cmd;
-  session << ss.str();
+  session << cmd << ss.str();
 }
 
 /*
