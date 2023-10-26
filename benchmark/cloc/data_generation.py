@@ -300,7 +300,7 @@ class CLDatasets:
 
         zip_files = [file for file in os.listdir(directory) if file.endswith(".zip")]
 
-        with ProcessPoolExecutor(max_workers=32) as executor, tqdm(total=len(zip_files)) as pbar:
+        with ProcessPoolExecutor(max_workers=96) as executor, tqdm(total=len(zip_files)) as pbar:
             futures_list = []
             for zip_file in zip_files:
                 future = executor.submit(extract_single_zip, directory, self.tmpdir, zip_file)
