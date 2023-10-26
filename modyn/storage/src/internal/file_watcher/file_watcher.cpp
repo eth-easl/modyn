@@ -115,8 +115,6 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   } else {
     const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
 
-    SPDLOG_INFO("Inserting {} files", file_paths.size());
-
     for (int16_t i = 0; i < insertion_threads_; ++i) {
       auto begin = file_paths.begin() + static_cast<long long>(i * chunk_size);  // NOLINT google-runtime-int
       auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
@@ -231,6 +229,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
       file_wrapper->set_file_path(file_path);
+      SPDLGO_INFO("Inserting file {}", file_path);
+      SPDLOG_INFO("For dataset {}", dataset_id);
       int64_t file_id =  // NOLINT misc-const-correctness
           insert_file(file_path, dataset_id, storage_database_connection, filesystem_wrapper, file_wrapper);
 
