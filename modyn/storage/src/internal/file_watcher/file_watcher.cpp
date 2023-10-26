@@ -327,19 +327,14 @@ void FileWatcher::postgres_copy_insertion(
   soci::session session = storage_database_connection.get_session();
 
   const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
-
-  // Create stringbuffer, dump data into file buffer csv and send to postgresql
-  std::string tmp_file_path = std::filesystem::temp_directory_path() / fmt::format("tmp{}.csv", std::rand());
-  std::ofstream tmp_file(tmp_file_path);
-  for (const auto& frame : file_frame) {
-    tmp_file << fmt::format("{},{},{},{}\n", dataset_id, frame.file_id, frame.index, frame.label);
-  }
-  tmp_file.close();
-  // Execute the COPY command using the temporary stream object
-  const std::string cmd = fmt::format("COPY samples{} FROM '{}' WITH (DELIMITER ',');", table_columns, tmp_file_path);
+  const std::string cmd = fmt::format("COPY samples{} FROM STDIN WITH (DELIMITER ',', FORMAT CSV)", table_columns);
   session << cmd;
-  // Remove the temporary file
-  std::filesystem::remove(tmp_file_path);
+
+  for (const auto& frame : file_frame) {
+    cout << fmt::format("{},{},{},{}\n", dataset_id, frame.file_id, frame.index, frame.label);
+  }
+
+  session << "\\.";
 }
 
 /*
