@@ -7,6 +7,7 @@ from modyn.supervisor.supervisor import Supervisor
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
 EVAL_DIR = pathlib.Path(".")
+DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 
 
 def get_modyn_config() -> dict:
@@ -16,7 +17,7 @@ def get_modyn_config() -> dict:
     return config
 
 
-def get_minimal_pipeline_config(num_workers: int = 1, strategy_config: dict = {}) -> dict:
+def get_minimal_pipeline_config(num_workers: int = 1, strategy_config: dict = DEFAULT_SELECTION_STRATEGY) -> dict:
     return {
         "pipeline": {"name": "Test"},
         "model": {"id": "ResNet18"},
