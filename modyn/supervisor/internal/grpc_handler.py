@@ -21,7 +21,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as 
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     DataInformResponse,
@@ -67,7 +66,12 @@ logger = logging.getLogger(__name__)
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, modyn_config: dict, progress_mgr: enlighten.Manager, status_bar: enlighten.StatusBar):
+    def __init__(
+        self,
+        modyn_config: dict,
+        progress_mgr: Optional[enlighten.Manager] = None,
+        status_bar: Optional[enlighten.StatusBar] = None,
+    ):
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
@@ -78,7 +82,6 @@ class GRPCHandler:
 
         self.init_storage()
         self.init_selector()
-        self.init_metadata_db()
         self.init_trainer_server()
         self.init_evaluator()
 
@@ -142,10 +145,6 @@ class GRPCHandler:
         logger.info("Successfully connected to evaluator.")
         self.connected_to_evaluator = True
 
-    def init_metadata_db(self) -> None:
-        with MetadataDatabaseConnection(self.config) as database:
-            database.create_tables()
-
     def dataset_available(self, dataset_id: str) -> bool:
         assert self.connected_to_storage, "Tried to check for dataset availability, but no storage connection."
         logger.info(f"Checking whether dataset {dataset_id} is available.")
@@ -197,30 +196,6 @@ class GRPCHandler:
         )
 
         return response.timestamp
-
-    def register_pipeline(self, pipeline_config: dict) -> int:
-        """
-        Registers a new pipeline in the metadata database.
-        Returns:
-            The id of the newly created training object
-        Throws:
-            ValueError if num_workers is not positive.
-        """
-        num_workers: int = pipeline_config["training"]["dataloader_workers"]
-        selection_strategy: str = json.dumps(pipeline_config["training"]["selection_strategy"])
-
-        if num_workers < 0:
-            raise ValueError(f"Tried to register training with {num_workers} workers.")
-
-        # TODO(#317): add the lock back after making supervisor a server: with self._next_pipeline_lock:
-        with MetadataDatabaseConnection(self.config) as database:
-            pipeline_id = database.register_pipeline(num_workers, selection_strategy)
-
-        return pipeline_id
-
-    def unregister_pipeline(self, pipeline_id: int) -> None:
-        # TODO(#64,#124,#302): Implement.
-        pass
 
     def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> dict[str, Any]:
         keys, timestamps, labels = zip(*data)
@@ -426,6 +401,9 @@ class GRPCHandler:
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> dict[str, Any]:  # pragma: no cover
+        assert self.progress_mgr is not None
+        assert self.status_bar is not None
+
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
@@ -602,6 +580,9 @@ class GRPCHandler:
         return EvaluateModelRequest(**cleaned_kwargs)
 
     def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
+        assert self.progress_mgr is not None
+        assert self.status_bar is not None
+
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 

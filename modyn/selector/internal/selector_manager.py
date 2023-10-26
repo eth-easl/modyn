@@ -31,12 +31,17 @@ class SelectorManager:
         # For now not a big problem since we mostly run one pipeline but we might want to redesign this.
         self._prepared_locks = [self._manager.Lock() for _ in range(64)]
 
+        self.init_metadata_db()
         self._init_trigger_sample_directory()
 
     def __getstate__(self) -> dict:
         state = self.__dict__.copy()
         del state["_manager"]
         return state
+
+    def init_metadata_db(self) -> None:
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            database.create_tables()
 
     def _init_trigger_sample_directory(self) -> None:
         ignore_existing_trigger_samples = (

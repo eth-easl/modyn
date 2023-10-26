@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 import enlighten
 from modyn.common.benchmark import Stopwatch
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -81,6 +82,7 @@ class Supervisor:
             raise ValueError("No permission to write to the evaluation results directory.")
 
         logging.info("Setting up connections to cluster components.")
+        self.init_metadata_db()
         self.grpc = GRPCHandler(modyn_config, self.progress_mgr, self.status_bar)
 
         if not self.validate_system():
@@ -111,6 +113,10 @@ class Supervisor:
             port = self.modyn_config["tensorboard"]["port"]
             self._run_tensorboard(port)
             logger.info(f"Starting up tensorboard on port {port}.")
+
+    def init_metadata_db(self) -> None:
+        with MetadataDatabaseConnection(self.modyn_config) as database:
+            database.create_tables()
 
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
@@ -282,6 +288,31 @@ class Supervisor:
         )
         tensorboard.launch()
         logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+    def register_pipeline(self, pipeline_config: dict) -> int:
+        """
+        Registers a new pipeline in the metadata database.
+
+        Returns:
+            The id of the newly created pipeline.
+        Throws:
+            ValueError if num_workers is not positive.
+        """
+        num_workers: int = pipeline_config["training"]["dataloader_workers"]
+        selection_strategy: str = json.dumps(pipeline_config["training"]["selection_strategy"])
+
+        if num_workers < 0:
+            raise ValueError(f"Tried to register training with {num_workers} workers.")
+
+        # TODO(#317): add the lock back after making supervisor a server: with self._next_pipeline_lock:
+        with MetadataDatabaseConnection(self.modyn_config) as database:
+            pipeline_id = database.register_pipeline(num_workers, selection_strategy)
+
+        return pipeline_id
+
+    def unregister_pipeline(self, pipeline_id: int) -> None:
+        # TODO(#64,#124,#302): Implement.
+        pass
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:
@@ -515,7 +546,7 @@ class Supervisor:
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
-        self.pipeline_id = self.grpc.register_pipeline(self.pipeline_config)
+        self.pipeline_id = self.register_pipeline(self.pipeline_config)
         self.status_bar.update(demo="Initial Pass")
 
         self.initial_pass()
@@ -529,5 +560,5 @@ class Supervisor:
 
         self.status_bar.update(demo="Cleanup")
         logger.info("Pipeline done, unregistering.")
-        self.grpc.unregister_pipeline(self.pipeline_id)
+        self.unregister_pipeline(self.pipeline_id)
         self._persist_pipeline_log()

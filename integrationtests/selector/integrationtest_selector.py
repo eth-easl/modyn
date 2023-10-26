@@ -1,6 +1,3 @@
-import json
-
-import enlighten
 import grpc
 from integrationtests.utils import get_modyn_config
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -8,7 +5,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetAvailableLabelsRequest,
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
-    JsonString,
     SamplesResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -17,17 +13,13 @@ from modyn.utils import grpc_connection_established
 
 # TODO(54): Write more integration tests for different strategies.
 
+SUPERVISOR_GRPC_HANDLER = GRPCHandler(get_modyn_config())
+
+
 def get_grpc_handler() -> GRPCHandler:
-    progress_mgr = enlighten.get_manager()
-    status_bar = progress_mgr.status_bar(
-        status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
-        color="bold_underline_bright_white_on_lightslategray",
-        justify=enlighten.Justify.CENTER,
-        demo="Initializing",
-        autorefresh=True,
-        min_delta=0.5,
-    )
-    return GRPCHandler(get_modyn_config(), progress_mgr, status_bar)
+    assert SUPERVISOR_GRPC_HANDLER is not None
+    return SUPERVISOR_GRPC_HANDLER
+
 
 def get_minimal_pipeline_config(num_workers: int, strategy_config: dict) -> dict:
     return {
@@ -52,6 +44,7 @@ def get_minimal_pipeline_config(num_workers: int, strategy_config: dict) -> dict
         "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
     }
+
 
 def connect_to_selector_servicer() -> grpc.Channel:
     config = get_modyn_config()

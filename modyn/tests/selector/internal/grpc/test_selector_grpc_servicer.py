@@ -24,6 +24,11 @@ def get_minimal_modyn_config():
     return {"selector": {"keys_in_selector_cache": 1000, "trigger_sample_directory": "/does/not/exist"}}
 
 
+def noop_init_metadata_db(self) -> None:
+    pass
+
+
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     with tempfile.TemporaryDirectory() as tmp_dir:
         config = get_minimal_modyn_config()
@@ -33,6 +38,7 @@ def test_init():
         assert servicer.selector_manager == mgr
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights(test_get_sample_keys_and_weights: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -52,6 +58,7 @@ def test_get_sample_keys_and_weights(test_get_sample_keys_and_weights: MagicMock
         test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights_batching(test_get_sample_keys_and_weights: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -76,6 +83,7 @@ def test_get_sample_keys_and_weights_batching(test_get_sample_keys_and_weights: 
         test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights_empty(test_get_sample_keys_and_weights: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -95,6 +103,7 @@ def test_get_sample_keys_and_weights_empty(test_get_sample_keys_and_weights: Mag
         test_get_sample_keys_and_weights.assert_called_once_with(0, 1, 2, 3)
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "inform_data")
 def test_inform_data(test_inform_data: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -109,6 +118,7 @@ def test_inform_data(test_inform_data: MagicMock):
         test_inform_data.assert_called_once_with(0, [10, 11], [1, 2], [0, 1])
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "inform_data_and_trigger")
 def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -125,6 +135,7 @@ def test_inform_data_and_trigger(test_inform_data_and_trigger: MagicMock):
         test_inform_data_and_trigger.assert_called_once_with(0, [10, 11], [1, 2], [0, 1])
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "get_number_of_samples")
 def test_get_number_of_samples(test_get_number_of_samples: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -141,6 +152,7 @@ def test_get_number_of_samples(test_get_number_of_samples: MagicMock):
         test_get_number_of_samples.assert_called_once_with(42, 21)
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "get_number_of_partitions")
 def test__get_number_of_partitions(test_get_number_of_partitions: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -157,6 +169,7 @@ def test__get_number_of_partitions(test_get_number_of_partitions: MagicMock):
         test_get_number_of_partitions.assert_called_once_with(42, 21)
 
 
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorGRPCServicer, "get_selection_strategy")
 def test_get_selection_strategy(test_get_selection_strategy_remote: MagicMock):
     with tempfile.TemporaryDirectory() as tmp_dir:

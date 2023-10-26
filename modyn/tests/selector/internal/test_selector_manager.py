@@ -10,6 +10,8 @@ from modyn.selector.internal.selector_manager import SelectorManager
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
 
+EXISTING_PIPELINE_ID = 42
+
 
 def get_modyn_config():
     return {
@@ -23,6 +25,10 @@ def get_modyn_config():
         },
         "selector": {"keys_in_selector_cache": 1000, "trigger_sample_directory": "/does/not/exist"},
     }
+
+
+def noop_init_metadata_db(self) -> None:  # pylint: disable=unused-argument
+    pass
 
 
 class MockStrategy(AbstractSelectionStrategy):
@@ -55,12 +61,13 @@ class MockDatabaseConnection:
 
 class MockSession:
     def get(self, some_type, pipeline_id) -> Optional[Pipeline]:  # pylint: disable=unused-argument
-        if pipeline_id == 0:
+        if pipeline_id == EXISTING_PIPELINE_ID:
             return Pipeline(num_workers=2, selection_strategy="{}")
         return None
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     with tempfile.TemporaryDirectory() as tmp_dir:
         config = get_modyn_config()
@@ -69,12 +76,14 @@ def test_init():
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init_throws_non_existing_dir():
     with pytest.raises(ValueError):
         SelectorManager(get_modyn_config())
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "get_sample_keys_and_weights")
 def test_get_sample_keys_and_weights(
@@ -86,7 +95,7 @@ def test_get_sample_keys_and_weights(
         selec = SelectorManager(config)
 
         test__instantiate_strategy.return_value = MockStrategy()
-        pipe_id = 0
+        pipe_id = EXISTING_PIPELINE_ID
 
         with pytest.raises(ValueError):
             # Non existing pipeline
@@ -98,12 +107,13 @@ def test_get_sample_keys_and_weights(
 
         selector_get_sample_keys_and_weight.return_value = [(10, 1.0), (11, 1.0)]
 
-        assert selec.get_sample_keys_and_weights(0, 0, 0, 0) == [(10, 1.0), (11, 1.0)]
+        assert selec.get_sample_keys_and_weights(pipe_id, 0, 0, 0) == [(10, 1.0), (11, 1.0)]
 
         selector_get_sample_keys_and_weight.assert_called_once_with(0, 0, 0)
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "inform_data")
 def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy: MagicMock):
@@ -113,7 +123,7 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
         selec = SelectorManager(config)
         test__instantiate_strategy.return_value = MockStrategy()
 
-        pipe_id = 0
+        pipe_id = EXISTING_PIPELINE_ID
         selector_inform_data.return_value = None
 
         selec.inform_data(pipe_id, [10], [0], [0])
@@ -125,6 +135,7 @@ def test_inform_data(selector_inform_data: MagicMock, test__instantiate_strategy
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "inform_data_and_trigger")
 def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, test__instantiate_strategy: MagicMock):
@@ -134,7 +145,7 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
         selec = SelectorManager(config)
         test__instantiate_strategy.return_value = MockStrategy()
 
-        pipe_id = 0
+        pipe_id = EXISTING_PIPELINE_ID
         selector_inform_data_and_trigger.return_value = None
 
         selec.inform_data_and_trigger(pipe_id, [10], [0], [0])
@@ -146,6 +157,7 @@ def test_inform_data_and_trigger(selector_inform_data_and_trigger: MagicMock, te
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "get_available_labels")
 def test_get_available_labels(selector_get_available_labels: MagicMock, test__instantiate_strategy: MagicMock):
@@ -155,7 +167,7 @@ def test_get_available_labels(selector_get_available_labels: MagicMock, test__in
         selector = SelectorManager(config)
         test__instantiate_strategy.return_value = MockStrategy()
 
-        pipe_id = 0
+        pipe_id = EXISTING_PIPELINE_ID
         selector_get_available_labels.return_value = None
 
         selector.get_available_labels(pipe_id)
@@ -166,6 +178,7 @@ def test_get_available_labels(selector_get_available_labels: MagicMock, test__in
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 def test_init_selector_manager_with_existing_trigger_dir():
     with tempfile.TemporaryDirectory() as tmp_dir:
         with open(os.path.join(tmp_dir, "test"), "w", encoding="utf-8") as file:
@@ -184,6 +197,7 @@ def test__instantiate_strategy():
 
 
 @patch("modyn.selector.internal.selector_manager.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
 @patch.object(SelectorManager, "_instantiate_strategy")
 @patch.object(Selector, "get_number_of_samples")
 def test_get_number_of_samples(selector_get_number_of_samples: MagicMock, test__instantiate_strategy: MagicMock):
@@ -193,7 +207,7 @@ def test_get_number_of_samples(selector_get_number_of_samples: MagicMock, test__
         selec = SelectorManager(config)
         test__instantiate_strategy.return_value = MockStrategy()
 
-        pipe_id = 0
+        pipe_id = EXISTING_PIPELINE_ID
         selector_get_number_of_samples.return_value = 12
 
         assert selec.get_number_of_samples(pipe_id, 21) == 12

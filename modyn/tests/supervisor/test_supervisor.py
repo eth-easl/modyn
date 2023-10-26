@@ -64,7 +64,7 @@ def noop_constructor_mock(
     pass
 
 
-def noop_init_metadata_db(self) -> None:
+def noop_init_metadata_db(self) -> None:  # pylint: disable=unused-argument
     pass
 
 
@@ -82,14 +82,40 @@ def teardown():
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 
+# from test_selector_manager.py
+# register_pipeline funtionality moved from selector to supervisor
+class MockDatabaseConnection:
+    def __init__(self, modyn_config: dict):  # pylint: disable=super-init-not-called,unused-argument
+        self.current_pipeline_id = 0
+        self.session = MockSession()
+
+    def register_pipeline(
+        self, number_of_workers: int, selection_strategy: str  # pylint: disable=unused-argument
+    ) -> typing.Optional[int]:
+        pid = self.current_pipeline_id
+        self.current_pipeline_id += 1
+        return pid
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception):
+        pass
+
+
+class MockSession:
+    def get(self, some_type, pipeline_id):  # pylint: disable=unused-argument
+        return None
+
+
 @patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def get_non_connecting_supervisor(
     test_trainer_server_available,
     test_dataset_available,
@@ -112,10 +138,10 @@ def test_initialization() -> None:
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=False)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def test_constructor_throws_on_invalid_system_config(
     test_trainer_server_available,
     test_dataset_available,
@@ -133,10 +159,10 @@ def test_constructor_throws_on_invalid_system_config(
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def test_constructor_throws_on_invalid_pipeline_config(
     test_trainer_server_available,
     test_dataset_available,
@@ -151,7 +177,6 @@ def test_constructor_throws_on_invalid_pipeline_config(
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_validate_pipeline_config_schema():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -171,7 +196,6 @@ def test_validate_pipeline_config_schema():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test__validate_training_options():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -226,7 +250,6 @@ def test__validate_training_options():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test__validate_evaluation_options():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -252,7 +275,6 @@ def test__validate_evaluation_options():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_validate_pipeline_config_content():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -284,7 +306,6 @@ def test_validate_pipeline_config_content():
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_validate_pipeline_config():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -351,6 +372,19 @@ def test_get_dataset_selector_batch_size_not_given():
 
 def test_shutdown_trainer():
     # TODO(MaxiBoether): implement
+    pass
+
+
+@patch("modyn.supervisor.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
+def test_register_pipeline():
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+
+    pipeline_id = sup.register_pipeline(get_minimal_pipeline_config())
+    assert pipeline_id == 0
+
+
+def test_unregister_pipeline():
+    # TODO(#64,#124,#302): implement a real test when func is implemented.
     pass
 
 
@@ -639,7 +673,6 @@ def test__run_training_with_evaluation(
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
-@patch.object(GRPCHandler, "init_metadata_db", noop_init_metadata_db)
 def test_initial_pass():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
 
@@ -698,12 +731,12 @@ def test_replay_data_open_interval_batched(test__handle_new_data: MagicMock, tes
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
-@patch.object(GRPCHandler, "register_pipeline", return_value=42)
+@patch.object(Supervisor, "register_pipeline", return_value=42)
 @patch.object(Supervisor, "get_dataset_selector_batch_size")
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(GRPCHandler, "unregister_pipeline")
+@patch.object(Supervisor, "unregister_pipeline")
 def test_non_experiment_pipeline(
     test_unregister_pipeline: MagicMock,
     test_wait_for_new_data: MagicMock,
@@ -727,12 +760,12 @@ def test_non_experiment_pipeline(
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
-@patch.object(GRPCHandler, "register_pipeline", return_value=42)
+@patch.object(Supervisor, "register_pipeline", return_value=42)
 @patch.object(Supervisor, "get_dataset_selector_batch_size")
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(GRPCHandler, "unregister_pipeline")
+@patch.object(Supervisor, "unregister_pipeline")
 def test_experiment_pipeline(
     test_unregister_pipeline: MagicMock,
     test_wait_for_new_data: MagicMock,
