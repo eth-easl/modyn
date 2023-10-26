@@ -212,7 +212,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   for (const auto& file_path : file_paths) {
     if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp,
                          storage_database_connection, filesystem_wrapper)) {
-      SPDLOG_INFO("Found valid file: {}", file_path);
       valid_files.push_back(file_path);
     }
   }

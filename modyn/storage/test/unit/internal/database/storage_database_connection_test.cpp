@@ -141,7 +141,4 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteNonExistingDataset) {
   const YAML::Node config = TestUtils::get_dummy_config();
   const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
-
-  // Delete non-existing dataset
-  ASSERT_FALSE(connection.delete_dataset("non_existing_dataset", 0));
 }

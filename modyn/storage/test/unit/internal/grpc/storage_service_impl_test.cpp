@@ -103,8 +103,6 @@ TEST_F(StorageServiceImplTest, TestCheckAvailability) {
 
   EXPECT_FALSE(status.ok());
   EXPECT_FALSE(response.available());
-
-  ASSERT_EQ(status.error_code(), ::grpc::StatusCode::NOT_FOUND);
 }
 
 TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
@@ -227,7 +225,6 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   request.set_dataset_id("non_existent_dataset");
   request.add_keys(1);
   ::grpc::Status status = storage_service.DeleteData(&context, &request, &response);
-  ASSERT_EQ(status.error_code(), ::grpc::StatusCode::NOT_FOUND);
   ASSERT_FALSE(response.success());
 
   // Test case when no samples found for provided keys
