@@ -149,7 +149,11 @@ void FileWatcher::seek_dataset() {
              "WHERE dataset_id = :dataset_id",
       soci::into(last_timestamp), soci::use(dataset_id_);
 
-  update_files_in_directory(dataset_path_, last_timestamp);
+  try {
+    update_files_in_directory(dataset_path_, last_timestamp);
+  } catch (const std::exception& e) {
+    SPDLOG_ERROR("Error while updating files in directory: {}", e.what());
+  }
 }
 
 /*
@@ -200,7 +204,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
                                     const int64_t dataset_id, const YAML::Node& file_wrapper_config,
                                     const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
                                     const bool force_fallback) {
-  SPDLOG_INFO("Handling {} files", file_paths.size());
   if (file_paths.empty()) {
     return;
   }
@@ -331,8 +334,7 @@ void FileWatcher::postgres_copy_insertion(
   SPDLOG_INFO("Using postgresql copy insertion");
   SPDLOG_INFO("Inserting {} samples", file_frame.size());
   soci::session session = storage_database_connection.get_session();
-  auto* postgresql_session_backend =
-      static_cast<soci::postgresql_session_backend*>(session.get_backend());
+  auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
 
   std::string copy_query =  // NOLINT misc-const-correctness
