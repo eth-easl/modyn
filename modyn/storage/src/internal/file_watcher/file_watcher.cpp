@@ -1,6 +1,7 @@
 #include "internal/file_watcher/file_watcher.hpp"
 
 #include <fmt/format.h>
+#include <libpq/libpq-fs.h>
 #include <spdlog/spdlog.h>
 
 #include <csignal>
@@ -265,6 +266,7 @@ int64_t FileWatcher::insert_file(
   int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
   int64_t file_id = -1;
 
+  // soci::session::get_last_insert_id() is not supported by postgresql, so we need to use a different query.
   if (storage_database_connection.get_drivername() == storage::database::DatabaseDriver::SQLITE3) {
     soci::session session = storage_database_connection.get_session();
     session << "INSERT INTO files (dataset_id, path, number_of_samples, "
@@ -276,7 +278,6 @@ int64_t FileWatcher::insert_file(
     static_assert(sizeof(long long) == sizeof(int64_t));  // NOLINT google-runtime-int
     long long inner_file_id = -1;                         // NOLINT google-runtime-int
     if (!session.get_last_insert_id("files", inner_file_id)) {
-      // The insert was not successful.
       SPDLOG_ERROR("Failed to insert file into database");
       return -1;
     }
@@ -316,8 +317,7 @@ void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConn
 /*
  * Inserts the file frame into the database using the optimized postgresql copy command.
  *
- * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
- * It is then dumped into a csv file buffer and sent to postgresql using the copy command.
+ * The data is expected in a vector of FileFrame which is defined as file_id, sample_index, label.
  *
  * @param file_frame The file frame to be inserted.
  */
@@ -325,22 +325,29 @@ void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
     const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
+  soci::postgresql_session_backend* postgresql_session_backend =
+      static_cast<soci::postgresql_session_backend*>(session.get_backend());
+  PGconn* conn = postgresql_session_backend->conn_;
 
-  const std::string table_columns = "(dataset_id,file_id,sample_index,label)";
-  const std::string cmd = fmt::format("COPY samples{} FROM STDIN WITH (DELIMITER ',', FORMAT CSV)", table_columns);
-  session << cmd;
+  std::string copy_query = fmt::format(
+      "COPY samples(dataset_id,file_id,sample_index,label) FROM STDIN WITH (DELIMITER ',', FORMAT CSV)", table_columns);
 
+  PQexec(conn, copy_query.c_str());
+  // put the data into the buffer
+  std::stringstream ss;
   for (const auto& frame : file_frame) {
-    std::cout << fmt::format("{},{},{},{}\n", dataset_id, frame.file_id, frame.index, frame.label);
+    ss << fmt::format("{},{},{},{}\n", dataset_id, frame.file_id, frame.index, frame.label);
   }
 
-  session << "\\.";
+  PQputline(conn, ss.str().c_str());
+  PQputline(conn, "\\.\n");
+  PQendcopy(conn);
 }
 
 /*
  * Inserts the file frame into the database using the fallback method.
  *
- * The data is expected in a vector of tuples frame which is defined as dataset_id, file_id, sample_index, label.
+ * The data is expected in a vector of FileFrame structs which is defined as file_id, sample_index, label.
  * It is then inserted into the database using a prepared statement.
  *
  * @param file_frame The file frame to be inserted.
@@ -357,7 +364,7 @@ void FileWatcher::fallback_insertion(const std::vector<FileFrame>& file_frame,
       query += fmt::format("({},{},{},{}),", dataset_id, frame->file_id, frame->index, frame->label);
     }
 
-    // Add the last tuple without the trailing comma
+    // Add the last frame without a comma
     const auto& last_frame = file_frame.back();
     query += fmt::format("({},{},{},{})", dataset_id, last_frame.file_id, last_frame.index, last_frame.label);
 
