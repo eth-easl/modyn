@@ -177,7 +177,7 @@ void StorageServiceImpl::send_get_response(
     // Get the file ids
     std::vector<int64_t> file_ids(number_of_files);
     std::vector<int64_t> timestamps(number_of_files);
-    session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp > :timestamp",
+    session << "SELECT file_id, updated_at FROM files WHERE dataset_id = :dataset_id AND updated_at > :timestamp",
         soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request_timestamp);
 
     if (disable_multithreading_) {
@@ -253,8 +253,8 @@ void StorageServiceImpl::send_get_new_data_since_response(
     // Get the file ids
     std::vector<int64_t> file_ids(number_of_files);
     std::vector<int64_t> timestamps(number_of_files);
-    session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp "
-               "AND timestamp <= :end_timestamp ",
+    session << "SELECT file_id, updated_at FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp "
+               "AND updated_at <= :end_timestamp ",
         soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request_start_timestamp),
         soci::use(request_end_timestamp);
 
