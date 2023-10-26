@@ -115,6 +115,8 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
   } else {
     const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
 
+    SPDLOG_INFO("Inserting {} files", file_paths.size());
+
     for (int16_t i = 0; i < insertion_threads_; ++i) {
       auto begin = file_paths.begin() + static_cast<long long>(i * chunk_size);  // NOLINT google-runtime-int
       auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
@@ -198,6 +200,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
                                     const int64_t dataset_id, const YAML::Node& file_wrapper_config,
                                     const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
                                     const bool force_fallback) {
+  SPDLOG_INFO("Handling {} files", file_paths.size());
   if (file_paths.empty()) {
     return;
   }
@@ -232,6 +235,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
         SPDLOG_ERROR("Failed to insert file into database");
         continue;
       }
+
+      SPDLOG_INFO("Inserting file {} with id {}", file_path, file_id);
 
       const std::vector<int64_t> labels = file_wrapper->get_all_labels();
 
