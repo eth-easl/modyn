@@ -608,14 +608,14 @@ int64_t StorageServiceImpl::get_number_of_files(int64_t dataset_id, soci::sessio
   int64_t number_of_files = -1;  // NOLINT misc-const-correctness
 
   if (start_timestamp >= 0 && end_timestamp == -1) {
-    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp",
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp);
   } else if (start_timestamp == -1 && end_timestamp >= 0) {
-    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp <= :end_timestamp",
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(end_timestamp);
   } else if (start_timestamp >= 0 && end_timestamp >= 0) {
-    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp AND "
-               "timestamp <= :end_timestamp",
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
+               "updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
   } else {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
