@@ -14,6 +14,7 @@ message RegisterModelRequest {
   string hostname = 3;
   int32 port = 4;
   string model_path = 5;
+  bytes checksum = 6;
 }
 
 message RegisterModelResponse {
@@ -23,11 +24,13 @@ message RegisterModelResponse {
 
 message FetchModelRequest {
   int32 model_id = 1;
+  bool load_metadata = 2;
 }
 
 message FetchModelResponse {
   bool success = 1;
   string model_path = 2;
+  bytes checksum = 3;
 }
 
 message DeleteModelRequest {

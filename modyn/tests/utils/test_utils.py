@@ -1,5 +1,7 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import io
 import pathlib
+import tempfile
 from unittest.mock import patch
 
 import grpc
@@ -11,21 +13,26 @@ from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
 from modyn.utils import (
+    calculate_checksum,
     convert_timestr_to_seconds,
     current_time_millis,
     deserialize_function,
     dynamic_module_import,
     flatten,
     get_partition_for_worker,
+    get_tensor_byte_size,
     grpc_connection_established,
+    instantiate_class,
     model_available,
     package_available_and_can_be_imported,
+    reconstruct_tensor_from_bytes,
     seed_everything,
     trigger_available,
+    unzip_file,
     validate_timestr,
     validate_yaml,
+    zip_file,
 )
-from modyn.utils.utils import instantiate_class
 
 
 @patch.object(GRPCHandler, "init_storage", lambda self: None)
@@ -203,3 +210,86 @@ def test_instantiate_class_not_existing():
     # missing parameters
     with pytest.raises(TypeError):
         instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage")
+
+
+def test_calculate_checksum():
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempdir_path = pathlib.Path(tempdir)
+
+        with open(tempdir_path / "testfile1.txt", "w", encoding="utf-8") as file:
+            file.write("This is a test")
+
+        with open(tempdir_path / "testfile2.txt", "w", encoding="utf-8") as file:
+            file.write("This is a test")
+
+        assert calculate_checksum(tempdir_path / "testfile1.txt") == calculate_checksum(tempdir_path / "testfile2.txt")
+        assert calculate_checksum(tempdir_path / "testfile1.txt", chunk_num_blocks=20) == calculate_checksum(
+            tempdir_path / "testfile2.txt", chunk_num_blocks=10
+        )
+        assert calculate_checksum(tempdir_path / "testfile1.txt", hash_func_name="blake2s") != calculate_checksum(
+            tempdir_path / "testfile2.txt", chunk_num_blocks=10
+        )
+
+
+def test_zip_and_unzip_file():
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempdir_path = pathlib.Path(tempdir)
+
+        text_file_path = tempdir_path / "testfile.txt"
+        zip_file_path = tempdir_path / "testfile.zip"
+
+        with open(text_file_path, "w", encoding="utf-8") as file:
+            file.write("This is a testfile!")
+
+        zip_file(text_file_path, zip_file_path, remove_file=True)
+
+        assert not text_file_path.exists()
+        assert zip_file_path.exists() and zip_file_path.is_file()
+
+        unzip_file(zip_file_path, text_file_path, remove_file=True)
+
+        assert not zip_file_path.exists()
+        assert text_file_path.exists() and text_file_path.is_file()
+
+        with open(text_file_path, "r", encoding="utf-8") as file:
+            assert file.read() == "This is a testfile!"
+
+
+def test_read_tensor_from_bytes():
+    buf = io.BytesIO()
+    buf.write(b"\x01\x00\x00\x00")
+    buf.write(b"\x02\x00\x00\x00")
+    buf.write(b"\x03\x00\x00\x00")
+    buf.write(b"\x04\x00\x00\x00")
+    buf.seek(0)
+    res = reconstruct_tensor_from_bytes(torch.ones((2, 2), dtype=torch.int32), buf.getvalue())
+
+    assert res[0, 0] == 1 and res[0, 1] == 2 and res[1, 0] == 3 and res[1, 1] == 4
+
+    buf.seek(0, io.SEEK_END)
+    buf.write(b"\xff\x00\x00\x00")
+    buf.write(b"\x0f\x00\x00\x00")
+    buf.seek(0)
+
+    res = reconstruct_tensor_from_bytes(torch.ones((1, 6), dtype=torch.int32), buf.getvalue())
+    assert (
+        res[0, 0] == 1 and res[0, 1] == 2 and res[0, 2] == 3 and res[0, 3] == 4 and res[0, 4] == 255 and res[0, 5] == 15
+    )
+
+    buf_floats = io.BytesIO()
+    buf_floats.write(b"\x00\x00\x00\x3f")
+    buf_floats.write(b"\x00\x00\x00\x3e")
+
+    res = reconstruct_tensor_from_bytes(torch.ones((2, 1), dtype=torch.float32), buf_floats.getvalue())
+    assert res[0, 0] == 1.0 / 2 and res[1, 0] == 1.0 / 8
+
+
+def test_get_tensor_byte_size():
+    tensor = torch.ones((3, 3, 3), dtype=torch.int32)
+    assert get_tensor_byte_size(tensor) == 3 * 3 * 3 * 4
+
+    tensor = torch.ones((5, 5), dtype=torch.float64) * 5
+    assert get_tensor_byte_size(tensor) == 5 * 5 * 8
+
+    tensor = torch.ones(10, dtype=torch.float32)
+    assert get_tensor_byte_size(tensor) == 40

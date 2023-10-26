@@ -6,6 +6,7 @@ import grpc
 import yaml
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable-next=no-name-in-module
 from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501
@@ -49,7 +50,9 @@ def get_grpc_channel(config: dict, component: str) -> grpc.Channel:
 
 def send_metadata_and_check_database(processor_client: MetadataProcessorClient, config: dict) -> int:
     with MetadataDatabaseConnection(config) as database:
-        pipeline_id = database.register_pipeline(2)
+        pipeline_id = database.register_pipeline(
+            2, "ResNet18", "{}", False, ModelStorageStrategyConfig("PyTorchFullModel")
+        )
 
     req = TrainingMetadataRequest(
         pipeline_id=pipeline_id,

@@ -1,8 +1,10 @@
 import errno
+import hashlib
 import importlib
 import importlib.util
 import inspect
 import logging
+import math
 import os
 import pathlib
 import random
@@ -13,6 +15,7 @@ from enum import Enum
 from inspect import isfunction
 from types import ModuleType
 from typing import Any, Callable, Optional
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import grpc
 import numpy as np
@@ -239,3 +242,102 @@ def get_partition_for_worker(worker_id: int, total_workers: int, total_num_eleme
         start_index = 0
 
     return start_index, worker_subset_size
+
+
+def calculate_checksum(file_path: pathlib.Path, hash_func_name: str = "blake2b", chunk_num_blocks: int = 128) -> bytes:
+    """
+    Returns the checksum of a file.
+
+    Args:
+        file_path: the path to the file.
+        hash_func_name: the name of the hash function.
+        chunk_num_blocks: size of the update step.
+
+    Returns:
+        bytes: the checksum that is calculated over the file.
+    """
+    assert file_path.exists() and file_path.is_file()
+
+    hash_func = hashlib.new(hash_func_name)
+    with open(file_path, "rb") as file:
+        while chunk := file.read(chunk_num_blocks * hash_func.block_size):
+            hash_func.update(chunk)
+    return hash_func.digest()
+
+
+def zip_file(
+    file_path: pathlib.Path, zipped_file_path: pathlib.Path, compression: int = ZIP_DEFLATED, remove_file: bool = False
+) -> None:
+    """
+    Zips a file.
+
+    Args:
+        file_path: the path to the file that should be zipped.
+        zipped_file_path: the path to the zipped file.
+        compression: the compression algorithm to be used.
+        remove_file: if the file should be removed after zipping.
+    """
+    assert file_path.exists(), "Cannot work with non-existing file"
+
+    with ZipFile(zipped_file_path, "w", compression=compression) as zipfile:
+        zipfile.write(file_path)
+
+    if remove_file:
+        os.remove(file_path)
+
+
+def unzip_file(
+    zipped_file_path: pathlib.Path, file_path: pathlib.Path, compression: int = ZIP_DEFLATED, remove_file: bool = False
+) -> None:
+    """
+    Unzips a file.
+
+    Args:
+        zipped_file_path: path to the zipped file.
+        file_path: path pointing to the location where the unzipped file should be stored.
+        compression: the compression algorithm to be used.
+        remove_file: true if we should remove the zipped file afterwards.
+    """
+    with ZipFile(zipped_file_path, "r", compression=compression) as zipfile:
+        assert len(zipfile.namelist()) == 1
+
+        with open(file_path, "wb") as file:
+            file.write(zipfile.read(zipfile.namelist()[0]))
+
+    if remove_file:
+        os.remove(zipped_file_path)
+
+
+def reconstruct_tensor_from_bytes(tensor: torch.Tensor, buffer: bytes) -> torch.Tensor:
+    """
+    Reconstruct a tensor from bytes.
+
+    Args:
+        tensor: the template for the reconstructed tensor.
+        buffer: the serialized tensor information.
+
+    Returns:
+        Tensor: the reconstructed tensor.
+    """
+    reconstructed_tensor = torch.frombuffer(buffer, dtype=tensor.dtype)
+    return torch.reshape(reconstructed_tensor, tensor.shape)
+
+
+def get_tensor_byte_size(tensor: torch.Tensor) -> int:
+    """
+    Get the amount of bytes needed to represent a tensor in binary format.
+
+    Args:
+        tensor: the tensor, for which the number of bytes is calculated.
+
+    Returns:
+        int: the number of bytes needed to represent the tensor.
+    """
+    shape = tensor.shape
+    if torch.is_floating_point(tensor):
+        type_size = torch.finfo(tensor.dtype).bits / 8
+    else:
+        type_size = torch.iinfo(tensor.dtype).bits / 8
+    num_bytes = int(math.prod(shape) * type_size)
+
+    return num_bytes

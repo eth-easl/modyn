@@ -15,14 +15,17 @@ logger = logging.getLogger(__name__)
 class GRPCServer:
     """GRPC server context manager."""
 
-    def __init__(self, modyn_config: dict, storage_dir: pathlib.Path) -> None:
+    def __init__(self, modyn_config: dict, storage_dir: pathlib.Path, ftp_directory: pathlib.Path) -> None:
         """Initialize the GRPC server.
 
         Args:
             modyn_config (dict): Configuration of the storage module.
+            storage_dir (path): Path to the model storage directory.
+            ftp_directory (path): Path to the ftp directory.
         """
         self.modyn_config = modyn_config
         self.storage_dir = storage_dir
+        self.ftp_directory = ftp_directory
         self.server = grpc.server(
             futures.ThreadPoolExecutor(
                 max_workers=10,
@@ -39,7 +42,9 @@ class GRPCServer:
         Returns:
             grpc.Server: GRPC server
         """
-        add_ModelStorageServicer_to_server(ModelStorageGRPCServicer(self.modyn_config, self.storage_dir), self.server)
+        add_ModelStorageServicer_to_server(
+            ModelStorageGRPCServicer(self.modyn_config, self.storage_dir, self.ftp_directory), self.server
+        )
         port = self.modyn_config["model_storage"]["port"]
         logger.info(f"Starting GRPC server. Listening on port {port}")
         self.server.add_insecure_port("[::]:" + port)
