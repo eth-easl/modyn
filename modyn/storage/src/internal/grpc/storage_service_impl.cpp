@@ -243,7 +243,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
 
     int64_t request_start_timestamp = request->start_timestamp();
     int64_t request_end_timestamp = request->end_timestamp();
-    int64_t number_of_files = get_number_of_files(dataset_id, session, request_start_timestamp, request_end_timestamp);
+    const int64_t number_of_files = get_number_of_files(dataset_id, session, request_start_timestamp, request_end_timestamp);
 
     if (number_of_files <= 0) {
       SPDLOG_INFO("No files found in dataset {}.", dataset_id);

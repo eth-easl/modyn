@@ -323,12 +323,14 @@ void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConn
 void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
     const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
+  SPDLOG_INFO("Using postgresql copy insertion");
+  SPDLOG_INFO("Inserting {} samples", file_frame.size());
   soci::session session = storage_database_connection.get_session();
-  soci::postgresql_session_backend* postgresql_session_backend =
+  auto* postgresql_session_backend =
       static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
 
-  std::string copy_query =
+  std::string copy_query =  // NOLINT misc-const-correctness
       fmt::format("COPY samples(dataset_id,file_id,sample_index,label) FROM STDIN WITH (DELIMITER ',', FORMAT CSV)");
 
   PQexec(conn, copy_query.c_str());
