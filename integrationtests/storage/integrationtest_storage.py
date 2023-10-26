@@ -299,7 +299,7 @@ def test_storage() -> None:
     add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
 
     response = None
-    for i in range(20):
+    for i in range(20):        
         responses = list(get_new_data_since(0))
         assert (
             len(responses) < 2
