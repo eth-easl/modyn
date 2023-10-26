@@ -219,12 +219,16 @@ void StorageServiceImpl::send_get_new_data_since_response(
   soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
       (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
 
+  SPDLOG_INFO("Sending response.");
+  SPDLOG_INFO("Number of samples: {}", number_of_samples);
+
   modyn::storage::GetNewDataSinceResponse response;
   for (auto& row : rs) {
     response.add_keys(row.get<int64_t>(0));
     response.add_labels(row.get<int64_t>(1));
   }
   writer->Write(response);
+  SPDLOG_INFO("Response sent.");
 }
 
 ::grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-naming

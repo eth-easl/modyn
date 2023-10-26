@@ -229,8 +229,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
       file_wrapper->set_file_path(file_path);
-      SPDLOG_INFO("Inserting file {}", file_path);
-      SPDLOG_INFO("For dataset {}", dataset_id);
       int64_t file_id =  // NOLINT misc-const-correctness
           insert_file(file_path, dataset_id, storage_database_connection, filesystem_wrapper, file_wrapper);
 
@@ -238,8 +236,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
         SPDLOG_ERROR("Failed to insert file into database");
         continue;
       }
-
-      SPDLOG_INFO("Inserting file {} with id {}", file_path, file_id);
 
       const std::vector<int64_t> labels = file_wrapper->get_all_labels();
 
@@ -331,8 +327,6 @@ void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConn
 void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
     const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
-  SPDLOG_INFO("Using postgresql copy insertion");
-  SPDLOG_INFO("Inserting {} samples", file_frame.size());
   soci::session session = storage_database_connection.get_session();
   auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
