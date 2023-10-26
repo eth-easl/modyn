@@ -154,18 +154,19 @@ void StorageServiceImpl::send_get_response(
   // Check if the dataset exists
   int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
 
-  SPDLOG_INFO("Dataset id: {}", dataset_id);
-
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
     return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
-  const int64_t number_of_files = get_number_of_files(dataset_id, session);
+  int64_t number_of_files = -1;                      // NOLINT misc-const-correctness
+  int64_t request_timestamp = request->timestamp();  // NOLINT misc-const-correctness
+  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp > :timestamp",
+      soci::into(number_of_files), soci::use(dataset_id), soci::use(request_timestamp);
 
   SPDLOG_INFO("Number of files: {}", number_of_files);
 
-  if (number_of_files == 0) {
+  if (number_of_files <= 0) {
     SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
     return {::grpc::StatusCode::OK, "No files found."};
   }
@@ -174,7 +175,7 @@ void StorageServiceImpl::send_get_response(
   std::vector<int64_t> file_ids(number_of_files);
   std::vector<int64_t> timestamps(number_of_files);
   session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp > :timestamp",
-      soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->timestamp());
+      soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request_timestamp);
 
   SPDLOG_INFO("File ids: {}", fmt::join(file_ids, ", "));
 
@@ -214,7 +215,7 @@ void StorageServiceImpl::send_get_new_data_since_response(
   session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
   soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
       (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
-  
+
   SPDLOG_INFO("Number of samples: {}", number_of_samples);
 
   modyn::storage::GetNewDataSinceResponse response;
@@ -239,15 +240,26 @@ void StorageServiceImpl::send_get_new_data_since_response(
     return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
-  const int64_t number_of_files = get_number_of_files(dataset_id, session);
+  int64_t number_of_files = -1;
+  int64_t request_start_timestamp = request->start_timestamp();
+  int64_t request_end_timestamp = request->end_timestamp();
+  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp AND "
+             "timestamp <= :end_timestamp ",
+      soci::into(number_of_files), soci::use(dataset_id), soci::use(request_start_timestamp),
+      soci::use(request_end_timestamp);
+
+  if (number_of_files <= 0) {
+    SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
+    return {::grpc::StatusCode::OK, "No files found."};
+  }
 
   // Get the file ids
   std::vector<int64_t> file_ids(number_of_files);
   std::vector<int64_t> timestamps(number_of_files);
   session << "SELECT file_id, timestamp FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp "
              "AND timestamp <= :end_timestamp ",
-      soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request->start_timestamp()),
-      soci::use(request->end_timestamp());
+      soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request_start_timestamp),
+      soci::use(request_end_timestamp);
 
   if (disable_multithreading_) {
     for (const int64_t file_id : file_ids) {
