@@ -176,36 +176,17 @@ void StorageServiceImpl::send_get_response(
 
     // Get the file ids
     std::vector<int64_t> file_ids(number_of_files);
-    std::vector<int64_t> timestamps(number_of_files);
-    session << "SELECT file_id, updated_at FROM files WHERE dataset_id = :dataset_id AND updated_at > :timestamp",
-        soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request_timestamp);
+    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at > :timestamp",
+        soci::into(file_ids), soci::use(dataset_id), soci::use(request_timestamp);
 
     if (disable_multithreading_) {
       for (const int64_t file_id : file_ids) {
-        send_get_new_data_since_response(writer, file_id);
+        send_samples_synchronous_retrieval(writer, file_id, session);
       }
     } else {
-      for (int64_t i = 0; i < retrieval_threads_; i++) {
-        retrieval_threads_vector_[i] = std::thread([&, i, number_of_files, file_ids]() {
-          const int64_t start_index = i * (number_of_files / retrieval_threads_);
-          int64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
-          if (end_index > number_of_files) {
-            end_index = number_of_files;
-          }
-          for (int64_t j = start_index; j < end_index; j++) {
-            send_get_new_data_since_response(writer, file_ids[j]);
-          }
-        });
+      for (const int64_t file_id : file_ids) {
+        send_samples_asynchronous_retrieval(writer, file_id, session);
       }
-
-      SPDLOG_INFO("Waiting for threads to finish.");
-      for (auto& thread : retrieval_threads_vector_) {
-        if (thread.joinable()) {
-          SPDLOG_INFO("Joining thread.");
-          thread.join();
-        }
-      }
-      SPDLOG_INFO("Threads finished.");
     }
     return {::grpc::StatusCode::OK, "Data retrieved."};
   } catch (const std::exception& e) {
@@ -214,24 +195,121 @@ void StorageServiceImpl::send_get_response(
   }
 }
 
-void StorageServiceImpl::send_get_new_data_since_response(
-    ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer, int64_t file_id) {
-  soci::session session = storage_database_connection_.get_session();
-  int64_t number_of_samples;
-  session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
-  soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
-      (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
+void StorageServiceImpl::send_samples_synchronous_retrieval(
+    ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer, int64_t file_id, soci::session& session) {
+  int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
+  if (number_of_samples > 0) {
+    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
+        (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
+    modyn::storage::GetNewDataSinceResponse response;
+    for (auto& row : rs) {
+      response.add_keys(row.get<long long>(0));
+      response.add_labels(row.get<long long>(1));
+      if (response.keys_size() == sample_batch_size_) {
+        writer->Write(response);
+        response.Clear();
+      }
+    }
 
-  SPDLOG_INFO("Sending response.");
-  SPDLOG_INFO("Number of samples: {}", number_of_samples);
-
-  modyn::storage::GetNewDataSinceResponse response;
-  for (auto& row : rs) {
-    response.add_keys(row.get<long long>(0));
-    response.add_labels(row.get<long long>(1));
+    if (response.keys_size() > 0) {
+      writer->Write(response);
+    }
   }
-  writer->Write(response);
-  SPDLOG_INFO("Response sent.");
+}
+
+void StorageServiceImpl::send_samples_asynchronous_retrieval(
+    ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer, int64_t file_id, soci::session& session) {
+  int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
+  if (number_of_samples <= sample_batch_size_) {
+    // If the number of samples is less than the sample batch size, retrieve all of the samples in one go and split them
+    // into batches of size number_of_samples / retrieval_threads_.
+    int64_t number_of_samples_per_thread = number_of_samples / retrieval_threads_;
+    std::vector<std::future<SampleData>> sample_ids_futures(retrieval_threads_);
+    int64_t retrieval_thread = 0;
+    for (int64_t i = 0; i < number_of_samples; i += number_of_samples_per_thread) {
+      std::future<SampleData> sample_ids_future = std::async(std::launch::async, get_sample_subset, file_id, i,
+                                                             i + number_of_samples_per_thread - 1,  // NOLINT
+                                                             std::ref(storage_database_connection_));
+      sample_ids_futures[retrieval_thread] = std::move(sample_ids_future);
+      retrieval_thread++;
+    }
+
+    modyn::storage::GetNewDataSinceResponse response;
+    for (auto& sample_ids_future : sample_ids_futures) {
+      SampleData sample_data = sample_ids_future.get();
+      for (size_t i = 0; i < sample_data.ids.size(); i++) {
+        response.add_keys(sample_data.ids[i]);
+        response.add_labels(sample_data.labels[i]);
+      }
+    }
+    writer->Write(response);
+  } else {
+    // If the number of samples is greater than the sample batch size, retrieve the samples in batches of size
+    // sample_batch_size_. The batches are retrieved asynchronously and the futures are stored in a queue. When the
+    // queue is full, the first future is waited for and the response is sent to the client. This is repeated until all
+    // of the futures have been waited for.
+    std::queue<std::future<SampleData>> sample_ids_futures_queue;
+
+    for (int64_t i = 0; i < number_of_samples; i += sample_batch_size_) {
+      if (static_cast<int64_t>(sample_ids_futures_queue.size()) == retrieval_threads_) {
+        // The queue is full, wait for the first future to finish and send the response.
+        modyn::storage::GetNewDataSinceResponse response;
+
+        SampleData sample_data = sample_ids_futures_queue.front().get();
+        sample_ids_futures_queue.pop();
+
+        for (size_t i = 0; i < sample_data.ids.size(); i++) {
+          response.add_keys(sample_data.ids[i]);
+          response.add_labels(sample_data.labels[i]);
+        }
+
+        writer->Write(response);
+      }
+
+      // Start a new future to retrieve the next batch of samples.
+      std::future<SampleData> sample_ids_future =
+          std::async(std::launch::async, get_sample_subset, file_id, i, i + sample_batch_size_ - 1,  // NOLINT
+                     std::ref(storage_database_connection_));
+      sample_ids_futures_queue.push(std::move(sample_ids_future));
+    }
+
+    // Wait for all of the futures to finish executing before returning.
+    while (!sample_ids_futures_queue.empty()) {
+      modyn::storage::GetNewDataSinceResponse response;
+
+      SampleData sample_data = sample_ids_futures_queue.front().get();
+      sample_ids_futures_queue.pop();
+
+      for (size_t i = 0; i < sample_data.ids.size(); i++) {
+        response.add_keys(sample_data.ids[i]);
+        response.add_labels(sample_data.labels[i]);
+      }
+
+      writer->Write(response);
+    }
+  }
+}
+
+SampleData StorageServiceImpl::get_sample_subset(
+    int64_t file_id, int64_t start_index, int64_t end_index,
+    const storage::database::StorageDatabaseConnection& storage_database_connection) {
+  soci::session session = storage_database_connection.get_session();
+  int64_t number_of_samples = end_index - start_index + 1;
+  std::vector<int64_t> sample_ids(number_of_samples);
+  std::vector<int64_t> sample_labels(number_of_samples);
+  session << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND sample_index >= :start_index AND "
+             "sample_index "
+             "<= :end_index",
+      soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id), soci::use(start_index),
+      soci::use(end_index);
+  return {sample_ids, {}, sample_labels};
+}
+
+int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci::session& session) {
+  int64_t number_of_samples;
+  session << "SELECT number_of_samples FROM files WHERE file_id = :file_id", soci::into(number_of_samples),
+      soci::use(file_id);
+  return number_of_samples;
 }
 
 ::grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-naming

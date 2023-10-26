@@ -5,7 +5,9 @@
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
-#include <deque>
+#include <queue>
+#include <future>
+#include <thread>
 
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
@@ -81,8 +83,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                          const SampleData& sample_data, const YAML::Node& file_wrapper_config,
                          const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
                          int64_t file_wrapper_type);
-  void send_get_new_data_since_response(::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
-                                        int64_t file_id);
+  void send_samples_synchronous_retrieval(::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
+                                          int64_t file_id, soci::session& session);
+  void send_samples_asynchronous_retrieval(::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
+                                           int64_t file_id, soci::session& session);
+  static SampleData get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
+                               const storage::database::StorageDatabaseConnection& storage_database_connection);
+  int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session);
   void send_get_new_data_in_interval_response(::grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer,
                                               int64_t file_id);
   static int64_t get_number_of_files(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
