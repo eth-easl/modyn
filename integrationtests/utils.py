@@ -6,7 +6,7 @@ from modyn.supervisor.supervisor import Supervisor
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
-EVAL_DIR = "."
+EVAL_DIR = pathlib.Path(".")
 
 
 def get_modyn_config() -> dict:
