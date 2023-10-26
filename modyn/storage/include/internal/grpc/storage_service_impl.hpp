@@ -85,7 +85,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                         int64_t file_id);
   void send_get_new_data_in_interval_response(::grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer,
                                               int64_t file_id);
-  static int64_t get_number_of_files(int64_t dataset_id, soci::session& session);
+  static int64_t get_number_of_files(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
+                                     int64_t end_timestamp = -1);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
 };
 }  // namespace storage::grpcs

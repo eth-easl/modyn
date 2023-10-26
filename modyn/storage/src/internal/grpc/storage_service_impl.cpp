@@ -159,10 +159,8 @@ void StorageServiceImpl::send_get_response(
     return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
-  int64_t number_of_files = -1;                      // NOLINT misc-const-correctness
   int64_t request_timestamp = request->timestamp();  // NOLINT misc-const-correctness
-  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp > :timestamp",
-      soci::into(number_of_files), soci::use(dataset_id), soci::use(request_timestamp);
+  int64_t number_of_files = get_number_of_files(dataset_id, session, request_timestamp);
 
   SPDLOG_INFO("Number of files: {}", number_of_files);
 
@@ -240,13 +238,9 @@ void StorageServiceImpl::send_get_new_data_since_response(
     return {::grpc::StatusCode::OK, "Dataset does not exist."};
   }
 
-  int64_t number_of_files = -1;
   int64_t request_start_timestamp = request->start_timestamp();
   int64_t request_end_timestamp = request->end_timestamp();
-  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp AND "
-             "timestamp <= :end_timestamp ",
-      soci::into(number_of_files), soci::use(dataset_id), soci::use(request_start_timestamp),
-      soci::use(request_end_timestamp);
+  int64_t number_of_files = get_number_of_files(dataset_id, session, request_start_timestamp, request_end_timestamp);
 
   if (number_of_files <= 0) {
     SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
@@ -600,10 +594,24 @@ int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci
   return dataset_id;
 }
 
-int64_t StorageServiceImpl::get_number_of_files(int64_t dataset_id, soci::session& session) {
+int64_t StorageServiceImpl::get_number_of_files(int64_t dataset_id, soci::session& session,
+                                                int64_t start_timestamp, int64_t end_timestamp) {
   int64_t number_of_files = -1;  // NOLINT misc-const-correctness
-  session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
-      soci::use(dataset_id);
+
+  if (start_timestamp >= 0 && end_timestamp == -1) {
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp",
+        soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp);
+  } else if (start_timestamp == -1 && end_timestamp >= 0) {
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp <= :end_timestamp",
+        soci::into(number_of_files), soci::use(dataset_id), soci::use(end_timestamp);
+  } else if (start_timestamp >= 0 && end_timestamp >= 0) {
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND timestamp >= :start_timestamp AND "
+               "timestamp <= :end_timestamp",
+        soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
+  } else {
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
+        soci::use(dataset_id);
+  }
 
   return number_of_files;
 }

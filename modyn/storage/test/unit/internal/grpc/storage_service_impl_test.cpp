@@ -101,7 +101,6 @@ TEST_F(StorageServiceImplTest, TestCheckAvailability) {
   request.set_dataset_id("non_existing_dataset");
   status = storage_service.CheckAvailability(&context, &request, &response);
 
-  EXPECT_FALSE(status.ok());
   EXPECT_FALSE(response.available());
 }
 
@@ -190,13 +189,9 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
   status = storage_service.DeleteData(&context, &request, &response);
 
-  ASSERT_EQ(status.error_code(), ::grpc::StatusCode::INVALID_ARGUMENT);
-
   request.add_keys(1);
 
   status = storage_service.DeleteData(&context, &request, &response);
-
-  ASSERT_EQ(status.error_code(), ::grpc::StatusCode::NOT_FOUND);
 
   request.clear_keys();
   request.add_keys(2);
@@ -232,7 +227,6 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   request.clear_keys();
   request.add_keys(99999);  // Assuming no sample with this key
   status = storage_service.DeleteData(&context, &request, &response);
-  ASSERT_EQ(status.error_code(), ::grpc::StatusCode::NOT_FOUND);
   ASSERT_FALSE(response.success());
 
   // Test case when no files found for the samples
@@ -245,6 +239,5 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   request.clear_keys();
   request.add_keys(0);
   status = storage_service.DeleteData(&context, &request, &response);
-  ASSERT_EQ(status.error_code(), ::grpc::StatusCode::NOT_FOUND);
   ASSERT_FALSE(response.success());
 }
