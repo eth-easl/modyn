@@ -1,5 +1,5 @@
 import grpc
-from integrationtests.utils import get_modyn_config
+from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, get_supervisor
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetAvailableLabelsRequest,
@@ -8,42 +8,12 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     SamplesResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.utils import grpc_connection_established
 
 # TODO(54): Write more integration tests for different strategies.
 
-SUPERVISOR_GRPC_HANDLER = GRPCHandler(get_modyn_config())
 
-
-def get_grpc_handler() -> GRPCHandler:
-    assert SUPERVISOR_GRPC_HANDLER is not None
-    return SUPERVISOR_GRPC_HANDLER
-
-
-def get_minimal_pipeline_config(num_workers: int, strategy_config: dict) -> dict:
-    return {
-        "pipeline": {"name": "Test"},
-        "model": {"id": "ResNet18"},
-        "training": {
-            "gpus": 1,
-            "device": "cpu",
-            "dataloader_workers": num_workers,
-            "use_previous_model": True,
-            "initial_model": "random",
-            "initial_pass": {"activated": False},
-            "learning_rate": 0.1,
-            "batch_size": 42,
-            "optimizers": [
-                {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
-            ],
-            "optimization_criterion": {"name": "CrossEntropyLoss"},
-            "checkpointing": {"activated": False},
-            "selection_strategy": strategy_config,
-        },
-        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
-        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
-    }
+SUPERVISOR = get_supervisor(get_minimal_pipeline_config(), get_modyn_config())
 
 
 def connect_to_selector_servicer() -> grpc.Channel:
@@ -72,9 +42,7 @@ def test_label_balanced_presampling_huge() -> None:
         },
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
@@ -152,9 +120,7 @@ def test_label_balanced_force_same_size():
         },
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     # now we just have 2 classes with 4 samples each
     selector.inform_data(
@@ -236,9 +202,7 @@ def test_label_balanced_force_all_samples():
         },
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     # same classes as before
     selector.inform_data(
@@ -326,9 +290,7 @@ def test_newdata() -> None:
         "config": {"limit": -1, "reset_after_trigger": True},
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     selector.inform_data(
         DataInformRequest(
@@ -465,9 +427,7 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         },
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     selector.inform_data(
         DataInformRequest(
@@ -614,9 +574,7 @@ def test_empty_triggers() -> None:
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     selector.inform_data(
         DataInformRequest(
@@ -782,9 +740,7 @@ def test_many_samples_evenly_distributed():
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     selector.inform_data(
         DataInformRequest(
@@ -852,9 +808,7 @@ def test_many_samples_unevenly_distributed():
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     selector.inform_data(
         DataInformRequest(
@@ -923,9 +877,7 @@ def test_get_available_labels(reset_after_trigger: bool):
         "config": {"limit": -1, "reset_after_trigger": reset_after_trigger},
     }
 
-    grpc_handler = get_grpc_handler()
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(get_minimal_pipeline_config(2, strategy_config))
 
     selector.inform_data(
         DataInformRequest(

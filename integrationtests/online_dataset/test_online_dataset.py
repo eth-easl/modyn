@@ -12,6 +12,7 @@ import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import torch
 import yaml
+from integrationtests.utils import get_minimal_pipeline_config, get_supervisor
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -23,7 +24,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     RegisterNewDatasetRequest,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.utils import grpc_connection_established
 from PIL import Image
@@ -52,37 +52,7 @@ def get_modyn_config() -> dict:
     return config
 
 
-SUPERVISOR_GRPC_HANDLER = GRPCHandler(get_modyn_config())
-
-
-def get_grpc_handler() -> GRPCHandler:
-    assert SUPERVISOR_GRPC_HANDLER is not None
-    return SUPERVISOR_GRPC_HANDLER
-
-
-def get_minimal_pipeline_config(num_workers: int, strategy_config: dict) -> dict:
-    return {
-        "pipeline": {"name": "Test"},
-        "model": {"id": "ResNet18"},
-        "training": {
-            "gpus": 1,
-            "device": "cpu",
-            "dataloader_workers": num_workers,
-            "use_previous_model": True,
-            "initial_model": "random",
-            "initial_pass": {"activated": False},
-            "learning_rate": 0.1,
-            "batch_size": 42,
-            "optimizers": [
-                {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
-            ],
-            "optimization_criterion": {"name": "CrossEntropyLoss"},
-            "checkpointing": {"activated": False},
-            "selection_strategy": strategy_config,
-        },
-        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
-        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
-    }
+SUPERVISOR = get_supervisor(get_minimal_pipeline_config(), get_modyn_config())
 
 
 def connect_to_selector_servicer() -> grpc.Channel:
@@ -235,9 +205,8 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
         "config": {"limit": -1, "reset_after_trigger": True},
     }
 
-    grpc_handler = get_grpc_handler()
     pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config)
-    pipeline_id = grpc_handler.register_pipeline(pipeline_config)
+    pipeline_id = SUPERVISOR.register_pipeline(pipeline_config)
 
     trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
