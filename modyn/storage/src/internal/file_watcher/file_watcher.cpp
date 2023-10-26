@@ -331,7 +331,7 @@ void FileWatcher::postgres_copy_insertion(
   session << cmd;
 
   for (const auto& frame : file_frame) {
-    cout << fmt::format("{},{},{},{}\n", dataset_id, frame.file_id, frame.index, frame.label);
+    std::cout << fmt::format("{},{},{},{}\n", dataset_id, frame.file_id, frame.index, frame.label);
   }
 
   session << "\\.";
