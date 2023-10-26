@@ -306,7 +306,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
 ::grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
     modyn::storage::DatasetAvailableResponse* response) {
-  try {
+  try {
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
@@ -319,8 +319,7 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     }
     response->set_available(true);
     return {::grpc::StatusCode::OK, "Dataset exists."};
-  }
-  catch (const std::exception& e) {
+  } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in CheckAvailability: {}", e.what());
     return {::grpc::StatusCode::OK, fmt::format("Error in CheckAvailability: {}", e.what())};
   }
