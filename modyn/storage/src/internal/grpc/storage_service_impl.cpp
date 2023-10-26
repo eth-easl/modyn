@@ -154,6 +154,7 @@ void StorageServiceImpl::send_get_response(
 ::grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetNewDataSinceRequest* request,
     ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {
+  SPDLOG_INFO("GetNewDataSince request received.");
   try {
     soci::session session = storage_database_connection_.get_session();
 
@@ -193,6 +194,7 @@ void StorageServiceImpl::send_get_response(
     SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
     return {::grpc::StatusCode::OK, fmt::format("Error in GetNewDataSince: {}", e.what())};
   }
+  SPDLOG_INFO("GetNewDataSince request finished.");
 }
 
 void StorageServiceImpl::send_samples_synchronous_retrieval(

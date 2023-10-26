@@ -188,7 +188,12 @@ void FileWatcher::run() {
   }
 
   while (true) {
-    seek();
+    try {
+      seek();
+    } catch (const std::exception& e) {
+      SPDLOG_ERROR("Error while seeking dataset: {}", e.what());
+      stop_file_watcher->store(true);
+    }
     if (stop_file_watcher->load()) {
       break;
     }
