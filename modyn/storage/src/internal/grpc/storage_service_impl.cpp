@@ -164,12 +164,7 @@ void StorageServiceImpl::send_get_response(
   int64_t request_timestamp = request->timestamp();  // NOLINT misc-const-correctness
   SPDLOG_INFO("Request timestamp: {}", request_timestamp);
   int64_t number_of_files = -1;
-  try {
-    number_of_files = get_number_of_files(dataset_id, session, request_timestamp);
-  } catch (const std::exception& e) {
-    SPDLOG_ERROR("Error getting number of files: {}", e.what());
-    return {::grpc::StatusCode::OK, "Error getting number of files."};
-  }
+  number_of_files = get_number_of_files(dataset_id, session, request_timestamp);
 
   SPDLOG_INFO("Number of files: {}", number_of_files);
 
