@@ -200,7 +200,10 @@ void StorageServiceImpl::send_get_response(
 
       SPDLOG_INFO("Waiting for threads to finish.");
       for (auto& thread : retrieval_threads_vector_) {
-        thread.join();
+        if (thread.joinable()) {
+          SPDLOG_INFO("Joining thread.");
+          thread.join();
+        }
       }
       SPDLOG_INFO("Threads finished.");
     }
@@ -224,8 +227,8 @@ void StorageServiceImpl::send_get_new_data_since_response(
 
   modyn::storage::GetNewDataSinceResponse response;
   for (auto& row : rs) {
-    response.add_keys(row.get<int64_t>(0));
-    response.add_labels(row.get<int64_t>(1));
+    response.add_keys(row.get<long long>(0));
+    response.add_labels(row.get<long long>(1));
   }
   writer->Write(response);
   SPDLOG_INFO("Response sent.");
@@ -247,7 +250,8 @@ void StorageServiceImpl::send_get_new_data_since_response(
 
     int64_t request_start_timestamp = request->start_timestamp();
     int64_t request_end_timestamp = request->end_timestamp();
-    const int64_t number_of_files = get_number_of_files(dataset_id, session, request_start_timestamp, request_end_timestamp);
+    const int64_t number_of_files =
+        get_number_of_files(dataset_id, session, request_start_timestamp, request_end_timestamp);
 
     if (number_of_files <= 0) {
       SPDLOG_INFO("No files found in dataset {}.", dataset_id);
@@ -257,8 +261,9 @@ void StorageServiceImpl::send_get_new_data_since_response(
     // Get the file ids
     std::vector<int64_t> file_ids(number_of_files);
     std::vector<int64_t> timestamps(number_of_files);
-    session << "SELECT file_id, updated_at FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp "
-               "AND updated_at <= :end_timestamp ",
+    session
+        << "SELECT file_id, updated_at FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp "
+           "AND updated_at <= :end_timestamp ",
         soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request_start_timestamp),
         soci::use(request_end_timestamp);
 
