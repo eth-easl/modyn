@@ -17,7 +17,7 @@ from) [Darwin](https://github.com/hpides/darwin), which is inspired by [Hyrise](
 ## Formatting and Naming
 
 * Much of this is enforced in CI.
-* Use the `./compliance_check.sh` script before committing your code.
+* Use the `scripts/python_compliance.sh` and `scripts/clang-format.sh` scripts before committing your code.
 * Choose clear and concise names, and avoid, e.g., `i`, `j`, `ch_ptr`, unless you are using it as a loop variable in a
   short loop.
 * Formatting details: 120 columns, comments above code.
