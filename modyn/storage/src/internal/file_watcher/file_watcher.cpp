@@ -329,8 +329,8 @@ void FileWatcher::postgres_copy_insertion(
       static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
 
-  std::string copy_query = fmt::format(
-      "COPY samples(dataset_id,file_id,sample_index,label) FROM STDIN WITH (DELIMITER ',', FORMAT CSV)", table_columns);
+  std::string copy_query =
+      fmt::format("COPY samples(dataset_id,file_id,sample_index,label) FROM STDIN WITH (DELIMITER ',', FORMAT CSV)");
 
   PQexec(conn, copy_query.c_str());
   // put the data into the buffer
