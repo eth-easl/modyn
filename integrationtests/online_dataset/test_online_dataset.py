@@ -12,7 +12,7 @@ import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import torch
 import yaml
-from integrationtests.utils import get_minimal_pipeline_config, get_supervisor
+from integrationtests.utils import get_minimal_pipeline_config, init_metadata_db, register_pipeline
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -50,9 +50,6 @@ def get_modyn_config() -> dict:
         config = yaml.safe_load(config_file)
 
     return config
-
-
-SUPERVISOR = get_supervisor(get_minimal_pipeline_config(), get_modyn_config())
 
 
 def connect_to_selector_servicer() -> grpc.Channel:
@@ -206,7 +203,8 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
     }
 
     pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config)
-    pipeline_id = SUPERVISOR.register_pipeline(pipeline_config)
+    init_metadata_db(get_modyn_config())
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(

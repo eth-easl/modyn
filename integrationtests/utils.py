@@ -1,12 +1,12 @@
+import json
 import os
 import pathlib
 
 import yaml
-from modyn.supervisor.supervisor import Supervisor
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
-EVAL_DIR = pathlib.Path(".")
 DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 
 
@@ -42,5 +42,19 @@ def get_minimal_pipeline_config(num_workers: int = 1, strategy_config: dict = DE
     }
 
 
-def get_supervisor(pipeline_config, modyn_config) -> Supervisor:
-    return Supervisor(pipeline_config, modyn_config, EVAL_DIR)
+def init_metadata_db(modyn_config: dict) -> None:
+    with MetadataDatabaseConnection(modyn_config) as database:
+        database.create_tables()
+
+
+def register_pipeline(pipeline_config: dict, modyn_config: dict) -> int:
+    num_workers: int = pipeline_config["training"]["dataloader_workers"]
+    selection_strategy: str = json.dumps(pipeline_config["training"]["selection_strategy"])
+
+    if num_workers < 0:
+        raise ValueError(f"Tried to register training with {num_workers} workers.")
+
+    with MetadataDatabaseConnection(modyn_config) as database:
+        pipeline_id = database.register_pipeline(num_workers, selection_strategy)
+
+    return pipeline_id
