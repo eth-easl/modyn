@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 DAY_LENGTH_SECONDS = 24 * 60 * 60
 
-def extract_single_zip(directory: str, zip_file: str) -> None:
+def extract_single_zip(directory: str, target: str, zip_file: str) -> None:
     zip_path = os.path.join(directory, zip_file)
-    output_dir = os.path.join(directory, os.path.splitext(zip_file)[0])
+    output_dir = os.path.join(target, os.path.splitext(zip_file)[0])
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -68,6 +68,14 @@ def setup_argparser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skips the unzipping and only (re)creates labels and timestamps.",
     )
+    parser_.add_argument(
+        "--tmpdir", type=pathlib.Path, action="store", help="If given, use a different directory for storing temporary data"
+    )
+    parser_.add_argument(
+        "--keep_zips",
+        action="store_true",
+        help="Keep the downloaded zipfiles.",
+    )
     return parser_
 
 
@@ -75,9 +83,11 @@ def main():
     parser = setup_argparser()
     args = parser.parse_args()
 
-    logger.info(f"Destination is {args.dir}")
+    tmpdir = args.tmpdir if hasattr(args, "tmpdir") else args.dir
 
-    downloader = CLDatasets(str(args.dir), test_mode=args.test)
+    logger.info(f"Final destination is {args.dir}; download destination is {tmpdir}")
+
+    downloader = CLDatasets(str(args.dir), str(tmpdir), test_mode=args.test, keep_zips = args.keep_zips)
     if not args.skip_download:
         logger.info("Starting download")
         downloader.download_dataset()
@@ -104,7 +114,7 @@ class CLDatasets:
     A class for downloading datasets from Google Cloud Storage.
     """
 
-    def __init__(self, directory: str, test_mode: bool = False, unzip: bool = True):
+    def __init__(self, directory: str, tmpdir: str, test_mode: bool = False, unzip: bool = True, keep_zips: bool = False):
         """
         Initialize the CLDatasets object.
 
@@ -114,8 +124,10 @@ class CLDatasets:
 
         self.dataset = "CLOC"
         self.directory = directory
+        self.tmpdir = tmpdir
         self.unzip = unzip
         self.test_mode = test_mode
+        self.keep_zips = keep_zips
         self.max_timestamp = 0
         self.example_path = ""
         self.example_label_path = ""
@@ -123,24 +135,28 @@ class CLDatasets:
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
 
+        if not os.path.exists(self.tmpdir):
+            os.makedirs(self.tmpdir)
+
+
     def extract(self):
         if self.unzip:
             self.unzip_data_files(self.directory + "/CLOC/data")
 
     def convert_labels_and_timestamps(self, all_data: bool):
         self.convert_labels_and_timestamps_impl(
-            self.directory + "/CLOC_torchsave_order_files/train_store_loc.torchSave",
-            self.directory + "/CLOC_torchsave_order_files/train_labels.torchSave",
-            self.directory + "/CLOC_torchsave_order_files/train_time.torchSave",
+            self.tmpdir + "/CLOC_torchsave_order_files/train_store_loc.torchSave",
+            self.tmpdir + "/CLOC_torchsave_order_files/train_labels.torchSave",
+            self.tmpdir + "/CLOC_torchsave_order_files/train_time.torchSave",
         )
 
         if all_data:
             logger.info("Converting all data")
             self.convert_labels_and_timestamps_impl(
-                self.directory
+                self.tmpdir
                 + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave",
-                self.directory + "/CLOC_torchsave_order_files/cross_val_labels.torchSave",
-                self.directory + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
+                self.tmpdir + "/CLOC_torchsave_order_files/cross_val_labels.torchSave",
+                self.tmpdir + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
             )
 
         self.remove_images_without_label()
@@ -220,7 +236,7 @@ class CLDatasets:
 
     def download_directory_from_gcloud(self, prefix):
         bucket_name = "cl-datasets"
-        dl_dir = pathlib.Path(self.directory)
+        dl_dir = pathlib.Path(self.tmpdir)
         storage_client = storage.Client.create_anonymous_client()
         bucket = storage_client.bucket(bucket_name=bucket_name)
         blobs = bucket.list_blobs(prefix=prefix)  # Get list of files
@@ -246,7 +262,7 @@ class CLDatasets:
             else:
                 print(f"Skipping {target} as it already exists")
 
-        with ThreadPoolExecutor(max_workers=16) as executor, tqdm(total=len(blobs_to_download)) as pbar:
+        with ThreadPoolExecutor(max_workers=32) as executor, tqdm(total=len(blobs_to_download)) as pbar:
             futures_list = []
             download_blob = lambda target, blob: blob.download_to_filename(target)
 
@@ -284,12 +300,10 @@ class CLDatasets:
 
         zip_files = [file for file in os.listdir(directory) if file.endswith(".zip")]
 
-
-
         with ProcessPoolExecutor(max_workers=32) as executor, tqdm(total=len(zip_files)) as pbar:
             futures_list = []
             for zip_file in zip_files:
-                future = executor.submit(extract_single_zip, directory, zip_file)
+                future = executor.submit(extract_single_zip, directory, self.tmpdir, zip_file)
                 future.add_done_callback(lambda p: pbar.update(1))
                 futures_list.append(future)
 
@@ -297,9 +311,10 @@ class CLDatasets:
             for future in futures_list:
                 future.result()
 
-        # Remove zip files
-        remove_command = f"rm {self.directory}/{self.dataset}/data/*.zip"
-        os.system(remove_command)
+        if not self.keep_zips:
+            # Remove zip files
+            remove_command = f"rm {self.tmpdir}/{self.dataset}/data/*.zip"
+            os.system(remove_command)
 
 
 if __name__ == "__main__":
