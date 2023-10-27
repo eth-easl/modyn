@@ -271,7 +271,7 @@ int64_t FileWatcher::insert_file(
     const std::unique_ptr<storage::file_wrapper::FileWrapper>& file_wrapper) {
   int64_t number_of_samples = 0;
   number_of_samples = file_wrapper->get_number_of_samples();
-  // TODO: The number of samples seems way off, debug this.
+  SPDLGOG_INFO("Number of samples: {}", number_of_samples);
   int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
   int64_t file_id = -1;
 
