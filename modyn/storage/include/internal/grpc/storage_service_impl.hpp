@@ -5,8 +5,8 @@
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
-#include <queue>
 #include <future>
+#include <queue>
 #include <thread>
 
 #include "internal/database/storage_database_connection.hpp"
@@ -83,17 +83,27 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                          const SampleData& sample_data, const YAML::Node& file_wrapper_config,
                          const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
                          int64_t file_wrapper_type);
-  void send_samples_synchronous_retrieval(::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
-                                          int64_t file_id, soci::session& session);
-  void send_samples_asynchronous_retrieval(::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer,
-                                           int64_t file_id, soci::session& session);
+
+  template <typename T,
+            typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
+                                    std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type* = nullptr>
+  void send_samples_synchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id, soci::session& session);
+
+  template <typename T,
+            typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
+                                    std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type* = nullptr>
+  void send_samples_asynchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id, soci::session& session);
   static SampleData get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
-                               const storage::database::StorageDatabaseConnection& storage_database_connection);
+                                      const storage::database::StorageDatabaseConnection& storage_database_connection);
   int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session);
-  void send_get_new_data_in_interval_response(::grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer,
-                                              int64_t file_id);
-  static int64_t get_number_of_files(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
-                                     int64_t end_timestamp = -1);
+
+  template <typename T,
+            typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
+                                    std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type* = nullptr>
+  void send_file_ids_and_labels(::grpc::ServerWriter<T>* writer, int64_t dataset_id, int64_t start_timestamp = -1,
+                                int64_t end_timestamp = -1);
+  static std::vector<int64_t> get_file_ids(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
+                                           int64_t end_timestamp = -1);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
 };
 }  // namespace storage::grpcs

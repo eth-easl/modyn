@@ -157,53 +157,49 @@ void StorageServiceImpl::send_get_response(
   SPDLOG_INFO("GetNewDataSince request received.");
   try {
     soci::session session = storage_database_connection_.get_session();
-
-    // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
-
+    const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
     if (dataset_id == -1) {
-      SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+      SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
       return {::grpc::StatusCode::OK, "Dataset does not exist."};
     }
-
     int64_t request_timestamp = request->timestamp();  // NOLINT misc-const-correctness
-    int64_t number_of_files = -1;
-    number_of_files = get_number_of_files(dataset_id, session, request_timestamp);
-
-    if (number_of_files <= 0) {
-      SPDLOG_INFO("No files found in dataset {}.", dataset_id);
-      return {::grpc::StatusCode::OK, "No files found."};
-    }
-
-    // Get the file ids
-    std::vector<int64_t> file_ids(number_of_files);
-    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at > :timestamp",
-        soci::into(file_ids), soci::use(dataset_id), soci::use(request_timestamp);
-
-    if (disable_multithreading_) {
-      for (const int64_t file_id : file_ids) {
-        send_samples_synchronous_retrieval(writer, file_id, session);
-      }
-    } else {
-      for (const int64_t file_id : file_ids) {
-        send_samples_asynchronous_retrieval(writer, file_id, session);
-      }
-    }
-    return {::grpc::StatusCode::OK, "Data retrieved."};
+    send_file_ids_and_labels<modyn::storage::GetNewDataSinceResponse>(writer, dataset_id, request_timestamp);
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
     return {::grpc::StatusCode::OK, fmt::format("Error in GetNewDataSince: {}", e.what())};
   }
   SPDLOG_INFO("GetNewDataSince request finished.");
+  return {::grpc::StatusCode::OK, "Data retrieved."};
 }
 
-void StorageServiceImpl::send_samples_synchronous_retrieval(
-    ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer, int64_t file_id, soci::session& session) {
+template <typename T, typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
+                                              std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type*>
+void StorageServiceImpl::send_file_ids_and_labels(::grpc::ServerWriter<T>* writer, int64_t dataset_id,
+                                                  int64_t start_timestamp, int64_t end_timestamp) {
+  soci::session session = storage_database_connection_.get_session();
+
+  std::vector<int64_t> file_ids = get_file_ids(dataset_id, session, start_timestamp, end_timestamp);
+
+  if (disable_multithreading_) {
+    for (const int64_t file_id : file_ids) {
+      send_samples_synchronous_retrieval<T>(writer, file_id, session);
+    }
+  } else {
+    for (const int64_t file_id : file_ids) {
+      send_samples_asynchronous_retrieval<T>(writer, file_id, session);
+    }
+  }
+}
+
+template <typename T, typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
+                                              std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type*>
+void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
+                                                            soci::session& session) {
   int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples > 0) {
     soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
         (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
-    modyn::storage::GetNewDataSinceResponse response;
+    T response;
     for (auto& row : rs) {
       response.add_keys(row.get<long long>(0));
       response.add_labels(row.get<long long>(1));
@@ -219,30 +215,19 @@ void StorageServiceImpl::send_samples_synchronous_retrieval(
   }
 }
 
-void StorageServiceImpl::send_samples_asynchronous_retrieval(
-    ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer, int64_t file_id, soci::session& session) {
+template <typename T, typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
+                                              std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type*>
+void StorageServiceImpl::send_samples_asynchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
+                                                             soci::session& session) {
   int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples <= sample_batch_size_) {
-    // If the number of samples is less than the sample batch size, retrieve all of the samples in one go and split them
-    // into batches of size number_of_samples / retrieval_threads_.
-    int64_t number_of_samples_per_thread = number_of_samples / retrieval_threads_;
-    std::vector<std::future<SampleData>> sample_ids_futures(retrieval_threads_);
-    int64_t retrieval_thread = 0;
-    for (int64_t i = 0; i < number_of_samples; i += number_of_samples_per_thread) {
-      std::future<SampleData> sample_ids_future = std::async(std::launch::async, get_sample_subset, file_id, i,
-                                                             i + number_of_samples_per_thread - 1,  // NOLINT
-                                                             std::ref(storage_database_connection_));
-      sample_ids_futures[retrieval_thread] = std::move(sample_ids_future);
-      retrieval_thread++;
-    }
-
-    modyn::storage::GetNewDataSinceResponse response;
-    for (auto& sample_ids_future : sample_ids_futures) {
-      SampleData sample_data = sample_ids_future.get();
-      for (size_t i = 0; i < sample_data.ids.size(); i++) {
-        response.add_keys(sample_data.ids[i]);
-        response.add_labels(sample_data.labels[i]);
-      }
+    // If the number of samples is less than the sample batch size, retrieve all of the samples in one go.
+    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
+        (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
+    T response;
+    for (auto& row : rs) {
+      response.add_keys(row.get<long long>(0));
+      response.add_labels(row.get<long long>(1));
     }
     writer->Write(response);
   } else {
@@ -255,7 +240,7 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(
     for (int64_t i = 0; i < number_of_samples; i += sample_batch_size_) {
       if (static_cast<int64_t>(sample_ids_futures_queue.size()) == retrieval_threads_) {
         // The queue is full, wait for the first future to finish and send the response.
-        modyn::storage::GetNewDataSinceResponse response;
+        T response;
 
         SampleData sample_data = sample_ids_futures_queue.front().get();
         sample_ids_futures_queue.pop();
@@ -277,7 +262,7 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(
 
     // Wait for all of the futures to finish executing before returning.
     while (!sample_ids_futures_queue.empty()) {
-      modyn::storage::GetNewDataSinceResponse response;
+      T response;
 
       SampleData sample_data = sample_ids_futures_queue.front().get();
       sample_ids_futures_queue.pop();
@@ -317,79 +302,24 @@ int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci:
 ::grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetDataInIntervalRequest* request,
     ::grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {
+  SPDLOG_INFO("GetDataInInterval request received.");
   try {
     soci::session session = storage_database_connection_.get_session();
-
-    // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
-
+    const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
     if (dataset_id == -1) {
-      SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+      SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
       return {::grpc::StatusCode::OK, "Dataset does not exist."};
     }
-
-    int64_t request_start_timestamp = request->start_timestamp();
-    int64_t request_end_timestamp = request->end_timestamp();
-    const int64_t number_of_files =
-        get_number_of_files(dataset_id, session, request_start_timestamp, request_end_timestamp);
-
-    if (number_of_files <= 0) {
-      SPDLOG_INFO("No files found in dataset {}.", dataset_id);
-      return {::grpc::StatusCode::OK, "No files found."};
-    }
-
-    // Get the file ids
-    std::vector<int64_t> file_ids(number_of_files);
-    std::vector<int64_t> timestamps(number_of_files);
-    session
-        << "SELECT file_id, updated_at FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp "
-           "AND updated_at <= :end_timestamp ",
-        soci::into(file_ids), soci::into(timestamps), soci::use(dataset_id), soci::use(request_start_timestamp),
-        soci::use(request_end_timestamp);
-
-    if (disable_multithreading_) {
-      for (const int64_t file_id : file_ids) {
-        send_get_new_data_in_interval_response(writer, file_id);
-      }
-    } else {
-      for (int64_t i = 0; i < retrieval_threads_; i++) {
-        retrieval_threads_vector_[i] = std::thread([&, i, number_of_files, file_ids]() {
-          const int64_t start_index = i * (number_of_files / retrieval_threads_);
-          int64_t end_index = (i + 1) * (number_of_files / retrieval_threads_);
-          if (end_index > number_of_files) {
-            end_index = number_of_files;
-          }
-          for (int64_t j = start_index; j < end_index; j++) {
-            send_get_new_data_in_interval_response(writer, file_ids[j]);
-          }
-        });
-      }
-
-      for (auto& thread : retrieval_threads_vector_) {
-        thread.join();
-      }
-    }
-    return {::grpc::StatusCode::OK, "Data retrieved."};
+    int64_t start_timestamp = request->start_timestamp();  // NOLINT misc-const-correctness
+    int64_t end_timestamp = request->end_timestamp();      // NOLINT misc-const-correctness
+    send_file_ids_and_labels<modyn::storage::GetDataInIntervalResponse>(writer, dataset_id, start_timestamp,
+                                                                        end_timestamp);
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetDataInInterval: {}", e.what());
     return {::grpc::StatusCode::OK, fmt::format("Error in GetDataInInterval: {}", e.what())};
   }
-}
-
-void StorageServiceImpl::send_get_new_data_in_interval_response(
-    ::grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer, int64_t file_id) {
-  soci::session session = storage_database_connection_.get_session();
-  int64_t number_of_samples;
-  session << "SELECT COUNT(*) FROM samples WHERE file_id = :file_id", soci::into(number_of_samples), soci::use(file_id);
-  soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
-      (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
-
-  modyn::storage::GetDataInIntervalResponse response;
-  for (auto& row : rs) {
-    response.add_keys(row.get<int64_t>(0));
-    response.add_labels(row.get<int64_t>(1));
-  }
-  writer->Write(response);
+  SPDLOG_INFO("GetDataInInterval request finished.");
+  return {::grpc::StatusCode::OK, "Data retrieved."};
 }
 
 ::grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-naming
@@ -462,7 +392,9 @@ void StorageServiceImpl::send_get_new_data_in_interval_response(
     auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
         base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
 
-    const int64_t number_of_files = get_number_of_files(dataset_id, session);
+    int64_t number_of_files;
+    session << "SELECT COUNT(file_id) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
+        soci::use(dataset_id);
 
     if (number_of_files > 0) {
       std::vector<std::string> file_paths(number_of_files);
@@ -725,24 +657,41 @@ int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci
   return dataset_id;
 }
 
-int64_t StorageServiceImpl::get_number_of_files(int64_t dataset_id, soci::session& session, int64_t start_timestamp,
-                                                int64_t end_timestamp) {
+std::vector<int64_t> StorageServiceImpl::get_file_ids(int64_t dataset_id, soci::session& session,
+                                                      int64_t start_timestamp, int64_t end_timestamp) {
   int64_t number_of_files = -1;  // NOLINT misc-const-correctness
+  std::vector<int64_t> file_ids;
 
   if (start_timestamp >= 0 && end_timestamp == -1) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp);
+    file_ids = std::vector<int64_t>(number_of_files);
+
+    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
+        soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp);
   } else if (start_timestamp == -1 && end_timestamp >= 0) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(end_timestamp);
+    file_ids = std::vector<int64_t>(number_of_files);
+
+    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
+        soci::into(file_ids), soci::use(dataset_id), soci::use(end_timestamp);
   } else if (start_timestamp >= 0 && end_timestamp >= 0) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
                "updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
+    file_ids = std::vector<int64_t>(number_of_files);
+
+    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
+               "updated_at <= :end_timestamp",
+        soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
   } else {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
         soci::use(dataset_id);
+    file_ids = std::vector<int64_t>(number_of_files);
+
+    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id", soci::into(file_ids), soci::use(dataset_id);
   }
 
-  return number_of_files;
+  return file_ids;
 }
