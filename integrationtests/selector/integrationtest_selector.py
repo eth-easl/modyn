@@ -6,7 +6,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
     SamplesResponse,
-    StrategyConfig,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
@@ -27,10 +26,6 @@ def connect_to_selector_servicer() -> grpc.Channel:
         raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
 
     return selector_channel
-
-
-def get_model_storage_policy() -> ModelStoragePolicyInfo:
-    return ModelStoragePolicyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
 
 
 def test_label_balanced_presampling_huge() -> None:

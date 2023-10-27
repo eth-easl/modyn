@@ -8,4 +8,7 @@ extend-exclude = """\
     .*/generated/.*\
     .*/benchmark/.*\
     .*/plotting/.*\
+    .*/build/.*\
+    .*/libbuild/.*\
+    .*/clang-tidy-build/.*\
 """

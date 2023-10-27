@@ -3,9 +3,11 @@ import os
 import pathlib
 import shutil
 import typing
+from typing import Optional
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.supervisor import Supervisor
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -90,9 +92,18 @@ class MockDatabaseConnection:
         self.current_pipeline_id = 0
         self.session = MockSession()
 
+    # pylint: disable=unused-argument
     def register_pipeline(
-        self, number_of_workers: int, selection_strategy: str  # pylint: disable=unused-argument
-    ) -> typing.Optional[int]:
+        self,
+        num_workers: int,
+        model_class_name: str,
+        model_config: str,
+        amp: bool,
+        selection_strategy: str,
+        full_model_strategy: ModelStorageStrategyConfig,
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
+        full_model_interval: Optional[int] = None,
+    ) -> Optional[int]:
         pid = self.current_pipeline_id
         self.current_pipeline_id += 1
         return pid

@@ -2,10 +2,9 @@ import json
 import logging
 import os
 import threading
-from typing import Iterable, Optional
+from typing import Iterable
 
 import grpc
-from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import (

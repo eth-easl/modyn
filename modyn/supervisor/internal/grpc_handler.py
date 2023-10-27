@@ -29,7 +29,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     NumberOfSamplesResponse,
     SeedSelectorRequest,
     StatusBarScaleResponse,
-    StrategyConfig,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub

@@ -75,35 +75,15 @@ class StrategyConfig(google.protobuf.message.Message):
 global___StrategyConfig = StrategyConfig
 
 @typing_extensions.final
-class ModelStoragePolicyInfo(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    FULL_MODEL_STRATEGY_CONFIG_FIELD_NUMBER: builtins.int
-    INCREMENTAL_MODEL_STRATEGY_CONFIG_FIELD_NUMBER: builtins.int
-    FULL_MODEL_INTERVAL_FIELD_NUMBER: builtins.int
-    @property
-    def full_model_strategy_config(self) -> global___StrategyConfig: ...
-    @property
-    def incremental_model_strategy_config(self) -> global___StrategyConfig: ...
-    full_model_interval: builtins.int
-    def __init__(
-        self,
-        *,
-        full_model_strategy_config: global___StrategyConfig | None = ...,
-        incremental_model_strategy_config: global___StrategyConfig | None = ...,
-        full_model_interval: builtins.int | None = ...,
-    ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_full_model_interval", b"_full_model_interval", "_incremental_model_strategy_config", b"_incremental_model_strategy_config", "full_model_interval", b"full_model_interval", "full_model_strategy_config", b"full_model_strategy_config", "incremental_model_strategy_config", b"incremental_model_strategy_config"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_full_model_interval", b"_full_model_interval", "_incremental_model_strategy_config", b"_incremental_model_strategy_config", "full_model_interval", b"full_model_interval", "full_model_strategy_config", b"full_model_strategy_config", "incremental_model_strategy_config", b"incremental_model_strategy_config"]) -> None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_full_model_interval", b"_full_model_interval"]) -> typing_extensions.Literal["full_model_interval"] | None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_incremental_model_strategy_config", b"_incremental_model_strategy_config"]) -> typing_extensions.Literal["incremental_model_strategy_config"] | None: ...
-
-global___ModelStoragePolicyInfo = ModelStoragePolicyInfo
-
-@typing_extensions.final
 class DataInformRequest(google.protobuf.message.Message):
+    """// TODO(#302): Remove this when reworking pipeline registration
+    message ModelStoragePolicyInfo {
+      StrategyConfig full_model_strategy_config = 1;
+      optional StrategyConfig incremental_model_strategy_config = 2;
+      optional int32 full_model_interval = 3;
+    }
+    """
+
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     PIPELINE_ID_FIELD_NUMBER: builtins.int
