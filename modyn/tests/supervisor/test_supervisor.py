@@ -18,6 +18,7 @@ def get_minimal_pipeline_config() -> dict:
     return {
         "pipeline": {"name": "Test"},
         "model": {"id": "ResNet18"},
+        "model_storage": {"full_model_strategy": {"name": "PyTorchFullModel"}},
         "training": {
             "gpus": 1,
             "device": "cpu",
@@ -388,7 +389,7 @@ def test_unregister_pipeline():
     pass
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[[(10, 42, 0), (11, 43, 1)]])
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[([(10, 42, 0), (11, 43, 1)], {})])
 @patch.object(Supervisor, "_handle_new_data", return_value=False, side_effect=KeyboardInterrupt)
 def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     # This is a simple test and does not the inclusivity filtering!
@@ -399,7 +400,7 @@ def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_s
     test__handle_new_data.assert_called_once_with([(10, 42, 0), (11, 43, 1)])
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[[(10, 42, 0)], [(11, 43, 1)]])
+@patch.object(GRPCHandler, "get_new_data_since", return_value=[([(10, 42, 0)], {}), ([(11, 43, 1)], {})])
 @patch.object(Supervisor, "_handle_new_data", return_value=False, side_effect=[None, KeyboardInterrupt])
 def test_wait_for_new_data_batched(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     # This is a simple test and does not the inclusivity filtering!
@@ -421,9 +422,9 @@ def test_wait_for_new_data_filtering():
 
     mocked__handle_new_data_return_vals = [True, True, KeyboardInterrupt]
     mocked_get_new_data_since = [
-        [[(10, 42, 0), (11, 43, 0), (12, 43, 1)]],
-        [[(11, 43, 0), (12, 43, 1), (13, 43, 2), (14, 45, 3)]],
-        [[]],
+        [([(10, 42, 0), (11, 43, 0), (12, 43, 1)], {})],
+        [([(11, 43, 0), (12, 43, 1), (13, 43, 2), (14, 45, 3)], {})],
+        [([], {})],
         ValueError,
     ]
 
@@ -452,9 +453,9 @@ def test_wait_for_new_data_filtering_batched():
 
     mocked__handle_new_data_return_vals = [True, True, True, True, True, KeyboardInterrupt]
     mocked_get_new_data_since = [
-        [[(10, 42, 0), (11, 43, 0)], [(12, 43, 1)]],
-        [[(11, 43, 0)], [(12, 43, 1), (13, 43, 2)], [(14, 45, 3)]],
-        [[]],
+        [([(10, 42, 0), (11, 43, 0)], {}), ([(12, 43, 1)], {})],
+        [([(11, 43, 0)], {}), ([(12, 43, 1), (13, 43, 2)], {}), ([(14, 45, 3)], {})],
+        [([], {})],
         ValueError,
     ]
 

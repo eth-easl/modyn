@@ -12,7 +12,7 @@ If you do not have a dataset yet, you can create an example MNIST dataset.
 In the `benchmark/mnist` subdirectory, run `python data_generation.py --timestamps INCREASING --dir /mnt/datasets/mnist` to download the dataset to `/mnst/datasets/mnist`.
 
 ### Running the initial setup
-Please run the `initial_setup.sh` file, if you have not configured Modyn already.
+Please run the `scripts/initial_setup.sh` file, if you have not configured Modyn already.
 This is necessary if you want to run model training on a GPU.
 This will ensure that we do not use the CPU, but CUDA version of PyTorch.
 If necessary, you can adjust the CUDA version in this file.
@@ -27,7 +27,7 @@ Optionally, you can uncomment the `.:/modyn_host` mount for all services to enab
 This is not required if you do not iterate.
 
 ### Starting the containers and the pipeline
-Next, run `./run_modyn.sh` to build the containers and start them. 
+Next, run `./scripts/run_modyn.sh` to build the containers and start them. 
 This may take several minutes for the first time.
 After building the containers, run `tmuxp load tmuxp.yaml` to have access to all container shells and logs.
 Switch to the supervisor pane (using regular tmux bindings).

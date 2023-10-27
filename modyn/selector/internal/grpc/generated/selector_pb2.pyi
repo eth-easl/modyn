@@ -8,6 +8,7 @@ import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.message
 import sys
+import typing
 
 if sys.version_info >= (3, 8):
     import typing as typing_extensions
@@ -40,6 +41,66 @@ class JsonString(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["value", b"value"]) -> None: ...
 
 global___JsonString = JsonString
+
+@typing_extensions.final
+class StrategyConfig(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    NAME_FIELD_NUMBER: builtins.int
+    ZIP_FIELD_NUMBER: builtins.int
+    ZIP_ALGORITHM_FIELD_NUMBER: builtins.int
+    CONFIG_FIELD_NUMBER: builtins.int
+    name: builtins.str
+    zip: builtins.bool
+    zip_algorithm: builtins.str
+    @property
+    def config(self) -> global___JsonString: ...
+    def __init__(
+        self,
+        *,
+        name: builtins.str = ...,
+        zip: builtins.bool | None = ...,
+        zip_algorithm: builtins.str | None = ...,
+        config: global___JsonString | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_config", b"_config", "_zip", b"_zip", "_zip_algorithm", b"_zip_algorithm", "config", b"config", "zip", b"zip", "zip_algorithm", b"zip_algorithm"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_config", b"_config", "_zip", b"_zip", "_zip_algorithm", b"_zip_algorithm", "config", b"config", "name", b"name", "zip", b"zip", "zip_algorithm", b"zip_algorithm"]) -> None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_config", b"_config"]) -> typing_extensions.Literal["config"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_zip", b"_zip"]) -> typing_extensions.Literal["zip"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_zip_algorithm", b"_zip_algorithm"]) -> typing_extensions.Literal["zip_algorithm"] | None: ...
+
+global___StrategyConfig = StrategyConfig
+
+@typing_extensions.final
+class ModelStoragePolicyInfo(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    FULL_MODEL_STRATEGY_CONFIG_FIELD_NUMBER: builtins.int
+    INCREMENTAL_MODEL_STRATEGY_CONFIG_FIELD_NUMBER: builtins.int
+    FULL_MODEL_INTERVAL_FIELD_NUMBER: builtins.int
+    @property
+    def full_model_strategy_config(self) -> global___StrategyConfig: ...
+    @property
+    def incremental_model_strategy_config(self) -> global___StrategyConfig: ...
+    full_model_interval: builtins.int
+    def __init__(
+        self,
+        *,
+        full_model_strategy_config: global___StrategyConfig | None = ...,
+        incremental_model_strategy_config: global___StrategyConfig | None = ...,
+        full_model_interval: builtins.int | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_full_model_interval", b"_full_model_interval", "_incremental_model_strategy_config", b"_incremental_model_strategy_config", "full_model_interval", b"full_model_interval", "full_model_strategy_config", b"full_model_strategy_config", "incremental_model_strategy_config", b"incremental_model_strategy_config"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_full_model_interval", b"_full_model_interval", "_incremental_model_strategy_config", b"_incremental_model_strategy_config", "full_model_interval", b"full_model_interval", "full_model_strategy_config", b"full_model_strategy_config", "incremental_model_strategy_config", b"incremental_model_strategy_config"]) -> None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_full_model_interval", b"_full_model_interval"]) -> typing_extensions.Literal["full_model_interval"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_incremental_model_strategy_config", b"_incremental_model_strategy_config"]) -> typing_extensions.Literal["incremental_model_strategy_config"] | None: ...
+
+global___ModelStoragePolicyInfo = ModelStoragePolicyInfo
 
 @typing_extensions.final
 class DataInformRequest(google.protobuf.message.Message):
