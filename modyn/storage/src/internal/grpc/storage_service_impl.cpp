@@ -38,7 +38,6 @@ using namespace storage::grpcs;
       request_keys[i] = request->keys(i);
     }
 
-    
     return {::grpc::StatusCode::OK, "Data retrieved."};
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in Get: {}", e.what());
@@ -89,7 +88,6 @@ using namespace storage::grpcs;
   SPDLOG_INFO("GetDataInInterval request finished.");
   return {::grpc::StatusCode::OK, "Data retrieved."};
 }
-
 
 ::grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
