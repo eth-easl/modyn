@@ -326,7 +326,7 @@ using namespace storage::grpcs;
     }
 
     int64_t total_keys = 0;
-    session << "SELECT SUM(number_of_samples) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
+    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
         soci::use(dataset_id);
 
     int64_t start_index;
@@ -380,7 +380,7 @@ using namespace storage::grpcs;
     }
 
     int64_t total_keys = 0;
-    session << "SELECT SUM(number_of_samples) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
+    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
         soci::use(dataset_id);
 
     response->set_num_keys(total_keys);
@@ -394,8 +394,7 @@ using namespace storage::grpcs;
 
 // ------- Helper functions -------
 
-template <typename T, typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
-                                              std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type*>
+template <typename T>
 void StorageServiceImpl::send_file_ids_and_labels(::grpc::ServerWriter<T>* writer, int64_t dataset_id,
                                                   int64_t start_timestamp, int64_t end_timestamp) {
   soci::session session = storage_database_connection_.get_session();
@@ -413,8 +412,7 @@ void StorageServiceImpl::send_file_ids_and_labels(::grpc::ServerWriter<T>* write
   }
 }
 
-template <typename T, typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
-                                              std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type*>
+template <typename T>
 void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
                                                             soci::session& session) {
   int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
@@ -437,8 +435,7 @@ void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter
   }
 }
 
-template <typename T, typename std::enable_if<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
-                                              std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value>::type*>
+template <typename T>
 void StorageServiceImpl::send_samples_asynchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
                                                              soci::session& session) {
   int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);

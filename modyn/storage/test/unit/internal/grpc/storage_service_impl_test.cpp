@@ -165,6 +165,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   // Add an additional sample for file 1 to the database
   const storage::database::StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();  // NOLINT misc-const-correctness
+  session << "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, 'test_file.txt', 100, 1)";
   session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 1, 0)";
 
   modyn::storage::DeleteDataResponse response;
