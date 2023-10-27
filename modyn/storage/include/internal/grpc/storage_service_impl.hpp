@@ -16,8 +16,9 @@
 namespace storage::grpcs {
 
 template <typename T>
-using T_ptr = std::enable_if_t<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value ||
-                               std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value, T*>;
+using T_ptr = std::variant<
+    std::enable_if_t<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value, T*>,  // NOLINT  modernize-type-traits
+    std::enable_if_t<std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value, T*>>;   // NOLINT  modernize-type-traits
 
 struct SampleData {
   std::vector<int64_t> ids{};
@@ -96,7 +97,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_samples_asynchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id, soci::session& session);
   static SampleData get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
                                       const storage::database::StorageDatabaseConnection& storage_database_connection);
-  int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session);
+  static int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session);
 
   static std::vector<int64_t> get_file_ids(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
                                            int64_t end_timestamp = -1);

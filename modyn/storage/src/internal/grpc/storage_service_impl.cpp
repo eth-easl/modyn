@@ -17,19 +17,15 @@ using namespace storage::grpcs;
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
-    if (dataset_id == -1) {
-      SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-      return {::grpc::StatusCode::OK, "Dataset does not exist."};
-    }
+    int64_t dataset_id;
     std::string base_path;
     int64_t filesystem_wrapper_type;
     int64_t file_wrapper_type;
     std::string file_wrapper_config;
 
-    session << "SELECT base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM datasets WHERE "
+    session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM datasets WHERE "
                "name = :name",
-        soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
+        soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
         soci::into(file_wrapper_config), soci::use(request->dataset_id());
 
     const int keys_size = request->keys_size();
@@ -37,6 +33,8 @@ using namespace storage::grpcs;
     for (int i = 0; i < keys_size; i++) {
       request_keys[i] = request->keys(i);
     }
+
+    // TODO(vGsteiger): Implement with new parallelization scheme used in GetNewDataSince and GetDataInInterval
 
     return {::grpc::StatusCode::OK, "Data retrieved."};
   } catch (const std::exception& e) {
@@ -397,7 +395,7 @@ void StorageServiceImpl::send_file_ids_and_labels(::grpc::ServerWriter<T>* write
                                                   int64_t start_timestamp, int64_t end_timestamp) {
   soci::session session = storage_database_connection_.get_session();
 
-  std::vector<int64_t> file_ids = get_file_ids(dataset_id, session, start_timestamp, end_timestamp);
+  const std::vector<int64_t> file_ids = get_file_ids(dataset_id, session, start_timestamp, end_timestamp);
 
   if (disable_multithreading_) {
     for (const int64_t file_id : file_ids) {
@@ -413,14 +411,14 @@ void StorageServiceImpl::send_file_ids_and_labels(::grpc::ServerWriter<T>* write
 template <typename T>
 void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
                                                             soci::session& session) {
-  int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
+  const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples > 0) {
     soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
         (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
     T response;
     for (auto& row : rs) {
-      response.add_keys(row.get<long long>(0));
-      response.add_labels(row.get<long long>(1));
+      response.add_keys(row.get<long long>(0));  // NOLINT google-runtime-int
+      response.add_labels(row.get<long long>(1));  // NOLINT google-runtime-int
       if (response.keys_size() == sample_batch_size_) {
         writer->Write(response);
         response.Clear();
@@ -436,15 +434,15 @@ void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter
 template <typename T>
 void StorageServiceImpl::send_samples_asynchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
                                                              soci::session& session) {
-  int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
+  const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples <= sample_batch_size_) {
     // If the number of samples is less than the sample batch size, retrieve all of the samples in one go.
     soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
         (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
     T response;
     for (auto& row : rs) {
-      response.add_keys(row.get<long long>(0));
-      response.add_labels(row.get<long long>(1));
+      response.add_keys(row.get<long long>(0));    // NOLINT google-runtime-int
+      response.add_labels(row.get<long long>(1));  // NOLINT google-runtime-int
     }
     writer->Write(response);
   } else {
@@ -498,7 +496,7 @@ SampleData StorageServiceImpl::get_sample_subset(
     int64_t file_id, int64_t start_index, int64_t end_index,
     const storage::database::StorageDatabaseConnection& storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
-  int64_t number_of_samples = end_index - start_index + 1;
+  const int64_t number_of_samples = end_index - start_index + 1;
   std::vector<int64_t> sample_ids(number_of_samples + 1);
   std::vector<int64_t> sample_labels(number_of_samples + 1);
   session << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND sample_index >= :start_index AND "
