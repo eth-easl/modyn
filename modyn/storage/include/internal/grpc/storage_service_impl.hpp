@@ -8,6 +8,7 @@
 #include <future>
 #include <queue>
 #include <thread>
+#include <variant>
 
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
