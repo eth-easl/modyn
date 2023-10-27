@@ -33,7 +33,7 @@ using namespace storage::grpcs;
         soci::into(file_wrapper_config), soci::use(request->dataset_id());
 
     const int keys_size = request->keys_size();
-    std::vector<int64_t> request_keys(keys_size);
+    std::vector<int64_t> request_keys(keys_size + 1);
     for (int i = 0; i < keys_size; i++) {
       request_keys[i] = request->keys(i);
     }
@@ -48,7 +48,6 @@ using namespace storage::grpcs;
 ::grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming
     ::grpc::ServerContext* /*context*/, const modyn::storage::GetNewDataSinceRequest* request,
     ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {
-  SPDLOG_INFO("GetNewDataSince request received.");
   try {
     soci::session session = storage_database_connection_.get_session();
     const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
@@ -62,7 +61,6 @@ using namespace storage::grpcs;
     SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
     return {::grpc::StatusCode::OK, fmt::format("Error in GetNewDataSince: {}", e.what())};
   }
-  SPDLOG_INFO("GetNewDataSince request finished.");
   return {::grpc::StatusCode::OK, "Data retrieved."};
 }
 
@@ -164,7 +162,7 @@ using namespace storage::grpcs;
         soci::use(dataset_id);
 
     if (number_of_files > 0) {
-      std::vector<std::string> file_paths(number_of_files);
+      std::vector<std::string> file_paths(number_of_files + 1);
       session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths), soci::use(dataset_id);
 
       try {
@@ -216,7 +214,7 @@ using namespace storage::grpcs;
       return {::grpc::StatusCode::OK, "No keys provided."};
     }
 
-    std::vector<int64_t> sample_ids(request->keys_size());
+    std::vector<int64_t> sample_ids(request->keys_size() + 1);
     for (int index = 0; index < request->keys_size(); index++) {
       sample_ids[index] = request->keys(index);
     }
@@ -237,7 +235,7 @@ using namespace storage::grpcs;
     }
 
     // Get the file ids
-    std::vector<int64_t> file_ids = std::vector<int64_t>(number_of_files);
+    std::vector<int64_t> file_ids(number_of_files + 1);
     sql = fmt::format("SELECT DISTINCT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {}",
                       sample_placeholders);
     session << sql, soci::into(file_ids), soci::use(dataset_id);
@@ -254,7 +252,7 @@ using namespace storage::grpcs;
     std::string index_placeholders;
 
     try {
-      std::vector<std::string> file_paths(number_of_files);
+      std::vector<std::string> file_paths(number_of_files + 1);
       sql = fmt::format("SELECT path FROM files WHERE file_id IN {}", file_placeholders);
       session << sql, soci::into(file_paths);
       if (file_paths.size() != file_ids.size()) {
@@ -275,21 +273,21 @@ using namespace storage::grpcs;
                           sample_placeholders);
         session << sql, soci::into(samples_to_delete), soci::use(file_id);
 
-        std::vector<int64_t> sample_ids_to_delete_indices(samples_to_delete);
+        std::vector<int64_t> sample_ids_to_delete_ids(samples_to_delete + 1);
         sql = fmt::format("SELECT sample_id FROM samples WHERE file_id = :file_id AND sample_id IN {}",
                           sample_placeholders);
-        session << sql, soci::into(sample_ids_to_delete_indices), soci::use(file_id);
+        session << sql, soci::into(sample_ids_to_delete_ids), soci::use(file_id);
 
-        file_wrapper->delete_samples(sample_ids_to_delete_indices);
+        file_wrapper->delete_samples(sample_ids_to_delete_ids);
 
-        index_placeholders = fmt::format("({})", fmt::join(sample_ids_to_delete_indices, ","));
+        index_placeholders = fmt::format("({})", fmt::join(sample_ids_to_delete_ids, ","));
         sql = fmt::format("DELETE FROM samples WHERE file_id = :file_id AND sample_id IN {}", index_placeholders);
         session << sql, soci::use(file_id);
 
         int64_t number_of_samples_in_file;
         session << "SELECT number_of_samples FROM files WHERE file_id = :file_id",
             soci::into(number_of_samples_in_file), soci::use(file_id);
-
+        
         if (number_of_samples_in_file - samples_to_delete == 0) {
           session << "DELETE FROM files WHERE file_id = :file_id", soci::use(file_id);
           filesystem_wrapper->remove(path);
@@ -501,8 +499,8 @@ SampleData StorageServiceImpl::get_sample_subset(
     const storage::database::StorageDatabaseConnection& storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   int64_t number_of_samples = end_index - start_index + 1;
-  std::vector<int64_t> sample_ids(number_of_samples);
-  std::vector<int64_t> sample_labels(number_of_samples);
+  std::vector<int64_t> sample_ids(number_of_samples + 1);
+  std::vector<int64_t> sample_labels(number_of_samples + 1);
   session << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND sample_index >= :start_index AND "
              "sample_index "
              "<= :end_index",
@@ -556,14 +554,19 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(int64_t dataset_id, soci::
   if (start_timestamp >= 0 && end_timestamp == -1) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp);
-    file_ids = std::vector<int64_t>(number_of_files);
-
+    if (number_of_files == 0) {
+      return file_ids;
+    }
+    file_ids = std::vector<int64_t>(number_of_files + 1);
     session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
         soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp);
   } else if (start_timestamp == -1 && end_timestamp >= 0) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(end_timestamp);
-    file_ids = std::vector<int64_t>(number_of_files);
+    if (number_of_files == 0) {
+      return file_ids;
+    }
+    file_ids = std::vector<int64_t>(number_of_files + 1);
 
     session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
         soci::into(file_ids), soci::use(dataset_id), soci::use(end_timestamp);
@@ -571,7 +574,10 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(int64_t dataset_id, soci::
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
                "updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
-    file_ids = std::vector<int64_t>(number_of_files);
+    if (number_of_files == 0) {
+      return file_ids;
+    }
+    file_ids = std::vector<int64_t>(number_of_files + 1);
 
     session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
                "updated_at <= :end_timestamp",
@@ -579,7 +585,10 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(int64_t dataset_id, soci::
   } else {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
         soci::use(dataset_id);
-    file_ids = std::vector<int64_t>(number_of_files);
+    if (number_of_files == 0) {
+      return file_ids;
+    }
+    file_ids = std::vector<int64_t>(number_of_files + 1);
 
     session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id", soci::into(file_ids), soci::use(dataset_id);
   }

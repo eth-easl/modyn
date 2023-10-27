@@ -313,7 +313,7 @@ def test_storage() -> None:
     assert response is not None, "Did not get any response from Storage"
     assert (
         len(response.keys) == 10
-    ), f"Not all images were returned. Images returned: {response.keys}"
+    ), f"Not all images were returned."
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
     check_dataset_size(10)
@@ -336,7 +336,7 @@ def test_storage() -> None:
     assert response is not None, "Did not get any response from Storage"
     assert (
         len(response.keys) == 10
-    ), f"Not all images were returned. Images returned: {response.keys}"
+    ), f"Not all images were returned. Images returned"
 
     check_data(response.keys, SECOND_ADDED_IMAGES)
     check_dataset_size(20)
