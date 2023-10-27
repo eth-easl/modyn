@@ -1,8 +1,5 @@
 FROM modynbase:latest
 
-# Verify CMake installation
-RUN cmake --version
-
 RUN mkdir -p ./modyn/storage/build \
     && cd ./modyn/storage/build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release -DMODYNSTORAGE_BUILD_TESTS=0 -DMODYNSTORAGE_BUILD_PLAYGROUND=0 \
