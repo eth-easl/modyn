@@ -239,8 +239,7 @@ using namespace storage::grpcs;
     }
 
     // Get the file ids
-    std::vector<int64_t> file_ids =
-        std::vector<int64_t>(number_of_files + 1);  // There is some undefined behaviour if number_of_files is 1
+    std::vector<int64_t> file_ids = std::vector<int64_t>(number_of_files);
     sql = fmt::format("SELECT DISTINCT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {}",
                       sample_placeholders);
     session << sql, soci::into(file_ids), soci::use(dataset_id);
@@ -257,7 +256,7 @@ using namespace storage::grpcs;
     std::string index_placeholders;
 
     try {
-      std::vector<std::string> file_paths(number_of_files + 1);
+      std::vector<std::string> file_paths(number_of_files);
       sql = fmt::format("SELECT path FROM files WHERE file_id IN {}", file_placeholders);
       session << sql, soci::into(file_paths);
       if (file_paths.size() != file_ids.size()) {
@@ -278,7 +277,7 @@ using namespace storage::grpcs;
                           sample_placeholders);
         session << sql, soci::into(samples_to_delete), soci::use(file_id);
 
-        std::vector<int64_t> sample_ids_to_delete_indices(samples_to_delete + 1);
+        std::vector<int64_t> sample_ids_to_delete_indices(samples_to_delete);
         sql = fmt::format("SELECT sample_id FROM samples WHERE file_id = :file_id AND sample_id IN {}",
                           sample_placeholders);
         session << sql, soci::into(sample_ids_to_delete_indices), soci::use(file_id);
@@ -328,10 +327,9 @@ using namespace storage::grpcs;
       return {::grpc::StatusCode::OK, "Dataset does not exist."};
     }
 
-    int64_t total_keys = 0;  // NOLINT misc-const-correctness
-    soci::statement count_stmt = (session.prepare << "SELECT COUNT(*) FROM Sample WHERE dataset_id = :dataset_id",
-                                  soci::into(total_keys), soci::use(dataset_id));
-    count_stmt.execute();
+    int64_t total_keys = 0;
+    session << "SELECT SUM(number_of_samples) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
+        soci::use(dataset_id);
 
     int64_t start_index;
     int64_t limit;
@@ -384,7 +382,7 @@ using namespace storage::grpcs;
     }
 
     int64_t total_keys = 0;
-    session << "SELECT COUNT(*) FROM samples WHERE dataset_id = :dataset_id", soci::into(total_keys),
+    session << "SELECT SUM(number_of_samples) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
         soci::use(dataset_id);
 
     response->set_num_keys(total_keys);
