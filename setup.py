@@ -52,10 +52,12 @@ project_slug = "modyn"
 
 EXTENSION_BUILD_DIR = pathlib.Path(here) / "libbuild"
 
+
 def _get_env_variable(name, default='OFF'):
     if name not in os.environ.keys():
         return default
     return os.environ[name]
+
 
 class CMakeExtension(Extension):
     def __init__(self, name, cmake_lists_dir='.', sources=[], **kwa):
@@ -66,10 +68,10 @@ class CMakeExtension(Extension):
 class CMakeBuild(build_ext):
     def copy_extensions_to_source(self):
         pass
-    
+
     def build_extensions(self):
         try:
-            out = subprocess.check_output(['cmake', '--version'])
+            subprocess.check_output(['cmake', '--version'])
         except OSError:
             raise RuntimeError('Cannot find CMake executable')
 
