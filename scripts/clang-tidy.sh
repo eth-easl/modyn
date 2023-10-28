@@ -47,6 +47,7 @@ function run_tidy() {
       echo "Will also automatically fix everything that we can..."
     fi
 
+    # For storage, we explicitly include src and include to avoid matching files in the generated directory, containing auto-generated gRPC headers
     ${RUN_CLANG_TIDY} -p "${BUILD_DIR}" \
         -clang-tidy-binary="${CLANG_TIDY}" \
         -config-file="${SCRIPT_DIR}/../.clang-tidy" \

@@ -35,6 +35,11 @@ set(MODYN-STORAGE_PROTOS
 
 add_library(modyn-storage-proto ${MODYN-STORAGE_PROTOS})
 
+# We output the proto generated headers into the generated directory
+# However, CMAKE_CURRENT_BINARY_DIR includes "src", such that the directory is [...]/src/../generated
+# This is fine here, but then clang-tidy starts to match the auto-generated files, which we do not want
+# Hence, we have to take the realpath of this directory.
+# We have to generate the directory first to make realpath work.
 set(PROTO_BINARY_DIR_REL "${CMAKE_CURRENT_BINARY_DIR}/../generated")
 file(MAKE_DIRECTORY ${PROTO_BINARY_DIR_REL})
 execute_process(COMMAND realpath ${PROTO_BINARY_DIR_REL} OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE PROTO_BINARY_DIR)
