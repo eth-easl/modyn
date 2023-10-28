@@ -52,7 +52,7 @@ function run_tidy() {
         -config-file="${SCRIPT_DIR}/../.clang-tidy" \
         -quiet \
         -checks='-bugprone-suspicious-include,-google-global-names-in-headers' \
-        -header-filter='(.*modyn/storage/.*)|(.*modyn/common/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)|(.*modyn/tests.*)' \
+        -header-filter='(.*modyn/storage/src/.*)|(.*modyn/storage/include/.*)|(.*modyn/common/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)|(.*modyn/tests.*)' \
         ${additional_args} \
         "${BUILD_DIR}"/modyn/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/Unity/*.cxx \
