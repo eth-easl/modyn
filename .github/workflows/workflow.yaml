@@ -252,8 +252,7 @@ jobs:
       branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
     steps:
       - uses: actions/checkout@v2
-        #with: TODO(MaxiBoether): add after merge.
-        #  ref: main 
+        ref: main 
 
       - name: Install clang 17
         uses: KyleMayes/install-llvm-action@v1

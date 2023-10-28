@@ -26,7 +26,8 @@ function run_build() {
     cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_UNITY_BUILD=ON \
-        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
+        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 \
+        -DMODYN_BUILD_STORAGE=ON
 
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
     ln -fs "${SCRIPT_DIR}"/../modyn/tests/.clang-tidy "${BUILD_DIR}"/modyn/tests/

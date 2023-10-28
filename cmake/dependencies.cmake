@@ -1,7 +1,5 @@
 include(FetchContent)
 
-# TODO(MaxiBoether): when merging storage, only downloads the new packages if MODYN_BUILD_STORAGE is enabled
-
 # Configure path to modules (for find_package)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules/")
 
