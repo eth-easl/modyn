@@ -6,7 +6,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/sqlite3/soci-sqlite3.h"
 

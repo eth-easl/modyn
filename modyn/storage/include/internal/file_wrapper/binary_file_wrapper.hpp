@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 
 namespace storage::file_wrapper {
 class BinaryFileWrapper : public storage::file_wrapper::FileWrapper {

@@ -10,7 +10,7 @@
 
 #include "file_watcher.hpp"
 #include "internal/database/storage_database_connection.hpp"
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 
 namespace storage::file_watcher {
 

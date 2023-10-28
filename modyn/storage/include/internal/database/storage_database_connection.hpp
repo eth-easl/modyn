@@ -4,7 +4,7 @@
 
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/soci.h"
 #include "soci/sqlite3/soci-sqlite3.h"

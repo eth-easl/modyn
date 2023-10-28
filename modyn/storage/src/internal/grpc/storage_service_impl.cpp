@@ -3,7 +3,7 @@
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 
 using namespace storage::grpcs;
 
@@ -23,10 +23,11 @@ using namespace storage::grpcs;
     int64_t file_wrapper_type;
     std::string file_wrapper_config;
 
-    session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM datasets WHERE "
+    session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
+               "datasets WHERE "
                "name = :name",
-        soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
-        soci::into(file_wrapper_config), soci::use(request->dataset_id());
+        soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type),
+        soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(request->dataset_id());
 
     const int keys_size = request->keys_size();
     std::vector<int64_t> request_keys(keys_size + 1);
@@ -167,7 +168,7 @@ using namespace storage::grpcs;
         for (const auto& file_path : file_paths) {
           filesystem_wrapper->remove(file_path);
         }
-      } catch (const storage::utils::ModynException& e) {
+      } catch (const modyn::utils::ModynException& e) {
         SPDLOG_ERROR("Error deleting dataset: {}", e.what());
         return {::grpc::StatusCode::OK, "Error deleting dataset."};
       }
@@ -285,7 +286,7 @@ using namespace storage::grpcs;
         int64_t number_of_samples_in_file;
         session << "SELECT number_of_samples FROM files WHERE file_id = :file_id",
             soci::into(number_of_samples_in_file), soci::use(file_id);
-        
+
         if (number_of_samples_in_file - samples_to_delete == 0) {
           session << "DELETE FROM files WHERE file_id = :file_id", soci::use(file_id);
           filesystem_wrapper->remove(path);
@@ -322,8 +323,8 @@ using namespace storage::grpcs;
     }
 
     int64_t total_keys = 0;
-    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
-        soci::use(dataset_id);
+    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
+        soci::into(total_keys), soci::use(dataset_id);
 
     int64_t start_index;
     int64_t limit;
@@ -376,8 +377,8 @@ using namespace storage::grpcs;
     }
 
     int64_t total_keys = 0;
-    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id", soci::into(total_keys),
-        soci::use(dataset_id);
+    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
+        soci::into(total_keys), soci::use(dataset_id);
 
     response->set_num_keys(total_keys);
     response->set_success(true);
@@ -417,7 +418,7 @@ void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter
         (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
     T response;
     for (auto& row : rs) {
-      response.add_keys(row.get<long long>(0));  // NOLINT google-runtime-int
+      response.add_keys(row.get<long long>(0));    // NOLINT google-runtime-int
       response.add_labels(row.get<long long>(1));  // NOLINT google-runtime-int
       if (response.keys_size() == sample_batch_size_) {
         writer->Write(response);

@@ -1,4 +1,4 @@
-set(MODYNSTORAGE_SOURCES
+set(MODYN_STORAGE_SOURCES
     storage.cpp
     internal/database/storage_database_connection.cpp
     internal/file_watcher/file_watcher_watchdog.cpp
@@ -12,7 +12,7 @@ set(MODYNSTORAGE_SOURCES
 )
 
 # Explicitly set all header files so that IDEs will recognize them as part of the project
-set(MODYNSTORAGE_HEADERS
+set(MODYN_STORAGE_HEADERS
     ../include/storage.hpp
     ../include/internal/database/storage_database_connection.hpp
     ../include/internal/file_watcher/file_watcher_watchdog.hpp
@@ -27,26 +27,25 @@ set(MODYNSTORAGE_HEADERS
     ../include/internal/filesystem_wrapper/filesystem_wrapper_utils.hpp
     ../include/internal/grpc/storage_grpc_server.hpp
     ../include/internal/grpc/storage_service_impl.hpp
-    ../include/internal/utils/utils.hpp
     )
 
-set(MODYNSTORAGE_PROTOS
+set(MODYN-STORAGE_PROTOS
     ../../protos/storage.proto
 )
 
-add_library(modynstorage-proto ${MODYNSTORAGE_PROTOS})
+add_library(modyn-storage-proto ${MODYN-STORAGE_PROTOS})
 
 set(PROTO_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY ${PROTO_BINARY_DIR})
 
 protobuf_generate(
-    TARGET modynstorage-proto
+    TARGET modyn-storage-proto
     OUT_VAR PROTO_GENERATED_FILES
     IMPORT_DIRS ../../protos
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
 
 protobuf_generate(
-    TARGET modynstorage-proto
+    TARGET modyn-storage-proto
     OUT_VAR PROTO_GENERATED_FILES
     LANGUAGE grpc
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
@@ -57,38 +56,27 @@ protobuf_generate(
 
 message(STATUS "Proto generated files in ${PROTO_BINARY_DIR}: ${PROTO_GENERATED_FILES}")
 
-target_include_directories(modynstorage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
+target_include_directories(modyn-storage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
-target_link_libraries(modynstorage-proto PUBLIC libprotobuf grpc++)
-target_compile_options(modynstorage-proto INTERFACE -Wno-unused-parameter -Wno-c++98-compat-extra-semi -Wno-conditional-uninitialized -Wno-documentation)
+target_link_libraries(modyn-storage-proto PUBLIC libprotobuf grpc++)
+target_compile_options(modyn-storage-proto INTERFACE -Wno-unused-parameter -Wno-c++98-compat-extra-semi -Wno-conditional-uninitialized -Wno-documentation)
 
-target_sources(modynstorage PRIVATE ${MODYNSTORAGE_HEADERS} ${MODYNSTORAGE_SOURCES})
-target_include_directories(modynstorage PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../cmake-build-debug/clang-tidy-build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../_deps/include  ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
-target_compile_options(modynstorage PRIVATE ${MODYNSTORAGE_COMPILE_OPTIONS})
+target_sources(modyn-storage-library PRIVATE ${MODYN_STORAGE_HEADERS} ${MODYN_STORAGE_SOURCES})
+target_include_directories(modyn-storage-library PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../cmake-build-debug/clang-tidy-build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../_deps/include  ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
+target_compile_options(modyn-storage-library PRIVATE ${MODYN_COMPILE_OPTIONS})
 
-target_link_libraries(modynstorage PUBLIC spdlog fmt argparse yaml-cpp ${PostgreSQL_LIBRARIES} soci_postgresql soci_sqlite3 soci_core grpc++ grpc++_reflection modynstorage-proto rapidcsv)
+target_link_libraries(modyn-storage-library PUBLIC modyn yaml-cpp ${PostgreSQL_LIBRARIES} soci_postgresql soci_sqlite3 soci_core grpc++ grpc++_reflection modyn-storage-proto rapidcsv)
 
 message(STATUS "Current dir: ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "Current binary dir: ${CMAKE_CURRENT_BINARY_DIR}")
 
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-target_compile_definitions(modynstorage PRIVATE MODYNSTORAGE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\")
-
-# AppleClang needs the SDKROOT setup in order to be used directly. This is not the case for clang++ or g++.
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
-  message(STATUS "Detected AppleClang compiler. Setting up AppleClang SDKROOT.")
-  message(STATUS "  SDKROOT: ${CMAKE_OSX_SYSROOT}")
-  set(MODYNSTORAGE_COMPILER_ENV "SDKROOT=${CMAKE_OSX_SYSROOT}")
-endif ()
-
-target_compile_definitions(modynstorage PRIVATE "MODYNSTORAGE_CMAKE_COMPILER=\"${MODYNSTORAGE_COMPILER_ENV} ${CMAKE_CXX_COMPILER}\"")
-
-target_compile_definitions(modynstorage PUBLIC ${MODYNSTORAGE_COMPILE_DEFINITIONS})
-message(STATUS "System-specific compile definitions: ${MODYNSTORAGE_COMPILE_DEFINITIONS}")
+target_compile_definitions(modyn-storage-library PRIVATE MODYN_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\")
+target_compile_definitions(modyn-storage-library PRIVATE "MODYN_CMAKE_COMPILER=\"${MODYN_COMPILER_ENV} ${CMAKE_CXX_COMPILER}\"")
+target_compile_definitions(modyn-storage-library PUBLIC ${MODYN_COMPILE_DEFINITIONS})
 
 # This adds a `INCLUDE_DIRECTORIES` definition containing all include directories, separate by comma.
 # The definition is set to PRIVATE, so it will not be exposed if the target is itself a dependency.
-set(INCLUDE_EXPR "$<TARGET_PROPERTY:modynstorage,INCLUDE_DIRECTORIES>")
+set(INCLUDE_EXPR "$<TARGET_PROPERTY:modyn-storage-library,INCLUDE_DIRECTORIES>")
 set(INCLUDE_FILTER "$<FILTER:${INCLUDE_EXPR},INCLUDE,.*/.*>")
 set(INCLUDE_JOINED "$<JOIN:${INCLUDE_FILTER},,>")
-target_compile_definitions(modynstorage PRIVATE "INCLUDE_DIRECTORIES=\"${INCLUDE_JOINED}\"")
+target_compile_definitions(modyn-storage-library PRIVATE "INCLUDE_DIRECTORIES=\"${INCLUDE_JOINED}\"")

@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 
 using namespace storage::file_wrapper;
 
