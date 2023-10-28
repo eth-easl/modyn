@@ -252,7 +252,8 @@ jobs:
       branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
     steps:
       - uses: actions/checkout@v2
-        ref: main 
+        with:
+          ref: main 
 
       - name: Install clang 17
         uses: KyleMayes/install-llvm-action@v1
