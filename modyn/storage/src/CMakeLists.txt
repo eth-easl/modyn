@@ -62,7 +62,7 @@ target_link_libraries(modyn-storage-proto PUBLIC libprotobuf grpc++)
 target_compile_options(modyn-storage-proto INTERFACE -Wno-unused-parameter -Wno-c++98-compat-extra-semi -Wno-conditional-uninitialized -Wno-documentation)
 
 target_sources(modyn-storage-library PRIVATE ${MODYN_STORAGE_HEADERS} ${MODYN_STORAGE_SOURCES})
-target_include_directories(modyn-storage-library PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../cmake-build-debug/clang-tidy-build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../_deps/include  ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
+target_include_directories(modyn-storage-library PUBLIC ../include ${CMAKE_CURRENT_BINARY_DIR}/../clang-tidy-build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/../build/_deps/soci-src/include ${CMAKE_CURRENT_BINARY_DIR}/_deps/include ${CMAKE_CURRENT_BINARY_DIR}/../_deps/include ${FETCHCONTENT_BASE_DIR}/include ${soci_SOURCE_DIR}/build/include ${PostgreSQL_INCLUDE_DIRS})
 target_compile_options(modyn-storage-library PRIVATE ${MODYN_COMPILE_OPTIONS})
 
 target_link_libraries(modyn-storage-library PUBLIC modyn yaml-cpp ${PostgreSQL_LIBRARIES} soci_postgresql soci_sqlite3 soci_core grpc++ grpc++_reflection modyn-storage-proto rapidcsv)
