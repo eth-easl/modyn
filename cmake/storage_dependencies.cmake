@@ -4,6 +4,10 @@ list(APPEND CMAKE_PREFIX_PATH /opt/homebrew/opt/libpq) # for macOS builds
 # Configure path to modules (for find_package)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules/")
 
+# Use original download path
+message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}.")
+message(STATUS "FETCHCONTENT_BASE_DIR = ${FETCHCONTENT_BASE_DIR}.")
+
 ################### libpq++ ####################
 find_package(PostgreSQL REQUIRED) # This needs to be installed on the system - cannot do a lightweight CMake install
 
@@ -98,3 +102,4 @@ file(DOWNLOAD
 include(${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
 
 message(STATUS "Processed gRPC.")
+

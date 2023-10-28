@@ -39,3 +39,8 @@ FetchContent_Declare(
   GIT_TAG v1.14.0
 )
 FetchContent_MakeAvailable(googletest)
+
+if (${MODYN_BUILD_STORAGE})
+  message(STATUS "Including storage dependencies.")
+  include(${MODYN_CMAKE_DIR}/storage_dependencies.cmake)
+endif ()

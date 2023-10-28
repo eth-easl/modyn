@@ -3,9 +3,6 @@ add_library(modyn-storage-library)
 
 set(MODYN_STORAGE_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-##### DEPENDENCIES #####
-include(${MODYN_STORAGE_CMAKE_DIR}/dependencies.cmake)
-
 ##### modyn-storage-library #####
 add_subdirectory(src/)
 
