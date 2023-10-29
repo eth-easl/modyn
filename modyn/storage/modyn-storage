@@ -2,4 +2,4 @@
 MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
 
 # run
-$MODYNPATH/storage/build/modyn-storage "$@"
+$MODYNPATH/build/modyn/storage/modyn-storage "$@"
