@@ -77,8 +77,8 @@ bool StorageDatabaseConnection::add_dataset(
     const std::string& name, const std::string& base_path,
     const FilesystemWrapperType& filesystem_wrapper_type,
     const FileWrapperType& file_wrapper_type, const std::string& description,
-    const std::string& version, const std::string& file_wrapper_config, const bool& ignore_last_timestamp,
-    const int& file_watcher_interval) const {
+    const std::string& version, const std::string& file_wrapper_config, const bool ignore_last_timestamp,
+    const int file_watcher_interval) const {
   soci::session session = get_session();
 
   auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);

@@ -38,7 +38,7 @@ class StorageDatabaseConnection {
                    const FilesystemWrapperType& filesystem_wrapper_type,
                    const FileWrapperType& file_wrapper_type, const std::string& description,
                    const std::string& version, const std::string& file_wrapper_config,
-                   const bool& ignore_last_timestamp, const int& file_watcher_interval = 5) const;
+                   bool ignore_last_timestamp, int file_watcher_interval = 5) const;
   bool delete_dataset(const std::string& name, const int64_t& dataset_id) const;
   void add_sample_dataset_partition(const std::string& dataset_name) const;
   soci::session get_session() const;
