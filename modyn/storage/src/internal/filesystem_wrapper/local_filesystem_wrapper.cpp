@@ -60,7 +60,7 @@ bool LocalFilesystemWrapper::is_directory(const std::string& path) { return std:
 
 bool LocalFilesystemWrapper::is_file(const std::string& path) { return std::filesystem::is_regular_file(path); }
 
-int64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
+uint64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
   return static_cast<int64_t>(std::filesystem::file_size(path));
 }
 

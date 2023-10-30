@@ -10,9 +10,6 @@ using namespace modyn::storage;
  * Transforms a vector of bytes into an int64_t.
  *
  * Handles both big and little endian machines.
- *
- * @param begin The beginning of the vector.
- * @param end The end of the vector.
  */
 int64_t BinaryFileWrapper::int_from_bytes(const unsigned char* begin, const unsigned char* end) {
   int64_t value = 0;
@@ -40,8 +37,6 @@ void BinaryFileWrapper::validate_file_extension() {
 
 /*
  * Offset calculation to retrieve the label of a sample.
- *
- * @param index The index of the sample.
  */
 int64_t BinaryFileWrapper::get_label(int64_t index) {
   ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
@@ -53,6 +48,8 @@ int64_t BinaryFileWrapper::get_label(int64_t index) {
 
   std::vector<unsigned char> label_vec(label_size_);
   stream.read(reinterpret_cast<char*>(label_vec.data()), label_size_);
+
+  stream.close();
 
   return int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0';
 }
@@ -73,17 +70,19 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
     std::vector<unsigned char> label_vec(label_size_);
     stream.read(reinterpret_cast<char*>(label_vec.data()), label_size_);
 
+    // ASCII zero is the character '0' in ASCII encoding. When we subtract ASCII zero from a character, we are
+    // essentially converting it from a character to its corresponding integer value. For example, the ASCII value of
+    // the character '1' is 49. If we subtract ASCII zero from it, we get the integer value 1.
     labels.push_back(int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0');
   }
+
+  stream.close();
 
   return labels;
 }
 
 /*
  * Offset calculation to retrieve the data of a sample interval.
- *
- * @param start The start index of the sample interval.
- * @param end The end index of the sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t start, int64_t end) {
   ASSERT(start >= 0 && end >= start && end <= get_number_of_samples(), "Invalid indices");
@@ -104,13 +103,13 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
     samples[index] = sample_vec;
   }
 
+  stream.close();
+
   return samples;
 }
 
 /*
  * Offset calculation to retrieve the data of a sample.
- *
- * @param index The index of the sample.
  */
 std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
   ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
@@ -124,13 +123,13 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
   std::vector<unsigned char> sample_vec(sample_size_);
   stream.read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
 
+  stream.close();
+
   return sample_vec;
 }
 
 /*
  * Offset calculation to retrieve the data of a sample interval.
- *
- * @param indices The indices of the sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indices(
     const std::vector<int64_t>& indices) {
@@ -154,6 +153,8 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
     samples.push_back(sample_vec);
   }
 
+  stream.close();
+
   return samples;
 }
 
@@ -165,15 +166,11 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
  * This is done to avoid the overhead of updating the file after every deletion.
  *
  * See DeleteData in the storage grpc servicer for more details.
- *
- * @param indices The indices of the samples to delete.
  */
 void BinaryFileWrapper::delete_samples(const std::vector<int64_t>& /*indices*/) {}
 
 /*
  * Set the file path of the file wrapper.
- *
- * @param path The new file path.
  */
 void BinaryFileWrapper::set_file_path(const std::string& path) {
   file_path_ = path;

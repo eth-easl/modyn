@@ -6,4 +6,4 @@ R"(CREATE TABLE IF NOT EXISTS samples (
     label BIGINT,
     PRIMARY KEY (sample_id, dataset_id)
     
-) PARTITION BY LIST (dataset_id);)"
+) PARTITION BY LIST (dataset_id))"

@@ -4,4 +4,4 @@ R"(CREATE TABLE IF NOT EXISTS samples (
     file_id INTEGER,
     sample_index BIGINT,
     label BIGINT
-);)"
+))"

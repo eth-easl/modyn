@@ -76,12 +76,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                                                int64_t total_num_elements);
 
  private:
-  YAML::Node config_;
-  int64_t sample_batch_size_{};
-  int64_t retrieval_threads_;
-  bool disable_multithreading_;
-  std::vector<std::thread> retrieval_threads_vector_{};
-  StorageDatabaseConnection storage_database_connection_;
   static void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
                               std::map<int64_t, SampleData>& file_id_to_sample_data);
   void send_get_response(ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
@@ -101,5 +95,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static std::vector<int64_t> get_file_ids(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
                                            int64_t end_timestamp = -1);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
+  YAML::Node config_;
+  int64_t sample_batch_size_{};
+  int64_t retrieval_threads_;
+  bool disable_multithreading_;
+  std::vector<std::thread> retrieval_threads_vector_{};
+  StorageDatabaseConnection storage_database_connection_;
 };
 }  // namespace modyn::storage

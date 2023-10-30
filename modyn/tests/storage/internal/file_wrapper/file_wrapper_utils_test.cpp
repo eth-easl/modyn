@@ -23,4 +23,14 @@ TEST(UtilsTest, TestGetFileWrapper) {
       get_file_wrapper("Testpath.bin", FileWrapperType::BINARY, config, filesystem_wrapper);
   ASSERT_NE(file_wrapper2, nullptr);
   ASSERT_EQ(file_wrapper2->get_type(), FileWrapperType::BINARY);
+
+  std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
+  stream->open("Testpath.csv", std::ios::binary);
+  std::ifstream& reference = *stream;
+  EXPECT_CALL(*filesystem_wrapper, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  config["file_extension"] = ".csv";
+  std::unique_ptr<FileWrapper> file_wrapper3 =
+      get_file_wrapper("Testpath.csv", FileWrapperType::CSV, config, filesystem_wrapper);
+  ASSERT_NE(file_wrapper3, nullptr);
+  ASSERT_EQ(file_wrapper3->get_type(), FileWrapperType::CSV);
 }

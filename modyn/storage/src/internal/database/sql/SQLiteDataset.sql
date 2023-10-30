@@ -10,4 +10,4 @@ R"(CREATE TABLE IF NOT EXISTS datasets (
     last_timestamp BIGINT NOT NULL,
     ignore_last_timestamp BOOLEAN NOT NULL DEFAULT FALSE,
     file_watcher_interval BIGINT NOT NULL DEFAULT 5
-);)"
+))"

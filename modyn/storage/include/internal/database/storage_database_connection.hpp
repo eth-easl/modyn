@@ -37,13 +37,15 @@ class StorageDatabaseConnection {
   bool add_dataset(const std::string& name, const std::string& base_path,
                    const FilesystemWrapperType& filesystem_wrapper_type, const FileWrapperType& file_wrapper_type,
                    const std::string& description, const std::string& version, const std::string& file_wrapper_config,
-                   bool ignore_last_timestamp, int file_watcher_interval = 5) const;
-  bool delete_dataset(const std::string& name, const int64_t& dataset_id) const;
+                   bool ignore_last_timestamp, int64_t file_watcher_interval = 5) const;
+  bool delete_dataset(const std::string& name, int64_t dataset_id) const;
   void add_sample_dataset_partition(const std::string& dataset_name) const;
   soci::session get_session() const;
   DatabaseDriver get_drivername() const { return drivername_; }
 
  private:
+  static DatabaseDriver get_drivername(const YAML::Node& config);
+  int64_t get_dataset_id(const std::string& name) const;
   std::string username_;
   std::string password_;
   std::string host_;
@@ -52,8 +54,6 @@ class StorageDatabaseConnection {
   bool sample_table_unlogged_ = false;
   int16_t hash_partition_modulus_ = 8;
   DatabaseDriver drivername_;
-  static DatabaseDriver get_drivername(const YAML::Node& config);
-  int64_t get_dataset_id(const std::string& name) const;
 };
 
 }  // namespace modyn::storage

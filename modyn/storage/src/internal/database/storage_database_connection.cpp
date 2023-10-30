@@ -33,9 +33,9 @@ soci::session StorageDatabaseConnection::get_session() const {
 void StorageDatabaseConnection::create_tables() const {
   soci::session session = get_session();
 
-  const char* dataset_table_sql;
-  const char* file_table_sql;
-  const char* sample_table_sql;
+  std::string dataset_table_sql;
+  std::string file_table_sql;
+  std::string sample_table_sql;
   switch (drivername_) {
     case DatabaseDriver::POSTGRESQL:
       dataset_table_sql =
@@ -77,7 +77,8 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
                                             const FilesystemWrapperType& filesystem_wrapper_type,
                                             const FileWrapperType& file_wrapper_type, const std::string& description,
                                             const std::string& version, const std::string& file_wrapper_config,
-                                            const bool ignore_last_timestamp, const int file_watcher_interval) const {
+                                            const bool ignore_last_timestamp,
+                                            const int64_t file_watcher_interval) const {
   soci::session session = get_session();
 
   auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);
@@ -151,7 +152,7 @@ DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& confi
   FAIL("Unsupported database driver: " + drivername);
 }
 
-bool StorageDatabaseConnection::delete_dataset(const std::string& name, const int64_t& dataset_id) const {
+bool StorageDatabaseConnection::delete_dataset(const std::string& name, const int64_t dataset_id) const {
   soci::session session = get_session();
 
   // Delete all samples for this dataset
@@ -192,31 +193,26 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
     case DatabaseDriver::POSTGRESQL: {
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
       try {
-        std::string statement = fmt::format(  // NOLINT misc-const-correctness (the statement cannot be const for soci)
-            "CREATE TABLE IF NOT EXISTS {} "
-            "PARTITION OF samples "
-            "FOR VALUES IN ({}) "
-            "PARTITION BY HASH (sample_id)",
-            dataset_partition_table_name, dataset_id);
-        session << statement;
+        session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
+                   "PARTITION OF samples "
+                   "FOR VALUES IN (:dataset_id) "
+                   "PARTITION BY HASH (sample_id)",
+            soci::use(dataset_partition_table_name), soci::use(dataset_id);
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
-        FAIL(e.what());
       }
 
       try {
         for (int64_t i = 0; i < hash_partition_modulus_; i++) {
           std::string hash_partition_name = dataset_partition_table_name + "_part" + std::to_string(i);
-          std::string statement = fmt::format(  // NOLINT misc-const-correctness (the statement cannot be const for soci)
-              "CREATE TABLE IF NOT EXISTS {} "
-              "PARTITION OF {} "
-              "FOR VALUES WITH (modulus {}, REMAINDER {})",
-              hash_partition_name, dataset_partition_table_name, hash_partition_modulus_, i);
-          session << statement;
+          session << "CREATE TABLE IF NOT EXISTS :hash_partition_name "
+                     "PARTITION OF :dataset_partition_table_name "
+                     "FOR VALUES WITH (modulus :hash_partition_modulus, REMAINDER :i)",
+              soci::use(hash_partition_name), soci::use(dataset_partition_table_name),
+              soci::use(hash_partition_modulus_), soci::use(i);
         }
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
-        FAIL(e.what());
       }
       break;
     }

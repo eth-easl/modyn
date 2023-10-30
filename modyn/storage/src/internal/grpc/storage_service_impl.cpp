@@ -145,16 +145,14 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
     modyn::storage::DeleteDatasetResponse* response) {
   try {
     response->set_success(false);
-    std::string base_path;
     int64_t filesystem_wrapper_type;
 
     soci::session session = storage_database_connection_.get_session();
     int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
-    session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
-        soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
+    session << "SELECT filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(filesystem_wrapper_type),
+        soci::use(request->dataset_id());
 
-    auto filesystem_wrapper =
-        get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+    auto filesystem_wrapper = get_filesystem_wrapper(static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
 
     int64_t number_of_files;
     session << "SELECT COUNT(file_id) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
@@ -174,8 +172,7 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
       }
     }
 
-    const bool success = storage_database_connection_.delete_dataset(request->dataset_id(),
-                                                                     dataset_id);
+    const bool success = storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);
 
     response->set_success(success);
     return Status::OK;
@@ -244,8 +241,7 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
       return {StatusCode::OK, "No files found."};
     }
 
-    auto filesystem_wrapper =
-        get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+    auto filesystem_wrapper = get_filesystem_wrapper(static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
     const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
     std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
     std::string index_placeholders;
@@ -537,7 +533,8 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
 }
 
 int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci::session& session) {
-  int64_t dataset_id = -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
+  int64_t dataset_id =
+      -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
   session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
 
   return dataset_id;
@@ -545,7 +542,8 @@ int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci
 
 std::vector<int64_t> StorageServiceImpl::get_file_ids(int64_t dataset_id, soci::session& session,
                                                       int64_t start_timestamp, int64_t end_timestamp) {
-  int64_t number_of_files = -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
+  int64_t number_of_files =
+      -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
   std::vector<int64_t> file_ids;
 
   if (start_timestamp >= 0 && end_timestamp == -1) {

@@ -7,8 +7,7 @@
 using namespace modyn::storage;
 
 TEST(UtilsTest, TestGetFilesystemWrapper) {
-  const std::shared_ptr<FilesystemWrapper> filesystem_wrapper =
-      get_filesystem_wrapper("Testpath", FilesystemWrapperType::LOCAL);
+  const std::shared_ptr<FilesystemWrapper> filesystem_wrapper = get_filesystem_wrapper(FilesystemWrapperType::LOCAL);
   ASSERT_NE(filesystem_wrapper, nullptr);
   ASSERT_EQ(filesystem_wrapper->get_type(), FilesystemWrapperType::LOCAL);
 }

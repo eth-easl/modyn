@@ -10,14 +10,6 @@
 
 namespace modyn::storage {
 class BinaryFileWrapper : public FileWrapper {
- private:
-  int64_t record_size_;
-  int64_t label_size_;
-  int64_t file_size_;
-  int64_t sample_size_;
-  static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices);
-  static int64_t int_from_bytes(const unsigned char* begin, const unsigned char* end);
-
  public:
   BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,
                     std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
@@ -57,5 +49,13 @@ class BinaryFileWrapper : public FileWrapper {
   void delete_samples(const std::vector<int64_t>& indices) override;
   void set_file_path(const std::string& path) override;
   FileWrapperType get_type() override;
+
+ private:
+  static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices);
+  static int64_t int_from_bytes(const unsigned char* begin, const unsigned char* end);
+  uint64_t record_size_;
+  uint64_t label_size_;
+  uint64_t file_size_;
+  uint64_t sample_size_;
 };
 }  // namespace modyn::storage

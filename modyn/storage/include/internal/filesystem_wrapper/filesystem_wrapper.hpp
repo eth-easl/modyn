@@ -12,13 +12,13 @@ enum FilesystemWrapperType { LOCAL };
 
 class FilesystemWrapper {
  public:
-  explicit FilesystemWrapper(std::string path) : base_path_{std::move(path)} {}
+  FilesystemWrapper() = default;
   virtual std::vector<unsigned char> get(const std::string& path) = 0;
   virtual bool exists(const std::string& path) = 0;
   virtual std::vector<std::string> list(const std::string& path, bool recursive) = 0;
   virtual bool is_directory(const std::string& path) = 0;
   virtual bool is_file(const std::string& path) = 0;
-  virtual int64_t get_file_size(const std::string& path) = 0;
+  virtual uint64_t get_file_size(const std::string& path) = 0;
   virtual int64_t get_modified_time(const std::string& path) = 0;
   virtual bool is_valid_path(const std::string& path) = 0;
   virtual std::ifstream& get_stream(const std::string& path) = 0;
@@ -35,8 +35,5 @@ class FilesystemWrapper {
   FilesystemWrapper& operator=(const FilesystemWrapper&) = default;
   FilesystemWrapper(FilesystemWrapper&&) = default;
   FilesystemWrapper& operator=(FilesystemWrapper&&) = default;
-
- protected:
-  std::string base_path_;
 };
 }  // namespace modyn::storage

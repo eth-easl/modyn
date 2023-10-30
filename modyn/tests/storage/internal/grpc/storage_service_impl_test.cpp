@@ -37,7 +37,8 @@ class StorageServiceImplTest : public ::testing::Test {
     connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                            "test description", "0.0.0", StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-    soci::session session = connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+    soci::session session =
+        connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
     std::string sql_expression = fmt::format(
         "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/test_file.txt', 100, "
         "1)",
@@ -114,8 +115,7 @@ TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   ::StorageServiceImpl storage_service(config);
 
-  const Status status =
-      storage_service.GetCurrentTimestamp(&context, &request, &response);
+  const Status status = storage_service.GetCurrentTimestamp(&context, &request, &response);
 
   EXPECT_TRUE(status.ok());
   EXPECT_GE(response.timestamp(), 0);
@@ -127,7 +127,8 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
 
   const StorageDatabaseConnection connection(config);
 
-  soci::session session = connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
 
   modyn::storage::DatasetAvailableRequest request;
   request.set_dataset_id("test_dataset");
@@ -163,7 +164,8 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
   // Add an additional sample for file 1 to the database
   const StorageDatabaseConnection connection(config);
-  soci::session session = connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
   session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 1, 0)";
 
   modyn::storage::DeleteDataResponse response;
@@ -231,7 +233,8 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   // Test case when no files found for the samples
   // Here we create a sample that doesn't link to a file.
   const StorageDatabaseConnection connection(config);
-  soci::session session = connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
   session
       << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file
                                                                                                     // with this id

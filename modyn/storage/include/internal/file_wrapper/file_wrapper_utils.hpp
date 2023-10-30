@@ -1,6 +1,7 @@
 #pragma once
 
 #include "internal/file_wrapper/binary_file_wrapper.hpp"
+#include "internal/file_wrapper/csv_file_wrapper.hpp"
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/file_wrapper/single_sample_file_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
@@ -19,6 +20,8 @@ static std::unique_ptr<FileWrapper> get_file_wrapper(const std::string& path, co
     file_wrapper = std::make_unique<BinaryFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
   } else if (type == FileWrapperType::SINGLE_SAMPLE) {
     file_wrapper = std::make_unique<SingleSampleFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
+  } else if (type == FileWrapperType::CSV) {
+    file_wrapper = std::make_unique<CsvFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
   } else {
     FAIL("Unknown file wrapper type");
   }

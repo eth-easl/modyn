@@ -78,7 +78,7 @@ TEST_F(FileWatcherWatchdogTest, TestStartFileWatcherProcess) {
                          "test description", "0.0.0",
                          modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  watchdog.start_file_watcher_thread(1, 0);
+  watchdog.start_file_watcher_thread(1);
   std::vector<int64_t> file_watcher_threads;
   file_watcher_threads = watchdog.get_running_file_watcher_threads();
   ASSERT_EQ(file_watcher_threads.size(), 1);
@@ -88,7 +88,7 @@ TEST_F(FileWatcherWatchdogTest, TestStartFileWatcherProcess) {
   ASSERT_EQ(file_watcher_threads.size(), 1);
 
   watchdog.stop_file_watcher_thread(1);
-  watchdog.start_file_watcher_thread(1, 0);
+  watchdog.start_file_watcher_thread(1);
   file_watcher_threads = watchdog.get_running_file_watcher_threads();
   ASSERT_EQ(file_watcher_threads.size(), 1);
 
@@ -107,7 +107,7 @@ TEST_F(FileWatcherWatchdogTest, TestStopFileWatcherProcess) {
                          "test description", "0.0.0",
                          modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  watchdog.start_file_watcher_thread(1, 0);
+  watchdog.start_file_watcher_thread(1);
 
   std::vector<int64_t> file_watcher_threads;
   file_watcher_threads = watchdog.get_running_file_watcher_threads();
@@ -191,7 +191,7 @@ TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
                          "test description", "0.0.0",
                          modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
-  watchdog.start_file_watcher_thread(1, 0);
+  watchdog.start_file_watcher_thread(1);
   // Simulate a failure of the FileWatcher process
   watchdog.stop_file_watcher_thread(1);
 
