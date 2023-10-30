@@ -26,7 +26,7 @@ void FileWatcherWatchdog::start_file_watcher_thread(int64_t dataset_id, int16_t 
                                     config_["storage"]["insertion_threads"].as<int16_t>());
   if (file_watcher == nullptr || file_watcher_thread_stop_flags_[dataset_id].load()) {
     SPDLOG_ERROR("Failed to create FileWatcher for dataset {}", dataset_id);
-    file_watcher_dataset_retries_[dataset_id] = static_cast<int16_t>(retries + additional_retry_);
+    file_watcher_dataset_retries_[dataset_id] = static_cast<int16_t>(retries + 1);
     return;
   }
   std::thread th(&FileWatcher::run, std::move(file_watcher));
@@ -74,6 +74,20 @@ void FileWatcherWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
   }
 }
 
+void FileWatcherWatchdog::stop_and_clear_all_file_watcher_threads() {
+  for (auto& file_watcher_thread_flag : file_watcher_thread_stop_flags_) {
+      file_watcher_thread_flag.second.store(true);
+    }
+    for (auto& file_watcher_thread : file_watcher_threads_) {
+      if (file_watcher_thread.second.joinable()) {
+        file_watcher_thread.second.join();
+      }
+    }
+    file_watcher_threads_.clear();
+    file_watcher_dataset_retries_.clear();
+    file_watcher_thread_stop_flags_.clear();
+}
+
 /*
  * Watch the FileWatcher threads and start/stop them as needed
  */
@@ -89,17 +103,7 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
       return;
     }
     // There are no datasets in the database, stop all FileWatcher threads
-    for (auto& file_watcher_thread_flag : file_watcher_thread_stop_flags_) {
-      file_watcher_thread_flag.second.store(true);
-    }
-    for (auto& file_watcher_thread : file_watcher_threads_) {
-      if (file_watcher_thread.second.joinable()) {
-        file_watcher_thread.second.join();
-      }
-    }
-    file_watcher_threads_.clear();
-    file_watcher_dataset_retries_.clear();
-    file_watcher_thread_stop_flags_.clear();
+    stop_and_clear_all_file_watcher_threads();
     return;
   }
 
@@ -153,7 +157,6 @@ void FileWatcherWatchdog::run() {
       file_watcher_thread.second.join();
     }
   }
-  stop();
 }
 
 std::vector<int64_t> FileWatcherWatchdog::get_running_file_watcher_threads() {
