@@ -3,9 +3,11 @@ import os
 import pathlib
 import shutil
 import typing
+from typing import Optional
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.supervisor import Supervisor
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -65,6 +67,10 @@ def noop_constructor_mock(
     pass
 
 
+def noop_init_metadata_db(self) -> None:  # pylint: disable=unused-argument
+    pass
+
+
 def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
@@ -79,6 +85,41 @@ def teardown():
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 
+# from test_selector_manager.py
+# register_pipeline funtionality moved from selector to supervisor
+class MockDatabaseConnection:
+    def __init__(self, modyn_config: dict):  # pylint: disable=super-init-not-called,unused-argument
+        self.current_pipeline_id = 0
+        self.session = MockSession()
+
+    # pylint: disable=unused-argument
+    def register_pipeline(
+        self,
+        num_workers: int,
+        model_class_name: str,
+        model_config: str,
+        amp: bool,
+        selection_strategy: str,
+        full_model_strategy: ModelStorageStrategyConfig,
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
+        full_model_interval: Optional[int] = None,
+    ) -> Optional[int]:
+        pid = self.current_pipeline_id
+        self.current_pipeline_id += 1
+        return pid
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception):
+        pass
+
+
+class MockSession:
+    def get(self, some_type, pipeline_id):  # pylint: disable=unused-argument
+        return None
+
+
 @patch.object(GRPCHandler, "init_selector", return_value=None)
 @patch.object(GRPCHandler, "init_storage", return_value=None)
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
@@ -86,6 +127,7 @@ def teardown():
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def get_non_connecting_supervisor(
     test_trainer_server_available,
     test_dataset_available,
@@ -111,6 +153,7 @@ def test_initialization() -> None:
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=False)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def test_constructor_throws_on_invalid_system_config(
     test_trainer_server_available,
     test_dataset_available,
@@ -131,6 +174,7 @@ def test_constructor_throws_on_invalid_system_config(
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def test_constructor_throws_on_invalid_pipeline_config(
     test_trainer_server_available,
     test_dataset_available,
@@ -340,6 +384,19 @@ def test_get_dataset_selector_batch_size_not_given():
 
 def test_shutdown_trainer():
     # TODO(MaxiBoether): implement
+    pass
+
+
+@patch("modyn.supervisor.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
+def test_register_pipeline():
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+
+    pipeline_id = sup.register_pipeline(get_minimal_pipeline_config())
+    assert pipeline_id == 0
+
+
+def test_unregister_pipeline():
+    # TODO(#64,#124,#302): implement a real test when func is implemented.
     pass
 
 
@@ -686,19 +743,19 @@ def test_replay_data_open_interval_batched(test__handle_new_data: MagicMock, tes
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
-@patch.object(GRPCHandler, "register_pipeline_at_selector", return_value=42)
+@patch.object(Supervisor, "register_pipeline", return_value=42)
 @patch.object(Supervisor, "get_dataset_selector_batch_size")
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(GRPCHandler, "unregister_pipeline_at_selector")
+@patch.object(Supervisor, "unregister_pipeline")
 def test_non_experiment_pipeline(
-    test_unregister_pipeline_at_selector: MagicMock,
+    test_unregister_pipeline: MagicMock,
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
-    test_register_pipeline_at_selector: MagicMock,
+    test_register_pipeline: MagicMock,
     test_get_time_at_storage: MagicMock,
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -706,28 +763,28 @@ def test_non_experiment_pipeline(
     sup.pipeline()
 
     test_get_time_at_storage.assert_called_once()
-    test_register_pipeline_at_selector.assert_called_once()
+    test_register_pipeline.assert_called_once()
     test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_called_once_with(21)
     test_replay_data.assert_not_called()
-    test_unregister_pipeline_at_selector.assert_called_once_with(42)
+    test_unregister_pipeline.assert_called_once_with(42)
 
 
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
-@patch.object(GRPCHandler, "register_pipeline_at_selector", return_value=42)
+@patch.object(Supervisor, "register_pipeline", return_value=42)
 @patch.object(Supervisor, "get_dataset_selector_batch_size")
 @patch.object(Supervisor, "initial_pass")
 @patch.object(Supervisor, "replay_data")
 @patch.object(Supervisor, "wait_for_new_data")
-@patch.object(GRPCHandler, "unregister_pipeline_at_selector")
+@patch.object(Supervisor, "unregister_pipeline")
 def test_experiment_pipeline(
-    test_unregister_pipeline_at_selector: MagicMock,
+    test_unregister_pipeline: MagicMock,
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
-    test_register_pipeline_at_selector: MagicMock,
+    test_register_pipeline: MagicMock,
     test_get_time_at_storage: MagicMock,
 ):
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -735,9 +792,9 @@ def test_experiment_pipeline(
     sup.pipeline()
 
     test_get_time_at_storage.assert_called_once()
-    test_register_pipeline_at_selector.assert_called_once()
+    test_register_pipeline.assert_called_once()
     test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_not_called()
     test_replay_data.assert_called_once()
-    test_unregister_pipeline_at_selector.assert_called_once_with(42)
+    test_unregister_pipeline.assert_called_once_with(42)

@@ -26,15 +26,9 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformResponse,
     GetNumberOfSamplesRequest,
     GetStatusBarScaleRequest,
-)
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
-from modyn.selector.internal.grpc.generated.selector_pb2 import (
-    ModelStoragePolicyInfo,
     NumberOfSamplesResponse,
-    RegisterPipelineRequest,
     SeedSelectorRequest,
     StatusBarScaleResponse,
-    StrategyConfig,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -72,7 +66,12 @@ logger = logging.getLogger(__name__)
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, modyn_config: dict, progress_mgr: enlighten.Manager, status_bar: enlighten.StatusBar):
+    def __init__(
+        self,
+        modyn_config: dict,
+        progress_mgr: Optional[enlighten.Manager] = None,
+        status_bar: Optional[enlighten.StatusBar] = None,
+    ):
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
@@ -197,61 +196,6 @@ class GRPCHandler:
         )
 
         return response.timestamp
-
-    def register_pipeline_at_selector(self, pipeline_config: dict) -> int:
-        if not self.connected_to_selector:
-            raise ConnectionError("Tried to register pipeline at selector, but no connection was made.")
-
-        if "config" in pipeline_config["model"]:
-            model_config = json.dumps(pipeline_config["model"]["config"])
-        else:
-            model_config = "{}"
-
-        model_storage_config = pipeline_config["model_storage"]
-        incremental_model_strategy: Optional[StrategyConfig] = None
-        full_model_interval: Optional[int] = None
-        if "incremental_model_strategy" in model_storage_config:
-            incremental_strategy = model_storage_config["incremental_model_strategy"]
-            incremental_model_strategy = self.get_model_strategy(incremental_strategy)
-            full_model_interval = (
-                incremental_strategy["full_model_interval"] if "full_model_interval" in incremental_strategy else None
-            )
-
-        pipeline_id = self.selector.register_pipeline(
-            RegisterPipelineRequest(
-                num_workers=pipeline_config["training"]["dataloader_workers"],
-                selection_strategy=SelectorJsonString(
-                    value=json.dumps(pipeline_config["training"]["selection_strategy"])
-                ),
-                model_class_name=pipeline_config["model"]["id"],
-                model_configuration=SelectorJsonString(value=model_config),
-                amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
-                model_storage_policy=ModelStoragePolicyInfo(
-                    full_model_strategy_config=self.get_model_strategy(model_storage_config["full_model_strategy"]),
-                    incremental_model_strategy_config=incremental_model_strategy,
-                    full_model_interval=full_model_interval,
-                ),
-            )
-        ).pipeline_id
-
-        logger.info(f"Registered pipeline {pipeline_config['pipeline']['name']} at selector with ID {pipeline_id}")
-        return pipeline_id
-
-    @staticmethod
-    def get_model_strategy(strategy_config: dict) -> StrategyConfig:
-        return StrategyConfig(
-            name=strategy_config["name"],
-            zip=strategy_config["zip"] if "zip" in strategy_config else None,
-            zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
-            config=SelectorJsonString(value=json.dumps(strategy_config["config"]))
-            if "config" in strategy_config
-            else None,
-        )
-
-    # pylint: disable-next=unused-argument
-    def unregister_pipeline_at_selector(self, pipeline_id: int) -> None:
-        #  # TODO(#64,#124): Implement.
-        pass
 
     def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> dict[str, Any]:
         keys, timestamps, labels = zip(*data)
@@ -447,6 +391,9 @@ class GRPCHandler:
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> dict[str, Any]:  # pragma: no cover
+        assert self.progress_mgr is not None
+        assert self.status_bar is not None
+
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
@@ -607,6 +554,9 @@ class GRPCHandler:
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
     def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
+        assert self.progress_mgr is not None
+        assert self.status_bar is not None
+
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 

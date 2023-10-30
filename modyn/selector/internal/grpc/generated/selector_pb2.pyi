@@ -75,34 +75,6 @@ class StrategyConfig(google.protobuf.message.Message):
 global___StrategyConfig = StrategyConfig
 
 @typing_extensions.final
-class ModelStoragePolicyInfo(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    FULL_MODEL_STRATEGY_CONFIG_FIELD_NUMBER: builtins.int
-    INCREMENTAL_MODEL_STRATEGY_CONFIG_FIELD_NUMBER: builtins.int
-    FULL_MODEL_INTERVAL_FIELD_NUMBER: builtins.int
-    @property
-    def full_model_strategy_config(self) -> global___StrategyConfig: ...
-    @property
-    def incremental_model_strategy_config(self) -> global___StrategyConfig: ...
-    full_model_interval: builtins.int
-    def __init__(
-        self,
-        *,
-        full_model_strategy_config: global___StrategyConfig | None = ...,
-        incremental_model_strategy_config: global___StrategyConfig | None = ...,
-        full_model_interval: builtins.int | None = ...,
-    ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_full_model_interval", b"_full_model_interval", "_incremental_model_strategy_config", b"_incremental_model_strategy_config", "full_model_interval", b"full_model_interval", "full_model_strategy_config", b"full_model_strategy_config", "incremental_model_strategy_config", b"incremental_model_strategy_config"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_full_model_interval", b"_full_model_interval", "_incremental_model_strategy_config", b"_incremental_model_strategy_config", "full_model_interval", b"full_model_interval", "full_model_strategy_config", b"full_model_strategy_config", "incremental_model_strategy_config", b"incremental_model_strategy_config"]) -> None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_full_model_interval", b"_full_model_interval"]) -> typing_extensions.Literal["full_model_interval"] | None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_incremental_model_strategy_config", b"_incremental_model_strategy_config"]) -> typing_extensions.Literal["incremental_model_strategy_config"] | None: ...
-
-global___ModelStoragePolicyInfo = ModelStoragePolicyInfo
-
-@typing_extensions.final
 class DataInformRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -165,55 +137,6 @@ class TriggerResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["log", b"log", "trigger_id", b"trigger_id"]) -> None: ...
 
 global___TriggerResponse = TriggerResponse
-
-@typing_extensions.final
-class RegisterPipelineRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    NUM_WORKERS_FIELD_NUMBER: builtins.int
-    SELECTION_STRATEGY_FIELD_NUMBER: builtins.int
-    MODEL_CLASS_NAME_FIELD_NUMBER: builtins.int
-    MODEL_CONFIGURATION_FIELD_NUMBER: builtins.int
-    AMP_FIELD_NUMBER: builtins.int
-    MODEL_STORAGE_POLICY_FIELD_NUMBER: builtins.int
-    num_workers: builtins.int
-    @property
-    def selection_strategy(self) -> global___JsonString: ...
-    model_class_name: builtins.str
-    @property
-    def model_configuration(self) -> global___JsonString: ...
-    amp: builtins.bool
-    @property
-    def model_storage_policy(self) -> global___ModelStoragePolicyInfo: ...
-    def __init__(
-        self,
-        *,
-        num_workers: builtins.int = ...,
-        selection_strategy: global___JsonString | None = ...,
-        model_class_name: builtins.str = ...,
-        model_configuration: global___JsonString | None = ...,
-        amp: builtins.bool = ...,
-        model_storage_policy: global___ModelStoragePolicyInfo | None = ...,
-    ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["model_configuration", b"model_configuration", "model_storage_policy", b"model_storage_policy", "selection_strategy", b"selection_strategy"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["amp", b"amp", "model_class_name", b"model_class_name", "model_configuration", b"model_configuration", "model_storage_policy", b"model_storage_policy", "num_workers", b"num_workers", "selection_strategy", b"selection_strategy"]) -> None: ...
-
-global___RegisterPipelineRequest = RegisterPipelineRequest
-
-@typing_extensions.final
-class PipelineResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    PIPELINE_ID_FIELD_NUMBER: builtins.int
-    pipeline_id: builtins.int
-    def __init__(
-        self,
-        *,
-        pipeline_id: builtins.int = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
-
-global___PipelineResponse = PipelineResponse
 
 @typing_extensions.final
 class GetSamplesRequest(google.protobuf.message.Message):

@@ -13,11 +13,6 @@ class SelectorStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.register_pipeline = channel.unary_unary(
-                '/selector.Selector/register_pipeline',
-                request_serializer=selector__pb2.RegisterPipelineRequest.SerializeToString,
-                response_deserializer=selector__pb2.PipelineResponse.FromString,
-                )
         self.get_sample_keys_and_weights = channel.unary_stream(
                 '/selector.Selector/get_sample_keys_and_weights',
                 request_serializer=selector__pb2.GetSamplesRequest.SerializeToString,
@@ -72,12 +67,6 @@ class SelectorStub(object):
 
 class SelectorServicer(object):
     """Missing associated documentation comment in .proto file."""
-
-    def register_pipeline(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
 
     def get_sample_keys_and_weights(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -142,11 +131,6 @@ class SelectorServicer(object):
 
 def add_SelectorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'register_pipeline': grpc.unary_unary_rpc_method_handler(
-                    servicer.register_pipeline,
-                    request_deserializer=selector__pb2.RegisterPipelineRequest.FromString,
-                    response_serializer=selector__pb2.PipelineResponse.SerializeToString,
-            ),
             'get_sample_keys_and_weights': grpc.unary_stream_rpc_method_handler(
                     servicer.get_sample_keys_and_weights,
                     request_deserializer=selector__pb2.GetSamplesRequest.FromString,
@@ -206,23 +190,6 @@ def add_SelectorServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class Selector(object):
     """Missing associated documentation comment in .proto file."""
-
-    @staticmethod
-    def register_pipeline(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/selector.Selector/register_pipeline',
-            selector__pb2.RegisterPipelineRequest.SerializeToString,
-            selector__pb2.PipelineResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def get_sample_keys_and_weights(request,

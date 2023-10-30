@@ -21,8 +21,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfSamplesRequest,
     JsonString,
     NumberOfSamplesResponse,
-    PipelineResponse,
-    RegisterPipelineRequest,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -323,64 +321,6 @@ def test_get_data_in_interval_batched(test_grpc_connection_established):
         mock.assert_called_once_with(
             GetDataInIntervalRequest(dataset_id="test_dataset", start_timestamp=21, end_timestamp=45)
         )
-
-
-@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def test_register_pipeline_at_selector(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
-
-    with patch.object(handler.selector, "register_pipeline") as mock:
-        mock.return_value = PipelineResponse(pipeline_id=42)
-
-        result = handler.register_pipeline_at_selector(
-            {
-                "pipeline": {"name": "test"},
-                "training": {"dataloader_workers": 2, "selection_strategy": {}, "amp": True},
-                "model": {"id": "ResNet18"},
-                "model_storage": {
-                    "full_model_strategy": {"name": "PyTorchFullModel", "zip": True, "zip_algorithm": "ZIP_DEFLATED"},
-                    "incremental_model_strategy": {
-                        "name": "WeightsDifference",
-                        "config": {"operator": "sub"},
-                        "full_model_interval": 10,
-                    },
-                },
-            }
-        )
-
-        assert result == 42
-        mock.assert_called_once()
-
-        request: RegisterPipelineRequest = mock.call_args.args[0]
-        assert request.num_workers == 2
-        assert request.selection_strategy.value == "{}"
-        assert request.model_class_name == "ResNet18"
-        assert request.model_configuration.value == "{}"
-        assert request.amp
-        assert request.model_storage_policy.full_model_strategy_config.name == "PyTorchFullModel"
-        assert request.model_storage_policy.full_model_strategy_config.zip
-        assert request.model_storage_policy.full_model_strategy_config.zip_algorithm == "ZIP_DEFLATED"
-        assert not request.model_storage_policy.full_model_strategy_config.HasField("config")
-        assert request.model_storage_policy.incremental_model_strategy_config.name == "WeightsDifference"
-        assert not request.model_storage_policy.incremental_model_strategy_config.HasField("zip")
-        assert not request.model_storage_policy.incremental_model_strategy_config.HasField("zip_algorithm")
-        assert (
-            json.loads(request.model_storage_policy.incremental_model_strategy_config.config.value)["operator"] == "sub"
-        )
-        assert request.model_storage_policy.full_model_interval == 10
-
-
-def test_unregister_pipeline_at_selector():
-    handler = get_non_connecting_handler()
-    pipeline_id = 42
-
-    # TODO(#64,#124): implement a real test when func is implemented.
-    handler.unregister_pipeline_at_selector(pipeline_id)
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

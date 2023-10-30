@@ -1,17 +1,11 @@
-import json
-
 import grpc
-from integrationtests.utils import get_modyn_config
+from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, init_metadata_db, register_pipeline
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetAvailableLabelsRequest,
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
-    JsonString,
-    ModelStoragePolicyInfo,
-    RegisterPipelineRequest,
     SamplesResponse,
-    StrategyConfig,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
@@ -31,10 +25,6 @@ def connect_to_selector_servicer() -> grpc.Channel:
     return selector_channel
 
 
-def get_model_storage_policy() -> ModelStoragePolicyInfo:
-    return ModelStoragePolicyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
-
-
 def test_label_balanced_presampling_huge() -> None:
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
@@ -49,16 +39,8 @@ def test_label_balanced_presampling_huge() -> None:
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(
@@ -136,16 +118,8 @@ def test_label_balanced_force_same_size():
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     # now we just have 2 classes with 4 samples each
     selector.inform_data(
@@ -227,16 +201,8 @@ def test_label_balanced_force_all_samples():
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     # same classes as before
     selector.inform_data(
@@ -324,16 +290,8 @@ def test_newdata() -> None:
         "config": {"limit": -1, "reset_after_trigger": True},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
         DataInformRequest(
@@ -470,16 +428,8 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         },
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
         DataInformRequest(
@@ -626,16 +576,8 @@ def test_empty_triggers() -> None:
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
         DataInformRequest(
@@ -801,16 +743,8 @@ def test_many_samples_evenly_distributed():
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
         DataInformRequest(
@@ -878,16 +812,8 @@ def test_many_samples_unevenly_distributed():
         "config": {"limit": -1, "reset_after_trigger": False},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
         DataInformRequest(
@@ -956,16 +882,8 @@ def test_get_available_labels(reset_after_trigger: bool):
         "config": {"limit": -1, "reset_after_trigger": reset_after_trigger},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value=json.dumps(strategy_config)),
-            model_class_name="ResNet10",
-            model_configuration=JsonString(value="{}"),
-            amp=False,
-            model_storage_policy=get_model_storage_policy(),
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
         DataInformRequest(
@@ -1033,6 +951,7 @@ def test_get_available_labels(reset_after_trigger: bool):
 
 
 if __name__ == "__main__":
+    init_metadata_db(get_modyn_config())
     test_newdata()
     test_label_balanced_presampling_huge()
     test_label_balanced_force_same_size()

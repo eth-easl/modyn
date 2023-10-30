@@ -7,6 +7,12 @@ from typing import Any, Optional
 
 import enlighten
 from modyn.common.benchmark import Stopwatch
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
+
+# pylint: disable=no-name-in-module
+from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
+from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -81,6 +87,7 @@ class Supervisor:
             raise ValueError("No permission to write to the evaluation results directory.")
 
         logging.info("Setting up connections to cluster components.")
+        self.init_metadata_db()
         self.grpc = GRPCHandler(modyn_config, self.progress_mgr, self.status_bar)
 
         if not self.validate_system():
@@ -111,6 +118,10 @@ class Supervisor:
             port = self.modyn_config["tensorboard"]["port"]
             self._run_tensorboard(port)
             logger.info(f"Starting up tensorboard on port {port}.")
+
+    def init_metadata_db(self) -> None:
+        with MetadataDatabaseConnection(self.modyn_config) as database:
+            database.create_tables()
 
     def _setup_trigger(self) -> None:
         trigger_id = self.pipeline_config["trigger"]["id"]
@@ -282,6 +293,71 @@ class Supervisor:
         )
         tensorboard.launch()
         logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+    def register_pipeline(self, pipeline_config: dict) -> int:
+        """
+        Registers a new pipeline in the metadata database.
+
+        Returns:
+            The id of the newly created pipeline.
+        Throws:
+            ValueError if num_workers is not positive.
+        """
+        num_workers: int = pipeline_config["training"]["dataloader_workers"]
+        if num_workers < 0:
+            raise ValueError(f"Tried to register training with {num_workers} workers.")
+
+        if "config" in pipeline_config["model"]:
+            model_config = json.dumps(pipeline_config["model"]["config"])
+        else:
+            model_config = "{}"
+
+        model_storage_config = pipeline_config["model_storage"]
+        full_model_strategy = ModelStorageStrategyConfig.from_config(
+            self.get_model_strategy(model_storage_config["full_model_strategy"])
+        )
+        incremental_model_strategy_config: Optional[StrategyConfig] = None
+        full_model_interval: Optional[int] = None
+        if "incremental_model_strategy" in model_storage_config:
+            incremental_strategy = model_storage_config["incremental_model_strategy"]
+            incremental_model_strategy_config = self.get_model_strategy(incremental_strategy)
+            full_model_interval = (
+                incremental_strategy["full_model_interval"] if "full_model_interval" in incremental_strategy else None
+            )
+
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
+        if incremental_model_strategy_config is not None:
+            incremental_model_strategy = ModelStorageStrategyConfig.from_config(incremental_model_strategy_config)
+
+        # TODO(#317): add the lock back after making supervisor a server: with self._next_pipeline_lock:
+        with MetadataDatabaseConnection(self.modyn_config) as database:
+            pipeline_id = database.register_pipeline(
+                num_workers=num_workers,
+                model_class_name=pipeline_config["model"]["id"],
+                model_config=model_config,
+                amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
+                selection_strategy=json.dumps(pipeline_config["training"]["selection_strategy"]),
+                full_model_strategy=full_model_strategy,
+                incremental_model_strategy=incremental_model_strategy,
+                full_model_interval=full_model_interval,
+            )
+
+        return pipeline_id
+
+    @staticmethod
+    def get_model_strategy(strategy_config: dict) -> StrategyConfig:
+        return StrategyConfig(
+            name=strategy_config["name"],
+            zip=strategy_config["zip"] if "zip" in strategy_config else None,
+            zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
+            config=SelectorJsonString(value=json.dumps(strategy_config["config"]))
+            if "config" in strategy_config
+            else None,
+        )
+
+    def unregister_pipeline(self, pipeline_id: int) -> None:
+        # TODO(#64,#124,#302): Implement.
+        pass
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:
@@ -515,7 +591,7 @@ class Supervisor:
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
-        self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
+        self.pipeline_id = self.register_pipeline(self.pipeline_config)
         self.status_bar.update(demo="Initial Pass")
 
         self.initial_pass()
@@ -529,5 +605,5 @@ class Supervisor:
 
         self.status_bar.update(demo="Cleanup")
         logger.info("Pipeline done, unregistering.")
-        self.grpc.unregister_pipeline_at_selector(self.pipeline_id)
+        self.unregister_pipeline(self.pipeline_id)
         self._persist_pipeline_log()
