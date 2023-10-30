@@ -2,7 +2,7 @@
 
 #include "internal/grpc/storage_service_impl.hpp"
 
-using namespace storage::grpcs;
+using namespace modyn::storage;
 
 void StorageGrpcServer::run() {
   if (!config_["storage"]["port"]) {
@@ -18,10 +18,10 @@ void StorageGrpcServer::run() {
   auto retrieval_threads = config_["storage"]["retrieval_threads"].as<int64_t>();
   StorageServiceImpl service(config_, retrieval_threads);
 
-  ::grpc::EnableDefaultHealthCheckService(true);
-  ::grpc::reflection::InitProtoReflectionServerBuilderPlugin();
-  ::grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
+  EnableDefaultHealthCheckService(true);
+  reflection::InitProtoReflectionServerBuilderPlugin();
+  ServerBuilder builder;
+  builder.AddListeningPort(server_address, InsecureServerCredentials());
   builder.RegisterService(&service);
 
   auto server = builder.BuildAndStart();

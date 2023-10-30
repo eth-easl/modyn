@@ -8,8 +8,8 @@
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
 
-namespace storage::file_wrapper {
-class BinaryFileWrapper : public storage::file_wrapper::FileWrapper {
+namespace modyn::storage {
+class BinaryFileWrapper : public FileWrapper {
  private:
   int64_t record_size_;
   int64_t label_size_;
@@ -20,8 +20,8 @@ class BinaryFileWrapper : public storage::file_wrapper::FileWrapper {
 
  public:
   BinaryFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                    std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper)
-      : storage::file_wrapper::FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
+                    std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+      : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     ASSERT(filesystem_wrapper_ != nullptr, "Filesystem wrapper cannot be null.");
 
     if (!fw_config["record_size"]) {
@@ -58,4 +58,4 @@ class BinaryFileWrapper : public storage::file_wrapper::FileWrapper {
   void set_file_path(const std::string& path) override;
   FileWrapperType get_type() override;
 };
-}  // namespace storage::file_wrapper
+}  // namespace modyn::storage

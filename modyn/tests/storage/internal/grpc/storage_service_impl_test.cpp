@@ -16,8 +16,8 @@
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
-using namespace storage::grpcs;
-using namespace storage::test;
+using namespace modyn::storage;
+using namespace grpc;
 
 class StorageServiceImplTest : public ::testing::Test {
  protected:
@@ -26,17 +26,17 @@ class StorageServiceImplTest : public ::testing::Test {
   StorageServiceImplTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/storage_service_impl_test"} {}
 
   void SetUp() override {
-    TestUtils::create_dummy_yaml();
+    modyn::test::TestUtils::create_dummy_yaml();
     // Create temporary directory
     std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
-    const storage::database::StorageDatabaseConnection connection(config);
+    const StorageDatabaseConnection connection(config);
     connection.create_tables();
 
     // Add a dataset to the database
-    connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                           storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                           TestUtils::get_dummy_file_wrapper_config_inline(), true);
+    connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
+                           FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                           StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
     soci::session session = connection.get_session();  // NOLINT misc-const-correctness
     std::string sql_expression = fmt::format(
@@ -84,7 +84,7 @@ class StorageServiceImplTest : public ::testing::Test {
 };
 
 TEST_F(StorageServiceImplTest, TestCheckAvailability) {
-  ::grpc::ServerContext context;
+  ServerContext context;
 
   modyn::storage::DatasetAvailableRequest request;
   request.set_dataset_id("test_dataset");
@@ -94,7 +94,7 @@ TEST_F(StorageServiceImplTest, TestCheckAvailability) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   ::StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
 
-  ::grpc::Status status = storage_service.CheckAvailability(&context, &request, &response);
+  Status status = storage_service.CheckAvailability(&context, &request, &response);
 
   EXPECT_TRUE(status.ok());
   EXPECT_TRUE(response.available());
@@ -106,7 +106,7 @@ TEST_F(StorageServiceImplTest, TestCheckAvailability) {
 }
 
 TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
-  ::grpc::ServerContext context;
+  ServerContext context;
 
   modyn::storage::GetCurrentTimestampRequest request;  // NOLINT misc-const-correctness
 
@@ -115,7 +115,7 @@ TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   ::StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
 
-  ::grpc::Status status =  // NOLINT misc-const-correctness
+  Status status =  // NOLINT misc-const-correctness
       storage_service.GetCurrentTimestamp(&context, &request, &response);
 
   EXPECT_TRUE(status.ok());
@@ -126,7 +126,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   ::StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session session = connection.get_session();  // NOLINT misc-const-correctness
 
@@ -135,14 +135,14 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
 
   modyn::storage::DeleteDatasetResponse response;
 
-  ::grpc::ServerContext context;
+  ServerContext context;
 
   int dataset_exists = 0;
   session << "SELECT COUNT(*) FROM datasets WHERE name = 'test_dataset'", soci::into(dataset_exists);
 
   ASSERT_TRUE(dataset_exists);
 
-  ::grpc::Status status =  // NOLINT misc-const-correctness
+  Status status =  // NOLINT misc-const-correctness
       storage_service.DeleteDataset(&context, &request, &response);
 
   ASSERT_TRUE(status.ok());
@@ -164,15 +164,15 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   request.add_keys(1);
 
   // Add an additional sample for file 1 to the database
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();  // NOLINT misc-const-correctness
   session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 1, 0)";
 
   modyn::storage::DeleteDataResponse response;
 
-  ::grpc::ServerContext context;
+  ServerContext context;
 
-  ::grpc::Status status = storage_service.DeleteData(&context, &request, &response);
+  Status status = storage_service.DeleteData(&context, &request, &response);
 
   ASSERT_TRUE(status.ok());
   ASSERT_TRUE(response.success());
@@ -215,12 +215,12 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   modyn::storage::DeleteDataRequest request;
   modyn::storage::DeleteDataResponse response;
 
-  ::grpc::ServerContext context;
+  ServerContext context;
 
   // Test case when dataset does not exist
   request.set_dataset_id("non_existent_dataset");
   request.add_keys(1);
-  ::grpc::Status status = storage_service.DeleteData(&context, &request, &response);
+  Status status = storage_service.DeleteData(&context, &request, &response);
   ASSERT_FALSE(response.success());
 
   // Test case when no samples found for provided keys
@@ -232,7 +232,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
 
   // Test case when no files found for the samples
   // Here we create a sample that doesn't link to a file.
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();  // NOLINT misc-const-correctness
   session
       << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file

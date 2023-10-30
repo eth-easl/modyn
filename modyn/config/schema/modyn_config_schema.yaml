@@ -64,7 +64,7 @@ properties:
       file_watcher_watchdog_sleep_time_s:
         type: number
         description: |
-          The time in seconds the file watcher watchdog sleeps between checking if the file watchers are still alive.
+          The time in seconds the file watcher watchdog sleeps between checking if the file watchers are still alive. Defaults to 3.
       datasets:
         type: array
         items:

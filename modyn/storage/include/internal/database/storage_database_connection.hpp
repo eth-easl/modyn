@@ -10,7 +10,7 @@
 #include "soci/sqlite3/soci-sqlite3.h"
 #include "yaml-cpp/yaml.h"
 
-namespace storage::database {
+namespace modyn::storage {
 
 enum class DatabaseDriver { POSTGRESQL, SQLITE3 };
 
@@ -35,8 +35,8 @@ class StorageDatabaseConnection {
   }
   void create_tables() const;
   bool add_dataset(const std::string& name, const std::string& base_path,
-                   const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
-                   const storage::file_wrapper::FileWrapperType& file_wrapper_type, const std::string& description,
+                   const FilesystemWrapperType& filesystem_wrapper_type,
+                   const FileWrapperType& file_wrapper_type, const std::string& description,
                    const std::string& version, const std::string& file_wrapper_config,
                    const bool& ignore_last_timestamp, const int& file_watcher_interval = 5) const;
   bool delete_dataset(const std::string& name, const int64_t& dataset_id) const;
@@ -57,4 +57,4 @@ class StorageDatabaseConnection {
   int64_t get_dataset_id(const std::string& name) const;
 };
 
-}  // namespace storage::database
+}  // namespace modyn::storage

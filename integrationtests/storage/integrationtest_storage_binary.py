@@ -1,16 +1,13 @@
 ############
-# storage integration tests adapted to CSV input format.
+# storage integration tests adapted to binary input format.
 # Unchanged functions are imported from the original test
-# Instead of images, we have CSV files. Each file has 25 rows end each row has 5 columns.
-# f"A{index}file{file},B{index}file{file},C{index}file{file},{counter}"
-# where index is a random number, file is the fileindex and the label (last column) is a global counter
+# Instead of images, we have binary files. The binary files with random content of size 10 bytes.
 
 import json
 import os
 import random
 import time
 from typing import Tuple
-import pickle
 
 # unchanged functions are imported from the original test file
 from integrationtests.storage.integrationtest_storage import (
@@ -72,36 +69,37 @@ def add_file_to_dataset(binary_data: bytes, name: str) -> None:
     )
 
 
-def create_random_binary_file(
-    file: int, counter: int
-) -> Tuple[bytes, list[bytes], int]:
-    data = {
-        "label": f"A{counter}",
-        "record": f"B{counter}C{counter}",
-    }
-    binary_data = pickle.dumps(data)
+def create_random_binary_file() -> bytes:
+    binary_data = b''
+    for i in range(250):
+        sample_binary_data = random.randbytes(10)
+        binary_data += sample_binary_data
 
-    return binary_data, [binary_data], counter
+    return binary_data
 
 
 def add_files_to_dataset(
     start_number: int,
     end_number: int,
     files_added: list[bytes],
-    rows_added: list[bytes],
 ) -> None:
     create_dataset_dir()
-    counter = 0
+
     for i in range(start_number, end_number):
-        binary_file, samples_binary_file, counter = create_random_binary_file(
-            i, counter
-        )
-        add_file_to_dataset(binary_file, f"csv_{i}.csv")
-        files_added.append(bytes(binary_file, "utf-8"))
-        [rows_added.append(bytes(row, "utf-8")) for row in samples_binary_file]
+        binary_file = create_random_binary_file()
+        add_file_to_dataset(binary_file, f"binary_{i}.bin")
+        files_added.append(binary_file)
 
 
 def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
+
+    samples_without_labels = []
+    for sample in expected_samples:
+        inner_sample = b''
+        for i in range(0, len(sample), 10):
+            inner_sample += sample[i:i+6]
+        samples_without_labels.append(inner_sample)
+
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -135,7 +133,7 @@ def test_storage() -> None:
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
 
-    add_files_to_dataset(0, 10, [], FIRST_ADDED_BINARY)  # Add samples to the dataset.
+    add_files_to_dataset(0, 10, FIRST_ADDED_BINARY)  # Add samples to the dataset.
 
     response = None
     for i in range(500):
@@ -157,7 +155,7 @@ def test_storage() -> None:
     check_data(response.keys, FIRST_ADDED_BINARY)
 
     add_files_to_dataset(
-        10, 20, [], SECOND_ADDED_BINARY
+        10, 20, SECOND_ADDED_BINARY
     )  # Add more samples to the dataset.
 
     for i in range(500):
@@ -193,8 +191,8 @@ def main() -> None:
     try:
         test_storage()
     finally:
-        cleanup_dataset_dir()
         cleanup_storage_database()
+        cleanup_dataset_dir()
 
 
 if __name__ == "__main__":

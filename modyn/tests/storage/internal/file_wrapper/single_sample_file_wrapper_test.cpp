@@ -6,12 +6,11 @@
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
-using namespace storage::file_wrapper;
-using namespace storage::test;
+using namespace modyn::storage;
 
 TEST(SingleSampleFileWrapperTest, TestGetNumberOfSamples) {
   const std::string file_name = "test.txt";
-  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config();
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   ::SingleSampleFileWrapper file_wrapper = ::SingleSampleFileWrapper(file_name, config, filesystem_wrapper);
   ASSERT_EQ(file_wrapper.get_number_of_samples(), 1);
@@ -19,7 +18,7 @@ TEST(SingleSampleFileWrapperTest, TestGetNumberOfSamples) {
 
 TEST(SingleSampleFileWrapperTest, TestGetLabel) {
   const std::string file_name = "test.txt";
-  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config();
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   const std::vector<unsigned char> bytes = {'1', '2', '3', '4', '5', '6', '7', '8'};
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -30,7 +29,7 @@ TEST(SingleSampleFileWrapperTest, TestGetLabel) {
 
 TEST(SingleSampleFileWrapperTest, TestGetAllLabels) {
   const std::string file_name = "test.txt";
-  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config();
   const std::vector<unsigned char> bytes = {'1', '2', '3', '4', '5', '6', '7', '8'};
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -43,7 +42,7 @@ TEST(SingleSampleFileWrapperTest, TestGetAllLabels) {
 
 TEST(SingleSampleFileWrapperTest, TestGetSamples) {
   const std::string file_name = "test.txt";
-  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config();
   const std::vector<unsigned char> bytes = {'1', '2', '3', '4', '5', '6', '7', '8'};
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -63,7 +62,7 @@ TEST(SingleSampleFileWrapperTest, TestGetSamples) {
 
 TEST(SingleSampleFileWrapperTest, TestGetSample) {
   const std::string file_name = "test.txt";
-  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config();
   const std::vector<unsigned char> bytes = {'1', '2', '3', '4', '5', '6', '7', '8'};
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -82,7 +81,7 @@ TEST(SingleSampleFileWrapperTest, TestGetSample) {
 
 TEST(SingleSampleFileWrapperTest, TestGetSamplesFromIndices) {
   const std::string file_name = "test.txt";
-  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config();
   const std::vector<unsigned char> bytes = {'1', '2', '3', '4', '5', '6', '7', '8'};
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
@@ -105,7 +104,7 @@ TEST(SingleSampleFileWrapperTest, TestDeleteSamples) {
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
 
   const std::string file_name = "test.txt";
-  const YAML::Node config = TestUtils::get_dummy_file_wrapper_config();
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config();
 
   ::SingleSampleFileWrapper file_wrapper = ::SingleSampleFileWrapper(file_name, config, filesystem_wrapper);
 

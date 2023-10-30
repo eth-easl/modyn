@@ -10,7 +10,7 @@
 #include "soci/postgresql/soci-postgresql.h"
 #include "soci/sqlite3/soci-sqlite3.h"
 
-using namespace storage::database;
+using namespace modyn::storage;
 
 soci::session StorageDatabaseConnection::get_session() const {
   const std::string connection_string = "dbname='" + database_ + "' user='" + username_ + "' password='" + password_ +
@@ -75,8 +75,8 @@ void StorageDatabaseConnection::create_tables() const {
 
 bool StorageDatabaseConnection::add_dataset(
     const std::string& name, const std::string& base_path,
-    const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
-    const storage::file_wrapper::FileWrapperType& file_wrapper_type, const std::string& description,
+    const FilesystemWrapperType& filesystem_wrapper_type,
+    const FileWrapperType& file_wrapper_type, const std::string& description,
     const std::string& version, const std::string& file_wrapper_config, const bool& ignore_last_timestamp,
     const int& file_watcher_interval) const {
   soci::session session = get_session();

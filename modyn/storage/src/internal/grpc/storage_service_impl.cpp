@@ -5,13 +5,13 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
 #include "modyn/utils/utils.hpp"
 
-using namespace storage::grpcs;
+using namespace modyn::storage;
 
 // ------- StorageServiceImpl -------
 
-::grpc::Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::GetRequest* request,
-    ::grpc::ServerWriter<modyn::storage::GetResponse>* writer) {
+Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::GetRequest* request,
+    ServerWriter<modyn::storage::GetResponse>* writer) {
   try {
     SPDLOG_INFO("Get request received.");
     soci::session session = storage_database_connection_.get_session();
@@ -37,42 +37,42 @@ using namespace storage::grpcs;
 
     // TODO(vGsteiger): Implement with new parallelization scheme used in GetNewDataSince and GetDataInInterval
 
-    return {::grpc::StatusCode::OK, "Data retrieved."};
+    return {StatusCode::OK, "Data retrieved."};
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in Get: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in Get: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in Get: {}", e.what())};
   }
 }
 
-::grpc::Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::GetNewDataSinceRequest* request,
-    ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {
+Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::GetNewDataSinceRequest* request,
+    ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {
   try {
     soci::session session = storage_database_connection_.get_session();
     const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
-      return {::grpc::StatusCode::OK, "Dataset does not exist."};
+      return {StatusCode::OK, "Dataset does not exist."};
     }
     int64_t request_timestamp = request->timestamp();  // NOLINT misc-const-correctness
     send_file_ids_and_labels<modyn::storage::GetNewDataSinceResponse>(writer, dataset_id, request_timestamp);
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in GetNewDataSince: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in GetNewDataSince: {}", e.what())};
   }
-  return {::grpc::StatusCode::OK, "Data retrieved."};
+  return {StatusCode::OK, "Data retrieved."};
 }
 
-::grpc::Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::GetDataInIntervalRequest* request,
-    ::grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {
+Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::GetDataInIntervalRequest* request,
+    ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {
   SPDLOG_INFO("GetDataInInterval request received.");
   try {
     soci::session session = storage_database_connection_.get_session();
     const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
-      return {::grpc::StatusCode::OK, "Dataset does not exist."};
+      return {StatusCode::OK, "Dataset does not exist."};
     }
     int64_t start_timestamp = request->start_timestamp();  // NOLINT misc-const-correctness
     int64_t end_timestamp = request->end_timestamp();      // NOLINT misc-const-correctness
@@ -80,14 +80,14 @@ using namespace storage::grpcs;
                                                                         end_timestamp);
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetDataInInterval: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in GetDataInInterval: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in GetDataInInterval: {}", e.what())};
   }
   SPDLOG_INFO("GetDataInInterval request finished.");
-  return {::grpc::StatusCode::OK, "Data retrieved."};
+  return {StatusCode::OK, "Data retrieved."};
 }
 
-::grpc::Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
+Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
     modyn::storage::DatasetAvailableResponse* response) {
   try {
     soci::session session = storage_database_connection_.get_session();
@@ -98,50 +98,50 @@ using namespace storage::grpcs;
     if (dataset_id == -1) {
       response->set_available(false);
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-      return {::grpc::StatusCode::OK, "Dataset does not exist."};
+      return {StatusCode::OK, "Dataset does not exist."};
     }
     response->set_available(true);
-    return {::grpc::StatusCode::OK, "Dataset exists."};
+    return {StatusCode::OK, "Dataset exists."};
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in CheckAvailability: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in CheckAvailability: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in CheckAvailability: {}", e.what())};
   }
 }
 
-::grpc::Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::RegisterNewDatasetRequest* request,
+Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::RegisterNewDatasetRequest* request,
     modyn::storage::RegisterNewDatasetResponse* response) {
   try {
     bool success = storage_database_connection_.add_dataset(  // NOLINT misc-const-correctness
         request->dataset_id(), request->base_path(),
-        storage::filesystem_wrapper::FilesystemWrapper::get_filesystem_wrapper_type(request->filesystem_wrapper_type()),
-        storage::file_wrapper::FileWrapper::get_file_wrapper_type(request->file_wrapper_type()), request->description(),
+        FilesystemWrapper::get_filesystem_wrapper_type(request->filesystem_wrapper_type()),
+        FileWrapper::get_file_wrapper_type(request->file_wrapper_type()), request->description(),
         request->version(), request->file_wrapper_config(), request->ignore_last_timestamp(),
         static_cast<int>(request->file_watcher_interval()));
     response->set_success(success);
-    return ::grpc::Status::OK;
+    return Status::OK;
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in RegisterNewDataset: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in RegisterNewDataset: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in RegisterNewDataset: {}", e.what())};
   }
 }
 
-::grpc::Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
+Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
     modyn::storage::GetCurrentTimestampResponse* response) {
   try {
     response->set_timestamp(
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
             .count());
-    return {::grpc::StatusCode::OK, "Timestamp retrieved."};
+    return {StatusCode::OK, "Timestamp retrieved."};
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetCurrentTimestamp: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in GetCurrentTimestamp: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in GetCurrentTimestamp: {}", e.what())};
   }
 }
 
-::grpc::Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
+Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
     modyn::storage::DeleteDatasetResponse* response) {
   try {
     response->set_success(false);
@@ -153,8 +153,8 @@ using namespace storage::grpcs;
     session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
         soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
 
-    auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
-        base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
+    auto filesystem_wrapper = get_filesystem_wrapper(
+        base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
 
     int64_t number_of_files;
     session << "SELECT COUNT(file_id) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
@@ -170,7 +170,7 @@ using namespace storage::grpcs;
         }
       } catch (const modyn::utils::ModynException& e) {
         SPDLOG_ERROR("Error deleting dataset: {}", e.what());
-        return {::grpc::StatusCode::OK, "Error deleting dataset."};
+        return {StatusCode::OK, "Error deleting dataset."};
       }
     }
 
@@ -178,15 +178,15 @@ using namespace storage::grpcs;
                                                                      dataset_id);  // NOLINT misc-const-correctness
 
     response->set_success(success);
-    return ::grpc::Status::OK;
+    return Status::OK;
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in DeleteDataset: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in DeleteDataset: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in DeleteDataset: {}", e.what())};
   }
 }
 
-::grpc::Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::DeleteDataRequest* request,
+Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::DeleteDataRequest* request,
     modyn::storage::DeleteDataResponse* response) {
   try {
     response->set_success(false);
@@ -205,12 +205,12 @@ using namespace storage::grpcs;
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-      return {::grpc::StatusCode::OK, "Dataset does not exist."};
+      return {StatusCode::OK, "Dataset does not exist."};
     }
 
     if (request->keys_size() == 0) {
       SPDLOG_ERROR("No keys provided.");
-      return {::grpc::StatusCode::OK, "No keys provided."};
+      return {StatusCode::OK, "No keys provided."};
     }
 
     std::vector<int64_t> sample_ids(request->keys_size() + 1);
@@ -230,7 +230,7 @@ using namespace storage::grpcs;
 
     if (number_of_files == 0) {
       SPDLOG_ERROR("No samples found in dataset {}.", dataset_id);
-      return {::grpc::StatusCode::OK, "No samples found."};
+      return {StatusCode::OK, "No samples found."};
     }
 
     // Get the file ids
@@ -241,11 +241,11 @@ using namespace storage::grpcs;
 
     if (file_ids.empty()) {
       SPDLOG_ERROR("No files found in dataset {}.", dataset_id);
-      return {::grpc::StatusCode::OK, "No files found."};
+      return {StatusCode::OK, "No files found."};
     }
 
-    auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(
-        base_path, static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type));
+    auto filesystem_wrapper = get_filesystem_wrapper(
+        base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
     const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
     std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
     std::string index_placeholders;
@@ -256,11 +256,11 @@ using namespace storage::grpcs;
       session << sql, soci::into(file_paths);
       if (file_paths.size() != file_ids.size()) {
         SPDLOG_ERROR("Error deleting data: Could not find all files.");
-        return {::grpc::StatusCode::OK, "Error deleting data."};
+        return {StatusCode::OK, "Error deleting data."};
       }
 
-      auto file_wrapper = storage::file_wrapper::get_file_wrapper(
-          file_paths.front(), static_cast<storage::file_wrapper::FileWrapperType>(file_wrapper_type),
+      auto file_wrapper = get_file_wrapper(
+          file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
           file_wrapper_config_node, filesystem_wrapper);
       for (size_t i = 0; i < file_paths.size(); ++i) {
         const auto& file_id = file_ids[i];
@@ -297,19 +297,19 @@ using namespace storage::grpcs;
       }
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error deleting data: {}", e.what());
-      return {::grpc::StatusCode::OK, "Error deleting data."};
+      return {StatusCode::OK, "Error deleting data."};
     }
     response->set_success(true);
-    return {::grpc::StatusCode::OK, "Data deleted."};
+    return {StatusCode::OK, "Data deleted."};
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in DeleteData: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in DeleteData: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in DeleteData: {}", e.what())};
   }
 }
 
-::grpc::Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request,
-    ::grpc::ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {  // NOLINT misc-const-correctness
+Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request,
+    ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {  // NOLINT misc-const-correctness
   try {
     SPDLOG_INFO("GetDataPerWorker request received.");
     soci::session session = storage_database_connection_.get_session();
@@ -319,7 +319,7 @@ using namespace storage::grpcs;
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-      return {::grpc::StatusCode::OK, "Dataset does not exist."};
+      return {StatusCode::OK, "Dataset does not exist."};
     }
 
     int64_t total_keys = 0;
@@ -352,18 +352,18 @@ using namespace storage::grpcs;
     }
 
     if (response.keys_size() > 0) {
-      writer->Write(response, ::grpc::WriteOptions().set_last_message());
+      writer->Write(response, WriteOptions().set_last_message());
     }
 
-    return {::grpc::StatusCode::OK, "Data retrieved."};
+    return {StatusCode::OK, "Data retrieved."};
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetDataPerWorker: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in GetDataPerWorker: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in GetDataPerWorker: {}", e.what())};
   }
 }
 
-::grpc::Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
-    ::grpc::ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
+Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
+    ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
     modyn::storage::GetDatasetSizeResponse* response) {  // NOLINT misc-const-correctness
   try {
     soci::session session = storage_database_connection_.get_session();
@@ -373,7 +373,7 @@ using namespace storage::grpcs;
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-      return {::grpc::StatusCode::OK, "Dataset does not exist."};
+      return {StatusCode::OK, "Dataset does not exist."};
     }
 
     int64_t total_keys = 0;
@@ -382,17 +382,17 @@ using namespace storage::grpcs;
 
     response->set_num_keys(total_keys);
     response->set_success(true);
-    return {::grpc::StatusCode::OK, "Dataset size retrieved."};
+    return {StatusCode::OK, "Dataset size retrieved."};
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetDatasetSize: {}", e.what());
-    return {::grpc::StatusCode::OK, fmt::format("Error in GetDatasetSize: {}", e.what())};
+    return {StatusCode::OK, fmt::format("Error in GetDatasetSize: {}", e.what())};
   }
 }
 
 // ------- Helper functions -------
 
 template <typename T>
-void StorageServiceImpl::send_file_ids_and_labels(::grpc::ServerWriter<T>* writer, int64_t dataset_id,
+void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, int64_t dataset_id,
                                                   int64_t start_timestamp, int64_t end_timestamp) {
   soci::session session = storage_database_connection_.get_session();
 
@@ -410,7 +410,7 @@ void StorageServiceImpl::send_file_ids_and_labels(::grpc::ServerWriter<T>* write
 }
 
 template <typename T>
-void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
+void StorageServiceImpl::send_samples_synchronous_retrieval(ServerWriter<T>* writer, int64_t file_id,
                                                             soci::session& session) {
   const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples > 0) {
@@ -433,7 +433,7 @@ void StorageServiceImpl::send_samples_synchronous_retrieval(::grpc::ServerWriter
 }
 
 template <typename T>
-void StorageServiceImpl::send_samples_asynchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id,
+void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* writer, int64_t file_id,
                                                              soci::session& session) {
   const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples <= sample_batch_size_) {
@@ -495,7 +495,7 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(::grpc::ServerWrite
 
 SampleData StorageServiceImpl::get_sample_subset(
     int64_t file_id, int64_t start_index, int64_t end_index,
-    const storage::database::StorageDatabaseConnection& storage_database_connection) {
+    const StorageDatabaseConnection& storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   const int64_t number_of_samples = end_index - start_index + 1;
   std::vector<int64_t> sample_ids(number_of_samples + 1);

@@ -3,8 +3,6 @@ FROM nvidia/cuda:11.7.1-devel-ubuntu22.04
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-ARG DEBIAN_FRONTEND=noninteractive
-
 # Setup basic system
 RUN apt-get update -yq \
   && apt-get upgrade -yq \
@@ -27,7 +25,6 @@ RUN apt-get update -yq \
     cmake \
     ca-certificates \
     libpq-dev \
-    postgresql-server-dev-all \
     libsqlite3-dev \
     software-properties-common \
   && rm -rf /var/lib/apt/lists/* \

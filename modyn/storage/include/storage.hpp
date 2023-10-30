@@ -6,7 +6,7 @@
 #include "internal/grpc/storage_grpc_server.hpp"
 #include "yaml-cpp/yaml.h"
 
-namespace storage {
+namespace modyn::storage {
 class Storage {
  public:
   explicit Storage(const std::string& config_file)
@@ -18,10 +18,10 @@ class Storage {
 
  private:
   YAML::Node config_;
-  storage::database::StorageDatabaseConnection connection_;
+  StorageDatabaseConnection connection_;
   std::atomic<bool> stop_file_watcher_watchdog_ = false;
   std::atomic<bool> stop_grpc_server_ = false;
-  storage::file_watcher::FileWatcherWatchdog file_watcher_watchdog_;
-  storage::grpcs::StorageGrpcServer grpc_server_;
+  FileWatcherWatchdog file_watcher_watchdog_;
+  StorageGrpcServer grpc_server_;
 };
-}  // namespace storage
+}  // namespace modyn::storage

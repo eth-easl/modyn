@@ -8,13 +8,13 @@
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
 
-namespace storage::file_wrapper {
+namespace modyn::storage {
 
-class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
+class CsvFileWrapper : public FileWrapper {
  public:
   CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                 std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper)
-      : storage::file_wrapper::FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
+                 std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+      : FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
     if (file_wrapper_config_["separator"]) {
       separator_ = file_wrapper_config_["separator"].as<char>();
     } else {
@@ -65,4 +65,4 @@ class CsvFileWrapper : public storage::file_wrapper::FileWrapper {
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;
 };
-}  // namespace storage::file_wrapper
+}  // namespace modyn::storage

@@ -4,7 +4,7 @@
 
 #include "storage_test_utils.hpp"
 
-using namespace storage::filesystem_wrapper;
+using namespace modyn::storage;
 
 TEST(UtilsTest, TestGetFilesystemWrapper) {
   const std::shared_ptr<FilesystemWrapper> filesystem_wrapper =

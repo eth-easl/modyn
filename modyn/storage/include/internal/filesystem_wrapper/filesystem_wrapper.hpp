@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace storage::filesystem_wrapper {
+namespace modyn::storage {
 
 enum FilesystemWrapperType { LOCAL };
 
@@ -39,4 +39,4 @@ class FilesystemWrapper {
  protected:
   std::string base_path_;
 };
-}  // namespace storage::filesystem_wrapper
+}  // namespace modyn::storage

@@ -8,7 +8,7 @@
 #include "internal/file_watcher/file_watcher_watchdog.hpp"
 #include "internal/grpc/storage_grpc_server.hpp"
 
-using namespace storage;
+using namespace modyn::storage;
 
 void Storage::run() {
   /* Run the storage service. */
@@ -19,12 +19,12 @@ void Storage::run() {
   SPDLOG_INFO("Starting file watcher watchdog.");
 
   // Start the file watcher watchdog
-  std::thread file_watcher_watchdog_thread(&file_watcher::FileWatcherWatchdog::run, &file_watcher_watchdog_);
+  std::thread file_watcher_watchdog_thread(&FileWatcherWatchdog::run, &file_watcher_watchdog_);
 
   SPDLOG_INFO("Starting storage gRPC server.");
 
   // Start the storage grpc server
-  std::thread grpc_server_thread(&grpcs::StorageGrpcServer::run, &grpc_server_);
+  std::thread grpc_server_thread(&StorageGrpcServer::run, &grpc_server_);
 
   // Create a condition variable to wait for the file watcher watchdog or gRPC server to exit.
   std::condition_variable cv;

@@ -16,9 +16,10 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
 #include "modyn/utils/utils.hpp"
 
-namespace storage::file_watcher {
+namespace modyn::storage {
 
 struct FileFrame {
+  // Struct to store file information for insertion into the database when watching a dataset.
   int64_t file_id;
   int64_t index;
   int64_t label;
@@ -33,7 +34,7 @@ class FileWatcher {
         dataset_id_{dataset_id},
         insertion_threads_{insertion_threads},
         disable_multithreading_{insertion_threads <= 1},
-        storage_database_connection_{storage::database::StorageDatabaseConnection(config)} {
+        storage_database_connection_{StorageDatabaseConnection(config)} {
     if (stop_file_watcher == nullptr) {
       FAIL("stop_file_watcher_ is nullptr.");
     }
@@ -61,7 +62,7 @@ class FileWatcher {
     }
 
     const auto filesystem_wrapper_type =
-        static_cast<storage::filesystem_wrapper::FilesystemWrapperType>(filesystem_wrapper_type_int);
+        static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
 
     if (dataset_path.empty()) {
       SPDLOG_ERROR("Dataset with id {} not found.", dataset_id_);
@@ -69,7 +70,7 @@ class FileWatcher {
       return;
     }
 
-    filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(dataset_path, filesystem_wrapper_type);
+    filesystem_wrapper = get_filesystem_wrapper(dataset_path, filesystem_wrapper_type);
 
     dataset_path_ = dataset_path;
     filesystem_wrapper_type_ = filesystem_wrapper_type;
@@ -84,31 +85,31 @@ class FileWatcher {
       insertion_thread_pool_ = std::vector<std::thread>(insertion_threads_);
     }
   }
-  std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper;
+  std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
   void run();
   static void handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-                                const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
+                                const FileWrapperType& file_wrapper_type, int64_t timestamp,
+                                const FilesystemWrapperType& filesystem_wrapper_type,
                                 int64_t dataset_id, const YAML::Node& file_wrapper_config, const YAML::Node& config,
                                 int64_t sample_dbinsertion_batchsize, bool force_fallback);
   void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
-  static void insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
+  static void insert_file_frame(const StorageDatabaseConnection& storage_database_connection,
                                 const std::vector<FileFrame>& file_frame, int64_t dataset_id, bool force_fallback);
   static int64_t insert_file(const std::string& file_path, int64_t dataset_id,
-                             const storage::database::StorageDatabaseConnection& storage_database_connection,
-                             const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
-                             const std::unique_ptr<storage::file_wrapper::FileWrapper>& file_wrapper);
+                             const StorageDatabaseConnection& storage_database_connection,
+                             const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
+                             const std::unique_ptr<FileWrapper>& file_wrapper);
   void seek_dataset();
   void seek();
   static bool check_valid_file(
       const std::string& file_path, const std::string& data_file_extension, bool ignore_last_timestamp,
-      int64_t timestamp, storage::database::StorageDatabaseConnection& storage_database_connection,
-      const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper);
+      int64_t timestamp, StorageDatabaseConnection& storage_database_connection,
+      const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper);
   static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
-                                      const storage::database::StorageDatabaseConnection& storage_database_connection,
+                                      const StorageDatabaseConnection& storage_database_connection,
                                       int64_t dataset_id);
   static void fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                 const storage::database::StorageDatabaseConnection& storage_database_connection,
+                                 const StorageDatabaseConnection& storage_database_connection,
                                  int64_t dataset_id);
 
  private:
@@ -119,8 +120,8 @@ class FileWatcher {
   std::vector<std::thread> insertion_thread_pool_;
   int64_t sample_dbinsertion_batchsize_ = 1000000;
   bool force_fallback_ = false;
-  storage::database::StorageDatabaseConnection storage_database_connection_;
+  StorageDatabaseConnection storage_database_connection_;
   std::string dataset_path_;
-  storage::filesystem_wrapper::FilesystemWrapperType filesystem_wrapper_type_;
+  FilesystemWrapperType filesystem_wrapper_type_;
 };
-}  // namespace storage::file_watcher
+}  // namespace modyn::storage

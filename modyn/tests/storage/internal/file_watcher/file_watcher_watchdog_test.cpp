@@ -8,8 +8,7 @@
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
-using namespace storage::file_watcher;
-using namespace storage::test;
+using namespace modyn::storage;
 
 class FileWatcherWatchdogTest : public ::testing::Test {
  protected:
@@ -19,16 +18,16 @@ class FileWatcherWatchdogTest : public ::testing::Test {
       : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_watchdog_test"} {}
 
   void SetUp() override {
-    TestUtils::create_dummy_yaml();
+    modyn::TestUtils::create_dummy_yaml();
     // Create temporary directory
     std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
-    const storage::database::StorageDatabaseConnection connection(config);
+    const StorageDatabaseConnection connection(config);
     connection.create_tables();
   }
 
   void TearDown() override {
-    TestUtils::delete_dummy_yaml();
+    modyn::TestUtils::delete_dummy_yaml();
     if (std::filesystem::exists("'test.db'")) {
       std::filesystem::remove("'test.db'");
     }
@@ -66,15 +65,15 @@ TEST_F(FileWatcherWatchdogTest, TestStartFileWatcherProcess) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   // Add two dataset to the database
-  connection.add_dataset("test_dataset1", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
-  connection.add_dataset("test_dataset2", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset1", tmp_dir_, FilesystemWrapperType::LOCAL,
+                         FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset2", tmp_dir_, FilesystemWrapperType::LOCAL,
+                         FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_thread(1, 0);
   std::vector<int64_t> file_watcher_threads;
@@ -98,11 +97,11 @@ TEST_F(FileWatcherWatchdogTest, TestStopFileWatcherProcess) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
-  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
+                         FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_thread(1, 0);
 
@@ -123,13 +122,13 @@ TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherThreads) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   watchdog.watch_file_watcher_threads();
 
-  connection.add_dataset("test_dataset1", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset1", tmp_dir_, FilesystemWrapperType::LOCAL,
+                         FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_threads();
 
@@ -165,7 +164,7 @@ TEST_F(FileWatcherWatchdogTest, TestFileWatcherWatchdogWithNoDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   watchdog.watch_file_watcher_threads();
 
@@ -179,11 +178,11 @@ TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
-  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
+                         FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_thread(1, 0);
   // Simulate a failure of the FileWatcher process
@@ -204,14 +203,14 @@ TEST_F(FileWatcherWatchdogTest, TestAddingNewDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   watchdog.watch_file_watcher_threads();
 
   // Add a new dataset to the database
-  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
+                         FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   // The watchdog should start a FileWatcher process for the new dataset
   watchdog.watch_file_watcher_threads();
@@ -228,12 +227,12 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   // Add a new dataset to the database
-  connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                         storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         TestUtils::get_dummy_file_wrapper_config_inline(), true);
+  connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
+                         FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_threads();
 
@@ -256,7 +255,7 @@ TEST_F(FileWatcherWatchdogTest, TestNoDatasetsInDB) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcherWatchdog watchdog(config, &stop_file_watcher);
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   watchdog.watch_file_watcher_threads();
 

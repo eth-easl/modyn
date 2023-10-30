@@ -4,7 +4,7 @@
 #include <numeric>
 #include <vector>
 
-using namespace storage::file_wrapper;
+using namespace modyn::storage;
 
 /*
  * Transforms a vector of bytes into an int64_t.

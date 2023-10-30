@@ -7,7 +7,7 @@
 
 #include "soci/soci.h"
 
-using namespace storage::file_watcher;
+using namespace modyn::storage;
 
 /*
  * Start a new FileWatcher thread for the given dataset

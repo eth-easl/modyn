@@ -14,7 +14,9 @@
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "storage.grpc.pb.h"
 
-namespace storage::grpcs {
+namespace modyn::storage {
+
+using namespace grpc;
 
 template <typename T>
 using T_ptr = std::variant<
@@ -50,30 +52,30 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       retrieval_threads_vector_ = std::vector<std::thread>(retrieval_threads_);
     }
   }
-  ::grpc::Status Get(::grpc::ServerContext* context, const modyn::storage::GetRequest* request,
-                     ::grpc::ServerWriter<modyn::storage::GetResponse>* writer) override;
-  ::grpc::Status GetNewDataSince(::grpc::ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,
-                                 ::grpc::ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) override;
-  ::grpc::Status GetDataInInterval(::grpc::ServerContext* context,
+  Status Get(ServerContext* context, const modyn::storage::GetRequest* request,
+                     ServerWriter<modyn::storage::GetResponse>* writer) override;
+  Status GetNewDataSince(ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,
+                                 ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) override;
+  Status GetDataInInterval(ServerContext* context,
                                    const modyn::storage::GetDataInIntervalRequest* request,
-                                   ::grpc::ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) override;
-  ::grpc::Status CheckAvailability(::grpc::ServerContext* context,
+                                   ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) override;
+  Status CheckAvailability(ServerContext* context,
                                    const modyn::storage::DatasetAvailableRequest* request,
                                    modyn::storage::DatasetAvailableResponse* response) override;
-  ::grpc::Status RegisterNewDataset(::grpc::ServerContext* context,
+  Status RegisterNewDataset(ServerContext* context,
                                     const modyn::storage::RegisterNewDatasetRequest* request,
                                     modyn::storage::RegisterNewDatasetResponse* response) override;
-  ::grpc::Status GetCurrentTimestamp(::grpc::ServerContext* context,
+  Status GetCurrentTimestamp(ServerContext* context,
                                      const modyn::storage::GetCurrentTimestampRequest* request,
                                      modyn::storage::GetCurrentTimestampResponse* response) override;
-  ::grpc::Status DeleteDataset(::grpc::ServerContext* context, const modyn::storage::DatasetAvailableRequest* request,
+  Status DeleteDataset(ServerContext* context, const modyn::storage::DatasetAvailableRequest* request,
                                modyn::storage::DeleteDatasetResponse* response) override;
-  ::grpc::Status DeleteData(::grpc::ServerContext* context, const modyn::storage::DeleteDataRequest* request,
+  Status DeleteData(ServerContext* context, const modyn::storage::DeleteDataRequest* request,
                             modyn::storage::DeleteDataResponse* response) override;
-  ::grpc::Status GetDataPerWorker(::grpc::ServerContext* context,
+  Status GetDataPerWorker(ServerContext* context,
                                   const modyn::storage::GetDataPerWorkerRequest* request,
-                                  ::grpc::ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) override;
-  ::grpc::Status GetDatasetSize(::grpc::ServerContext* context, const modyn::storage::GetDatasetSizeRequest* request,
+                                  ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) override;
+  Status GetDatasetSize(ServerContext* context, const modyn::storage::GetDatasetSizeRequest* request,
                                 modyn::storage::GetDatasetSizeResponse* response) override;
   static std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,
                                                                int64_t total_num_elements);
@@ -84,26 +86,26 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   int64_t retrieval_threads_;
   bool disable_multithreading_;
   std::vector<std::thread> retrieval_threads_vector_{};
-  storage::database::StorageDatabaseConnection storage_database_connection_;
+  StorageDatabaseConnection storage_database_connection_;
   static void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
                               std::map<int64_t, SampleData>& file_id_to_sample_data);
-  void send_get_response(::grpc::ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
+  void send_get_response(ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
                          const SampleData& sample_data, const YAML::Node& file_wrapper_config,
-                         const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
+                         const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
                          int64_t file_wrapper_type);
   template <typename T>
-  void send_file_ids_and_labels(::grpc::ServerWriter<T>* writer, int64_t dataset_id, int64_t start_timestamp = -1,
+  void send_file_ids_and_labels(ServerWriter<T>* writer, int64_t dataset_id, int64_t start_timestamp = -1,
                                 int64_t end_timestamp = -1);
   template <typename T>
-  void send_samples_synchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id, soci::session& session);
+  void send_samples_synchronous_retrieval(ServerWriter<T>* writer, int64_t file_id, soci::session& session);
   template <typename T>
-  void send_samples_asynchronous_retrieval(::grpc::ServerWriter<T>* writer, int64_t file_id, soci::session& session);
+  void send_samples_asynchronous_retrieval(ServerWriter<T>* writer, int64_t file_id, soci::session& session);
   static SampleData get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
-                                      const storage::database::StorageDatabaseConnection& storage_database_connection);
+                                      const StorageDatabaseConnection& storage_database_connection);
   static int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session);
 
   static std::vector<int64_t> get_file_ids(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
                                            int64_t end_timestamp = -1);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
 };
-}  // namespace storage::grpcs
+}  // namespace modyn::storage

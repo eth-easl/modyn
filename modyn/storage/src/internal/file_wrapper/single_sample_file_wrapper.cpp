@@ -7,7 +7,7 @@
 
 #include "modyn/utils/utils.hpp"
 
-using namespace storage::file_wrapper;
+using namespace modyn::storage;
 
 int64_t SingleSampleFileWrapper::get_number_of_samples() {
   ASSERT(file_wrapper_config_["file_extension"], "File wrapper configuration does not contain a file extension");

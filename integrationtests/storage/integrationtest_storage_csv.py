@@ -167,8 +167,8 @@ def main() -> None:
     try:
         test_storage()
     finally:
-        cleanup_dataset_dir()
         cleanup_storage_database()
+        cleanup_dataset_dir()
 
 
 if __name__ == "__main__":

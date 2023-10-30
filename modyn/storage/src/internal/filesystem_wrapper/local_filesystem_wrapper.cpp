@@ -13,7 +13,7 @@
 
 #include "modyn/utils/utils.hpp"
 
-using namespace storage::filesystem_wrapper;
+using namespace modyn::storage;
 
 std::vector<unsigned char> LocalFilesystemWrapper::get(const std::string& path) {
   std::ifstream file;

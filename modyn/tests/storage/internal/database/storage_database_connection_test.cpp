@@ -10,8 +10,7 @@
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
-using namespace storage::database;
-using namespace storage::test;
+using namespace modyn::storage;
 
 class StorageDatabaseConnectionTest : public ::testing::Test {
  protected:
@@ -23,19 +22,19 @@ class StorageDatabaseConnectionTest : public ::testing::Test {
 };
 
 TEST_F(StorageDatabaseConnectionTest, TestGetSession) {
-  YAML::Node config = TestUtils::get_dummy_config();  // NOLINT
+  YAML::Node config = modyn::test::TestUtils::get_dummy_config();  // NOLINT
   const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.get_session());
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestInvalidDriver) {
-  YAML::Node config = TestUtils::get_dummy_config();  // NOLINT
+  YAML::Node config = modyn::test::TestUtils::get_dummy_config();  // NOLINT
   config["storage"]["database"]["drivername"] = "invalid";
   ASSERT_THROW(const StorageDatabaseConnection connection(config), modyn::utils::ModynException);
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
-  const YAML::Node config = TestUtils::get_dummy_config();
+  const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
   const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
@@ -53,7 +52,7 @@ TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
-  const YAML::Node config = TestUtils::get_dummy_config();
+  const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
   const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
@@ -67,8 +66,8 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
 
   // Add dataset
   ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path",
-                                      storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                                      storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                      FilesystemWrapperType::LOCAL,
+                                      FileWrapperType::SINGLE_SAMPLE, "test_description",
                                       "test_version", "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists
@@ -80,20 +79,20 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestAddExistingDataset) {
-  const YAML::Node config = TestUtils::get_dummy_config();
+  const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
   const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
   // Add dataset
   ASSERT_TRUE(connection.add_dataset("test_dataset", "test_base_path",
-                                     storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                                     storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                     FilesystemWrapperType::LOCAL,
+                                     FileWrapperType::SINGLE_SAMPLE, "test_description",
                                      "test_version", "test_file_wrapper_config", false, 0));
 
   // Add existing dataset
   ASSERT_FALSE(connection.add_dataset("test_dataset", "test_base_path2",
-                                      storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                                      storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                      FilesystemWrapperType::LOCAL,
+                                      FileWrapperType::SINGLE_SAMPLE, "test_description",
                                       "test_version", "test_file_wrapper_config", false, 0));
 
   soci::session session = connection.get_session();
@@ -103,7 +102,7 @@ TEST_F(StorageDatabaseConnectionTest, TestAddExistingDataset) {
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
-  const YAML::Node config = TestUtils::get_dummy_config();
+  const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
   const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 
@@ -117,8 +116,8 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
 
   // Add dataset
   ASSERT_NO_THROW(connection2.add_dataset("test_dataset", "test_base_path",
-                                          storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                                          storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test_description",
+                                          FilesystemWrapperType::LOCAL,
+                                          FileWrapperType::SINGLE_SAMPLE, "test_description",
                                           "test_version", "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists
@@ -139,7 +138,7 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestDeleteNonExistingDataset) {
-  const YAML::Node config = TestUtils::get_dummy_config();
+  const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
   const StorageDatabaseConnection connection(config);
   ASSERT_NO_THROW(connection.create_tables());
 }

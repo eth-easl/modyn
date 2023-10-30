@@ -23,7 +23,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetRequest,
     RegisterNewDatasetRequest,
     DeleteDataRequest,
-    DeleteDataResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
@@ -292,14 +291,15 @@ def test_storage() -> None:
     check_get_current_timestamp()  # Check if the storage service is available.
     create_dataset_dir()
     register_new_dataset()
-    check_dataset_size(0)  # Check if the dataset is empty.
-    check_dataset_size_invalid()
     check_dataset_availability()  # Check if the dataset is available.
+    check_dataset_size(0)  # Check if the dataset is empty.
+    
+    check_dataset_size_invalid()
 
     add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
 
     response = None
-    for i in range(20):        
+    for i in range(20):
         responses = list(get_new_data_since(0))
         assert (
             len(responses) < 2
@@ -307,6 +307,9 @@ def test_storage() -> None:
         if len(responses) == 1:
             response = responses[0]
             if len(response.keys) == 10:
+                assert (
+                    label in [f"{i}" for i in range(0, 10)] for label in response.labels
+                )
                 break
         time.sleep(1)
 
@@ -330,6 +333,9 @@ def test_storage() -> None:
         if len(responses) == 1:
             response = responses[0]
             if len(response.keys) == 10:
+                assert (
+                    label in [f"{i}" for i in range(10, 20)] for label in response.labels
+                )
                 break
         time.sleep(1)
 

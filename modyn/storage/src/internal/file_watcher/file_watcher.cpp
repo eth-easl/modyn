@@ -14,7 +14,7 @@
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
 
-using namespace storage::file_watcher;
+using namespace modyn::storage;
 
 /*
  * Checks if the file is valid for the dataset.
@@ -32,8 +32,8 @@ using namespace storage::file_watcher;
  */
 bool FileWatcher::check_valid_file(
     const std::string& file_path, const std::string& data_file_extension, bool ignore_last_timestamp, int64_t timestamp,
-    storage::database::StorageDatabaseConnection& storage_database_connection,
-    const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper) {
+    StorageDatabaseConnection& storage_database_connection,
+    const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
   if (file_path.empty()) {
     return false;
   }
@@ -87,7 +87,7 @@ void FileWatcher::update_files_in_directory(const std::string& directory_path, i
     return;
   }
 
-  const auto file_wrapper_type = static_cast<storage::file_wrapper::FileWrapperType>(file_wrapper_type_id);
+  const auto file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type_id);
 
   if (file_wrapper_config.empty()) {
     SPDLOG_ERROR("Failed to get file wrapper config");
@@ -202,8 +202,8 @@ void FileWatcher::run() {
 }
 
 void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-                                    const storage::file_wrapper::FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                    const storage::filesystem_wrapper::FilesystemWrapperType& filesystem_wrapper_type,
+                                    const FileWrapperType& file_wrapper_type, int64_t timestamp,
+                                    const FilesystemWrapperType& filesystem_wrapper_type,
                                     const int64_t dataset_id, const YAML::Node& file_wrapper_config,
                                     const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
                                     const bool force_fallback) {
@@ -211,12 +211,12 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     return;
   }
 
-  storage::database::StorageDatabaseConnection storage_database_connection(config);
+  StorageDatabaseConnection storage_database_connection(config);
   soci::session session = storage_database_connection.get_session();  // NOLINT misc-const-correctness
 
   std::vector<std::string> valid_files;
   const std::string& file_path = file_paths.front();
-  auto filesystem_wrapper = storage::filesystem_wrapper::get_filesystem_wrapper(file_path, filesystem_wrapper_type);
+  auto filesystem_wrapper = get_filesystem_wrapper(file_path, filesystem_wrapper_type);
 
   for (const auto& file_path : file_paths) {
     if (check_valid_file(file_path, data_file_extension, /*ignore_last_timestamp=*/false, timestamp,
@@ -229,7 +229,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     const std::string file_path = valid_files.front();
     std::vector<FileFrame> file_frame = {};
     auto file_wrapper =
-        storage::file_wrapper::get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+        get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
 
     int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
@@ -266,16 +266,16 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
 int64_t FileWatcher::insert_file(
     const std::string& file_path, const int64_t dataset_id,
-    const storage::database::StorageDatabaseConnection& storage_database_connection,
-    const std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper>& filesystem_wrapper,
-    const std::unique_ptr<storage::file_wrapper::FileWrapper>& file_wrapper) {
+    const StorageDatabaseConnection& storage_database_connection,
+    const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
+    const std::unique_ptr<FileWrapper>& file_wrapper) {
   int64_t number_of_samples = 0;
   number_of_samples = file_wrapper->get_number_of_samples();
   int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
   int64_t file_id = -1;
 
   // soci::session::get_last_insert_id() is not supported by postgresql, so we need to use a different query.
-  if (storage_database_connection.get_drivername() == storage::database::DatabaseDriver::SQLITE3) {
+  if (storage_database_connection.get_drivername() == DatabaseDriver::SQLITE3) {
     soci::session session = storage_database_connection.get_session();
     session << "INSERT INTO files (dataset_id, path, number_of_samples, "
                "updated_at) VALUES (:dataset_id, :path, "
@@ -290,7 +290,7 @@ int64_t FileWatcher::insert_file(
       return -1;
     }
     file_id = static_cast<int64_t>(inner_file_id);
-  } else if (storage_database_connection.get_drivername() == storage::database::DatabaseDriver::POSTGRESQL) {
+  } else if (storage_database_connection.get_drivername() == DatabaseDriver::POSTGRESQL) {
     soci::session session = storage_database_connection.get_session();
     session << "INSERT INTO files (dataset_id, path, number_of_samples, "
                "updated_at) VALUES (:dataset_id, :path, "
@@ -307,14 +307,14 @@ int64_t FileWatcher::insert_file(
   return file_id;
 }
 
-void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConnection& storage_database_connection,
+void FileWatcher::insert_file_frame(const StorageDatabaseConnection& storage_database_connection,
                                     const std::vector<FileFrame>& file_frame, const int64_t dataset_id,
                                     const bool /*force_fallback*/) {
   switch (storage_database_connection.get_drivername()) {
-    case storage::database::DatabaseDriver::POSTGRESQL:
+    case DatabaseDriver::POSTGRESQL:
       postgres_copy_insertion(file_frame, storage_database_connection, dataset_id);
       break;
-    case storage::database::DatabaseDriver::SQLITE3:
+    case DatabaseDriver::SQLITE3:
       fallback_insertion(file_frame, storage_database_connection, dataset_id);
       break;
     default:
@@ -331,7 +331,7 @@ void FileWatcher::insert_file_frame(const storage::database::StorageDatabaseConn
  */
 void FileWatcher::postgres_copy_insertion(
     const std::vector<FileFrame>& file_frame,
-    const storage::database::StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
+    const StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
   auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
@@ -360,7 +360,7 @@ void FileWatcher::postgres_copy_insertion(
  * @param file_frame The file frame to be inserted.
  */
 void FileWatcher::fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                     const storage::database::StorageDatabaseConnection& storage_database_connection,
+                                     const StorageDatabaseConnection& storage_database_connection,
                                      const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
   // Prepare query

@@ -7,7 +7,7 @@
 #include "modyn/utils/utils.hpp"
 #include "storage.hpp"
 
-using namespace storage;
+using namespace modyn::storage;
 
 void setup_logger() { spdlog::set_pattern("[%Y-%m-%d:%H:%M:%S] [%s:%#] [%l] %v"); }
 

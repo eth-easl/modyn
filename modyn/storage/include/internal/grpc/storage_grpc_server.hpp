@@ -7,7 +7,7 @@
 
 #include <condition_variable>
 
-namespace storage::grpcs {
+namespace modyn::storage {
 
 class StorageGrpcServer {
  public:
@@ -22,4 +22,4 @@ class StorageGrpcServer {
   std::condition_variable cv_;
 };
 
-}  // namespace storage::grpcs
+}  // namespace modyn::storage

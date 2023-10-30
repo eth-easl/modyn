@@ -4,13 +4,13 @@
 
 #include "internal/file_wrapper/file_wrapper.hpp"
 
-namespace storage::file_wrapper {
+namespace modyn::storage {
 
-class SingleSampleFileWrapper : public storage::file_wrapper::FileWrapper {
+class SingleSampleFileWrapper : public FileWrapper {
  public:
   SingleSampleFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                          std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> filesystem_wrapper)
-      : storage::file_wrapper::FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
+                          std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+      : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     validate_file_extension();
   }
   int64_t get_number_of_samples() override;
@@ -24,4 +24,4 @@ class SingleSampleFileWrapper : public storage::file_wrapper::FileWrapper {
   void set_file_path(const std::string& path) override { file_path_ = path; }
   FileWrapperType get_type() override;
 };
-}  // namespace storage::file_wrapper
+}  // namespace modyn::storage

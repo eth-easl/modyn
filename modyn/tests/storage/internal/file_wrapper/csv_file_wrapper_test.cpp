@@ -12,8 +12,7 @@
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
-using namespace storage::file_wrapper;
-using namespace storage::test;
+using namespace modyn::storage;
 
 class CsvFileWrapperTest : public ::testing::Test {
  protected:
@@ -23,7 +22,7 @@ class CsvFileWrapperTest : public ::testing::Test {
   std::string tmp_dir_ = std::filesystem::temp_directory_path().string() + "/csv_file_wrapper_test";
 
   CsvFileWrapperTest()
-      : config_{TestUtils::get_dummy_file_wrapper_config()},
+      : config_{StorageTestUtils::get_dummy_file_wrapper_config()},
         filesystem_wrapper_{std::make_shared<MockFilesystemWrapper>()} {
     file_name_ = tmp_dir_ + "/test.csv";
   }

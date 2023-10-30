@@ -12,7 +12,7 @@
 #include "internal/database/storage_database_connection.hpp"
 #include "modyn/utils/utils.hpp"
 
-namespace storage::file_watcher {
+namespace modyn::storage {
 
 class FileWatcherWatchdog {
  public:
@@ -22,7 +22,7 @@ class FileWatcherWatchdog {
         file_watcher_dataset_retries_{std::map<int64_t, int16_t>()},
         file_watcher_thread_stop_flags_{std::map<int64_t, std::atomic<bool>>()},
         stop_file_watcher_watchdog_{stop_file_watcher_watchdog},
-        storage_database_connection_{storage::database::StorageDatabaseConnection(config_)} {
+        storage_database_connection_{StorageDatabaseConnection(config_)} {
     if (stop_file_watcher_watchdog_ == nullptr) {
       FAIL("stop_file_watcher_watchdog_ is nullptr.");
     }
@@ -48,6 +48,6 @@ class FileWatcherWatchdog {
   std::map<int64_t, std::atomic<bool>> file_watcher_thread_stop_flags_;
   // Used to stop the FileWatcherWatchdog thread from storage main thread
   std::atomic<bool>* stop_file_watcher_watchdog_;
-  storage::database::StorageDatabaseConnection storage_database_connection_;
+  StorageDatabaseConnection storage_database_connection_;
 };
-}  // namespace storage::file_watcher
+}  // namespace modyn::storage

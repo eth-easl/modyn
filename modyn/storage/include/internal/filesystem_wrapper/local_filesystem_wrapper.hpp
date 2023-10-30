@@ -2,7 +2,7 @@
 
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 
-namespace storage::filesystem_wrapper {
+namespace modyn::storage {
 class LocalFilesystemWrapper : public FilesystemWrapper {
  public:
   explicit LocalFilesystemWrapper(const std::string& path) : FilesystemWrapper(path) {}
@@ -18,4 +18,4 @@ class LocalFilesystemWrapper : public FilesystemWrapper {
   FilesystemWrapperType get_type() override;
   bool remove(const std::string& path) override;
 };
-}  // namespace storage::filesystem_wrapper
+}  // namespace modyn::storage

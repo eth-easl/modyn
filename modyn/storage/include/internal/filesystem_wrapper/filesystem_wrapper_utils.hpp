@@ -4,9 +4,9 @@
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
 
-namespace storage::filesystem_wrapper {
+namespace modyn::storage {
 
-static std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> get_filesystem_wrapper(
+static std::shared_ptr<FilesystemWrapper> get_filesystem_wrapper(
     const std::string& path, const FilesystemWrapperType& type) {
   std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
   if (type == FilesystemWrapperType::LOCAL) {
@@ -16,4 +16,4 @@ static std::shared_ptr<storage::filesystem_wrapper::FilesystemWrapper> get_files
   }
   return filesystem_wrapper;
 }
-}  // namespace storage::filesystem_wrapper
+}  // namespace modyn::storage

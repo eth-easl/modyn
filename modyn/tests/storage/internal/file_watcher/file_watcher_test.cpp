@@ -14,8 +14,7 @@
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
-using namespace storage::file_watcher;
-using namespace storage::test;
+using namespace modyn::storage;
 
 class FileWatcherTest : public ::testing::Test {
  protected:
@@ -24,21 +23,21 @@ class FileWatcherTest : public ::testing::Test {
   FileWatcherTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_test"} {}
 
   void SetUp() override {
-    TestUtils::create_dummy_yaml();
+    modyn::utils::TestUtils::create_dummy_yaml();
     // Create temporary directory
     std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
-    const storage::database::StorageDatabaseConnection connection(config);
+    const StorageDatabaseConnection connection(config);
     connection.create_tables();
 
     // Add a dataset to the database
-    connection.add_dataset("test_dataset", tmp_dir_, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL,
-                           storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                           TestUtils::get_dummy_file_wrapper_config_inline(), true);
+    connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
+                           FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
+                           StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
   }
 
   void TearDown() override {
-    TestUtils::delete_dummy_yaml();
+    modyn::utils::TestUtils::delete_dummy_yaml();
     if (std::filesystem::exists("'test.db'")) {
       std::filesystem::remove("'test.db'");
     }
@@ -57,7 +56,7 @@ TEST_F(FileWatcherTest, TestSeek) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session session = connection.get_session();
 
@@ -98,7 +97,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   // Add a file to the temporary directory
   std::ofstream file(tmp_dir_ + "/test_file.txt");
@@ -126,7 +125,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
 
 TEST_F(FileWatcherTest, TestExtractCheckValidFile) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  storage::database::StorageDatabaseConnection connection(config);
+  StorageDatabaseConnection connection(config);
 
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
 
@@ -178,7 +177,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
 
   ASSERT_NO_THROW(watcher.update_files_in_directory(tmp_dir_, 0));
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session session = connection.get_session();
 
@@ -192,7 +191,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   std::atomic<bool> stop_file_watcher = false;
   const FileWatcher watcher(config, 1, &stop_file_watcher);
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session session = connection.get_session();
 
@@ -251,7 +250,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   files.emplace_back(tmp_dir_ + "/test2.txt");
   files.emplace_back(tmp_dir_ + "/test2.lbl");
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   soci::session session = connection.get_session();
 
@@ -260,10 +259,10 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   EXPECT_CALL(*filesystem_wrapper, exists(testing::_)).WillRepeatedly(testing::Return(true));
   watcher.filesystem_wrapper = filesystem_wrapper;
 
-  const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
+  const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE,
-                                                 0, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL, 1,
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE,
+                                                 0, FilesystemWrapperType::LOCAL, 1,
                                                  file_wrapper_config_node, config, 100, false));
 
   // Check if the samples are added to the database
@@ -323,7 +322,7 @@ TEST_F(FileWatcherTest, TestSeekDatasetWithNonExistentDirectory) {
 TEST_F(FileWatcherTest, TestCheckValidFileWithInvalidPath) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
 
-  storage::database::StorageDatabaseConnection connection(config);
+  StorageDatabaseConnection connection(config);
 
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
 
@@ -336,7 +335,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {
 
   const std::vector<FileFrame> files;
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
 
   ASSERT_NO_THROW(FileWatcher::fallback_insertion(files, connection, 1));
 }
@@ -346,10 +345,10 @@ TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {
 
   const std::vector<std::string> files;
 
-  const YAML::Node file_wrapper_config_node = YAML::Load(TestUtils::get_dummy_file_wrapper_config_inline());
+  const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", storage::file_wrapper::FileWrapperType::SINGLE_SAMPLE,
-                                                 0, storage::filesystem_wrapper::FilesystemWrapperType::LOCAL, 1,
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE,
+                                                 0, FilesystemWrapperType::LOCAL, 1,
                                                  file_wrapper_config_node, config, 100, false));
 }
 
@@ -374,7 +373,7 @@ TEST_F(FileWatcherTest, TestMultipleFileHandling) {
   // Seek the temporary directory
   ASSERT_NO_THROW(watcher.seek());
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
 
   // Check if the files are added to the database
@@ -410,7 +409,7 @@ TEST_F(FileWatcherTest, TestDirectoryUpdateWhileRunning) {
 
   std::this_thread::sleep_for(std::chrono::seconds(2));  // wait for the watcher to process
 
-  const storage::database::StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
 
   // Check if the file is added to the database

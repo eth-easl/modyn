@@ -6,7 +6,7 @@
 #include <numeric>
 #include <stdexcept>
 
-using namespace storage::file_wrapper;
+using namespace modyn::storage;
 
 void CsvFileWrapper::validate_file_extension() {
   if (file_path_.substr(file_path_.find_last_of('.') + 1) != "csv") {
