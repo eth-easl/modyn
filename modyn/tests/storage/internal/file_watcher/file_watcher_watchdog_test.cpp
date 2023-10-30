@@ -18,7 +18,7 @@ class FileWatcherWatchdogTest : public ::testing::Test {
       : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_watchdog_test"} {}
 
   void SetUp() override {
-    modyn::TestUtils::create_dummy_yaml();
+    modyn::test::TestUtils::create_dummy_yaml();
     // Create temporary directory
     std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
@@ -27,7 +27,7 @@ class FileWatcherWatchdogTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    modyn::TestUtils::delete_dummy_yaml();
+    modyn::test::TestUtils::delete_dummy_yaml();
     if (std::filesystem::exists("'test.db'")) {
       std::filesystem::remove("'test.db'");
     }
@@ -70,10 +70,10 @@ TEST_F(FileWatcherWatchdogTest, TestStartFileWatcherProcess) {
   // Add two dataset to the database
   connection.add_dataset("test_dataset1", tmp_dir_, FilesystemWrapperType::LOCAL,
                          FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
   connection.add_dataset("test_dataset2", tmp_dir_, FilesystemWrapperType::LOCAL,
                          FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_thread(1, 0);
   std::vector<int64_t> file_watcher_threads;
@@ -101,7 +101,7 @@ TEST_F(FileWatcherWatchdogTest, TestStopFileWatcherProcess) {
 
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
                          FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_thread(1, 0);
 
@@ -128,7 +128,7 @@ TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherThreads) {
 
   connection.add_dataset("test_dataset1", tmp_dir_, FilesystemWrapperType::LOCAL,
                          FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_threads();
 
@@ -182,7 +182,7 @@ TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
 
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
                          FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.start_file_watcher_thread(1, 0);
   // Simulate a failure of the FileWatcher process
@@ -210,7 +210,7 @@ TEST_F(FileWatcherWatchdogTest, TestAddingNewDataset) {
   // Add a new dataset to the database
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
                          FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   // The watchdog should start a FileWatcher process for the new dataset
   watchdog.watch_file_watcher_threads();
@@ -232,7 +232,7 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   // Add a new dataset to the database
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
                          FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                         modyn::test::TestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
 
   watchdog.watch_file_watcher_threads();
 

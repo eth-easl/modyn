@@ -1,6 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
-
+#pragma once
 
 #include <yaml-cpp/yaml.h>
 
@@ -14,5 +12,3 @@ class TestUtils {
   static YAML::Node get_dummy_config();
 };
 } // namespace modyn
-
-#endif

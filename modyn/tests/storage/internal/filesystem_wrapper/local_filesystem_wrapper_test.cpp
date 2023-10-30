@@ -10,7 +10,7 @@
 
 #include "gmock/gmock.h"
 #include "storage_test_utils.hpp"
-#include "utils/test_utils.hpp"
+#include "test_utils.hpp"
 
 using namespace modyn::storage;
 

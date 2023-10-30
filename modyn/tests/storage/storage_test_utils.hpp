@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <yaml-cpp/yaml.h>
 
@@ -12,5 +11,3 @@ class StorageTestUtils {
   static std::string get_dummy_file_wrapper_config_inline();
 };
 }  // namespace modyn::storage
-
-#endif

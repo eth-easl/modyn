@@ -23,7 +23,7 @@ class FileWatcherTest : public ::testing::Test {
   FileWatcherTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_test"} {}
 
   void SetUp() override {
-    modyn::utils::TestUtils::create_dummy_yaml();
+    modyn::test::TestUtils::create_dummy_yaml();
     // Create temporary directory
     std::filesystem::create_directory(tmp_dir_);
     const YAML::Node config = YAML::LoadFile("config.yaml");
@@ -37,7 +37,7 @@ class FileWatcherTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    modyn::utils::TestUtils::delete_dummy_yaml();
+    modyn::test::TestUtils::delete_dummy_yaml();
     if (std::filesystem::exists("'test.db'")) {
       std::filesystem::remove("'test.db'");
     }
