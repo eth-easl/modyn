@@ -3,7 +3,7 @@
 #include "internal/file_wrapper/binary_file_wrapper.hpp"
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/file_wrapper/single_sample_file_wrapper.hpp"
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 
 namespace storage::file_wrapper {
 

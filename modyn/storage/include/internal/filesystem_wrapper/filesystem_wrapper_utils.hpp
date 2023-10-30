@@ -2,7 +2,7 @@
 
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "internal/filesystem_wrapper/local_filesystem_wrapper.hpp"
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 
 namespace storage::filesystem_wrapper {
 

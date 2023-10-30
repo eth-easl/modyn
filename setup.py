@@ -3,8 +3,12 @@
 
 import io
 import os
+import pathlib
+import subprocess
+from pprint import pprint
 
-from setuptools import find_packages, setup
+from setuptools import Extension, find_packages, setup
+from setuptools.command.build_ext import build_ext
 
 # Package meta-data.
 NAME = 'modyn'
@@ -45,6 +49,53 @@ except FileNotFoundError:
 # Load the package's _version.py module as a dictionary.
 about = {}
 project_slug = "modyn"
+
+EXTENSION_BUILD_DIR = pathlib.Path(here) / "libbuild"
+
+
+def _get_env_variable(name, default='OFF'):
+    if name not in os.environ.keys():
+        return default
+    return os.environ[name]
+
+
+class CMakeExtension(Extension):
+    def __init__(self, name, cmake_lists_dir='.', sources=[], **kwa):
+        Extension.__init__(self, name, sources=sources, **kwa)
+        self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
+
+
+class CMakeBuild(build_ext):
+    def copy_extensions_to_source(self):
+        pass
+
+    def build_extensions(self):
+        try:
+            subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError('Cannot find CMake executable')
+
+        for ext in self.extensions:
+            cfg = _get_env_variable('MODYN_BUILDTYPE', "Release")
+            print(f"Using build type {cfg} for Modyn.")
+            cmake_args = [
+                '-DCMAKE_BUILD_TYPE=%s' % cfg,
+                "-DMODYN_BUILD_PLAYGROUND=Off",
+                "-DMODYN_BUILD_TESTS=Off",
+                "-DMODYN_BUILD_STORAGE=Off",
+                "-DMODYN_TEST_COVERAGE=Off"
+            ]
+
+            pprint(cmake_args)
+
+            if not os.path.exists(EXTENSION_BUILD_DIR):
+                os.makedirs(EXTENSION_BUILD_DIR)
+
+            # Config and build the extension
+            subprocess.check_call(['cmake', ext.cmake_lists_dir] + cmake_args,
+                                  cwd=EXTENSION_BUILD_DIR)
+            subprocess.check_call(['cmake', '--build', '.', '--config', cfg],
+                                  cwd=EXTENSION_BUILD_DIR)
 
 
 # Where the magic happens:
@@ -87,6 +138,8 @@ setup(
     include_package_data=True,
     license='MIT',
     keywords=KEYWORDS,
+    ext_modules=[CMakeExtension("example_extension")],
+    cmdclass={'build_ext': CMakeBuild},
     classifiers=[
         # Trove classifiers
         # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers

@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 
 using namespace storage::filesystem_wrapper;
 

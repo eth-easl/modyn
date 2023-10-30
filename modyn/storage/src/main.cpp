@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "internal/utils/utils.hpp"
+#include "modyn/utils/utils.hpp"
 #include "storage.hpp"
 
 using namespace storage;

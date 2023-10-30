@@ -7,7 +7,7 @@ runs:
     # Necessary to e.g. patch which container image is being used
     - name: Apply initial setup
       run: |
-        bash ./initial_setup.sh
+        bash ./scripts/initial_setup.sh
       shell: bash
 
     - name: Build dependencies and push
