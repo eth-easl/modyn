@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package supervisor;
+
+service Supervisor {
+  rpc start_pipeline(StartPipelineRequest) returns (PipelineResponse) {}
+}
+
+message Empty {}
+
+message JsonString { string value = 1; }
+
+message StartPipelineRequest {
+    JsonString pipeline_config = 1;
+    string eval_directory = 2;
+    optional int32 start_replay_at = 3;
+    optional int32 stop_replay_at = 4;
+    optional int32 maximum_triggers = 5;
+}
+
+message PipelineResponse { int32 pipeline_id = 1; }
