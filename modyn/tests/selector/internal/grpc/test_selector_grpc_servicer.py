@@ -4,7 +4,7 @@ import tempfile
 from typing import Iterable
 from unittest.mock import MagicMock, patch
 
-from modyn.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611; StrategyConfig,
+from modyn.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611;
     DataInformRequest,
     GetNumberOfPartitionsRequest,
     GetNumberOfSamplesRequest,

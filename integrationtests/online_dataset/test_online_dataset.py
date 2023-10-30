@@ -12,12 +12,7 @@ import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import torch
 import yaml
-from integrationtests.utils import (
-    get_minimal_evaluation_config,
-    get_minimal_pipeline_config,
-    init_metadata_db,
-    register_pipeline,
-)
+from integrationtests.utils import get_minimal_pipeline_config, init_metadata_db, register_pipeline
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (

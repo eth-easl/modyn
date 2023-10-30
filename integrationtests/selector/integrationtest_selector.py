@@ -13,9 +13,6 @@ from modyn.utils import grpc_connection_established
 # TODO(54): Write more integration tests for different strategies.
 
 
-init_metadata_db(get_modyn_config())
-
-
 def connect_to_selector_servicer() -> grpc.Channel:
     config = get_modyn_config()
 
@@ -954,6 +951,7 @@ def test_get_available_labels(reset_after_trigger: bool):
 
 
 if __name__ == "__main__":
+    init_metadata_db(get_modyn_config())
     test_newdata()
     test_label_balanced_presampling_huge()
     test_label_balanced_force_same_size()

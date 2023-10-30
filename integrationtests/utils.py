@@ -52,21 +52,6 @@ def get_minimal_pipeline_config(
     }
 
 
-def get_minimal_evaluation_config() -> dict:
-    return {
-        "device": "cpu",
-        "datasets": [
-            {
-                "dataset_id": "MNIST_eval",
-                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-                "dataloader_workers": 2,
-                "batch_size": 64,
-                "metrics": [{"name": "Accuracy"}],
-            }
-        ],
-    }
-
-
 def init_metadata_db(modyn_config: dict) -> None:
     with MetadataDatabaseConnection(modyn_config) as database:
         database.create_tables()

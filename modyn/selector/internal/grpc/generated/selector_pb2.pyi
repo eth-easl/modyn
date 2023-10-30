@@ -76,14 +76,6 @@ global___StrategyConfig = StrategyConfig
 
 @typing_extensions.final
 class DataInformRequest(google.protobuf.message.Message):
-    """// TODO(#302): Remove this when reworking pipeline registration
-    message ModelStoragePolicyInfo {
-      StrategyConfig full_model_strategy_config = 1;
-      optional StrategyConfig incremental_model_strategy_config = 2;
-      optional int32 full_model_interval = 3;
-    }
-    """
-
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     PIPELINE_ID_FIELD_NUMBER: builtins.int

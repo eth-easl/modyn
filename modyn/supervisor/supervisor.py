@@ -1,4 +1,3 @@
-# pylint: disable=no-name-in-module
 import json
 import logging
 import os
@@ -10,6 +9,8 @@ import enlighten
 from modyn.common.benchmark import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
+
+# pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import (
