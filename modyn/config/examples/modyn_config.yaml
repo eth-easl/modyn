@@ -181,3 +181,7 @@ evaluator:
 
 tensorboard:
   port: "50062"
+
+supervisor:
+  hostname: "supervisor"
+  port: "50063"
