@@ -61,8 +61,7 @@ class FileWatcher {
       return;
     }
 
-    const auto filesystem_wrapper_type =
-        static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
+    const auto filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
 
     if (dataset_path.empty()) {
       SPDLOG_ERROR("Dataset with id {} not found.", dataset_id_);
@@ -89,8 +88,8 @@ class FileWatcher {
   void run();
   static void handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
                                 const FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                const FilesystemWrapperType& filesystem_wrapper_type,
-                                int64_t dataset_id, const YAML::Node& file_wrapper_config, const YAML::Node& config,
+                                const FilesystemWrapperType& filesystem_wrapper_type, int64_t dataset_id,
+                                const YAML::Node& file_wrapper_config, const YAML::Node& config,
                                 int64_t sample_dbinsertion_batchsize, bool force_fallback);
   void update_files_in_directory(const std::string& directory_path, int64_t timestamp);
   static void insert_file_frame(const StorageDatabaseConnection& storage_database_connection,
@@ -101,16 +100,14 @@ class FileWatcher {
                              const std::unique_ptr<FileWrapper>& file_wrapper);
   void seek_dataset();
   void seek();
-  static bool check_valid_file(
-      const std::string& file_path, const std::string& data_file_extension, bool ignore_last_timestamp,
-      int64_t timestamp, StorageDatabaseConnection& storage_database_connection,
-      const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper);
+  static bool check_valid_file(const std::string& file_path, const std::string& data_file_extension,
+                               bool ignore_last_timestamp, int64_t timestamp,
+                               StorageDatabaseConnection& storage_database_connection,
+                               const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper);
   static void postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
-                                      const StorageDatabaseConnection& storage_database_connection,
-                                      int64_t dataset_id);
+                                      const StorageDatabaseConnection& storage_database_connection, int64_t dataset_id);
   static void fallback_insertion(const std::vector<FileFrame>& file_frame,
-                                 const StorageDatabaseConnection& storage_database_connection,
-                                 int64_t dataset_id);
+                                 const StorageDatabaseConnection& storage_database_connection, int64_t dataset_id);
 
  private:
   YAML::Node config_;

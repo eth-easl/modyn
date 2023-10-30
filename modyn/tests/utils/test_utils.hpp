@@ -11,4 +11,4 @@ class TestUtils {
   static void delete_dummy_yaml();
   static YAML::Node get_dummy_config();
 };
-} // namespace modyn
+}  // namespace modyn::test

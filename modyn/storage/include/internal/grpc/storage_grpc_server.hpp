@@ -11,15 +11,19 @@ namespace modyn::storage {
 
 class StorageGrpcServer {
  public:
-  StorageGrpcServer(const YAML::Node& config, std::atomic<bool>* stop_grpc_server)
+  StorageGrpcServer(const YAML::Node& config, std::atomic<bool>* stop_grpc_server,
+                    std::atomic<bool>* request_storage_shutdown)
       : config_{config}, stop_grpc_server_(stop_grpc_server) {}
   void run();
+  void stop() {
+    stop_grpc_server_->store(true);
+    request_storage_shutdown_->store(true);
+  }
 
  private:
   YAML::Node config_;
   std::atomic<bool>* stop_grpc_server_;
-  std::mutex mtx_;
-  std::condition_variable cv_;
+  std::atomic<bool>* request_storage_shutdown_;
 };
 
 }  // namespace modyn::storage

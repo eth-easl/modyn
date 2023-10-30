@@ -26,18 +26,8 @@ void Storage::run() {
   // Start the storage grpc server
   std::thread grpc_server_thread(&StorageGrpcServer::run, &grpc_server_);
 
-  // Create a condition variable to wait for the file watcher watchdog or gRPC server to exit.
-  std::condition_variable cv;
-
-  // Create a mutex to protect the `stop_grpc_server_` and `stop_file_watcher_watchdog_` variables.
-  std::mutex stop_mutex;
-
-  SPDLOG_INFO("Storage service running and ready to accept requests.");
-
-  {
-    std::unique_lock<std::mutex> lk(stop_mutex);
-    cv.wait(lk, [&] { return stop_grpc_server_.load() || stop_file_watcher_watchdog_.load(); });
-  }
+  // Wait for shutdown signal (storage_shutdown_requested_ true)
+  storage_shutdown_requested_.wait(true);
 
   SPDLOG_INFO("Storage service shutting down.");
 

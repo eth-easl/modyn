@@ -54,7 +54,7 @@ Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-na
       SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
       return {StatusCode::OK, "Dataset does not exist."};
     }
-    int64_t request_timestamp = request->timestamp();  // NOLINT misc-const-correctness
+    const int64_t request_timestamp = request->timestamp();
     send_file_ids_and_labels<modyn::storage::GetNewDataSinceResponse>(writer, dataset_id, request_timestamp);
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
@@ -74,8 +74,8 @@ Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-
       SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
       return {StatusCode::OK, "Dataset does not exist."};
     }
-    int64_t start_timestamp = request->start_timestamp();  // NOLINT misc-const-correctness
-    int64_t end_timestamp = request->end_timestamp();      // NOLINT misc-const-correctness
+    const int64_t start_timestamp = request->start_timestamp();
+    const int64_t end_timestamp = request->end_timestamp();
     send_file_ids_and_labels<modyn::storage::GetDataInIntervalResponse>(writer, dataset_id, start_timestamp,
                                                                         end_timestamp);
   } catch (const std::exception& e) {
@@ -112,11 +112,11 @@ Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier
     ServerContext* /*context*/, const modyn::storage::RegisterNewDatasetRequest* request,
     modyn::storage::RegisterNewDatasetResponse* response) {
   try {
-    bool success = storage_database_connection_.add_dataset(  // NOLINT misc-const-correctness
+    const bool success = storage_database_connection_.add_dataset(
         request->dataset_id(), request->base_path(),
         FilesystemWrapper::get_filesystem_wrapper_type(request->filesystem_wrapper_type()),
-        FileWrapper::get_file_wrapper_type(request->file_wrapper_type()), request->description(),
-        request->version(), request->file_wrapper_config(), request->ignore_last_timestamp(),
+        FileWrapper::get_file_wrapper_type(request->file_wrapper_type()), request->description(), request->version(),
+        request->file_wrapper_config(), request->ignore_last_timestamp(),
         static_cast<int>(request->file_watcher_interval()));
     response->set_success(success);
     return Status::OK;
@@ -153,8 +153,8 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
     session << "SELECT base_path, filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(base_path),
         soci::into(filesystem_wrapper_type), soci::use(request->dataset_id());
 
-    auto filesystem_wrapper = get_filesystem_wrapper(
-        base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+    auto filesystem_wrapper =
+        get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
 
     int64_t number_of_files;
     session << "SELECT COUNT(file_id) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
@@ -175,7 +175,7 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
     }
 
     const bool success = storage_database_connection_.delete_dataset(request->dataset_id(),
-                                                                     dataset_id);  // NOLINT misc-const-correctness
+                                                                     dataset_id);
 
     response->set_success(success);
     return Status::OK;
@@ -244,8 +244,8 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
       return {StatusCode::OK, "No files found."};
     }
 
-    auto filesystem_wrapper = get_filesystem_wrapper(
-        base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
+    auto filesystem_wrapper =
+        get_filesystem_wrapper(base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
     const YAML::Node file_wrapper_config_node = YAML::Load(file_wrapper_config);
     std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
     std::string index_placeholders;
@@ -259,9 +259,8 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
         return {StatusCode::OK, "Error deleting data."};
       }
 
-      auto file_wrapper = get_file_wrapper(
-          file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
-          file_wrapper_config_node, filesystem_wrapper);
+      auto file_wrapper = get_file_wrapper(file_paths.front(), static_cast<FileWrapperType>(file_wrapper_type),
+                                           file_wrapper_config_node, filesystem_wrapper);
       for (size_t i = 0; i < file_paths.size(); ++i) {
         const auto& file_id = file_ids[i];
         const auto& path = file_paths[i];
@@ -309,7 +308,7 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
 
 Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request,
-    ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {  // NOLINT misc-const-correctness
+    ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {
   try {
     SPDLOG_INFO("GetDataPerWorker request received.");
     soci::session session = storage_database_connection_.get_session();
@@ -364,7 +363,7 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
 
 Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
-    modyn::storage::GetDatasetSizeResponse* response) {  // NOLINT misc-const-correctness
+    modyn::storage::GetDatasetSizeResponse* response) {
   try {
     soci::session session = storage_database_connection_.get_session();
 
@@ -392,8 +391,8 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
 // ------- Helper functions -------
 
 template <typename T>
-void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, int64_t dataset_id,
-                                                  int64_t start_timestamp, int64_t end_timestamp) {
+void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, int64_t dataset_id, int64_t start_timestamp,
+                                                  int64_t end_timestamp) {
   soci::session session = storage_database_connection_.get_session();
 
   const std::vector<int64_t> file_ids = get_file_ids(dataset_id, session, start_timestamp, end_timestamp);
@@ -414,7 +413,7 @@ void StorageServiceImpl::send_samples_synchronous_retrieval(ServerWriter<T>* wri
                                                             soci::session& session) {
   const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples > 0) {
-    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
+    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness  (the rowset cannot be const for soci)
         (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
     T response;
     for (auto& row : rs) {
@@ -438,7 +437,7 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* wr
   const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples <= sample_batch_size_) {
     // If the number of samples is less than the sample batch size, retrieve all of the samples in one go.
-    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness
+    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness  (the rowset cannot be const for soci)
         (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
     T response;
     for (auto& row : rs) {
@@ -493,9 +492,8 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* wr
   }
 }
 
-SampleData StorageServiceImpl::get_sample_subset(
-    int64_t file_id, int64_t start_index, int64_t end_index,
-    const StorageDatabaseConnection& storage_database_connection) {
+SampleData StorageServiceImpl::get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
+                                                 const StorageDatabaseConnection& storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   const int64_t number_of_samples = end_index - start_index + 1;
   std::vector<int64_t> sample_ids(number_of_samples + 1);
@@ -539,7 +537,7 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_
 }
 
 int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci::session& session) {
-  int64_t dataset_id = -1;  // NOLINT misc-const-correctness
+  int64_t dataset_id = -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
   session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
 
   return dataset_id;
@@ -547,7 +545,7 @@ int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci
 
 std::vector<int64_t> StorageServiceImpl::get_file_ids(int64_t dataset_id, soci::session& session,
                                                       int64_t start_timestamp, int64_t end_timestamp) {
-  int64_t number_of_files = -1;  // NOLINT misc-const-correctness
+  int64_t number_of_files = -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
   std::vector<int64_t> file_ids;
 
   if (start_timestamp >= 0 && end_timestamp == -1) {

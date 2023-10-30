@@ -27,11 +27,9 @@ void StorageGrpcServer::run() {
   auto server = builder.BuildAndStart();
   SPDLOG_INFO("Server listening on {}", server_address);
 
-  {
-    std::unique_lock<std::mutex> lock(mtx_);
-    cv_.wait(lock, [&] { return stop_grpc_server_->load(); });
-  }
-
+  // Wait for the server to shutdown or signal to shutdown.
+  stop_grpc_server_->wait(true);
   server->Shutdown();
-  stop_grpc_server_->store(true);
+
+  stop();
 }

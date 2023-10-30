@@ -65,10 +65,9 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
   ASSERT_EQ(number_of_datasets, 0);
 
   // Add dataset
-  ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path",
-                                      FilesystemWrapperType::LOCAL,
-                                      FileWrapperType::SINGLE_SAMPLE, "test_description",
-                                      "test_version", "test_file_wrapper_config", false, 0));
+  ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
+                                      FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
+                                      "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists
   session << "SELECT COUNT(*) FROM datasets;", soci::into(number_of_datasets);
@@ -84,16 +83,14 @@ TEST_F(StorageDatabaseConnectionTest, TestAddExistingDataset) {
   ASSERT_NO_THROW(connection.create_tables());
 
   // Add dataset
-  ASSERT_TRUE(connection.add_dataset("test_dataset", "test_base_path",
-                                     FilesystemWrapperType::LOCAL,
-                                     FileWrapperType::SINGLE_SAMPLE, "test_description",
-                                     "test_version", "test_file_wrapper_config", false, 0));
+  ASSERT_TRUE(connection.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
+                                     FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
+                                     "test_file_wrapper_config", false, 0));
 
   // Add existing dataset
-  ASSERT_FALSE(connection.add_dataset("test_dataset", "test_base_path2",
-                                      FilesystemWrapperType::LOCAL,
-                                      FileWrapperType::SINGLE_SAMPLE, "test_description",
-                                      "test_version", "test_file_wrapper_config", false, 0));
+  ASSERT_FALSE(connection.add_dataset("test_dataset", "test_base_path2", FilesystemWrapperType::LOCAL,
+                                      FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
+                                      "test_file_wrapper_config", false, 0));
 
   soci::session session = connection.get_session();
   std::string base_path;
@@ -115,10 +112,9 @@ TEST_F(StorageDatabaseConnectionTest, TestDeleteDataset) {
   ASSERT_EQ(number_of_datasets, 0);
 
   // Add dataset
-  ASSERT_NO_THROW(connection2.add_dataset("test_dataset", "test_base_path",
-                                          FilesystemWrapperType::LOCAL,
-                                          FileWrapperType::SINGLE_SAMPLE, "test_description",
-                                          "test_version", "test_file_wrapper_config", false, 0));
+  ASSERT_NO_THROW(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
+                                          FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
+                                          "test_file_wrapper_config", false, 0));
 
   // Assert dataset exists
   session << "SELECT COUNT(*) FROM datasets;", soci::into(number_of_datasets);

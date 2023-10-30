@@ -12,8 +12,7 @@ enum FileWrapperType { SINGLE_SAMPLE, BINARY, CSV };
 
 class FileWrapper {
  public:
-  FileWrapper(std::string path, const YAML::Node& fw_config,
-              std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+  FileWrapper(std::string path, const YAML::Node& fw_config, std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
       : file_path_{std::move(path)},
         file_wrapper_config_{fw_config},
         filesystem_wrapper_{std::move(filesystem_wrapper)} {}

@@ -35,9 +35,8 @@ class StorageDatabaseConnection {
   }
   void create_tables() const;
   bool add_dataset(const std::string& name, const std::string& base_path,
-                   const FilesystemWrapperType& filesystem_wrapper_type,
-                   const FileWrapperType& file_wrapper_type, const std::string& description,
-                   const std::string& version, const std::string& file_wrapper_config,
+                   const FilesystemWrapperType& filesystem_wrapper_type, const FileWrapperType& file_wrapper_type,
+                   const std::string& description, const std::string& version, const std::string& file_wrapper_config,
                    bool ignore_last_timestamp, int file_watcher_interval = 5) const;
   bool delete_dataset(const std::string& name, const int64_t& dataset_id) const;
   void add_sample_dataset_partition(const std::string& dataset_name) const;

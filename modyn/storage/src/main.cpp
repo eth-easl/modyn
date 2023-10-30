@@ -27,12 +27,9 @@ int main(int argc, char* argv[]) {
 
   parser.parse_args(argc, argv);
 
-  std::string config_file = parser.get<std::string>("config");  // NOLINT misc-const-correctness
+  const std::string config_file = parser.get<std::string>("config");
 
   ASSERT(std::filesystem::exists(config_file), "Config file does not exist.");
-  if (!std::filesystem::exists(config_file)) {
-    FAIL("Config file does not exist.");
-  }
 
   // Verify that the config file exists and is readable.
   const YAML::Node config = YAML::LoadFile(config_file);

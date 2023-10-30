@@ -30,10 +30,10 @@ using namespace modyn::storage;
  * @param timestamp The last modified timestamp of the file.
  * @return True if the file is valid, false otherwise.
  */
-bool FileWatcher::check_valid_file(
-    const std::string& file_path, const std::string& data_file_extension, bool ignore_last_timestamp, int64_t timestamp,
-    StorageDatabaseConnection& storage_database_connection,
-    const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
+bool FileWatcher::check_valid_file(const std::string& file_path, const std::string& data_file_extension,
+                                   bool ignore_last_timestamp, int64_t timestamp,
+                                   StorageDatabaseConnection& storage_database_connection,
+                                   const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
   if (file_path.empty()) {
     return false;
   }
@@ -203,16 +203,15 @@ void FileWatcher::run() {
 
 void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
                                     const FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                    const FilesystemWrapperType& filesystem_wrapper_type,
-                                    const int64_t dataset_id, const YAML::Node& file_wrapper_config,
-                                    const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
-                                    const bool force_fallback) {
+                                    const FilesystemWrapperType& filesystem_wrapper_type, const int64_t dataset_id,
+                                    const YAML::Node& file_wrapper_config, const YAML::Node& config,
+                                    const int64_t sample_dbinsertion_batchsize, const bool force_fallback) {
   if (file_paths.empty()) {
     return;
   }
 
   StorageDatabaseConnection storage_database_connection(config);
-  soci::session session = storage_database_connection.get_session();  // NOLINT misc-const-correctness
+  soci::session session = storage_database_connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
 
   std::vector<std::string> valid_files;
   const std::string& file_path = file_paths.front();
@@ -228,13 +227,12 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   if (!valid_files.empty()) {
     const std::string file_path = valid_files.front();
     std::vector<FileFrame> file_frame = {};
-    auto file_wrapper =
-        get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+    auto file_wrapper = get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
 
     int64_t inserted_samples = 0;
     for (const auto& file_path : valid_files) {
       file_wrapper->set_file_path(file_path);
-      int64_t file_id =  // NOLINT misc-const-correctness
+      const int64_t file_id =
           insert_file(file_path, dataset_id, storage_database_connection, filesystem_wrapper, file_wrapper);
 
       if (file_id == -1) {
@@ -264,11 +262,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   }
 }
 
-int64_t FileWatcher::insert_file(
-    const std::string& file_path, const int64_t dataset_id,
-    const StorageDatabaseConnection& storage_database_connection,
-    const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
-    const std::unique_ptr<FileWrapper>& file_wrapper) {
+int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dataset_id,
+                                 const StorageDatabaseConnection& storage_database_connection,
+                                 const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
+                                 const std::unique_ptr<FileWrapper>& file_wrapper) {
   int64_t number_of_samples = 0;
   number_of_samples = file_wrapper->get_number_of_samples();
   int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
@@ -329,14 +326,14 @@ void FileWatcher::insert_file_frame(const StorageDatabaseConnection& storage_dat
  *
  * @param file_frame The file frame to be inserted.
  */
-void FileWatcher::postgres_copy_insertion(
-    const std::vector<FileFrame>& file_frame,
-    const StorageDatabaseConnection& storage_database_connection, const int64_t dataset_id) {
+void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_frame,
+                                          const StorageDatabaseConnection& storage_database_connection,
+                                          const int64_t dataset_id) {
   soci::session session = storage_database_connection.get_session();
   auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
 
-  std::string copy_query =  // NOLINT misc-const-correctness
+  std::string copy_query =  // NOLINT misc-const-correctness (the query cannot be const for soci)
       fmt::format("COPY samples(dataset_id,file_id,sample_index,label) FROM STDIN WITH (DELIMITER ',', FORMAT CSV)");
 
   PQexec(conn, copy_query.c_str());

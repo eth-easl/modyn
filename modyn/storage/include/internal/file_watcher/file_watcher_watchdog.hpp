@@ -16,12 +16,14 @@ namespace modyn::storage {
 
 class FileWatcherWatchdog {
  public:
-  FileWatcherWatchdog(const YAML::Node& config, std::atomic<bool>* stop_file_watcher_watchdog)
+  FileWatcherWatchdog(const YAML::Node& config, std::atomic<bool>* stop_file_watcher_watchdog,
+                      std::atomic<bool>* request_storage_shutdown)
       : config_{config},
         file_watcher_threads_{std::map<int64_t, std::thread>()},
         file_watcher_dataset_retries_{std::map<int64_t, int16_t>()},
         file_watcher_thread_stop_flags_{std::map<int64_t, std::atomic<bool>>()},
         stop_file_watcher_watchdog_{stop_file_watcher_watchdog},
+        request_storage_shutdown_{request_storage_shutdown},
         storage_database_connection_{StorageDatabaseConnection(config_)} {
     if (stop_file_watcher_watchdog_ == nullptr) {
       FAIL("stop_file_watcher_watchdog_ is nullptr.");
@@ -37,6 +39,10 @@ class FileWatcherWatchdog {
   void start_file_watcher_thread(int64_t dataset_id, int16_t retries);
   void stop_file_watcher_thread(int64_t dataset_id);
   void run();
+  void stop() {
+    stop_file_watcher_watchdog_->store(true);
+    request_storage_shutdown_->store(true);
+  }
   std::vector<int64_t> get_running_file_watcher_threads();
 
  private:
@@ -48,6 +54,7 @@ class FileWatcherWatchdog {
   std::map<int64_t, std::atomic<bool>> file_watcher_thread_stop_flags_;
   // Used to stop the FileWatcherWatchdog thread from storage main thread
   std::atomic<bool>* stop_file_watcher_watchdog_;
+  std::atomic<bool>* request_storage_shutdown_;
   StorageDatabaseConnection storage_database_connection_;
 };
 }  // namespace modyn::storage

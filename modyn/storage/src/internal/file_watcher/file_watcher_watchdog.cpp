@@ -137,7 +137,12 @@ void FileWatcherWatchdog::run() {
     if (stop_file_watcher_watchdog_->load()) {
       break;
     }
-    watch_file_watcher_threads();
+    try {
+      watch_file_watcher_threads();
+    } catch (const std::exception& e) {
+      SPDLOG_ERROR("Exception in FileWatcherWatchdog::run(): {}", e.what());
+      stop();
+    }
     std::this_thread::sleep_for(std::chrono::seconds(file_watcher_watchdog_sleep_time_s_));
   }
   for (auto& file_watcher_thread_flag : file_watcher_thread_stop_flags_) {
@@ -148,7 +153,7 @@ void FileWatcherWatchdog::run() {
       file_watcher_thread.second.join();
     }
   }
-  stop_file_watcher_watchdog_->store(true);
+  stop();
 }
 
 std::vector<int64_t> FileWatcherWatchdog::get_running_file_watcher_threads() {

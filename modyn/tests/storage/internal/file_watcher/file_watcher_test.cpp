@@ -31,9 +31,8 @@ class FileWatcherTest : public ::testing::Test {
     connection.create_tables();
 
     // Add a dataset to the database
-    connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL,
-                           FileWrapperType::SINGLE_SAMPLE, "test description", "0.0.0",
-                           StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+    connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
+                           "test description", "0.0.0", StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
   }
 
   void TearDown() override {
@@ -261,9 +260,9 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
 
   const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE,
-                                                 0, FilesystemWrapperType::LOCAL, 1,
-                                                 file_wrapper_config_node, config, 100, false));
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
+                                                 FilesystemWrapperType::LOCAL, 1, file_wrapper_config_node, config, 100,
+                                                 false));
 
   // Check if the samples are added to the database
   int32_t sample_id1 = -1;
@@ -347,9 +346,9 @@ TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {
 
   const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE,
-                                                 0, FilesystemWrapperType::LOCAL, 1,
-                                                 file_wrapper_config_node, config, 100, false));
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
+                                                 FilesystemWrapperType::LOCAL, 1, file_wrapper_config_node, config, 100,
+                                                 false));
 }
 
 TEST_F(FileWatcherTest, TestMultipleFileHandling) {
