@@ -258,7 +258,7 @@ int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dat
              ":updated_at, :number_of_samples)",
       soci::use(dataset_id), soci::use(file_path), soci::use(modified_time), soci::use(number_of_samples);
 
-  int64_t file_id = -1;
+  long long file_id = -1;  // NOLINT google-runtime-int (Linux otherwise complains about the following call)
   if (!session.get_last_insert_id("files", file_id)) {
     SPDLOG_ERROR("Failed to insert file into database");
     return -1;

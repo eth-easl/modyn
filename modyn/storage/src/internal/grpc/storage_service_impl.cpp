@@ -560,51 +560,52 @@ int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci
   return dataset_id;
 }
 
-std::vector<int64_t> StorageServiceImpl::get_file_ids(int64_t dataset_id, soci::session& session,
-                                                      int64_t start_timestamp, int64_t end_timestamp) {
-  int64_t number_of_files =
-      -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
-  std::vector<int64_t> file_ids;
+std::vector<int64_t> StorageServiceImpl::get_file_ids(const int64_t dataset_id, soci::session& session,
+                                                      const int64_t start_timestamp, const int64_t end_timestamp) {
+  const int64_t number_of_files = get_file_count(session, dataset_id, start_timestamp, end_timestamp);
+  if (number_of_files == 0) {
+    return {};
+  }
 
+  return get_file_ids(session, dataset_id, start_timestamp, end_timestamp, number_of_files);
+}
+
+int64_t StorageServiceImpl::get_file_count(soci::session& session, const int64_t dataset_id,
+                                           const int64_t start_timestamp, const int64_t end_timestamp) {
+  int64_t number_of_files = -1;
   if (start_timestamp >= 0 && end_timestamp == -1) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp);
-    if (number_of_files == 0) {
-      return file_ids;
-    }
-    file_ids = std::vector<int64_t>(number_of_files + 1);
-    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
-        soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp);
   } else if (start_timestamp == -1 && end_timestamp >= 0) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(end_timestamp);
-    if (number_of_files == 0) {
-      return file_ids;
-    }
-    file_ids = std::vector<int64_t>(number_of_files + 1);
-
-    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
-        soci::into(file_ids), soci::use(dataset_id), soci::use(end_timestamp);
   } else if (start_timestamp >= 0 && end_timestamp >= 0) {
     session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
                "updated_at <= :end_timestamp",
         soci::into(number_of_files), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
-    if (number_of_files == 0) {
-      return file_ids;
-    }
-    file_ids = std::vector<int64_t>(number_of_files + 1);
+  } else {
+    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
+        soci::use(dataset_id);
+  }
+  return number_of_files;
+}
 
+std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, const int64_t dataset_id,
+                                                      const int64_t start_timestamp, const int64_t end_timestamp,
+                                                      const int64_t number_of_files) {
+  std::vector<int64_t> file_ids(number_of_files + 1);
+
+  if (start_timestamp >= 0 && end_timestamp == -1) {
+    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
+        soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp);
+  } else if (start_timestamp == -1 && end_timestamp >= 0) {
+    session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
+        soci::into(file_ids), soci::use(dataset_id), soci::use(end_timestamp);
+  } else if (start_timestamp >= 0 && end_timestamp >= 0) {
     session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
                "updated_at <= :end_timestamp",
         soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
   } else {
-    session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
-        soci::use(dataset_id);
-    if (number_of_files == 0) {
-      return file_ids;
-    }
-    file_ids = std::vector<int64_t>(number_of_files + 1);
-
     session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id", soci::into(file_ids), soci::use(dataset_id);
   }
 

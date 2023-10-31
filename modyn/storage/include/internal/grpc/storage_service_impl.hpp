@@ -19,11 +19,8 @@ namespace modyn::storage {
 using namespace grpc;
 
 template <typename T>
-using T_ptr = std::variant<
-    std::enable_if_t<std::is_same<T, modyn::storage::GetDataInIntervalResponse>::value, T*>,  // NOLINT
-                                                                                              // modernize-type-traits
-    std::enable_if_t<std::is_same<T, modyn::storage::GetNewDataSinceResponse>::value, T*>>;   // NOLINT
-                                                                                              // modernize-type-traits
+concept IsResponse = std::is_same_v<T, modyn::storage::GetDataInIntervalResponse> ||
+                     std::is_same_v<T, modyn::storage::GetNewDataSinceResponse>;
 
 struct SampleData {
   std::vector<int64_t> ids{};
@@ -96,6 +93,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   static std::vector<int64_t> get_file_ids(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
                                            int64_t end_timestamp = -1);
+  static int64_t get_file_count(soci::session& session, int64_t dataset_id, int64_t start_timestamp,
+                                int64_t end_timestamp);
+  static std::vector<int64_t> get_file_ids(soci::session& session, int64_t dataset_id, int64_t start_timestamp,
+                                           int64_t end_timestamp, int64_t number_of_files);
   static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
   YAML::Node config_;
   int64_t sample_batch_size_{};
