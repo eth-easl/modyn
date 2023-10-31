@@ -228,11 +228,12 @@ class Supervisor:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-    ) -> None:
+    ) -> int:
         if not self.validate_pipeline_config(pipeline_config):
             raise ValueError("Invalid pipeline configuration")
 
         # TODO(#317): start a process. pool?
+        # TODO(#317): return pipeline id or something else?
         process = Process(
             target=self.pipeline,
             args=(

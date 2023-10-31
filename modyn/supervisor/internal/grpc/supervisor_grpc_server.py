@@ -6,19 +6,21 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import (  # no
     add_SupervisorServicer_to_server,
 )
 from modyn.supervisor.internal.grpc.supervisor_grpc_servicer import SupervisorGRPCServicer
+from modyn.supervisor.supervisor import Supervisor
 
 logger = logging.getLogger(__name__)
 
 
 class SupervisorGRPCServer(GenericGRPCServer):
     @staticmethod
-    def callback(modyn_config: dict, server: Any) -> None:
-        add_SupervisorServicer_to_server(SupervisorGRPCServicer(modyn_config), server)
+    def callback(modyn_config: dict, server: Any, supervisor: Supervisor) -> None: # pylint: disable-next=unused-argument
+        add_SupervisorServicer_to_server(SupervisorGRPCServicer(supervisor), server)
 
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
+        self.supervisor = Supervisor(modyn_config)
 
-        callback_kwargs = {}
+        callback_kwargs = {"supervisor": self.supervisor}
         super().__init__(
             modyn_config, modyn_config["supervisor"]["port"], SupervisorGRPCServer.callback, callback_kwargs
         )
