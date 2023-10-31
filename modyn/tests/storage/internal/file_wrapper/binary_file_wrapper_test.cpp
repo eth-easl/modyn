@@ -37,8 +37,8 @@ class BinaryFileWrapperTest : public ::testing::Test {
     file.close();
   }
 
-  void payload_to_file(std::ofstream& file, uint32_t payload, uint16_t label) {
-    file.write(reinterpret_cast<const char*>(&payload), sizeof(uint32_t));
+  void payload_to_file(std::ofstream& file, uint16_t payload, uint16_t label) {
+    file.write(reinterpret_cast<const char*>(&payload), sizeof(uint16_t));
     file.write(reinterpret_cast<const char*>(&label), sizeof(uint16_t));
   }
 
@@ -46,37 +46,45 @@ class BinaryFileWrapperTest : public ::testing::Test {
 };
 
 TEST_F(BinaryFileWrapperTest, TestGetNumberOfSamples) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(8));
+  std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
+  stream->open(file_name_, std::ios::binary);
+  std::ifstream& reference = *stream;
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   ASSERT_EQ(file_wrapper.get_number_of_samples(), 4);
 }
 
 TEST_F(BinaryFileWrapperTest, TestValidateFileExtension) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(8));
-  ASSERT_NO_THROW(const BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_););
-}
-
-TEST_F(BinaryFileWrapperTest, TestValidateRequestIndices) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(8));
   std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
   stream->open(file_name_, std::ios::binary);
   std::ifstream& reference = *stream;
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
+  ASSERT_NO_THROW(const BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_););
+}
+
+TEST_F(BinaryFileWrapperTest, TestValidateRequestIndices) {
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
+  std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
+  stream->open(file_name_, std::ios::binary);
+  std::ifstream& reference = *stream;
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::ReturnRef(reference));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   std::vector<unsigned char> sample = file_wrapper.get_sample(0);
 
-  ASSERT_EQ(sample.size(), 1);
-  ASSERT_EQ((sample)[0], '2');
+  ASSERT_EQ(sample.size(), 2);
+  ASSERT_EQ((sample)[0], 12);
 
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(8));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
   BinaryFileWrapper file_wrapper2(file_name_, config_, filesystem_wrapper_);
   ASSERT_THROW(file_wrapper2.get_sample(8), modyn::utils::ModynException);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetLabel) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(8));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
   std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
   stream->open(file_name_, std::ios::binary);
   std::ifstream& reference = *stream;
@@ -90,7 +98,7 @@ TEST_F(BinaryFileWrapperTest, TestGetLabel) {
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(8));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
   std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
   stream->open(file_name_, std::ios::binary);
   std::ifstream& reference = *stream;
@@ -99,14 +107,14 @@ TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   std::vector<int64_t> labels = file_wrapper.get_all_labels();
   ASSERT_EQ(labels.size(), 4);
-  ASSERT_EQ((labels)[0], 1);
-  ASSERT_EQ((labels)[1], 3);
-  ASSERT_EQ((labels)[2], 5);
-  ASSERT_EQ((labels)[3], 7);
+  ASSERT_EQ((labels)[0], 42);
+  ASSERT_EQ((labels)[1], 43);
+  ASSERT_EQ((labels)[2], 44);
+  ASSERT_EQ((labels)[3], 45);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetSample) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(8));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
   std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
   stream->open(file_name_, std::ios::binary);
   std::ifstream& reference = *stream;
@@ -114,24 +122,24 @@ TEST_F(BinaryFileWrapperTest, TestGetSample) {
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   std::vector<unsigned char> sample = file_wrapper.get_sample(0);
-  ASSERT_EQ(sample.size(), 1);
-  ASSERT_EQ((sample)[0], '2');
+  ASSERT_EQ(sample.size(), 2);
+  ASSERT_EQ((sample)[0], 12);
 
   sample = file_wrapper.get_sample(1);
-  ASSERT_EQ(sample.size(), 1);
-  ASSERT_EQ((sample)[0], '4');
+  ASSERT_EQ(sample.size(), 2);
+  ASSERT_EQ((sample)[0], 13);
 
   sample = file_wrapper.get_sample(2);
-  ASSERT_EQ(sample.size(), 1);
-  ASSERT_EQ((sample)[0], '6');
+  ASSERT_EQ(sample.size(), 2);
+  ASSERT_EQ((sample)[0], 14);
 
   sample = file_wrapper.get_sample(3);
-  ASSERT_EQ(sample.size(), 1);
-  ASSERT_EQ((sample)[0], '8');
+  ASSERT_EQ(sample.size(), 2);
+  ASSERT_EQ((sample)[0], 15);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetSamples) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(8));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
   std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
   stream->open(file_name_, std::ios::binary);
   std::ifstream& reference = *stream;
@@ -140,36 +148,36 @@ TEST_F(BinaryFileWrapperTest, TestGetSamples) {
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples(0, 3);
   ASSERT_EQ(samples.size(), 4);
-  ASSERT_EQ((samples)[0][0], '2');
-  ASSERT_EQ((samples)[1][0], '4');
-  ASSERT_EQ((samples)[2][0], '6');
-  ASSERT_EQ((samples)[3][0], '8');
+  ASSERT_EQ((samples)[0][0], 12);
+  ASSERT_EQ((samples)[1][0], 13);
+  ASSERT_EQ((samples)[2][0], 14);
+  ASSERT_EQ((samples)[3][0], 15);
 
   samples = file_wrapper.get_samples(1, 3);
   ASSERT_EQ(samples.size(), 3);
-  ASSERT_EQ((samples)[0][0], '4');
-  ASSERT_EQ((samples)[1][0], '6');
-  ASSERT_EQ((samples)[2][0], '8');
+  ASSERT_EQ((samples)[0][0], 13);
+  ASSERT_EQ((samples)[1][0], 14);
+  ASSERT_EQ((samples)[2][0], 15);
 
   samples = file_wrapper.get_samples(2, 3);
   ASSERT_EQ(samples.size(), 2);
-  ASSERT_EQ((samples)[0][0], '6');
-  ASSERT_EQ((samples)[1][0], '8');
+  ASSERT_EQ((samples)[0][0], 14);
+  ASSERT_EQ((samples)[1][0], 15);
 
   samples = file_wrapper.get_samples(3, 3);
   ASSERT_EQ(samples.size(), 1);
-  ASSERT_EQ((samples)[0][0], '8');
+  ASSERT_EQ((samples)[0][0], 15);
 
   ASSERT_THROW(file_wrapper.get_samples(4, 3), modyn::utils::ModynException);
 
   samples = file_wrapper.get_samples(1, 2);
   ASSERT_EQ(samples.size(), 2);
-  ASSERT_EQ((samples)[0][0], '4');
-  ASSERT_EQ((samples)[1][0], '6');
+  ASSERT_EQ((samples)[0][0], 13);
+  ASSERT_EQ((samples)[1][0], 14);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(8));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
   std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
   stream->open(file_name_, std::ios::binary);
   std::ifstream& reference = *stream;
@@ -179,32 +187,36 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   std::vector<int64_t> label_indices{0, 1, 2, 3};
   std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(label_indices);
   ASSERT_EQ(samples.size(), 4);
-  ASSERT_EQ((samples)[0][0], '2');
-  ASSERT_EQ((samples)[1][0], '4');
-  ASSERT_EQ((samples)[2][0], '6');
-  ASSERT_EQ((samples)[3][0], '8');
+  ASSERT_EQ((samples)[0][0], 12);
+  ASSERT_EQ((samples)[1][0], 13);
+  ASSERT_EQ((samples)[2][0], 14);
+  ASSERT_EQ((samples)[3][0], 15);
 
   label_indices = {1, 2, 3};
   samples = file_wrapper.get_samples_from_indices(label_indices);
   ASSERT_EQ(samples.size(), 3);
-  ASSERT_EQ((samples)[0][0], '4');
-  ASSERT_EQ((samples)[1][0], '6');
-  ASSERT_EQ((samples)[2][0], '8');
+  ASSERT_EQ((samples)[0][0], 13);
+  ASSERT_EQ((samples)[1][0], 14);
+  ASSERT_EQ((samples)[2][0], 15);
 
   label_indices = {2};
   samples = file_wrapper.get_samples_from_indices(label_indices);
   ASSERT_EQ(samples.size(), 1);
-  ASSERT_EQ((samples)[0][0], '6');
+  ASSERT_EQ((samples)[0][0], 14);
 
   label_indices = {1, 3};
   samples = file_wrapper.get_samples_from_indices(label_indices);
   ASSERT_EQ(samples.size(), 2);
-  ASSERT_EQ((samples)[0][0], '4');
-  ASSERT_EQ((samples)[1][0], '8');
+  ASSERT_EQ((samples)[0][0], 13);
+  ASSERT_EQ((samples)[1][0], 15);
 }
 
 TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(8));
+  std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
+  stream->open(file_name_, std::ios::binary);
+  std::ifstream& reference = *stream;
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
 
