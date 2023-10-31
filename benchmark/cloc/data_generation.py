@@ -287,7 +287,7 @@ class CLDatasets:
         elapsed_time = time.time() - start_time
         print("Elapsed time:", elapsed_time)
 
-    def unzip_data_files(self, directory: str) -> None:
+    def unzip_data_files(self, zip_file_directory: str) -> None:
         """
         Extracts the contents of zip files in a directory into nested folders.
 
@@ -298,12 +298,12 @@ class CLDatasets:
             None
         """
 
-        zip_files = [file for file in os.listdir(directory) if file.endswith(".zip")]
+        zip_files = [file for file in os.listdir(zip_file_directory) if file.endswith(".zip")]
 
         with ProcessPoolExecutor(max_workers=96) as executor, tqdm(total=len(zip_files)) as pbar:
             futures_list = []
             for zip_file in zip_files:
-                future = executor.submit(extract_single_zip, self.tmpdir, directory, zip_file)
+                future = executor.submit(extract_single_zip, zip_file_directory, self.directory, zip_file)
                 future.add_done_callback(lambda p: pbar.update(1))
                 futures_list.append(future)
 
