@@ -303,7 +303,7 @@ class CLDatasets:
         with ProcessPoolExecutor(max_workers=96) as executor, tqdm(total=len(zip_files)) as pbar:
             futures_list = []
             for zip_file in zip_files:
-                future = executor.submit(extract_single_zip, directory, self.tmpdir, zip_file)
+                future = executor.submit(extract_single_zip, self.tmpdir, directory, zip_file)
                 future.add_done_callback(lambda p: pbar.update(1))
                 futures_list.append(future)
 
