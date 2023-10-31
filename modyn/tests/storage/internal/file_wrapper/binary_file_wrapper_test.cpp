@@ -30,8 +30,16 @@ class BinaryFileWrapperTest : public ::testing::Test {
     std::filesystem::create_directory(tmp_dir_);
 
     std::ofstream file(file_name_, std::ios::binary);
-    file << 1234567891345544;
+    std::vector<std::pair<uint32_t, uint16_t>> data = {{42, 12}, {43, 13}, {44, 14}, {45, 15}};
+    for (const auto& [payload, label] : data) {
+      payload_to_file(file, payload, label);
+    }
     file.close();
+  }
+
+  void payload_to_file(std::ofstream& file, uint32_t payload, uint16_t label) {
+    file.write(reinterpret_cast<const char*>(&payload), sizeof(uint32_t));
+    file.write(reinterpret_cast<const char*>(&label), sizeof(uint16_t));
   }
 
   void TearDown() override { std::filesystem::remove_all(file_name_); }
@@ -75,10 +83,10 @@ TEST_F(BinaryFileWrapperTest, TestGetLabel) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  ASSERT_EQ(file_wrapper.get_label(0), 12);
-  ASSERT_EQ(file_wrapper.get_label(1), 56);
-  ASSERT_EQ(file_wrapper.get_label(2), 91);
-  ASSERT_EQ(file_wrapper.get_label(3), 55);
+  ASSERT_EQ(file_wrapper.get_label(0), 42);
+  ASSERT_EQ(file_wrapper.get_label(1), 43);
+  ASSERT_EQ(file_wrapper.get_label(2), 44);
+  ASSERT_EQ(file_wrapper.get_label(3), 45);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
