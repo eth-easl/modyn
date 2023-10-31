@@ -1,5 +1,6 @@
 #include "internal/grpc/storage_service_impl.hpp"
 
+#include "internal/database/cursor_handler.hpp"
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
@@ -35,12 +36,20 @@ Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
     }
 
     const int keys_size = request->keys_size();
-    std::vector<int64_t> request_keys(keys_size + 1);
+    std::vector<int64_t> request_keys(keys_size);
     for (int i = 0; i < keys_size; i++) {
       request_keys[i] = request->keys(i);
     }
 
-    // TODO(vGsteiger): Implement with new parallelization scheme used in GetNewDataSince and GetDataInInterval
+    if (request_keys.empty()) {
+      SPDLOG_ERROR("No keys provided.");
+      return {StatusCode::OK, "No keys provided."};
+    }
+
+    if (disable_multithreading_) {
+    }
+
+    // TODO(vGsteiger): Implement with cursor and lock guard on the writer
 
     return {StatusCode::OK, "Data retrieved."};
   } catch (const std::exception& e) {
@@ -400,126 +409,72 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
 // ------- Helper functions -------
 
 template <typename T>
-void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, int64_t dataset_id, int64_t start_timestamp,
-                                                  int64_t end_timestamp) {
+void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const int64_t dataset_id,
+                                                  const int64_t start_timestamp, int64_t end_timestamp) {
   soci::session session = storage_database_connection_.get_session();
 
   const std::vector<int64_t> file_ids = get_file_ids(dataset_id, session, start_timestamp, end_timestamp);
 
   if (disable_multithreading_) {
-    for (const int64_t file_id : file_ids) {
-      send_samples_synchronous_retrieval<T>(writer, file_id, session, dataset_id);
-    }
+    send_sample_id_and_label<T>(writer, file_ids, storage_database_connection_, dataset_id, sample_batch_size_);
   } else {
-    for (const int64_t file_id : file_ids) {
-      send_samples_asynchronous_retrieval<T>(writer, file_id, session, dataset_id);
+    // Split the number of files over retrieval_threads_
+    const int64_t number_of_files = file_ids.size();
+    const int64_t subset_size = number_of_files / retrieval_threads_;
+    std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads_);
+    for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
+      const int64_t start_index = thread_id * subset_size;
+      const int64_t end_index = (thread_id + 1) * subset_size;
+      if (thread_id == retrieval_threads_ - 1) {
+        file_ids_per_thread[thread_id] = std::vector<int64_t>(file_ids.begin() + start_index, file_ids.end());
+      } else {
+        file_ids_per_thread[thread_id] =
+            std::vector<int64_t>(file_ids.begin() + start_index, file_ids.begin() + end_index);
+      }
+    }
+
+    for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
+      retrieval_threads_vector_[thread_id] = std::thread([this, writer, &file_ids_per_thread, thread_id, dataset_id]() {
+        send_sample_id_and_label<T>(writer, file_ids_per_thread[thread_id], std::ref(storage_database_connection_),
+                                    dataset_id, sample_batch_size_);
+      });
+    }
+
+    for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
+      retrieval_threads_vector_[thread_id].join();
     }
   }
 }
 
 template <typename T>
-void StorageServiceImpl::send_samples_synchronous_retrieval(ServerWriter<T>* writer, int64_t file_id,
-                                                            soci::session& session, int64_t dataset_id) {
-  const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
-  if (number_of_samples > 0) {
-    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness  (the rowset cannot be const for soci)
-        (session.prepare
-             << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND dataset_id = :dataset_id",
-         soci::use(file_id), soci::use(dataset_id));
-    T response;
-    for (auto& row : rs) {
-      response.add_keys(row.get<long long>(0));    // NOLINT google-runtime-int (we need to use long long here for soci)
-      response.add_labels(row.get<long long>(1));  // NOLINT google-runtime-int (we need to use long long here for soci)
-      if (response.keys_size() == sample_batch_size_) {
-        writer->Write(response);
-        response.Clear();
-      }
-    }
-
-    if (response.keys_size() > 0) {
-      writer->Write(response);
-    }
-  }
-}
-
-template <typename T>
-void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* writer, int64_t file_id,
-                                                             soci::session& session, int64_t dataset_id) {
-  const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
-  if (number_of_samples <= sample_batch_size_) {
-    // If the number of samples is less than the sample batch size, retrieve all of the samples in one go.
-    soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness  (the rowset cannot be const for soci)
-        (session.prepare
-             << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND dataset_id = :dataset_id",
-         soci::use(file_id), soci::use(dataset_id));
-    T response;
-    for (auto& row : rs) {
-      response.add_keys(row.get<long long>(0));    // NOLINT google-runtime-int
-      response.add_labels(row.get<long long>(1));  // NOLINT google-runtime-int
-    }
-    writer->Write(response);
-  } else {
-    // If the number of samples is greater than the sample batch size, retrieve the samples in batches of size
-    // sample_batch_size_. The batches are retrieved asynchronously and the futures are stored in a queue. When the
-    // queue is full, the first future is waited for and the response is sent to the client. This is repeated until all
-    // of the futures have been waited for.
-    std::queue<std::future<SampleData>> sample_ids_futures_queue;
-
-    for (int64_t i = 0; i < number_of_samples; i += sample_batch_size_) {
-      if (static_cast<int64_t>(sample_ids_futures_queue.size()) == retrieval_threads_) {
-        // The queue is full, wait for the first future to finish and send the response.
-        T response;
-
-        SampleData sample_data = sample_ids_futures_queue.front().get();
-        sample_ids_futures_queue.pop();
-
-        for (size_t i = 0; i < sample_data.ids.size(); i++) {
-          response.add_keys(sample_data.ids[i]);
-          response.add_labels(sample_data.labels[i]);
-        }
-
-        writer->Write(response);
-      }
-
-      // Start a new future to retrieve the next batch of samples.
-      std::future<SampleData> sample_ids_future =
-          std::async(std::launch::async, get_sample_subset, file_id, i, i + sample_batch_size_ - 1, dataset_id,
-                     std::ref(storage_database_connection_));
-      sample_ids_futures_queue.push(std::move(sample_ids_future));
-    }
-
-    // Wait for all of the futures to finish executing before returning.
-    while (!sample_ids_futures_queue.empty()) {
-      T response;
-
-      // The get method blocks until the future is ready.
-      // https://en.cppreference.com/w/cpp/thread/future/get
-      SampleData sample_data = sample_ids_futures_queue.front().get();
-      sample_ids_futures_queue.pop();
-
-      for (size_t i = 0; i < sample_data.ids.size(); i++) {
-        response.add_keys(sample_data.ids[i]);
-        response.add_labels(sample_data.labels[i]);
-      }
-
-      writer->Write(response);
-    }
-  }
-}
-
-SampleData StorageServiceImpl::get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
-                                                 int64_t dataset_id,
-                                                 const StorageDatabaseConnection& storage_database_connection) {
+void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, const std::vector<int64_t> file_ids,
+                                                  StorageDatabaseConnection& storage_database_connection,
+                                                  const int64_t dataset_id, const int64_t sample_batch_size) {
   soci::session session = storage_database_connection.get_session();
-  const int64_t number_of_samples = end_index - start_index + 1;
-  std::vector<int64_t> sample_ids(number_of_samples + 1);
-  std::vector<int64_t> sample_labels(number_of_samples + 1);
-  session << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND sample_index >= :start_index AND "
-             "sample_index "
-             "<= :end_index AND dataset_id = :dataset_id",
-      soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id), soci::use(start_index),
-      soci::use(end_index), soci::use(dataset_id);
-  return {sample_ids, {}, sample_labels};
+  for (const int64_t file_id : file_ids) {
+    const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
+    if (number_of_samples > 0) {
+      const std::string query =
+          fmt::format("SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = ", file_id, dataset_id);
+      const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_id);
+      CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 2);
+
+      std::vector<SampleRecord> records(sample_batch_size);
+
+      while (true) {
+        records = cursor_handler.yield_per(sample_batch_size);
+        if (records.empty()) {
+          break;
+        }
+        T response;
+        for (const auto& record : records) {
+          response.add_keys(record.id);
+          response.add_labels(record.label);
+        }
+        writer->Write(response);
+      }
+    }
+  }
 }
 
 int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci::session& session) {
@@ -529,8 +484,9 @@ int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci:
   return number_of_samples;
 }
 
-std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(int64_t worker_id, int64_t total_workers,
-                                                                          int64_t total_num_elements) {
+std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(const int64_t worker_id,
+                                                                          const int64_t total_workers,
+                                                                          const int64_t total_num_elements) {
   if (worker_id < 0 || worker_id >= total_workers) {
     FAIL("Worker id must be between 0 and total_workers - 1.");
   }

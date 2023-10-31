@@ -168,8 +168,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
   try {
     const StorageDatabaseConnection storage_database_connection(config);
-    soci::session session = storage_database_connection
-                                .get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+    soci::session session =  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+        storage_database_connection.get_session();
 
     std::vector<std::string> files_for_insertion;
     auto filesystem_wrapper = get_filesystem_wrapper(filesystem_wrapper_type);

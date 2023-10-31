@@ -1,6 +1,7 @@
 set(MODYN_STORAGE_SOURCES
     storage_server.cpp
     internal/database/storage_database_connection.cpp
+    internal/database/cursor_handler.cpp
     internal/file_watcher/file_watcher_watchdog.cpp
     internal/file_watcher/file_watcher.cpp
     internal/file_wrapper/binary_file_wrapper.cpp
@@ -15,6 +16,7 @@ set(MODYN_STORAGE_SOURCES
 set(MODYN_STORAGE_HEADERS
     ../include/storage_server.hpp
     ../include/internal/database/storage_database_connection.hpp
+    ../include/internal/database/cursor_handler.hpp
     ../include/internal/file_watcher/file_watcher_watchdog.hpp
     ../include/internal/file_watcher/file_watcher.hpp
     ../include/internal/file_wrapper/file_wrapper.hpp
