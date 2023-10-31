@@ -34,7 +34,7 @@ class BinaryFileWrapper : public FileWrapper {
     }
 
     validate_file_extension();
-    file_size_ = filesystem_wrapper_->get_file_size(path);
+    file_size_ = static_cast<int64_t>(filesystem_wrapper_->get_file_size(path));
 
     if (file_size_ % record_size_ != 0) {
       FAIL("File size must be a multiple of the record size.");
@@ -57,15 +57,19 @@ class BinaryFileWrapper : public FileWrapper {
       stream_->close();
     }
   }
+  BinaryFileWrapper(const BinaryFileWrapper&) = default;
+  BinaryFileWrapper& operator=(const BinaryFileWrapper&) = default;
+  BinaryFileWrapper(BinaryFileWrapper&&) = default;
+  BinaryFileWrapper& operator=(BinaryFileWrapper&&) = default;
 
  private:
   static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices);
   static int64_t int_from_bytes(const unsigned char* begin, const unsigned char* end);
   std::ifstream* get_stream();
-  uint64_t record_size_;
-  uint64_t label_size_;
+  int64_t record_size_;
+  int64_t label_size_;
   int64_t file_size_;
-  uint64_t sample_size_;
+  int64_t sample_size_;
   std::ifstream* stream_;
 };
 }  // namespace modyn::storage

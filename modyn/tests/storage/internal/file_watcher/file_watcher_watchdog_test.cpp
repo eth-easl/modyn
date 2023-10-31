@@ -73,10 +73,12 @@ TEST_F(FileWatcherWatchdogTest, TestStartFileWatcherProcess) {
   // Add two dataset to the database
   connection.add_dataset("test_dataset1", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                          "test description", "0.0.0",
-                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                         /*ignore_last_timestamp=*/true);
   connection.add_dataset("test_dataset2", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                          "test description", "0.0.0",
-                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                         /*ignore_last_timestamp=*/true);
 
   watchdog.start_file_watcher_thread(1);
   std::vector<int64_t> file_watcher_threads;
@@ -105,7 +107,8 @@ TEST_F(FileWatcherWatchdogTest, TestStopFileWatcherProcess) {
 
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                          "test description", "0.0.0",
-                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                         /*ignore_last_timestamp=*/true);
 
   watchdog.start_file_watcher_thread(1);
 
@@ -133,7 +136,8 @@ TEST_F(FileWatcherWatchdogTest, TestWatchFileWatcherThreads) {
 
   connection.add_dataset("test_dataset1", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                          "test description", "0.0.0",
-                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                         /*ignore_last_timestamp=*/true);
 
   watchdog.watch_file_watcher_threads();
 
@@ -189,7 +193,8 @@ TEST_F(FileWatcherWatchdogTest, TestRestartFailedFileWatcherProcess) {
 
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                          "test description", "0.0.0",
-                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                         /*ignore_last_timestamp=*/true);
 
   watchdog.start_file_watcher_thread(1);
   // Simulate a failure of the FileWatcher process
@@ -218,7 +223,8 @@ TEST_F(FileWatcherWatchdogTest, TestAddingNewDataset) {
   // Add a new dataset to the database
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                          "test description", "0.0.0",
-                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                         /*ignore_last_timestamp=*/true);
 
   // The watchdog should start a FileWatcher process for the new dataset
   watchdog.watch_file_watcher_threads();
@@ -241,7 +247,8 @@ TEST_F(FileWatcherWatchdogTest, TestRemovingDataset) {
   // Add a new dataset to the database
   connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
                          "test description", "0.0.0",
-                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                         modyn::storage::StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                         /*ignore_last_timestamp=*/true);
 
   watchdog.watch_file_watcher_threads();
 

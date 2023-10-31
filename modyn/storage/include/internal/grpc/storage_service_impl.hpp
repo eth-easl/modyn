@@ -85,10 +85,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_file_ids_and_labels(ServerWriter<T>* writer, int64_t dataset_id, int64_t start_timestamp = -1,
                                 int64_t end_timestamp = -1);
   template <typename T>
-  void send_samples_synchronous_retrieval(ServerWriter<T>* writer, int64_t file_id, soci::session& session);
+  void send_samples_synchronous_retrieval(ServerWriter<T>* writer, int64_t file_id, soci::session& session,
+                                          int64_t dataset_id);
   template <typename T>
-  void send_samples_asynchronous_retrieval(ServerWriter<T>* writer, int64_t file_id, soci::session& session);
-  static SampleData get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
+  void send_samples_asynchronous_retrieval(ServerWriter<T>* writer, int64_t file_id, soci::session& session,
+                                           int64_t dataset_id);
+  static SampleData get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index, int64_t dataset_id,
                                       const StorageDatabaseConnection& storage_database_connection);
   static int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session);
 

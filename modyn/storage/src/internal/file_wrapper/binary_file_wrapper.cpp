@@ -155,7 +155,7 @@ void BinaryFileWrapper::delete_samples(const std::vector<int64_t>& /*indices*/) 
  */
 void BinaryFileWrapper::set_file_path(const std::string& path) {
   file_path_ = path;
-  file_size_ = filesystem_wrapper_->get_file_size(path);
+  file_size_ = static_cast<int64_t>(filesystem_wrapper_->get_file_size(path));
 
   if (file_size_ % record_size_ != 0) {
     FAIL("File size must be a multiple of the record size.");

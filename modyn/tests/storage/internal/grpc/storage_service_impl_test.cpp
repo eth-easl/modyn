@@ -35,7 +35,8 @@ class StorageServiceImplTest : public ::testing::Test {
 
     // Add a dataset to the database
     connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
-                           "test description", "0.0.0", StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                           "test description", "0.0.0", StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                           /*ignore_last_timestamp=*/true);
 
     soci::session session =
         connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)

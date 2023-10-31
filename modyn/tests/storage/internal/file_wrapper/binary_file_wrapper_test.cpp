@@ -30,14 +30,14 @@ class BinaryFileWrapperTest : public ::testing::Test {
     std::filesystem::create_directory(tmp_dir_);
 
     std::ofstream file(file_name_, std::ios::binary);
-    std::vector<std::pair<uint32_t, uint16_t>> data = {{42, 12}, {43, 13}, {44, 14}, {45, 15}};
+    const std::vector<std::pair<uint32_t, uint16_t>> data = {{42, 12}, {43, 13}, {44, 14}, {45, 15}};
     for (const auto& [payload, label] : data) {
       payload_to_file(file, payload, label);
     }
     file.close();
   }
 
-  void payload_to_file(std::ofstream& file, uint16_t payload, uint16_t label) {
+  static void payload_to_file(std::ofstream& file, uint16_t payload, uint16_t label) {
     file.write(reinterpret_cast<const char*>(&payload), sizeof(uint16_t));
     file.write(reinterpret_cast<const char*>(&label), sizeof(uint16_t));
   }

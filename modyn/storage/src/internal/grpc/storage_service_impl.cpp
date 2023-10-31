@@ -11,16 +11,16 @@ using namespace modyn::storage;
 
 Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetRequest* request,
-    ServerWriter<modyn::storage::GetResponse>* writer) {
+    ServerWriter<modyn::storage::GetResponse>* /*writer*/) {
   try {
     SPDLOG_INFO("Get request received.");
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
-    int64_t dataset_id;
+    int64_t dataset_id = -1;
     std::string base_path;
-    int64_t filesystem_wrapper_type;
-    int64_t file_wrapper_type;
+    int64_t filesystem_wrapper_type = -1;
+    int64_t file_wrapper_type = -1;
     std::string file_wrapper_config;
 
     session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
@@ -28,6 +28,11 @@ Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
                "name = :name",
         soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type),
         soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(request->dataset_id());
+
+    if (dataset_id == -1) {
+      SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+      return {StatusCode::OK, "Dataset does not exist."};
+    }
 
     const int keys_size = request->keys_size();
     std::vector<int64_t> request_keys(keys_size + 1);
@@ -97,7 +102,7 @@ Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-
 
     if (dataset_id == -1) {
       response->set_available(false);
-      SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+      SPDLOG_INFO("Dataset {} does not exist.", request->dataset_id());
       return {StatusCode::OK, "Dataset does not exist."};
     }
     response->set_available(true);
@@ -149,12 +154,16 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
 
     soci::session session = storage_database_connection_.get_session();
     int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+    if (dataset_id == -1) {
+      SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+      return {StatusCode::OK, "Dataset does not exist."};
+    }
     session << "SELECT filesystem_wrapper_type FROM datasets WHERE name = :name", soci::into(filesystem_wrapper_type),
         soci::use(request->dataset_id());
 
     auto filesystem_wrapper = get_filesystem_wrapper(static_cast<FilesystemWrapperType>(filesystem_wrapper_type));
 
-    int64_t number_of_files;
+    int64_t number_of_files = 0;
     session << "SELECT COUNT(file_id) FROM files WHERE dataset_id = :dataset_id", soci::into(number_of_files),
         soci::use(dataset_id);
 
@@ -192,8 +201,8 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
     // Check if the dataset exists
     int64_t dataset_id = -1;
     std::string base_path;
-    int64_t filesystem_wrapper_type;
-    int64_t file_wrapper_type;
+    int64_t filesystem_wrapper_type = -1;
+    int64_t file_wrapper_type = -1;
     std::string file_wrapper_config;
     session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
                "datasets WHERE name = :name",
@@ -321,8 +330,8 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
     session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
         soci::into(total_keys), soci::use(dataset_id);
 
-    int64_t start_index;
-    int64_t limit;
+    int64_t start_index = 0;
+    int64_t limit = 0;
     std::tie(start_index, limit) = get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
 
     std::vector<int64_t> keys;
@@ -331,19 +340,23 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
                             soci::use(dataset_id), soci::use(start_index), soci::use(limit));
     stmt.execute();
 
-    int64_t key_value;
+    int64_t key_value = 0;
     stmt.exchange(soci::into(key_value));
     while (stmt.fetch()) {
       keys.push_back(key_value);
+      if (keys.size() % sample_batch_size_ == 0) {
+        modyn::storage::GetDataPerWorkerResponse response;
+        for (auto key : keys) {
+          response.add_keys(key);
+        }
+        writer->Write(response);
+        keys.clear();
+      }
     }
 
     modyn::storage::GetDataPerWorkerResponse response;
     for (auto key : keys) {
       response.add_keys(key);
-      if (response.keys_size() % sample_batch_size_ == 0) {
-        writer->Write(response);
-        response.clear_keys();
-      }
     }
 
     if (response.keys_size() > 0) {
@@ -395,26 +408,28 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, int64
 
   if (disable_multithreading_) {
     for (const int64_t file_id : file_ids) {
-      send_samples_synchronous_retrieval<T>(writer, file_id, session);
+      send_samples_synchronous_retrieval<T>(writer, file_id, session, dataset_id);
     }
   } else {
     for (const int64_t file_id : file_ids) {
-      send_samples_asynchronous_retrieval<T>(writer, file_id, session);
+      send_samples_asynchronous_retrieval<T>(writer, file_id, session, dataset_id);
     }
   }
 }
 
 template <typename T>
 void StorageServiceImpl::send_samples_synchronous_retrieval(ServerWriter<T>* writer, int64_t file_id,
-                                                            soci::session& session) {
+                                                            soci::session& session, int64_t dataset_id) {
   const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples > 0) {
     soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness  (the rowset cannot be const for soci)
-        (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
+        (session.prepare
+             << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND dataset_id = :dataset_id",
+         soci::use(file_id), soci::use(dataset_id));
     T response;
     for (auto& row : rs) {
-      response.add_keys(row.get<long long>(0));    // NOLINT google-runtime-int
-      response.add_labels(row.get<long long>(1));  // NOLINT google-runtime-int
+      response.add_keys(row.get<long long>(0));    // NOLINT google-runtime-int (we need to use long long here for soci)
+      response.add_labels(row.get<long long>(1));  // NOLINT google-runtime-int (we need to use long long here for soci)
       if (response.keys_size() == sample_batch_size_) {
         writer->Write(response);
         response.Clear();
@@ -429,12 +444,14 @@ void StorageServiceImpl::send_samples_synchronous_retrieval(ServerWriter<T>* wri
 
 template <typename T>
 void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* writer, int64_t file_id,
-                                                             soci::session& session) {
+                                                             soci::session& session, int64_t dataset_id) {
   const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
   if (number_of_samples <= sample_batch_size_) {
     // If the number of samples is less than the sample batch size, retrieve all of the samples in one go.
     soci::rowset<soci::row> rs =  // NOLINT misc-const-correctness  (the rowset cannot be const for soci)
-        (session.prepare << "SELECT sample_id, label FROM samples WHERE file_id = :file_id", soci::use(file_id));
+        (session.prepare
+             << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND dataset_id = :dataset_id",
+         soci::use(file_id), soci::use(dataset_id));
     T response;
     for (auto& row : rs) {
       response.add_keys(row.get<long long>(0));    // NOLINT google-runtime-int
@@ -466,7 +483,7 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* wr
 
       // Start a new future to retrieve the next batch of samples.
       std::future<SampleData> sample_ids_future =
-          std::async(std::launch::async, get_sample_subset, file_id, i, i + sample_batch_size_ - 1,  // NOLINT
+          std::async(std::launch::async, get_sample_subset, file_id, i, i + sample_batch_size_ - 1, dataset_id,
                      std::ref(storage_database_connection_));
       sample_ids_futures_queue.push(std::move(sample_ids_future));
     }
@@ -475,6 +492,8 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* wr
     while (!sample_ids_futures_queue.empty()) {
       T response;
 
+      // The get method blocks until the future is ready.
+      // https://en.cppreference.com/w/cpp/thread/future/get
       SampleData sample_data = sample_ids_futures_queue.front().get();
       sample_ids_futures_queue.pop();
 
@@ -489,6 +508,7 @@ void StorageServiceImpl::send_samples_asynchronous_retrieval(ServerWriter<T>* wr
 }
 
 SampleData StorageServiceImpl::get_sample_subset(int64_t file_id, int64_t start_index, int64_t end_index,
+                                                 int64_t dataset_id,
                                                  const StorageDatabaseConnection& storage_database_connection) {
   soci::session session = storage_database_connection.get_session();
   const int64_t number_of_samples = end_index - start_index + 1;
@@ -496,14 +516,14 @@ SampleData StorageServiceImpl::get_sample_subset(int64_t file_id, int64_t start_
   std::vector<int64_t> sample_labels(number_of_samples + 1);
   session << "SELECT sample_id, label FROM samples WHERE file_id = :file_id AND sample_index >= :start_index AND "
              "sample_index "
-             "<= :end_index",
+             "<= :end_index AND dataset_id = :dataset_id",
       soci::into(sample_ids), soci::into(sample_labels), soci::use(file_id), soci::use(start_index),
-      soci::use(end_index);
+      soci::use(end_index), soci::use(dataset_id);
   return {sample_ids, {}, sample_labels};
 }
 
 int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci::session& session) {
-  int64_t number_of_samples;
+  int64_t number_of_samples = 0;
   session << "SELECT number_of_samples FROM files WHERE file_id = :file_id", soci::into(number_of_samples),
       soci::use(file_id);
   return number_of_samples;

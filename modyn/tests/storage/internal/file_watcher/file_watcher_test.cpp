@@ -32,7 +32,8 @@ class FileWatcherTest : public ::testing::Test {
 
     // Add a dataset to the database
     connection.add_dataset("test_dataset", tmp_dir_, FilesystemWrapperType::LOCAL, FileWrapperType::SINGLE_SAMPLE,
-                           "test description", "0.0.0", StorageTestUtils::get_dummy_file_wrapper_config_inline(), true);
+                           "test description", "0.0.0", StorageTestUtils::get_dummy_file_wrapper_config_inline(),
+                           /*ignore_last_timestamp=*/true);
   }
 
   void TearDown() override {
@@ -124,7 +125,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
 
 TEST_F(FileWatcherTest, TestExtractCheckFileForInsertion) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
 
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
@@ -321,7 +322,7 @@ TEST_F(FileWatcherTest, TestSeekDatasetWithNonExistentDirectory) {
 TEST_F(FileWatcherTest, TestCheckFileForInsertionWithInvalidPath) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
 
-  StorageDatabaseConnection connection(config);
+  const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
 
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
