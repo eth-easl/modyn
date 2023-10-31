@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cstddef>
+#include <fstream>
 #include <iostream>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
@@ -38,6 +39,8 @@ class BinaryFileWrapper : public FileWrapper {
     if (file_size_ % record_size_ != 0) {
       FAIL("File size must be a multiple of the record size.");
     }
+
+    stream_ = &filesystem_wrapper_->get_stream(path);
   }
   int64_t get_number_of_samples() override;
   int64_t get_label(int64_t index) override;
@@ -49,13 +52,20 @@ class BinaryFileWrapper : public FileWrapper {
   void delete_samples(const std::vector<int64_t>& indices) override;
   void set_file_path(const std::string& path) override;
   FileWrapperType get_type() override;
+  ~BinaryFileWrapper() override {
+    if (stream_->is_open()) {
+      stream_->close();
+    }
+  }
 
  private:
   static void validate_request_indices(int64_t total_samples, const std::vector<int64_t>& indices);
   static int64_t int_from_bytes(const unsigned char* begin, const unsigned char* end);
+  std::ifstream* get_stream();
   uint64_t record_size_;
   uint64_t label_size_;
-  uint64_t file_size_;
+  int64_t file_size_;
   uint64_t sample_size_;
+  std::ifstream* stream_;
 };
 }  // namespace modyn::storage

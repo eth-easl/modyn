@@ -13,7 +13,7 @@ class StorageGrpcServer {
  public:
   StorageGrpcServer(const YAML::Node& config, std::atomic<bool>* stop_grpc_server,
                     std::atomic<bool>* request_storage_shutdown)
-      : config_{config}, stop_grpc_server_(stop_grpc_server) {}
+      : config_{config}, stop_grpc_server_{stop_grpc_server}, request_storage_shutdown_{request_storage_shutdown} {}
   void run();
   void stop() {
     stop_grpc_server_->store(true);

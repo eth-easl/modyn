@@ -7,9 +7,9 @@
 #include "yaml-cpp/yaml.h"
 
 namespace modyn::storage {
-class Storage {
+class StorageServer {
  public:
-  explicit Storage(const std::string& config_file)
+  explicit StorageServer(const std::string& config_file)
       : config_{YAML::LoadFile(config_file)},
         connection_{config_},
         file_watcher_watchdog_{config_, &stop_file_watcher_watchdog_, &storage_shutdown_requested_},

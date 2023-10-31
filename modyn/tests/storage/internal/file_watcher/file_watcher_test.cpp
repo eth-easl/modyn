@@ -175,7 +175,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   ON_CALL(*filesystem_wrapper, exists(testing::_)).WillByDefault(testing::Return(true));
   ON_CALL(*filesystem_wrapper, is_valid_path(testing::_)).WillByDefault(testing::Return(true));
 
-  ASSERT_NO_THROW(watcher.search_for_new_files_in_directory(tmp_dir_, 0, session));
+  ASSERT_NO_THROW(watcher.search_for_new_files_in_directory(tmp_dir_, 0));
 
   std::vector<std::string> file_paths = std::vector<std::string>(1);
   session << "SELECT path FROM files", soci::into(file_paths);

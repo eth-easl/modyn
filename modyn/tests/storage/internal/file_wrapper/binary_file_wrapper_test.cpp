@@ -29,8 +29,8 @@ class BinaryFileWrapperTest : public ::testing::Test {
   void SetUp() override {
     std::filesystem::create_directory(tmp_dir_);
 
-    std::ofstream file(file_name_);
-    file << "12345678";
+    std::ofstream file(file_name_, std::ios::binary);
+    file << 1234567891345544;
     file.close();
   }
 
@@ -72,13 +72,13 @@ TEST_F(BinaryFileWrapperTest, TestGetLabel) {
   std::unique_ptr<std::ifstream> stream = std::make_unique<std::ifstream>();
   stream->open(file_name_, std::ios::binary);
   std::ifstream& reference = *stream;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::ReturnRef(reference));
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  ASSERT_EQ(file_wrapper.get_label(0), 1);
-  ASSERT_EQ(file_wrapper.get_label(1), 3);
-  ASSERT_EQ(file_wrapper.get_label(2), 5);
-  ASSERT_EQ(file_wrapper.get_label(3), 7);
+  ASSERT_EQ(file_wrapper.get_label(0), 12);
+  ASSERT_EQ(file_wrapper.get_label(1), 56);
+  ASSERT_EQ(file_wrapper.get_label(2), 91);
+  ASSERT_EQ(file_wrapper.get_label(3), 55);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {

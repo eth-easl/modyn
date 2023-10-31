@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "modyn/utils/utils.hpp"
-#include "storage.hpp"
+#include "storage_server.hpp"
 
 using namespace modyn::storage;
 
@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
   const YAML::Node config = YAML::LoadFile(config_file);
 
   SPDLOG_INFO("Initializing storage.");
-  Storage storage(config_file);
+  StorageServer storage(config_file);
   SPDLOG_INFO("Starting storage.");
   storage.run();
 

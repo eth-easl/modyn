@@ -48,9 +48,9 @@ class FileWatcher {
     }
     soci::session session = storage_database_connection_.get_session();
 
-    std::string dataset_path = "";
+    std::string dataset_path;
     int64_t filesystem_wrapper_type_int = -1;
-    std::string file_wrapper_config = "";
+    std::string file_wrapper_config;
     int64_t file_wrapper_type_id = -1;
     try {
       session << "SELECT base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM datasets "
@@ -74,12 +74,6 @@ class FileWatcher {
     filesystem_wrapper = get_filesystem_wrapper(filesystem_wrapper_type_);
 
     dataset_path_ = dataset_path;
-
-    if (dataset_path_ == "") {
-      SPDLOG_ERROR("Dataset path for dataset {} is empty.", dataset_id_);
-      *stop_file_watcher = true;
-      return;
-    }
 
     if (!filesystem_wrapper->exists(dataset_path_) || !filesystem_wrapper->is_directory(dataset_path_)) {
       SPDLOG_ERROR("Dataset path {} does not exist or is not a directory.", dataset_path_);
@@ -117,7 +111,7 @@ class FileWatcher {
     }
   }
   void run();
-  void search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp, soci::session& session);
+  void search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp);
   void seek_dataset(soci::session& session);
   void seek(soci::session& session);
   static void handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
@@ -127,11 +121,9 @@ class FileWatcher {
                                 int64_t sample_dbinsertion_batchsize, bool force_fallback,
                                 std::atomic<bool>& exception_thrown);
   static void handle_files_for_insertion(std::vector<std::string>& files_for_insertion,
-                                         const FileWrapperType& file_wrapper_type,
-                                         const FilesystemWrapperType& filesystem_wrapper_type, const int64_t dataset_id,
-                                         const YAML::Node& file_wrapper_config, const YAML::Node& config,
-                                         const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
-                                         soci::session& session, DatabaseDriver& database_driver,
+                                         const FileWrapperType& file_wrapper_type, int64_t dataset_id,
+                                         const YAML::Node& file_wrapper_config, int64_t sample_dbinsertion_batchsize,
+                                         bool force_fallback, soci::session& session, DatabaseDriver& database_driver,
                                          const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper);
   static void insert_file_samples(const std::vector<FileFrame>& file_samples, int64_t dataset_id, bool force_fallback,
                                   soci::session& session, DatabaseDriver& database_driver);
@@ -147,10 +139,10 @@ class FileWatcher {
                                       soci::session& session);
   static void fallback_insertion(const std::vector<FileFrame>& file_samples, int64_t dataset_id,
                                  soci::session& session);
-  static int64_t insert_file(const std::string& file_path, const int64_t dataset_id, soci::session& session,
-                             int64_t number_of_samples, int64_t modified_time);
-  static int64_t insert_file_using_returning_statement(const std::string& file_path, const int64_t dataset_id,
-                                                       soci::session& session, int64_t number_of_samples,
+  static int64_t insert_file(const std::string& file_path, int64_t dataset_id, soci::session& session,
+                             uint64_t number_of_samples, int64_t modified_time);
+  static int64_t insert_file_using_returning_statement(const std::string& file_path, int64_t dataset_id,
+                                                       soci::session& session, uint64_t number_of_samples,
                                                        int64_t modified_time);
   std::atomic<bool>* stop_file_watcher;
   std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
@@ -165,10 +157,10 @@ class FileWatcher {
   int64_t sample_dbinsertion_batchsize_ = 1000000;
   bool force_fallback_ = false;
   StorageDatabaseConnection storage_database_connection_;
-  std::string dataset_path_ = "";
+  std::string dataset_path_;
   FilesystemWrapperType filesystem_wrapper_type_;
   FileWrapperType file_wrapper_type_;
   YAML::Node file_wrapper_config_node_;
-  std::string data_file_extension_ = "";
+  std::string data_file_extension_;
 };
 }  // namespace modyn::storage

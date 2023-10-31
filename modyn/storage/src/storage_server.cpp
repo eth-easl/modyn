@@ -1,4 +1,4 @@
-#include "storage.hpp"
+#include "storage_server.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -10,7 +10,7 @@
 
 using namespace modyn::storage;
 
-void Storage::run() {
+void StorageServer::run() {
   /* Run the storage service. */
   SPDLOG_INFO("Running storage service.");
 

@@ -6,11 +6,6 @@
 
 using namespace modyn::storage;
 
-/*
- * Transforms a vector of bytes into an int64_t.
- *
- * Handles both big and little endian machines.
- */
 int64_t BinaryFileWrapper::int_from_bytes(const unsigned char* begin, const unsigned char* end) {
   int64_t value = 0;
 
@@ -41,17 +36,21 @@ void BinaryFileWrapper::validate_file_extension() {
 int64_t BinaryFileWrapper::get_label(int64_t index) {
   ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
 
-  const int64_t record_start = index * record_size_;
-  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
+  const int64_t label_start = index * record_size_;
 
-  stream.seekg(record_start, std::ios::beg);
+  get_stream()->seekg(label_start, std::ios::beg);
 
   std::vector<unsigned char> label_vec(label_size_);
-  stream.read(reinterpret_cast<char*>(label_vec.data()), label_size_);
+  get_stream()->read(reinterpret_cast<char*>(label_vec.data()), label_size_);
 
-  stream.close();
+  return int_from_bytes(label_vec.data(), label_vec.data() + label_size_);
+}
 
-  return int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0';
+std::ifstream* BinaryFileWrapper::get_stream() {
+  if (!stream_->is_open()) {
+    stream_ = &filesystem_wrapper_->get_stream(file_path_);
+  }
+  return stream_;
 }
 
 /*
@@ -62,21 +61,14 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
   std::vector<int64_t> labels = std::vector<int64_t>();
   labels.reserve(num_samples);
 
-  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
-
   for (int64_t i = 0; i < num_samples; i++) {
-    stream.seekg(i * record_size_, std::ios::beg);
+    get_stream()->seekg(i * record_size_, std::ios::beg);
 
     std::vector<unsigned char> label_vec(label_size_);
-    stream.read(reinterpret_cast<char*>(label_vec.data()), label_size_);
+    get_stream()->read(reinterpret_cast<char*>(label_vec.data()), label_size_);
 
-    // ASCII zero is the character '0' in ASCII encoding. When we subtract ASCII zero from a character, we are
-    // essentially converting it from a character to its corresponding integer value. For example, the ASCII value of
-    // the character '1' is 49. If we subtract ASCII zero from it, we get the integer value 1.
-    labels.push_back(int_from_bytes(label_vec.data(), label_vec.data() + label_size_) - '0');
+    labels.push_back(int_from_bytes(label_vec.data(), label_vec.data() + label_size_));
   }
-
-  stream.close();
 
   return labels;
 }
@@ -89,21 +81,17 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
 
   const int64_t num_samples = end - start + 1;
 
-  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
-
   std::vector<std::vector<unsigned char>> samples(num_samples);
   int64_t record_start;
   for (int64_t index = 0; index < num_samples; index++) {
     record_start = (start + index) * record_size_;
-    stream.seekg(record_start + label_size_, std::ios::beg);
+    get_stream()->seekg(record_start + label_size_, std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
-    stream.read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
+    get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
 
     samples[index] = sample_vec;
   }
-
-  stream.close();
 
   return samples;
 }
@@ -116,14 +104,10 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
 
   const int64_t record_start = index * record_size_;
 
-  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
-
-  stream.seekg(record_start + label_size_, std::ios::beg);
+  get_stream()->seekg(record_start + label_size_, std::ios::beg);
 
   std::vector<unsigned char> sample_vec(sample_size_);
-  stream.read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
-
-  stream.close();
+  get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
 
   return sample_vec;
 }
@@ -140,20 +124,17 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
   std::vector<std::vector<unsigned char>> samples;
   samples.reserve(indices.size());
 
-  std::ifstream& stream = filesystem_wrapper_->get_stream(file_path_);
   int64_t record_start = 0;
   for (const int64_t index : indices) {
     record_start = index * record_size_;
 
-    stream.seekg(record_start + label_size_, std::ios::beg);
+    get_stream()->seekg(record_start + label_size_, std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
-    stream.read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
+    get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
 
     samples.push_back(sample_vec);
   }
-
-  stream.close();
 
   return samples;
 }

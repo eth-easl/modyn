@@ -6,8 +6,8 @@ YAML::Node StorageTestUtils::get_dummy_file_wrapper_config() {
   YAML::Node config;
   config["file_extension"] = ".txt";
   config["label_file_extension"] = ".json";
-  config["label_size"] = 1;
-  config["record_size"] = 2;
+  config["label_size"] = 2;
+  config["record_size"] = 4;
   config["label_index"] = 0;
   config["encoding"] = "utf-8";
   config["validate_file_content"] = false;

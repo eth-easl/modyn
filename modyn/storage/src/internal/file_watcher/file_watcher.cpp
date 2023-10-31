@@ -56,8 +56,7 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
  *
  * Each thread spawned will handle an equal share of the files in the directory.
  */
-void FileWatcher::search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp,
-                                                    soci::session& session) {
+void FileWatcher::search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp) {
   std::vector<std::string> file_paths = filesystem_wrapper->list(directory_path, /*recursive=*/true);
 
   if (disable_multithreading_) {
@@ -72,7 +71,7 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
     const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
-      auto begin = file_paths.begin() + i * chunk_size;
+      auto begin = file_paths.begin() + static_cast<int32_t>(i * chunk_size);
       auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
       const std::vector<std::string> file_paths_thread(begin, end);
@@ -109,7 +108,7 @@ void FileWatcher::seek_dataset(soci::session& session) {
              "WHERE dataset_id = :dataset_id",
       soci::into(last_timestamp), soci::use(dataset_id_);
 
-  search_for_new_files_in_directory(dataset_path_, last_timestamp, session);
+  search_for_new_files_in_directory(dataset_path_, last_timestamp);
 }
 
 /*
@@ -168,7 +167,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
   }
 
   try {
-    StorageDatabaseConnection storage_database_connection(config);
+    const StorageDatabaseConnection storage_database_connection(config);
     soci::session session = storage_database_connection
                                 .get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
 
@@ -183,9 +182,9 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
     if (!files_for_insertion.empty()) {
       DatabaseDriver database_driver = storage_database_connection.get_drivername();
-      handle_files_for_insertion(files_for_insertion, file_wrapper_type, filesystem_wrapper_type, dataset_id,
-                                 file_wrapper_config, config, sample_dbinsertion_batchsize, force_fallback, session,
-                                 database_driver, filesystem_wrapper);
+      handle_files_for_insertion(files_for_insertion, file_wrapper_type, dataset_id, file_wrapper_config,
+                                 sample_dbinsertion_batchsize, force_fallback, session, database_driver,
+                                 filesystem_wrapper);
     }
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error while handling file paths: {}", e.what());
@@ -194,12 +193,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 }
 
 void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for_insertion,
-                                             const FileWrapperType& file_wrapper_type,
-                                             const FilesystemWrapperType& filesystem_wrapper_type,
-                                             const int64_t dataset_id, const YAML::Node& file_wrapper_config,
-                                             const YAML::Node& config, const int64_t sample_dbinsertion_batchsize,
-                                             const bool force_fallback, soci::session& session,
-                                             DatabaseDriver& database_driver,
+                                             const FileWrapperType& file_wrapper_type, const int64_t dataset_id,
+                                             const YAML::Node& file_wrapper_config,
+                                             const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
+                                             soci::session& session, DatabaseDriver& database_driver,
                                              const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
   const std::string file_path = files_for_insertion.front();
   std::vector<FileFrame> file_samples = {};
@@ -240,9 +237,9 @@ int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dat
                                  const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
                                  const std::unique_ptr<FileWrapper>& file_wrapper, soci::session& session,
                                  DatabaseDriver& database_driver) {
-  int64_t number_of_samples = 0;
+  uint64_t number_of_samples = 0;
   number_of_samples = file_wrapper->get_number_of_samples();
-  int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
+  const int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
   int64_t file_id = -1;
 
   // soci::session::get_last_insert_id() is not supported by postgresql, so we need to use a different query.
@@ -255,7 +252,7 @@ int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dat
 }
 
 int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dataset_id, soci::session& session,
-                                 int64_t number_of_samples, int64_t modified_time) {
+                                 uint64_t number_of_samples, int64_t modified_time) {
   session << "INSERT INTO files (dataset_id, path, number_of_samples, "
              "updated_at) VALUES (:dataset_id, :path, "
              ":updated_at, :number_of_samples)",
@@ -270,7 +267,7 @@ int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dat
 }
 
 int64_t FileWatcher::insert_file_using_returning_statement(const std::string& file_path, const int64_t dataset_id,
-                                                           soci::session& session, int64_t number_of_samples,
+                                                           soci::session& session, uint64_t number_of_samples,
                                                            int64_t modified_time) {
   int64_t file_id = -1;
   session << "INSERT INTO files (dataset_id, path, number_of_samples, "

@@ -1,5 +1,5 @@
 set(MODYN_STORAGE_SOURCES
-    storage.cpp
+    storage_server.cpp
     internal/database/storage_database_connection.cpp
     internal/file_watcher/file_watcher_watchdog.cpp
     internal/file_watcher/file_watcher.cpp
@@ -13,7 +13,7 @@ set(MODYN_STORAGE_SOURCES
 
 # Explicitly set all header files so that IDEs will recognize them as part of the project
 set(MODYN_STORAGE_HEADERS
-    ../include/storage.hpp
+    ../include/storage_server.hpp
     ../include/internal/database/storage_database_connection.hpp
     ../include/internal/file_watcher/file_watcher_watchdog.hpp
     ../include/internal/file_watcher/file_watcher.hpp
