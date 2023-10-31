@@ -141,7 +141,7 @@ class CLDatasets:
 
     def extract(self):
         if self.unzip:
-            self.unzip_data_files(self.directory + "/CLOC/data")
+            self.unzip_data_files(self.tmpdir + "/CLOC/data")
 
     def convert_labels_and_timestamps(self, all_data: bool):
         self.convert_labels_and_timestamps_impl(
