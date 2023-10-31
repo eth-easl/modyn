@@ -1,19 +1,12 @@
 import json
 import logging
-import os
-import threading
-from typing import Iterable
 
 import grpc
+from modyn.supervisor import Supervisor
 
 # pylint: disable=no-name-in-module
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
-    StartPipelineRequest,
-    PipelineResponse,
-)
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorServicer  # noqa: E402, E501
-from modyn.utils import seed_everything
-from modyn.supervisor import Supervisor
 
 logger = logging.getLogger(__name__)
 
@@ -27,5 +20,9 @@ class SupervisorGRPCServicer(SupervisorServicer):
     def start_pipeline(self, request: StartPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         logger.info(f"Starting pipeline with request - {str(request)}")
         self._supervisor.start_pipeline(
-            json.loads(request.pipeline_config.value), request.eval_directory, request.start_replay_at, request.stop_replay_at, request.maximum_triggers 
+            json.loads(request.pipeline_config.value),
+            request.eval_directory,
+            request.start_replay_at,
+            request.stop_replay_at,
+            request.maximum_triggers,
         )
