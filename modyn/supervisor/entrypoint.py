@@ -45,7 +45,7 @@ def main() -> None:
         modyn_config = yaml.safe_load(config_file)
 
     logger.info("Initializing supervisor server.")
-    
+
     with SupervisorGRPCServer(modyn_config):
         pass
 

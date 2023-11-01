@@ -31,6 +31,6 @@ class SupervisorGRPCServicer(SupervisorServicer):
             request.stop_replay_at,
             request.maximum_triggers,
         )
-        
+
         # TODO(#317): return pipeline id or something else?
-        yield PipelineResponse()
+        yield PipelineResponse(1)
