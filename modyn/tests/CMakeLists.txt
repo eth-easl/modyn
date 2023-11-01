@@ -39,6 +39,7 @@ if (${MODYN_BUILD_STORAGE})
     storage/internal/file_watcher/file_watcher_test.cpp
     storage/internal/file_watcher/file_watcher_watchdog_test.cpp
     storage/internal/database/storage_database_connection_test.cpp
+    storage/internal/database/cursor_handler_test.cpp
     storage/internal/file_wrapper/single_sample_file_wrapper_test.cpp
     storage/internal/file_wrapper/mock_file_wrapper.hpp
     storage/internal/file_wrapper/binary_file_wrapper_test.cpp

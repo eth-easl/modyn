@@ -1,7 +1,8 @@
+#pragma once
+
 #include <fmt/format.h>
 #include <libpq/libpq-fs.h>
 #include <soci/soci.h>
-#include <spdlog/spdlog.h>
 
 #include <iostream>
 
@@ -17,22 +18,20 @@ struct SampleRecord {
 
 class CursorHandler {
  public:
-  CursorHandler(soci::session& session, DatabaseDriver driver, const std::string& query, const std::string& cursorName,
+  CursorHandler(soci::session& session, DatabaseDriver driver, const std::string& query, std::string cursor_name,
                 int16_t number_of_columns = 3)
       : driver_{driver},
         session_{session},
         query_{query},
-        cursorName_{cursorName},
+        cursor_name_{std::move(cursor_name)},
         number_of_columns_{number_of_columns} {
-    rs_ = nullptr;
-    postgresql_conn_ = nullptr;
     switch (driver_) {
       case DatabaseDriver::POSTGRESQL: {
         auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session_.get_backend());
         PGconn* conn = postgresql_session_backend->conn_;
 
-        std::string declareCursor = fmt::format("DECLARE {} CURSOR FOR {}", cursorName, query);
-        PGresult* result = PQexec(conn, declareCursor.c_str());
+        const std::string declare_cursor = fmt::format("DECLARE {} CURSOR FOR {}", cursor_name_, query);
+        PGresult* result = PQexec(conn, declare_cursor.c_str());
 
         if (PQresultStatus(result) != PGRES_COMMAND_OK) {
           SPDLOG_ERROR("Cursor declaration failed: {}", PQerrorMessage(conn));
@@ -46,7 +45,7 @@ class CursorHandler {
         break;
       }
       case DatabaseDriver::SQLITE3: {
-        rs_ = new soci::rowset<soci::row>((session_.prepare << query));
+        rs_ = std::make_unique<soci::rowset<soci::row>>(session_.prepare << query);
         break;
       }
       default:
@@ -62,12 +61,13 @@ class CursorHandler {
   void close_cursor();
 
  private:
+  void check_cursor_initialized();
   DatabaseDriver driver_;
   soci::session& session_;
   std::string query_;
-  std::string cursorName_;
+  std::string cursor_name_;
   int16_t number_of_columns_;
-  soci::rowset<soci::row>* rs_;
-  PGconn* postgresql_conn_;
+  std::unique_ptr<soci::rowset<soci::row>> rs_{nullptr};
+  PGconn* postgresql_conn_{nullptr};
 };
 }  // namespace modyn::storage

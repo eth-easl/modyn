@@ -26,6 +26,8 @@ class StorageDatabaseConnection {
     host_ = config["storage"]["database"]["host"].as<std::string>();
     port_ = config["storage"]["database"]["port"].as<std::string>();
     database_ = config["storage"]["database"]["database"].as<std::string>();
+    SPDLOG_INFO("Database configuration: username: {}, password: {}, host: {}, port: {}, database: {}", username_,
+                password_, host_, port_, database_);
     if (config["storage"]["database"]["hash_partition_modulus"]) {
       hash_partition_modulus_ = config["storage"]["database"]["hash_partition_modulus"].as<int16_t>();
     }

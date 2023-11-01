@@ -78,8 +78,8 @@ class StorageServiceImplTest : public ::testing::Test {
     // Remove temporary directory
     std::filesystem::remove_all(tmp_dir_);
     std::filesystem::remove("config.yaml");
-    if (std::filesystem::exists("'test.db'")) {
-      std::filesystem::remove("'test.db'");
+    if (std::filesystem::exists("test.db")) {
+      std::filesystem::remove("test.db");
     }
   }
 };

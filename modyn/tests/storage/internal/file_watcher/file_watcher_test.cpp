@@ -38,8 +38,8 @@ class FileWatcherTest : public ::testing::Test {
 
   void TearDown() override {
     modyn::test::TestUtils::delete_dummy_yaml();
-    if (std::filesystem::exists("'test.db'")) {
-      std::filesystem::remove("'test.db'");
+    if (std::filesystem::exists("test.db")) {
+      std::filesystem::remove("test.db");
     }
     // Remove temporary directory
     std::filesystem::remove_all(tmp_dir_);

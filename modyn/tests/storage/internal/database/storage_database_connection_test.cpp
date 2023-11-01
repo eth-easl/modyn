@@ -15,8 +15,8 @@ using namespace modyn::storage;
 class StorageDatabaseConnectionTest : public ::testing::Test {
  protected:
   void TearDown() override {
-    if (std::filesystem::exists("'test.db'")) {
-      std::filesystem::remove("'test.db'");
+    if (std::filesystem::exists("test.db")) {
+      std::filesystem::remove("test.db");
     }
   }
 };

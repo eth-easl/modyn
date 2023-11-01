@@ -82,7 +82,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_file_ids_and_labels(ServerWriter<T>* writer, int64_t dataset_id, int64_t start_timestamp = -1,
                                 int64_t end_timestamp = -1);
   template <typename T>
-  static void send_sample_id_and_label(ServerWriter<T>* writer, std::vector<int64_t> file_ids,
+  static void send_sample_id_and_label(ServerWriter<T>* writer, std::mutex& writer_mutex,
+                                       const std::vector<int64_t>& file_ids,
                                        StorageDatabaseConnection& storage_database_connection, int64_t dataset_id,
                                        int64_t sample_batch_size);
   static int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session);

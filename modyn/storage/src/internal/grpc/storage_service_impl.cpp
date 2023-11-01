@@ -1,5 +1,7 @@
 #include "internal/grpc/storage_service_impl.hpp"
 
+#include <mutex>
+
 #include "internal/database/cursor_handler.hpp"
 #include "internal/database/storage_database_connection.hpp"
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
@@ -14,7 +16,6 @@ Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetRequest* request,
     ServerWriter<modyn::storage::GetResponse>* /*writer*/) {
   try {
-    SPDLOG_INFO("Get request received.");
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
@@ -80,7 +81,6 @@ Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-na
 Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetDataInIntervalRequest* request,
     ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {
-  SPDLOG_INFO("GetDataInInterval request received.");
   try {
     soci::session session = storage_database_connection_.get_session();
     const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
@@ -96,7 +96,6 @@ Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-
     SPDLOG_ERROR("Error in GetDataInInterval: {}", e.what());
     return {StatusCode::OK, fmt::format("Error in GetDataInInterval: {}", e.what())};
   }
-  SPDLOG_INFO("GetDataInInterval request finished.");
   return {StatusCode::OK, "Data retrieved."};
 }
 
@@ -111,7 +110,6 @@ Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-
 
     if (dataset_id == -1) {
       response->set_available(false);
-      SPDLOG_INFO("Dataset {} does not exist.", request->dataset_id());
       return {StatusCode::OK, "Dataset does not exist."};
     }
     response->set_available(true);
@@ -228,7 +226,7 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
       return {StatusCode::OK, "No keys provided."};
     }
 
-    std::vector<int64_t> sample_ids(request->keys_size() + 1);
+    std::vector<int64_t> sample_ids(request->keys_size());
     for (int index = 0; index < request->keys_size(); index++) {
       sample_ids[index] = request->keys(index);
     }
@@ -324,7 +322,6 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
     ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request,
     ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {
   try {
-    SPDLOG_INFO("GetDataPerWorker request received.");
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
@@ -415,11 +412,14 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const
 
   const std::vector<int64_t> file_ids = get_file_ids(dataset_id, session, start_timestamp, end_timestamp);
 
+  std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
+
   if (disable_multithreading_) {
-    send_sample_id_and_label<T>(writer, file_ids, storage_database_connection_, dataset_id, sample_batch_size_);
+    send_sample_id_and_label<T>(writer, writer_mutex, file_ids, storage_database_connection_, dataset_id,
+                                sample_batch_size_);
   } else {
     // Split the number of files over retrieval_threads_
-    const int64_t number_of_files = file_ids.size();
+    auto number_of_files = static_cast<int64_t>(file_ids.size());
     const int64_t subset_size = number_of_files / retrieval_threads_;
     std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads_);
     for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -434,10 +434,11 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const
     }
 
     for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-      retrieval_threads_vector_[thread_id] = std::thread([this, writer, &file_ids_per_thread, thread_id, dataset_id]() {
-        send_sample_id_and_label<T>(writer, file_ids_per_thread[thread_id], std::ref(storage_database_connection_),
-                                    dataset_id, sample_batch_size_);
-      });
+      retrieval_threads_vector_[thread_id] =
+          std::thread([this, writer, &file_ids_per_thread, thread_id, dataset_id, &writer_mutex]() {
+            send_sample_id_and_label<T>(writer, writer_mutex, file_ids_per_thread[thread_id],
+                                        std::ref(storage_database_connection_), dataset_id, sample_batch_size_);
+          });
     }
 
     for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -447,7 +448,8 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const
 }
 
 template <typename T>
-void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, const std::vector<int64_t> file_ids,
+void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::mutex& writer_mutex,
+                                                  const std::vector<int64_t>& file_ids,
                                                   StorageDatabaseConnection& storage_database_connection,
                                                   const int64_t dataset_id, const int64_t sample_batch_size) {
   soci::session session = storage_database_connection.get_session();
@@ -471,6 +473,8 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, const
           response.add_keys(record.id);
           response.add_labels(record.label);
         }
+
+        const std::lock_guard<std::mutex> lock(writer_mutex);
         writer->Write(response);
       }
     }
