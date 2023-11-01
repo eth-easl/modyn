@@ -5,6 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules/
 
 ################### spdlog ####################
 message(STATUS "Making spdlog available.")
+set(SPDLOG_FMT_EXTERNAL ON) # Otherwise, we run into linking errors since the fmt version used by spdlog does not match.
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
