@@ -10,7 +10,7 @@ import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
+from modyn.metadata_database.models import Trigger, TriggerPartition
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -112,7 +112,7 @@ class AbstractSelectionStrategy(ABC):
     @property
     def maximum_keys_in_memory(self):
         return self._maximum_keys_in_memory
-    
+
     @maximum_keys_in_memory.setter
     def maximum_keys_in_memory(self, value):
         self._maximum_keys_in_memory = value

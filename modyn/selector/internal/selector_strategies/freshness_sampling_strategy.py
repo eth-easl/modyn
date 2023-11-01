@@ -6,13 +6,11 @@ from math import isclose
 from typing import Any, Iterable, Iterator
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from modyn.selector.internal.storage_backend.local import LocalStorageBackend
-from sqlalchemy import asc, exc, func, select, update
+from sqlalchemy import exc, func, update
 from sqlalchemy.sql.selectable import Select
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
-from sqlalchemy import asc, select
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,8 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         """Generator to get all samples seen since a certain trigger
 
         Returns:
-            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+            Iterable[tuple[list[int], dict[str, object]]]:
+                Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
         """
         additional_filter = (SelectorStateMetadata.seen_in_trigger_id >= smallest_included_trigger_id,)
         yield from self._get_pipeline_data(additional_filter)
@@ -117,7 +118,8 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         """Generator to get all samples seen during a certain trigger
 
         Returns:
-            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+            Iterable[tuple[list[int], dict[str, object]]]:
+                Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
         """
         additional_filter = (SelectorStateMetadata.seen_in_trigger_id == trigger_id,)
         yield from self._get_pipeline_data(additional_filter)
@@ -126,7 +128,8 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         """Generator to get all samples seen
 
         Returns:
-            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+            Iterable[tuple[list[int], dict[str, object]]]:
+                Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
         """
         yield from self._get_pipeline_data(())
 
@@ -143,19 +146,28 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         yield_per defaults to self._maximum_keys_in_memory if not given.
 
         Returns:
-            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+            Iterable[tuple[list[int], dict[str, object]]]:
+                Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
         """
-        swt = Stopwatch()
         yield_per = self._maximum_keys_in_memory if yield_per is None else yield_per
-
         filter_tuple = (SelectorStateMetadata.pipeline_id == self._pipeline_id,) + additional_filter
 
+        stmt = select(SelectorStateMetadata.sample_key).execution_options(yield_per=yield_per).filter(*filter_tuple)
+
+        if statement_modifier is not None:
+            stmt = statement_modifier(stmt)
+
+        yield from self._partitioned_execute_stmt(stmt, yield_per, chunk_callback)
+
+    def _partitioned_execute_stmt(
+        self, stmt: Any, yield_per: int, chunk_callback: Optional[Callable]
+    ) -> Iterable[tuple[list[int], dict[str, object]]]:
+        swt = Stopwatch()
+        assert yield_per is not None
+
+        stmt = stmt.execution_options(yield_per=yield_per)
+
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            stmt = select(SelectorStateMetadata.sample_key).execution_options(yield_per=yield_per).filter(*filter_tuple)
-
-            if statement_modifier is not None:
-                stmt = statement_modifier(stmt)
-
             swt.start("get_chunk")
             for chunk in database.session.execute(stmt).partitions():
                 log = {"get_chunk_time": swt.stop()}
@@ -175,6 +187,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
             return session_callback(database.session)
 
     def get_available_labels(self) -> list[int]:
+        # TODO adapt since this is currently just copied
         with MetadataDatabaseConnection(self._modyn_config) as database:
             result = (
                 database.session.query(SelectorStateMetadata.label)
