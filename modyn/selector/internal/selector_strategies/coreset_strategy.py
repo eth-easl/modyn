@@ -21,10 +21,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
         super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
-        # Every coreset method has a presampling strategy to select datapoints to train on
-        self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
-            config, modyn_config, pipeline_id
-        )
         # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
         self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, maximum_keys_in_memory)
@@ -46,6 +42,11 @@ class CoresetStrategy(AbstractSelectionStrategy):
             self._storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
+
+        # Every coreset method has a presampling strategy to select datapoints to train on
+        self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
+            config, modyn_config, pipeline_id, self._storage_backend
+        )
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)

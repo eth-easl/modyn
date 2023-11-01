@@ -1,13 +1,17 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from sqlalchemy import Select
 
 
 class AbstractPresamplingStrategy(ABC):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
+    def __init__(
+        self, presampling_config: dict, modyn_config: dict, pipeline_id: int, storage_backend: AbstractStorageBackend
+    ):
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
+        self._storage_backend = storage_backend
 
         if "ratio" not in presampling_config:
             raise ValueError("Please specify the presampling ratio.")

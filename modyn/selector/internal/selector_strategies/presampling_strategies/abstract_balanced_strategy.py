@@ -1,11 +1,12 @@
 from typing import Optional
 
 import sqlalchemy
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
     AbstractPresamplingStrategy,
 )
+from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
+from modyn.selector.internal.storage_backend.database.database_storage_backend import DatabaseStorageBackend
 from sqlalchemy import Select, asc, func, select
 from sqlalchemy.sql.expression import func as sql_func
 
@@ -35,13 +36,19 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
         presampling_config: dict,
         modyn_config: dict,
         pipeline_id: int,
+        storage_backend: AbstractStorageBackend,
         balanced_column: sqlalchemy.orm.attributes.InstrumentedAttribute,
     ):
-        super().__init__(presampling_config, modyn_config, pipeline_id)
+        super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)
 
         self.force_required_target_size = presampling_config.get("force_required_target_size", False)
         self.force_column_balancing = presampling_config.get("force_column_balancing", False)
         self.balanced_column = balanced_column
+
+        # TODO(create issue): Support local backend on AbstractBalancedStrategy
+        assert isinstance(
+            self._storage_backend, DatabaseStorageBackend
+        ), "AbstractBalancedPresamplingStrategy currently only supports the DatabaseStorageBackend"
 
     def get_presampling_query(
         self,
@@ -125,9 +132,10 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
         Performs a group_by query and returns a list with the number of samples for each group
 
         """
-        with MetadataDatabaseConnection(self.modyn_config) as database:
+
+        def _session_callback(session):
             query = (
-                database.session.query(self.balanced_column, func.count())  # pylint: disable=not-callable
+                session.query(self.balanced_column, func.count())  # pylint: disable=not-callable
                 .filter(
                     SelectorStateMetadata.pipeline_id == self.pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
@@ -138,5 +146,7 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
             )
             samples_count = query.all()
 
-        # el[0] is the class/trigger, el[1] is the count
-        return [el[1] for el in samples_count]
+            # el[0] is the class/trigger, el[1] is the count
+            return [el[1] for el in samples_count]
+
+        return self._storage_backend._execute_on_session(_session_callback)
