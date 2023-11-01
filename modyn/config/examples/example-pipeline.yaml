@@ -57,6 +57,7 @@ training:
     config:
       limit: -1
       reset_after_trigger: True
+      storage_backend: local
     processor_type: basic_processor_strategy
 data:
   dataset_id: mnist

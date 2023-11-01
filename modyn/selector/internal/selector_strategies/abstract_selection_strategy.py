@@ -109,6 +109,18 @@ class AbstractSelectionStrategy(ABC):
 
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
 
+    @property
+    def maximum_keys_in_memory(self):
+        return self._maximum_keys_in_memory
+    
+    @maximum_keys_in_memory.setter
+    def maximum_keys_in_memory(self, value):
+        self._maximum_keys_in_memory = value
+
+        # Forward update of maximum keys in memory if needed
+        if hasattr(self, "_storage_backend") and hasattr(self._storage_backend, "_maximum_keys_in_memory"):
+            self._storage_backend._maximum_keys_in_memory = value
+
     @abstractmethod
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
         """
@@ -351,110 +363,3 @@ class AbstractSelectionStrategy(ABC):
         assert len(data) <= self._maximum_keys_in_memory, "Chunking went wrong"
 
         return data
-
-    @staticmethod
-    def _persist_samples_impl(
-        keys: list[int],
-        timestamps: list[int],
-        labels: list[int],
-        pipeline_id: int,
-        modyn_config: dict,
-        seen_in_trigger_id: int,
-    ) -> None:
-        with MetadataDatabaseConnection(modyn_config) as database:
-            database.session.bulk_insert_mappings(
-                SelectorStateMetadata,
-                [
-                    {
-                        "pipeline_id": pipeline_id,
-                        "sample_key": key,
-                        "timestamp": timestamp,
-                        "label": label,
-                        "seen_in_trigger_id": seen_in_trigger_id,
-                    }
-                    for key, timestamp, label in zip(keys, timestamps, labels)
-                ],
-            )
-            database.session.commit()
-
-    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
-        """Persists the data in the database.
-
-        Args:
-            keys (list[str]): A list of keys of the data
-            timestamps (list[int]): A list of timestamps of the data.
-            labels (list[int]): A list of labels of the data.
-        """
-        # TODO(#116): Right now we persist all datapoint into DB. We might want to
-        # keep this partly in memory for performance.
-        # Even if each sample is 64 byte and we see 2 million samples, it's just 128 MB of data in memory.
-        # This also means that we have to clear this list on reset accordingly etc.
-        assert len(keys) == len(timestamps) and len(keys) == len(labels)
-
-        log = {}
-        swt = Stopwatch()
-
-        # First persist the trigger which also creates the partition tables
-        # This is done outside of subprocesses to avoid issues with duplicate table creation
-        swt.start("trigger_creation")
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            database.add_selector_state_metadata_trigger(self._pipeline_id, self._next_trigger_id)
-        log["trigger_creation_time"] = swt.stop()
-
-        if self._disable_mt or (self._is_test and self._is_mac):
-            swt.start("persist_samples_time")
-            AbstractSelectionStrategy._persist_samples_impl(
-                keys, timestamps, labels, self._pipeline_id, self._modyn_config, self._next_trigger_id
-            )
-            log["persist_samples_time"] = swt.stop()
-            return log
-
-        samples_per_proc = int(len(keys) / self._insertion_threads)
-        processes: list[mp.Process] = []
-
-        swt.start("persist_samples_time")
-        for i in range(self._insertion_threads):
-            start_idx = i * samples_per_proc
-            end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(keys)
-            proc_keys = keys[start_idx:end_idx]
-            proc_timestamps = timestamps[start_idx:end_idx]
-            proc_labels = labels[start_idx:end_idx]
-            if len(proc_keys) > 0:
-                logger.debug(f"Starting persisting process for {len(proc_keys)} samples.")
-                proc = mp.Process(
-                    target=AbstractSelectionStrategy._persist_samples_impl,
-                    args=(
-                        proc_keys,
-                        proc_timestamps,
-                        proc_labels,
-                        self._pipeline_id,
-                        self._modyn_config,
-                        self._next_trigger_id,
-                    ),
-                )
-                proc.start()
-                processes.append(proc)
-
-        for proc in processes:
-            proc.join()
-        log["persist_samples_time"] = swt.stop()
-
-        return log
-
-    def get_available_labels(self) -> list[int]:
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            result = (
-                database.session.query(SelectorStateMetadata.label)
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id < self._next_trigger_id,
-                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers - 1
-                    if self.tail_triggers is not None
-                    else True,
-                )
-                .distinct()
-                .all()
-            )
-            available_labels = [result_tuple[0] for result_tuple in result]
-
-        return available_labels

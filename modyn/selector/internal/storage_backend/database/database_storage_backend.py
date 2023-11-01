@@ -1,11 +1,12 @@
 import logging
 import multiprocessing as mp
-from typing import Any
+from typing import Any, Callable, Iterable, Optional
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from sqlalchemy import asc, select
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +42,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         return log
 
     def _mt_persist_samples_impl(
-        self, 
-        keys: list[int],
-        timestamps: list[int],
-        labels: list[int],
-        seen_in_trigger_id: int,
-        log: dict
+        self, keys: list[int], timestamps: list[int], labels: list[int], seen_in_trigger_id: int, log: dict
     ):
         swt = Stopwatch()
         samples_per_proc = int(len(keys) / self._insertion_threads)
@@ -81,7 +77,6 @@ class DatabaseStorageBackend(AbstractStorageBackend):
 
         log["persist_samples_time"] = swt.stop()
 
-
     @staticmethod
     def _persist_samples_impl(
         keys: list[int],
@@ -106,6 +101,78 @@ class DatabaseStorageBackend(AbstractStorageBackend):
                 ],
             )
             database.session.commit()
+
+    def get_data_since_trigger(
+        self, smallest_included_trigger_id: int
+    ) -> Iterable[tuple[list[int], dict[str, object]]]:
+        """Generator to get all samples seen since a certain trigger
+
+        Returns:
+            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+        """
+        additional_filter = (SelectorStateMetadata.seen_in_trigger_id >= smallest_included_trigger_id,)
+        yield from self._get_pipeline_data(additional_filter)
+
+    def get_trigger_data(self, trigger_id: int) -> Iterable[tuple[list[int], dict[str, object]]]:
+        """Generator to get all samples seen during a certain trigger
+
+        Returns:
+            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+        """
+        additional_filter = (SelectorStateMetadata.seen_in_trigger_id == trigger_id,)
+        yield from self._get_pipeline_data(additional_filter)
+
+    def get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
+        """Generator to get all samples seen
+
+        Returns:
+            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+        """
+        yield from self._get_pipeline_data(())
+
+    def _get_pipeline_data(
+        self,
+        additional_filter: tuple,
+        yield_per: Optional[int] = None,
+        statement_modifier: Optional[Callable] = None,
+        chunk_callback: Optional[Callable] = None,
+    ) -> Iterable[tuple[list[int], dict[str, object]]]:
+        """Internal generator to interact with database.
+
+        Calling functions can extend the filtering by providing additional filter statements.
+        yield_per defaults to self._maximum_keys_in_memory if not given.
+
+        Returns:
+            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
+        """
+        swt = Stopwatch()
+        yield_per = self._maximum_keys_in_memory if yield_per is None else yield_per
+
+        filter_tuple = (SelectorStateMetadata.pipeline_id == self._pipeline_id,) + additional_filter
+
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            stmt = select(SelectorStateMetadata.sample_key).execution_options(yield_per=yield_per).filter(*filter_tuple)
+
+            if statement_modifier is not None:
+                stmt = statement_modifier(stmt)
+
+            swt.start("get_chunk")
+            for chunk in database.session.execute(stmt).partitions():
+                log = {"get_chunk_time": swt.stop()}
+
+                if len(chunk) > 0:
+                    if chunk_callback is not None:
+                        chunk_callback(chunk)
+
+                    yield [res[0] for res in chunk], log
+                else:
+                    yield [], log
+
+                swt.start("get_chunk", overwrite=True)
+
+    def _execute_on_session(self, session_callback: Callable):
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            return session_callback(database.session)
 
     def get_available_labels(self) -> list[int]:
         with MetadataDatabaseConnection(self._modyn_config) as database:

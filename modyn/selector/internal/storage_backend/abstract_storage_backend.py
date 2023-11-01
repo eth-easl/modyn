@@ -2,7 +2,7 @@ import logging
 import os
 import platform
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -29,4 +29,18 @@ class AbstractStorageBackend(ABC):
 
     @abstractmethod
     def get_available_labels(self) -> list[int]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_trigger_data(self, trigger_id: int) -> Iterable[tuple[list[int], dict[str, object]]]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_data_since_trigger(
+        self, smallest_included_trigger_id: int
+    ) -> Iterable[tuple[list[int], dict[str, object]]]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         raise NotImplementedError()
