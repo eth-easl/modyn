@@ -3,6 +3,15 @@ include(FetchContent)
 # Configure path to modules (for find_package)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules/")
 
+################### fmt ####################
+message(STATUS "Making fmt available.")
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG 10.1.1
+)
+FetchContent_MakeAvailable(fmt)
+
 ################### spdlog ####################
 message(STATUS "Making spdlog available.")
 set(SPDLOG_FMT_EXTERNAL ON) # Otherwise, we run into linking errors since the fmt version used by spdlog does not match.
@@ -12,15 +21,6 @@ FetchContent_Declare(
   GIT_TAG v1.12.0
 )
 FetchContent_MakeAvailable(spdlog)
-
-################### fmt ####################
-message(STATUS "Making fmt available.")
-FetchContent_Declare(
-  fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 10.1.1
-)
-FetchContent_MakeAvailable(fmt)
 
 ################### argparse ####################
 message(STATUS "Making argparse available.")
