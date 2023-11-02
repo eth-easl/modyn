@@ -2,22 +2,15 @@ import json
 import logging
 import os
 import pathlib
-from multiprocessing import Lock
 from time import sleep
 from typing import Any, Optional
 
 import enlighten
 from modyn.common.benchmark import Stopwatch
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.utils import ModelStorageStrategyConfig
-
-# pylint: disable=no-name-in-module
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
-from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
-from modyn.utils import dynamic_module_import, is_directory_writable
+from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +18,8 @@ logger = logging.getLogger(__name__)
 class PipelineExecutor:
     def __init__(
         self,
-        next_pipeline_lock: Lock,
+        start_timestamp: int,
+        pipeline_id: int,
         modyn_config: dict,
         pipeline_config: dict,
         eval_directory: pathlib.Path,
@@ -34,19 +28,16 @@ class PipelineExecutor:
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
     ) -> None:
-        self._next_pipeline_lock = next_pipeline_lock
-
+        self.start_timestamp = start_timestamp
+        self.pipeline_id = pipeline_id
         self.modyn_config = modyn_config
         self.pipeline_config = pipeline_config
+        self.eval_directory = eval_directory
         self.supervisor_supported_eval_result_writers = supervisor_supported_eval_result_writers
 
         self.previous_model_id: Optional[int] = None
         if self.pipeline_config["training"]["initial_model"] == "pretrained":
             self.previous_model_id = self.pipeline_config["training"]["initial_model_id"]
-
-        if not is_directory_writable(eval_directory):
-            raise ValueError("No permission to write to the evaluation results directory.")
-        self.eval_directory = eval_directory
 
         self.progress_mgr = enlighten.get_manager()
         self.status_bar = self.progress_mgr.status_bar(
@@ -59,13 +50,12 @@ class PipelineExecutor:
         )
         self.grpc = GRPCHandler(self.modyn_config, self.progress_mgr, self.status_bar)
 
-        if not self.validate_system():
-            raise ValueError("Invalid system configuration")
-
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
+
         self._sw = Stopwatch()
+        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
         self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": self.pipeline_config, "modyn_config": self.modyn_config},
             "supervisor": {
@@ -80,22 +70,8 @@ class PipelineExecutor:
         self._setup_trigger()
         self._selector_batch_size = 128
 
-        self.pipeline_id: Optional[int] = None
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
-        self._pipeline_log_file: Optional[pathlib.Path] = None
-
-    def dataset_available(self) -> bool:
-        dataset_id = self.pipeline_config["data"]["dataset_id"]
-        available = self.grpc.dataset_available(dataset_id)
-
-        if not available:
-            logger.error(f"Dataset {dataset_id} not available at storage.")
-
-        return available
-
-    def validate_system(self) -> bool:
-        return self.dataset_available() and self.grpc.trainer_server_available()
 
     def _determine_pipeline_mode(self) -> None:
         if self.start_replay_at is None:
@@ -119,75 +95,6 @@ class PipelineExecutor:
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
 
         assert self.trigger is not None, "Error during trigger initialization"
-
-    def _set_pipeline_id(self, pipeline_id: int) -> None:
-        self.pipeline_id = pipeline_id
-        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
-
-    def register(self) -> None:
-        """
-        Registers a new pipeline in the metadata database.
-
-        Returns:
-            The id of the newly created pipeline.
-        Throws:
-            ValueError if num_workers is not positive.
-        """
-        num_workers: int = self.pipeline_config["training"]["dataloader_workers"]
-        if num_workers < 0:
-            raise ValueError(f"Tried to register training with {num_workers} workers.")
-
-        if "config" in self.pipeline_config["model"]:
-            model_config = json.dumps(self.pipeline_config["model"]["config"])
-        else:
-            model_config = "{}"
-
-        model_storage_config = self.pipeline_config["model_storage"]
-        full_model_strategy = ModelStorageStrategyConfig.from_config(
-            self.get_model_strategy(model_storage_config["full_model_strategy"])
-        )
-        incremental_model_strategy_config: Optional[StrategyConfig] = None
-        full_model_interval: Optional[int] = None
-        if "incremental_model_strategy" in model_storage_config:
-            incremental_strategy = model_storage_config["incremental_model_strategy"]
-            incremental_model_strategy_config = self.get_model_strategy(incremental_strategy)
-            full_model_interval = (
-                incremental_strategy["full_model_interval"] if "full_model_interval" in incremental_strategy else None
-            )
-
-        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
-        if incremental_model_strategy_config is not None:
-            incremental_model_strategy = ModelStorageStrategyConfig.from_config(incremental_model_strategy_config)
-
-        with self._next_pipeline_lock:
-            with MetadataDatabaseConnection(self.modyn_config) as database:
-                pipeline_id = database.register_pipeline(
-                    num_workers=num_workers,
-                    model_class_name=self.pipeline_config["model"]["id"],
-                    model_config=model_config,
-                    amp=self.pipeline_config["training"]["amp"] if "amp" in self.pipeline_config["training"] else False,
-                    selection_strategy=json.dumps(self.pipeline_config["training"]["selection_strategy"]),
-                    full_model_strategy=full_model_strategy,
-                    incremental_model_strategy=incremental_model_strategy,
-                    full_model_interval=full_model_interval,
-                )
-
-        self._set_pipeline_id(pipeline_id)
-
-    @staticmethod
-    def get_model_strategy(strategy_config: dict) -> StrategyConfig:
-        return StrategyConfig(
-            name=strategy_config["name"],
-            zip=strategy_config["zip"] if "zip" in strategy_config else None,
-            zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
-            config=SelectorJsonString(value=json.dumps(strategy_config["config"]))
-            if "config" in strategy_config
-            else None,
-        )
-
-    def unregister(self) -> None:
-        # TODO(#64,#124,#317): Implement.
-        pass
 
     def initial_pass(self) -> None:
         # TODO(#128): Implement initial pass.
@@ -428,7 +335,7 @@ class PipelineExecutor:
             self.shutdown_trainer()
             logger.info("Shutdown successful.")
 
-    def execute(self, start_timestamp: int) -> None:
+    def execute(self) -> None:
         self.status_bar.update(demo="Initial Pass")
         self.initial_pass()
         logger.info(f"Pipeline {self.pipeline_id}: Initial pass completed.")
@@ -437,14 +344,7 @@ class PipelineExecutor:
         if self.experiment_mode:
             self.replay_data()
         else:
-            self.wait_for_new_data(start_timestamp)
+            self.wait_for_new_data(self.start_timestamp)
 
-    def register_and_execute(self) -> None:
-        start_timestamp = self.grpc.get_time_at_storage()
-        self.register()
-        logger.info(f"Pipeline {self.pipeline_id} registered, start executing.")
-        self.execute(start_timestamp)
         self.status_bar.update(demo="Cleanup")
-        logger.info(f"Pipeline {self.pipeline_id} done, unregistering.")
-        self.unregister()
         self._persist_pipeline_log()

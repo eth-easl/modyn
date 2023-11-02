@@ -1,18 +1,27 @@
 # pylint: disable=unused-argument, no-name-in-module, redefined-outer-name
-
-from typing import Iterable
+import json
+import os
+import pathlib
 from unittest.mock import MagicMock, patch
 
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (  # noqa: E402, E501, E611;
+    JsonString,
     PipelineResponse,
     StartPipelineRequest,
 )
 from modyn.supervisor.internal.grpc.supervisor_grpc_servicer import SupervisorGRPCServicer
+from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.supervisor import Supervisor
+
+EVALUATION_DIRECTORY: str = str(pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir")
 
 
 def get_minimal_modyn_config():
-    return {"supervisor": {"port": "50063"}}
+    return {}
+
+
+def noop_constructor_mock(self, modyn_config: dict) -> None:
+    pass
 
 
 def get_minimal_pipeline_config() -> dict:
@@ -55,6 +64,7 @@ def noop_init_metadata_db(self) -> None:
     pass
 
 
+@patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     modyn_config = get_minimal_modyn_config()
@@ -63,6 +73,7 @@ def test_init():
     assert servicer._supervisor == sup
 
 
+@patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 @patch.object(Supervisor, "start_pipeline")
 def test_start_pipeline(test_start_pipeline: MagicMock):
@@ -72,13 +83,15 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
 
     pipeline_config = get_minimal_pipeline_config()
     request = StartPipelineRequest(
-        pipeline_config=pipeline_config, eval_directory=".", start_replay_at=0, stop_replay_at=1, maximum_triggers=2
+        pipeline_config=JsonString(value=json.dumps(pipeline_config)),
+        eval_directory=EVALUATION_DIRECTORY,
+        start_replay_at=0,
+        stop_replay_at=1,
+        maximum_triggers=2,
     )
     test_start_pipeline.return_value = 1
 
-    responses: Iterable[PipelineResponse] = list(servicer.start_pipeline(request, None))
-    assert len(responses) == 1
-    response = responses[0]
+    response: PipelineResponse = servicer.start_pipeline(request, None)
     assert response.pipeline_id == 1
 
-    test_start_pipeline.assert_called_once_with(pipeline_config, ".", 0, 1, 2)
+    test_start_pipeline.assert_called_once_with(pipeline_config, EVALUATION_DIRECTORY, 0, 1, 2)

@@ -41,4 +41,4 @@ class SupervisorGRPCServer(GenericGRPCServer):
             exc_tb (Exception): exception traceback
         """
         super().__exit__(exc_type, exc_val, exc_tb)
-        logger.log("SupervisorGRPCServer exited.")
+        logger.info("SupervisorGRPCServer exited.")

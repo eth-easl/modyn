@@ -33,4 +33,4 @@ class SupervisorGRPCServicer(SupervisorServicer):
         )
 
         # TODO(#317): return pipeline id or something else?
-        yield PipelineResponse(1)
+        return PipelineResponse(pipeline_id=1)

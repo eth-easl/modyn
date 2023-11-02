@@ -1,14 +1,20 @@
+import json
 import logging
 import os
 import pathlib
-from multiprocessing import Lock, Manager, Process
+from multiprocessing import Manager, Process
 from typing import Optional
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
+
+# pylint: disable=no-name-in-module
+from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
+from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor
-from modyn.utils import model_available, trigger_available, validate_yaml
+from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +36,7 @@ class Supervisor:
         self,
         modyn_config: dict,
     ) -> None:
+        # TODO(#325): validate modyn_config
         self.modyn_config = modyn_config
         self._manager = Manager()
         self._next_pipeline_lock = self._manager.Lock()
@@ -48,7 +55,6 @@ class Supervisor:
         #     self._run_tensorboard(port)
         #     logger.info(f"Starting up tensorboard on port {port}.")
 
-    # TODO(#317): what is it?
     def __getstate__(self) -> dict:
         state = self.__dict__.copy()
         del state["_manager"]
@@ -177,6 +183,83 @@ class Supervisor:
             pipeline_config
         )
 
+    def dataset_available(self, pipeline_config: dict) -> bool:
+        dataset_id = pipeline_config["data"]["dataset_id"]
+        available = self.grpc.dataset_available(dataset_id)
+
+        if not available:
+            logger.error(f"Dataset {dataset_id} not available at storage.")
+
+        return available
+
+    def validate_system(self, pipeline_config: dict) -> bool:
+        return self.dataset_available(pipeline_config) and self.grpc.trainer_server_available()
+
+    def register_pipeline(self, pipeline_config: dict) -> int:
+        """
+        Registers a new pipeline in the metadata database.
+
+        Returns:
+            The id of the newly created pipeline.
+        Throws:
+            ValueError if num_workers is not positive.
+        """
+        num_workers: int = pipeline_config["training"]["dataloader_workers"]
+        if num_workers < 0:
+            raise ValueError(f"Tried to register training with {num_workers} workers.")
+
+        if "config" in pipeline_config["model"]:
+            model_config = json.dumps(pipeline_config["model"]["config"])
+        else:
+            model_config = "{}"
+
+        model_storage_config = pipeline_config["model_storage"]
+        full_model_strategy = ModelStorageStrategyConfig.from_config(
+            self.get_model_strategy(model_storage_config["full_model_strategy"])
+        )
+        incremental_model_strategy_config: Optional[StrategyConfig] = None
+        full_model_interval: Optional[int] = None
+        if "incremental_model_strategy" in model_storage_config:
+            incremental_strategy = model_storage_config["incremental_model_strategy"]
+            incremental_model_strategy_config = self.get_model_strategy(incremental_strategy)
+            full_model_interval = (
+                incremental_strategy["full_model_interval"] if "full_model_interval" in incremental_strategy else None
+            )
+
+        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
+        if incremental_model_strategy_config is not None:
+            incremental_model_strategy = ModelStorageStrategyConfig.from_config(incremental_model_strategy_config)
+
+        with self._next_pipeline_lock:
+            with MetadataDatabaseConnection(self.modyn_config) as database:
+                pipeline_id = database.register_pipeline(
+                    num_workers=num_workers,
+                    model_class_name=pipeline_config["model"]["id"],
+                    model_config=model_config,
+                    amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
+                    selection_strategy=json.dumps(pipeline_config["training"]["selection_strategy"]),
+                    full_model_strategy=full_model_strategy,
+                    incremental_model_strategy=incremental_model_strategy,
+                    full_model_interval=full_model_interval,
+                )
+
+        return pipeline_id
+
+    @staticmethod
+    def get_model_strategy(strategy_config: dict) -> StrategyConfig:
+        return StrategyConfig(
+            name=strategy_config["name"],
+            zip=strategy_config["zip"] if "zip" in strategy_config else None,
+            zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
+            config=SelectorJsonString(value=json.dumps(strategy_config["config"]))
+            if "config" in strategy_config
+            else None,
+        )
+
+    def unregister_pipeline(self, pipeline_id: int) -> None:
+        # TODO(#64,#124,#317): Implement.
+        pass
+
     # def _run_tensorboard(self, port: str) -> None:
     #     logging.getLogger("tensorboard").setLevel(logging.ERROR)
     #     logging.getLogger("MARKDOWN").setLevel(logging.ERROR)
@@ -199,7 +282,8 @@ class Supervisor:
 
     def pipeline(
         self,
-        next_pipeline_lock: Lock,
+        start_timestamp: int,
+        pipeline_id: int,
         modyn_config: dict,
         pipeline_config: dict,
         eval_directory: pathlib.Path,
@@ -209,7 +293,8 @@ class Supervisor:
         maximum_triggers: Optional[int] = None,
     ) -> None:
         pipeline = PipelineExecutor(
-            next_pipeline_lock,
+            start_timestamp,
+            pipeline_id,
             modyn_config,
             pipeline_config,
             eval_directory,
@@ -218,8 +303,10 @@ class Supervisor:
             stop_replay_at,
             maximum_triggers,
         )
-        pipeline.register_and_execute()
-        logger.info("Pipeline done.")
+        pipeline.execute()
+
+        logger.info(f"Pipeline {pipeline_id} done, unregistering.")
+        self.unregister_pipeline(pipeline_id)
 
     def start_pipeline(
         self,
@@ -232,12 +319,21 @@ class Supervisor:
         if not self.validate_pipeline_config(pipeline_config):
             raise ValueError("Invalid pipeline configuration")
 
-        # TODO(#317): start a process. pool?
-        # TODO(#317): return pipeline id or something else?
+        if not is_directory_writable(eval_directory):
+            raise ValueError("No permission to write to the evaluation results directory.")
+
+        if not self.validate_system(pipeline_config):
+            raise ValueError("Invalid system configuration")
+
+        start_timestamp = self.grpc.get_time_at_storage()
+        pipeline_id = self.register_pipeline(pipeline_config)
+        logger.info(f"Pipeline {pipeline_id} registered, start executing.")
+
         process = Process(
             target=self.pipeline,
             args=(
-                self._next_pipeline_lock,
+                start_timestamp,
+                pipeline_id,
                 self.modyn_config,
                 pipeline_config,
                 eval_directory,
@@ -248,3 +344,5 @@ class Supervisor:
             ),
         )
         process.start()
+
+        return pipeline_id
