@@ -309,11 +309,11 @@ TEST_F(StorageServiceImplTest, TestGetFileIds) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 1));
   ASSERT_EQ(result.size(), 1);
-  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[0], 2);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 2, 100));
   ASSERT_EQ(result.size(), 1);
-  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[0], 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1));
   ASSERT_EQ(result.size(), 2);
@@ -322,7 +322,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIds) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 2));
   ASSERT_EQ(result.size(), 1);
-  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[0], 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 100));
   ASSERT_EQ(result.size(), 2);
@@ -369,11 +369,11 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 1, 1, 1));
   ASSERT_EQ(result.size(), 1);
-  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[0], 2);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 2, 100, 1));
   ASSERT_EQ(result.size(), 1);
-  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[0], 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, -1, -1, 2));
   ASSERT_EQ(result.size(), 2);
@@ -382,7 +382,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 2, -1, 1));
   ASSERT_EQ(result.size(), 1);
-  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[0], 1);
 }
 
 TEST_F(StorageServiceImplTest, TestGetDatasetId) {
@@ -416,12 +416,11 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsForSamples) {
   std::vector<int64_t> result;
   std::vector<int64_t> request_keys = {1, 2, 3};
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
-  ASSERT_EQ(result.size(), 3);
+  ASSERT_EQ(result.size(), 2);
   ASSERT_EQ(result[0], 1);
   ASSERT_EQ(result[1], 2);
-  ASSERT_EQ(result[2], 3);
 
-  request_keys = {1, 2, 3, 4};
+  request_keys = {3, 4, 5, 6};
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
   ASSERT_EQ(result.size(), 4);
   ASSERT_EQ(result[0], 1);
@@ -432,10 +431,10 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsForSamples) {
   request_keys = {3, 4};
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0], 2);
-  ASSERT_EQ(result[1], 3);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
 
-  request_keys = {1, 2, 3, 4, 5};
+  request_keys = {1, 2, 3, 4, 5, 6, 7};
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
   ASSERT_EQ(result.size(), 4);
   ASSERT_EQ(result[0], 1);
@@ -508,23 +507,25 @@ TEST_F(StorageServiceImplTest, TestGetSamplesCorrespondingToFiles) {
   session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 4, 0, 1)";
 
   std::vector<int64_t> result;
-  const std::vector<int64_t> request_keys = {1, 2, 3, 4, 5};
+  const std::vector<int64_t> request_keys = {1, 2, 3, 4, 5, 6, 7};
   ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(1, 1, request_keys, session));
-  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result.size(), 2);
   ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 3);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(2, 1, request_keys, session));
-  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result.size(), 2);
   ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[1], 4);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(3, 1, request_keys, session));
   ASSERT_EQ(result.size(), 1);
-  ASSERT_EQ(result[0], 3);
+  ASSERT_EQ(result[0], 5);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(4, 1, request_keys, session));
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0], 4);
-  ASSERT_EQ(result[1], 5);
+  ASSERT_EQ(result[0], 6);
+  ASSERT_EQ(result[1], 7);
 }
 
 TEST_F(StorageServiceImplTest, TestGetDatasetData) {

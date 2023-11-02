@@ -508,7 +508,7 @@ void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage:
 std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
                                                                               const int64_t retrieval_threads) {
   auto number_of_files = static_cast<int64_t>(file_ids.size());
-  const int64_t subset_size = number_of_files / retrieval_threads;
+  const int64_t subset_size = (number_of_files + retrieval_threads - 1) / retrieval_threads;
   std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
   for (int64_t thread_id = 0; thread_id < retrieval_threads; ++thread_id) {
     const int64_t start_index = thread_id * subset_size;

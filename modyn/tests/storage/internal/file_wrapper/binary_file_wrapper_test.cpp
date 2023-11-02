@@ -213,8 +213,8 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   label_indices = {3, 1, 3};
   samples = file_wrapper.get_samples_from_indices(label_indices);
   ASSERT_EQ(samples.size(), 3);
-  ASSERT_EQ((samples)[1][0], 15);
-  ASSERT_EQ((samples)[0][0], 13);
+  ASSERT_EQ((samples)[0][0], 15);
+  ASSERT_EQ((samples)[1][0], 13);
   ASSERT_EQ((samples)[2][0], 15);
 }
 

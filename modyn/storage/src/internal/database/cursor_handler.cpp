@@ -43,11 +43,8 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
     case DatabaseDriver::SQLITE3: {
       int64_t retrieved_rows = 0;
       for (auto& row : *rs_) {
-        if (retrieved_rows >= number_of_rows_to_fetch) {
-          break;
-        }
         SampleRecord record{};
-        record.id = row.get<int64_t>(0);
+        record.id = row.get<int32_t>(0);
         if (number_of_columns_ > 1) {
           record.column_1 = row.get<int64_t>(1);
         }
@@ -56,6 +53,9 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
         }
         records[retrieved_rows] = record;
         retrieved_rows++;
+        if (retrieved_rows >= number_of_rows_to_fetch) {
+          break;
+        }
       }
       return records;
       break;

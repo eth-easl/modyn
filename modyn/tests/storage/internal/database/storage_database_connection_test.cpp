@@ -41,8 +41,6 @@ TEST_F(StorageDatabaseConnectionTest, TestCreateTables) {
   const StorageDatabaseConnection connection2(config);
   soci::session session = connection2.get_session();
 
-  const soci::rowset<soci::row> tables = (session.prepare << "SELECT name FROM sqlite_master WHERE type='table';");
-
   // Assert datasets, files and samples tables exist
   int number_of_tables = 0;  // NOLINT
   session << "SELECT COUNT(*) FROM sqlite_master WHERE type='table';", soci::into(number_of_tables);

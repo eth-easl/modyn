@@ -13,8 +13,8 @@
 using namespace modyn::storage;
 
 soci::session StorageDatabaseConnection::get_session() const {
-  const std::string connection_string = "dbname='" + database_ + "' user='" + username_ + "' password='" + password_ +
-                                        "' host='" + host_ + "' port=" + port_;
+  const std::string connection_string =
+      fmt::format("dbname={} user={} password={} host={} port={}", database_, username_, password_, host_, port_);
   soci::connection_parameters parameters;
 
   switch (drivername_) {

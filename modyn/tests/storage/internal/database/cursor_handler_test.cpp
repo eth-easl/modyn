@@ -53,7 +53,7 @@ TEST_F(CursorHandlerTest, TestYieldPerSQLite3ThreeColumns) {  // NOLINT (readabi
     ASSERT_NO_THROW(record = cursor_handler.yield_per(100));
     ASSERT_EQ(record.size(), 100);
     for (int64_t j = 0; j < 100; j++) {
-      ASSERT_EQ(record[j].id, j + i * 100);
+      ASSERT_EQ(record[j].id, j + i * 100 + 1);
       ASSERT_EQ(record[j].column_1, j + i * 100);
       ASSERT_EQ(record[j].column_2, j + i * 100);
     }
@@ -74,7 +74,7 @@ TEST_F(CursorHandlerTest, TestYieldPerSQLite3TwoColumns) {  // NOLINT (readabili
     ASSERT_NO_THROW(record = cursor_handler.yield_per(100));
     ASSERT_EQ(record.size(), 100);
     for (int64_t j = 0; j < 100; j++) {
-      ASSERT_EQ(record[j].id, j + i * 100);
+      ASSERT_EQ(record[j].id, j + i * 100 + 1);
       ASSERT_EQ(record[j].column_1, j + i * 100);
     }
   }

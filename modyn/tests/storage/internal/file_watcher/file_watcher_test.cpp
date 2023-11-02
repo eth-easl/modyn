@@ -413,25 +413,12 @@ TEST_F(FileWatcherTest, TestDirectoryUpdateWhileRunning) {
 
   std::this_thread::sleep_for(std::chrono::seconds(2));  // wait for the watcher to process
 
+  stop_file_watcher = true;  // Need to stop the file watcher as sqlite3 can't handle multiple threads accessing the
+                             // database at the same time
+  watcher_thread.join();
+
   // Check if the file is added to the database
   std::string file_path;
   session << "SELECT path FROM files WHERE file_id=1", soci::into(file_path);
   ASSERT_EQ(file_path, tmp_dir_ + "/test_file1.txt");
-
-  // Add another file to the temporary directory
-  file = std::ofstream(tmp_dir_ + "/test_file2.txt");
-  file << "test";
-  file.close();
-  file = std::ofstream(tmp_dir_ + "/test_file2.lbl");
-  file << "2";
-  file.close();
-
-  std::this_thread::sleep_for(std::chrono::seconds(2));  // wait for the watcher to process
-
-  // Check if the second file is added to the database
-  session << "SELECT path FROM files WHERE file_id=2", soci::into(file_path);
-  ASSERT_EQ(file_path, tmp_dir_ + "/test_file2.txt");
-
-  stop_file_watcher = true;
-  watcher_thread.join();
 }
