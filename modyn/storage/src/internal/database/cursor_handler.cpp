@@ -44,12 +44,14 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
       int64_t retrieved_rows = 0;
       for (auto& row : *rs_) {
         SampleRecord record{};
-        record.id = row.get<int32_t>(0);
+        record.id =
+            static_cast<int64_t>(row.get<int>(0));  // Because of different implementations of types and the
+                                                    // implementation of soci datatypes we sadly need to cast here
         if (number_of_columns_ > 1) {
-          record.column_1 = row.get<int64_t>(1);
+          record.column_1 = static_cast<int64_t>(row.get<long long>(1));
         }
         if (number_of_columns_ == 3) {
-          record.column_2 = row.get<int64_t>(2);
+          record.column_2 = static_cast<int64_t>(row.get<long long>(2));
         }
         records[retrieved_rows] = record;
         retrieved_rows++;
