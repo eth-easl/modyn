@@ -12,8 +12,8 @@ namespace modyn::storage {
 
 struct SampleRecord {
   int64_t id;
-  int64_t label;
-  int64_t index;
+  int64_t column_1;
+  int64_t column_2;
 };
 
 class CursorHandler {

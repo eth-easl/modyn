@@ -2,8 +2,7 @@
 ---
 $schema: "http://json-schema.org/draft-04/schema"
 id: "http://stsci.edu/schemas/yaml-schema/draft-01"
-title:
-  Modyn Configuration
+title: Modyn Configuration
 description: |
   This is the configuration file for the Modyn.
   It contains the configuration for the system, adapt as required.
@@ -38,7 +37,7 @@ properties:
         type: number
         description: |
           The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce 
-          the size of a single answer the keys are batched in sizes of `sample_batch_size`.
+          the size of a single answer the keys are batched in sizes of `sample_batch_size`. Defaults to 10000.
       sample_dbinsertion_batchsize:
         type: number
         description: |

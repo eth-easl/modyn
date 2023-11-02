@@ -40,7 +40,7 @@ TEST_F(CursorHandlerTest, TestCheckCursorInitialized) {
   ASSERT_NO_THROW(cursor_handler.close_cursor());
 }
 
-TEST_F(CursorHandlerTest, TestYieldPerSQLite3AllColumns) {
+TEST_F(CursorHandlerTest, TestYieldPerSQLite3ThreeColumns) {  // NOLINT (readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
@@ -54,14 +54,14 @@ TEST_F(CursorHandlerTest, TestYieldPerSQLite3AllColumns) {
     ASSERT_EQ(record.size(), 100);
     for (int64_t j = 0; j < 100; j++) {
       ASSERT_EQ(record[j].id, j + i * 100);
-      ASSERT_EQ(record[j].label, j + i * 100);
-      ASSERT_EQ(record[j].index, j + i * 100);
+      ASSERT_EQ(record[j].column_1, j + i * 100);
+      ASSERT_EQ(record[j].column_2, j + i * 100);
     }
   }
   cursor_handler.close_cursor();
 }
 
-TEST_F(CursorHandlerTest, TestYieldPerSQLite3TwoColumns) {
+TEST_F(CursorHandlerTest, TestYieldPerSQLite3TwoColumns) {  // NOLINT (readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
@@ -75,7 +75,7 @@ TEST_F(CursorHandlerTest, TestYieldPerSQLite3TwoColumns) {
     ASSERT_EQ(record.size(), 100);
     for (int64_t j = 0; j < 100; j++) {
       ASSERT_EQ(record[j].id, j + i * 100);
-      ASSERT_EQ(record[j].label, j + i * 100);
+      ASSERT_EQ(record[j].column_1, j + i * 100);
     }
   }
   cursor_handler.close_cursor();

@@ -14,24 +14,15 @@ using namespace modyn::storage;
 
 Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetRequest* request,
-    ServerWriter<modyn::storage::GetResponse>* /*writer*/) {
+    ServerWriter<modyn::storage::GetResponse>* writer) {
   try {
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
-    int64_t dataset_id = -1;
-    std::string base_path;
-    int64_t filesystem_wrapper_type = -1;
-    int64_t file_wrapper_type = -1;
-    std::string file_wrapper_config;
+    std::string dataset_name = request->dataset_id();
+    const DatasetData dataset_data = get_dataset_data(session, dataset_name);
 
-    session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
-               "datasets WHERE "
-               "name = :name",
-        soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type),
-        soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(request->dataset_id());
-
-    if (dataset_id == -1) {
+    if (dataset_data.dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
       return {StatusCode::OK, "Dataset does not exist."};
     }
@@ -47,10 +38,8 @@ Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
       return {StatusCode::OK, "No keys provided."};
     }
 
-    if (disable_multithreading_) {
-    }
-
-    // TODO(vGsteiger): Implement with cursor and lock guard on the writer
+    send_sample_data_from_keys(writer, request_keys, dataset_data, session,
+                               storage_database_connection_.get_drivername());
 
     return {StatusCode::OK, "Data retrieved."};
   } catch (const std::exception& e) {
@@ -236,7 +225,8 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
     std::string sample_placeholders = fmt::format("({})", fmt::join(sample_ids, ","));
 
     std::string sql = fmt::format(
-        "SELECT COUNT(DISTINCT file_id) FROM (SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id "
+        "SELECT COUNT(DISTINCT file_id) FROM (SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND "
+        "sample_id "
         "IN {})",
         sample_placeholders);
     session << sql, soci::into(number_of_files), soci::use(dataset_id);
@@ -419,22 +409,11 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const
                                 sample_batch_size_);
   } else {
     // Split the number of files over retrieval_threads_
-    auto number_of_files = static_cast<int64_t>(file_ids.size());
-    const int64_t subset_size = number_of_files / retrieval_threads_;
-    std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads_);
-    for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-      const int64_t start_index = thread_id * subset_size;
-      const int64_t end_index = (thread_id + 1) * subset_size;
-      if (thread_id == retrieval_threads_ - 1) {
-        file_ids_per_thread[thread_id] = std::vector<int64_t>(file_ids.begin() + start_index, file_ids.end());
-      } else {
-        file_ids_per_thread[thread_id] =
-            std::vector<int64_t>(file_ids.begin() + start_index, file_ids.begin() + end_index);
-      }
-    }
+    auto file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
 
+    std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
     for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-      retrieval_threads_vector_[thread_id] =
+      retrieval_threads_vector[thread_id] =
           std::thread([this, writer, &file_ids_per_thread, thread_id, dataset_id, &writer_mutex]() {
             send_sample_id_and_label<T>(writer, writer_mutex, file_ids_per_thread[thread_id],
                                         std::ref(storage_database_connection_), dataset_id, sample_batch_size_);
@@ -442,7 +421,7 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const
     }
 
     for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-      retrieval_threads_vector_[thread_id].join();
+      retrieval_threads_vector[thread_id].join();
     }
   }
 }
@@ -454,14 +433,14 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
                                                   const int64_t dataset_id, const int64_t sample_batch_size) {
   soci::session session = storage_database_connection.get_session();
   for (const int64_t file_id : file_ids) {
-    const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session);
+    const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
     if (number_of_samples > 0) {
-      const std::string query =
-          fmt::format("SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = ", file_id, dataset_id);
+      const std::string query = fmt::format(
+          "SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = {}", file_id, dataset_id);
       const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_id);
       CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 2);
 
-      std::vector<SampleRecord> records(sample_batch_size);
+      std::vector<SampleRecord> records;
 
       while (true) {
         records = cursor_handler.yield_per(sample_batch_size);
@@ -471,7 +450,7 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
         T response;
         for (const auto& record : records) {
           response.add_keys(record.id);
-          response.add_labels(record.label);
+          response.add_labels(record.column_1);
         }
 
         const std::lock_guard<std::mutex> lock(writer_mutex);
@@ -481,10 +460,148 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
   }
 }
 
-int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci::session& session) {
+void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage::GetResponse>* writer,
+                                                    const std::vector<int64_t>& request_keys,
+                                                    const DatasetData& dataset_data, soci::session& session,
+                                                    const DatabaseDriver& driver) {
+  const std::vector<int64_t> file_ids = get_file_ids_for_samples(request_keys, dataset_data.dataset_id, session);
+
+  if (file_ids.empty()) {
+    SPDLOG_ERROR("No files corresponding to the keys found in dataset {}.", dataset_data.dataset_id);
+    return;
+  }
+
+  // create mutex to protect the writer from concurrent writes as this is not supported by gRPC
+  std::mutex writer_mutex;
+
+  if (disable_multithreading_) {
+    for (auto file_id : file_ids) {
+      const std::vector<int64_t> samples_corresponding_to_file =
+          get_samples_corresponding_to_file(file_id, dataset_data.dataset_id, request_keys, session);
+      send_sample_data_for_keys_and_file(writer, writer_mutex, file_id, samples_corresponding_to_file, dataset_data,
+                                         session, driver, sample_batch_size_);
+    }
+  } else {
+    auto file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
+
+    auto thread_function = [this, writer, &writer_mutex, &file_ids_per_thread, &request_keys, &dataset_data, &session,
+                            &driver](int thread_id) {
+      for (auto file_id : file_ids_per_thread[thread_id]) {
+        const std::vector<int64_t> samples_corresponding_to_file =
+            get_samples_corresponding_to_file(file_id, dataset_data.dataset_id, request_keys, session);
+        send_sample_data_for_keys_and_file(writer, writer_mutex, file_id, samples_corresponding_to_file, dataset_data,
+                                           session, driver, sample_batch_size_);
+      }
+    };
+
+    std::vector<std::thread> threads;
+    for (int64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
+      threads.emplace_back(thread_function, thread_id);
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+  }
+}
+
+std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
+                                                                              const int64_t retrieval_threads) {
+  auto number_of_files = static_cast<int64_t>(file_ids.size());
+  const int64_t subset_size = number_of_files / retrieval_threads;
+  std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
+  for (int64_t thread_id = 0; thread_id < retrieval_threads; ++thread_id) {
+    const int64_t start_index = thread_id * subset_size;
+    const int64_t end_index = (thread_id + 1) * subset_size;
+    if (thread_id == retrieval_threads - 1) {
+      file_ids_per_thread[thread_id] = std::vector<int64_t>(file_ids.begin() + start_index, file_ids.end());
+    } else {
+      file_ids_per_thread[thread_id] =
+          std::vector<int64_t>(file_ids.begin() + start_index, file_ids.begin() + end_index);
+    }
+  }
+  return file_ids_per_thread;
+}
+
+void StorageServiceImpl::send_sample_data_for_keys_and_file(ServerWriter<modyn::storage::GetResponse>* writer,
+                                                            std::mutex& writer_mutex, const int64_t file_id,
+                                                            const std::vector<int64_t>& request_keys_per_file,
+                                                            const DatasetData& dataset_data, soci::session& session,
+                                                            const DatabaseDriver& driver,
+                                                            const int64_t sample_batch_size) {
+  const YAML::Node file_wrapper_config_node = YAML::Load(dataset_data.file_wrapper_config);
+  auto filesystem_wrapper =
+      get_filesystem_wrapper(static_cast<FilesystemWrapperType>(dataset_data.filesystem_wrapper_type));
+  auto file_wrapper =
+      get_file_wrapper(dataset_data.base_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
+                       file_wrapper_config_node, filesystem_wrapper);
+
+  CursorHandler cursor_handler(session, driver,
+                               fmt::format("SELECT sample_id, sample_index, label FROM sampels WHERE file_id = "
+                                           "{}7 AND dataset_id = {} AND sample_id IN ({})",
+                                           file_id, dataset_data.dataset_id, fmt::join(request_keys_per_file, ",")),
+                               fmt::format("file_{}", file_id), 2);
+
+  std::vector<SampleRecord> records;
+
+  while (true) {
+    records = cursor_handler.yield_per(sample_batch_size);
+    if (records.empty()) {
+      break;
+    }
+    std::vector<int64_t> sample_indexes(records.size());
+    for (size_t i = 0; i < records.size(); ++i) {
+      sample_indexes[i] = records[i].column_1;
+    }
+    const auto samples = file_wrapper->get_samples_from_indices(sample_indexes);
+
+    modyn::storage::GetResponse response;
+    for (size_t i = 0; i < records.size(); ++i) {
+      response.add_keys(records[i].id);
+      response.add_labels(records[i].column_2);
+      response.add_samples(samples[i].data(), samples[i].size());
+    }
+    const std::lock_guard<std::mutex> lock(writer_mutex);
+    writer->Write(response);
+  }
+}
+
+std::vector<int64_t> StorageServiceImpl::get_samples_corresponding_to_file(const int64_t file_id,
+                                                                           const int64_t dataset_id,
+                                                                           const std::vector<int64_t>& request_keys,
+                                                                           soci::session& session) {
+  const auto number_of_samples = static_cast<int64_t>(request_keys.size());
+  const std::string sample_placeholders = fmt::format("({})", fmt::join(request_keys, ","));
+
+  const std::string sql = fmt::format(
+      "SELECT DISTINCT sample_id FROM (SELECT sample_id FROM samples WHERE file_id = :file_id AND dataset_id = "
+      ":dataset_id AND sample_id IN {})",
+      sample_placeholders);
+  std::vector<int64_t> sample_ids(number_of_samples + 1);
+  session << sql, soci::into(sample_ids), soci::use(file_id), soci::use(dataset_id);
+
+  return sample_ids;
+}
+
+std::vector<int64_t> StorageServiceImpl::get_file_ids_for_samples(const std::vector<int64_t>& request_keys,
+                                                                  const int64_t dataset_id, soci::session& session) {
+  const auto number_of_samples = static_cast<int64_t>(request_keys.size());
+  const std::string sample_placeholders = fmt::format("({})", fmt::join(request_keys, ","));
+
+  const std::string sql = fmt::format(
+      "SELECT DISTINCT file_id FROM (SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {})",
+      sample_placeholders);
+  std::vector<int64_t> file_ids(number_of_samples + 1);
+  session << sql, soci::into(file_ids), soci::use(dataset_id);
+
+  return file_ids;
+}
+
+int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci::session& session,
+                                                          const int64_t dataset_id) {
   int64_t number_of_samples = 0;
-  session << "SELECT number_of_samples FROM files WHERE file_id = :file_id", soci::into(number_of_samples),
-      soci::use(file_id);
+  session << "SELECT number_of_samples FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
+      soci::into(number_of_samples), soci::use(file_id), soci::use(dataset_id);
   return number_of_samples;
 }
 
@@ -570,4 +687,21 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, co
   }
 
   return file_ids;
+}
+
+DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::string& dataset_name) {
+  int64_t dataset_id = -1;
+  std::string base_path;
+  int64_t filesystem_wrapper_type = -1;
+  int64_t file_wrapper_type = -1;
+  std::string file_wrapper_config;
+
+  session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
+             "datasets WHERE "
+             "name = :name",
+      soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
+      soci::into(file_wrapper_config), soci::use(dataset_name);
+
+  return {dataset_id, base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
+          static_cast<FileWrapperType>(file_wrapper_type), file_wrapper_config};
 }

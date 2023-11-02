@@ -17,8 +17,8 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
       PGresult* result = PQexec(postgresql_conn_, fetch_query.c_str());
 
       if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+        SPDLOG_ERROR("Cursor fetch failed: {}", PQerrorMessage(postgresql_conn_));
         PQclear(result);
-        FAIL(fmt::format("Cursor fetch failed: {}", PQerrorMessage(postgresql_conn_)));
         return records;
       }
 
@@ -28,10 +28,10 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
         SampleRecord record{};
         record.id = std::stoll(PQgetvalue(result, i, 0));
         if (number_of_columns_ > 1) {
-          record.label = std::stoll(PQgetvalue(result, i, 1));
+          record.column_1 = std::stoll(PQgetvalue(result, i, 1));
         }
         if (number_of_columns_ == 3) {
-          record.index = std::stoll(PQgetvalue(result, i, 2));
+          record.column_2 = std::stoll(PQgetvalue(result, i, 2));
         }
         records[i] = record;
       }
@@ -49,10 +49,10 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
         SampleRecord record{};
         record.id = row.get<int64_t>(0);
         if (number_of_columns_ > 1) {
-          record.label = row.get<int64_t>(1);
+          record.column_1 = row.get<int64_t>(1);
         }
         if (number_of_columns_ == 3) {
-          record.index = row.get<int64_t>(2);
+          record.column_2 = row.get<int64_t>(2);
         }
         records[retrieved_rows] = record;
         retrieved_rows++;
@@ -67,7 +67,8 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
 
 void CursorHandler::check_cursor_initialized() {
   if (rs_ == nullptr && postgresql_conn_ == nullptr) {
-    FAIL("Cursor not initialized");
+    SPDLOG_ERROR("Cursor not initialized");
+    throw std::runtime_error("Cursor not initialized");
   }
 }
 
@@ -81,7 +82,7 @@ void CursorHandler::close_cursor() {
       PGresult* result = PQexec(conn, close_query.c_str());
 
       if (PQresultStatus(result) != PGRES_COMMAND_OK) {
-        FAIL(fmt::format("Cursor close failed: {}", PQerrorMessage(conn)));
+        SPDLOG_ERROR(fmt::format("Cursor close failed: {}", PQerrorMessage(conn)));
       }
 
       PQclear(result);
