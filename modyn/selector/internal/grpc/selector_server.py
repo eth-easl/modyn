@@ -1,3 +1,4 @@
+import atexit
 import logging
 from typing import Any
 
@@ -22,6 +23,7 @@ class SelectorGRPCServer(GenericGRPCServer):
 
         callback_kwargs = {"selector_manager": self.selector_manager}
         super().__init__(modyn_config, modyn_config["selector"]["port"], SelectorGRPCServer.callback, callback_kwargs)
+        atexit.register(self._cleanup)
 
     def __getstate__(self) -> dict[str, Any]:
         state = self.__dict__.copy()
@@ -29,6 +31,14 @@ class SelectorGRPCServer(GenericGRPCServer):
             del state["add_servicer_callback"]
 
         return state
+
+    def _cleanup(self) -> None:
+        if (
+            "cleanup_storage_directories_after_shutdown" in self.modyn_config["selector"]
+            and self.modyn_config["selector"]["cleanup_storage_directories_after_shutdown"]
+        ):
+            self.selector_manager.cleanup_trigger_samples()
+            self.selector_manager.cleanup_local_storage()
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
         """Exit the context manager.
@@ -39,8 +49,4 @@ class SelectorGRPCServer(GenericGRPCServer):
             exc_tb (Exception): exception traceback
         """
         super().__exit__(exc_type, exc_val, exc_tb)
-        if (
-            "cleanup_trigger_samples_after_shutdown" in self.modyn_config["selector"]
-            and self.modyn_config["selector"]["cleanup_trigger_samples_after_shutdown"]
-        ):
-            self.selector_manager.cleanup_trigger_samples()
+        self._cleanup()

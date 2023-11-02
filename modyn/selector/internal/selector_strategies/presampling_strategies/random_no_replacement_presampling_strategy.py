@@ -20,7 +20,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
         # a complete_trigger is the last time when all the datapoints (in the db at that time) have been seen
         self.last_complete_trigger = 0
 
-        # TODO(create issue): Support local backend on AbstractBalancedStrategy
+        # TODO(#324): Support local backend on RandomNoReplacementPresamplingStrategy
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
         ), "AbstractBalancedPresamplingStrategy currently only supports the DatabaseStorageBackend"

@@ -115,7 +115,9 @@ services:
       context: .
       dockerfile: docker/Selector/Dockerfile
     volumes:
-       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (line below)
+       - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
+       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
+#      - /mnt/ssd/local_storage:/tmp/local_storage
 #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
 #      - .:/modyn_host
 #    shm_size: 4gb

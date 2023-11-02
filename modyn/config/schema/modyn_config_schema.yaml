@@ -320,9 +320,6 @@ properties:
           type: string
           description: |
             The directory where selection strategies that use the local storage backend persist data to.
-        # TODO(mboether): search for cleanup cleanup_trigger_samples_after_shutdown and ignore_existing_trigger_samples in repo, adjust.
-        # Furthermore, actually implement the two new flags for both local storage and trigger sample directory.
-        # Furthermore, fix that on container shutdown (force exit), we do not clean up (e.g., try atexit)
         cleanup_storage_directories_after_shutdown:
           type: boolean
           description: |

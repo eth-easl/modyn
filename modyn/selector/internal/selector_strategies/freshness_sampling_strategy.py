@@ -53,7 +53,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         self._storage_backend: AbstractStorageBackend
         if "storage_backend" in config:
             if config["storage_backend"] == "local":
-                # TODO(create issue): Support local backend on FreshnessSamplingStrategy
+                # TODO(#324): Support local backend on FreshnessSamplingStrategy
                 raise NotImplementedError("The FreshnessSamplingStrategy currently does not support the local backend.")
 
             if config["storage_backend"] == "database":

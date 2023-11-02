@@ -46,7 +46,7 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
         self.force_column_balancing = presampling_config.get("force_column_balancing", False)
         self.balanced_column = balanced_column
 
-        # TODO(create issue): Support local backend on AbstractBalancedStrategy
+        # TODO(#324): Support local backend on AbstractBalancedStrategy
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
         ), "AbstractBalancedPresamplingStrategy currently only supports the DatabaseStorageBackend"

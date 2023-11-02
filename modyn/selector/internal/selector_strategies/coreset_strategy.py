@@ -28,7 +28,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
         self._storage_backend: AbstractStorageBackend
         if "storage_backend" in config:
             if config["storage_backend"] == "local":
-                # TODO(create issue): Support local backend on CoresetStrategy
+                # TODO(#324): Support local backend on CoresetStrategy
                 raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
 
             if config["storage_backend"] == "database":

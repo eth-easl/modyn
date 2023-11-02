@@ -106,6 +106,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         assert self.reset_after_trigger
 
         if self.has_limit:
+            # TODO(#179): this assumes limit < len(samples)
             swt = Stopwatch()
             for samples, partition_log in self._get_current_trigger_data():
                 swt.start("sample_time")

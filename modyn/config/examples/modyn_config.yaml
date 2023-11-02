@@ -161,7 +161,7 @@ selector:
   insertion_threads: 16
   trigger_sample_directory: "/tmp/trigger_samples"
   local_storage_directory: "/tmp/local_storage"
-  cleanup_trigger_samples_after_shutdown: true
+  cleanup_storage_directories_after_shutdown: true
   ignore_existing_trigger_samples: false
 
 trainer_server:
