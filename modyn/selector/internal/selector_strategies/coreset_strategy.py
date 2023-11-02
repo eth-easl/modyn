@@ -102,13 +102,13 @@ class CoresetStrategy(AbstractSelectionStrategy):
         def _session_callback(session: Session) -> Any:
             return (
                 session.query(SelectorStateMetadata.sample_key)
-                # TODO(#182): Index on used?
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
                     if self.tail_triggers is not None
                     else True,
-                ).count()
+                )
+                .count()
             )
 
         return self._storage_backend._execute_on_session(_session_callback)

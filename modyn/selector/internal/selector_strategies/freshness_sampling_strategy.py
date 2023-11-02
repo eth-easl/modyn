@@ -203,7 +203,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             )
 
         yield_per = max(int(self._maximum_keys_in_memory / 2), 1)
-        # Change to yield_from when we actually use the log returned here.
+        # Change to `yield from` when we actually use the log returned here.
         for keys, _ in self._storage_backend._get_pipeline_data(
             (SelectorStateMetadata.used == used,),
             yield_per=yield_per,

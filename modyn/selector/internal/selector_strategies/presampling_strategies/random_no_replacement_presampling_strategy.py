@@ -23,7 +23,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
         # TODO(#324): Support local backend on RandomNoReplacementPresamplingStrategy
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
-        ), "AbstractBalancedPresamplingStrategy currently only supports the DatabaseStorageBackend"
+        ), "RandomNoReplacementPresamplingStrategy currently only supports the DatabaseStorageBackend"
 
     def get_presampling_query(
         self,

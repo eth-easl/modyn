@@ -164,5 +164,6 @@ services:
 volumes:
   storage-data:
   selector-data:
+  selector-localstorage-data:
   downsampling-data:
   model_storage-data:
