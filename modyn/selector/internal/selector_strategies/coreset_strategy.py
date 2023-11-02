@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Iterable
+from typing import Any, Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -13,6 +13,7 @@ from modyn.selector.internal.selector_strategies.presampling_strategies import A
 from modyn.selector.internal.selector_strategies.presampling_strategies.utils import instantiate_presampler
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
+from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,8 @@ class CoresetStrategy(AbstractSelectionStrategy):
             if config["storage_backend"] == "local":
                 # TODO(create issue): Support local backend on CoresetStrategy
                 raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
-            elif config["storage_backend"] == "database":
+
+            if config["storage_backend"] == "database":
                 self._storage_backend = DatabaseStorageBackend(
                     self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
                 )
@@ -97,7 +99,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
             self._storage_backend, DatabaseStorageBackend
         ), "FreshnessStrategy currently only supports DatabaseBackend"
 
-        def _session_callback(session):
+        def _session_callback(session: Session) -> Any:
             return (
                 session.query(SelectorStateMetadata.sample_key)
                 # TODO(#182): Index on used?
@@ -110,6 +112,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
             )
 
         return self._storage_backend._execute_on_session(_session_callback)
+
+    def get_available_labels(self) -> list[int]:
+        return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)
 
     @property
     def downsampling_strategy(self) -> str:

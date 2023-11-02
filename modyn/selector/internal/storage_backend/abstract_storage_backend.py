@@ -2,7 +2,7 @@ import logging
 import os
 import platform
 from abc import ABC, abstractmethod
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class AbstractStorageBackend(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_available_labels(self) -> list[int]:
+    def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
         raise NotImplementedError()
 
     @abstractmethod

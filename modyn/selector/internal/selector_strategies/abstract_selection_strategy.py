@@ -110,11 +110,11 @@ class AbstractSelectionStrategy(ABC):
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
 
     @property
-    def maximum_keys_in_memory(self):
+    def maximum_keys_in_memory(self) -> int:
         return self._maximum_keys_in_memory
 
     @maximum_keys_in_memory.setter
-    def maximum_keys_in_memory(self, value):
+    def maximum_keys_in_memory(self, value: int) -> None:
         self._maximum_keys_in_memory = value
 
         # Forward update of maximum keys in memory if needed
@@ -150,6 +150,15 @@ class AbstractSelectionStrategy(ABC):
             keys (list[str]): A list of keys of the data
             timestamps (list[int]): A list of timestamps of the data.
             labels list[int]: A list of labels
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_available_labels(self) -> list[int]:
+        """Returns the list of all labels that could be returned in the latest trigger training set
+
+        If the labels from the current "in progress" trigger should be included, first,
+        we need to trigger, and then call this function, since this only includes data from the last finished trigger.
         """
         raise NotImplementedError
 

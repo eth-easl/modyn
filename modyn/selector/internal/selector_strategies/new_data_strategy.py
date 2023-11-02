@@ -54,7 +54,9 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
         self._storage_backend: AbstractStorageBackend
         if config["storage_backend"] == "local":
-            self._storage_backend = LocalStorageBackend()
+            self._storage_backend = LocalStorageBackend(
+                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+            )
         elif config["storage_backend"] == "database":
             self._storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
@@ -191,3 +193,6 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
     def _reset_state(self) -> None:
         pass  # As we currently hold everything in database (#116), this currently is a noop.
+
+    def get_available_labels(self) -> list[int]:
+        return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)

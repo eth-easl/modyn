@@ -12,9 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseStorageBackend(AbstractStorageBackend):
-    def __init__(self, pipeline_id: int, modyn_config: dict, maximum_keys_in_memory: int):
-        super().__init__(pipeline_id, modyn_config, maximum_keys_in_memory)
-
     def persist_samples(
         self, seen_in_trigger_id: int, keys: list[int], timestamps: list[int], labels: list[int]
     ) -> dict[str, Any]:
@@ -41,9 +38,11 @@ class DatabaseStorageBackend(AbstractStorageBackend):
 
         return log
 
+    # pylint: disable=too-many-locals
+
     def _mt_persist_samples_impl(
         self, keys: list[int], timestamps: list[int], labels: list[int], seen_in_trigger_id: int, log: dict
-    ):
+    ) -> None:
         swt = Stopwatch()
         samples_per_proc = int(len(keys) / self._insertion_threads)
         processes: list[mp.Process] = []
@@ -85,7 +84,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         pipeline_id: int,
         modyn_config: dict,
         seen_in_trigger_id: int,
-    ):
+    ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
             database.session.bulk_insert_mappings(
                 SelectorStateMetadata,
@@ -132,6 +131,24 @@ class DatabaseStorageBackend(AbstractStorageBackend):
                 Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
         """
         yield from self._get_pipeline_data(())
+
+    def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            result = (
+                database.session.query(SelectorStateMetadata.label)
+                .filter(
+                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
+                    SelectorStateMetadata.seen_in_trigger_id < next_trigger_id,
+                    SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers - 1
+                    if tail_triggers is not None
+                    else True,
+                )
+                .distinct()
+                .all()
+            )
+            available_labels = [result_tuple[0] for result_tuple in result]
+
+        return available_labels
 
     def _get_pipeline_data(
         self,
@@ -182,25 +199,6 @@ class DatabaseStorageBackend(AbstractStorageBackend):
 
                 swt.start("get_chunk", overwrite=True)
 
-    def _execute_on_session(self, session_callback: Callable):
+    def _execute_on_session(self, session_callback: Callable) -> Any:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return session_callback(database.session)
-
-    def get_available_labels(self) -> list[int]:
-        # TODO adapt since this is currently just copied
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            result = (
-                database.session.query(SelectorStateMetadata.label)
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id < self._next_trigger_id,
-                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers - 1
-                    if self.tail_triggers is not None
-                    else True,
-                )
-                .distinct()
-                .all()
-            )
-            available_labels = [result_tuple[0] for result_tuple in result]
-
-        return available_labels

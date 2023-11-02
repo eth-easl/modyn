@@ -7,6 +7,7 @@ from modyn.selector.internal.selector_strategies.presampling_strategies.abstract
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database.database_storage_backend import DatabaseStorageBackend
 from sqlalchemy import Select, asc, func, select
+from sqlalchemy.orm.session import Session
 
 
 class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
@@ -83,7 +84,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
         return subq
 
     def _update_last_used_in_trigger(self, next_trigger_id: int, subq: Select) -> None:
-        def _session_callback(session):
+        def _session_callback(session: Session) -> None:
             session.query(SelectorStateMetadata).filter(
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.sample_key.in_(subq),
@@ -93,7 +94,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
         self._storage_backend._execute_on_session(_session_callback)
 
     def _count_number_of_sampled_points(self, next_trigger_id: int) -> int:
-        def _session_callback(session):
+        def _session_callback(session: Session) -> None:
             return (
                 session.query(SelectorStateMetadata.sample_key)
                 .filter(

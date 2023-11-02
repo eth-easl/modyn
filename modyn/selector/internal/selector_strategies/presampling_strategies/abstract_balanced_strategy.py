@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 import sqlalchemy
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -8,6 +8,7 @@ from modyn.selector.internal.selector_strategies.presampling_strategies.abstract
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database.database_storage_backend import DatabaseStorageBackend
 from sqlalchemy import Select, asc, func, select
+from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import func as sql_func
 
 
@@ -133,7 +134,7 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
 
         """
 
-        def _session_callback(session):
+        def _session_callback(session: Session) -> Any:
             query = (
                 session.query(self.balanced_column, func.count())  # pylint: disable=not-callable
                 .filter(

@@ -11,6 +11,7 @@ from modyn.selector.internal.selector_strategies.abstract_selection_strategy imp
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
 from sqlalchemy import exc, func, update
+from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.selectable import Select
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,8 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             if config["storage_backend"] == "local":
                 # TODO(create issue): Support local backend on FreshnessSamplingStrategy
                 raise NotImplementedError("The FreshnessSamplingStrategy currently does not support the local backend.")
-            elif config["storage_backend"] == "database":
+
+            if config["storage_backend"] == "database":
                 self._storage_backend = DatabaseStorageBackend(
                     self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
                 )
@@ -186,14 +188,14 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             self._storage_backend, DatabaseStorageBackend
         ), "FreshnessStrategy currently only supports DatabaseBackend"
 
-        def _chunk_callback(chunk):
+        def _chunk_callback(chunk: Any) -> None:
             _, used_data = zip(*chunk)
             if used:
                 assert all(used_data), "Queried used data, but got unused data."
             else:
                 assert not any(used_data), "Queried unused data, but got used data."
 
-        def _statement_modifier(stmt: Select):
+        def _statement_modifier(stmt: Select) -> tuple:
             return (
                 stmt.add_columns(SelectorStateMetadata.used)
                 .order_by(func.random())  # pylint: disable=not-callable
@@ -220,11 +222,11 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             self._storage_backend, DatabaseStorageBackend
         ), "FreshnessStrategy currently only supports DatabaseBackend"
 
-        def _chunk_callback(chunk):
+        def _chunk_callback(chunk: Any) -> None:
             _, used = zip(*chunk)
             assert not any(used), "Queried unused data, but got used data."
 
-        def _statement_modifier(stmt: Select):
+        def _statement_modifier(stmt: Select) -> Any:
             return stmt.add_columns(SelectorStateMetadata.used)
 
         # Change to yield_from when we actually use the log returned here.
@@ -245,7 +247,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             self._storage_backend, DatabaseStorageBackend
         ), "FreshnessStrategy currently only supports DatabaseBackend"
 
-        def _session_callback(session):
+        def _session_callback(session: Session) -> Any:
             return (
                 session.query(SelectorStateMetadata.sample_key)
                 # TODO(#182): Index on used?
@@ -264,7 +266,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             self._storage_backend, DatabaseStorageBackend
         ), "FreshnessStrategy currently only supports DatabaseBackend"
 
-        def _session_callback(session):
+        def _session_callback(session: Session) -> None:
             try:
                 stmt = update(SelectorStateMetadata).where(SelectorStateMetadata.sample_key.in_(keys)).values(used=True)
                 session.execute(stmt)
@@ -273,7 +275,10 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 logger.error(f"Could not set metadata: {exception}")
                 session.rollback()
 
-        return self._storage_backend._execute_on_session(_session_callback)
+        self._storage_backend._execute_on_session(_session_callback)
 
     def _reset_state(self) -> None:
         raise NotImplementedError("This strategy does not support resets.")
+
+    def get_available_labels(self) -> list[int]:
+        return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)
