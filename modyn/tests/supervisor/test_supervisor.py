@@ -3,14 +3,20 @@ import os
 import pathlib
 import shutil
 from typing import Optional
-from unittest.mock import patch
+from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.supervisor import Supervisor
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
+from modyn.supervisor.internal.pipeline_executor import PipelineExecutor
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
+SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
+START_TIMESTAMP = 21
+PIPELINE_ID = 42
 
 
 def get_minimal_training_config() -> dict:
@@ -66,7 +72,26 @@ def noop_constructor_mock(self, modyn_config: dict) -> None:
     pass
 
 
-def noop_init_metadata_db(self) -> None:  # pylint: disable=unused-argument
+def noop_init_metadata_db(self) -> None:
+    pass
+
+
+def noop_pipeline_executor_constructor_mock(
+    self,
+    start_timestamp: int,
+    pipeline_id: int,
+    modyn_config: dict,
+    pipeline_config: dict,
+    eval_directory: pathlib.Path,
+    supervisor_supported_eval_result_writers: dict,
+    start_replay_at: Optional[int] = None,
+    stop_replay_at: Optional[int] = None,
+    maximum_triggers: Optional[int] = None,
+) -> None:
+    pass
+
+
+def noop() -> None:
     pass
 
 
@@ -122,12 +147,8 @@ class MockSession:
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
-@patch.object(GRPCHandler, "dataset_available", return_value=True)
-@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def get_non_connecting_supervisor(
-    test_trainer_server_available,
-    test_dataset_available,
     test_connection_established,
     test_init_evaluator,
     test_init_trainer_server,
@@ -324,56 +345,58 @@ def test_register_pipeline():
     assert pipeline_id == 0
 
 
+@patch("modyn.supervisor.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
 def test_unregister_pipeline():
     # TODO(#64,#124,#302): implement a real test when func is implemented.
-    pass
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    sup.unregister_pipeline(PIPELINE_ID)
 
 
+@patch.object(PipelineExecutor, "__init__", noop_pipeline_executor_constructor_mock)
+@patch.object(PipelineExecutor, "execute")
 @patch.object(Supervisor, "unregister_pipeline")
-@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-def test_pipeline(
-    test_unregister_pipeline,
-) -> None:
-    # sup = get_non_connecting_supervisor()
-    # TODO(#317): a PipelineExecutor is created,
-    # a pipeline is registered, executed and unregistered
-    pass
+def test_pipeline(test_unregister_pipeline: MagicMock, test_execute: MagicMock) -> None:
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    modyn_config = get_minimal_system_config()
+    pipeline_config = get_minimal_pipeline_config()
+
+    sup.pipeline(
+        START_TIMESTAMP,
+        PIPELINE_ID,
+        modyn_config,
+        pipeline_config,
+        EVALUATION_DIRECTORY,
+        SUPPORTED_EVAL_RESULT_WRITERS,
+    )
+
+    test_execute.assert_called_once()
+    test_unregister_pipeline.assert_called_once_with(PIPELINE_ID)
 
 
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
-@patch.object(GRPCHandler, "get_time_at_storage", return_value=21)
-@patch.object(Supervisor, "register_pipeline", return_value=42)
-@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
+@patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
+@patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
+@patch.object(Supervisor, "pipeline")
 def test_start_pipeline(
-    test_trainer_server_available,
-    test_dataset_available,
-    test_get_time_at_storage,
+    test_pipeline,
     test_register_pipeline,
-) -> None:
-    # sup = get_non_connecting_supervisor()
-    # TODO(#317): test pipeline() running in a process?
-    pass
-
-
-@patch.object(GRPCHandler, "init_selector", return_value=None)
-@patch.object(GRPCHandler, "init_storage", return_value=None)
-@patch.object(GRPCHandler, "init_trainer_server", return_value=None)
-@patch.object(GRPCHandler, "init_evaluator", return_value=None)
-@patch("modyn.utils.grpc_connection_established", return_value=True)
-@patch.object(GRPCHandler, "dataset_available", return_value=True)
-@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
-@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-def test_start_pipeline_throws_on_invalid_pipeline_config(
-    test_init_selector,
-    test_init_storage,
-    test_init_trainer_server,
-    test_init_evaluator,
-    test_connection_established,
+    test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_available,
+    test_dataset_availabale,
 ) -> None:
-    sup = Supervisor(get_minimal_system_config())
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    pipeline_config = get_minimal_pipeline_config()
+
+    mock_start = mock.Mock()
+    mock_start.side_effect = noop
+    with patch("multiprocessing.Process.start", mock_start):
+        pipeline_id = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
+        assert pipeline_id == PIPELINE_ID
+
+
+def test_start_pipeline_throws_on_invalid_pipeline_config() -> None:
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     with pytest.raises(ValueError, match="Invalid pipeline configuration"):
         sup.start_pipeline({}, EVALUATION_DIRECTORY)
 

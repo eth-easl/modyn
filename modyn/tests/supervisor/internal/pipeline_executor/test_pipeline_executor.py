@@ -103,11 +103,7 @@ def teardown():
 @patch.object(GRPCHandler, "init_trainer_server", return_value=None)
 @patch.object(GRPCHandler, "init_evaluator", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
-@patch.object(GRPCHandler, "dataset_available", return_value=True)
-@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
 def get_non_connecting_pipeline_executor(
-    test_trainer_server_available,
-    test_dataset_available,
     test_connection_established,
     test_init_evaluator,
     test_init_trainer_server,

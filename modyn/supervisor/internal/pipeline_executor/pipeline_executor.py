@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import pathlib
+import traceback
 from time import sleep
 from typing import Any, Optional
 
@@ -336,15 +337,21 @@ class PipelineExecutor:
             logger.info("Shutdown successful.")
 
     def execute(self) -> None:
-        self.status_bar.update(demo="Initial Pass")
-        self.initial_pass()
-        logger.info(f"Pipeline {self.pipeline_id}: Initial pass completed.")
+        try:
+            self.status_bar.update(demo="Initial Pass")
+            self.initial_pass()
+            logger.info(f"Pipeline {self.pipeline_id}: Initial pass completed.")
 
-        self.get_dataset_selector_batch_size()
-        if self.experiment_mode:
-            self.replay_data()
-        else:
-            self.wait_for_new_data(self.start_timestamp)
+            self.get_dataset_selector_batch_size()
+            if self.experiment_mode:
+                self.replay_data()
+            else:
+                self.wait_for_new_data(self.start_timestamp)
 
-        self.status_bar.update(demo="Cleanup")
-        self._persist_pipeline_log()
+            self.status_bar.update(demo="Cleanup")
+            self._persist_pipeline_log()
+        except Exception:  # pylint: disable=broad-except
+            exception_msg = traceback.format_exc()
+            logger.error(exception_msg)
+            # TODO(#317): implement exception queue in supervisor
+            # exception_queue.put(exception_msg)
