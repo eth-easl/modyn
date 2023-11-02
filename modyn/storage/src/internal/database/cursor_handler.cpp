@@ -43,7 +43,7 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
     }
     case DatabaseDriver::SQLITE3: {
       int64_t retrieved_rows = 0;
-      ASSERT(rs_ != nullptr);
+      ASSERT(rs_ != nullptr, "rowset is nullptr");
       for (auto& row : *rs_) {
         SampleRecord record{};
         static_assert(sizeof(int) == sizeof(int32_t), "We currently assume int is 32 bit.");
