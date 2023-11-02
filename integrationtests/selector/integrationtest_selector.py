@@ -43,6 +43,7 @@ def test_label_balanced_presampling_huge() -> None:
         "name": "CoresetStrategy",
         "maximum_keys_in_memory": 250,
         "config": {
+            "storage_backend": "database",  # TODO(#324): Support local backend
             "limit": -1,
             "reset_after_trigger": True,
             "presampling_config": {"strategy": "LabelBalancedPresamplingStrategy", "ratio": 50},
@@ -126,6 +127,7 @@ def test_label_balanced_force_same_size():
         "name": "CoresetStrategy",
         "maximum_keys_in_memory": 100,
         "config": {
+            "storage_backend": "database",  # TODO(#324): Support local backend
             "limit": -1,
             "reset_after_trigger": False,
             "presampling_config": {
@@ -217,6 +219,7 @@ def test_label_balanced_force_all_samples():
         "name": "CoresetStrategy",
         "maximum_keys_in_memory": 100,
         "config": {
+            "storage_backend": "database",  # TODO(#324): Support local backend
             "limit": -1,
             "reset_after_trigger": False,
             "presampling_config": {
@@ -318,10 +321,11 @@ def test_newdata() -> None:
     # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit
     # We also enforce high partitioning (maximum_keys_in_memory == 2) to ensure that works
 
+    # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = {
         "name": "NewDataStrategy",
         "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": True},
+        "config": {"limit": -1, "reset_after_trigger": True, "storage_backend": "database"},
     }
 
     pipeline_id = selector.register_pipeline(
@@ -459,6 +463,7 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
         "name": "CoresetStrategy",
         "maximum_keys_in_memory": 50000,
         "config": {
+            "storage_backend": "database",  # TODO(#324): Support local backend
             "limit": -1,
             "reset_after_trigger": reset_after_trigger,
             "presampling_config": {"ratio": 20, "strategy": "Random"},
@@ -620,10 +625,11 @@ def test_empty_triggers() -> None:
     selector = SelectorStub(selector_channel)
     # We test without reset, i.e., after an empty trigger we get the same data
 
+    # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = {
         "name": "NewDataStrategy",
         "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": False},
+        "config": {"limit": -1, "reset_after_trigger": False, "storage_backend": "database"},
     }
 
     pipeline_id = selector.register_pipeline(
@@ -795,10 +801,11 @@ def test_many_samples_evenly_distributed():
     selector = SelectorStub(selector_channel)
     # We test without reset, i.e., after an empty trigger we get the same data
 
+    # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = {
         "name": "NewDataStrategy",
         "maximum_keys_in_memory": 5000,
-        "config": {"limit": -1, "reset_after_trigger": False},
+        "config": {"limit": -1, "reset_after_trigger": False, "storage_backend": "database"},
     }
 
     pipeline_id = selector.register_pipeline(
@@ -872,10 +879,11 @@ def test_many_samples_unevenly_distributed():
     selector = SelectorStub(selector_channel)
     # We test without reset, i.e., after an empty trigger we get the same data
 
+    # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = {
         "name": "NewDataStrategy",
         "maximum_keys_in_memory": 4999,
-        "config": {"limit": -1, "reset_after_trigger": False},
+        "config": {"limit": -1, "reset_after_trigger": False, "storage_backend": "database"},
     }
 
     pipeline_id = selector.register_pipeline(
@@ -950,10 +958,11 @@ def test_get_available_labels(reset_after_trigger: bool):
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
 
+    # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = {
         "name": "NewDataStrategy",
         "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": reset_after_trigger},
+        "config": {"limit": -1, "reset_after_trigger": reset_after_trigger, "storage_backend": "database"},
     }
 
     pipeline_id = selector.register_pipeline(

@@ -35,11 +35,13 @@ def get_minimal_modyn_config():
 
 
 def get_config():
-    return {"reset_after_trigger": False, "limit": -1}
+    # TODO(MaxiBoether): also test local
+    return {"reset_after_trigger": False, "limit": -1, "storage_backend": "database"}
 
 
 def get_config_tail():
-    return {"reset_after_trigger": False, "limit": -1, "tail_triggers": 1}
+    # TODO(MaxiBoether): also test local
+    return {"reset_after_trigger": False, "limit": -1, "tail_triggers": 1, "storage_backend": "database"}
 
 
 @pytest.fixture(scope="function", autouse=True)

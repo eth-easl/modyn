@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
+from modyn.metadata_database.models import Trigger, TriggerPartition
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -214,33 +214,6 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-def test__persist_data():
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42, 1000)
-    strat._persist_samples([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
-
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        data = database.session.query(
-            SelectorStateMetadata.sample_key,
-            SelectorStateMetadata.timestamp,
-            SelectorStateMetadata.label,
-            SelectorStateMetadata.pipeline_id,
-            SelectorStateMetadata.used,
-        ).all()
-
-        assert len(data) == 3
-
-        keys, timestamps, labels, pipeline_ids, useds = zip(*data)
-
-        assert not any(useds)
-        for pip_id in pipeline_ids:
-            assert pip_id == 42
-
-        assert keys[0] == 10 and keys[1] == 11 and keys[2] == 12
-        assert timestamps[0] == 0 and timestamps[1] == 1 and timestamps[2] == 2
-        assert labels[0] == "dog" and labels[1] == "dog" and labels[2] == "cat"
-
-
-@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 def test_two_strategies_increase_next_trigger_separately(test__on_trigger: MagicMock):
     test__on_trigger.return_value = []
@@ -288,80 +261,3 @@ def test_store_trigger_num_keys():
         assert data[0].pipeline_id == 42
         assert data[0].partition_id == 12
         assert data[0].num_keys == 10
-
-
-@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-def test_get_available_labels_reset():
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        # first trigger
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=0, seen_in_trigger_id=0, timestamp=0, label=1)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=1, seen_in_trigger_id=0, timestamp=0, label=18)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=2, seen_in_trigger_id=0, timestamp=0, label=1)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=3, seen_in_trigger_id=0, timestamp=0, label=0)
-        )
-        database.session.commit()
-
-    abstr = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 1, 1000)
-    abstr._next_trigger_id += 1
-    assert sorted(abstr.get_available_labels()) == [0, 1, 18]
-
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        # second trigger
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=4, seen_in_trigger_id=1, timestamp=0, label=0)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=5, seen_in_trigger_id=1, timestamp=0, label=890)
-        )
-        database.session.commit()
-
-    abstr._next_trigger_id += 1
-    assert sorted(abstr.get_available_labels()) == [0, 890]
-
-
-@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-def test_get_available_labels_no_reset():
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        # first batch of data
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=0, seen_in_trigger_id=0, timestamp=0, label=1)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=1, seen_in_trigger_id=0, timestamp=0, label=18)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=2, seen_in_trigger_id=0, timestamp=0, label=1)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=3, seen_in_trigger_id=0, timestamp=0, label=0)
-        )
-        database.session.commit()
-
-    abstr = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 1, 1000)
-
-    assert sorted(abstr.get_available_labels()) == []
-    # simulate a trigger
-    abstr._next_trigger_id += 1
-    assert sorted(abstr.get_available_labels()) == [0, 1, 18]
-
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        # another batch of data is inserted with just one more class
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=4, seen_in_trigger_id=1, timestamp=0, label=0)
-        )
-        database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=5, seen_in_trigger_id=1, timestamp=0, label=890)
-        )
-        database.session.commit()
-
-    assert sorted(abstr.get_available_labels()) == [0, 1, 18]
-    # simulate a trigger
-    abstr._next_trigger_id += 1
-    assert sorted(abstr.get_available_labels()) == [0, 1, 18, 890]

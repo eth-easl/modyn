@@ -19,6 +19,9 @@ class MockStrategy(AbstractSelectionStrategy):
     def _reset_state(self) -> None:
         pass
 
+    def get_available_labels(self) -> list[int]:
+        return []
+
 
 def test_init():
     selec = Selector(MockStrategy(), 42, 2, {})
