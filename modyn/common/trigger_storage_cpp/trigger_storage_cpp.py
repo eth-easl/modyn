@@ -12,7 +12,8 @@ from .utils import get_partition_for_worker
 
 logger = logging.getLogger(__name__)
 
-_MAX_SAMPLE_QUANTITY = 100000
+_MAX_SAMPLE_QUANTITY = 100000000
+_MAX_DIR_SAMPLE_QUANTITY = 100 * _MAX_SAMPLE_QUANTITY
 
 
 class TriggerStorageCPP:
@@ -38,7 +39,7 @@ class TriggerStorageCPP:
 
     @staticmethod
     def __get_build_path() -> Path:
-        return Path(__file__).parent.parent.parent.parent
+        return Path(__file__).parent.parent.parent.parent / "libbuild"
 
     @staticmethod
     def __ensure_library_present() -> None:
@@ -180,7 +181,7 @@ class TriggerStorageCPP:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
-        array = np.empty((_MAX_SAMPLE_QUANTITY,), dtype=[("f0", "<i8"), ("f1", "<f8")])
+        array = np.empty((_MAX_DIR_SAMPLE_QUANTITY,), dtype=[("f0", "<i8"), ("f1", "<f8")])
 
         samples = self._get_worker_samples_impl(folder, pattern, array, start_index, worker_subset_size)
         return array[:samples]
@@ -197,9 +198,9 @@ class TriggerStorageCPP:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
-        array = np.empty((_MAX_SAMPLE_QUANTITY,), dtype=[("f0", "<i8"), ("f1", "<f8")])
+        array = np.empty((_MAX_DIR_SAMPLE_QUANTITY,), dtype=[("f0", "<i8"), ("f1", "<f8")])
         samples = self._get_all_samples_impl(folder, pattern, array)
-
+        print(f"Found {samples} samples")
         return array[:samples]
 
     def save_trigger_sample(

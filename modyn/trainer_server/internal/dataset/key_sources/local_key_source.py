@@ -1,6 +1,6 @@
 from typing import Optional
 
-from modyn.common.trigger_storage_cpp import TriggerStorageCPP as TriggerSampleStorage
+from modyn.common.trigger_storage_cpp import TriggerSampleStorage
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
 
 

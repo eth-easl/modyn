@@ -5,7 +5,7 @@ from multiprocessing.managers import SharedMemoryManager
 
 import numpy as np
 import torch
-from modyn.common.trigger_storage_cpp import TriggerStorageCPP as TriggerSampleStorage
+from modyn.common.trigger_storage_cpp import TriggerSampleStorage
 
 
 class LocalDatasetWriter(TriggerSampleStorage):

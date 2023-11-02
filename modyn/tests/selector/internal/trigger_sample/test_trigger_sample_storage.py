@@ -60,7 +60,11 @@ def test_parse_file_subset():
     assert samples[1][1] == 2.0
 
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")), 5
+        1,
+        2,
+        3,
+        np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")),
+        5,
     )
     file_path = Path(TMP_DIR) / "1_2_3_5.npy"
 
@@ -101,7 +105,11 @@ def test_parse_file():
     assert samples[1][1] == 2.0
 
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")), 5
+        1,
+        2,
+        3,
+        np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")),
+        5,
     )
     file_path = Path(TMP_DIR) / "1_2_3_5.npy"
 
@@ -119,16 +127,32 @@ def test_parse_file():
 
 def test_get_trigger_samples():
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")), 4
+        1,
+        2,
+        3,
+        np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")),
+        4,
     )
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(3, 3.0), (4, 4.0), (5, 5.0), (6, 6.0)], dtype=np.dtype("i8,f8")), 5
+        1,
+        2,
+        3,
+        np.array([(3, 3.0), (4, 4.0), (5, 5.0), (6, 6.0)], dtype=np.dtype("i8,f8")),
+        5,
     )
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(7, 7.0), (8, 8.0), (8, 8.0), (8, 8.0)], dtype=np.dtype("i8,f8")), 6
+        1,
+        2,
+        3,
+        np.array([(7, 7.0), (8, 8.0), (8, 8.0), (8, 8.0)], dtype=np.dtype("i8,f8")),
+        6,
     )
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(9, 9.0), (10, 10.0), (11, 11.0), (12, 12.0)], dtype=np.dtype("i8,f8")), 7
+        1,
+        2,
+        3,
+        np.array([(9, 9.0), (10, 10.0), (11, 11.0), (12, 12.0)], dtype=np.dtype("i8,f8")),
+        7,
     )
 
     expected_order = [
@@ -187,10 +211,18 @@ def test_get_trigger_samples():
 
 def test_extended_get_trigger_samples():
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")), 4
+        1,
+        2,
+        3,
+        np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")),
+        4,
     )
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(3, 3.0), (4, 4.0), (5, 5.0), (6, 6.0)], dtype=np.dtype("i8,f8")), 5
+        1,
+        2,
+        3,
+        np.array([(3, 3.0), (4, 4.0), (5, 5.0), (6, 6.0)], dtype=np.dtype("i8,f8")),
+        5,
     )
 
     expected_order = [
@@ -205,7 +237,14 @@ def test_extended_get_trigger_samples():
     ]
 
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(7, 7.0), (8, 8.0), (9, 9.0), (10, 10.0), (11, 11.0)], dtype=np.dtype("i8,f8")), 6
+        1,
+        2,
+        3,
+        np.array(
+            [(7, 7.0), (8, 8.0), (9, 9.0), (10, 10.0), (11, 11.0)],
+            dtype=np.dtype("i8,f8"),
+        ),
+        6,
     )
     expected_order = expected_order + [
         (7, 7.0),
@@ -252,7 +291,11 @@ def test_extended_get_trigger_samples():
     assert result == expected_order
 
     TriggerSampleStorage(TMP_DIR).save_trigger_sample(
-        1, 2, 30, np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")), 6
+        1,
+        2,
+        30,
+        np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")),
+        6,
     )
 
     result = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 2, 13)

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import torch
 import yaml
-from modyn.common.trigger_storage_cpp import TriggerStorageCPP as TriggerSampleStorage
+from modyn.common.trigger_storage_cpp import TriggerSampleStorage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
 from modyn.utils import (
