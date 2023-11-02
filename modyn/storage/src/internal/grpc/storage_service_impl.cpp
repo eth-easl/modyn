@@ -53,7 +53,7 @@ Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-na
     ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {
   try {
     soci::session session = storage_database_connection_.get_session();
-    const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
       return {StatusCode::OK, "Dataset does not exist."};
@@ -72,7 +72,7 @@ Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-
     ServerWriter<modyn::storage::GetDataInIntervalResponse>* writer) {
   try {
     soci::session session = storage_database_connection_.get_session();
-    const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
       return {StatusCode::OK, "Dataset does not exist."};
@@ -95,7 +95,7 @@ Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
-    const int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
     if (dataset_id == -1) {
       response->set_available(false);
@@ -149,7 +149,7 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
     int64_t filesystem_wrapper_type;
 
     soci::session session = storage_database_connection_.get_session();
-    int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
       return {StatusCode::OK, "Dataset does not exist."};
@@ -315,7 +315,7 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
@@ -373,7 +373,7 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
     soci::session session = storage_database_connection_.get_session();
 
     // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(request->dataset_id(), session);
+    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
@@ -400,7 +400,7 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const
                                                   const int64_t start_timestamp, int64_t end_timestamp) {
   soci::session session = storage_database_connection_.get_session();
 
-  const std::vector<int64_t> file_ids = get_file_ids(dataset_id, session, start_timestamp, end_timestamp);
+  const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
 
   std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
 
@@ -629,22 +629,21 @@ std::tuple<int64_t, int64_t> StorageServiceImpl::get_partition_for_worker(const 
   return {start_index, worker_subset_size};
 }
 
-int64_t StorageServiceImpl::get_dataset_id(const std::string& dataset_name, soci::session& session) {
-  int64_t dataset_id =
-      -1;  // NOLINT misc-const-correctness  (the variable cannot be const to be usable as filling variable by soci)
+int64_t StorageServiceImpl::get_dataset_id(soci::session& session, const std::string& dataset_name) {
+  int64_t dataset_id = -1;
   session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(dataset_name);
 
   return dataset_id;
 }
 
-std::vector<int64_t> StorageServiceImpl::get_file_ids(const int64_t dataset_id, soci::session& session,
+std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, const int64_t dataset_id,
                                                       const int64_t start_timestamp, const int64_t end_timestamp) {
   const int64_t number_of_files = get_file_count(session, dataset_id, start_timestamp, end_timestamp);
   if (number_of_files == 0) {
     return {};
   }
 
-  return get_file_ids(session, dataset_id, start_timestamp, end_timestamp, number_of_files);
+  return get_file_ids_given_number_of_files(session, dataset_id, start_timestamp, end_timestamp, number_of_files);
 }
 
 int64_t StorageServiceImpl::get_file_count(soci::session& session, const int64_t dataset_id,
@@ -667,9 +666,11 @@ int64_t StorageServiceImpl::get_file_count(soci::session& session, const int64_t
   return number_of_files;
 }
 
-std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, const int64_t dataset_id,
-                                                      const int64_t start_timestamp, const int64_t end_timestamp,
-                                                      const int64_t number_of_files) {
+std::vector<int64_t> StorageServiceImpl::get_file_ids_given_number_of_files(soci::session& session,
+                                                                            const int64_t dataset_id,
+                                                                            const int64_t start_timestamp,
+                                                                            const int64_t end_timestamp,
+                                                                            const int64_t number_of_files) {
   std::vector<int64_t> file_ids(number_of_files + 1);
 
   if (start_timestamp >= 0 && end_timestamp == -1) {

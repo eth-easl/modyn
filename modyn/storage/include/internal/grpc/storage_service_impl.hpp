@@ -29,17 +29,17 @@ struct SampleData {
 };
 
 struct DatasetData {
-  int64_t dataset_id;
+  int64_t dataset_id = -1;
   std::string base_path;
-  FilesystemWrapperType filesystem_wrapper_type;
-  FileWrapperType file_wrapper_type;
+  FilesystemWrapperType filesystem_wrapper_type{};
+  FileWrapperType file_wrapper_type{};
   std::string file_wrapper_config;
 };
 
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
  public:
   explicit StorageServiceImpl(const YAML::Node& config, int64_t retrieval_threads = 1)
-      : Service(),  // NOLINT readability-redundant-member-init
+      : Service(),  // NOLINT readability-redundant-member-init  (we need to call the base constructor)
         config_{config},
         retrieval_threads_{retrieval_threads},
         disable_multithreading_{retrieval_threads <= 1},
@@ -97,17 +97,16 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                                  const DatabaseDriver& driver, int64_t sample_batch_size);
   static std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,
                                                                int64_t total_num_elements);
-  static void get_sample_data(soci::session& session, int64_t dataset_id, const std::vector<int64_t>& sample_ids,
-                              std::map<int64_t, SampleData>& file_id_to_sample_data);
   static int64_t get_number_of_samples_in_file(int64_t file_id, soci::session& session, int64_t dataset_id);
 
-  static std::vector<int64_t> get_file_ids(int64_t dataset_id, soci::session& session, int64_t start_timestamp = -1,
+  static std::vector<int64_t> get_file_ids(soci::session& session, int64_t dataset_id, int64_t start_timestamp = -1,
                                            int64_t end_timestamp = -1);
   static int64_t get_file_count(soci::session& session, int64_t dataset_id, int64_t start_timestamp,
                                 int64_t end_timestamp);
-  static std::vector<int64_t> get_file_ids(soci::session& session, int64_t dataset_id, int64_t start_timestamp,
-                                           int64_t end_timestamp, int64_t number_of_files);
-  static int64_t get_dataset_id(const std::string& dataset_name, soci::session& session);
+  static std::vector<int64_t> get_file_ids_given_number_of_files(soci::session& session, int64_t dataset_id,
+                                                                 int64_t start_timestamp, int64_t end_timestamp,
+                                                                 int64_t number_of_files);
+  static int64_t get_dataset_id(soci::session& session, const std::string& dataset_name);
   static std::vector<int64_t> get_file_ids_for_samples(const std::vector<int64_t>& request_keys, int64_t dataset_id,
                                                        soci::session& session);
   static std::vector<std::vector<int64_t>> get_file_ids_per_thread(const std::vector<int64_t>& file_ids,

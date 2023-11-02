@@ -50,7 +50,7 @@ class StorageServiceImplTest : public ::testing::Test {
 
     sql_expression = fmt::format(
         "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/test_file2.txt', "
-        "100, 1)",
+        "1, 1)",
         tmp_dir_);
     session << sql_expression;
 
@@ -93,7 +93,7 @@ TEST_F(StorageServiceImplTest, TestCheckAvailability) {
   modyn::storage::DatasetAvailableResponse response;
 
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl storage_service(config);
+  StorageServiceImpl storage_service(config);
 
   Status status = storage_service.CheckAvailability(&context, &request, &response);
 
@@ -114,7 +114,7 @@ TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
   modyn::storage::GetCurrentTimestampResponse response;
 
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl storage_service(config);
+  StorageServiceImpl storage_service(config);
 
   const Status status = storage_service.GetCurrentTimestamp(&context, &request, &response);
 
@@ -124,7 +124,7 @@ TEST_F(StorageServiceImplTest, TestGetCurrentTimestamp) {
 
 TEST_F(StorageServiceImplTest, TestDeleteDataset) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl storage_service(config);
+  StorageServiceImpl storage_service(config);
 
   const StorageDatabaseConnection connection(config);
 
@@ -157,7 +157,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
 
 TEST_F(StorageServiceImplTest, TestDeleteData) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
+  StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
 
   modyn::storage::DeleteDataRequest request;
   request.set_dataset_id("test_dataset");
@@ -211,7 +211,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
 
 TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
-  ::StorageServiceImpl storage_service(config);
+  StorageServiceImpl storage_service(config);
 
   modyn::storage::DeleteDataRequest request;
   modyn::storage::DeleteDataResponse response;
@@ -243,4 +243,308 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   request.add_keys(0);
   status = storage_service.DeleteData(&context, &request, &response);
   ASSERT_FALSE(response.success());
+}
+
+TEST_F(StorageServiceImplTest, TestGetPartitionForWorker) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  std::tuple<int64_t, int64_t> result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_partition_for_worker(0, 1, 1));
+  ASSERT_EQ(std::get<0>(result), 0);
+  ASSERT_EQ(std::get<1>(result), 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_partition_for_worker(0, 2, 2));
+  ASSERT_EQ(std::get<0>(result), 0);
+  ASSERT_EQ(std::get<1>(result), 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_partition_for_worker(1, 2, 2));
+  ASSERT_EQ(std::get<0>(result), 1);
+  ASSERT_EQ(std::get<1>(result), 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_partition_for_worker(0, 3, 9));
+  ASSERT_EQ(std::get<0>(result), 0);
+  ASSERT_EQ(std::get<1>(result), 3);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_partition_for_worker(1, 3, 9));
+  ASSERT_EQ(std::get<0>(result), 3);
+  ASSERT_EQ(std::get<1>(result), 3);
+}
+
+TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInFile) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  int64_t result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_file(1, session, 1));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_file(2, session, 1));
+  ASSERT_EQ(result, 1);
+
+  const std::string sql_expression = fmt::format(
+      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/test_file2.txt', "
+      "100, 10)",
+      tmp_dir_);
+  session << sql_expression;
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_file(3, session, 1));
+  ASSERT_EQ(result, 10);
+}
+
+TEST_F(StorageServiceImplTest, TestGetFileIds) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  std::vector<int64_t> result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 100));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 1));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 2, 100));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 2));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 100));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+}
+
+TEST_F(StorageServiceImplTest, TestGetFileCount) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  int64_t result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_count(session, 1, 1, 100));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_count(session, 1, 1, 1));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_count(session, 1, 2, 100));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_count(session, 1, -1, -1));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_count(session, 1, 2, -1));
+  ASSERT_EQ(result, 1);
+}
+
+TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  std::vector<int64_t> result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 1, 100, 2));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 1, 1, 1));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 2, 100, 1));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, -1, -1, 2));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 2, -1, 1));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 2);
+}
+
+TEST_F(StorageServiceImplTest, TestGetDatasetId) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  int64_t result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_dataset_id(session, "test_dataset"));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_dataset_id(session, "non_existent_dataset"));
+  ASSERT_EQ(result, -1);
+}
+
+TEST_F(StorageServiceImplTest, TestGetFileIdsForSamples) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 2, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 3, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 4, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 4, 0, 1)";
+
+  std::vector<int64_t> result;
+  std::vector<int64_t> request_keys = {1, 2, 3};
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
+  ASSERT_EQ(result.size(), 3);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[2], 3);
+
+  request_keys = {1, 2, 3, 4};
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
+  ASSERT_EQ(result.size(), 4);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[2], 3);
+  ASSERT_EQ(result[3], 4);
+
+  request_keys = {3, 4};
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[1], 3);
+
+  request_keys = {1, 2, 3, 4, 5};
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_for_samples(request_keys, 1, session));
+  ASSERT_EQ(result.size(), 4);
+  ASSERT_EQ(result[0], 1);
+  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[2], 3);
+  ASSERT_EQ(result[3], 4);
+}
+
+TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+
+  std::vector<std::vector<int64_t>> result;
+  std::vector<int64_t> file_ids = {1, 2, 3, 4, 5};
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 1));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0].size(), 5);
+  ASSERT_EQ(result[0][0], 1);
+  ASSERT_EQ(result[0][1], 2);
+  ASSERT_EQ(result[0][2], 3);
+  ASSERT_EQ(result[0][3], 4);
+  ASSERT_EQ(result[0][4], 5);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 2));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0].size(), 3);
+  ASSERT_EQ(result[0][0], 1);
+  ASSERT_EQ(result[0][1], 2);
+  ASSERT_EQ(result[0][2], 3);
+  ASSERT_EQ(result[1].size(), 2);
+  ASSERT_EQ(result[1][0], 4);
+  ASSERT_EQ(result[1][1], 5);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 3));
+  ASSERT_EQ(result.size(), 3);
+  ASSERT_EQ(result[0].size(), 2);
+  ASSERT_EQ(result[0][0], 1);
+  ASSERT_EQ(result[0][1], 2);
+  ASSERT_EQ(result[1].size(), 2);
+  ASSERT_EQ(result[1][0], 3);
+  ASSERT_EQ(result[1][1], 4);
+  ASSERT_EQ(result[2].size(), 1);
+  ASSERT_EQ(result[2][0], 5);
+
+  file_ids = {1};
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 1));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0].size(), 1);
+  ASSERT_EQ(result[0][0], 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 2));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0].size(), 1);
+  ASSERT_EQ(result[0][0], 1);
+  ASSERT_EQ(result[1].size(), 0);
+}
+
+TEST_F(StorageServiceImplTest, TestGetSamplesCorrespondingToFiles) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 2, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 3, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 4, 0, 1)";
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 4, 0, 1)";
+
+  std::vector<int64_t> result;
+  const std::vector<int64_t> request_keys = {1, 2, 3, 4, 5};
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(1, 1, request_keys, session));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(2, 1, request_keys, session));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(3, 1, request_keys, session));
+  ASSERT_EQ(result.size(), 1);
+  ASSERT_EQ(result[0], 3);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_samples_corresponding_to_file(4, 1, request_keys, session));
+  ASSERT_EQ(result.size(), 2);
+  ASSERT_EQ(result[0], 4);
+  ASSERT_EQ(result[1], 5);
+}
+
+TEST_F(StorageServiceImplTest, TestGetDatasetData) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  DatasetData result;
+  std::string dataset_name = "test_dataset";
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_dataset_data(session, dataset_name));
+  ASSERT_EQ(result.dataset_id, 1);
+  ASSERT_EQ(result.base_path, tmp_dir_);
+  ASSERT_EQ(result.filesystem_wrapper_type, FilesystemWrapperType::LOCAL);
+  ASSERT_EQ(result.file_wrapper_type, FileWrapperType::SINGLE_SAMPLE);
+  ASSERT_EQ(result.file_wrapper_config, StorageTestUtils::get_dummy_file_wrapper_config_inline());
+
+  dataset_name = "non_existent_dataset";
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_dataset_data(session, dataset_name));
+  ASSERT_EQ(result.dataset_id, -1);
+  ASSERT_EQ(result.base_path, "");
 }
