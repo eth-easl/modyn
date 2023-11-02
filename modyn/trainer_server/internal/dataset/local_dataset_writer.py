@@ -5,7 +5,7 @@ from multiprocessing.managers import SharedMemoryManager
 
 import numpy as np
 import torch
-from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStorage
+from modyn.common.trigger_storage_cpp import TriggerStorageCPP as TriggerSampleStorage
 
 
 class LocalDatasetWriter(TriggerSampleStorage):
@@ -65,7 +65,10 @@ class LocalDatasetWriter(TriggerSampleStorage):
 
         # add the input tuples to the output list.
         for sample_id, sample_weight in zip(sample_ids, sample_weights):
-            self.output_samples_list[self.current_sample_index] = (sample_id, sample_weight)
+            self.output_samples_list[self.current_sample_index] = (
+                sample_id,
+                sample_weight,
+            )
             self.current_sample_index += 1
 
             # if the target is reached, store the samples

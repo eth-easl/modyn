@@ -8,7 +8,7 @@ from typing import Any, Iterable, Optional
 
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.common.trigger_sample import TriggerSampleStorage
+from modyn.common.trigger_storage_cpp import TriggerStorageCPP as TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
 from sqlalchemy import func
@@ -206,7 +206,10 @@ class AbstractSelectionStrategy(ABC):
         swt.start("on_trigger")
 
         for partition, (training_samples, partition_log) in enumerate(self._on_trigger()):
-            overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop("on_trigger")}
+            overall_partition_log = {
+                "partition_log": partition_log,
+                "on_trigger_time": swt.stop("on_trigger"),
+            }
 
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
@@ -254,7 +257,14 @@ class AbstractSelectionStrategy(ABC):
                         logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
                         proc = mp.Process(
                             target=AbstractSelectionStrategy._store_triggersamples_impl,
-                            args=(partition, trigger_id, self._pipeline_id, shared_proc_samples, self._modyn_config, i),
+                            args=(
+                                partition,
+                                trigger_id,
+                                self._pipeline_id,
+                                shared_proc_samples,
+                                self._modyn_config,
+                                i,
+                            ),
                         )
                         proc.start()
                         processes.append(proc)
@@ -279,7 +289,10 @@ class AbstractSelectionStrategy(ABC):
         with MetadataDatabaseConnection(self._modyn_config) as database:
             trigger = (
                 database.session.query(Trigger)
-                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
+                .filter(
+                    Trigger.pipeline_id == self._pipeline_id,
+                    Trigger.trigger_id == trigger_id,
+                )
                 .first()
             )
             trigger.num_keys = total_keys_in_trigger
@@ -307,7 +320,11 @@ class AbstractSelectionStrategy(ABC):
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def get_trigger_partition_keys(
-        self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
+        self,
+        trigger_id: int,
+        partition_id: int,
+        worker_id: int = -1,
+        num_workers: int = -1,
     ) -> list[tuple[int, float]]:
         """
         Given a trigger id and partition id, returns a list of all keys in this partition
@@ -404,7 +421,12 @@ class AbstractSelectionStrategy(ABC):
         if self._disable_mt or (self._is_test and self._is_mac):
             swt.start("persist_samples_time")
             AbstractSelectionStrategy._persist_samples_impl(
-                keys, timestamps, labels, self._pipeline_id, self._modyn_config, self._next_trigger_id
+                keys,
+                timestamps,
+                labels,
+                self._pipeline_id,
+                self._modyn_config,
+                self._next_trigger_id,
             )
             log["persist_samples_time"] = swt.stop()
             return log

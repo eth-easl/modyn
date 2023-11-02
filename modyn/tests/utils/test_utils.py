@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import torch
 import yaml
-from modyn.common.trigger_sample import TriggerSampleStorage
+from modyn.common.trigger_storage_cpp import TriggerStorageCPP as TriggerSampleStorage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
 from modyn.utils import (
@@ -68,12 +68,16 @@ def test_trigger_available():
 
 def test_validate_yaml():
     with open(
-        pathlib.Path("modyn") / "config" / "examples" / "modyn_config.yaml", "r", encoding="utf-8"
+        pathlib.Path("modyn") / "config" / "examples" / "modyn_config.yaml",
+        "r",
+        encoding="utf-8",
     ) as concrete_file:
         file = yaml.safe_load(concrete_file)
     assert validate_yaml(file, pathlib.Path("modyn") / "config" / "schema" / "modyn_config_schema.yaml")[0]
     with open(
-        pathlib.Path("modyn") / "config" / "examples" / "example-pipeline.yaml", "r", encoding="utf-8"
+        pathlib.Path("modyn") / "config" / "examples" / "example-pipeline.yaml",
+        "r",
+        encoding="utf-8",
     ) as concrete_file:
         file = yaml.safe_load(concrete_file)
     assert validate_yaml(file, pathlib.Path("modyn") / "config" / "schema" / "pipeline-schema.yaml")[0]
@@ -144,7 +148,12 @@ def test_deserialize_function():
 
     test_func_import = "import torch\ndef test_func(x: torch.Tensor):\n\treturn x * 3"
 
-    assert torch.all(torch.eq(deserialize_function(test_func_import, "test_func")(torch.ones(4)), torch.ones(4) * 3))
+    assert torch.all(
+        torch.eq(
+            deserialize_function(test_func_import, "test_func")(torch.ones(4)),
+            torch.ones(4) * 3,
+        )
+    )
 
 
 def test_deserialize_function_invalid():
