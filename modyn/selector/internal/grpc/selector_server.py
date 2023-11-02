@@ -51,4 +51,3 @@ class SelectorGRPCServer(GenericGRPCServer):
         super().__exit__(exc_type, exc_val, exc_tb)
         self._cleanup()
         atexit.unregister(self._cleanup)
-
