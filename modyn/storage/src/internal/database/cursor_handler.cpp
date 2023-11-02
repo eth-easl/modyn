@@ -50,7 +50,7 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
         static_assert(sizeof(long long) == sizeof(int64_t), "We currently assume long long is 64 bit.");
 
         record.id =
-            static_cast<int64_t>(row.get<int>(0));  // NOLINT(google-runtime-int)
+            static_cast<int64_t>(row.get<long int>(0));  // NOLINT(google-runtime-int)
                                                     // Because of different implementations of types and the
                                                     // implementation of soci datatypes we sadly need to cast here
         if (number_of_columns_ > 1) {
