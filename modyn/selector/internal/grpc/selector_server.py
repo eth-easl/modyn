@@ -23,7 +23,7 @@ class SelectorGRPCServer(GenericGRPCServer):
 
         callback_kwargs = {"selector_manager": self.selector_manager}
         super().__init__(modyn_config, modyn_config["selector"]["port"], SelectorGRPCServer.callback, callback_kwargs)
-        #atexit.register(self._cleanup)
+        atexit.register(self._cleanup)
 
     def __getstate__(self) -> dict[str, Any]:
         state = self.__dict__.copy()
@@ -50,3 +50,5 @@ class SelectorGRPCServer(GenericGRPCServer):
         """
         super().__exit__(exc_type, exc_val, exc_tb)
         self._cleanup()
+        atexit.unregister(self._cleanup)
+
