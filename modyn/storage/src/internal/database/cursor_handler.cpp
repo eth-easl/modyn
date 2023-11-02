@@ -33,7 +33,7 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
         if (number_of_columns_ == 3) {
           record.column_2 = std::stoll(PQgetvalue(result, i, 2));
         }
-        
+
         records[i] = record;
       }
 
@@ -46,8 +46,8 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
       ASSERT(rs_ != nullptr);
       for (auto& row : *rs_) {
         SampleRecord record{};
-        static_assert(sizeof(int) == sizeof(int32_t), "We currently assume int is 32 bit.")
-        static_assert(sizeof(long long) == sizeof(int64_t), "We currently assume long long is 64 bit.")
+        static_assert(sizeof(int) == sizeof(int32_t), "We currently assume int is 32 bit.");
+        static_assert(sizeof(long long) == sizeof(int64_t), "We currently assume long long is 64 bit.");
 
         record.id =
             static_cast<int64_t>(row.get<int>(0));  // NOLINT(google-runtime-int)
