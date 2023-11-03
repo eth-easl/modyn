@@ -30,10 +30,10 @@ struct SampleData {
 
 struct DatasetData {
   int64_t dataset_id = -1;
-  std::string base_path;
-  FilesystemWrapperType filesystem_wrapper_type{};
-  FileWrapperType file_wrapper_type{};
-  std::string file_wrapper_config;
+  std::string base_path = "";
+  FilesystemWrapperType filesystem_wrapper_type = FilesystemWrapperType::LOCAL;
+  FileWrapperType file_wrapper_type = FileWrapperType::SINGLE_SAMPLE;
+  std::string file_wrapper_config = "";
 };
 
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
