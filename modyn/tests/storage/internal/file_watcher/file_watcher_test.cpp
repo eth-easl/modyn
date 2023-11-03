@@ -51,7 +51,7 @@ TEST_F(FileWatcherTest, TestConstructor) {
   ASSERT_NO_THROW(const FileWatcher watcher(YAML::LoadFile("config.yaml"), 1, &stop_file_watcher));
 }
 
-TEST_F(FileWatcherTest, TestSeek) {
+TEST_F(FileWatcherTest, TestSeek) {  // NOLINT(readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
@@ -97,7 +97,7 @@ TEST_F(FileWatcherTest, TestSeek) {
   ASSERT_TRUE(last_timestamp > 0);
 }
 
-TEST_F(FileWatcherTest, TestSeekDataset) {
+TEST_F(FileWatcherTest, TestSeekDataset) {  // NOLINT(readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
@@ -233,7 +233,7 @@ TEST_F(FileWatcherTest, TestFallbackInsertion) {
   ASSERT_GT(sample_id, 0);
 }
 
-TEST_F(FileWatcherTest, TestHandleFilePaths) {
+TEST_F(FileWatcherTest, TestHandleFilePaths) {  // NOLINT(readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   std::atomic<bool> stop_file_watcher = false;
   FileWatcher watcher(config, 1, &stop_file_watcher);
@@ -377,7 +377,7 @@ TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {
                                                  false, exception_thrown));
 }
 
-TEST_F(FileWatcherTest, TestMultipleFileHandling) {
+TEST_F(FileWatcherTest, TestMultipleFileHandling) {  // NOLINT(readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   const StorageDatabaseConnection connection(config);
   soci::session session = connection.get_session();
