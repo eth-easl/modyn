@@ -10,6 +10,8 @@ static std::shared_ptr<FilesystemWrapper> get_filesystem_wrapper(const Filesyste
   std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
   if (type == FilesystemWrapperType::LOCAL) {
     filesystem_wrapper = std::make_shared<LocalFilesystemWrapper>();
+  } else if (type == FilesystemWrapperType::INVALID_FSW) {
+    FAIL("Trying to instantiate INVALID FileSystemWrapper");
   } else {
     FAIL("Unknown filesystem wrapper type");
   }

@@ -22,8 +22,10 @@ static std::unique_ptr<FileWrapper> get_file_wrapper(const std::string& path, co
     file_wrapper = std::make_unique<SingleSampleFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
   } else if (type == FileWrapperType::CSV) {
     file_wrapper = std::make_unique<CsvFileWrapper>(path, file_wrapper_config, filesystem_wrapper);
+  } else if (type == FileWrapperType::INVALID_FW) {
+    FAIL(fmt::format("Trying to instantiate INVALID FileWrapper at path {}", path));
   } else {
-    FAIL("Unknown file wrapper type");
+    FAIL(fmt::format("Unknown file wrapper type {}", static_cast<int64_t>(type)));
   }
   return file_wrapper;
 }

@@ -49,9 +49,9 @@ class FileWatcher {
     soci::session session = storage_database_connection_.get_session();
 
     std::string dataset_path;
-    int64_t filesystem_wrapper_type_int = -1;
+    int64_t filesystem_wrapper_type_int = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
     std::string file_wrapper_config;
-    int64_t file_wrapper_type_id = -1;
+    int64_t file_wrapper_type_id = static_cast<int64_t>(FileWrapperType::INVALID_FW);
     try {
       session << "SELECT base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM datasets "
                  "WHERE dataset_id = :dataset_id",
