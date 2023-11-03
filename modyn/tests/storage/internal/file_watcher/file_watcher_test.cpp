@@ -69,7 +69,7 @@ TEST_F(FileWatcherTest, TestSeek) {
   ASSERT(!test_file.is_open(), "Could not close test file");
 
   const std::string label_file_path = tmp_dir_ + "/test_file.lbl";
-  std::ofstream label_file = std::ofstream(label_file_path);
+  std::ofstream label_file(label_file_path);
   ASSERT(label_file.is_open(), "Could not open label file");
   label_file << "1";
   label_file.close();
@@ -114,7 +114,7 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   ASSERT(!test_file.is_open(), "Could not close test file");
 
   const std::string label_file_path = tmp_dir_ + "/test_file.lbl";
-  std::ofstream label_file = std::ofstream(label_file_path);
+  std::ofstream label_file(label_file_path);
   ASSERT(label_file.is_open(), "Could not open label file");
   label_file << "1";
   label_file.close();
@@ -123,12 +123,12 @@ TEST_F(FileWatcherTest, TestSeekDataset) {
   ASSERT_NO_THROW(watcher.seek_dataset(session));
 
   // Check if the file is added to the database
-  std::vector<std::string> file_paths = std::vector<std::string>(1);
+  std::vector<std::string> file_paths(1);
   session << "SELECT path FROM files", soci::into(file_paths);
   ASSERT_EQ(file_paths[0], test_file_path);
 
   // Check if the sample is added to the database
-  std::vector<int64_t> sample_ids = std::vector<int64_t>(1);
+  std::vector<int64_t> sample_ids(1);
   session << "SELECT sample_id FROM samples", soci::into(sample_ids);
   ASSERT_EQ(sample_ids[0], 1);
 }
@@ -177,7 +177,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   ASSERT(!test_file.is_open(), "Could not close test file");
 
   const std::string label_file_path = tmp_dir_ + "/test.lbl";
-  std::ofstream label_file = std::ofstream(label_file_path);
+  std::ofstream label_file(label_file_path);
   ASSERT(label_file.is_open(), "Could not open label file");
   label_file << "1";
   label_file.close();
@@ -192,7 +192,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
 
   ASSERT_NO_THROW(watcher.search_for_new_files_in_directory(tmp_dir_, 0));
 
-  std::vector<std::string> file_paths = std::vector<std::string>(1);
+  std::vector<std::string> file_paths(1);
   session << "SELECT path FROM files", soci::into(file_paths);
   ASSERT_EQ(file_paths[0], test_file_path);
 }
@@ -247,7 +247,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   ASSERT(!test_file.is_open(), "Could not close test file");
 
   const std::string label_file_path = tmp_dir_ + "/test.lbl";
-  std::ofstream label_file = std::ofstream(label_file_path);
+  std::ofstream label_file(label_file_path);
   ASSERT(label_file.is_open(), "Could not open label file");
   label_file << "1";
   label_file.close();
@@ -261,17 +261,13 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {
   ASSERT(!test_file2.is_open(), "Could not close test file");
 
   const std::string label_file_path2 = tmp_dir_ + "/test2.lbl";
-  std::ofstream label_file2 = std::ofstream(label_file_path2);
+  std::ofstream label_file2(label_file_path2);
   ASSERT(label_file2.is_open(), "Could not open label file");
   label_file2 << "2";
   label_file2.close();
   ASSERT(!label_file2.is_open(), "Could not close label file");
 
-  std::vector<std::string> files = std::vector<std::string>();
-  files.emplace_back(test_file_path);
-  files.emplace_back(label_file_path);
-  files.emplace_back(test_file_path2);
-  files.emplace_back(label_file_path2);
+  std::vector<std::string> files = {test_file_path, label_file_path, test_file_path2, label_file_path2};
 
   const StorageDatabaseConnection connection(config);
 
@@ -400,7 +396,7 @@ TEST_F(FileWatcherTest, TestMultipleFileHandling) {
     ASSERT(!test_file.is_open(), "Could not close test file");
 
     const std::string label_file_path = tmp_dir_ + "/test_file" + std::to_string(i) + ".lbl";
-    std::ofstream label_file = std::ofstream(label_file_path);
+    std::ofstream label_file(label_file_path);
     ASSERT(label_file.is_open(), "Could not open label file");
     label_file << i;
     label_file.close();
@@ -444,7 +440,7 @@ TEST_F(FileWatcherTest, TestDirectoryUpdateWhileRunning) {
   ASSERT(!test_file.is_open(), "Could not close test file");
 
   const std::string label_file_path = tmp_dir_ + "/test_file1.lbl";
-  std::ofstream label_file = std::ofstream(label_file_path);
+  std::ofstream label_file(label_file_path);
   ASSERT(label_file.is_open(), "Could not open label file");
   label_file << "1";
   label_file.close();
