@@ -43,11 +43,35 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
     }
     case DatabaseDriver::SQLITE3: {
       int64_t retrieved_rows = 0;
-      ASSERT(rs_ != nullptr, "rowset is nullptr");
       for (auto& row : *rs_) {
         SampleRecord record{};
         static_assert(sizeof(int) == sizeof(int32_t), "We currently assume int is 32 bit.");
         static_assert(sizeof(long long) == sizeof(int64_t), "We currently assume long long is 64 bit.");
+
+        const soci::column_properties& props = row.get_properties(0);
+        switch(props.get_data_type())
+        {
+        case soci::dt_string:
+            FAIL(fmt::format("Name is {}, type is dt_string", props.get_name()));
+            break;
+        case soci::dt_double:
+            FAIL(fmt::format("Name is {}, type is dt_double", props.get_name()));
+            break;
+        case soci::dt_integer:
+            FAIL(fmt::format("Name is {}, type is dt_integer", props.get_name()));
+            break;
+        case soci::dt_long_long:
+            FAIL(fmt::format("Name is {}, type is dt_long_long", props.get_name()));
+            break;
+        case soci::dt_unsigned_long_long:
+            FAIL(fmt::format("Name is {}, type is dt_unsigned_long_long", props.get_name()));
+            break;
+        case soci::dt_date:
+            FAIL(fmt::format("Name is {}, type is dt_date", props.get_name()));
+            break;
+        default:
+            FAIL(fmt::format("Name is {}, type is unknown = {}", props.get_name(), static_cast<int>(props.get_data_type())));
+        }
 
         record.id =
             static_cast<int64_t>(row.get<int>(0));  // NOLINT(google-runtime-int)
