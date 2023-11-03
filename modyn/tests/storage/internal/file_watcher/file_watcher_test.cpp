@@ -62,12 +62,16 @@ TEST_F(FileWatcherTest, TestSeek) {
 
   // Add a file to the temporary directory
   std::ofstream file(tmp_dir_ + "/test_file.txt");
+  ASSERT(file.is_open(), "Couldn't open test_file.txt");
   file << "test";
   file.close();
+  ASSERT(!file.is_open(), "Couldn't close test_file.txt");
 
   file = std::ofstream(tmp_dir_ + "/test_file.lbl");
+  ASSERT(file.is_open(), "Couldn't open test_file.lbl");
   file << "1";
   file.close();
+  ASSERT(!file.is_open(), "Couldn't close test_file.lbl");
 
   // Seek the temporary directory
   ASSERT_NO_THROW(watcher.seek(session));
