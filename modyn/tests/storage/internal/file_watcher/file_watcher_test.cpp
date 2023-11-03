@@ -183,7 +183,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
   label_file.close();
   ASSERT(!label_file.is_open(), "Could not close label file");
 
-  std::vector<std::string> files = {test_file_path, label_file_path};
+  const std::vector<std::string> files = {test_file_path, label_file_path};
 
   EXPECT_CALL(*filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
   EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
@@ -267,7 +267,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {  // NOLINT(readability-function-c
   label_file2.close();
   ASSERT(!label_file2.is_open(), "Could not close label file");
 
-  std::vector<std::string> files = {test_file_path, label_file_path, test_file_path2, label_file_path2};
+  const std::vector<std::string> files = {test_file_path, label_file_path, test_file_path2, label_file_path2};
 
   const StorageDatabaseConnection connection(config);
 

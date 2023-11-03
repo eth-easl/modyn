@@ -560,4 +560,6 @@ TEST_F(StorageServiceImplTest, TestGetDatasetData) {
   ASSERT_NO_THROW(result = StorageServiceImpl::get_dataset_data(session, dataset_name));
   ASSERT_EQ(result.dataset_id, -1);
   ASSERT_EQ(result.base_path, "");
+  ASSERT_EQ(result.filesystem_wrapper_type, FilesystemWrapperType::INVALID_FSW);
+  ASSERT_EQ(result.file_wrapper_type, FileWrapperType::INVALID_FW);
 }

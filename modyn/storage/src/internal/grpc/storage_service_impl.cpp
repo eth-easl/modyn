@@ -692,10 +692,10 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_given_number_of_files(soci
 
 DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::string& dataset_name) {
   int64_t dataset_id = -1;
-  std::string base_path;
-  int64_t filesystem_wrapper_type = -1;
-  int64_t file_wrapper_type = -1;
-  std::string file_wrapper_config;
+  std::string base_path = "";
+  int64_t filesystem_wrapper_type = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
+  int64_t file_wrapper_type = static_cast<int64_t>(FileWrapperType::INVALID_FW);
+  std::string file_wrapper_config = "";
 
   session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
              "datasets WHERE "
