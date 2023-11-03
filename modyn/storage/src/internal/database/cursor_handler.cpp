@@ -45,43 +45,12 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
       int64_t retrieved_rows = 0;
       for (auto& row : *rs_) {
         SampleRecord record{};
-        static_assert(sizeof(int) == sizeof(int32_t), "We currently assume int is 32 bit.");
-        static_assert(sizeof(long long) == sizeof(int64_t), "We currently assume long long is 64 bit.");
-
-        const soci::column_properties& props = row.get_properties(0);
-        switch(props.get_data_type())
-        {
-        case soci::dt_string:
-            FAIL(fmt::format("Name is {}, type is dt_string", props.get_name()));
-            break;
-        case soci::dt_double:
-            FAIL(fmt::format("Name is {}, type is dt_double", props.get_name()));
-            break;
-        case soci::dt_integer:
-            FAIL(fmt::format("Name is {}, type is dt_integer", props.get_name()));
-            break;
-        case soci::dt_long_long:
-            FAIL(fmt::format("Name is {}, type is dt_long_long", props.get_name()));
-            break;
-        case soci::dt_unsigned_long_long:
-            FAIL(fmt::format("Name is {}, type is dt_unsigned_long_long", props.get_name()));
-            break;
-        case soci::dt_date:
-            FAIL(fmt::format("Name is {}, type is dt_date", props.get_name()));
-            break;
-        default:
-            FAIL(fmt::format("Name is {}, type is unknown = {}", props.get_name(), static_cast<int>(props.get_data_type())));
-        }
-
-        record.id =
-            static_cast<int64_t>(row.get<int>(0));  // NOLINT(google-runtime-int)
-                                                    // Because of different implementations of types and the
-                                                    // implementation of soci datatypes we sadly need to cast here
+        record.id = StorageDatabaseConnection::get_from_row<int64_t>(row, 0);
         if (number_of_columns_ > 1) {
-          record.column_1 = static_cast<int64_t>(row.get<long long>(1));  // NOLINT(google-runtime-int): see above
+          record.column_1 = StorageDatabaseConnection::get_from_row<int64_t>(row, 1);
         }
         if (number_of_columns_ == 3) {
-          record.column_2 = static_cast<int64_t>(row.get<long long>(2));  // NOLINT(google-runtime-int): see above
+          record.column_2 = StorageDatabaseConnection::get_from_row<int64_t>(row, 2);
         }
         records[retrieved_rows] = record;
         retrieved_rows++;

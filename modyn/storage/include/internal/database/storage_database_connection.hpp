@@ -2,6 +2,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <typeinfo>
+
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
@@ -42,6 +44,65 @@ class StorageDatabaseConnection {
   void add_sample_dataset_partition(const std::string& dataset_name) const;
   soci::session get_session() const;
   DatabaseDriver get_drivername() const { return drivername_; }
+  template <typename T>
+  static T get_from_row(soci::row& row, uint64_t pos) {
+    // This function is needed to make dispatching soci's typing system easier...
+    const soci::column_properties& props = row.get_properties(pos);
+    if constexpr (std::is_same_v<T, int64_t>) {
+      switch (props.get_data_type()) {
+        case soci::dt_long_long:
+          static_assert(sizeof(long long) <= sizeof(int64_t),
+                        "We currently assume long long is equal to or less than 64 bit.");
+          return static_cast<T>(row.get<long long>(pos));  // NOLINT(google-runtime-int)
+        case soci::dt_integer:
+          static_assert(sizeof(int) <= sizeof(int64_t), "We currently assume int is equal to or less than 64 bit.");
+          return static_cast<T>(row.get<int>(pos));  // NOLINT(google-runtime-int)
+        case soci::dt_unsigned_long_long:
+          FAIL(fmt::format("Tried to extract integer from unsigned long long column {}", props.get_name()));
+          break;
+        case soci::dt_string:
+          FAIL(fmt::format("Tried to extract integer from string column {}", props.get_name()));
+          break;
+        case soci::dt_double:
+          FAIL(fmt::format("Tried to extract integer from double column {}", props.get_name()));
+          break;
+        case soci::dt_date:
+          FAIL(fmt::format("Tried to extract integer from data column {}", props.get_name()));
+          break;
+        default:
+          FAIL(fmt::format("Tried to extract integer from unknown data type ({}) column {}",
+                           static_cast<int>(props.get_data_type()), props.get_name()));
+      }
+    }
+
+    if constexpr (std::is_same_v<T, uint64_t>) {
+      switch (props.get_data_type()) {
+        case soci::dt_unsigned_long_long:
+          static_assert(sizeof(unsigned long long) <= sizeof(uint64_t),
+                        "We currently assume unsined long long is equal to or less than 64 bit.");
+          return static_cast<T>(row.get<unsigned long long>(pos));  // NOLINT(google-runtime-int)
+        case soci::dt_long_long:
+          FAIL(fmt::format("Tried to extract unsigned long long from signed long long column {}", props.get_name()));
+        case soci::dt_integer:
+          FAIL(fmt::format("Tried to extract unsigned long long from signed integer column {}", props.get_name()));
+        case soci::dt_string:
+          FAIL(fmt::format("Tried to extract integer from string column {}", props.get_name()));
+          break;
+        case soci::dt_double:
+          FAIL(fmt::format("Tried to extract integer from double column {}", props.get_name()));
+          break;
+        case soci::dt_date:
+          FAIL(fmt::format("Tried to extract integer from data column {}", props.get_name()));
+          break;
+        default:
+          FAIL(fmt::format("Tried to extract integer from unknown data type ({}) column {}",
+                           static_cast<int>(props.get_data_type()), props.get_name()));
+      }
+    }
+    const std::type_info& ti1 = typeid(T);
+    const std::string type_id = ti1.name();
+    FAIL(fmt::format("Unsupported type in get_from_row: {}", type_id));
+  }
 
  private:
   static DatabaseDriver get_drivername(const YAML::Node& config);
