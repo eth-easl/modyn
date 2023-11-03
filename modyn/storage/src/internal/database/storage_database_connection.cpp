@@ -193,25 +193,30 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
     case DatabaseDriver::POSTGRESQL: {
       std::string dataset_partition_table_name = "samples__did" + std::to_string(dataset_id);
       try {
-        session << "CREATE TABLE IF NOT EXISTS :dataset_partition_table_name "
-                   "PARTITION OF samples "
-                   "FOR VALUES IN (:dataset_id) "
-                   "PARTITION BY HASH (sample_id)",
-            soci::use(dataset_partition_table_name), soci::use(dataset_id);
+        session << fmt::format(
+            "CREATE TABLE IF NOT EXISTS {} "
+            "PARTITION OF samples "
+            "FOR VALUES IN (:dataset_id) "
+            "PARTITION BY HASH (sample_id)",
+            dataset_partition_table_name),
+            soci::use(dataset_id);
       } catch (const soci::soci_error& e) {
+        // TODO(MaxiBoether): In this case, return failure!
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
       }
 
       try {
         for (int64_t i = 0; i < hash_partition_modulus_; i++) {
           std::string hash_partition_name = dataset_partition_table_name + "_part" + std::to_string(i);
-          session << "CREATE TABLE IF NOT EXISTS :hash_partition_name "
-                     "PARTITION OF :dataset_partition_table_name "
-                     "FOR VALUES WITH (modulus :hash_partition_modulus, REMAINDER :i)",
-              soci::use(hash_partition_name), soci::use(dataset_partition_table_name),
+          session << fmt::format(
+              "CREATE TABLE IF NOT EXISTS {} "
+              "PARTITION OF {} "
+              "FOR VALUES WITH (modulus :hash_partition_modulus, REMAINDER :i)",
+              hash_partition_name, dataset_partition_table_name),
               soci::use(hash_partition_modulus_), soci::use(i);
         }
       } catch (const soci::soci_error& e) {
+        // TODO(MaxiBoether): In this case, return failure!
         SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
       }
       break;
