@@ -57,21 +57,33 @@ class StorageServiceImplTest : public ::testing::Test {
     session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 2, 0, 1)";
 
     // Create dummy files
-    std::ofstream file(tmp_dir_ + "/test_file.txt");
-    file << "test";
-    file.close();
+    const std::string test_file_path = tmp_dir_ + "/test.txt";
+    std::ofstream test_file(test_file_path);
+    ASSERT(test_file.is_open(), "Could not open test file");
+    test_file << "test";
+    test_file.close();
+    ASSERT(!test_file.is_open(), "Could not close test file");
 
-    file = std::ofstream(tmp_dir_ + "/test_file.lbl");
-    file << "1";
-    file.close();
+    const std::string label_file_path = tmp_dir_ + "/test.lbl";
+    std::ofstream label_file(label_file_path);
+    ASSERT(label_file.is_open(), "Could not open label file");
+    label_file << "1";
+    label_file.close();
+    ASSERT(!label_file.is_open(), "Could not close label file");
 
-    file = std::ofstream(tmp_dir_ + "/test_file2.txt");
-    file << "test";
-    file.close();
+    const std::string test_file_path2 = tmp_dir_ + "/test2.txt";
+    std::ofstream test_file2(test_file_path2);
+    ASSERT(test_file2.is_open(), "Could not open test file");
+    test_file2 << "test";
+    test_file2.close();
+    ASSERT(!test_file2.is_open(), "Could not close test file");
 
-    file = std::ofstream(tmp_dir_ + "/test_file2.lbl");
-    file << "2";
-    file.close();
+    const std::string label_file_path2 = tmp_dir_ + "/test2.lbl";
+    std::ofstream label_file2(label_file_path2);
+    ASSERT(label_file2.is_open(), "Could not open label file");
+    label_file2 << "2";
+    label_file2.close();
+    ASSERT(!label_file2.is_open(), "Could not close label file");
   }
 
   void TearDown() override {
