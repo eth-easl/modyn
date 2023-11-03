@@ -11,16 +11,6 @@ message(STATUS "FETCHCONTENT_BASE_DIR = ${FETCHCONTENT_BASE_DIR}.")
 ################### libpq++ ####################
 find_package(PostgreSQL REQUIRED) # This needs to be installed on the system - cannot do a lightweight CMake install
 
-################### sqlite ####################
-message(STATUS "Making sqlite available.")
-
-FetchContent_Declare(
-  sqlite
-  GIT_REPOSITORY https://github.com/rhuijben/sqlite-amalgamation
-  GIT_TAG 3.44.0
-)
-FetchContent_MakeAvailable(sqlite)
-
 ################### rapidcsv ####################
 message(STATUS "Making rapidcsv available.")
 
