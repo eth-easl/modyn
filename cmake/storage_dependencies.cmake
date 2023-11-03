@@ -11,6 +11,16 @@ message(STATUS "FETCHCONTENT_BASE_DIR = ${FETCHCONTENT_BASE_DIR}.")
 ################### libpq++ ####################
 find_package(PostgreSQL REQUIRED) # This needs to be installed on the system - cannot do a lightweight CMake install
 
+################### sqlite ####################
+message(STATUS "Making sqlite available.")
+
+FetchContent_Declare(
+  sqlite
+  GIT_REPOSITORY https://github.com/rhuijben/sqlite-amalgamation
+  GIT_TAG 3.44.0
+)
+FetchContent_MakeAvailable(sqlite)
+
 ################### rapidcsv ####################
 message(STATUS "Making rapidcsv available.")
 
@@ -32,7 +42,7 @@ FetchContent_Declare(
 set(SOCI_TESTS OFF CACHE BOOL "soci configuration")
 set(SOCI_CXX11 ON CACHE BOOL "soci configuration")
 set(SOCI_STATIC ON CACHE BOOL "soci configuration")
-set(SOCI_SHARED ON CACHE BOOL "soci configuration")
+set(SOCI_SHARED OFF CACHE BOOL "soci configuration")
 set(SOCI_EMPTY OFF CACHE BOOL "soci configuration")
 set(SOCI_HAVE_BOOST OFF CACHE BOOL "configuration" FORCE)
 
