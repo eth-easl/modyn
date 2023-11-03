@@ -643,6 +643,11 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, co
     return {};
   }
 
+  if (number_of_files < 0) {
+    SPDLOG_ERROR(fmt::format("Number of files for dataset {} is below zero: {}", dataset_id, number_of_files));
+    return {};
+  }
+
   return get_file_ids_given_number_of_files(session, dataset_id, start_timestamp, end_timestamp, number_of_files);
 }
 
@@ -671,6 +676,7 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_given_number_of_files(soci
                                                                             const int64_t start_timestamp,
                                                                             const int64_t end_timestamp,
                                                                             const int64_t number_of_files) {
+  ASSERT(number_of_files >= 0, "This function should only be called for a non-negative number of files");
   std::vector<int64_t> file_ids(number_of_files + 1);
 
   if (start_timestamp >= 0 && end_timestamp == -1) {

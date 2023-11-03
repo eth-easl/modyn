@@ -196,10 +196,9 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
         session << fmt::format(
             "CREATE TABLE IF NOT EXISTS {} "
             "PARTITION OF samples "
-            "FOR VALUES IN (:dataset_id) "
+            "FOR VALUES IN ({}) "
             "PARTITION BY HASH (sample_id)",
-            dataset_partition_table_name),
-            soci::use(dataset_id);
+            dataset_partition_table_name, dataset_id);
       } catch (const soci::soci_error& e) {
         // TODO(MaxiBoether): In this case, return failure!
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
@@ -211,9 +210,8 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
           session << fmt::format(
               "CREATE TABLE IF NOT EXISTS {} "
               "PARTITION OF {} "
-              "FOR VALUES WITH (modulus :hash_partition_modulus, REMAINDER :i)",
-              hash_partition_name, dataset_partition_table_name),
-              soci::use(hash_partition_modulus_), soci::use(i);
+              "FOR VALUES WITH (modulus {}, REMAINDER {})",
+              hash_partition_name, dataset_partition_table_name, hash_partition_modulus_, i);
         }
       } catch (const soci::soci_error& e) {
         // TODO(MaxiBoether): In this case, return failure!
