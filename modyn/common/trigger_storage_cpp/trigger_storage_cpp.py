@@ -277,10 +277,10 @@ class TriggerStorageCPP:
         """
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
-        array = np.empty((end_index - start_index,), dtype=[("f0", "<i8"), ("f1", "<f8")])
+        array = np.empty((_MAX_SAMPLE_QUANTITY,), dtype=[("f0", "<i8"), ("f1", "<f8")])
 
         if self._parse_file_subset_impl(file, array, 0, start_index, end_index):
-            return array
+            return array[: end_index - start_index]
 
         raise IndexError("End index exceeds amount of trigger samples!")
 

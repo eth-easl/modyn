@@ -189,7 +189,7 @@ def test_seed():
 
 def test_instantiate_class_existing():
     # class with a single parameter
-    trigger_storage = instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage", "test_path")
+    trigger_storage = instantiate_class("modyn.common.trigger_storage_cpp", "TriggerSampleStorage", "test_path")
     assert isinstance(trigger_storage, TriggerSampleStorage)
     assert trigger_storage.trigger_sample_directory == "test_path"
     # class with several parameters
