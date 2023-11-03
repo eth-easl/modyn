@@ -51,10 +51,11 @@ class StorageDatabaseConnection {
     if constexpr (std::is_same_v<T, int64_t>) {
       switch (props.get_data_type()) {
         case soci::dt_long_long:
-          static_assert(sizeof(long long) <= sizeof(int64_t),
+          static_assert(sizeof(long long) <= sizeof(int64_t),  // NOLINT(google-runtime-int)
                         "We currently assume long long is equal to or less than 64 bit.");
           return static_cast<T>(row.get<long long>(pos));  // NOLINT(google-runtime-int)
         case soci::dt_integer:
+          // NOLINTNEXTLINE(google-runtime-int)
           static_assert(sizeof(int) <= sizeof(int64_t), "We currently assume int is equal to or less than 64 bit.");
           return static_cast<T>(row.get<int>(pos));  // NOLINT(google-runtime-int)
         case soci::dt_unsigned_long_long:
@@ -78,7 +79,7 @@ class StorageDatabaseConnection {
     if constexpr (std::is_same_v<T, uint64_t>) {
       switch (props.get_data_type()) {
         case soci::dt_unsigned_long_long:
-          static_assert(sizeof(unsigned long long) <= sizeof(uint64_t),
+          static_assert(sizeof(unsigned long long) <= sizeof(uint64_t),  // NOLINT(google-runtime-int)
                         "We currently assume unsined long long is equal to or less than 64 bit.");
           return static_cast<T>(row.get<unsigned long long>(pos));  // NOLINT(google-runtime-int)
         case soci::dt_long_long:
