@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 class SupervisorGRPCServer(GenericGRPCServer):
     @staticmethod
-    def callback(modyn_config: dict, server: Any, supervisor: Supervisor) -> None:  # pylint: disable=unused-argument
-        add_SupervisorServicer_to_server(SupervisorGRPCServicer(supervisor), server)
+    def callback(modyn_config: dict, server: Any, supervisor: Supervisor) -> None:
+        add_SupervisorServicer_to_server(SupervisorGRPCServicer(supervisor, modyn_config), server)
 
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config

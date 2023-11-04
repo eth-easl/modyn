@@ -69,17 +69,16 @@ class GRPCHandler:
     def __init__(
         self,
         modyn_config: dict,
-        progress_mgr: Optional[int] = None,
-        status_bar: Optional[int] = None,
+        # progress_mgr: Optional[int] = None,
+        # status_bar: Optional[int] = None,
     ):
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
         self.connected_to_selector = False
         self.connected_to_evaluator = False
-        self.progress_mgr = progress_mgr
-        self.status_bar = status_bar
-        self.test_pm: Optional[enlighten.Manager] = None
+        # self.progress_mgr = progress_mgr
+        # self.status_bar = status_bar
 
         self.init_storage()
         self.init_selector()
@@ -392,8 +391,8 @@ class GRPCHandler:
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> dict[str, Any]:  # pragma: no cover
-        assert self.progress_mgr is not None
-        assert self.status_bar is not None
+        # assert self.progress_mgr is not None
+        # assert self.status_bar is not None
 
         if not self.connected_to_trainer_server:
             raise ConnectionError(
@@ -403,8 +402,10 @@ class GRPCHandler:
 
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         status_bar_scale = self.get_status_bar_scale(pipeline_id)
+        assert total_samples is not None
+        assert status_bar_scale is not None
 
-        status_tracker = TrainingStatusTracker(self.test_pm, training_id, total_samples, status_bar_scale)
+        # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -434,7 +435,7 @@ class GRPCHandler:
                         res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
 
-                    status_tracker.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
+                    # status_tracker.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -445,7 +446,7 @@ class GRPCHandler:
                 trainer_log = json.loads(res.log.value)
                 break
 
-        status_tracker.close_counter()
+        # status_tracker.close_counter()
         logger.info("Training completed 🚀")
 
         return trainer_log
@@ -555,8 +556,8 @@ class GRPCHandler:
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
     def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
-        assert self.progress_mgr is not None
-        assert self.status_bar is not None
+        # assert self.progress_mgr is not None
+        # assert self.status_bar is not None
 
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
@@ -568,7 +569,8 @@ class GRPCHandler:
         working_queue: deque[int] = deque()
         blocked_in_a_row: dict[int, int] = {}
         for evaluation_id, status_tracker in evaluations.items():
-            status_tracker.create_counter(self.test_pm, training_id, evaluation_id)
+            # status_tracker.create_counter(self.progress_mgr, training_id, evaluation_id)
+            assert status_tracker is not None
             working_queue.append(evaluation_id)
             blocked_in_a_row[evaluation_id] = 0
 

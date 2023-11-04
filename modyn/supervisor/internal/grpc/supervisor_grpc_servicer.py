@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 class SupervisorGRPCServicer(SupervisorServicer):
     """Provides methods that implement functionality of the selector."""
 
-    def __init__(self, supervisor: Supervisor) -> None:
+    def __init__(self, supervisor: Supervisor, modyn_config: dict) -> None:
+        self.modyn_config = modyn_config
         self._supervisor = supervisor
 
     def start_pipeline(self, request: StartPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
