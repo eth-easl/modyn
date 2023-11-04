@@ -8,10 +8,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
-from modyn.supervisor import Supervisor
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor
+from modyn.supervisor.supervisor import Supervisor
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}

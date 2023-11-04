@@ -61,7 +61,7 @@ class Supervisor:
         logging.info("Setting up connections to cluster components.")
         self.grpc.init_cluster_connection()
         self.init_metadata_db()
-        
+
         # TODO(#317): seed per pipeline instead of per system
         if "seed" in self.modyn_config:
             self.grpc.seed_selector(self.modyn_config["seed"])

@@ -69,7 +69,7 @@ def noop_init_metadata_db(self) -> None:
 def test_init():
     modyn_config = get_minimal_modyn_config()
     sup = Supervisor(modyn_config)
-    servicer = SupervisorGRPCServicer(sup)
+    servicer = SupervisorGRPCServicer(sup, modyn_config)
     assert servicer._supervisor == sup
 
 
@@ -79,7 +79,7 @@ def test_init():
 def test_start_pipeline(test_start_pipeline: MagicMock):
     modyn_config = get_minimal_modyn_config()
     sup = Supervisor(modyn_config)
-    servicer = SupervisorGRPCServicer(sup)
+    servicer = SupervisorGRPCServicer(sup, modyn_config)
 
     pipeline_config = get_minimal_pipeline_config()
     request = StartPipelineRequest(

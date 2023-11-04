@@ -79,6 +79,14 @@ class GRPCHandler:
         self.connected_to_evaluator = False
         self.progress_mgr = progress_mgr
         self.status_bar = status_bar
+        self.storage: Optional[StorageStub] = None
+        self.storage_channel: Optional[grpc.Channel] = None
+        self.selector: Optional[SelectorStub] = None
+        self.selector_channel: Optional[grpc.Channel] = None
+        self.trainer_server: Optional[TrainerServerStub] = None
+        self.trainer_server_channel: Optional[grpc.Channel] = None
+        self.evaluator: Optional[EvaluatorStub] = None
+        self.evaluator_channel: Optional[grpc.Channel] = None
 
     def init_cluster_connection(self) -> None:
         self.init_storage()
