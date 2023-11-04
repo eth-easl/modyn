@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from modyn.supervisor.internal.grpc.supervisor_grpc_server import SupervisorGRPCServer
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.supervisor import Supervisor
+from modyn.supervisor.internal.supervisor import Supervisor
 
 
 def noop_init_metadata_db(self):

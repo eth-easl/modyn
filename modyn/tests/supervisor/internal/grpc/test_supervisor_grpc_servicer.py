@@ -11,7 +11,7 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (  # noqa: E
 )
 from modyn.supervisor.internal.grpc.supervisor_grpc_servicer import SupervisorGRPCServicer
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.supervisor import Supervisor
+from modyn.supervisor.internal.supervisor import Supervisor
 
 EVALUATION_DIRECTORY: str = str(pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir")
 

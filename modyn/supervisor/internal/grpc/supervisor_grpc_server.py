@@ -6,7 +6,7 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import (  # no
     add_SupervisorServicer_to_server,
 )
 from modyn.supervisor.internal.grpc.supervisor_grpc_servicer import SupervisorGRPCServicer
-from modyn.supervisor.supervisor import Supervisor
+from modyn.supervisor.internal.supervisor import Supervisor
 
 logger = logging.getLogger(__name__)
 

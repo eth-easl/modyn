@@ -8,7 +8,7 @@ import grpc
 # pylint: disable=no-name-in-module
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorServicer  # noqa: E402, E501
-from modyn.supervisor.supervisor import Supervisor
+from modyn.supervisor.internal.supervisor import Supervisor
 
 logger = logging.getLogger(__name__)
 
