@@ -69,8 +69,8 @@ class GRPCHandler:
     def __init__(
         self,
         modyn_config: dict,
-        progress_mgr: Optional[enlighten.Manager] = None,
-        status_bar: Optional[enlighten.StatusBar] = None,
+        progress_mgr: Optional[int] = None,
+        status_bar: Optional[int] = None,
     ):
         self.config = modyn_config
         self.connected_to_storage = False
@@ -79,6 +79,7 @@ class GRPCHandler:
         self.connected_to_evaluator = False
         self.progress_mgr = progress_mgr
         self.status_bar = status_bar
+        self.test_pm: Optional[enlighten.Manager] = None
 
         self.init_storage()
         self.init_selector()
@@ -398,12 +399,12 @@ class GRPCHandler:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
-        self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
+        # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         status_bar_scale = self.get_status_bar_scale(pipeline_id)
 
-        status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
+        status_tracker = TrainingStatusTracker(self.test_pm, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -560,14 +561,14 @@ class GRPCHandler:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
-        self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
+        # self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
 
         # We are using a deque here in order to fetch the status of each evaluation
         # sequentially in a round-robin manner.
         working_queue: deque[int] = deque()
         blocked_in_a_row: dict[int, int] = {}
         for evaluation_id, status_tracker in evaluations.items():
-            status_tracker.create_counter(self.progress_mgr, training_id, evaluation_id)
+            status_tracker.create_counter(self.test_pm, training_id, evaluation_id)
             working_queue.append(evaluation_id)
             blocked_in_a_row[evaluation_id] = 0
 
@@ -611,7 +612,7 @@ class GRPCHandler:
             sleep(1)
 
         logger.info("Evaluation completed ✅")
-        self.status_bar.update(demo="Evaluation completed")
+        # self.status_bar.update(demo="Evaluation completed")
 
     def store_evaluation_results(
         self,
