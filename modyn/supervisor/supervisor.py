@@ -40,14 +40,7 @@ class Supervisor:
         self.modyn_config = modyn_config
         self._manager = Manager()
         self._next_pipeline_lock = self._manager.Lock()
-        # self.grpc = GRPCHandler(self.modyn_config)
-
-        logging.info("Setting up connections to cluster components.")
-        self.init_metadata_db()
-
-        # TODO(#317): seed per pipeline instead of per system
-        # if "seed" in self.modyn_config:
-        #     self.grpc.seed_selector(self.modyn_config["seed"])
+        self.grpc = GRPCHandler(self.modyn_config)
 
         # TODO(#317): redesign tensorboard. ignore it for now
         # if "tensorboard" in self.modyn_config:
@@ -63,6 +56,15 @@ class Supervisor:
     def init_metadata_db(self) -> None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
             database.create_tables()
+
+    def init_cluster_connection(self) -> None:
+        logging.info("Setting up connections to cluster components.")
+        self.grpc.init_cluster_connection()
+        self.init_metadata_db()
+        
+        # TODO(#317): seed per pipeline instead of per system
+        if "seed" in self.modyn_config:
+            self.grpc.seed_selector(self.modyn_config["seed"])
 
     def validate_pipeline_config_schema(self, pipeline_config: dict) -> bool:
         schema_path = (

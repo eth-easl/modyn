@@ -40,16 +40,16 @@ class PipelineExecutor:
         if self.pipeline_config["training"]["initial_model"] == "pretrained":
             self.previous_model_id = self.pipeline_config["training"]["initial_model_id"]
 
-        # self.progress_mgr = enlighten.get_manager()
-        # self.status_bar = self.progress_mgr.status_bar(
-        #     status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
-        #     color="bold_underline_bright_white_on_lightslategray",
-        #     justify=enlighten.Justify.CENTER,
-        #     demo="Initializing",
-        #     autorefresh=True,
-        #     min_delta=0.5,
-        # )
-        self.grpc = GRPCHandler(self.modyn_config)
+        self.progress_mgr = enlighten.get_manager()
+        self.status_bar = self.progress_mgr.status_bar(
+            status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
+            color="bold_underline_bright_white_on_lightslategray",
+            justify=enlighten.Justify.CENTER,
+            demo="Initializing",
+            autorefresh=True,
+            min_delta=0.5,
+        )
+        self.grpc = GRPCHandler(self.modyn_config, self.progress_mgr, self.status_bar)
 
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
