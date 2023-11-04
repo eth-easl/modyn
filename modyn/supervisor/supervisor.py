@@ -40,14 +40,14 @@ class Supervisor:
         self.modyn_config = modyn_config
         self._manager = Manager()
         self._next_pipeline_lock = self._manager.Lock()
-        self.grpc = GRPCHandler(self.modyn_config)
+        # self.grpc = GRPCHandler(self.modyn_config)
 
         logging.info("Setting up connections to cluster components.")
         self.init_metadata_db()
 
         # TODO(#317): seed per pipeline instead of per system
-        if "seed" in self.modyn_config:
-            self.grpc.seed_selector(self.modyn_config["seed"])
+        # if "seed" in self.modyn_config:
+        #     self.grpc.seed_selector(self.modyn_config["seed"])
 
         # TODO(#317): redesign tensorboard. ignore it for now
         # if "tensorboard" in self.modyn_config:
@@ -183,17 +183,17 @@ class Supervisor:
             pipeline_config
         )
 
-    def dataset_available(self, pipeline_config: dict) -> bool:
-        dataset_id = pipeline_config["data"]["dataset_id"]
-        available = self.grpc.dataset_available(dataset_id)
+    # def dataset_available(self, pipeline_config: dict) -> bool:
+    #     dataset_id = pipeline_config["data"]["dataset_id"]
+    #     available = self.grpc.dataset_available(dataset_id)
 
-        if not available:
-            logger.error(f"Dataset {dataset_id} not available at storage.")
+    #     if not available:
+    #         logger.error(f"Dataset {dataset_id} not available at storage.")
 
-        return available
+    #     return available
 
-    def validate_system(self, pipeline_config: dict) -> bool:
-        return self.dataset_available(pipeline_config) and self.grpc.trainer_server_available()
+    # def validate_system(self, pipeline_config: dict) -> bool:
+    #     return self.dataset_available(pipeline_config) and self.grpc.trainer_server_available()
 
     def register_pipeline(self, pipeline_config: dict) -> int:
         """
@@ -322,10 +322,11 @@ class Supervisor:
         if not is_directory_writable(eval_directory):
             raise ValueError("No permission to write to the evaluation results directory.")
 
-        if not self.validate_system(pipeline_config):
-            raise ValueError("Invalid system configuration")
+        # if not self.validate_system(pipeline_config):
+        #     raise ValueError("Invalid system configuration")
 
-        start_timestamp = self.grpc.get_time_at_storage()
+        # start_timestamp = self.grpc.get_time_at_storage()
+        start_timestamp = 0
         pipeline_id = self.register_pipeline(pipeline_config)
         logger.info(f"Pipeline {pipeline_id} registered, start executing.")
 
