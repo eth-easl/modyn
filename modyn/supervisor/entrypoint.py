@@ -5,7 +5,6 @@ import os
 import pathlib
 
 import yaml
-from modyn.supervisor.internal.grpc.supervisor_grpc_server import SupervisorGRPCServer
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -21,6 +20,10 @@ except RuntimeError as error:
     if mp.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
         logger.error(f"Start method is already set to {mp.get_start_method()}")
         raise error
+
+from modyn.supervisor.internal.grpc.supervisor_grpc_server import (  # noqa # pylint: disable=wrong-import-position
+    SupervisorGRPCServer,
+)
 
 
 def setup_argparser() -> argparse.ArgumentParser:
