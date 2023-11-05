@@ -59,6 +59,10 @@ Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-na
       return {StatusCode::OK, "Dataset does not exist."};
     }
     const int64_t request_timestamp = request->timestamp();
+
+    SPDLOG_INFO(fmt::format("Received GetNewDataSince Request for dataset {} (id = {}) with timestamp {}.",
+                            request->dataset_id(), dataset_id, request_timestamp));
+
     send_file_ids_and_labels<modyn::storage::GetNewDataSinceResponse>(writer, dataset_id, request_timestamp);
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
@@ -401,6 +405,7 @@ void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const
   soci::session session = storage_database_connection_.get_session();
 
   const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
+  SPDLOG_INFO(fmt::format("send_file_ids_and_labels got {} file ids.", file_ids.size()));
 
   std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
 
@@ -434,6 +439,7 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
   soci::session session = storage_database_connection.get_session();
   for (const int64_t file_id : file_ids) {
     const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
+    SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples))
     if (number_of_samples > 0) {
       const std::string query = fmt::format(
           "SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = {}", file_id, dataset_id);
@@ -444,6 +450,8 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
 
       while (true) {
         records = cursor_handler.yield_per(sample_batch_size);
+
+        SPDLOG_INFO(fmt::format("got {} records (batch size = {})", records.size(), sample_batch_size));
         if (records.empty()) {
           break;
         }
@@ -507,7 +515,7 @@ void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage:
 
 std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
                                                                               const int64_t retrieval_threads) {
-  ASSERT(retrieval_threads > 1, "This function is only intended for multi-threade retrieval.");
+  ASSERT(retrieval_threads > 0, "This function is only intended for multi-threade retrieval.");
   std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
   try {
     auto number_of_files = static_cast<uint64_t>(file_ids.size());
