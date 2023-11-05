@@ -15,7 +15,7 @@ void StorageGrpcServer::run() {
     SPDLOG_ERROR("No retrieval_threads specified in config.yaml");
     return;
   }
-  auto retrieval_threads = config_["storage"]["retrieval_threads"].as<int64_t>();
+  auto retrieval_threads = config_["storage"]["retrieval_threads"].as<uint64_t>();
   StorageServiceImpl service(config_, retrieval_threads);
 
   EnableDefaultHealthCheckService(true);

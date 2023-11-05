@@ -38,7 +38,7 @@ struct DatasetData {
 
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
  public:
-  explicit StorageServiceImpl(const YAML::Node& config, int64_t retrieval_threads = 1)
+  explicit StorageServiceImpl(const YAML::Node& config, uint64_t retrieval_threads = 1)
       : Service(),  // NOLINT readability-redundant-member-init  (we need to call the base constructor)
         config_{config},
         retrieval_threads_{retrieval_threads},
@@ -119,7 +119,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
  private:
   YAML::Node config_;
   int64_t sample_batch_size_ = 10000;
-  int64_t retrieval_threads_;
+  uint64_t retrieval_threads_;
   bool disable_multithreading_;
   StorageDatabaseConnection storage_database_connection_;
 };

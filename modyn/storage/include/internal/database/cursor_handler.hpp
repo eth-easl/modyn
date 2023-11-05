@@ -30,7 +30,7 @@ class CursorHandler {
         auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session_.get_backend());
         PGconn* conn = postgresql_session_backend->conn_;
 
-        const std::string declare_cursor = fmt::format("DECLARE {} CURSOR FOR {}", cursor_name_, query);
+        const std::string declare_cursor = fmt::format("DECLARE {} CURSOR WITH HOLD FOR {}", cursor_name_, query);
         PGresult* result = PQexec(conn, declare_cursor.c_str());
 
         if (PQresultStatus(result) != PGRES_COMMAND_OK) {
