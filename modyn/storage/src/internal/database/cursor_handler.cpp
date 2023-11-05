@@ -7,7 +7,7 @@
 using namespace modyn::storage;
 
 std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_to_fetch) {
-  std::vector<SampleRecord> records(number_of_rows_to_fetch);
+  std::vector<SampleRecord> records;
   check_cursor_initialized();
 
   switch (driver_) {
@@ -22,7 +22,8 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
         return records;
       }
 
-      const int rows = PQntuples(result);
+      const uint64_t rows = static_cast<uint64_t>(PQntuples(result));
+      records.resize(rows);
 
       for (int i = 0; i < rows; i++) {
         SampleRecord record{};
