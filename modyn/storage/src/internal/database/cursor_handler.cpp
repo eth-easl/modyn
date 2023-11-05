@@ -25,7 +25,7 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
       const uint64_t rows = static_cast<uint64_t>(PQntuples(result));
       records.resize(rows);
 
-      for (int i = 0; i < rows; i++) {
+      for (uint64_t i = 0; i < rows; ++i) {
         SampleRecord record{};
         record.id = std::stoll(PQgetvalue(result, i, 0));
         if (number_of_columns_ > 1) {
