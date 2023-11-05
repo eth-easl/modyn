@@ -439,7 +439,7 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
   soci::session session = storage_database_connection.get_session();
   for (const int64_t file_id : file_ids) {
     const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
-    SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples))
+    SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples));
     if (number_of_samples > 0) {
       const std::string query = fmt::format(
           "SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = {}", file_id, dataset_id);
