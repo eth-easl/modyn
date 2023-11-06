@@ -152,6 +152,9 @@ Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT readability-identifie
 Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
     modyn::storage::DeleteDatasetResponse* response) {
+  // TODO remove this
+
+  return {StatusCode::OK, "Error deleting dataset."};
   try {
     response->set_success(false);
     int64_t filesystem_wrapper_type;
