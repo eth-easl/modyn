@@ -23,11 +23,13 @@ const int DTYPE_SIZE = 16;
  * @param worker_subset_size Total amount of samples to store
  * @return uint64_t Amount of samples
  */
-uint64_t get_worker_samples_impl(const char* folder, const char* pattern, void* array, const uint64_t start_index,
-                                 const std::size_t worker_subset_size) {
+void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pattern, const uint64_t start_index,
+                              const std::size_t worker_subset_size) {
   std::vector<std::string> matching_files = get_matching_files(folder, pattern);
-  std::size_t array_offset = 0;
+  std::size_t samples = 0;
   std::size_t current_index = 0;
+
+  std::vector<char> char_vector;
 
   for (const std::string& filename : matching_files) {
     if (current_index >= start_index + worker_subset_size) {
@@ -47,18 +49,23 @@ uint64_t get_worker_samples_impl(const char* folder, const char* pattern, void* 
       //  or completely from 0 to the end of the file.
       // Because the end index is exclusive, we compare < instead of <= otherwise we would retrieve
       // one more sample than we should
-      parse_file_subset_impl(filename.c_str(), array, array_offset, start, num_samples);
-      array_offset += num_samples - start;
+      parse_file_subset(filename.c_str(), char_vector, samples, start, num_samples);
+      samples += num_samples - start;
       current_index += num_samples;
       continue;
     }
 
-    parse_file_subset_impl(filename.c_str(), array, array_offset, start,
-                           start_index + worker_subset_size - current_index);
-    array_offset += start_index + worker_subset_size - current_index - start;
+    parse_file_subset(filename.c_str(), char_vector, samples, start, start_index + worker_subset_size - current_index);
+    samples += start_index + worker_subset_size - current_index - start;
     break;
   }
-  return array_offset;
+
+  void* array = malloc(sizeof(char) * DTYPE_SIZE * samples);
+
+  memcpy((char*)array, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
+
+  size[0] = samples;
+  return array;
 }
 
 /**
@@ -69,14 +76,30 @@ uint64_t get_worker_samples_impl(const char* folder, const char* pattern, void* 
  * @param array Array to store the samples in
  * @return uint64_t Amount of samples
  */
-uint64_t get_all_samples_impl(const char* folder, const char* pattern, void* array) {
+void* get_all_samples_impl(const char* folder, uint64_t* size, const char* pattern) {
   std::vector<std::string> matching_files = get_matching_files(folder, pattern);
-  std::size_t array_offset = 0;
+  std::vector<char> char_vector;
+
+  std::size_t samples = 0;
 
   for (const std::string& filename : matching_files) {
-    array_offset += parse_file_impl(filename.c_str(), array, array_offset);
+    std::ifstream file = open_file(filename.c_str());
+    read_magic(file);
+    std::size_t samples_in_file = read_data_size_from_header(file);
+
+    char_vector.resize(DTYPE_SIZE * (samples + samples_in_file));
+    file.read(char_vector.data() + DTYPE_SIZE * samples, DTYPE_SIZE * samples_in_file);
+    samples += samples_in_file;
+
+    file.close();
   }
-  return array_offset;
+
+  void* array = malloc(sizeof(char) * DTYPE_SIZE * samples);
+
+  memcpy((char*)array, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
+
+  size[0] = samples;
+  return array;
 }
 
 /**
@@ -134,6 +157,30 @@ uint64_t parse_file_impl(const char* filename, void* array, const uint64_t array
 }
 
 /**
+ * @brief Read samples from file
+ *
+ * @param filename File to read from
+ * @param array Array to write to
+ * @return uint64_t Amount of samples read
+ */
+void* parse_file_direct_impl(const char* filename, uint64_t* size) {
+  std::ifstream file = open_file(filename);
+  read_magic(file);
+  std::size_t samples = read_data_size_from_header(file);
+
+  size[0] = samples;
+
+  void* array = malloc(sizeof(char) * DTYPE_SIZE * samples);
+
+  file.read((char*)array, sizeof(char) * DTYPE_SIZE * samples);
+  file.close();
+
+  return array;
+}
+
+void release_array_impl(void* array) { free(array); }
+
+/**
  * @brief Read subset of samples from file
  *
  * @param filename File to read from
@@ -143,13 +190,13 @@ uint64_t parse_file_impl(const char* filename, void* array, const uint64_t array
  * @return true File read succesfully
  * @return false end_index exceeds samples of file
  */
-bool parse_file_subset_impl(const char* filename, void* array, const uint64_t array_offset, const uint64_t start_index,
-                            const uint64_t end_index) {
+bool parse_file_subset(const char* filename, std::vector<char>& char_vector, const uint64_t samples,
+                       const uint64_t start_index, const uint64_t end_index) {
   std::ifstream file = open_file(filename);
   read_magic(file);
-  std::size_t samples = read_data_size_from_header(file);
+  std::size_t samples_in_file = read_data_size_from_header(file);
 
-  if (end_index > samples) {
+  if (end_index > samples_in_file) {
     return false;
   }
 
@@ -157,9 +204,10 @@ bool parse_file_subset_impl(const char* filename, void* array, const uint64_t ar
   std::size_t num_bytes = (end_index - start_index) * DTYPE_SIZE;
 
   file.seekg(offset, std::ios::cur);
-  file.read((char*)array + DTYPE_SIZE * array_offset, DTYPE_SIZE * num_bytes);
-  file.close();
+  char_vector.resize(DTYPE_SIZE * (samples + num_bytes));
+  file.read(char_vector.data() + DTYPE_SIZE * samples, DTYPE_SIZE * num_bytes);
 
+  file.close();
   return true;
 }
 

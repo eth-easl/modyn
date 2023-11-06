@@ -4,15 +4,18 @@
 #include <vector>
 
 namespace modyn::common::trigger_storage_cpp {
-uint64_t get_worker_samples_impl(const char* folder, const char* pattern, void* array, const uint64_t start_index,
-                                 const size_t worker_subset_size);
-uint64_t get_all_samples_impl(const char* folder, const char* pattern, void* array);
+
+void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pattern, const uint64_t start_index,
+                              const size_t worker_subset_size);
+void* get_all_samples_impl(const char* folder, uint64_t* size, const char* pattern);
 uint64_t get_num_samples_in_file_impl(const char* filename);
 uint64_t parse_file_impl(const char* filename, void* array, const uint64_t array_offset);
-bool parse_file_subset_impl(const char* filename, void* array, const uint64_t array_offset, uint64_t start_index,
-                            uint64_t end_index);
+bool parse_file_subset(const char* filename, std ::vector<char>& char_vector, const uint64_t samples,
+                       uint64_t start_index, uint64_t end_index);
 void write_file_impl(const char* filename, void* array, const size_t array_length, const char* header,
                      const size_t header_length);
+void* parse_file_direct_impl(const char* filename, uint64_t* size);
+void release_array_impl(void* array);
 
 std::vector<std::string> get_matching_files(const char* folder, const char* pattern);
 std::size_t read_data_size_from_header(std::ifstream& file);
