@@ -494,7 +494,7 @@ void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage:
 
     auto thread_function = [this, writer, &writer_mutex, &file_ids_per_thread, &request_keys, &dataset_data, &session,
                             &driver](int64_t thread_id) {
-      for (int64_t file_id : file_ids_per_thread[thread_id]) {
+      for (const int64_t file_id : file_ids_per_thread[thread_id]) {
         const std::vector<int64_t>& samples_corresponding_to_file =
             get_samples_corresponding_to_file(file_id, dataset_data.dataset_id, request_keys, session);
         send_sample_data_for_keys_and_file(writer, writer_mutex, file_id, samples_corresponding_to_file, dataset_data,
@@ -514,15 +514,15 @@ void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage:
 }
 
 std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
-                                                                              const int64_t retrieval_threads) {
+                                                                              const uint64_t retrieval_threads) {
   ASSERT(retrieval_threads > 0, "This function is only intended for multi-threade retrieval.");
   std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
   try {
     auto number_of_files = static_cast<uint64_t>(file_ids.size());
-    const int64_t subset_size = (number_of_files + retrieval_threads - 1) / retrieval_threads;
-    for (int64_t thread_id = 0; thread_id < retrieval_threads; ++thread_id) {
-      const int64_t start_index = thread_id * subset_size;
-      const int64_t end_index = (thread_id + 1) * subset_size;
+    const uint64_t subset_size = (number_of_files + retrieval_threads - 1) / retrieval_threads;
+    for (uint64_t thread_id = 0; thread_id < retrieval_threads; ++thread_id) {
+      const uint64_t start_index = thread_id * subset_size;
+      const uint64_t end_index = (thread_id + 1) * subset_size;
       if (thread_id == retrieval_threads - 1) {
         file_ids_per_thread[thread_id] = std::vector<int64_t>(file_ids.begin() + start_index, file_ids.end());
       } else {

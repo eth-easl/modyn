@@ -110,7 +110,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static std::vector<int64_t> get_file_ids_for_samples(const std::vector<int64_t>& request_keys, int64_t dataset_id,
                                                        soci::session& session);
   static std::vector<std::vector<int64_t>> get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
-                                                                   int64_t retrieval_threads);
+                                                                   uint64_t retrieval_threads);
   static std::vector<int64_t> get_samples_corresponding_to_file(int64_t file_id, int64_t dataset_id,
                                                                 const std::vector<int64_t>& request_keys,
                                                                 soci::session& session);
