@@ -15,7 +15,7 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
   switch (driver_) {
     case DatabaseDriver::POSTGRESQL: {
       const std::string fetch_query = fmt::format("FETCH {} FROM {}", number_of_rows_to_fetch, cursor_name_);
-      ASSERT(number_of_rows_to_fetch <= std::numeric_limits<int>::max,
+      ASSERT(number_of_rows_to_fetch <= std::numeric_limits<int>::max(),
              "Postgres can only accept up to MAX_INT rows per iteration");
 
       PGresult* result = PQexec(postgresql_conn_, fetch_query.c_str());
