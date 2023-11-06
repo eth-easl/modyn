@@ -336,43 +336,84 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
       return {StatusCode::OK, "Dataset does not exist."};
     }
+    SPDLOG_INFO(
+        fmt::format("Received GetDataPerWorker Request for dataset {} (id = {}) and worker {} out of {} workers",
+                    request->dataset_id(), dataset_id, request->worker_id(), request->total_workers()));
 
     int64_t total_keys = 0;
     session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
         soci::into(total_keys), soci::use(dataset_id);
 
-    int64_t start_index = 0;
-    int64_t limit = 0;
-    std::tie(start_index, limit) = get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
+    if (total_keys > 0) {
+      int64_t start_index = 0;
+      int64_t limit = 0;
+      std::tie(start_index, limit) =
+          get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
 
-    std::vector<int64_t> keys;
-    keys.reserve(sample_batch_size_);
-    soci::statement stmt = (session.prepare << "SELECT sample_id FROM samples WHERE dataset_id = :dataset_id ORDER BY "
-                                               "sample_id OFFSET :start_index LIMIT :limit",
-                            soci::use(dataset_id), soci::use(start_index), soci::use(limit));
-    stmt.execute();
+      const std::string query =
+          fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id OFFSET {} LIMIT {}",
+                      dataset_id, start_index, limit);
+      const std::string cursor_name = fmt::format("pw_cursor_{}_{}", dataset_id, request->worker_id());
+      CursorHandler cursor_handler(session, storage_database_connection_.get_drivername(), query, cursor_name, 1);
 
-    int64_t key_value = 0;
-    stmt.exchange(soci::into(key_value));
-    while (stmt.fetch()) {
-      keys.push_back(key_value);
-      if (keys.size() % sample_batch_size_ == 0) {
-        modyn::storage::GetDataPerWorkerResponse response;
-        for (const auto& key : keys) {
-          response.add_keys(key);
+      std::vector<SampleRecord> records;
+      std::vector<SampleRecord> record_buf;
+      record_buf.reserve(sample_batch_size_);
+
+      while (true) {
+        records = cursor_handler.yield_per(sample_batch_size_);
+
+        SPDLOG_INFO(fmt::format("got {} records (batch size = {})", records.size(), sample_batch_size_));
+        if (records.empty()) {
+          break;
         }
-        writer->Write(response);
-        keys.clear();
+
+        const uint64_t obtained_records = records.size();
+        ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size_, "Received too many samples");
+
+        if (static_cast<int64_t>(records.size()) == sample_batch_size_) {
+          // If we obtained a full buffer, we can emit a response directly
+          modyn::storage::GetDataPerWorkerResponse response;
+          for (const auto& record : records) {
+            response.add_keys(record.id);
+          }
+
+          writer->Write(response);
+        } else {
+          // If not, we append to our record buf
+          record_buf.insert(record_buf.end(), records.begin(), records.end());
+          // If our record buf is big enough, emit a message
+          if (static_cast<int64_t>(records.size()) >= sample_batch_size_) {
+            modyn::storage::GetDataPerWorkerResponse response;
+
+            // sample_batch_size is signed int...
+            for (int64_t record_idx = 0; record_idx < sample_batch_size_; ++record_idx) {
+              const SampleRecord& record = record_buf[record_idx];
+              response.add_keys(record.id);
+            }
+
+            // Now, delete first sample_batch_size elements from vector as we are sending them
+            record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size_);
+
+            ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
+                   "The record buffer should never have more than 2*sample_batch_size elements!");
+
+            writer->Write(response);
+          }
+        }
       }
-    }
 
-    modyn::storage::GetDataPerWorkerResponse response;
-    for (auto key : keys) {
-      response.add_keys(key);
-    }
+      if (!record_buf.empty()) {
+        ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
+               "We should have written this buffer before!");
 
-    if (response.keys_size() > 0) {
-      writer->Write(response, WriteOptions().set_last_message());
+        modyn::storage::GetDataPerWorkerResponse response;
+        for (const auto& record : record_buf) {
+          response.add_keys(record.id);
+        }
+
+        writer->Write(response);
+      }
     }
 
     return {StatusCode::OK, "Data retrieved."};
