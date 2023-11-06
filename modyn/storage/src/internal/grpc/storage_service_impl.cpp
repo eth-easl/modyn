@@ -83,6 +83,10 @@ Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-
     }
     const int64_t start_timestamp = request->start_timestamp();
     const int64_t end_timestamp = request->end_timestamp();
+
+    SPDLOG_INFO(fmt::format("Received GetDataInInterval Request for dataset {} (id = {}) with start = {} and end = {}.",
+                            request->dataset_id(), dataset_id, start_timestamp, end_timestamp));
+
     send_file_ids_and_labels<modyn::storage::GetDataInIntervalResponse>(writer, dataset_id, start_timestamp,
                                                                         end_timestamp);
   } catch (const std::exception& e) {

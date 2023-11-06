@@ -182,7 +182,7 @@ def cleanup_storage_database() -> None:
 def add_image_to_dataset(image: Image, name: str) -> None:
     image.save(DATASET_PATH / name)
     IMAGE_UPDATED_TIME_STAMPS.append(
-        int(round(os.path.getmtime(DATASET_PATH / name) * 1000))
+        int(round(os.path.getmtime(DATASET_PATH / name)))
     )
 
 
@@ -343,7 +343,7 @@ def test_storage() -> None:
     assert response is not None, "Did not get any response from Storage"
     assert (
         len(response.keys) == 10
-    ), f"Not all images were returned. Images returned"
+    ), f"Not all images were returned. Images returned = {response.keys}"
 
     check_data(response.keys, SECOND_ADDED_IMAGES)
     check_dataset_size(20)
