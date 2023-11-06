@@ -501,6 +501,9 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
             // Now, delete first sample_batch_size elements from vector as we are sending them
             record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
 
+            ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
+                   "The record buffer should never have more than 2*sample_batch_size elements!");
+
             {
               const std::lock_guard<std::mutex> lock(writer_mutex);
               writer->Write(response);
@@ -513,6 +516,8 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
 
   // Iterated over all files, we now need to emit all data from buffer
   if (!record_buf.empty()) {
+    ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size, "We should have written this buffer before!");
+
     T response;
     for (const auto& record : record_buf) {
       response.add_keys(record.id);
@@ -530,6 +535,9 @@ void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage:
                                                     const std::vector<int64_t>& request_keys,
                                                     const DatasetData& dataset_data, soci::session& session,
                                                     const DatabaseDriver& driver) {
+  // TODO(maxiBoether): we need to benchmark this. In Python, we just get all samples from the DB and then fetch then
+  // from disk. Here, we first have to get all files with a big subq, then all samples for each file again. Not sure if
+  // this is faster instead of one big query and then parallelizing over that result.
   const std::vector<int64_t> file_ids = get_file_ids_for_samples(request_keys, dataset_data.dataset_id, session);
 
   if (file_ids.empty()) {
@@ -603,6 +611,12 @@ void StorageServiceImpl::send_sample_data_for_keys_and_file(ServerWriter<modyn::
                                                             const DatabaseDriver& driver,
                                                             const int64_t sample_batch_size) {
   try {
+    std::vector<SampleRecord> record_buf;
+    record_buf.reserve(sample_batch_size);
+
+    std::vector<std::vector<unsigned char>> sample_buf;
+    sample_buf.reserve(sample_batch_size);
+
     const YAML::Node file_wrapper_config_node = YAML::Load(dataset_data.file_wrapper_config);
     auto filesystem_wrapper =
         get_filesystem_wrapper(static_cast<FilesystemWrapperType>(dataset_data.filesystem_wrapper_type));
@@ -623,17 +637,64 @@ void StorageServiceImpl::send_sample_data_for_keys_and_file(ServerWriter<modyn::
       if (records.empty()) {
         break;
       }
-      std::vector<int64_t> sample_indexes(records.size());
-      for (size_t i = 0; i < records.size(); ++i) {
+      const uint64_t obtained_records = records.size();
+      ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
+
+      std::vector<int64_t> sample_indexes(obtained_records);
+      for (size_t i = 0; i < obtained_records; ++i) {
         sample_indexes[i] = records[i].column_1;
       }
       const auto samples = file_wrapper->get_samples_from_indices(sample_indexes);
 
+      if (static_cast<int64_t>(records.size()) == sample_batch_size) {
+        // If we obtained a full buffer, we can emit a response directly
+
+        modyn::storage::GetResponse response;
+        for (int64_t i = 0; i < sample_batch_size; ++i) {
+          response.add_keys(records[i].id);
+          response.add_labels(records[i].column_2);
+          response.add_samples(samples[i].data(), samples[i].size());
+        }
+        {
+          const std::lock_guard<std::mutex> lock(writer_mutex);
+          writer->Write(response);
+        }
+      } else {
+        // If not, we append to our buffers
+        record_buf.insert(record_buf.end(), records.begin(), records.end());
+        sample_buf.insert(sample_buf.end(), samples.begin(), samples.end());
+
+        // If our record buf is big enough, emit a message
+        if (static_cast<int64_t>(records.size()) >= sample_batch_size) {
+          modyn::storage::GetResponse response;
+          for (int64_t i = 0; i < sample_batch_size; ++i) {
+            response.add_keys(record_buf[i].id);
+            response.add_labels(record_buf[i].column_2);
+            response.add_samples(sample_buf[i].data(), sample_buf[i].size());
+          }
+          // Now, delete first sample_batch_size elements from vector as we are sending them
+          record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
+          sample_buf.erase(sample_buf.begin(), sample_buf.begin() + sample_batch_size);
+
+          ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
+                 "The record buffer should never have more than 2*sample_batch_size elements!");
+
+          {
+            const std::lock_guard<std::mutex> lock(writer_mutex);
+            writer->Write(response);
+          }
+        }
+      }
+    }
+
+    if (!record_buf.empty()) {
+      ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size, "We should have written this buffer before!");
+      const uint64_t buffer_size = record_buf.size();
       modyn::storage::GetResponse response;
-      for (size_t i = 0; i < records.size(); ++i) {
-        response.add_keys(records[i].id);
-        response.add_labels(records[i].column_2);
-        response.add_samples(samples[i].data(), samples[i].size());
+      for (uint64_t i = 0; i < buffer_size; ++i) {
+        response.add_keys(record_buf[i].id);
+        response.add_labels(record_buf[i].column_2);
+        response.add_samples(sample_buf[i].data(), sample_buf[i].size());
       }
       {
         const std::lock_guard<std::mutex> lock(writer_mutex);
@@ -658,8 +719,8 @@ std::vector<int64_t> StorageServiceImpl::get_samples_corresponding_to_file(const
     const std::string sample_placeholders = fmt::format("({})", fmt::join(request_keys, ","));
 
     const std::string sql = fmt::format(
-        "SELECT DISTINCT sample_id FROM (SELECT sample_id FROM samples WHERE file_id = :file_id AND dataset_id = "
-        ":dataset_id AND sample_id IN {})",
+        "SELECT sample_id FROM samples WHERE file_id = :file_id AND dataset_id = "
+        ":dataset_id AND sample_id IN {}",
         sample_placeholders);
     session << sql, soci::into(sample_ids), soci::use(file_id), soci::use(dataset_id);
   } catch (const std::exception& e) {
@@ -677,7 +738,8 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_for_samples(const std::vec
   const std::string sample_placeholders = fmt::format("({})", fmt::join(request_keys, ","));
 
   const std::string sql = fmt::format(
-      "SELECT DISTINCT file_id FROM (SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {})",
+      "SELECT DISTINCT file_id FROM (SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {}) "
+      "AS subq",
       sample_placeholders);
   std::vector<int64_t> file_ids(number_of_samples + 1);
   session << sql, soci::into(file_ids), soci::use(dataset_id);

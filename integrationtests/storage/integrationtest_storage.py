@@ -256,6 +256,7 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
         keys=keys,
     )
 
+    i = -1
     for i, response in enumerate(storage.Get(request)):
         if len(response.samples) == 0:
             assert False, f"Could not get image with key {keys[i]}."
