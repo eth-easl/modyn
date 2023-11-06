@@ -100,6 +100,7 @@ Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-
 
     // Check if the dataset exists
     const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+    SPDLOG_INFO(fmt::format("Received availability request for dataset {}", dataset_id));
 
     if (dataset_id == -1) {
       response->set_available(false);
@@ -117,6 +118,8 @@ Status StorageServiceImpl::RegisterNewDataset(  // NOLINT readability-identifier
     ServerContext* /*context*/, const modyn::storage::RegisterNewDatasetRequest* request,
     modyn::storage::RegisterNewDatasetResponse* response) {
   try {
+    SPDLOG_INFO(fmt::format("Received register new dataset request for {} at {}.", request->dataset_id(),
+                            request->base_path()));
     const bool success = storage_database_connection_.add_dataset(
         request->dataset_id(), request->base_path(),
         FilesystemWrapper::get_filesystem_wrapper_type(request->filesystem_wrapper_type()),
@@ -135,6 +138,7 @@ Status StorageServiceImpl::GetCurrentTimestamp(  // NOLINT readability-identifie
     ServerContext* /*context*/, const modyn::storage::GetCurrentTimestampRequest* /*request*/,
     modyn::storage::GetCurrentTimestampResponse* response) {
   try {
+    SPDLOG_INFO("ReceivedGetCurrentTimestamp request.");
     response->set_timestamp(
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
             .count());
@@ -154,6 +158,7 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
 
     soci::session session = storage_database_connection_.get_session();
     int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+    SPDLOG_INFO(fmt::format("Received DeleteDataset Request for dataset {}", dataset_id));
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
       return {StatusCode::OK, "Dataset does not exist."};
@@ -208,6 +213,8 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
                "datasets WHERE name = :name",
         soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type),
         soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::use(request->dataset_id());
+
+    SPDLOG_INFO(fmt::format("Received DeleteData Request for dataset {}", dataset_id));
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
@@ -630,6 +637,17 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_for_samples(const std::vec
 int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci::session& session,
                                                           const int64_t dataset_id) {
   int64_t number_of_samples = 0;
+  int64_t number_of_rows = 0;
+  // TODO remove this debug code
+  session << "SELECT COUNT(*) FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
+      soci::into(number_of_rows), soci::use(file_id), soci::use(dataset_id);
+
+  if (number_of_rows != 1) {
+    SPDLOG_ERROR(fmt::format("Warning! Number of rows for file id {}, dataset id {} == {}", file_id, dataset_id,
+                             number_of_rows));
+    return number_of_samples;
+  }
+
   session << "SELECT number_of_samples FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
       soci::into(number_of_samples), soci::use(file_id), soci::use(dataset_id);
   return number_of_samples;

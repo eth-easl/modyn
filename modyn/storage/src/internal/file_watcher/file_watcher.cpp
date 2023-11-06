@@ -312,6 +312,7 @@ void FileWatcher::insert_file_samples(const std::vector<FileFrame>& file_samples
  */
 void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_samples, const int64_t dataset_id,
                                           soci::session& session) {
+  SPDLOG_INFO(fmt::format("Doing copy insertion for {} samples", file_samples.size()));
   auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
 
