@@ -470,9 +470,9 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
           break;
         }
         const uint64_t obtained_records = records.size();
-        ASSERT(obtained_records <= sample_batch_size, "Received too many samples");
+        ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
 
-        if (records.size() == sample_batch_size) {
+        if (static_cast<int64_t>(records.size()) == sample_batch_size) {
           // If we obtained a full buffer, we can emit a response directly
           T response;
           for (const auto& record : records) {
@@ -488,10 +488,11 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
           // If not, we append to our record buf
           record_buf.insert(record_buf.end(), records.begin(), records.end());
           // If our record buf is big enough, emit a message
-          if (record_buf.size() >= sample_batch_size) {
+          if (static_cast<int64_t>(records.size()) >= sample_batch_size) {
             T response;
 
-            for (uint64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
+            // sample_batch_size is signed int...
+            for (int64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
               const SampleRecord& record = record_buf[record_idx];
               response.add_keys(record.id);
               response.add_labels(record.column_1);
@@ -513,7 +514,7 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
   // Iterated over all files, we now need to emit all data from buffer
   if (!record_buf.empty()) {
     T response;
-    for (const auto& record : records) {
+    for (const auto& record : record_buf) {
       response.add_keys(record.id);
       response.add_labels(record.column_1);
     }
@@ -572,7 +573,7 @@ void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage:
 
 std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
                                                                               const uint64_t retrieval_threads) {
-  ASSERT(retrieval_threads > 0, "This function is only intended for multi-threade retrieval.");
+  ASSERT(retrieval_threads > 0, "This function is only intended for multi-threaded retrieval.");
   std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
   try {
     auto number_of_files = static_cast<uint64_t>(file_ids.size());
@@ -588,7 +589,7 @@ std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(co
       }
     }
   } catch (const std::exception& e) {
-    SPDLOG_ERROR("Error in get_file_count with get_file_ids_per_thread.size() = {}, retrieval_theads = {}: {}",
+    SPDLOG_ERROR("Error in get_file_ids_per_thread with file_ids.size() = {}, retrieval_theads = {}: {}",
                  file_ids.size(), retrieval_threads, e.what());
     throw;
   }
