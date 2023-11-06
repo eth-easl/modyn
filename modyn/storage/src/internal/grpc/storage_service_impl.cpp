@@ -447,6 +447,10 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
                                                   StorageDatabaseConnection& storage_database_connection,
                                                   const int64_t dataset_id, const int64_t sample_batch_size) {
   soci::session session = storage_database_connection.get_session();
+
+  std::vector<SampleRecord> record_buf;
+  record_buf.reserve(sample_batch_size);
+
   for (const int64_t file_id : file_ids) {
     const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
     SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples));
@@ -465,17 +469,58 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
         if (records.empty()) {
           break;
         }
-        T response;
-        for (const auto& record : records) {
-          response.add_keys(record.id);
-          response.add_labels(record.column_1);
-        }
+        const uint64_t obtained_records = records.size();
+        ASSERT(obtained_records <= sample_batch_size, "Received too many samples");
 
-        {
-          const std::lock_guard<std::mutex> lock(writer_mutex);
-          writer->Write(response);
+        if (records.size() == sample_batch_size) {
+          // If we obtained a full buffer, we can emit a response directly
+          T response;
+          for (const auto& record : records) {
+            response.add_keys(record.id);
+            response.add_labels(record.column_1);
+          }
+
+          {
+            const std::lock_guard<std::mutex> lock(writer_mutex);
+            writer->Write(response);
+          }
+        } else {
+          // If not, we append to our record buf
+          record_buf.insert(record_buf.end(), records.begin(), records.end());
+          // If our record buf is big enough, emit a message
+          if (record_buf.size() >= sample_batch_size) {
+            T response;
+
+            for (uint64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
+              const SampleRecord& record = record_buf[record_idx];
+              response.add_keys(record.id);
+              response.add_labels(record.column_1);
+            }
+
+            // Now, delete first sample_batch_size elements from vector as we are sending them
+            record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
+
+            {
+              const std::lock_guard<std::mutex> lock(writer_mutex);
+              writer->Write(response);
+            }
+          }
         }
       }
+    }
+  }
+
+  // Iterated over all files, we now need to emit all data from buffer
+  if (!record_buf.empty()) {
+    T response;
+    for (const auto& record : records) {
+      response.add_keys(record.id);
+      response.add_labels(record.column_1);
+    }
+
+    {
+      const std::lock_guard<std::mutex> lock(writer_mutex);
+      writer->Write(response);
     }
   }
 }
