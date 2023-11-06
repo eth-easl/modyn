@@ -43,7 +43,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
-from modyn.supervisor.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
+from modyn.supervisor.internal.utils import EvaluationStatusTracker
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -425,8 +425,8 @@ class GRPCHandler:
             )
         # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
 
-        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        status_bar_scale = self.get_status_bar_scale(pipeline_id)
+        # total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
+        # status_bar_scale = self.get_status_bar_scale(pipeline_id)
 
         # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
@@ -596,7 +596,7 @@ class GRPCHandler:
         # sequentially in a round-robin manner.
         working_queue: deque[int] = deque()
         blocked_in_a_row: dict[int, int] = {}
-        for evaluation_id, status_tracker in evaluations.items():
+        for evaluation_id in evaluations.items():
             # status_tracker.create_counter(self.progress_mgr, training_id, evaluation_id)
             working_queue.append(evaluation_id)
             blocked_in_a_row[evaluation_id] = 0

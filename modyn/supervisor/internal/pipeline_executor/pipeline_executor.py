@@ -6,7 +6,6 @@ import traceback
 from time import sleep
 from typing import Any, Optional
 
-import enlighten
 from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler

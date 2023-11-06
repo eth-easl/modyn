@@ -510,12 +510,13 @@ def test_non_experiment_pipeline(
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
+    test__init_cluster_connection: MagicMock,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.experiment_mode = False
     pe.execute()
 
-    test_init_cluster_connection.assert_called_once()
+    test__init_cluster_connection.assert_called_once()
     test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_called_once_with(21)
@@ -537,13 +538,13 @@ def test_experiment_pipeline(
     test_replay_data: MagicMock,
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
-    test_init_cluster_connection: MagicMock,
+    test__init_cluster_connection: MagicMock,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.experiment_mode = True
     pe.execute()
 
-    test_init_cluster_connection.assert_called_once()
+    test__init_cluster_connection.assert_called_once()
     test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_not_called()

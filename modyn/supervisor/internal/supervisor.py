@@ -1,8 +1,8 @@
 import json
 import logging
+import multiprocessing as mp
 import os
 import pathlib
-import multiprocessing as mp
 from multiprocessing import Manager, Process
 from typing import Optional
 
@@ -54,7 +54,7 @@ class Supervisor:
         if "_manager" in state:
             del state["_manager"]
         else:
-            logger.info(f"'_manager' not found in state")
+            logger.info("'_manager' not found in state")
         return state
 
     def init_metadata_db(self) -> None:
@@ -264,7 +264,8 @@ class Supervisor:
 
     def unregister_pipeline(self, pipeline_id: int) -> None:
         # TODO(#64,#124,#317): Implement.
-        
+        pass
+
     def start_pipeline(
         self,
         pipeline_config: dict,
