@@ -242,7 +242,7 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
     std::string sql = fmt::format(
         "SELECT COUNT(DISTINCT file_id) FROM (SELECT file_id FROM samples WHERE dataset_id = :dataset_id AND "
         "sample_id "
-        "IN {})",
+        "IN {}) AS subq",
         sample_placeholders);
     session << sql, soci::into(number_of_files), soci::use(dataset_id);
 
