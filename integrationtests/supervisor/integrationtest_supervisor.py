@@ -1,25 +1,13 @@
 import json
-import grpc
-from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest, JsonString as SupervisorJsonString
+
+from integrationtests.utils import DatasetHelper, connect_to_server, get_minimal_pipeline_config
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
-from modyn.utils import grpc_connection_established
-
-
-def connect_to_supervisor_servicer() -> grpc.Channel:
-    config = get_modyn_config()
-
-    supervisor_address = f"{config['supervisor']['hostname']}:{config['supervisor']['port']}"
-    supervisor_channel = grpc.insecure_channel(supervisor_address)
-
-    if not grpc_connection_established(supervisor_channel):
-        raise ConnectionError(f"Could not establish gRPC connection to supervisor at {supervisor_address}.")
-
-    return supervisor_channel
 
 
 def test_start_one_pipeline() -> None:
-    supervisor_channel = connect_to_supervisor_servicer()
+    supervisor_channel = connect_to_server("supervisor")
     supervisor = SupervisorStub(supervisor_channel)
 
     pipeline_config = get_minimal_pipeline_config()
@@ -35,7 +23,7 @@ def test_start_one_pipeline() -> None:
 
 
 def test_start_two_pipelines() -> None:
-    supervisor_channel = connect_to_supervisor_servicer()
+    supervisor_channel = connect_to_server("supervisor")
     supervisor = SupervisorStub(supervisor_channel)
 
     pipeline1_config = get_minimal_pipeline_config()
@@ -62,5 +50,11 @@ def test_start_two_pipelines() -> None:
 
 
 if __name__ == "__main__":
-    test_start_one_pipeline()
-    test_start_two_pipelines()
+    dataset_helper = DatasetHelper()
+    try:
+        dataset_helper.setup_dataset()
+        test_start_one_pipeline()
+        test_start_two_pipelines()
+    finally:
+        dataset_helper.cleanup_dataset_dir()
+        dataset_helper.cleanup_storage_database()
