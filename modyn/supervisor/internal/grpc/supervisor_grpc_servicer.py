@@ -25,7 +25,7 @@ class SupervisorGRPCServicer(SupervisorServicer):
         pid = os.getpid()
 
         logger.info(f"[{pid}][{tid}]: Starting pipeline with request - {str(request)}")
-        self._supervisor.start_pipeline(
+        pipeline_id = self._supervisor.start_pipeline(
             json.loads(request.pipeline_config.value),
             request.eval_directory,
             request.start_replay_at,
@@ -33,5 +33,4 @@ class SupervisorGRPCServicer(SupervisorServicer):
             request.maximum_triggers,
         )
 
-        # TODO(#317): return pipeline id or something else?
-        return PipelineResponse(pipeline_id=1)
+        return PipelineResponse(pipeline_id=pipeline_id)
