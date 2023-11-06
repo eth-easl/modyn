@@ -204,6 +204,7 @@ void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for
   int64_t current_file_samples_to_be_inserted = 0;
   for (const auto& file_path : files_for_insertion) {
     file_wrapper->set_file_path(file_path);
+    // TODO(MaxiBoether): isn't this batched in Python?
     const int64_t file_id =
         insert_file(file_path, dataset_id, filesystem_wrapper, file_wrapper, session, database_driver);
 
@@ -268,12 +269,15 @@ int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dat
 int64_t FileWatcher::insert_file_using_returning_statement(const std::string& file_path, const int64_t dataset_id,
                                                            soci::session& session, uint64_t number_of_samples,
                                                            int64_t modified_time) {
+  SPDLOG_INFO(
+      fmt::format("Inserting file {} with {} samples for dataset {}", file_path, number_of_samples, dataset_id));
   int64_t file_id = -1;
   session << "INSERT INTO files (dataset_id, path, number_of_samples, "
              "updated_at) VALUES (:dataset_id, :path, "
              ":updated_at, :number_of_samples) RETURNING file_id",
       soci::use(dataset_id), soci::use(file_path), soci::use(modified_time), soci::use(number_of_samples),
       soci::into(file_id);
+  SPDLOG_INFO(fmt::format("Inserted file {} into file ID {}", file_path, file_id));
 
   if (file_id == -1) {
     SPDLOG_ERROR("Failed to insert file into database");
