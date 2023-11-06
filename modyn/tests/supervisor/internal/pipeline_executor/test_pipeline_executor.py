@@ -98,13 +98,7 @@ def teardown():
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 
-def get_non_connecting_pipeline_executor(
-    test_connection_established,
-    test_init_evaluator,
-    test_init_trainer_server,
-    test_init_storage,
-    test_init_selector,
-) -> PipelineExecutor:
+def get_non_connecting_pipeline_executor() -> PipelineExecutor:
     pipeline_executor = PipelineExecutor(
         START_TIMESTAMP,
         PIPELINE_ID,
@@ -495,10 +489,7 @@ def test_replay_data_open_interval_batched(test__handle_new_data: MagicMock, tes
     assert test__handle_new_data.call_args_list == [call([(10, 1)]), call([(11, 2)])]
 
 
-@patch.object(GRPCHandler, "init_selector", return_value=None)
-@patch.object(GRPCHandler, "init_storage", return_value=None)
-@patch.object(GRPCHandler, "init_trainer_server", return_value=None)
-@patch.object(GRPCHandler, "init_evaluator", return_value=None)
+@patch.object(GRPCHandler, "init_cluster_connection", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(PipelineExecutor, "_init_cluster_connection")
 @patch.object(PipelineExecutor, "get_dataset_selector_batch_size")
@@ -511,6 +502,8 @@ def test_non_experiment_pipeline(
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
     test__init_cluster_connection: MagicMock,
+    test_connection_established,
+    test_init_cluster_connection,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.experiment_mode = False
@@ -523,10 +516,7 @@ def test_non_experiment_pipeline(
     test_replay_data.assert_not_called()
 
 
-@patch.object(GRPCHandler, "init_selector", return_value=None)
-@patch.object(GRPCHandler, "init_storage", return_value=None)
-@patch.object(GRPCHandler, "init_trainer_server", return_value=None)
-@patch.object(GRPCHandler, "init_evaluator", return_value=None)
+@patch.object(GRPCHandler, "init_cluster_connection", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(PipelineExecutor, "_init_cluster_connection")
 @patch.object(PipelineExecutor, "get_dataset_selector_batch_size")
@@ -539,6 +529,8 @@ def test_experiment_pipeline(
     test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
     test__init_cluster_connection: MagicMock,
+    test_connection_established,
+    test_init_cluster_connection,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.experiment_mode = True

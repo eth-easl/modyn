@@ -24,6 +24,10 @@ def noop_constructor_mock(self, modyn_config: dict) -> None:
     pass
 
 
+def noop(self) -> None:
+    pass
+
+
 def get_minimal_pipeline_config() -> dict:
     return {
         "pipeline": {"name": "Test"},
@@ -65,6 +69,7 @@ def noop_init_metadata_db(self) -> None:
 
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def test_init():
     modyn_config = get_minimal_modyn_config()
@@ -74,6 +79,7 @@ def test_init():
 
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 @patch.object(Supervisor, "start_pipeline")
 def test_start_pipeline(test_start_pipeline: MagicMock):

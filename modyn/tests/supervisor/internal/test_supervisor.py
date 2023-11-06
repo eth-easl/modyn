@@ -4,7 +4,7 @@ import pathlib
 import shutil
 from typing import Optional
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -353,34 +353,13 @@ def test_unregister_pipeline():
     sup.unregister_pipeline(PIPELINE_ID)
 
 
-@patch.object(PipelineExecutor, "__init__", noop_pipeline_executor_constructor_mock)
-@patch.object(PipelineExecutor, "execute")
-@patch.object(Supervisor, "unregister_pipeline")
-def test_pipeline(test_unregister_pipeline: MagicMock, test_execute: MagicMock) -> None:
-    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
-    modyn_config = get_minimal_system_config()
-    pipeline_config = get_minimal_pipeline_config()
-
-    sup.pipeline(
-        START_TIMESTAMP,
-        PIPELINE_ID,
-        modyn_config,
-        pipeline_config,
-        EVALUATION_DIRECTORY,
-        SUPPORTED_EVAL_RESULT_WRITERS,
-    )
-
-    test_execute.assert_called_once()
-    test_unregister_pipeline.assert_called_once_with(PIPELINE_ID)
-
-
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
 @patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
-@patch.object(Supervisor, "pipeline")
+@patch.object(PipelineExecutor, "execute")
 def test_start_pipeline(
-    test_pipeline,
+    test_execute,
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
