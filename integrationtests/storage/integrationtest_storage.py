@@ -273,14 +273,14 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
     ), f"Could not get all images. Images missing: keys: {keys} i: {i}"
 
 
-def check_delete_data() -> None:
+def check_delete_data(keys_to_delete: list[int]) -> None:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
 
     request = DeleteDataRequest(
         dataset_id="test_dataset",
-        keys=FIRST_ADDED_IMAGES,
+        keys=keys_to_delete,
     )
 
     responses = storage.DeleteData(request)
@@ -318,6 +318,8 @@ def test_storage() -> None:
     assert (
         len(response.keys) == 10
     ), f"Not all images were returned."
+
+    first_image_keys = list(response.keys)
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
     check_dataset_size(10)
@@ -358,7 +360,7 @@ def test_storage() -> None:
 
     check_data_per_worker()
 
-    check_delete_data()
+    check_delete_data(first_image_keys)
 
     check_dataset_size(10)
 
