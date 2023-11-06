@@ -58,3 +58,8 @@ def test_start_two_pipelines() -> None:
     ).pipeline_id
 
     assert pipeline1_id == 0 and pipeline2_id == 1
+
+
+if __name__ == "__main__":
+    test_start_one_pipeline()
+    test_start_two_pipelines()
