@@ -603,13 +603,13 @@ class GRPCHandler:
 
         while working_queue:
             current_evaluation_id = working_queue.popleft()
-            current_evaluation_tracker = evaluations[current_evaluation_id]
+            # current_evaluation_tracker = evaluations[current_evaluation_id]
             req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
             res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
 
             if not res.valid:
                 logger.warning(f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n")
-                current_evaluation_tracker.end_counter(True)
+                # current_evaluation_tracker.end_counter(True)
                 continue
 
             if res.blocked:
@@ -623,17 +623,17 @@ class GRPCHandler:
 
                 if res.HasField("exception") and res.exception is not None:
                     logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
-                    current_evaluation_tracker.end_counter(True)
+                    # current_evaluation_tracker.end_counter(True)
                     continue
                 if not res.is_running:
-                    current_evaluation_tracker.end_counter(False)
+                    # current_evaluation_tracker.end_counter(False)
                     continue
                 if res.state_available:
                     assert res.HasField("samples_seen") and res.HasField(
                         "batches_seen"
                     ), f"Inconsistent server response:\n{res}"
 
-                    current_evaluation_tracker.progress_counter(res.samples_seen)
+                    # current_evaluation_tracker.progress_counter(res.samples_seen)
                 elif res.is_running:
                     logger.warning("Evaluator is not blocked and is running, but no state is available.")
 
