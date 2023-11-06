@@ -471,8 +471,10 @@ void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::
           response.add_labels(record.column_1);
         }
 
-        const std::lock_guard<std::mutex> lock(writer_mutex);
-        writer->Write(response);
+        {
+          const std::lock_guard<std::mutex> lock(writer_mutex);
+          writer->Write(response);
+        }
       }
     }
   }

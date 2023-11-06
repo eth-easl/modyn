@@ -303,7 +303,7 @@ def test_storage() -> None:
         responses = list(get_new_data_since(0))
         assert (
             len(responses) < 2
-        ), f"Received batched response, shouldn't happen: {responses}"
+        ), f"Received batched response, shouldn't happen: {responses}. Type of list = {type(responses)}, type of first element: {type(responses[0])}"
         if len(responses) == 1:
             response = responses[0]
             if len(response.keys) == 10:
