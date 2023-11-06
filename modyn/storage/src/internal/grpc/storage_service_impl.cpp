@@ -611,6 +611,15 @@ void StorageServiceImpl::send_sample_data_for_keys_and_file(ServerWriter<modyn::
                                                             const DatabaseDriver& driver,
                                                             const int64_t sample_batch_size) {
   try {
+    std::string file_path;
+    session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id", soci::into(file_path),
+        soci::use(file_id), soci::use(dataset_data.dataset_id);
+
+    if (file_path.empty()) {
+      SPDLOG_ERROR(
+          fmt::format("Could not obtain full path of file id {} in dataset {}", file_id, dataset_data.dataset_id));
+    }
+
     std::vector<SampleRecord> record_buf;
     record_buf.reserve(sample_batch_size);
 
@@ -620,9 +629,8 @@ void StorageServiceImpl::send_sample_data_for_keys_and_file(ServerWriter<modyn::
     const YAML::Node file_wrapper_config_node = YAML::Load(dataset_data.file_wrapper_config);
     auto filesystem_wrapper =
         get_filesystem_wrapper(static_cast<FilesystemWrapperType>(dataset_data.filesystem_wrapper_type));
-    auto file_wrapper =
-        get_file_wrapper(dataset_data.base_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
-                         file_wrapper_config_node, filesystem_wrapper);
+    auto file_wrapper = get_file_wrapper(file_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
+                                         file_wrapper_config_node, filesystem_wrapper);
 
     CursorHandler cursor_handler(session, driver,
                                  fmt::format("SELECT sample_id, sample_index, label FROM sampels WHERE file_id = "

@@ -275,7 +275,7 @@ int64_t FileWatcher::insert_file_using_returning_statement(const std::string& fi
   session << "INSERT INTO files (dataset_id, path, number_of_samples, "
              "updated_at) VALUES (:dataset_id, :path, "
              ":number_of_samples, :updated_at) RETURNING file_id",
-      soci::use(dataset_id), soci::use(file_path), soci::use(modified_time), soci::use(number_of_samples),
+      soci::use(dataset_id), soci::use(file_path), soci::use(number_of_samples), soci::use(modified_time),
       soci::into(file_id);
   SPDLOG_INFO(fmt::format("Inserted file {} into file ID {}", file_path, file_id));
 
