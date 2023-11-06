@@ -1,6 +1,7 @@
+import json
 import grpc
 from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest, JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modyn.utils import grpc_connection_established
 
@@ -25,7 +26,7 @@ def test_start_one_pipeline() -> None:
 
     pipeline_id = supervisor.start_pipeline(
         StartPipelineRequest(
-            pipeline_config=pipeline_config,
+            pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
             eval_directory=".",
         )
     ).pipeline_id
@@ -42,14 +43,14 @@ def test_start_two_pipelines() -> None:
 
     pipeline1_id = supervisor.start_pipeline(
         StartPipelineRequest(
-            pipeline_config=pipeline1_config,
+            pipeline_config=SupervisorJsonString(value=json.dumps(pipeline1_config)),
             eval_directory=".",
         )
     ).pipeline_id
 
     pipeline2_id = supervisor.start_pipeline(
         StartPipelineRequest(
-            pipeline_config=pipeline2_config,
+            pipeline_config=SupervisorJsonString(value=json.dumps(pipeline2_config)),
             eval_directory=".",
             start_replay_at=0,
             stop_replay_at=50,
