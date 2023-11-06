@@ -346,7 +346,8 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
     std::tie(start_index, limit) = get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
 
     std::vector<int64_t> keys;
-    soci::statement stmt = (session.prepare << "SELECT sample_id FROM Sample WHERE dataset_id = :dataset_id ORDER BY "
+    keys.reserve(sample_batch_size_);
+    soci::statement stmt = (session.prepare << "SELECT sample_id FROM samples WHERE dataset_id = :dataset_id ORDER BY "
                                                "sample_id OFFSET :start_index LIMIT :limit",
                             soci::use(dataset_id), soci::use(start_index), soci::use(limit));
     stmt.execute();
@@ -357,7 +358,7 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
       keys.push_back(key_value);
       if (keys.size() % sample_batch_size_ == 0) {
         modyn::storage::GetDataPerWorkerResponse response;
-        for (auto key : keys) {
+        for (const auto& key : keys) {
           response.add_keys(key);
         }
         writer->Write(response);
