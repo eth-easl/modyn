@@ -633,7 +633,7 @@ void StorageServiceImpl::send_sample_data_for_keys_and_file(ServerWriter<modyn::
                                          file_wrapper_config_node, filesystem_wrapper);
 
     CursorHandler cursor_handler(session, driver,
-                                 fmt::format("SELECT sample_id, sample_index, label FROM sampels WHERE file_id = "
+                                 fmt::format("SELECT sample_id, sample_index, label FROM samples WHERE file_id = "
                                              "{} AND dataset_id = {} AND sample_id IN ({})",
                                              file_id, dataset_data.dataset_id, fmt::join(request_keys_per_file, ",")),
                                  fmt::format("file_{}", file_id), 3);
