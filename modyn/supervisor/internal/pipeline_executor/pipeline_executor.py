@@ -23,7 +23,7 @@ class PipelineExecutor:
         pipeline_id: int,
         modyn_config: dict,
         pipeline_config: dict,
-        eval_directory: pathlib.Path,
+        eval_directory: str,
         supervisor_supported_eval_result_writers: dict,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
@@ -40,23 +40,24 @@ class PipelineExecutor:
         if self.pipeline_config["training"]["initial_model"] == "pretrained":
             self.previous_model_id = self.pipeline_config["training"]["initial_model_id"]
 
-        self.progress_mgr = enlighten.get_manager()
-        self.status_bar = self.progress_mgr.status_bar(
-            status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
-            color="bold_underline_bright_white_on_lightslategray",
-            justify=enlighten.Justify.CENTER,
-            demo="Initializing",
-            autorefresh=True,
-            min_delta=0.5,
-        )
-        self.grpc = GRPCHandler(self.modyn_config, self.progress_mgr, self.status_bar)
+        # TODO(#317): implement status_bar for multiprocessing
+        # self.progress_mgr = enlighten.get_manager()
+        # self.status_bar = self.progress_mgr.status_bar(
+        #     status_format="Modyn{fill}Current Task: {demo}{fill}{elapsed}",
+        #     color="bold_underline_bright_white_on_lightslategray",
+        #     justify=enlighten.Justify.CENTER,
+        #     demo="Initializing",
+        #     autorefresh=True,
+        #     min_delta=0.5,
+        # )
+        self.grpc = GRPCHandler(self.modyn_config)
 
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
 
         self._sw = Stopwatch()
-        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
+        self._pipeline_log_file = pathlib.Path(self.eval_directory) / f"pipeline_{self.pipeline_id}.log"
         self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": self.pipeline_config, "modyn_config": self.modyn_config},
             "supervisor": {
@@ -73,6 +74,9 @@ class PipelineExecutor:
 
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
+
+    def _init_cluster_connection(self) -> None:
+        self.grpc.init_cluster_connection()
 
     def _determine_pipeline_mode(self) -> None:
         if self.start_replay_at is None:
@@ -128,29 +132,29 @@ class PipelineExecutor:
         we inform the selector about all data points including that data point.
         Otherwise, the selector is informed
         """
-        self.status_bar.update(demo="Handling new data")
+        # self.status_bar.update(demo="Handling new data")
         logger.info(f"Received {len(new_data)} new data points. Handling batches.")
         new_data.sort(key=lambda tup: tup[1])
         any_training_triggered = False
         new_data_len = len(new_data)
 
-        pbar = self.progress_mgr.counter(
-            total=new_data_len, desc=f"[Pipeline {self.pipeline_id}] Processing New Samples", unit="samples"
-        )
+        # pbar = self.progress_mgr.counter(
+        #     total=new_data_len, desc=f"[Pipeline {self.pipeline_id}] Processing New Samples", unit="samples"
+        # )
 
         for i in range(0, new_data_len, self._selector_batch_size):
             batch = new_data[i : i + self._selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
-            self.status_bar.update(demo="Handling new data")
+            # self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
-            pbar.update(self._selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
+            # pbar.update(self._selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
             if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
                 logger.info(f"Reached trigger limit ({self.maximum_triggers}), exiting.")
                 break
 
-        self.status_bar.update(demo="New data handled")
-        pbar.clear(flush=True)
-        pbar.close(clear=True)
+        # self.status_bar.update(demo="New data handled")
+        # pbar.clear(flush=True)
+        # pbar.close(clear=True)
 
         return any_training_triggered
 
@@ -164,7 +168,7 @@ class PipelineExecutor:
         )
 
         if num_triggers > 0:
-            self.status_bar.update(demo="Handling triggers")
+            # self.status_bar.update(demo="Handling triggers")
             logger.info(f"There are {num_triggers} triggers in this batch.")
             self._handle_triggers_within_batch(batch, triggering_indices)
             return True
@@ -231,9 +235,9 @@ class PipelineExecutor:
             }
             self._persist_pipeline_log()
 
-            self.status_bar.update(demo="Training")
+            # self.status_bar.update(demo="Training")
             self._run_training(trigger_id)  # Blocks until training is done.
-            self.status_bar.update(demo="Handling triggers")
+            # self.status_bar.update(demo="Handling triggers")
 
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
@@ -263,7 +267,7 @@ class PipelineExecutor:
     def replay_data(self) -> None:
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
-        self.status_bar.update(demo="Replaying data")
+        # self.status_bar.update(demo="Replaying data")
         logger.info("Starting data replay.")
 
         if self.stop_replay_at is None:
@@ -283,7 +287,7 @@ class PipelineExecutor:
                 logger.info("Exiting replay loop due to trigger limit.")
                 break
 
-        self.status_bar.update(demo="Replay done")
+        # self.status_bar.update(demo="Replay done")
 
     def shutdown_trainer(self) -> None:
         if self.current_training_id is not None:
@@ -301,7 +305,7 @@ class PipelineExecutor:
 
         try:
             while continue_running:
-                self.status_bar.update(demo="Fetching new data")
+                # self.status_bar.update(demo="Fetching new data")
                 trigger_occured = False
                 largest_keys = set()
                 for new_data, _ in self.grpc.get_new_data_since(dataset_id, last_timestamp):
@@ -328,7 +332,7 @@ class PipelineExecutor:
 
                 previous_largest_keys = largest_keys
                 if not trigger_occured:
-                    self.status_bar.update(demo="Waiting for new data...")
+                    # self.status_bar.update(demo="Waiting for new data...")
                     sleep(2)
 
         except KeyboardInterrupt:
@@ -338,7 +342,8 @@ class PipelineExecutor:
 
     def execute(self) -> None:
         try:
-            self.status_bar.update(demo="Initial Pass")
+            self._init_cluster_connection()
+            # self.status_bar.update(demo="Initial Pass")
             self.initial_pass()
             logger.info(f"Pipeline {self.pipeline_id}: Initial pass completed.")
 
@@ -348,7 +353,7 @@ class PipelineExecutor:
             else:
                 self.wait_for_new_data(self.start_timestamp)
 
-            self.status_bar.update(demo="Cleanup")
+            # self.status_bar.update(demo="Cleanup")
             self._persist_pipeline_log()
         except Exception:  # pylint: disable=broad-except
             exception_msg = traceback.format_exc()

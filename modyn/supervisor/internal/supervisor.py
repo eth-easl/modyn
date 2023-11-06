@@ -264,7 +264,45 @@ class Supervisor:
 
     def unregister_pipeline(self, pipeline_id: int) -> None:
         # TODO(#64,#124,#317): Implement.
-        pass
+        
+    def start_pipeline(
+        self,
+        pipeline_config: dict,
+        eval_directory: str,
+        start_replay_at: Optional[int] = None,
+        stop_replay_at: Optional[int] = None,
+        maximum_triggers: Optional[int] = None,
+    ) -> int:
+        if not self.validate_pipeline_config(pipeline_config):
+            raise ValueError("Invalid pipeline configuration")
+
+        if not is_directory_writable(pathlib.Path(eval_directory)):
+            raise ValueError("No permission to write to the evaluation results directory.")
+
+        if not self.validate_system(pipeline_config):
+            raise ValueError("Invalid system configuration")
+
+        start_timestamp = self.grpc.get_time_at_storage()
+        pipeline_id = self.register_pipeline(pipeline_config)
+        logger.info(f"Pipeline {pipeline_id} registered, start executing.")
+
+        logger.info(f"start_pipeline: start method is {mp.get_start_method()}")
+        pipeline = PipelineExecutor(
+            start_timestamp,
+            pipeline_id,
+            self.modyn_config,
+            pipeline_config,
+            eval_directory,
+            self.supported_evaluation_result_writers,
+            start_replay_at,
+            stop_replay_at,
+            maximum_triggers,
+        )
+        process = Process(target=pipeline.execute)
+        process.start()
+        # TODO(#317): unregister pipeline when process terminates
+
+        return pipeline_id
 
     # def _run_tensorboard(self, port: str) -> None:
     #     logging.getLogger("tensorboard").setLevel(logging.ERROR)
@@ -285,72 +323,3 @@ class Supervisor:
     #     )
     #     tensorboard.launch()
     #     logging.getLogger("werkzeug").setLevel(logging.ERROR)
-
-    def pipeline(
-        self,
-        start_timestamp: int,
-        pipeline_id: int,
-        modyn_config: dict,
-        pipeline_config: dict,
-        eval_directory: pathlib.Path,
-        supervisor_supported_eval_result_writers: dict,
-        start_replay_at: Optional[int] = None,
-        stop_replay_at: Optional[int] = None,
-        maximum_triggers: Optional[int] = None,
-    ) -> None:
-        pipeline = PipelineExecutor(
-            start_timestamp,
-            pipeline_id,
-            modyn_config,
-            pipeline_config,
-            eval_directory,
-            supervisor_supported_eval_result_writers,
-            start_replay_at,
-            stop_replay_at,
-            maximum_triggers,
-        )
-        # pipeline.init_cluster_connection()
-        pipeline.execute()
-
-        logger.info(f"Pipeline {pipeline_id} done, unregistering.")
-        self.unregister_pipeline(pipeline_id)
-
-    def start_pipeline(
-        self,
-        pipeline_config: dict,
-        eval_directory: pathlib.Path,
-        start_replay_at: Optional[int] = None,
-        stop_replay_at: Optional[int] = None,
-        maximum_triggers: Optional[int] = None,
-    ) -> int:
-        if not self.validate_pipeline_config(pipeline_config):
-            raise ValueError("Invalid pipeline configuration")
-
-        if not is_directory_writable(eval_directory):
-            raise ValueError("No permission to write to the evaluation results directory.")
-
-        if not self.validate_system(pipeline_config):
-            raise ValueError("Invalid system configuration")
-
-        start_timestamp = self.grpc.get_time_at_storage()
-        pipeline_id = self.register_pipeline(pipeline_config)
-        logger.info(f"Pipeline {pipeline_id} registered, start executing.")
-
-        logger.info(f"start_pipeline: start method is {mp.get_start_method()}")
-        process = Process(
-            target=self.pipeline,
-            args=(
-                start_timestamp,
-                pipeline_id,
-                self.modyn_config,
-                pipeline_config,
-                eval_directory,
-                self.supported_evaluation_result_writers,
-                start_replay_at,
-                stop_replay_at,
-                maximum_triggers,
-            ),
-        )
-        process.start()
-
-        return pipeline_id
