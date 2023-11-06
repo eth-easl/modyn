@@ -18,7 +18,6 @@ def noop_constructor_mock(self, modyn_config: dict) -> None:
     pass
 
 
-# TODO(#317): mock or create GRPCHandler?
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 def test_init():

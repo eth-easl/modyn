@@ -156,6 +156,7 @@ def get_non_connecting_supervisor(
     test_init_selector,
 ) -> Supervisor:
     supervisor = Supervisor(get_minimal_system_config())
+    supervisor.init_cluster_connection()
 
     return supervisor
 
@@ -336,7 +337,7 @@ def test_validate_system(test_trainer_server_available):
     assert not sup.validate_system(pipeline_config)
 
 
-@patch("modyn.supervisor.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch("modyn.supervisor.internal.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
 def test_register_pipeline():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
@@ -345,7 +346,7 @@ def test_register_pipeline():
     assert pipeline_id == 0
 
 
-@patch("modyn.supervisor.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch("modyn.supervisor.internal.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
 def test_unregister_pipeline():
     # TODO(#64,#124,#302): implement a real test when func is implemented.
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
@@ -419,5 +420,6 @@ def test_start_pipeline_throws_on_invalid_system_config(
     test_dataset_available,
 ) -> None:
     sup = Supervisor({})
+    sup.init_cluster_connection()
     with pytest.raises(ValueError, match="Invalid system configuration"):
         sup.start_pipeline(get_minimal_pipeline_config(), EVALUATION_DIRECTORY)

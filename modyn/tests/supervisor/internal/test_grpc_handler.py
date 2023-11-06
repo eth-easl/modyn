@@ -106,7 +106,17 @@ def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
     pbar = mgr.status_bar(
         status_format="Test",
     )
-    return GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
+    return handler
+
+
+def test_init():
+    mgr = enlighten.get_manager()
+    pbar = mgr.status_bar(
+        status_format="Test",
+    )
+    GRPCHandler(get_simple_config(), mgr, pbar)
 
 
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
@@ -115,12 +125,13 @@ def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
 @patch.object(EvaluatorStub, "__init__", noop_constructor_mock)
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
-def test_init(test_insecure_channel, test_connection_established):
+def test_init_cluster_connection(test_insecure_channel, test_connection_established):
     mgr = enlighten.get_manager()
     pbar = mgr.status_bar(
         status_format="Test",
     )
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     assert handler.connected_to_storage
     assert handler.connected_to_trainer_server
@@ -140,8 +151,7 @@ def test_init_storage(test_insecure_channel, test_connection_established):
         status_format="Test",
     )
 
-    with patch.object(GRPCHandler, "init_storage", return_value=None):
-        handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -165,11 +175,7 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
         status_format="Test",
     )
 
-    with patch.object(GRPCHandler, "init_storage", return_value=None):
-        with patch.object(GRPCHandler, "init_trainer_server", return_value=None):
-            with patch.object(GRPCHandler, "init_selector", return_value=None):
-                with patch.object(GRPCHandler, "init_evaluator", return_value=None):
-                    handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -191,8 +197,7 @@ def test_init_selector(test_insecure_channel, test_connection_established):
         status_format="Test",
     )
 
-    with patch.object(GRPCHandler, "init_selector", return_value=None):
-        handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
+    handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_selector
@@ -211,6 +216,7 @@ def test_dataset_available(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     assert handler.storage is not None
 
@@ -242,6 +248,7 @@ def test_get_new_data_since(test_grpc_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
         mock.return_value = [GetNewDataSinceResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
@@ -260,6 +267,7 @@ def test_get_new_data_since_batched(test_grpc_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
         mock.return_value = [
@@ -288,6 +296,7 @@ def test_get_data_in_interval(test_grpc_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
         mock.return_value = [GetDataInIntervalResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
@@ -308,6 +317,7 @@ def test_get_data_in_interval_batched(test_grpc_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
         mock.return_value = [
@@ -331,6 +341,7 @@ def test_inform_selector(test_grpc_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     with patch.object(handler.selector, "inform_data") as mock:
         mock.return_value = DataInformResponse(log=JsonString(value='{"1": 2}'))
@@ -352,6 +363,7 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
 
     with patch.object(handler.selector, "inform_data_and_trigger") as mock:
         mock.return_value = TriggerResponse(trigger_id=12, log=JsonString(value='{"1": 2}'))
@@ -382,6 +394,7 @@ def test_trainer_server_available(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.trainer_server is not None
 
     with patch.object(
@@ -399,6 +412,7 @@ def test_get_number_of_samples(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.selector is not None
 
     with patch.object(
@@ -424,6 +438,7 @@ def test_start_training(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.trainer_server is not None
 
     pipeline_id = 42
@@ -450,6 +465,7 @@ def test_wait_for_training_completion(test_connection_established):
     with patch.object(GRPCHandler, "get_number_of_samples", return_value=22):
         with patch.object(GRPCHandler, "get_status_bar_scale", return_value=100):
             handler = GRPCHandler(get_simple_config(), mgr, pbar)
+            handler.init_cluster_connection()
             assert handler.trainer_server is not None
 
             with patch.object(
@@ -477,6 +493,7 @@ def test_store_trained_model(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.trainer_server is not None
 
     res = StoreFinalModelResponse(valid_state=True, model_id=42)
@@ -495,6 +512,7 @@ def test_start_evaluation(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     model_id = 10
@@ -534,6 +552,7 @@ def test_wait_for_evaluation_completion(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     evaluations = {
@@ -568,6 +587,7 @@ def test_store_evaluation_results(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     res = EvaluationResultResponse(
@@ -640,6 +660,7 @@ def test_store_evaluation_results_invalid(test_connection_established):
     )
 
     handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     res = EvaluationResultResponse(valid=False)
