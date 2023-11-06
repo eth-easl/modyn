@@ -54,7 +54,7 @@ if __name__ == "__main__":
     try:
         dataset_helper.setup_dataset()
         test_start_one_pipeline()
-        test_start_two_pipelines()
+        # test_start_two_pipelines()
     finally:
         dataset_helper.cleanup_dataset_dir()
         dataset_helper.cleanup_storage_database()

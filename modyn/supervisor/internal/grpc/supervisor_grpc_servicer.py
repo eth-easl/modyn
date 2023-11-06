@@ -19,6 +19,7 @@ class SupervisorGRPCServicer(SupervisorServicer):
     def __init__(self, supervisor: Supervisor, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
         self._supervisor = supervisor
+        self._supervisor.init_cluster_connection()
 
     def start_pipeline(self, request: StartPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         tid = threading.get_native_id()

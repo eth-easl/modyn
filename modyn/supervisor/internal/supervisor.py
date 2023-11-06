@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import pathlib
+import multiprocessing as mp
 from multiprocessing import Manager, Process
 from typing import Optional
 
@@ -50,7 +51,10 @@ class Supervisor:
 
     def __getstate__(self) -> dict:
         state = self.__dict__.copy()
-        del state["_manager"]
+        if "_manager" in state:
+            del state["_manager"]
+        else:
+            logger.info(f"'_manager' not found in state")
         return state
 
     def init_metadata_db(self) -> None:
@@ -305,6 +309,7 @@ class Supervisor:
             stop_replay_at,
             maximum_triggers,
         )
+        # pipeline.init_cluster_connection()
         pipeline.execute()
 
         logger.info(f"Pipeline {pipeline_id} done, unregistering.")
@@ -331,6 +336,7 @@ class Supervisor:
         pipeline_id = self.register_pipeline(pipeline_config)
         logger.info(f"Pipeline {pipeline_id} registered, start executing.")
 
+        logger.info(f"start_pipeline: start method is {mp.get_start_method()}")
         process = Process(
             target=self.pipeline,
             args=(

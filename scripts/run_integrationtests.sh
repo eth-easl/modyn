@@ -22,6 +22,8 @@ docker build -t modynbase -f docker/Base/Dockerfile --build-arg MODYN_BUILDTYPE=
 docker compose up --build tests --abort-on-container-exit --exit-code-from tests
 exitcode=$?
 
+docker logs supervisor
+
 # Cleanup
 docker compose down
 if [[ ! -z "$CI" ]]; then

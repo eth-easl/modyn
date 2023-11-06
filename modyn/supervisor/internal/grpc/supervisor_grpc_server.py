@@ -14,9 +14,7 @@ logger = logging.getLogger(__name__)
 class SupervisorGRPCServer(GenericGRPCServer):
     @staticmethod
     def callback(modyn_config: dict, server: Any, supervisor: Supervisor) -> None:
-        supervisor.init_cluster_connection()
-        sup_grpc_servicer = SupervisorGRPCServicer(supervisor, modyn_config)
-        add_SupervisorServicer_to_server(sup_grpc_servicer, server)
+        add_SupervisorServicer_to_server(SupervisorGRPCServicer(supervisor, modyn_config), server)
 
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
