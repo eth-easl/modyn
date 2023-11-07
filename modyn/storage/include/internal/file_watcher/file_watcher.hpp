@@ -109,7 +109,7 @@ class FileWatcher {
     data_file_extension_ = file_wrapper_config_node_["file_extension"].as<std::string>();
 
     if (!disable_multithreading_) {
-      insertion_thread_pool_ = std::vector<std::thread>(insertion_threads_);
+      insertion_thread_pool_.reserve(insertion_threads_);
       insertion_thread_exceptions_ = std::vector<std::atomic<bool>>(insertion_threads_);
     }
     SPDLOG_INFO("FileWatcher for dataset {} initialized", dataset_id_);
@@ -118,12 +118,13 @@ class FileWatcher {
   void search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp);
   void seek_dataset(soci::session& session);
   void seek(soci::session& session);
-  static void handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-                                const FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                const FilesystemWrapperType& filesystem_wrapper_type, int64_t dataset_id,
-                                const YAML::Node& file_wrapper_config, const YAML::Node& config,
+  static void handle_file_paths(const std::vector<std::string>::iterator file_paths_begin,
+                                const std::vector<std::string>::iterator file_paths_end,
+                                std::string data_file_extension, FileWrapperType file_wrapper_type, int64_t timestamp,
+                                FilesystemWrapperType filesystem_wrapper_type, int64_t dataset_id,
+                                const YAML::Node* file_wrapper_config, const YAML::Node* config,
                                 int64_t sample_dbinsertion_batchsize, bool force_fallback,
-                                std::atomic<bool>& exception_thrown);
+                                std::atomic<bool>* exception_thrown);
   static void handle_files_for_insertion(std::vector<std::string>& files_for_insertion,
                                          const FileWrapperType& file_wrapper_type, int64_t dataset_id,
                                          const YAML::Node& file_wrapper_config, int64_t sample_dbinsertion_batchsize,

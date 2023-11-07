@@ -267,7 +267,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {  // NOLINT(readability-function-c
   label_file2.close();
   ASSERT(!label_file2.is_open(), "Could not close label file");
 
-  const std::vector<std::string> files = {test_file_path, label_file_path, test_file_path2, label_file_path2};
+  std::vector<std::string> files = {test_file_path, label_file_path, test_file_path2, label_file_path2};
 
   const StorageDatabaseConnection connection(config);
 
@@ -281,9 +281,9 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {  // NOLINT(readability-function-c
   const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
   std::atomic<bool> exception_thrown = false;
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
-                                                 FilesystemWrapperType::LOCAL, 1, file_wrapper_config_node, config, 100,
-                                                 false, exception_thrown));
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files.begin(), files.end(), ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
+                                                 FilesystemWrapperType::LOCAL, 1, &file_wrapper_config_node, &config,
+                                                 100, false, &exception_thrown));
 
   // Check if the samples are added to the database
   int32_t sample_id1 = -1;
@@ -367,14 +367,14 @@ TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {
 TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
 
-  const std::vector<std::string> files;
+  std::vector<std::string> files;
 
   const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
   std::atomic<bool> exception_thrown = false;
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files, ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
-                                                 FilesystemWrapperType::LOCAL, 1, file_wrapper_config_node, config, 100,
-                                                 false, exception_thrown));
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files.begin(), files.end(), ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
+                                                 FilesystemWrapperType::LOCAL, 1, &file_wrapper_config_node, &config,
+                                                 100, false, &exception_thrown));
 }
 
 TEST_F(FileWatcherTest, TestMultipleFileHandling) {  // NOLINT(readability-function-cognitive-complexity)

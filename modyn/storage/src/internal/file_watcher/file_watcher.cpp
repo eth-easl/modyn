@@ -70,10 +70,10 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
   std::vector<std::string> file_paths = filesystem_wrapper->list(directory_path, /*recursive=*/true);
 
   if (disable_multithreading_) {
-    std::atomic<bool> exception_thrown(false);
-    FileWatcher::handle_file_paths(file_paths, data_file_extension_, file_wrapper_type_, timestamp,
-                                   filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node_, config_,
-                                   sample_dbinsertion_batchsize_, force_fallback_, exception_thrown);
+    std::atomic<bool> exception_thrown = false;
+    FileWatcher::handle_file_paths(file_paths.begin(), file_paths.end(), data_file_extension_, file_wrapper_type_,
+                                   timestamp, filesystem_wrapper_type_, dataset_id_, &file_wrapper_config_node_,
+                                   &config_, sample_dbinsertion_batchsize_, force_fallback_, &exception_thrown);
     if (exception_thrown.load()) {
       *stop_file_watcher = true;
     }
@@ -85,14 +85,13 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
       auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
       const std::vector<std::string> file_paths_thread(begin, end);
+      std::atomic<bool>* exception_thrown = &insertion_thread_exceptions_[i];
+      exception_thrown->store(false);
 
-      insertion_thread_exceptions_[i].store(false);
-
-      insertion_thread_pool_[i] = std::thread([this, file_paths_thread, &timestamp, &i]() {
-        FileWatcher::handle_file_paths(file_paths_thread, data_file_extension_, file_wrapper_type_, timestamp,
-                                       filesystem_wrapper_type_, dataset_id_, file_wrapper_config_node_, config_,
-                                       sample_dbinsertion_batchsize_, force_fallback_, insertion_thread_exceptions_[i]);
-      });
+      insertion_thread_pool_.emplace_back(
+          std::thread(&FileWatcher::handle_file_paths, begin, end, data_file_extension_, file_wrapper_type_, timestamp,
+                      filesystem_wrapper_type_, dataset_id_, &file_wrapper_config_node_, &config_,
+                      sample_dbinsertion_batchsize_, force_fallback_, exception_thrown));
     }
 
     int index = 0;
@@ -166,18 +165,19 @@ void FileWatcher::run() {
   }
 }
 
-void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, const std::string& data_file_extension,
-                                    const FileWrapperType& file_wrapper_type, int64_t timestamp,
-                                    const FilesystemWrapperType& filesystem_wrapper_type, const int64_t dataset_id,
-                                    const YAML::Node& file_wrapper_config, const YAML::Node& config,
-                                    const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
-                                    std::atomic<bool>& exception_thrown) {
-  if (file_paths.empty()) {
+void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator file_paths_begin,
+                                    const std::vector<std::string>::iterator file_paths_end,
+                                    const std::string data_file_extension, const FileWrapperType file_wrapper_type,
+                                    int64_t timestamp, const FilesystemWrapperType filesystem_wrapper_type,
+                                    const int64_t dataset_id, const YAML::Node* file_wrapper_config,
+                                    const YAML::Node* config, const int64_t sample_dbinsertion_batchsize,
+                                    const bool force_fallback, std::atomic<bool>* exception_thrown) {
+  if (file_paths_begin >= file_paths_end) {
     return;
   }
 
   try {
-    const StorageDatabaseConnection storage_database_connection(config);
+    const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
     std::vector<std::string> files_for_insertion;
@@ -187,7 +187,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     session << "SELECT ignore_last_timestamp FROM datasets WHERE dataset_id = :dataset_id",
         soci::into(ignore_last_timestamp), soci::use(dataset_id);
 
-    std::copy_if(file_paths.begin(), file_paths.end(), std::back_inserter(files_for_insertion),
+    std::copy_if(file_paths_begin, file_paths_end, std::back_inserter(files_for_insertion),
                  [&data_file_extension, &timestamp, &session, &filesystem_wrapper,
                   &ignore_last_timestamp](const std::string& file_path) {
                    return check_file_for_insertion(file_path, data_file_extension,
@@ -197,13 +197,13 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
 
     if (!files_for_insertion.empty()) {
       DatabaseDriver database_driver = storage_database_connection.get_drivername();
-      handle_files_for_insertion(files_for_insertion, file_wrapper_type, dataset_id, file_wrapper_config,
+      handle_files_for_insertion(files_for_insertion, file_wrapper_type, dataset_id, *file_wrapper_config,
                                  sample_dbinsertion_batchsize, force_fallback, session, database_driver,
                                  filesystem_wrapper);
     }
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error while handling file paths: {}", e.what());
-    exception_thrown.store(true);
+    exception_thrown->store(true);
   }
 }
 
