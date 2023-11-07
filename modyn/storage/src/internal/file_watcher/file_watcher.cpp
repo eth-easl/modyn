@@ -43,7 +43,14 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
     if (ignore_last_timestamp) {
       return true;
     }
-    return filesystem_wrapper->get_modified_time(file_path) > timestamp;
+    try {
+      return filesystem_wrapper->get_modified_time(file_path) > timestamp;
+    } catch (const std::exception& e) {
+      SPDLOG_ERROR(fmt::format(
+          "Error while checking modified time of file {}. It could be that a deletion request is currently running: {}",
+          file_path, e.what()));
+      return false;
+    }
   }
   return false;
 }
