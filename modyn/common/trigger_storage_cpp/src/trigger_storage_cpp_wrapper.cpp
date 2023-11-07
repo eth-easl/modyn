@@ -36,8 +36,8 @@ void write_files(const char* filenames[], const void* array, std::size_t data_le
                                                               num_files);
 }
 
-void* parse_file_direct(const char* filename, uint64_t* size) {
-  return modyn::common::trigger_storage_cpp::parse_file_direct_impl(filename, size);
+void* parse_file(const char* filename, uint64_t* size) {
+  return modyn::common::trigger_storage_cpp::parse_file_impl(filename, size);
 }
 void release_array(void* array) { return modyn::common::trigger_storage_cpp::release_array_impl(array); }
 }

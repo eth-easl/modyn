@@ -18,11 +18,11 @@ const int DTYPE_SIZE = 16;
  * @brief Get a specified amount of samples from matching files, starting at a specified index
  *
  * @param folder Directory to search in
+ * @param size Return pointer for array size
  * @param pattern Pattern to match. Should match at start of filename
- * @param array Array to store the samples in
  * @param start_index Index of the first sample to store
  * @param worker_subset_size Total amount of samples to store
- * @return uint64_t Amount of samples
+ * @return void* Array of samples
  */
 void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pattern, const uint64_t start_index,
                               const std::size_t worker_subset_size) {
@@ -73,9 +73,9 @@ void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pa
  * @brief Get all the samples from matching files
  *
  * @param folder Directory to search in
+ * @param size Return pointer for array size
  * @param pattern Pattern to match. Should match at start of filename
- * @param array Array to store the samples in
- * @return uint64_t Amount of samples
+ * @return void* Array of samples
  */
 void* get_all_samples_impl(const char* folder, uint64_t* size, const char* pattern) {
   std::vector<std::string> matching_files = get_matching_files(folder, pattern);
@@ -143,28 +143,10 @@ uint64_t get_num_samples_in_file_impl(const char* filename) {
  * @brief Read samples from file
  *
  * @param filename File to read from
- * @param array Array to write to
- * @return uint64_t Amount of samples read
+ * @param size Return pointer for array size
+ * @return void* Array of samples
  */
-uint64_t parse_file_impl(const char* filename, void* array, const uint64_t array_offset) {
-  std::ifstream file = open_file(filename);
-  read_magic(file);
-  std::size_t samples = read_data_size_from_header(file);
-
-  file.read((char*)array + DTYPE_SIZE * array_offset, DTYPE_SIZE * samples);
-  file.close();
-
-  return samples;
-}
-
-/**
- * @brief Read samples from file
- *
- * @param filename File to read from
- * @param array Array to write to
- * @return uint64_t Amount of samples read
- */
-void* parse_file_direct_impl(const char* filename, uint64_t* size) {
+void* parse_file_impl(const char* filename, uint64_t* size) {
   std::ifstream file = open_file(filename);
   read_magic(file);
   std::size_t samples = read_data_size_from_header(file);
@@ -179,15 +161,21 @@ void* parse_file_direct_impl(const char* filename, uint64_t* size) {
   return array;
 }
 
+/**
+ * @brief Release memory of array
+ *
+ * @param array Array to free the memory of
+ */
 void release_array_impl(void* array) { free(array); }
 
 /**
  * @brief Read subset of samples from file
  *
  * @param filename File to read from
- * @param array  Array to write to
- * @param start_index Start index of samples
- * @param end_index End index of samples
+ * @param char_vector Vector to append to
+ * @param samples Amount of samples in vector
+ * @param start_index Start index of new samples
+ * @param end_index End index of new samples
  * @return true File read succesfully
  * @return false end_index exceeds samples of file
  */
@@ -216,8 +204,9 @@ bool parse_file_subset(const char* filename, std::vector<char>& char_vector, con
  * @brief Write samples to file
  *
  * @param filename File to write to
- * @param array Samples to write
- * @param array_length Length of the array
+ * @param array Array of samples to write
+ * @param array_offset Offset in array to write
+ * @param data_length Length of the array
  * @param header File header to write
  * @param header_length Length of the header
  */
@@ -231,20 +220,25 @@ void write_file_impl(const char* filename, const void* array, std::size_t array_
   file.close();
 }
 
+/**
+ * @brief Write samples to multiple files using async
+ *
+ * @param filenames Files to write to
+ * @param array Array of samples to write
+ * @param data_lengths Amount of samples to write to each file
+ * @param headers Headers for the files
+ * @param header_length Length of the headers
+ * @param num_files Amount of files
+ */
 void write_files_impl(const char* filenames[], const void* array, std::size_t data_lengths[], const char* headers[],
                       std::size_t header_length, std::size_t num_files) {
   std::vector<std::future<void>> futures;
   std::size_t array_offset = 0;
 
   for (std::size_t i = 0; i < num_files; ++i) {
-    // std::cout << "Filename " << i << ": " << filenames[i] << '\n';
-    // std::cout << "Data Length " << i << ": " << data_lengths[i] << '\n';
-    // std::cout << "Offset " << i << ": " << array_offset << '\n';
-    // std::cout << "Header " << i << ": " << headers[i] << '\n';
     futures.push_back(std::async(std::launch::async, write_file_impl, filenames[i], array, array_offset,
                                  data_lengths[i], headers[i], header_length));
     array_offset += data_lengths[i];
-    // write_file_impl(filenames[i], arrays[i], data_lengths[i], headers[i], header_length);
   }
 
   for (auto& future : futures) {

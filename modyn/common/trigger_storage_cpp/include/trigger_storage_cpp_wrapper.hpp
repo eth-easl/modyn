@@ -14,6 +14,6 @@ void write_file(const char* filename, const void* array, size_t array_offset, co
                 const char* header, const size_t header_length);
 void write_files(const char* filenames[], const void* array, std::size_t data_lengths[], const char* headers[],
                  std::size_t header_length, std::size_t num_files);
-void* parse_file_direct(const char* filename, uint64_t* size);
+void* parse_file(const char* filename, uint64_t* size);
 void release_array(void* array);
 }
