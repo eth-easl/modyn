@@ -146,12 +146,12 @@ class TriggerStorageCPP:
         ]
         self._get_worker_samples_impl.restype = self.array_pointer
 
-        self._parse_file_direct_impl = self.extension.parse_file_direct
-        self._parse_file_direct_impl.argtypes = [
+        self._parse_file_impl = self.extension.parse_file
+        self._parse_file_impl.argtypes = [
             ctypes.POINTER(ctypes.c_char),
             ctypes.POINTER(ctypes.c_uint64),
         ]
-        self._parse_file_direct_impl.restype = self.array_pointer
+        self._parse_file_impl.restype = self.array_pointer
 
         self._release_array_impl = self.extension.release_array
         self._release_array_impl.argtypes = [
@@ -393,7 +393,7 @@ class TriggerStorageCPP:
         size = (ctypes.c_uint64 * 1)()
         self.array_pointer.shape_val = size
 
-        array = self._parse_file_direct_impl(file, size).reshape(-1)
+        array = self._parse_file_impl(file, size).reshape(-1)
         result = ArrayWrapper(array, self._release_array_impl)
 
         return result
