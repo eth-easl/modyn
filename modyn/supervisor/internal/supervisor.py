@@ -40,9 +40,9 @@ def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
             if p_info.pipeline_exited:
                 proc_alive = p_info.process_handler.is_alive()
                 logger.info(
-                    f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id} 
-                        exit code {p_info.pipeline_exit_code.name}, 
-                        proc alive {proc_alive}"""
+                    f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id}
+                         exit code {p_info.pipeline_exit_code.name},
+                         proc alive {proc_alive}"""
                 )
                 if not proc_alive:
                     # TODO(#317): unregister pipeline when process terminates

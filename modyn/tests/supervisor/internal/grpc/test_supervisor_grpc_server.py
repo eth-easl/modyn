@@ -12,7 +12,7 @@ def noop_init_metadata_db(self):
 
 def noop(self) -> None:
     pass
-\
+
 
 def get_minimal_modyn_config():
     return {"supervisor": {"hostname": "supervisor", "port": 42}}

@@ -38,8 +38,8 @@ class PipelineExecutor:
         self.pipeline_config = pipeline_config
         self.eval_directory = eval_directory
         self.supervisor_supported_eval_result_writers = supervisor_supported_eval_result_writers
-        self.status_query_queue_training = status_query_queue
-        self.status_response_queue_training = status_response_queue
+        self.status_query_queue = status_query_queue
+        self.status_response_queue = status_response_queue
 
         self.previous_model_id: Optional[int] = None
         if self.pipeline_config["training"]["initial_model"] == "pretrained":
@@ -148,7 +148,7 @@ class PipelineExecutor:
         # )
 
         for i in range(0, new_data_len, self._selector_batch_size):
-            batch = new_data[i: i + self._selector_batch_size]
+            batch = new_data[i : i + self._selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             # self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
@@ -225,7 +225,7 @@ class PipelineExecutor:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         for i, triggering_idx in enumerate(triggering_indices):
-            triggering_data = batch[previous_trigger_idx: triggering_idx + 1]
+            triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
             # This call informs the selector about the data until (and including)
@@ -247,7 +247,7 @@ class PipelineExecutor:
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1:]
+                remaining_data = batch[triggering_idx + 1 :]
                 logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0:
