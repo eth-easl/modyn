@@ -265,10 +265,6 @@ class TriggerStorageCPP:
             f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8")
         )
 
-        print("FILES!!")
-        for f in Path(self.trigger_sample_directory).glob("*"):
-            print(f)
-
         array = self._get_all_samples_impl(folder, size, pattern).reshape(-1)
         result = ArrayWrapper(array, self._release_array_impl)
         return result
