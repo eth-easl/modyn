@@ -1,4 +1,3 @@
-from modyn.common.trigger_storage_cpp.trigger_storage_cpp import TriggerStorageCPP
 import os
 import shutil
 import tempfile
@@ -6,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from modyn.common.trigger_storage_cpp.trigger_storage_cpp import TriggerStorageCPP
 
 TMP_DIR = tempfile.mkdtemp()
 
@@ -20,9 +20,7 @@ def setup_and_teardown():
 
 
 def test_save_trigger_sample():
-    TriggerStorageCPP(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(1, 1.0), (2, 2.0)], dtype=np.dtype("i8,f8")), 4
-    )
+    TriggerStorageCPP(TMP_DIR).save_trigger_sample(1, 2, 3, np.array([(1, 1.0), (2, 2.0)], dtype=np.dtype("i8,f8")), 4)
 
     samples = TriggerStorageCPP(TMP_DIR).get_trigger_samples(1, 2, 3)
 
@@ -38,9 +36,7 @@ def test_save_trigger_samples():
         1,
         2,
         3,
-        np.array(
-            [(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0), (5, 5.0)], dtype=np.dtype("i8,f8")
-        ),
+        np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0), (5, 5.0)], dtype=np.dtype("i8,f8")),
         [3, 2],
     )
 
@@ -60,18 +56,14 @@ def test_save_trigger_samples():
 
 
 def test_get_file_size():
-    TriggerStorageCPP(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(1, 1.0), (2, 2.0)], dtype=np.dtype("i8,f8")), 4
-    )
+    TriggerStorageCPP(TMP_DIR).save_trigger_sample(1, 2, 3, np.array([(1, 1.0), (2, 2.0)], dtype=np.dtype("i8,f8")), 4)
 
     file_path = Path(TMP_DIR) / "1_2_3_4.npy"
     TriggerStorageCPP(TMP_DIR)._get_num_samples_in_file(file_path)
 
 
 def test_parse_file():
-    TriggerStorageCPP(TMP_DIR).save_trigger_sample(
-        1, 2, 3, np.array([(1, 1.0), (2, 2.0)], dtype=np.dtype("i8,f8")), 4
-    )
+    TriggerStorageCPP(TMP_DIR).save_trigger_sample(1, 2, 3, np.array([(1, 1.0), (2, 2.0)], dtype=np.dtype("i8,f8")), 4)
     file_path = Path(TMP_DIR) / "1_2_3_4.npy"
 
     samples = TriggerStorageCPP(TMP_DIR)._parse_file(file_path)
@@ -128,9 +120,7 @@ def test_get_trigger_samples():
         1,
         2,
         3,
-        np.array(
-            [(9, 9.0), (10, 10.0), (11, 11.0), (12, 12.0)], dtype=np.dtype("i8,f8")
-        ),
+        np.array([(9, 9.0), (10, 10.0), (11, 11.0), (12, 12.0)], dtype=np.dtype("i8,f8")),
         7,
     )
 
@@ -156,9 +146,7 @@ def test_get_trigger_samples():
         dtype=np.dtype("i8,f8"),
     )
 
-    assert (
-        TriggerStorageCPP(TMP_DIR).get_trigger_samples(1, 2, 3) == expected_order
-    ).all()
+    assert (TriggerStorageCPP(TMP_DIR).get_trigger_samples(1, 2, 3) == expected_order).all()
 
     result = TriggerStorageCPP(TMP_DIR).get_trigger_samples(1, 2, 3, 0, 4, 16)
     assert len(result) == 4

@@ -1,13 +1,13 @@
 import ctypes
-from pathlib import Path
-from sys import platform
-
 import logging
 import os
 import sys
+from pathlib import Path
+from sys import platform
 
 import numpy as np
 from numpy.ctypeslib import ndpointer
+
 from .utils import get_partition_for_worker
 
 logger = logging.getLogger(__name__)
@@ -74,9 +74,7 @@ class TriggerStorageCPP:
     def _ensure_library_present() -> None:
         path = TriggerStorageCPP._get_library_path()
         if not path.exists():
-            raise RuntimeError(
-                f"Cannot find {TriggerStorageCPP.__name__} library at {path}"
-            )
+            raise RuntimeError(f"Cannot find {TriggerStorageCPP.__name__} library at {path}")
 
     def __init__(self, trigger_sample_directory: str = "sample_dir") -> None:
         TriggerStorageCPP._ensure_library_present()
@@ -85,13 +83,9 @@ class TriggerStorageCPP:
         self.trigger_sample_directory = trigger_sample_directory
         if not Path(self.trigger_sample_directory).exists():
             Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
-            logger.info(
-                f"Created the trigger sample directory {self.trigger_sample_directory}."
-            )
+            logger.info(f"Created the trigger sample directory {self.trigger_sample_directory}.")
         if sys.maxsize < 2**63 - 1:
-            raise RuntimeError(
-                "Modyn Selector Implementation requires a 64-bit system."
-            )
+            raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
 
         # We define a return object here that can infer its size when being parsed by ctypes
         self.data_pointer = ndpointer(
@@ -154,9 +148,7 @@ class TriggerStorageCPP:
         self._parse_file_impl.restype = self.data_pointer
 
         self._release_data_impl = self.extension.release_data
-        self._release_data_impl.argtypes = [
-            ndpointer(dtype=[("f0", "<i8"), ("f1", "<f8")], flags="C_CONTIGUOUS")
-        ]
+        self._release_data_impl.argtypes = [ndpointer(dtype=[("f0", "<i8"), ("f1", "<f8")], flags="C_CONTIGUOUS")]
         self._release_data_impl.restype = None
 
     def get_trigger_samples(
@@ -186,9 +178,7 @@ class TriggerStorageCPP:
         :return: the trigger samples
         """
         if not Path(self.trigger_sample_directory).exists():
-            raise FileNotFoundError(
-                f"The trigger sample directory {self.trigger_sample_directory} does not exist."
-            )
+            raise FileNotFoundError(f"The trigger sample directory {self.trigger_sample_directory} does not exist.")
         assert (retrieval_worker_id >= 0 and total_retrieval_workers >= 0) or (
             retrieval_worker_id < 0 and total_retrieval_workers < 2
         ), "Either both or none of the retrieval worker id must be negative and \
@@ -196,9 +186,7 @@ class TriggerStorageCPP:
         if retrieval_worker_id < 0 and total_retrieval_workers < 2:
             return self._get_all_samples(pipeline_id, trigger_id, partition_id)
         else:
-            assert (
-                num_samples_trigger_partition > 0
-            ), "The number of samples per trigger must be positive."
+            assert num_samples_trigger_partition > 0, "The number of samples per trigger must be positive."
             return self._get_worker_samples(
                 pipeline_id,
                 trigger_id,
@@ -236,19 +224,13 @@ class TriggerStorageCPP:
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
         self.data_pointer.shape_val = size
-        pattern = ctypes.c_char_p(
-            f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8")
-        )
+        pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
-        data = self._get_worker_samples_impl(
-            folder, size, pattern, start_index, worker_subset_size
-        ).reshape(-1)
+        data = self._get_worker_samples_impl(folder, size, pattern, start_index, worker_subset_size).reshape(-1)
         result = ArrayWrapper(data, self._release_data_impl)
         return result
 
-    def _get_all_samples(
-        self, pipeline_id: int, trigger_id: int, partition_id: int
-    ) -> ArrayWrapper:
+    def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> ArrayWrapper:
         """
         Return all the samples for the given pipeline id, trigger id and partition id.
 
@@ -261,9 +243,7 @@ class TriggerStorageCPP:
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
         self.data_pointer.shape_val = size
-        pattern = ctypes.c_char_p(
-            f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8")
-        )
+        pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
         data = self._get_all_samples_impl(folder, size, pattern).reshape(-1)
         result = ArrayWrapper(data, self._release_data_impl)
@@ -287,20 +267,14 @@ class TriggerStorageCPP:
         :param insertion_id: the id of the insertion
         """
         if trigger_samples.dtype != np.dtype("i8,f8"):
-            raise ValueError(
-                f"Unexpected dtype: {trigger_samples.dtype}\nExpected: {np.dtype('i8,f8')}"
-            )
+            raise ValueError(f"Unexpected dtype: {trigger_samples.dtype}\nExpected: {np.dtype('i8,f8')}")
 
         Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
 
-        samples_file = (
-            Path(self.trigger_sample_directory)
-            / f"{pipeline_id}_{trigger_id}_{partition_id}_{insertion_id}"
-        )
+        samples_file = Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{insertion_id}"
 
         assert not Path(samples_file).exists(), (
-            f"Trigger samples file {samples_file} already exists. "
-            f"Please delete it if you want to overwrite it."
+            f"Trigger samples file {samples_file} already exists. " f"Please delete it if you want to overwrite it."
         )
 
         self._write_file(samples_file, trigger_samples)
@@ -324,18 +298,13 @@ class TriggerStorageCPP:
         :param data_lengths: the lengths of subarrays to write to files
         """
         if trigger_samples.dtype != np.dtype("i8,f8"):
-            raise ValueError(
-                f"Unexpected dtype: {trigger_samples.dtype}\nExpected: {np.dtype('i8,f8')}"
-            )
+            raise ValueError(f"Unexpected dtype: {trigger_samples.dtype}\nExpected: {np.dtype('i8,f8')}")
 
         Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
 
         samples_files = []
         for i in range(len(data_lengths)):
-            samples_files.append(
-                Path(self.trigger_sample_directory)
-                / f"{pipeline_id}_{trigger_id}_{partition_id}_{i}"
-            )
+            samples_files.append(Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{i}")
             assert not Path(samples_files[i]).exists(), (
                 f"Trigger samples file {samples_files[i]} already exists. "
                 f"Please delete it if you want to overwrite it."
@@ -343,13 +312,8 @@ class TriggerStorageCPP:
 
         self._write_files(samples_files, trigger_samples, data_lengths)
 
-    def get_file_path(
-        self, pipeline_id: int, trigger_id: int, partition_id: int, worker_id: int
-    ) -> Path:
-        return (
-            Path(self.trigger_sample_directory)
-            / f"{pipeline_id}_{trigger_id}_{partition_id}_{worker_id}.npy"
-        )
+    def get_file_path(self, pipeline_id: int, trigger_id: int, partition_id: int, worker_id: int) -> Path:
+        return Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{worker_id}.npy"
 
     def _get_files_for_trigger(self, pipeline_id: int, trigger_id: int) -> list[str]:
         # here we filter the files belonging to the given pipeline and trigger
@@ -418,9 +382,7 @@ class TriggerStorageCPP:
 
         data = np.asanyarray(trigger_samples)
 
-        header = self._build_array_header(
-            np.lib.format.header_data_from_array_1_0(data)
-        )
+        header = self._build_array_header(np.lib.format.header_data_from_array_1_0(data))
 
         file = ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8"))
         header = ctypes.c_char_p(header)
@@ -456,17 +418,12 @@ class TriggerStorageCPP:
         for data_length in data_lengths:
             raw_headers.append(
                 self._build_array_header(
-                    np.lib.format.header_data_from_array_1_0(
-                        data[length_sum : length_sum + data_length]
-                    )
+                    np.lib.format.header_data_from_array_1_0(data[length_sum : length_sum + data_length])
                 )
             )
             length_sum += data_length
 
-        files = [
-            ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8"))
-            for file_path in file_paths
-        ]
+        files = [ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8")) for file_path in file_paths]
         headers = [ctypes.c_char_p(header) for header in raw_headers]
 
         files_p = (ctypes.c_char_p * len(files))()
@@ -522,9 +479,7 @@ class TriggerStorageCPP:
         # the end.
         shape = d["shape"]
         GROWTH_AXIS_MAX_DIGITS = 21
-        header += " " * (
-            (GROWTH_AXIS_MAX_DIGITS - len(repr(shape[0]))) if len(shape) > 0 else 0
-        )
+        header += " " * ((GROWTH_AXIS_MAX_DIGITS - len(repr(shape[0]))) if len(shape) > 0 else 0)
 
         header = np.lib.format._wrap_header_guess_version(header)
         return header

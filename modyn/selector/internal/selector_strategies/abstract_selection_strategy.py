@@ -9,14 +9,8 @@ from typing import Any, Iterable, Optional
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_storage_cpp import TriggerSampleStorage
-from modyn.metadata_database.metadata_database_connection import (
-    MetadataDatabaseConnection,
-)
-from modyn.metadata_database.models import (
-    SelectorStateMetadata,
-    Trigger,
-    TriggerPartition,
-)
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models import SelectorStateMetadata, Trigger, TriggerPartition
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -68,9 +62,7 @@ class AbstractSelectionStrategy(ABC):
             if (self.reset_after_trigger and self.tail_triggers > 0) or (
                 (not self.reset_after_trigger) and self.tail_triggers == 0
             ):
-                raise ValueError(
-                    "Reset after trigger is equivalent to setting tail triggers to 0."
-                )
+                raise ValueError("Reset after trigger is equivalent to setting tail triggers to 0.")
         else:
             if self.reset_after_trigger:
                 self.tail_triggers = 0  # consider only the current trigger
@@ -87,35 +79,24 @@ class AbstractSelectionStrategy(ABC):
         self._disable_mt = self._insertion_threads <= 0
 
         if self._maximum_keys_in_memory < 1:
-            raise ValueError(
-                f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}"
-            )
+            raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")
 
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
             last_trigger_id = (
-                database.session.query(
-                    func.max(Trigger.trigger_id)
-                )  # pylint: disable=not-callable
+                database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
                 .filter(Trigger.pipeline_id == self._pipeline_id)
                 .scalar()
             )
             if last_trigger_id is None:
-                logger.info(
-                    f"Did not find previous trigger id DB for pipeline {pipeline_id}, next trigger is 0."
-                )
+                logger.info(f"Did not find previous trigger id DB for pipeline {pipeline_id}, next trigger is 0.")
                 self._next_trigger_id = 0
             else:
-                logger.info(
-                    f"Last trigger in DB for pipeline {pipeline_id} was {last_trigger_id}."
-                )
+                logger.info(f"Last trigger in DB for pipeline {pipeline_id} was {last_trigger_id}.")
                 self._next_trigger_id = last_trigger_id + 1
 
-        if (
-            self.has_limit
-            and self.training_set_size_limit > self._maximum_keys_in_memory
-        ):
+        if self.has_limit and self.training_set_size_limit > self._maximum_keys_in_memory:
             # TODO(#179) Otherwise, we need to somehow sample over multiple not-in-memory partitions, which is a problem
             # Right now, we interpret the limit as a limit per partition
             # (this means a limit of 2 with 4 partitions with lead to 8 data points!)
@@ -126,9 +107,7 @@ class AbstractSelectionStrategy(ABC):
                 "larger than the maximum amount of keys we may hold in memory."
             )
 
-        self._trigger_sample_directory = self._modyn_config["selector"][
-            "trigger_sample_directory"
-        ]
+        self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
 
     @abstractmethod
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
@@ -152,9 +131,7 @@ class AbstractSelectionStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def inform_data(
-        self, keys: list[int], timestamps: list[int], labels: list[int]
-    ) -> dict[str, Any]:
+    def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         """Informs the strategy of new data.
 
         Args:
@@ -174,9 +151,7 @@ class AbstractSelectionStrategy(ABC):
         modyn_config: dict,
     ) -> None:
         TriggerSampleStorage(
-            trigger_sample_directory=modyn_config["selector"][
-                "trigger_sample_directory"
-            ],
+            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"],
         ).save_trigger_samples(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
@@ -230,9 +205,7 @@ class AbstractSelectionStrategy(ABC):
         partition: Optional[int] = None
         swt.start("on_trigger")
 
-        for partition, (training_samples, partition_log) in enumerate(
-            self._on_trigger()
-        ):
+        for partition, (training_samples, partition_log) in enumerate(self._on_trigger()):
             overall_partition_log = {
                 "partition_log": partition_log,
                 "on_trigger_time": swt.stop("on_trigger"),
@@ -287,9 +260,7 @@ class AbstractSelectionStrategy(ABC):
             )
 
             overall_partition_log["mt_finish_time"] = swt.stop()
-            overall_partition_log["store_triggersamples_time"] = swt.stop(
-                "store_triggersamples"
-            )
+            overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
 
             log["trigger_partitions"].append(overall_partition_log)
             swt.start("on_trigger", overwrite=True)
@@ -366,9 +337,7 @@ class AbstractSelectionStrategy(ABC):
                 )
                 .first()
             )
-            assert (
-                num_samples_trigger_partition is not None
-            ), f"Could not find TriggerPartition {partition_id} in DB"
+            assert num_samples_trigger_partition is not None, f"Could not find TriggerPartition {partition_id} in DB"
             num_samples_trigger_partition = num_samples_trigger_partition[0]
 
         data = TriggerSampleStorage(
@@ -411,9 +380,7 @@ class AbstractSelectionStrategy(ABC):
             )
             database.session.commit()
 
-    def _persist_samples(
-        self, keys: list[int], timestamps: list[int], labels: list[int]
-    ) -> dict[str, Any]:
+    def _persist_samples(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         """Persists the data in the database.
 
         Args:
@@ -434,9 +401,7 @@ class AbstractSelectionStrategy(ABC):
         #  This is done outside of subprocesses to avoid issues with duplicate table creation
         swt.start("trigger_creation")
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            database.add_selector_state_metadata_trigger(
-                self._pipeline_id, self._next_trigger_id
-            )
+            database.add_selector_state_metadata_trigger(self._pipeline_id, self._next_trigger_id)
         log["trigger_creation_time"] = swt.stop()
 
         if self._disable_mt or (self._is_test and self._is_mac):
@@ -458,18 +423,12 @@ class AbstractSelectionStrategy(ABC):
         swt.start("persist_samples_time")
         for i in range(self._insertion_threads):
             start_idx = i * samples_per_proc
-            end_idx = (
-                start_idx + samples_per_proc
-                if i < self._insertion_threads - 1
-                else len(keys)
-            )
+            end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(keys)
             proc_keys = keys[start_idx:end_idx]
             proc_timestamps = timestamps[start_idx:end_idx]
             proc_labels = labels[start_idx:end_idx]
             if len(proc_keys) > 0:
-                logger.debug(
-                    f"Starting persisting process for {len(proc_keys)} samples."
-                )
+                logger.debug(f"Starting persisting process for {len(proc_keys)} samples.")
                 proc = mp.Process(
                     target=AbstractSelectionStrategy._persist_samples_impl,
                     args=(
@@ -497,8 +456,7 @@ class AbstractSelectionStrategy(ABC):
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id < self._next_trigger_id,
-                    SelectorStateMetadata.seen_in_trigger_id
-                    >= self._next_trigger_id - self.tail_triggers - 1
+                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers - 1
                     if self.tail_triggers is not None
                     else True,
                 )

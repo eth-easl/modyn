@@ -1,4 +1,5 @@
 import math
+
 import pytest
 import torch
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource
