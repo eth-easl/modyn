@@ -13,12 +13,12 @@ void* get_all_samples_impl(const char* folder, uint64_t* size, const char* patte
 
 void* parse_file_impl(const char* filename, uint64_t* size);
 
-void write_file_impl(const char* filename, const void* array, size_t array_offset, const size_t array_length,
+void write_file_impl(const char* filename, const void* data, size_t data_offset, const size_t data_length,
                      const char* header, const size_t header_length);
-void write_files_impl(const char* filenames[], const void* array, std::size_t data_lengths[], const char* headers[],
+void write_files_impl(const char* filenames[], const void* data, std::size_t data_lengths[], const char* headers[],
                       std::size_t header_length, std::size_t num_files);
 
-void release_array_impl(void* array);
+void release_data_impl(void* data);
 
 bool parse_file_subset(const char* filename, std ::vector<char>& char_vector, const uint64_t samples,
                        uint64_t start_index, uint64_t end_index);

@@ -20,14 +20,14 @@ void* get_all_samples(const char* folder, uint64_t* size, const char* pattern) {
   return modyn::common::trigger_storage_cpp::get_all_samples_impl(folder, size, pattern);
 }
 
-void write_file(const char* filename, const void* array, size_t array_offset, const size_t array_length,
+void write_file(const char* filename, const void* data, size_t data_offset, const size_t data_length,
                 const char* header, const size_t header_length) {
-  return modyn::common::trigger_storage_cpp::write_file_impl(filename, array, array_offset, array_length, header,
+  return modyn::common::trigger_storage_cpp::write_file_impl(filename, data, data_offset, data_length, header,
                                                              header_length);
 }
-void write_files(const char* filenames[], const void* array, std::size_t data_lengths[], const char* headers[],
+void write_files(const char* filenames[], const void* data, std::size_t data_lengths[], const char* headers[],
                  std::size_t header_length, std::size_t num_files) {
-  return modyn::common::trigger_storage_cpp::write_files_impl(filenames, array, data_lengths, headers, header_length,
+  return modyn::common::trigger_storage_cpp::write_files_impl(filenames, data, data_lengths, headers, header_length,
                                                               num_files);
 }
 
@@ -35,5 +35,5 @@ void* parse_file(const char* filename, uint64_t* size) {
   return modyn::common::trigger_storage_cpp::parse_file_impl(filename, size);
 }
 
-void release_array(void* array) { return modyn::common::trigger_storage_cpp::release_array_impl(array); }
+void release_data(void* data) { return modyn::common::trigger_storage_cpp::release_data_impl(data); }
 }

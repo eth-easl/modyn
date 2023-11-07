@@ -73,12 +73,12 @@ void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pa
     break;
   }
 
-  void* array = malloc(sizeof(char) * DTYPE_SIZE * samples);
+  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);
 
-  memcpy((char*)array, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
+  memcpy((char*)data, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
 
   size[0] = samples;
-  return array;
+  return data;
 }
 
 /**
@@ -107,12 +107,12 @@ void* get_all_samples_impl(const char* folder, uint64_t* size, const char* patte
     file.close();
   }
 
-  void* array = malloc(sizeof(char) * DTYPE_SIZE * samples);
+  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);
 
-  memcpy((char*)array, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
+  memcpy((char*)data, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
 
   size[0] = samples;
-  return array;
+  return data;
 }
 
 /**
@@ -129,30 +129,30 @@ void* parse_file_impl(const char* filename, uint64_t* size) {
 
   size[0] = samples;
 
-  void* array = malloc(sizeof(char) * DTYPE_SIZE * samples);
+  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);
 
-  file.read((char*)array, sizeof(char) * DTYPE_SIZE * samples);
+  file.read((char*)data, sizeof(char) * DTYPE_SIZE * samples);
   file.close();
 
-  return array;
+  return data;
 }
 
 /**
  * @brief Write samples to file
  *
  * @param filename File to write to
- * @param array Array of samples to write
- * @param array_offset Offset in array to write
+ * @param data Array of samples to write
+ * @param data_offset Offset in array to write
  * @param data_length Length of the array
  * @param header File header to write
  * @param header_length Length of the header
  */
-void write_file_impl(const char* filename, const void* array, std::size_t array_offset, const std::size_t data_length,
+void write_file_impl(const char* filename, const void* data, std::size_t data_offset, const std::size_t data_length,
                      const char* header, const std::size_t header_length) {
   std::ofstream file = open_file_write(filename);
 
   file.write(header, header_length);
-  file.write((char*)array + DTYPE_SIZE * array_offset, DTYPE_SIZE * data_length);
+  file.write((char*)data + DTYPE_SIZE * data_offset, DTYPE_SIZE * data_length);
 
   file.close();
 }
@@ -161,21 +161,21 @@ void write_file_impl(const char* filename, const void* array, std::size_t array_
  * @brief Write samples to multiple files using async
  *
  * @param filenames Files to write to
- * @param array Array of samples to write
+ * @param data Array of samples to write
  * @param data_lengths Amount of samples to write to each file
  * @param headers Headers for the files
  * @param header_length Length of the headers
  * @param num_files Amount of files
  */
-void write_files_impl(const char* filenames[], const void* array, std::size_t data_lengths[], const char* headers[],
+void write_files_impl(const char* filenames[], const void* data, std::size_t data_lengths[], const char* headers[],
                       std::size_t header_length, std::size_t num_files) {
   std::vector<std::future<void>> futures;
-  std::size_t array_offset = 0;
+  std::size_t data_offset = 0;
 
   for (std::size_t i = 0; i < num_files; ++i) {
-    futures.push_back(std::async(std::launch::async, write_file_impl, filenames[i], array, array_offset,
-                                 data_lengths[i], headers[i], header_length));
-    array_offset += data_lengths[i];
+    futures.push_back(std::async(std::launch::async, write_file_impl, filenames[i], data, data_offset, data_lengths[i],
+                                 headers[i], header_length));
+    data_offset += data_lengths[i];
   }
 
   for (auto& future : futures) {
@@ -186,9 +186,9 @@ void write_files_impl(const char* filenames[], const void* array, std::size_t da
 /**
  * @brief Release memory of array
  *
- * @param array Array to free the memory of
+ * @param data Array to free the memory of
  */
-void release_array_impl(void* array) { free(array); }
+void release_data_impl(void* data) { free(data); }
 
 /**
  * @brief Read subset of samples from file

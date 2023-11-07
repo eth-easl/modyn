@@ -94,13 +94,13 @@ class TriggerStorageCPP:
             )
 
         # We define a return object here that can infer its size when being parsed by ctypes
-        self.array_pointer = ndpointer(
+        self.data_pointer = ndpointer(
             dtype=[("f0", "<i8"), ("f1", "<f8")],
             ndim=1,
             shape=(1,),
             flags="C_CONTIGUOUS",
         )
-        self.array_pointer._shape_ = property(lambda self: self.shape_val[0])
+        self.data_pointer._shape_ = property(lambda self: self.shape_val[0])
 
         self._get_num_samples_in_file_impl = self.extension.get_num_samples_in_file
         self._get_num_samples_in_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char)]
@@ -134,7 +134,7 @@ class TriggerStorageCPP:
             ctypes.POINTER(ctypes.c_uint64),
             ctypes.POINTER(ctypes.c_char),
         ]
-        self._get_all_samples_impl.restype = self.array_pointer
+        self._get_all_samples_impl.restype = self.data_pointer
 
         self._get_worker_samples_impl = self.extension.get_worker_samples
         self._get_worker_samples_impl.argtypes = [
@@ -144,20 +144,20 @@ class TriggerStorageCPP:
             ctypes.c_uint64,
             ctypes.c_uint64,
         ]
-        self._get_worker_samples_impl.restype = self.array_pointer
+        self._get_worker_samples_impl.restype = self.data_pointer
 
         self._parse_file_impl = self.extension.parse_file
         self._parse_file_impl.argtypes = [
             ctypes.POINTER(ctypes.c_char),
             ctypes.POINTER(ctypes.c_uint64),
         ]
-        self._parse_file_impl.restype = self.array_pointer
+        self._parse_file_impl.restype = self.data_pointer
 
-        self._release_array_impl = self.extension.release_array
-        self._release_array_impl.argtypes = [
+        self._release_data_impl = self.extension.release_data
+        self._release_data_impl.argtypes = [
             ndpointer(dtype=[("f0", "<i8"), ("f1", "<f8")], flags="C_CONTIGUOUS")
         ]
-        self._release_array_impl.restype = None
+        self._release_data_impl.restype = None
 
     def get_trigger_samples(
         self,
@@ -235,15 +235,15 @@ class TriggerStorageCPP:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
-        self.array_pointer.shape_val = size
+        self.data_pointer.shape_val = size
         pattern = ctypes.c_char_p(
             f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8")
         )
 
-        array = self._get_worker_samples_impl(
+        data = self._get_worker_samples_impl(
             folder, size, pattern, start_index, worker_subset_size
         ).reshape(-1)
-        result = ArrayWrapper(array, self._release_array_impl)
+        result = ArrayWrapper(data, self._release_data_impl)
         return result
 
     def _get_all_samples(
@@ -260,13 +260,13 @@ class TriggerStorageCPP:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
-        self.array_pointer.shape_val = size
+        self.data_pointer.shape_val = size
         pattern = ctypes.c_char_p(
             f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8")
         )
 
-        array = self._get_all_samples_impl(folder, size, pattern).reshape(-1)
-        result = ArrayWrapper(array, self._release_array_impl)
+        data = self._get_all_samples_impl(folder, size, pattern).reshape(-1)
+        result = ArrayWrapper(data, self._release_data_impl)
         return result
 
     def save_trigger_sample(
@@ -391,10 +391,10 @@ class TriggerStorageCPP:
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
-        self.array_pointer.shape_val = size
+        self.data_pointer.shape_val = size
 
-        array = self._parse_file_impl(file, size).reshape(-1)
-        result = ArrayWrapper(array, self._release_array_impl)
+        data = self._parse_file_impl(file, size).reshape(-1)
+        result = ArrayWrapper(data, self._release_data_impl)
 
         return result
 
@@ -416,10 +416,10 @@ class TriggerStorageCPP:
             trigger_samples (np.ndarray): List of trigger samples.
         """
 
-        array = np.asanyarray(trigger_samples)
+        data = np.asanyarray(trigger_samples)
 
         header = self._build_array_header(
-            np.lib.format.header_data_from_array_1_0(array)
+            np.lib.format.header_data_from_array_1_0(data)
         )
 
         file = ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8"))
@@ -427,9 +427,9 @@ class TriggerStorageCPP:
 
         self._write_file_impl(
             file,
-            array,
+            data,
             0,
-            len(array),
+            len(data),
             header,
             128,
         )
@@ -448,7 +448,7 @@ class TriggerStorageCPP:
             data_lengths (list): List of
         """
 
-        array = np.asanyarray(trigger_samples)
+        data = np.asanyarray(trigger_samples)
 
         raw_headers = []
         length_sum = 0
@@ -457,7 +457,7 @@ class TriggerStorageCPP:
             raw_headers.append(
                 self._build_array_header(
                     np.lib.format.header_data_from_array_1_0(
-                        array[length_sum : length_sum + data_length]
+                        data[length_sum : length_sum + data_length]
                     )
                 )
             )
@@ -489,7 +489,7 @@ class TriggerStorageCPP:
 
         self._write_files_impl(
             files_p,
-            array,
+            data,
             data_lengths_p,
             headers_p,
             128,

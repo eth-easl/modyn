@@ -13,10 +13,10 @@ void* get_all_samples(const char* folder, uint64_t* size, const char* pattern);
 
 void* parse_file(const char* filename, uint64_t* size);
 
-void write_file(const char* filename, const void* array, size_t array_offset, const size_t array_length,
+void write_file(const char* filename, const void* data, size_t data_offset, const size_t data_length,
                 const char* header, const size_t header_length);
-void write_files(const char* filenames[], const void* array, std::size_t data_lengths[], const char* headers[],
+void write_files(const char* filenames[], const void* data, std::size_t data_lengths[], const char* headers[],
                  std::size_t header_length, std::size_t num_files);
 
-void release_array(void* array);
+void release_data(void* data);
 }
