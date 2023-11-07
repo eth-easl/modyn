@@ -30,6 +30,20 @@ class ArrayWrapper:
     def __del__(self):
         self.f_release(self.array)
 
+    def __eq__(self, other):
+        return self.array == other
+
+    def __ne__(self, other):
+        return self.array == other
+
+    @property
+    def dtype(self):
+        return self.array.dtype
+
+    @property
+    def shape(self):
+        return self.array.shape
+
 
 class TriggerStorageCPP:
     """
@@ -79,6 +93,7 @@ class TriggerStorageCPP:
                 "Modyn Selector Implementation requires a 64-bit system."
             )
 
+        # We define a return object here that can infer its size when being parsed by ctypes
         self.array_pointer = ndpointer(
             dtype=[("f0", "<i8"), ("f1", "<f8")],
             ndim=1,
@@ -96,10 +111,22 @@ class TriggerStorageCPP:
             ctypes.POINTER(ctypes.c_char),
             ndpointer(flags="C_CONTIGUOUS"),
             ctypes.c_uint64,
+            ctypes.c_uint64,
             ctypes.POINTER(ctypes.c_char),
             ctypes.c_uint64,
         ]
         self._write_file_impl.restype = None
+
+        self._write_files_impl = self.extension.write_files
+        self._write_files_impl.argtypes = [
+            ctypes.POINTER(ctypes.POINTER(ctypes.c_char)),
+            ndpointer(flags="C_CONTIGUOUS"),
+            ctypes.POINTER(ctypes.c_uint64),
+            ctypes.POINTER(ctypes.POINTER(ctypes.c_char)),
+            ctypes.c_uint64,
+            ctypes.c_uint64,
+        ]
+        self._write_files_impl.restype = None
 
         self._get_all_samples_impl = self.extension.get_all_samples
         self._get_all_samples_impl.argtypes = [
@@ -140,7 +167,7 @@ class TriggerStorageCPP:
         retrieval_worker_id: int = -1,
         total_retrieval_workers: int = -1,
         num_samples_trigger_partition: int = -1,
-    ) -> list[tuple[int, float]]:
+    ) -> ArrayWrapper:
         """
         Return the trigger samples for the given pipeline id, trigger id and partition id.
 
@@ -189,7 +216,7 @@ class TriggerStorageCPP:
         retrieval_worker_id: int,
         total_retrieval_workers: int,
         num_samples_trigger_partition: int,
-    ) -> list[tuple[int, float]]:
+    ) -> ArrayWrapper:
         """
         Return the trigger samples for the given pipeline id, trigger id and partition id that are assigned to the
         retrieval worker.
@@ -221,7 +248,7 @@ class TriggerStorageCPP:
 
     def _get_all_samples(
         self, pipeline_id: int, trigger_id: int, partition_id: int
-    ) -> list[tuple[int, float]]:
+    ) -> ArrayWrapper:
         """
         Return all the samples for the given pipeline id, trigger id and partition id.
 
@@ -237,6 +264,10 @@ class TriggerStorageCPP:
         pattern = ctypes.c_char_p(
             f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8")
         )
+
+        print("FILES!!")
+        for f in Path(self.trigger_sample_directory).glob("*"):
+            print(f)
 
         array = self._get_all_samples_impl(folder, size, pattern).reshape(-1)
         result = ArrayWrapper(array, self._release_array_impl)
@@ -277,6 +308,44 @@ class TriggerStorageCPP:
         )
 
         self._write_file(samples_file, trigger_samples)
+
+    def save_trigger_samples(
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        partition_id: int,
+        trigger_samples: np.ndarray,
+        data_lengths: list,
+    ) -> None:
+        """
+        Save the trigger samples for the given pipeline id, trigger id and partition id
+        to multiple files.
+
+        :param pipeline_id: the id of the pipeline
+        :param trigger_id: the id of the trigger
+        :param partition_id: the id of the partition
+        :param trigger_samples: the trigger samples
+        :param data_lengths: the lengths of subarrays to write to files
+        """
+        if trigger_samples.dtype != np.dtype("i8,f8"):
+            raise ValueError(
+                f"Unexpected dtype: {trigger_samples.dtype}\nExpected: {np.dtype('i8,f8')}"
+            )
+
+        Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
+
+        samples_files = []
+        for i in range(len(data_lengths)):
+            samples_files.append(
+                Path(self.trigger_sample_directory)
+                / f"{pipeline_id}_{trigger_id}_{partition_id}_{i}"
+            )
+            assert not Path(samples_files[i]).exists(), (
+                f"Trigger samples file {samples_files[i]} already exists. "
+                f"Please delete it if you want to overwrite it."
+            )
+
+        self._write_files(samples_files, trigger_samples, data_lengths)
 
     def get_file_path(
         self, pipeline_id: int, trigger_id: int, partition_id: int, worker_id: int
@@ -321,7 +390,7 @@ class TriggerStorageCPP:
             file_path (str): File path to parse.
 
         Returns:
-            list[tuple[int, float]]: List of trigger samples.
+            np.ndarray: List of trigger samples.
         """
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
@@ -343,12 +412,12 @@ class TriggerStorageCPP:
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         return self._get_num_samples_in_file_impl(file)
 
-    def _write_file(self, file_path: Path, trigger_samples: np.ndarray) -> None:
+    def _write_file(self, file_path: list, trigger_samples: list) -> None:
         """Write the trigger samples to the given file.
 
         Args:
             file_path (str): File path to write to.
-            trigger_samples (list[tuple[int, float]]): List of trigger samples.
+            trigger_samples (np.ndarray): List of trigger samples.
         """
 
         array = np.asanyarray(trigger_samples)
@@ -363,9 +432,72 @@ class TriggerStorageCPP:
         self._write_file_impl(
             file,
             array,
-            len(array) * 16,
+            0,
+            len(array),
             header,
             128,
+        )
+
+    def _write_files(
+        self,
+        file_paths: Path,
+        trigger_samples: np.ndarray,
+        data_lengths: list,
+    ) -> None:
+        """Write the trigger samples to multiple files.
+
+        Args:
+            file_path (str): File path to write to.
+            trigger_samples (np.ndarray): List of trigger samples.
+            data_lengths (list): List of
+        """
+
+        array = np.asanyarray(trigger_samples)
+
+        raw_headers = []
+        length_sum = 0
+
+        for data_length in data_lengths:
+            raw_headers.append(
+                self._build_array_header(
+                    np.lib.format.header_data_from_array_1_0(
+                        array[length_sum : length_sum + data_length]
+                    )
+                )
+            )
+            length_sum += data_length
+
+        files = [
+            ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8"))
+            for file_path in file_paths
+        ]
+        headers = [ctypes.c_char_p(header) for header in raw_headers]
+
+        files_p = (ctypes.c_char_p * len(files))()
+        headers_p = (ctypes.c_char_p * len(files))()
+        data_lengths_p = (ctypes.c_uint64 * len(data_lengths))()
+
+        for i, _ in enumerate(files):
+            files_p[i] = files[i]
+            headers_p[i] = headers[i]
+            data_lengths_p[i] = data_lengths[i]
+
+        self._write_files_impl.argtypes = [
+            ctypes.POINTER(ctypes.c_char_p),
+            ndpointer(flags="C_CONTIGUOUS"),
+            ctypes.POINTER(ctypes.c_uint64),
+            ctypes.POINTER(ctypes.c_char_p),
+            ctypes.c_uint64,
+            ctypes.c_uint64,
+        ]
+
+        self._write_files_impl(
+            files_p,
+            array,
+            data_lengths_p,
+            headers_p,
+            128,
+            len(data_lengths),
         )
 
     def _build_array_header(self, d):
@@ -395,9 +527,7 @@ class TriggerStorageCPP:
         shape = d["shape"]
         GROWTH_AXIS_MAX_DIGITS = 21
         header += " " * (
-            (GROWTH_AXIS_MAX_DIGITS - len(repr(shape[-1 if d["fortran_order"] else 0])))
-            if len(shape) > 0
-            else 0
+            (GROWTH_AXIS_MAX_DIGITS - len(repr(shape[0]))) if len(shape) > 0 else 0
         )
 
         header = np.lib.format._wrap_header_guess_version(header)

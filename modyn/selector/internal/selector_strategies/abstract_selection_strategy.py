@@ -170,10 +170,8 @@ class AbstractSelectionStrategy(ABC):
         trigger_id: int,
         pipeline_id: int,
         training_samples: np.ndarray,
-        modyn_config: dict,
-        array_offsets: list,
         data_lengths: list,
-        # insertion_id: int,
+        modyn_config: dict,
     ) -> None:
         TriggerSampleStorage(
             trigger_sample_directory=modyn_config["selector"][
@@ -185,7 +183,6 @@ class AbstractSelectionStrategy(ABC):
             partition_id=partition_id,
             trigger_samples=training_samples,
             data_lengths=data_lengths,
-            # insertion_id=insertion_id,
         )
 
     @staticmethod
@@ -268,55 +265,25 @@ class AbstractSelectionStrategy(ABC):
             swt.start("store_triggersamples", overwrite=True)
             swt.start("mt_prep", overwrite=True)
             samples_per_proc = int(len(training_samples) / self._insertion_threads)
-            processes: list[mp.Process] = []
 
-            array_offsets = []
             data_lengths = []
 
             overall_partition_log["mt_prep_time"] = swt.stop()
             swt.start("mt_finish", overwrite=True)
-            # for proc in processes:
-            #     proc.join()
 
-            # with SharedMemoryManager() as smm:
-            for i in range(self._insertion_threads):
-                data_lengths.append(
-                    min(samples_per_proc, len(training_samples) - i * samples_per_proc)
-                )
+            if samples_per_proc > 0:
+                data_lengths = [samples_per_proc] * (self._insertion_threads - 1)
 
-                # end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
-                # proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
-                # if len(proc_samples) > 0:
-                # shm = smm.SharedMemory(proc_samples.nbytes)
-
-                # shared_proc_samples: np.ndarray = np.ndarray(
-                #     proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
-                # )
-                # shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
-                # assert proc_samples.shape == shared_proc_samples.shape
-
-                # logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
-                # proc = mp.Process(
-                #     target=AbstractSelectionStrategy._store_triggersamples_impl,
-                #     args=(
-                #         partition,
-                #         trigger_id,
-                #         self._pipeline_id,
-                #         shared_proc_samples,
-                #         self._modyn_config,
-                #         i,
-                #     ),
-                # )
-                # proc.start()
-                # processes.append(proc)
+            if sum(data_lengths) < len(training_samples):
+                data_lengths.append(len(training_samples) - sum(data_lengths))
 
             AbstractSelectionStrategy._store_triggersamples_impl(
                 partition,
                 trigger_id,
                 self._pipeline_id,
                 np.array(training_samples, dtype=np.dtype("i8,f8")),
+                data_lengths,
                 self._modyn_config,
-                # 0,
             )
 
             overall_partition_log["mt_finish_time"] = swt.stop()

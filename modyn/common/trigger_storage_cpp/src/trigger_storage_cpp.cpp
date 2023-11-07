@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <numeric>
 #include <vector>
@@ -220,14 +221,35 @@ bool parse_file_subset(const char* filename, std::vector<char>& char_vector, con
  * @param header File header to write
  * @param header_length Length of the header
  */
-void write_file_impl(const char* filename, void* array, const std::size_t data_length, const char* header,
-                     const std::size_t header_length) {
+void write_file_impl(const char* filename, const void* array, std::size_t array_offset, const std::size_t data_length,
+                     const char* header, const std::size_t header_length) {
   std::ofstream file = open_file_write(filename);
 
   file.write(header, header_length);
-  file.write((char*)array, data_length);
+  file.write((char*)array + DTYPE_SIZE * array_offset, DTYPE_SIZE * data_length);
 
   file.close();
+}
+
+void write_files_impl(const char* filenames[], const void* array, std::size_t data_lengths[], const char* headers[],
+                      std::size_t header_length, std::size_t num_files) {
+  std::vector<std::future<void>> futures;
+  std::size_t array_offset = 0;
+
+  for (std::size_t i = 0; i < num_files; ++i) {
+    // std::cout << "Filename " << i << ": " << filenames[i] << '\n';
+    // std::cout << "Data Length " << i << ": " << data_lengths[i] << '\n';
+    // std::cout << "Offset " << i << ": " << array_offset << '\n';
+    // std::cout << "Header " << i << ": " << headers[i] << '\n';
+    futures.push_back(std::async(std::launch::async, write_file_impl, filenames[i], array, array_offset,
+                                 data_lengths[i], headers[i], header_length));
+    array_offset += data_lengths[i];
+    // write_file_impl(filenames[i], arrays[i], data_lengths[i], headers[i], header_length);
+  }
+
+  for (auto& future : futures) {
+    future.get();
+  }
 }
 
 /**
