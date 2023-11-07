@@ -65,6 +65,9 @@ class FileWatcher {
 
     filesystem_wrapper_type_ = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
 
+    SPDLOG_INFO("FileWatcher for dataset {} uses path {}, file_wrapper_id {} and file_system_id {}", dataset_id_,
+                dataset_path, file_wrapper_type_id, filesystem_wrapper_type_int);
+
     if (dataset_path.empty()) {
       SPDLOG_ERROR("Dataset with id {} not found.", dataset_id_);
       *stop_file_watcher = true;
@@ -109,6 +112,7 @@ class FileWatcher {
       insertion_thread_pool_ = std::vector<std::thread>(insertion_threads_);
       insertion_thread_exceptions_ = std::vector<std::atomic<bool>>(insertion_threads_);
     }
+    SPDLOG_INFO("FileWatcher for dataset {} initialized", dataset_id_);
   }
   void run();
   void search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp);
