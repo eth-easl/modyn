@@ -142,20 +142,20 @@ TEST_F(FileWatcherTest, TestExtractCheckFileForInsertion) {
 
   EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(1000));
 
-  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 0, filesystem_wrapper, session));
+  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 0, 1, filesystem_wrapper, session));
 
   EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(0));
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 1000, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 1000, 1, filesystem_wrapper, session));
 
-  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", ".txt", true, 0, filesystem_wrapper, session));
+  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", ".txt", true, 0, 1, filesystem_wrapper, session));
 
   session << "INSERT INTO files (file_id, dataset_id, path, updated_at) VALUES "
              "(1, 1, 'test.txt', 1000)";
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 0, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 0, 1, filesystem_wrapper, session));
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 1000, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 1000, 1, filesystem_wrapper, session));
 }
 
 TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
@@ -349,8 +349,8 @@ TEST_F(FileWatcherTest, TestCheckFileForInsertionWithInvalidPath) {
 
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("", ".txt", false, 0, filesystem_wrapper, session));
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test", ".txt", true, 0, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("", ".txt", false, 0, 1, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test", ".txt", true, 0, 1, filesystem_wrapper, session));
 }
 
 TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {

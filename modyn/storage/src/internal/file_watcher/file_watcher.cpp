@@ -25,7 +25,7 @@ using namespace modyn::storage;
  * - If we are not ignoring the last modified timestamp, the file has been modified since the last check.
  */
 bool FileWatcher::check_file_for_insertion(const std::string& file_path, const std::string& data_file_extension,
-                                           bool ignore_last_timestamp, int64_t timestamp,
+                                           bool ignore_last_timestamp, int64_t timestamp, int64_t dataset_id,
                                            const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
                                            soci::session& session) {
   if (file_path.empty()) {
@@ -37,7 +37,8 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
   }
 
   int64_t file_id = -1;
-  session << "SELECT file_id FROM files WHERE path = :file_path", soci::into(file_id), soci::use(file_path);
+  session << "SELECT file_id FROM files WHERE path = :file_path AND dataset_id = :dataset_id", soci::into(file_id),
+      soci::use(file_path), soci::use(dataset_id);
 
   if (file_id == -1) {
     if (ignore_last_timestamp) {
@@ -155,6 +156,7 @@ void FileWatcher::run() {
 
   while (true) {
     try {
+      SPDLOG_INFO("FileWatcher for dataset {} is seeking.", dataset_id_);
       seek(session);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error while seeking dataset: {}", e.what());
@@ -165,6 +167,10 @@ void FileWatcher::run() {
       break;
     }
     std::this_thread::sleep_for(std::chrono::seconds(file_watcher_interval));
+    if (stop_file_watcher->load()) {
+      SPDLOG_INFO("FileWatcher for dataset {} is exiting.", dataset_id_);
+      break;
+    }
   }
 }
 
@@ -190,10 +196,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
         soci::into(ignore_last_timestamp), soci::use(dataset_id);
 
     std::copy_if(file_paths_begin, file_paths_end, std::back_inserter(files_for_insertion),
-                 [&data_file_extension, &timestamp, &session, &filesystem_wrapper,
-                  &ignore_last_timestamp](const std::string& file_path) {
+                 [&data_file_extension, &timestamp, &session, &filesystem_wrapper, &ignore_last_timestamp,
+                  &dataset_id](const std::string& file_path) {
                    return check_file_for_insertion(file_path, data_file_extension,
-                                                   static_cast<bool>(ignore_last_timestamp), timestamp,
+                                                   static_cast<bool>(ignore_last_timestamp), timestamp, dataset_id,
                                                    filesystem_wrapper, session);
                  });
     if (!files_for_insertion.empty()) {

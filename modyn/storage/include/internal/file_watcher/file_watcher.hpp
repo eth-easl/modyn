@@ -137,7 +137,7 @@ class FileWatcher {
                              const std::unique_ptr<FileWrapper>& file_wrapper, soci::session& session,
                              DatabaseDriver& database_driver);
   static bool check_file_for_insertion(const std::string& file_path, const std::string& data_file_extension,
-                                       bool ignore_last_timestamp, int64_t timestamp,
+                                       bool ignore_last_timestamp, int64_t timestamp, int64_t dataset_id,
                                        const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
                                        soci::session& session);
   static void postgres_copy_insertion(const std::vector<FileFrame>& file_samples, int64_t dataset_id,
