@@ -6,7 +6,9 @@ set(MODYN_STORAGE_SOURCES
     internal/file_watcher/file_watcher.cpp
     internal/file_wrapper/binary_file_wrapper.cpp
     internal/file_wrapper/csv_file_wrapper.cpp
+    internal/file_wrapper/file_wrapper_utils.cpp
     internal/file_wrapper/single_sample_file_wrapper.cpp
+    internal/filesystem_wrapper/filesystem_wrapper_utils.cpp
     internal/filesystem_wrapper/local_filesystem_wrapper.cpp
     internal/grpc/storage_grpc_server.cpp
     internal/grpc/storage_service_impl.cpp

@@ -6,15 +6,6 @@
 
 namespace modyn::storage {
 
-static std::shared_ptr<FilesystemWrapper> get_filesystem_wrapper(const FilesystemWrapperType& type) {
-  std::shared_ptr<FilesystemWrapper> filesystem_wrapper;
-  if (type == FilesystemWrapperType::LOCAL) {
-    filesystem_wrapper = std::make_shared<LocalFilesystemWrapper>();
-  } else if (type == FilesystemWrapperType::INVALID_FSW) {
-    FAIL("Trying to instantiate INVALID FileSystemWrapper");
-  } else {
-    FAIL("Unknown filesystem wrapper type");
-  }
-  return filesystem_wrapper;
-}
+std::shared_ptr<FilesystemWrapper> get_filesystem_wrapper(const FilesystemWrapperType& type);
+
 }  // namespace modyn::storage
