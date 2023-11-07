@@ -1,13 +1,46 @@
 #pragma once
 
+#include <gmock/gmock.h>
+#include <grpcpp/support/sync_stream.h>
 #include <yaml-cpp/yaml.h>
 
 #include <fstream>
 
 namespace modyn::storage {
+
 class StorageTestUtils {
  public:
   static YAML::Node get_dummy_file_wrapper_config();
   static std::string get_dummy_file_wrapper_config_inline();
 };
+
+template <typename T>
+class MockServerWriter : public grpc::ServerWriterInterface<T> {
+ public:
+  MockServerWriter() = default;
+
+  MockServerWriter(grpc::internal::Call* call, grpc::ServerContext* ctx) : call_(call), ctx_(ctx) {}
+
+  /// ServerStreamingInterface
+  MOCK_METHOD0_T(SendInitialMetadata, void());
+
+  /// WriterInterface
+  bool Write(const T& response, const grpc::WriteOptions /* options */) override {
+    responses_.push_back(response);
+    return true;
+  };
+
+  inline bool Write(const T& msg) { return Write(msg, grpc::WriteOptions()); }
+
+  std::vector<T> get_responses() { return responses_; }
+
+ private:
+  grpc::internal::Call* const call_;
+  grpc::ServerContext* const ctx_;
+  template <class ServiceType, class RequestType, class ResponseType>
+  friend class grpc::internal::ServerStreamingHandler;
+
+  std::vector<T> responses_;
+};
+
 }  // namespace modyn::storage

@@ -49,26 +49,9 @@ Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
 }
 
 Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming
-    ServerContext* /*context*/, const modyn::storage::GetNewDataSinceRequest* request,
+    ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,
     ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) {
-  try {
-    soci::session session = storage_database_connection_.get_session();
-    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
-    if (dataset_id == -1) {
-      SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
-      return {StatusCode::OK, "Dataset does not exist."};
-    }
-    const int64_t request_timestamp = request->timestamp();
-
-    SPDLOG_INFO(fmt::format("Received GetNewDataSince Request for dataset {} (id = {}) with timestamp {}.",
-                            request->dataset_id(), dataset_id, request_timestamp));
-
-    send_file_ids_and_labels<modyn::storage::GetNewDataSinceResponse>(writer, dataset_id, request_timestamp);
-  } catch (const std::exception& e) {
-    SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
-    return {StatusCode::OK, fmt::format("Error in GetNewDataSince: {}", e.what())};
-  }
-  return {StatusCode::OK, "Data retrieved."};
+  return GetNewDataSince_Impl<ServerWriter<modyn::storage::GetNewDataSinceResponse>>(context, request, writer);
 }
 
 Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-naming
@@ -453,128 +436,6 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
 }
 
 // ------- Helper functions -------
-
-template <typename T>
-void StorageServiceImpl::send_file_ids_and_labels(ServerWriter<T>* writer, const int64_t dataset_id,
-                                                  const int64_t start_timestamp, int64_t end_timestamp) {
-  soci::session session = storage_database_connection_.get_session();
-
-  const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
-  SPDLOG_INFO(fmt::format("send_file_ids_and_labels got {} file ids.", file_ids.size()));
-
-  std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
-
-  if (disable_multithreading_) {
-    send_sample_id_and_label<T>(writer, writer_mutex, file_ids, storage_database_connection_, dataset_id,
-                                sample_batch_size_);
-  } else {
-    // Split the number of files over retrieval_threads_
-    auto file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
-
-    std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
-    for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-      retrieval_threads_vector[thread_id] =
-          std::thread([this, writer, &file_ids_per_thread, thread_id, dataset_id, &writer_mutex]() {
-            send_sample_id_and_label<T>(writer, writer_mutex, file_ids_per_thread[thread_id],
-                                        std::ref(storage_database_connection_), dataset_id, sample_batch_size_);
-          });
-    }
-
-    for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-      retrieval_threads_vector[thread_id].join();
-    }
-  }
-}
-
-template <typename T>
-void StorageServiceImpl::send_sample_id_and_label(ServerWriter<T>* writer, std::mutex& writer_mutex,
-                                                  const std::vector<int64_t>& file_ids,
-                                                  StorageDatabaseConnection& storage_database_connection,
-                                                  const int64_t dataset_id, const int64_t sample_batch_size) {
-  soci::session session = storage_database_connection.get_session();
-
-  std::vector<SampleRecord> record_buf;
-  record_buf.reserve(sample_batch_size);
-
-  for (const int64_t file_id : file_ids) {
-    const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
-    SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples));
-    if (number_of_samples > 0) {
-      const std::string query = fmt::format(
-          "SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = {}", file_id, dataset_id);
-      const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_id);
-      CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 2);
-
-      std::vector<SampleRecord> records;
-
-      while (true) {
-        records = cursor_handler.yield_per(sample_batch_size);
-
-        SPDLOG_INFO(fmt::format("got {} records (batch size = {})", records.size(), sample_batch_size));
-        if (records.empty()) {
-          break;
-        }
-        const uint64_t obtained_records = records.size();
-        ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
-
-        if (static_cast<int64_t>(records.size()) == sample_batch_size) {
-          // If we obtained a full buffer, we can emit a response directly
-          T response;
-          for (const auto& record : records) {
-            response.add_keys(record.id);
-            response.add_labels(record.column_1);
-          }
-
-          {
-            const std::lock_guard<std::mutex> lock(writer_mutex);
-            writer->Write(response);
-          }
-        } else {
-          // If not, we append to our record buf
-          record_buf.insert(record_buf.end(), records.begin(), records.end());
-          // If our record buf is big enough, emit a message
-          if (static_cast<int64_t>(records.size()) >= sample_batch_size) {
-            T response;
-
-            // sample_batch_size is signed int...
-            for (int64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
-              const SampleRecord& record = record_buf[record_idx];
-              response.add_keys(record.id);
-              response.add_labels(record.column_1);
-            }
-
-            // Now, delete first sample_batch_size elements from vector as we are sending them
-            record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
-
-            ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
-                   "The record buffer should never have more than 2*sample_batch_size elements!");
-
-            {
-              const std::lock_guard<std::mutex> lock(writer_mutex);
-              writer->Write(response);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Iterated over all files, we now need to emit all data from buffer
-  if (!record_buf.empty()) {
-    ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size, "We should have written this buffer before!");
-
-    T response;
-    for (const auto& record : record_buf) {
-      response.add_keys(record.id);
-      response.add_labels(record.column_1);
-    }
-
-    {
-      const std::lock_guard<std::mutex> lock(writer_mutex);
-      writer->Write(response);
-    }
-  }
-}
 
 void StorageServiceImpl::send_sample_data_from_keys(ServerWriter<modyn::storage::GetResponse>* writer,
                                                     const std::vector<int64_t>& request_keys,

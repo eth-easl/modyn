@@ -22,6 +22,8 @@ using namespace grpc;
 class StorageServiceImplTest : public ::testing::Test {
  protected:
   std::string tmp_dir_;
+  int64_t early_sample_id_;
+  int64_t late_sample_id_;
 
   StorageServiceImplTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/storage_service_impl_test"} {}
 
@@ -47,6 +49,11 @@ class StorageServiceImplTest : public ::testing::Test {
     session << sql_expression;
 
     session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 1, 0, 0)";
+    long long inserted_id = -1;  // NOLINT google-runtime-int (Linux otherwise complains about the following call)
+    if (!session.get_last_insert_id("samples", inserted_id)) {
+      FAIL("Failed to insert sample into database");
+    }
+    late_sample_id_ = static_cast<int64_t>(inserted_id);
 
     sql_expression = fmt::format(
         "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/test_file2.txt', "
@@ -55,6 +62,11 @@ class StorageServiceImplTest : public ::testing::Test {
     session << sql_expression;
 
     session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 2, 0, 1)";
+    inserted_id = -1;  // NOLINT google-runtime-int (Linux otherwise complains about the following call)
+    if (!session.get_last_insert_id("samples", inserted_id)) {
+      FAIL("Failed to insert sample into database");
+    }
+    early_sample_id_ = static_cast<int64_t>(inserted_id);
 
     // Create dummy files
     const std::string test_file_path = tmp_dir_ + "/test_file.txt";
@@ -219,6 +231,64 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   session << "SELECT COUNT(*) FROM samples WHERE dataset_id = 1", soci::into(number_of_samples);
 
   ASSERT_EQ(number_of_samples, 1);
+}
+
+TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
+  grpc::ServerContext context;
+  grpc::internal::Call call;
+  modyn::storage::MockServerWriter<modyn::storage::GetNewDataSinceResponse> writer(&call, &context);
+
+  modyn::storage::GetNewDataSinceRequest request;
+  request.set_dataset_id("test_dataset");
+  request.set_timestamp(0);
+
+  grpc::Status status =
+      storage_service.GetNewDataSince_Impl<modyn::storage::MockServerWriter<modyn::storage::GetNewDataSinceResponse>>(
+          &context, &request, &writer);
+
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetNewDataSinceResponse>& responses = writer.get_responses();
+  ASSERT_EQ(responses.size(), 1);
+  const modyn::storage::GetNewDataSinceResponse& response = responses[0];
+
+  std::vector<int64_t> keys;
+  keys.reserve(response.keys_size());
+  for (const auto& key : response.keys()) {
+    keys.push_back(key);
+  }
+
+  ASSERT_THAT(keys, ::testing::UnorderedElementsAre(early_sample_id_, late_sample_id_));
+
+  // Now try only the second file
+
+  modyn::storage::MockServerWriter<modyn::storage::GetNewDataSinceResponse> writer2(&call, &context);
+  request.set_timestamp(50);
+  status =
+      storage_service.GetNewDataSince_Impl<modyn::storage::MockServerWriter<modyn::storage::GetNewDataSinceResponse>>(
+          &context, &request, &writer2);
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetNewDataSinceResponse>& responses2 = writer2.get_responses();
+  ASSERT_EQ(responses2.size(), 1);
+  const modyn::storage::GetNewDataSinceResponse& response2 = responses2[0];
+  std::vector<int64_t> keys2;
+  keys2.reserve(response2.keys_size());
+  for (const auto& key : response2.keys()) {
+    keys2.push_back(key);
+  }
+
+  ASSERT_THAT(keys2, ::testing::ElementsAre(late_sample_id_));
+
+  // And now no files
+  modyn::storage::MockServerWriter<modyn::storage::GetNewDataSinceResponse> writer3(&call, &context);
+  request.set_timestamp(101);
+  status =
+      storage_service.GetNewDataSince_Impl<modyn::storage::MockServerWriter<modyn::storage::GetNewDataSinceResponse>>(
+          &context, &request, &writer3);
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetNewDataSinceResponse>& responses3 = writer3.get_responses();
+  ASSERT_EQ(responses3.size(), 0);
 }
 
 TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
