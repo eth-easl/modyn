@@ -13,7 +13,7 @@ static std::unique_ptr<FileWrapper> get_file_wrapper(const std::string& path, co
                                                      const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
   ASSERT(filesystem_wrapper != nullptr, "Filesystem wrapper is nullptr");
   ASSERT(!path.empty(), "Path is empty");
-  ASSERT(filesystem_wrapper->exists(path), "Path does not exist");
+  ASSERT(filesystem_wrapper->exists(path), fmt::format("Path {} does not exist", path));
 
   std::unique_ptr<FileWrapper> file_wrapper;
   if (type == FileWrapperType::BINARY) {
