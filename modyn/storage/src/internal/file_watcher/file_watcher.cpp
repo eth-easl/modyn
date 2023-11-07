@@ -173,10 +173,15 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>& file_paths, 
     std::vector<std::string> files_for_insertion;
     auto filesystem_wrapper = get_filesystem_wrapper(filesystem_wrapper_type);
 
+    bool ignore_last_timestamp = false;
+    session << "SELECT ignore_last_timestamp FROM datasets WHERE dataset_id = :dataset_id",
+        soci::into(ignore_last_timestamp), soci::use(dataset_id);
+
+    // TODO(MaxiBoether): Ignore last timestamp is a property of the dataset!!
     std::copy_if(file_paths.begin(), file_paths.end(), std::back_inserter(files_for_insertion),
                  [&data_file_extension, &timestamp, &session, &filesystem_wrapper](const std::string& file_path) {
-                   return check_file_for_insertion(file_path, data_file_extension, /*ignore_last_timestamp=*/true,
-                                                   timestamp, filesystem_wrapper, session);
+                   return check_file_for_insertion(file_path, data_file_extension, ignore_last_timestamp, timestamp,
+                                                   filesystem_wrapper, session);
                  });
 
     if (!files_for_insertion.empty()) {
