@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -64,19 +65,28 @@ uint64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
   return static_cast<int64_t>(std::filesystem::file_size(path));
 }
 
+template <typename TP>
+std::time_t to_time_t(TP tp) {
+  using namespace std::chrono;
+  auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
+  return system_clock::to_time_t(sctp);
+}
+
 int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
+  static_assert(sizeof(int64_t) >= sizeof(std::time_t), "Cannot cast time_t to int64_t");
 
-  // For the most system reliable way to get the file timestamp, we use stat
-  struct stat file_stat = {};
-  if (stat(path.c_str(), &file_stat) != 0) {
-    FAIL(fmt::format("File timestamp not readable: {}", path));
-  }
+  const auto modified_time = std::filesystem::last_write_time(path);
+  const auto cftime = to_time_t(modified_time);
+  return static_cast<int64_t>(cftime);
 
-  const time_t file_timestamp = file_stat.st_mtime;
-  const auto int64_file_timestamp = static_cast<int64_t>(file_timestamp);
-  return int64_file_timestamp;
+  /* C++20 version, not supported by compilers yet */
+  /*
+    const auto modified_time = std::filesystem::last_write_time(path);
+    const auto system_time = std::chrono::clock_cast<std::chrono::system_clock>(modified_time);
+    const std::time_t time = std::chrono::system_clock::to_time_t(system_time);
+    return static_cast<int64_t>(time); */
 }
 
 bool LocalFilesystemWrapper::is_valid_path(const std::string& path) { return std::filesystem::exists(path); }

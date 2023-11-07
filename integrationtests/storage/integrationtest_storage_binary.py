@@ -4,6 +4,7 @@
 # Instead of images, we have binary files. The binary files with random content of size 10 bytes.
 
 import json
+import math
 import os
 import random
 import time
@@ -21,10 +22,7 @@ from integrationtests.storage.integrationtest_storage import (
     get_data_in_interval,
     get_new_data_since,
 )
-from modyn.storage.internal.grpc.generated.storage_pb2 import (
-    GetRequest,
-    RegisterNewDatasetRequest,
-)
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, RegisterNewDatasetRequest
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 
 # Because we have no mapping of file to key (happens in the storage service), we have to keep
@@ -65,7 +63,7 @@ def add_file_to_dataset(binary_data: bytes, name: str) -> None:
     with open(DATASET_PATH / name, "wb") as f:
         f.write(binary_data)
     BINARY_UPDATED_TIME_STAMPS.append(
-        int(round(os.path.getmtime(DATASET_PATH / name) * 1000))
+        int(math.floor(os.path.getmtime(DATASET_PATH / name)))
     )
 
 
@@ -153,6 +151,11 @@ def test_storage() -> None:
     ), f"Not all samples were returned. Samples returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_BINARY)
+
+    # Otherwise, if the test runs too quick, the timestamps of the new data equals the timestamps of the old data, and then we have a problem
+    print("Sleeping for 2 seconds before adding more binary files to the dataset...")
+    time.sleep(2)
+    print("Continuing test.")
 
     add_files_to_dataset(
         10, 20, SECOND_ADDED_BINARY

@@ -1,5 +1,6 @@
 import io
 import json
+import math
 import os
 import pathlib
 import random
@@ -12,6 +13,7 @@ import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import yaml
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
+    DeleteDataRequest,
     GetDataInIntervalRequest,
     GetDataInIntervalResponse,
     GetDataPerWorkerRequest,
@@ -22,7 +24,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
     GetRequest,
     RegisterNewDatasetRequest,
-    DeleteDataRequest,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
@@ -182,7 +183,7 @@ def cleanup_storage_database() -> None:
 def add_image_to_dataset(image: Image, name: str) -> None:
     image.save(DATASET_PATH / name)
     IMAGE_UPDATED_TIME_STAMPS.append(
-        int(round(os.path.getmtime(DATASET_PATH / name)))
+        int(math.floor(os.path.getmtime(DATASET_PATH / name)))
     )
 
 
@@ -323,6 +324,11 @@ def test_storage() -> None:
 
     check_data(response.keys, FIRST_ADDED_IMAGES)
     check_dataset_size(10)
+
+    # Otherwise, if the test runs too quick, the timestamps of the new data equals the timestamps of the old data, and then we have a problem
+    print("Sleeping for 2 seconds before adding more images to the dataset...")
+    time.sleep(2)
+    print("Continuing test.")
 
     add_images_to_dataset(
         10, 20, SECOND_ADDED_IMAGES

@@ -44,9 +44,10 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
       return true;
     }
     try {
-      SPDLOG_INFO(fmt::format("Modified time of {} is {}, timestamp is {}", file_path,
-                              filesystem_wrapper->get_modified_time(file_path), timestamp));
-      return filesystem_wrapper->get_modified_time(file_path) > timestamp;
+      const int64_t& modified_time = filesystem_wrapper->get_modified_time(file_path);
+      // TODO(MaxiBoether): remove print
+      SPDLOG_INFO(fmt::format("Modified time of {} is {}, timestamp is {}", file_path, modified_time, timestamp));
+      return modified_time > timestamp;
     } catch (const std::exception& e) {
       SPDLOG_ERROR(fmt::format(
           "Error while checking modified time of file {}. It could be that a deletion request is currently running: {}",

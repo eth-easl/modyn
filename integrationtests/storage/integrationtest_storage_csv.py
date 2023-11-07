@@ -6,6 +6,7 @@
 # where index is a random number, file is the fileindex and the label (last column) is a global counter
 
 import json
+import math
 import os
 import random
 import time
@@ -57,7 +58,7 @@ def register_new_dataset() -> None:
 def add_file_to_dataset(csv_file_content: str, name: str) -> None:
     with open(DATASET_PATH / name, "w") as f:
         f.write(csv_file_content)
-    CSV_UPDATED_TIME_STAMPS.append(int(round(os.path.getmtime(DATASET_PATH / name) * 1000)))
+    CSV_UPDATED_TIME_STAMPS.append(int(math.floor(os.path.getmtime(DATASET_PATH / name))))
 
 
 def create_random_csv_row(file: int, counter: int) -> str:
@@ -137,6 +138,11 @@ def test_storage() -> None:
     assert len(response.keys) == 250, f"Not all samples were returned. Samples returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_CSVS)
+
+    # Otherwise, if the test runs too quick, the timestamps of the new data equals the timestamps of the old data, and then we have a problem
+    print("Sleeping for 2 seconds before adding more csvs to the dataset...")
+    time.sleep(2)
+    print("Continuing test.")
 
     add_files_to_dataset(10, 20, [], SECOND_ADDED_CSVS)  # Add more samples to the dataset.
 
