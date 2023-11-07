@@ -10,6 +10,10 @@ def noop_init_metadata_db(self):
     pass
 
 
+def noop(self) -> None:
+    pass
+\
+
 def get_minimal_modyn_config():
     return {"supervisor": {"hostname": "supervisor", "port": 42}}
 
@@ -20,6 +24,7 @@ def noop_constructor_mock(self, modyn_config: dict) -> None:
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
+@patch.object(Supervisor, "monitor_pipelines", noop)
 def test_init():
     modyn_config = get_minimal_modyn_config()
     grpc_server = SupervisorGRPCServer(modyn_config)

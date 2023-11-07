@@ -3,7 +3,7 @@
 """
 import os
 
-from .pipeline_executor import PipelineExecutor  # noqa: F401
+from .pipeline_executor import PipelineExecutor, execute_pipeline  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

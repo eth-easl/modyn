@@ -1,5 +1,6 @@
 import json
 import logging
+import multiprocessing as mp
 import os
 import pathlib
 import traceback
@@ -25,6 +26,8 @@ class PipelineExecutor:
         pipeline_config: dict,
         eval_directory: str,
         supervisor_supported_eval_result_writers: dict,
+        status_query_queue: mp.Queue,
+        status_response_queue: mp.Queue,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
@@ -35,6 +38,8 @@ class PipelineExecutor:
         self.pipeline_config = pipeline_config
         self.eval_directory = eval_directory
         self.supervisor_supported_eval_result_writers = supervisor_supported_eval_result_writers
+        self.status_query_queue_training = status_query_queue
+        self.status_response_queue_training = status_response_queue
 
         self.previous_model_id: Optional[int] = None
         if self.pipeline_config["training"]["initial_model"] == "pretrained":
@@ -75,7 +80,7 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
 
-    def _init_cluster_connection(self) -> None:
+    def init_cluster_connection(self) -> None:
         self.grpc.init_cluster_connection()
 
     def _determine_pipeline_mode(self) -> None:
@@ -143,7 +148,7 @@ class PipelineExecutor:
         # )
 
         for i in range(0, new_data_len, self._selector_batch_size):
-            batch = new_data[i : i + self._selector_batch_size]
+            batch = new_data[i: i + self._selector_batch_size]
             triggered = self._handle_new_data_batch(batch)
             # self.status_bar.update(demo="Handling new data")
             any_training_triggered = any_training_triggered or triggered
@@ -220,7 +225,7 @@ class PipelineExecutor:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         for i, triggering_idx in enumerate(triggering_indices):
-            triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
+            triggering_data = batch[previous_trigger_idx: triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
             # This call informs the selector about the data until (and including)
@@ -242,7 +247,7 @@ class PipelineExecutor:
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1 :]
+                remaining_data = batch[triggering_idx + 1:]
                 logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0:
@@ -341,22 +346,51 @@ class PipelineExecutor:
             logger.info("Shutdown successful.")
 
     def execute(self) -> None:
-        try:
-            self._init_cluster_connection()
-            # self.status_bar.update(demo="Initial Pass")
-            self.initial_pass()
-            logger.info(f"Pipeline {self.pipeline_id}: Initial pass completed.")
+        # self.status_bar.update(demo="Initial Pass")
+        self.initial_pass()
+        logger.info(f"Pipeline {self.pipeline_id}: Initial pass completed.")
 
-            self.get_dataset_selector_batch_size()
-            if self.experiment_mode:
-                self.replay_data()
-            else:
-                self.wait_for_new_data(self.start_timestamp)
+        self.get_dataset_selector_batch_size()
+        if self.experiment_mode:
+            self.replay_data()
+        else:
+            self.wait_for_new_data(self.start_timestamp)
 
-            # self.status_bar.update(demo="Cleanup")
-            self._persist_pipeline_log()
-        except Exception:  # pylint: disable=broad-except
-            exception_msg = traceback.format_exc()
-            logger.error(exception_msg)
-            # TODO(#317): implement exception queue in supervisor
-            # exception_queue.put(exception_msg)
+        # self.status_bar.update(demo="Cleanup")
+        self._persist_pipeline_log()
+
+
+def execute_pipeline(
+    start_timestamp: int,
+    pipeline_id: int,
+    modyn_config: dict,
+    pipeline_config: dict,
+    eval_directory: str,
+    supervisor_supported_eval_result_writers: dict,
+    exception_queue: mp.Queue,
+    status_query_queue: mp.Queue,
+    status_response_queue: mp.Queue,
+    start_replay_at: Optional[int] = None,
+    stop_replay_at: Optional[int] = None,
+    maximum_triggers: Optional[int] = None,
+) -> None:
+    try:
+        pipeline = PipelineExecutor(
+            start_timestamp,
+            pipeline_id,
+            modyn_config,
+            pipeline_config,
+            eval_directory,
+            supervisor_supported_eval_result_writers,
+            status_query_queue,
+            status_response_queue,
+            start_replay_at,
+            stop_replay_at,
+            maximum_triggers,
+        )
+        pipeline.init_cluster_connection()
+        pipeline.execute()
+    except Exception:  # pylint: disable=broad-except
+        exception_msg = traceback.format_exc()
+        logger.error(exception_msg)
+        exception_queue.put(exception_msg)

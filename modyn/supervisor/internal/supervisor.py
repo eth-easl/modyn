@@ -3,8 +3,10 @@ import logging
 import multiprocessing as mp
 import os
 import pathlib
+import threading
+import time
 from multiprocessing import Manager, Process
-from typing import Optional
+from typing import Any, Optional
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -14,10 +16,41 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as Se
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import PipelineExecutor
+from modyn.supervisor.internal.pipeline_executor import execute_pipeline
+from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
+
+
+def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
+    logger.info(f"[{os.getpid()}][pipeline_monitor] start")
+    while True:
+        num_pipelines = len(pipeline_process_dict)
+        if num_pipelines > 0:
+            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_pipelines} pipelines registered")
+
+        # join all the terminated procs
+        num_active_pipeline_processes = len(mp.active_children())
+        if num_active_pipeline_processes > 0:
+            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")
+
+        for p_id, p_info in pipeline_process_dict.items():
+            p_info.update_status()
+            if p_info.pipeline_exited:
+                proc_alive = p_info.process_handler.is_alive()
+                logger.info(
+                    f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id} 
+                        exit code {p_info.pipeline_exit_code.name}, 
+                        proc alive {proc_alive}"""
+                )
+                if not proc_alive:
+                    # TODO(#317): unregister pipeline when process terminates
+                    pass
+            else:
+                logger.info(f"[{os.getpid()}][pipeline_monitor] pipeline {p_id} still running")
+
+        time.sleep(10)
 
 
 class Supervisor:
@@ -39,9 +72,11 @@ class Supervisor:
     ) -> None:
         # TODO(#325): validate modyn_config
         self.modyn_config = modyn_config
+        self._pipeline_process_dict: dict[int, PipelineInfo] = {}
         self._manager = Manager()
         self._next_pipeline_lock = self._manager.Lock()
         self.grpc = GRPCHandler(self.modyn_config)
+        self.pipeline_monitor_thread: Optional[threading.Thread] = None
 
         # TODO(#317): redesign tensorboard. ignore it for now
         # if "tensorboard" in self.modyn_config:
@@ -69,6 +104,11 @@ class Supervisor:
         # TODO(#317): seed per pipeline instead of per system
         if "seed" in self.modyn_config:
             self.grpc.seed_selector(self.modyn_config["seed"])
+
+    def monitor_pipelines(self) -> None:
+        logging.info("Starting pipeline monitor thread.")
+        self.pipeline_monitor_thread = threading.Thread(target=pipeline_monitor, args=(self._pipeline_process_dict,))
+        self.pipeline_monitor_thread.start()
 
     def validate_pipeline_config_schema(self, pipeline_config: dict) -> bool:
         schema_path = (
@@ -283,25 +323,39 @@ class Supervisor:
         if not self.validate_system(pipeline_config):
             raise ValueError("Invalid system configuration")
 
+        exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+
         start_timestamp = self.grpc.get_time_at_storage()
         pipeline_id = self.register_pipeline(pipeline_config)
         logger.info(f"Pipeline {pipeline_id} registered, start executing.")
 
         logger.info(f"start_pipeline: start method is {mp.get_start_method()}")
-        pipeline = PipelineExecutor(
-            start_timestamp,
-            pipeline_id,
-            self.modyn_config,
-            pipeline_config,
-            eval_directory,
-            self.supported_evaluation_result_writers,
-            start_replay_at,
-            stop_replay_at,
-            maximum_triggers,
+        process = Process(
+            target=execute_pipeline,
+            args=(
+                start_timestamp,
+                pipeline_id,
+                self.modyn_config,
+                pipeline_config,
+                eval_directory,
+                self.supported_evaluation_result_writers,
+                exception_queue,
+                status_query_queue,
+                status_response_queue,
+                start_replay_at,
+                stop_replay_at,
+                maximum_triggers,
+            ),
         )
-        process = Process(target=pipeline.execute)
         process.start()
-        # TODO(#317): unregister pipeline when process terminates
+        self._pipeline_process_dict[pipeline_id] = PipelineInfo(
+            process,
+            exception_queue,
+            status_query_queue,
+            status_response_queue,
+        )
 
         return pipeline_id
 

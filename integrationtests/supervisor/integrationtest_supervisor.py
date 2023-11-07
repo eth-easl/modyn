@@ -1,9 +1,12 @@
 import json
+import time
 
 from integrationtests.utils import DatasetHelper, connect_to_server, get_minimal_pipeline_config
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
+
+TIMEOUT = 60
 
 
 def test_start_one_pipeline() -> None:
@@ -57,6 +60,8 @@ if __name__ == "__main__":
         dataset_helper.setup_dataset()
         test_start_one_pipeline()
         test_start_two_pipelines()
+        time.sleep(TIMEOUT)
+        # TODO(#317): implement get_status proto. check for pipeline execution success.
     finally:
         dataset_helper.cleanup_dataset_dir()
         dataset_helper.cleanup_storage_database()
