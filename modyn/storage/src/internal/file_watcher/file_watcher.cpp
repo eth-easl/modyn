@@ -81,20 +81,19 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
     const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
-      auto begin = file_paths.begin() + static_cast<int32_t>(i * chunk_size);
-      auto end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
+      std::vector<std::string>::iterator begin = file_paths.begin() + static_cast<int32_t>(i * chunk_size);
+      std::vector<std::string>::iterator end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
-      const std::vector<std::string> file_paths_thread(begin, end);
-      std::atomic<bool>* exception_thrown = &insertion_thread_exceptions_[i];
+      std::atomic<bool>* exception_thrown = &insertion_thread_exceptions_.at(i);
       exception_thrown->store(false);
 
       insertion_thread_pool_.emplace_back(
-          std::thread(&FileWatcher::handle_file_paths, begin, end, data_file_extension_, file_wrapper_type_, timestamp,
+          std::thread(FileWatcher::handle_file_paths, begin, end, data_file_extension_, file_wrapper_type_, timestamp,
                       filesystem_wrapper_type_, dataset_id_, &file_wrapper_config_node_, &config_,
                       sample_dbinsertion_batchsize_, force_fallback_, exception_thrown));
     }
 
-    int index = 0;
+    uint16_t index = 0;
     for (auto& thread : insertion_thread_pool_) {
       // handle if any thread throws an exception
       if (insertion_thread_exceptions_[index].load()) {
@@ -102,8 +101,11 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
         break;
       }
       index++;
-      thread.join();
+      if (thread.joinable()) {
+        thread.join();
+      }
     }
+    insertion_thread_pool_.clear();
   }
 }
 
@@ -159,6 +161,7 @@ void FileWatcher::run() {
       stop_file_watcher->store(true);
     }
     if (stop_file_watcher->load()) {
+      SPDLOG_INFO("FileWatcher for dataset {} is exiting.", dataset_id_);
       break;
     }
     std::this_thread::sleep_for(std::chrono::seconds(file_watcher_interval));
@@ -172,11 +175,10 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                     const int64_t dataset_id, const YAML::Node* file_wrapper_config,
                                     const YAML::Node* config, const int64_t sample_dbinsertion_batchsize,
                                     const bool force_fallback, std::atomic<bool>* exception_thrown) {
-  if (file_paths_begin >= file_paths_end) {
-    return;
-  }
-
   try {
+    if (file_paths_begin >= file_paths_end) {
+      return;
+    }
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
@@ -194,7 +196,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                                    static_cast<bool>(ignore_last_timestamp), timestamp,
                                                    filesystem_wrapper, session);
                  });
-
     if (!files_for_insertion.empty()) {
       DatabaseDriver database_driver = storage_database_connection.get_drivername();
       handle_files_for_insertion(files_for_insertion, file_wrapper_type, dataset_id, *file_wrapper_config,

@@ -19,14 +19,12 @@ using namespace modyn::storage;
 void FileWatcherWatchdog::start_file_watcher_thread(int64_t dataset_id) {
   // Start a new child thread of a FileWatcher
   file_watcher_thread_stop_flags_.emplace(dataset_id, false);
-  std::unique_ptr<FileWatcher> file_watcher =
-      std::make_unique<FileWatcher>(config_, dataset_id, &file_watcher_thread_stop_flags_[dataset_id],
-                                    config_["storage"]["insertion_threads"].as<int16_t>());
-  if (file_watcher == nullptr || file_watcher_thread_stop_flags_[dataset_id].load()) {
-    SPDLOG_ERROR("Failed to create FileWatcher for dataset {}", dataset_id);
-    return;
-  }
-  std::thread th(&FileWatcher::run, std::move(file_watcher));
+  FileWatcher watcher(config_, dataset_id, &file_watcher_thread_stop_flags_[dataset_id],
+                      config_["storage"]["insertion_threads"].as<int16_t>());
+
+  file_watchers_.emplace(dataset_id, std::move(watcher));
+
+  std::thread th(&FileWatcher::run, &file_watchers_.at(dataset_id));
   file_watcher_threads_[dataset_id] = std::move(th);
 }
 
@@ -63,6 +61,14 @@ void FileWatcherWatchdog::stop_file_watcher_thread(int64_t dataset_id) {
     } else {
       file_watcher_thread_stop_flags_.erase(file_watcher_thread_stop_flags_it);
     }
+
+    auto file_watcher_it = file_watchers_.find(dataset_id);
+    if (file_watcher_it == file_watchers_.end()) {
+      SPDLOG_ERROR("FileWatcher object for dataset {} not found", dataset_id);
+    } else {
+      file_watchers_.erase(file_watcher_it);
+    }
+
   } else {
     SPDLOG_ERROR("FileWatcher thread for dataset {} not found", dataset_id);
   }
