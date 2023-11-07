@@ -76,9 +76,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                           ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) override;
   Status GetDatasetSize(ServerContext* context, const modyn::storage::GetDatasetSizeRequest* request,
                         modyn::storage::GetDatasetSizeResponse* response) override;
-  void send_get_response(ServerWriter<modyn::storage::GetResponse>* writer, int64_t file_id,
-                         const SampleData& sample_data, const YAML::Node& file_wrapper_config,
-                         const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper, int64_t file_wrapper_type);
   void send_sample_data_from_keys(ServerWriter<modyn::storage::GetResponse>* writer,
                                   const std::vector<int64_t>& request_keys, const DatasetData& dataset_data,
                                   soci::session& session, const DatabaseDriver& driver);

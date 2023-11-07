@@ -240,9 +240,10 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
 
     std::string sql = fmt::format(
         "SELECT COUNT(DISTINCT file_id) FROM samples WHERE dataset_id = :dataset_id AND "
-        "sample_id IN {}" sample_placeholders);
+        "sample_id IN {}",
+        sample_placeholders);
     session << sql, soci::into(number_of_files), soci::use(dataset_id);
-    SPDLOG_INFO(fmt::format("DeleteData Request for dataset {} found {} relevant files", dataset_id, numer_of_files));
+    SPDLOG_INFO(fmt::format("DeleteData Request for dataset {} found {} relevant files", dataset_id, number_of_files));
 
     if (number_of_files == 0) {
       SPDLOG_ERROR("No samples found in dataset {}.", dataset_id);
@@ -279,7 +280,8 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
       for (uint64_t i = 0; i < file_paths.size(); ++i) {
         const auto& file_id = file_ids[i];
         const auto& path = file_paths[i];
-        SPDLOG_INFO(fmt::format("DeleteData Request for dataset {} handling path {} (file id {})", path, file_id));
+        SPDLOG_INFO(
+            fmt::format("DeleteData Request for dataset {} handling path {} (file id {})", dataset_id, path, file_id));
 
         file_wrapper->set_file_path(path);
 
@@ -789,7 +791,7 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_for_samples(const std::vec
   const std::string sample_placeholders = fmt::format("({})", fmt::join(request_keys, ","));
 
   const std::string sql = fmt::format(
-      "SELECT DISTINCT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {}" sample_placeholders);
+      "SELECT DISTINCT file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN {}", sample_placeholders);
   std::vector<int64_t> file_ids(number_of_samples + 1);
   session << sql, soci::into(file_ids), soci::use(dataset_id);
 
