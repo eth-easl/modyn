@@ -44,7 +44,7 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
       return true;
     }
     try {
-      SPDLOG_INFO(fmt::format("Modified time of {}} is {}, timestamp is {}", file_path,
+      SPDLOG_INFO(fmt::format("Modified time of {} is {}, timestamp is {}", file_path,
                               filesystem_wrapper->get_modified_time(file_path), timestamp))
       return filesystem_wrapper->get_modified_time(file_path) > timestamp;
     } catch (const std::exception& e) {
