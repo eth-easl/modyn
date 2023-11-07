@@ -15,6 +15,18 @@ namespace modyn::common::trigger_storage_cpp {
 const int DTYPE_SIZE = 16;
 
 /**
+ * @brief Get the number of samples in file
+ *
+ * @param filename File to read
+ * @return uint64_t Amount of samples
+ */
+uint64_t get_num_samples_in_file_impl(const char* filename) {
+  std::ifstream file = open_file(filename);
+  read_magic(file);
+  return read_data_size_from_header(file);
+}
+
+/**
  * @brief Get a specified amount of samples from matching files, starting at a specified index
  *
  * @param folder Directory to search in
@@ -104,42 +116,6 @@ void* get_all_samples_impl(const char* folder, uint64_t* size, const char* patte
 }
 
 /**
- * @brief Retrieve all matching filenames in a directory
- *
- * @param folder Directory to search in
- * @param pattern Pattern to match. Should match at start of filename
- * @return std::vector<std::string> Vector of matching filenames
- */
-std::vector<std::string> get_matching_files(const char* folder, const char* pattern) {
-  std::vector<std::string> matching_files;
-
-  for (const auto& entry : std::filesystem::directory_iterator(folder)) {
-    if (std::filesystem::is_regular_file(entry)) {
-      std::string filename = entry.path().filename().string();
-      if (filename.rfind(pattern, 0) == 0) {
-        matching_files.push_back(std::string(folder) + '/' + filename);
-      }
-    }
-  }
-
-  std::sort(matching_files.begin(), matching_files.end());
-
-  return matching_files;
-}
-
-/**
- * @brief Get the number of samples in file
- *
- * @param filename File to read
- * @return uint64_t Amount of samples
- */
-uint64_t get_num_samples_in_file_impl(const char* filename) {
-  std::ifstream file = open_file(filename);
-  read_magic(file);
-  return read_data_size_from_header(file);
-}
-
-/**
  * @brief Read samples from file
  *
  * @param filename File to read from
@@ -159,45 +135,6 @@ void* parse_file_impl(const char* filename, uint64_t* size) {
   file.close();
 
   return array;
-}
-
-/**
- * @brief Release memory of array
- *
- * @param array Array to free the memory of
- */
-void release_array_impl(void* array) { free(array); }
-
-/**
- * @brief Read subset of samples from file
- *
- * @param filename File to read from
- * @param char_vector Vector to append to
- * @param samples Amount of samples in vector
- * @param start_index Start index of new samples
- * @param end_index End index of new samples
- * @return true File read succesfully
- * @return false end_index exceeds samples of file
- */
-bool parse_file_subset(const char* filename, std::vector<char>& char_vector, const uint64_t samples,
-                       const uint64_t start_index, const uint64_t end_index) {
-  std::ifstream file = open_file(filename);
-  read_magic(file);
-  std::size_t samples_in_file = read_data_size_from_header(file);
-
-  if (end_index > samples_in_file) {
-    return false;
-  }
-
-  std::size_t offset = start_index * DTYPE_SIZE;
-  std::size_t num_bytes = (end_index - start_index) * DTYPE_SIZE;
-
-  file.seekg(offset, std::ios::cur);
-  char_vector.resize(DTYPE_SIZE * (samples + num_bytes));
-  file.read(char_vector.data() + DTYPE_SIZE * samples, DTYPE_SIZE * num_bytes);
-
-  file.close();
-  return true;
 }
 
 /**
@@ -244,6 +181,69 @@ void write_files_impl(const char* filenames[], const void* array, std::size_t da
   for (auto& future : futures) {
     future.get();
   }
+}
+
+/**
+ * @brief Release memory of array
+ *
+ * @param array Array to free the memory of
+ */
+void release_array_impl(void* array) { free(array); }
+
+/**
+ * @brief Read subset of samples from file
+ *
+ * @param filename File to read from
+ * @param char_vector Vector to append to
+ * @param samples Amount of samples in vector
+ * @param start_index Start index of new samples
+ * @param end_index End index of new samples
+ * @return true File read succesfully
+ * @return false end_index exceeds samples of file
+ */
+bool parse_file_subset(const char* filename, std::vector<char>& char_vector, const uint64_t samples,
+                       const uint64_t start_index, const uint64_t end_index) {
+  std::ifstream file = open_file(filename);
+  read_magic(file);
+  std::size_t samples_in_file = read_data_size_from_header(file);
+
+  if (end_index > samples_in_file) {
+    return false;
+  }
+
+  std::size_t offset = start_index * DTYPE_SIZE;
+  std::size_t num_bytes = (end_index - start_index) * DTYPE_SIZE;
+
+  file.seekg(offset, std::ios::cur);
+  char_vector.resize(DTYPE_SIZE * (samples + num_bytes));
+  file.read(char_vector.data() + DTYPE_SIZE * samples, DTYPE_SIZE * num_bytes);
+
+  file.close();
+  return true;
+}
+
+/**
+ * @brief Retrieve all matching filenames in a directory
+ *
+ * @param folder Directory to search in
+ * @param pattern Pattern to match. Should match at start of filename
+ * @return std::vector<std::string> Vector of matching filenames
+ */
+std::vector<std::string> get_matching_files(const char* folder, const char* pattern) {
+  std::vector<std::string> matching_files;
+
+  for (const auto& entry : std::filesystem::directory_iterator(folder)) {
+    if (std::filesystem::is_regular_file(entry)) {
+      std::string filename = entry.path().filename().string();
+      if (filename.rfind(pattern, 0) == 0) {
+        matching_files.push_back(std::string(folder) + '/' + filename);
+      }
+    }
+  }
+
+  std::sort(matching_files.begin(), matching_files.end());
+
+  return matching_files;
 }
 
 /**
