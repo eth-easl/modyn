@@ -100,6 +100,30 @@ class StorageDatabaseConnection {
                            static_cast<int>(props.get_data_type()), props.get_name()));
       }
     }
+
+    if constexpr (std::is_same_v<T, bool>) {
+      switch (props.get_data_type()) {
+        case soci::dt_unsigned_long_long:
+          return static_cast<T>(row.get<unsigned long long>(pos));  // NOLINT(google-runtime-int)
+        case soci::dt_long_long:
+          return static_cast<T>(row.get<long long>(pos));  // NOLINT(google-runtime-int)
+        case soci::dt_integer:
+          return static_cast<T>(row.get<int>(pos));  // NOLINT(google-runtime-int)
+        case soci::dt_string:
+          FAIL(fmt::format("Tried to extract bool from string column {}", props.get_name()));
+          break;
+        case soci::dt_double:
+          FAIL(fmt::format("Tried to extract bool from double column {}", props.get_name()));
+          break;
+        case soci::dt_date:
+          FAIL(fmt::format("Tried to extract bool from data column {}", props.get_name()));
+          break;
+        default:
+          FAIL(fmt::format("Tried to extract bool from unknown data type ({}) column {}",
+                           static_cast<int>(props.get_data_type()), props.get_name()));
+      }
+    }
+
     const std::type_info& ti1 = typeid(T);
     const std::string type_id = ti1.name();
     FAIL(fmt::format("Unsupported type in get_from_row: {}", type_id));
