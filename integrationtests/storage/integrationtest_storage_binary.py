@@ -73,7 +73,7 @@ def create_random_binary_file() -> Tuple[bytes, list[bytes]]:
     for i in range(250):
         sample_binary_data = random.randbytes(10)
         binary_data += sample_binary_data
-        samples.append(sample_binary_data[:6])
+        samples.append(sample_binary_data[4:])
 
     return binary_data, samples
 
