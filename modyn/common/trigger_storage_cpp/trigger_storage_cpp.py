@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 class ArrayWrapper:
-    def __init__(self, array: np.ndarray, f_release: callable) -> None:
+    def __init__(self, array: np.ndarray, f_release: typing.Callable) -> None:
         self.array = array
         self.f_release = f_release
 
     def __len__(self) -> int:
         return self.array.size
 
-    def __getitem__(self, key) -> typing.Any:
+    def __getitem__(self, key: typing.Any) -> typing.Any:
         return self.array.__getitem__(key)
 
     def __str__(self) -> str:
@@ -31,10 +31,10 @@ class ArrayWrapper:
     def __del__(self) -> None:
         self.f_release(self.array)
 
-    def __eq__(self, other) -> bool | np.ndarray:
+    def __eq__(self, other: typing.Any) -> typing.Any:
         return self.array == other
 
-    def __ne__(self, other) -> bool | np.ndarray:
+    def __ne__(self, other: typing.Any) -> typing.Any:
         return self.array == other
 
     @property
