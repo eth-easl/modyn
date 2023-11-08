@@ -24,6 +24,7 @@ from integrationtests.storage.integrationtest_storage import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, RegisterNewDatasetRequest
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.utils.utils import flatten
 
 # Because we have no mapping of file to key (happens in the storage service), we have to keep
 # track of the samples we added to the dataset ourselves and compare them to the samples we get
@@ -132,21 +133,19 @@ def test_storage() -> None:
     response = None
     for i in range(500):
         responses = list(get_new_data_since(0))
-        assert (
-            len(responses) < 2
-        ), f"Received batched response, shouldn't happen: {responses}"
-        if len(responses) == 1:
-            response = responses[0]
-            if len(response.keys) == 2500:  # 10 files, each one with 250 samples
+        keys = []
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
+            if len(keys) == 2500:  # 10 files, each one with 250 samples
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
+    assert len(responses) > 0, "Did not get any response from Storage"
     assert (
-        len(response.keys) == 2500
-    ), f"Not all samples were returned. Samples returned: {response.keys}"
+        len(keys) == 2500
+    ), f"Not all samples were returned. Samples returned: {keys}"
 
-    check_data(response.keys, FIRST_ADDED_BINARY)
+    check_data(keys, FIRST_ADDED_BINARY)
 
     # Otherwise, if the test runs too quick, the timestamps of the new data equals the timestamps of the old data, and then we have a problem
     print("Sleeping for 2 seconds before adding more binary files to the dataset...")
@@ -159,29 +158,25 @@ def test_storage() -> None:
 
     for i in range(500):
         responses = list(get_new_data_since(BINARY_UPDATED_TIME_STAMPS[9] + 1))
-        assert (
-            len(responses) < 2
-        ), f"Received batched response, shouldn't happen: {responses}"
-        if len(responses) == 1:
-            response = responses[0]
-            if len(response.keys) == 2500:
+        keys = []
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
+            if len(keys) == 2500:
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
+    assert len(responses) > 0, "Did not get any response from Storage"
     assert (
-        len(response.keys) == 2500
-    ), f"Not all samples were returned. Samples returned: {response.keys}"
+        len(keys) == 2500
+    ), f"Not all samples were returned. Samples returned: {keys}"
 
-    check_data(response.keys, SECOND_ADDED_BINARY)
+    check_data(keys, SECOND_ADDED_BINARY)
 
     responses = list(get_data_in_interval(0, BINARY_UPDATED_TIME_STAMPS[9]))
-    assert (
-        len(responses) == 1
-    ), f"Received batched/no response, shouldn't happen: {responses}"
-    response = responses[0]
+    assert len(responses) > 0, f"Received no response, shouldn't happen: {responses}"
+    keys = flatten([list(response.keys) for response in responses])
 
-    check_data(response.keys, FIRST_ADDED_BINARY)
+    check_data(keys, FIRST_ADDED_BINARY)
 
     check_get_current_timestamp()  # Check if the storage service is still available.
 

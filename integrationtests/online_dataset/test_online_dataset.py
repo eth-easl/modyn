@@ -10,6 +10,7 @@ from typing import Iterable, Tuple
 
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
+from modyn.utils.utils import flatten
 import torch
 import yaml
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, JsonString, RegisterPipelineRequest
@@ -234,20 +235,18 @@ def get_new_data_since(timestamp: int) -> Iterable[GetNewDataSinceResponse]:
 
 
 def get_data_keys() -> list[int]:
-    response = None
     keys = []
     for i in range(60):
         responses = list(get_new_data_since(0))
-        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
-        if len(responses) == 1:
-            response = responses[0]
-            keys = list(response.keys)
+        keys = []
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
             if len(keys) == 10:
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
-    assert len(keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
+    assert len(responses) > 0, "Did not get any response from Storage"
+    assert len(keys) == 10, f"Not all images were returned. Images returned: {keys}"
 
     return keys
 

@@ -29,6 +29,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
 from PIL import Image
 
+from modyn.utils.utils import flatten
+
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
@@ -302,22 +304,22 @@ def test_storage() -> None:
 
     response = None
     for i in range(20):
+        keys = []
+        labels = []
         responses = list(get_new_data_since(0))
-        assert (
-            len(responses) < 2
-        ), f"Received batched response, shouldn't happen: {responses}. Type of list = {type(responses)}, type of first element: {type(responses[0])}"
-        if len(responses) == 1:
-            response = responses[0]
-            if len(response.keys) == 10:
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
+            labels = flatten([list(response.keys) for response in responses])
+            if len(keys) == 10:
                 assert (
-                    label in [f"{i}" for i in range(0, 10)] for label in response.labels
+                    label in [f"{i}" for i in range(0, 10)] for label in labels
                 )
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
+    assert len(responses) > 0, "Did not get any response from Storage"
     assert (
-        len(response.keys) == 10
+        len(keys) == 10
     ), f"Not all images were returned."
 
     first_image_keys = list(response.keys)
@@ -335,34 +337,35 @@ def test_storage() -> None:
     )  # Add more images to the dataset.
 
     for i in range(60):
+        keys = []
+        labels = []
         responses = list(get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1))
-        assert (
-            len(responses) < 2
-        ), f"Received batched response, shouldn't happen: {responses}"
-        if len(responses) == 1:
-            response = responses[0]
-            if len(response.keys) == 10:
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
+            labels = flatten([list(response.keys) for response in responses])
+            if len(keys) == 10:
                 assert (
-                    label in [f"{i}" for i in range(10, 20)] for label in response.labels
+                    label in [f"{i}" for i in range(10, 20)] for label in labels
                 )
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
+    assert len(responses) > 0, "Did not get any response from Storage"
     assert (
-        len(response.keys) == 10
-    ), f"Not all images were returned. Images returned = {response.keys}"
+        len(keys) == 10
+    ), f"Not all images were returned. Images returned = {keys}"
 
-    check_data(response.keys, SECOND_ADDED_IMAGES)
+    check_data(keys, SECOND_ADDED_IMAGES)
     check_dataset_size(20)
 
     responses = list(get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9]))
+    
     assert (
-        len(responses) == 1
-    ), f"Received batched/no response, shouldn't happen: {responses}"
-    response = responses[0]
+        len(responses) > 0
+    ), f"Received no response, shouldn't happen: {responses}"
+    keys = flatten([list(response.keys) for response in responses])
 
-    check_data(response.keys, FIRST_ADDED_IMAGES)
+    check_data(keys, FIRST_ADDED_IMAGES)
 
     check_data_per_worker()
 
