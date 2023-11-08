@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 
 #include "trigger_storage_cpp.hpp"
 
@@ -11,8 +10,8 @@ uint64_t get_num_samples_in_file(const char* filename) {
   return modyn::common::trigger_storage_cpp::get_num_samples_in_file_impl(filename);
 }
 
-void* get_worker_samples(const char* folder, uint64_t* size, const char* pattern, const uint64_t start_index,
-                         const size_t worker_subset_size) {
+void* get_worker_samples(const char* folder, uint64_t* size, const char* pattern, uint64_t start_index,
+                         size_t worker_subset_size) {
   return modyn::common::trigger_storage_cpp::get_worker_samples_impl(folder, size, pattern, start_index,
                                                                      worker_subset_size);
 }
@@ -20,8 +19,8 @@ void* get_all_samples(const char* folder, uint64_t* size, const char* pattern) {
   return modyn::common::trigger_storage_cpp::get_all_samples_impl(folder, size, pattern);
 }
 
-void write_file(const char* filename, const void* data, size_t data_offset, const size_t data_length,
-                const char* header, const size_t header_length) {
+void write_file(const char* filename, const void* data, size_t data_offset, size_t data_length, const char* header,
+                size_t header_length) {
   return modyn::common::trigger_storage_cpp::write_file_impl(filename, data, data_offset, data_length, header,
                                                              header_length);
 }
