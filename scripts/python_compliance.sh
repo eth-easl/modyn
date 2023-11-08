@@ -33,7 +33,7 @@ mamba run -n modyn black modyn integrationtests --verbose --config black.toml > 
 
 echo "Running linters"
 
-if mamba run -n modyn flake8 ; then
+if mamba run -n modyn flake8 modyn ; then
     echo "No flake8 errors"
 else
     echo "flake8 errors"
