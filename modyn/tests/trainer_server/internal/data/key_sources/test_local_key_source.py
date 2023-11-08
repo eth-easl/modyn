@@ -78,7 +78,7 @@ def test_read_dirty_directory():
 
     assert keysource.get_num_data_partitions() == 0
     with pytest.raises(ValueError):
-        assert keysource.get_keys_and_weights(0, 0) == ([], [])
+        assert keysource.get_keys_and_weights(0, 0)
 
     write_directory(
         current_pipeline, 1, TMP_PATH_TEST, number_of_files=4, maximum_keys_in_memory=maximum_keys_in_memory
