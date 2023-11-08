@@ -107,11 +107,7 @@ def test_read_dirty_directory():
 
 def test_reads_pro():
     writer = LocalDatasetWriter(
-        pipeline_id=0,
-        trigger_id=0,
-        number_of_workers=1,
-        maximum_keys_in_memory=25,
-        offline_dataset_path=TMP_PATH_TEST,
+        pipeline_id=0, trigger_id=0, number_of_workers=1, maximum_keys_in_memory=25, offline_dataset_path=TMP_PATH_TEST
     )
     reader = LocalKeySource(pipeline_id=0, trigger_id=0, offline_dataset_path=TMP_PATH_TEST)
     # We can just keep 25 keys in memory. So, after it we dup to 2 files (one for each worker)

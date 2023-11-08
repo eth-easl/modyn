@@ -151,7 +151,7 @@ class AbstractSelectionStrategy(ABC):
         modyn_config: dict,
     ) -> None:
         TriggerSampleStorage(
-            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"],
+            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"]
         ).save_trigger_samples(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
@@ -162,18 +162,11 @@ class AbstractSelectionStrategy(ABC):
 
     @staticmethod
     def _store_trigger_num_keys(
-        modyn_config: dict,
-        pipeline_id: int,
-        trigger_id: int,
-        partition_id: int,
-        num_keys: int,
+        modyn_config: dict, pipeline_id: int, trigger_id: int, partition_id: int, num_keys: int
     ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
             trigger_partition = TriggerPartition(
-                pipeline_id=pipeline_id,
-                trigger_id=trigger_id,
-                partition_id=partition_id,
-                num_keys=num_keys,
+                pipeline_id=pipeline_id, trigger_id=trigger_id, partition_id=partition_id, num_keys=num_keys
             )
             # TODO(#246): Maybe clean this up after some time.
             database.session.add(trigger_partition)
@@ -206,10 +199,7 @@ class AbstractSelectionStrategy(ABC):
         swt.start("on_trigger")
 
         for partition, (training_samples, partition_log) in enumerate(self._on_trigger()):
-            overall_partition_log = {
-                "partition_log": partition_log,
-                "on_trigger_time": swt.stop("on_trigger"),
-            }
+            overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop("on_trigger")}
 
             logger.info(
                 f"Strategy for pipeline {self._pipeline_id} returned batch of"
@@ -275,10 +265,7 @@ class AbstractSelectionStrategy(ABC):
         with MetadataDatabaseConnection(self._modyn_config) as database:
             trigger = (
                 database.session.query(Trigger)
-                .filter(
-                    Trigger.pipeline_id == self._pipeline_id,
-                    Trigger.trigger_id == trigger_id,
-                )
+                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
                 .first()
             )
             trigger.num_keys = total_keys_in_trigger
@@ -306,11 +293,7 @@ class AbstractSelectionStrategy(ABC):
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def get_trigger_partition_keys(
-        self,
-        trigger_id: int,
-        partition_id: int,
-        worker_id: int = -1,
-        num_workers: int = -1,
+        self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
     ) -> list[tuple[int, float]]:
         """
         Given a trigger id and partition id, returns a list of all keys in this partition
@@ -340,9 +323,7 @@ class AbstractSelectionStrategy(ABC):
             assert num_samples_trigger_partition is not None, f"Could not find TriggerPartition {partition_id} in DB"
             num_samples_trigger_partition = num_samples_trigger_partition[0]
 
-        data = TriggerSampleStorage(
-            self._trigger_sample_directory,
-        ).get_trigger_samples(
+        data = TriggerSampleStorage(self._trigger_sample_directory).get_trigger_samples(
             pipeline_id=self._pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
@@ -407,12 +388,7 @@ class AbstractSelectionStrategy(ABC):
         if self._disable_mt or (self._is_test and self._is_mac):
             swt.start("persist_samples_time")
             AbstractSelectionStrategy._persist_samples_impl(
-                keys,
-                timestamps,
-                labels,
-                self._pipeline_id,
-                self._modyn_config,
-                self._next_trigger_id,
+                keys, timestamps, labels, self._pipeline_id, self._modyn_config, self._next_trigger_id
             )
             log["persist_samples_time"] = swt.stop()
             return log

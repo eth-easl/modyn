@@ -46,12 +46,7 @@ def setup_and_teardown():
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test_init():
     # Test init works
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
     assert not strat.has_limit
     assert not strat.reset_after_trigger
     assert strat._pipeline_id == 42
@@ -63,55 +58,31 @@ def test_init():
 
     with pytest.raises(ValueError):
         AbstractSelectionStrategy(
-            {"limit": -1, "reset_after_trigger": False},
-            get_minimal_modyn_config(),
-            42,
-            1000,
-            ["doesntexist"],
+            {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000, ["doesntexist"]
         )
 
     #  Test reinit works
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
     strat._next_trigger_id = 1
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test__on_trigger():
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
     with pytest.raises(NotImplementedError):
         strat._on_trigger()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test__reset_state():
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
     with pytest.raises(NotImplementedError):
         strat._reset_state()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test_inform_data():
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
     with pytest.raises(NotImplementedError):
         strat.inform_data([], [], [])
 
@@ -120,12 +91,7 @@ def test_inform_data():
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: MagicMock):
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
@@ -143,14 +109,7 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
 
     assert (
         strat.get_trigger_partition_keys(trigger_id, 0)
-        == np.array(
-            [
-                (10, 1.0),
-                (11, 1.0),
-                (12, 1.0),
-            ],
-            dtype=[("f0", "<i8"), ("f1", "<f8")],
-        )
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
     ).all()
 
 
@@ -158,19 +117,11 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, test__on_trigger: MagicMock):
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
+    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [
-        ([(10, 1.0), (11, 1.0), (12, 1.0)], {}),
-        ([(13, 1.0), (14, 1.0), (15, 1.0)], {}),
-    ]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0), (14, 1.0), (15, 1.0)], {})]
 
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
@@ -184,25 +135,11 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
 
     assert (
         strat.get_trigger_partition_keys(trigger_id, 0)
-        == np.array(
-            [
-                (10, 1.0),
-                (11, 1.0),
-                (12, 1.0),
-            ],
-            dtype=[("f0", "<i8"), ("f1", "<f8")],
-        )
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
     ).all()
     assert (
         strat.get_trigger_partition_keys(trigger_id, 1)
-        == np.array(
-            [
-                (13, 1.0),
-                (14, 1.0),
-                (15, 1.0),
-            ],
-            dtype=[("f0", "<i8"), ("f1", "<f8")],
-        )
+        == np.array([(13, 1.0), (14, 1.0), (15, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
     ).all()
 
     with pytest.raises(AssertionError):
@@ -231,14 +168,7 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
     test__on_trigger.assert_called_once()
     assert (
         strat.get_trigger_partition_keys(trigger_id, 0)
-        == np.array(
-            [
-                (10, 1.0),
-                (11, 1.0),
-                (12, 1.0),
-            ],
-            dtype=[("f0", "<i8"), ("f1", "<f8")],
-        )
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
     ).all()
 
 
@@ -250,10 +180,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [
-        ([(10, 1.0), (11, 1.0), (12, 1.0)], {}),
-        ([(13, 1.0)], {}),
-    ]
+    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0)], {})]
 
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_id == 0
@@ -270,11 +197,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert data[0].num_keys == 4
         assert data[0].num_partitions == 2
 
-        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(
-            42,
-            0,
-            0,
-        )
+        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(42, 0, 0)
 
         assert len(data) == 3
         assert data[0][0] == 10
@@ -284,11 +207,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert data[2][0] == 12
         assert data[2][1] == 1.0
 
-        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(
-            42,
-            0,
-            1,
-        )
+        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(42, 0, 1)
 
         assert len(data) == 1
         assert data[0][0] == 13
@@ -328,10 +247,7 @@ def test_two_strategies_increase_next_trigger_separately(test__on_trigger: Magic
     test__on_trigger.return_value = []
 
     strat1 = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
+        {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000
     )
     assert strat1._pipeline_id == 42
     assert strat1._next_trigger_id == 0
@@ -342,10 +258,7 @@ def test_two_strategies_increase_next_trigger_separately(test__on_trigger: Magic
     assert strat1._next_trigger_id == 2
 
     strat2 = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        21,
-        1000,
+        {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 21, 1000
     )
     assert strat2._pipeline_id == 21
     assert strat2._next_trigger_id == 0
@@ -406,13 +319,7 @@ def test_get_available_labels_reset():
             SelectorStateMetadata(pipeline_id=1, sample_key=4, seen_in_trigger_id=1, timestamp=0, label=0)
         )
         database.session.add(
-            SelectorStateMetadata(
-                pipeline_id=1,
-                sample_key=5,
-                seen_in_trigger_id=1,
-                timestamp=0,
-                label=890,
-            )
+            SelectorStateMetadata(pipeline_id=1, sample_key=5, seen_in_trigger_id=1, timestamp=0, label=890)
         )
         database.session.commit()
 
@@ -451,13 +358,7 @@ def test_get_available_labels_no_reset():
             SelectorStateMetadata(pipeline_id=1, sample_key=4, seen_in_trigger_id=1, timestamp=0, label=0)
         )
         database.session.add(
-            SelectorStateMetadata(
-                pipeline_id=1,
-                sample_key=5,
-                seen_in_trigger_id=1,
-                timestamp=0,
-                label=890,
-            )
+            SelectorStateMetadata(pipeline_id=1, sample_key=5, seen_in_trigger_id=1, timestamp=0, label=890)
         )
         database.session.commit()
 

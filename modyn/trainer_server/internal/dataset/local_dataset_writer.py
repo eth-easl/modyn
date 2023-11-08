@@ -49,9 +49,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
         insertion_id: int,
         offline_dataset_path: str,
     ) -> None:
-        TriggerSampleStorage(
-            trigger_sample_directory=offline_dataset_path,
-        ).save_trigger_sample(
+        TriggerSampleStorage(trigger_sample_directory=offline_dataset_path).save_trigger_sample(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
@@ -65,10 +63,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
 
         # add the input tuples to the output list.
         for sample_id, sample_weight in zip(sample_ids, sample_weights):
-            self.output_samples_list[self.current_sample_index] = (
-                sample_id,
-                sample_weight,
-            )
+            self.output_samples_list[self.current_sample_index] = (sample_id, sample_weight)
             self.current_sample_index += 1
 
             # if the target is reached, store the samples
