@@ -2,6 +2,7 @@ import ctypes
 import logging
 import os
 import sys
+import typing
 from pathlib import Path
 from sys import platform
 
@@ -14,34 +15,34 @@ logger = logging.getLogger(__name__)
 
 
 class ArrayWrapper:
-    def __init__(self, array, f_release):
+    def __init__(self, array: np.ndarray, f_release: callable) -> None:
         self.array = array
         self.f_release = f_release
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.array.size
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> typing.Any:
         return self.array.__getitem__(key)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.array.__str__()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.f_release(self.array)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool | np.ndarray:
         return self.array == other
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool | np.ndarray:
         return self.array == other
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype:
         return self.array.dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple:
         return self.array.shape
 
 
@@ -352,7 +353,7 @@ class TriggerStorageCPP:
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         return self._get_num_samples_in_file_impl(file)
 
-    def _write_file(self, file_path: list, trigger_samples: list) -> None:
+    def _write_file(self, file_path: Path, trigger_samples: list) -> None:
         """Write the trigger samples to the given file.
 
         Args:
@@ -369,7 +370,7 @@ class TriggerStorageCPP:
 
         self._write_file_impl(file, data, 0, len(data), header, 128)
 
-    def _write_files(self, file_paths: Path, trigger_samples: np.ndarray, data_lengths: list) -> None:
+    def _write_files(self, file_paths: list, trigger_samples: np.ndarray, data_lengths: list) -> None:
         """Write the trigger samples to multiple files.
 
         Args:
@@ -414,19 +415,14 @@ class TriggerStorageCPP:
 
         self._write_files_impl(files_p, data, data_lengths_p, headers_p, 128, len(data_lengths))
 
-    def _build_array_header(self, d):
-        """Write the header for an array and returns the version used
+    def _build_array_header(self, d: dict) -> str:
+        """Build the header for the array
 
-        Parameters
-        ----------
-        fp : filelike object
-        d : dict
-            This has the appropriate entries for writing its string representation
-            to the header of the file.
-        version : tuple or None
-            None means use oldest that works. Providing an explicit version will
-            raise a ValueError if the format does not allow saving this data.
-            Default: None
+        Args:
+            d (dict): Dictionary of header items
+
+        Returns:
+            str: Header string
         """
         header = ["{"]
         for key, value in sorted(d.items()):

@@ -237,8 +237,8 @@ class AbstractSelectionStrategy(ABC):
                     trigger_id,
                     self._pipeline_id,
                     np.array(training_samples, dtype=np.dtype("i8,f8")),
+                    len(training_samples),
                     self._modyn_config,
-                    0,
                 )
                 overall_partition_log["store_triggersamples_time"] = swt.stop()
                 log["trigger_partitions"].append(overall_partition_log)
