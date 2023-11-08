@@ -394,8 +394,11 @@ std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(co
   std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
   try {
     auto number_of_files = static_cast<uint64_t>(file_ids.size());
+    SPDLOG_INFO("Running get_file_ids_per_thread with {} threads for {} files", retrieval_threads, number_of_files);
+
     if (number_of_files < retrieval_threads) {
       retrieval_threads = number_of_files;
+      SPDLOG_INFO("Adjusting retrieval_threads to number_of_files since it's too big.");
     }
 
     const uint64_t subset_size = (number_of_files + retrieval_threads - 1) / retrieval_threads;
