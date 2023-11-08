@@ -156,7 +156,6 @@ void FileWatcher::run() {
 
   while (true) {
     try {
-      SPDLOG_INFO("FileWatcher for dataset {} is seeking.", dataset_id_);
       seek(session);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error while seeking dataset: {}", e.what());
