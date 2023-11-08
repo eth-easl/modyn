@@ -391,8 +391,14 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
 std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
                                                                               uint64_t retrieval_threads) {
   ASSERT(retrieval_threads > 0, "This function is only intended for multi-threaded retrieval.");
+
   std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
   try {
+    if (file_ids.empty()) {
+      SPDLOG_INFO("get_file_ids_per_thread returning early since file_ids is empty.");
+      return file_ids_per_thread;
+    }
+
     auto number_of_files = static_cast<uint64_t>(file_ids.size());
     SPDLOG_INFO("Running get_file_ids_per_thread with {} threads for {} files", retrieval_threads, number_of_files);
 

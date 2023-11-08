@@ -221,7 +221,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
     const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
     SPDLOG_INFO(fmt::format("send_file_ids_and_labels got {} file ids.", file_ids.size()));
-
+    if (file_ids.empty()) {
+      SPDLOG_INFO("Returning early, since no file ids obtained.")
+      return;
+    }
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
 
     if (disable_multithreading_) {
