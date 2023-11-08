@@ -18,20 +18,20 @@ TEST(UtilsTest, TestGetFileWrapper) {
   ASSERT_NE(file_wrapper1, nullptr);
   ASSERT_EQ(file_wrapper1->get_type(), FileWrapperType::SINGLE_SAMPLE);
 
-  std::unique_ptr<std::ifstream> binary_stream = std::make_unique<std::ifstream>();
-  binary_stream->open("Testpath.bin", std::ios::binary);
-  std::ifstream& binary_reference = *binary_stream;
-  EXPECT_CALL(*filesystem_wrapper, get_stream(testing::_)).WillOnce(testing::ReturnRef(binary_reference));
+  std::shared_ptr<std::ifstream> binary_stream_ptr = std::make_shared<std::ifstream>();
+  binary_stream_ptr->open("Testpath.bin", std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper, get_stream(testing::_)).WillOnce(testing::Return(binary_stream_ptr));
   config["file_extension"] = ".bin";
   std::unique_ptr<FileWrapper> file_wrapper2 =
       get_file_wrapper("Testpath.bin", FileWrapperType::BINARY, config, filesystem_wrapper);
   ASSERT_NE(file_wrapper2, nullptr);
   ASSERT_EQ(file_wrapper2->get_type(), FileWrapperType::BINARY);
 
-  std::unique_ptr<std::ifstream> csv_stream = std::make_unique<std::ifstream>();
-  csv_stream->open("Testpath.csv", std::ios::binary);
-  std::ifstream& csv_reference = *csv_stream;
-  EXPECT_CALL(*filesystem_wrapper, get_stream(testing::_)).WillOnce(testing::ReturnRef(csv_reference));
+  std::shared_ptr<std::ifstream> csv_stream_ptr = std::make_shared<std::ifstream>();
+  csv_stream_ptr->open("Testpath.csv", std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper, get_stream(testing::_)).WillOnce(testing::Return(csv_stream_ptr));
   config["file_extension"] = ".csv";
   std::unique_ptr<FileWrapper> file_wrapper3 =
       get_file_wrapper("Testpath.csv", FileWrapperType::CSV, config, filesystem_wrapper);

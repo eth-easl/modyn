@@ -40,7 +40,7 @@ class BinaryFileWrapper : public FileWrapper {
       FAIL("File size must be a multiple of the record size.");
     }
 
-    stream_ = &filesystem_wrapper_->get_stream(path);
+    stream_ = filesystem_wrapper_->get_stream(path);
   }
   int64_t get_number_of_samples() override;
   int64_t get_label(int64_t index) override;
@@ -70,6 +70,6 @@ class BinaryFileWrapper : public FileWrapper {
   int64_t label_size_;
   int64_t file_size_;
   int64_t sample_size_;
-  std::ifstream* stream_;
+  std::shared_ptr<std::ifstream> stream_;
 };
 }  // namespace modyn::storage

@@ -43,9 +43,15 @@ class CsvFileWrapper : public FileWrapper {
 
     label_params_ = rapidcsv::LabelParams(ignore_first_line ? 0 : -1);
 
-    std::ifstream& stream = filesystem_wrapper_->get_stream(path);
+    stream_ = filesystem_wrapper_->get_stream(path);
 
-    doc_ = rapidcsv::Document(stream, label_params_, rapidcsv::SeparatorParams(separator_));
+    doc_ = rapidcsv::Document(*stream_, label_params_, rapidcsv::SeparatorParams(separator_));
+  }
+
+  ~CsvFileWrapper() override {
+    if (stream_->is_open()) {
+      stream_->close();
+    }
   }
 
   int64_t get_number_of_samples() override;
@@ -64,5 +70,6 @@ class CsvFileWrapper : public FileWrapper {
   int64_t label_index_;
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;
+  std::shared_ptr<std::ifstream> stream_;
 };
 }  // namespace modyn::storage

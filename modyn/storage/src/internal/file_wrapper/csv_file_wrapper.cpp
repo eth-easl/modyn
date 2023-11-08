@@ -99,9 +99,14 @@ void CsvFileWrapper::delete_samples(const std::vector<int64_t>& indices) {
 
 void CsvFileWrapper::set_file_path(const std::string& path) {
   file_path_ = path;
-  std::ifstream& stream = filesystem_wrapper_->get_stream(path);
 
-  doc_ = rapidcsv::Document(stream, label_params_, rapidcsv::SeparatorParams(separator_));
+  if (stream_->is_open()) {
+    stream_->close();
+  }
+
+  stream_ = filesystem_wrapper_->get_stream(path);
+
+  doc_ = rapidcsv::Document(*stream_, label_params_, rapidcsv::SeparatorParams(separator_));
 }
 
 FileWrapperType CsvFileWrapper::get_type() { return FileWrapperType::CSV; }

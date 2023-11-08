@@ -48,9 +48,9 @@ int64_t BinaryFileWrapper::get_label(int64_t index) {
 
 std::ifstream* BinaryFileWrapper::get_stream() {
   if (!stream_->is_open()) {
-    stream_ = &filesystem_wrapper_->get_stream(file_path_);
+    stream_ = filesystem_wrapper_->get_stream(file_path_);
   }
-  return stream_;
+  return stream_.get();
 }
 
 /*
@@ -159,6 +159,10 @@ void BinaryFileWrapper::set_file_path(const std::string& path) {
 
   if (file_size_ % record_size_ != 0) {
     FAIL("File size must be a multiple of the record size.");
+  }
+
+  if (stream_->is_open()) {
+    stream_->close();
   }
 }
 

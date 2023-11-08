@@ -21,7 +21,7 @@ class FilesystemWrapper {
   virtual uint64_t get_file_size(const std::string& path) = 0;
   virtual int64_t get_modified_time(const std::string& path) = 0;
   virtual bool is_valid_path(const std::string& path) = 0;
-  virtual std::ifstream& get_stream(const std::string& path) = 0;
+  virtual std::shared_ptr<std::ifstream> get_stream(const std::string& path) = 0;
   virtual FilesystemWrapperType get_type() = 0;
   virtual bool remove(const std::string& path) = 0;
   static FilesystemWrapperType get_filesystem_wrapper_type(const std::string& type) {

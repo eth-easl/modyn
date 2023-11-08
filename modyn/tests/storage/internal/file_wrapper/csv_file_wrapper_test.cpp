@@ -43,10 +43,10 @@ class CsvFileWrapperTest : public ::testing::Test {
 
 TEST_F(CsvFileWrapperTest, TestGetNumberOfSamples) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
-  file->open(file_name_, std::ios::binary);
-  std::ifstream& reference = *file;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const int64_t expected_number_of_samples = 3;
@@ -57,10 +57,10 @@ TEST_F(CsvFileWrapperTest, TestGetNumberOfSamples) {
 
 TEST_F(CsvFileWrapperTest, TestGetLabel) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
-  file->open(file_name_, std::ios::binary);
-  std::ifstream& reference = *file;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const int64_t index = 1;
@@ -78,10 +78,10 @@ TEST_F(CsvFileWrapperTest, TestGetLabel) {
 
 TEST_F(CsvFileWrapperTest, TestGetAllLabels) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
-  file->open(file_name_, std::ios::binary);
-  std::ifstream& reference = *file;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const std::vector<int64_t> expected_labels = {1, 2, 3};
@@ -92,10 +92,10 @@ TEST_F(CsvFileWrapperTest, TestGetAllLabels) {
 
 TEST_F(CsvFileWrapperTest, TestGetSamples) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
-  file->open(file_name_, std::ios::binary);
-  std::ifstream& reference = *file;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const int64_t start = 1;
@@ -111,10 +111,10 @@ TEST_F(CsvFileWrapperTest, TestGetSamples) {
 
 TEST_F(CsvFileWrapperTest, TestGetSample) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
-  file->open(file_name_, std::ios::binary);
-  std::ifstream& reference = *file;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const int64_t index = 1;
@@ -126,10 +126,10 @@ TEST_F(CsvFileWrapperTest, TestGetSample) {
 
 TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndices) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
-  file->open(file_name_, std::ios::binary);
-  std::ifstream& reference = *file;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const std::vector<int64_t> indices = {0, 2};
@@ -144,10 +144,10 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndices) {
 
 TEST_F(CsvFileWrapperTest, TestDeleteSamples) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  std::unique_ptr<std::ifstream> file = std::make_unique<std::ifstream>();
-  file->open(file_name_, std::ios::binary);
-  std::ifstream& reference = *file;
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::ReturnRef(reference));
+  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const std::vector<int64_t> indices = {0, 1};
