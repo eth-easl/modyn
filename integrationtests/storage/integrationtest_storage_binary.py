@@ -90,7 +90,6 @@ def add_files_to_dataset(
 
 
 def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
-
     samples_without_labels = []
     for sample in expected_samples:
         inner_sample = b''
@@ -106,7 +105,7 @@ def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
         dataset_id="test_dataset",
         keys=keys,
     )
-
+    samples_counter = 0
     for _, response in enumerate(storage.Get(request)):
         if len(response.samples) == 0:
             assert False, f"Could not get sample with key {keys[samples_counter]}."
