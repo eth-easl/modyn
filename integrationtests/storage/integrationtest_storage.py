@@ -322,9 +322,9 @@ def test_storage() -> None:
         len(keys) == 10
     ), f"Not all images were returned."
 
-    first_image_keys = list(response.keys)
+    first_image_keys = keys
 
-    check_data(response.keys, FIRST_ADDED_IMAGES)
+    check_data(keys, FIRST_ADDED_IMAGES)
     check_dataset_size(10)
 
     # Otherwise, if the test runs too quick, the timestamps of the new data equals the timestamps of the old data, and then we have a problem
