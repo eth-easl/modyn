@@ -112,10 +112,10 @@ def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
         for sample in response.samples:
             if sample is None:
                 assert False, f"Could not get sample with key {keys[samples_counter]}."
-            if sample not in expected_samples:
+            if sample not in samples_without_labels:
                 raise ValueError(
                     f"Sample {sample} with key {keys[samples_counter]} is not present in the "
-                    f"expected samples {expected_samples}. "
+                    f"expected samples {samples_without_labels}. "
                 )
             samples_counter += 1
 
