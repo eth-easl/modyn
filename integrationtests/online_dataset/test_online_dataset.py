@@ -378,9 +378,8 @@ def main() -> None:
     try:
         test_dataset()
     finally:
-        cleanup_dataset_dir()
         cleanup_storage_database()
-
+        cleanup_dataset_dir()
 
 if __name__ == "__main__":
     main()

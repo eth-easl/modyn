@@ -229,28 +229,32 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                                    dataset_id, sample_batch_size_);
     } else {
       // Split the number of files over retrieval_threads_
+      // TODO pass iterator around instead of copying ids around
       auto file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
 
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
         retrieval_threads_vector[thread_id] =
-            std::thread([this, writer, &file_ids_per_thread, thread_id, dataset_id, &writer_mutex]() {
-              send_sample_id_and_label<ResponseT, WriterT>(writer, writer_mutex, file_ids_per_thread[thread_id],
+            std::thread(StorageServiceImpl::send_sample_id_and_label<ResponseT, WriterT>,
+              writer, writer_mutex, file_ids_per_thread[thread_id],
                                                            std::ref(storage_database_connection_), dataset_id,
                                                            sample_batch_size_);
-            });
+            
       }
 
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-        retrieval_threads_vector[thread_id].join();
+        if (retrieval_threads_vector[thread_id].joinable()) {
+          retrieval_threads_vector[thread_id].join();
+        }
       }
     }
   }
 
   template <typename ResponseT, typename WriterT = ServerWriter<ResponseT>>
-  static void send_sample_id_and_label(WriterT* writer, std::mutex& writer_mutex, const std::vector<int64_t>& file_ids,
-                                       StorageDatabaseConnection& storage_database_connection, int64_t dataset_id,
+  static void send_sample_id_and_label(WriterT* writer, std::mutex* writer_mutex, const std::vector<int64_t>* file_ids,
+                                       const YAML::Node* config, int64_t dataset_id,
                                        int64_t sample_batch_size) {
+    const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
     std::vector<SampleRecord> record_buf;
