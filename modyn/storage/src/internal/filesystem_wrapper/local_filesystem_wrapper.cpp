@@ -91,8 +91,12 @@ int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
 bool LocalFilesystemWrapper::is_valid_path(const std::string& path) { return std::filesystem::exists(path); }
 
 bool LocalFilesystemWrapper::remove(const std::string& path) {
-  ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(!std::filesystem::is_directory(path), fmt::format("Path is a directory: {}", path));
+
+  if (!std::filesystem::exists(path)) {
+    SPDLOG_WARN(fmt::format("Trying to delete already deleted file {}", path));
+    return true;
+  }
 
   SPDLOG_DEBUG("Removing file: {}", path);
 
