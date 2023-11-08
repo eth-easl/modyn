@@ -389,15 +389,26 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
 // ------- Helper functions -------
 
 std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
-                                                                              const uint64_t retrieval_threads) {
+                                                                              uint64_t retrieval_threads) {
   ASSERT(retrieval_threads > 0, "This function is only intended for multi-threaded retrieval.");
   std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
   try {
     auto number_of_files = static_cast<uint64_t>(file_ids.size());
+    if (number_of_files < retrieval_threads) {
+      retrieval_threads = number_of_files;
+    }
+
     const uint64_t subset_size = (number_of_files + retrieval_threads - 1) / retrieval_threads;
     for (uint64_t thread_id = 0; thread_id < retrieval_threads; ++thread_id) {
       const uint64_t start_index = thread_id * subset_size;
-      const uint64_t end_index = (thread_id + 1) * subset_size;
+      const uint64_t end_index = std::min((thread_id + 1) * subset_size, number_of_files - 1);
+      DEBUG_ASSERT(start_index < file_ids.size(),
+                   fmt::format("Start Index too big! idx = {}, size = {}, thread_id = {}+1/{}, subset_size = {}",
+                               start_index, file_ids.size(), thread_id, retrieval_threads, subset_size));
+      DEBUG_ASSERT(end_index < file_ids.size(),
+                   fmt::format("End Index too big! idx = {}, size = {}, thread_id = {}+1/{}, subset_size = {}",
+                               start_index, file_ids.size(), thread_id, retrieval_threads, subset_size));
+
       if (thread_id == retrieval_threads - 1) {
         file_ids_per_thread[thread_id] = std::vector<int64_t>(file_ids.begin() + start_index, file_ids.end());
       } else {
