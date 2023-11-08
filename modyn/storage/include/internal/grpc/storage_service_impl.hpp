@@ -184,33 +184,24 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     std::mutex writer_mutex;
 
     if (disable_multithreading_) {
-      for (auto file_id : file_ids) {
-        const std::vector<int64_t> samples_corresponding_to_file =
-            get_samples_corresponding_to_file(file_id, dataset_data.dataset_id, request_keys, session);
-        send_sample_data_for_keys_and_file<WriterT>(writer, writer_mutex, file_id, samples_corresponding_to_file,
-                                                    dataset_data, session, driver, sample_batch_size_);
-      }
+      get_samples_and_send<WriterT>(&file_ids, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
+                                    &request_keys, driver);
+
     } else {
       std::vector<std::vector<int64_t>> file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
-
-      auto thread_function = [this, writer, &writer_mutex, &file_ids_per_thread, &request_keys, &dataset_data, &session,
-                              &driver](int64_t thread_id) {
-        for (const int64_t file_id : file_ids_per_thread[thread_id]) {
-          const std::vector<int64_t>& samples_corresponding_to_file =
-              get_samples_corresponding_to_file(file_id, dataset_data.dataset_id, request_keys, session);
-          send_sample_data_for_keys_and_file<WriterT>(writer, writer_mutex, file_id, samples_corresponding_to_file,
-                                                      dataset_data, session, driver, sample_batch_size_);
-        }
-      };
-
-      std::vector<std::thread> threads;
+      std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
-        threads.emplace_back(thread_function, thread_id);
+        retrieval_threads_vector[thread_id] =
+            std::thread(StorageServiceImpl::get_samples_and_send<WriterT>, &file_ids_per_thread[thread_id], writer,
+                        &writer_mutex, &dataset_data, &config_, sample_batch_size_, &request_keys, driver);
       }
 
-      for (auto& thread : threads) {
-        thread.join();
+      for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
+        if (retrieval_threads_vector[thread_id].joinable()) {
+          retrieval_threads_vector[thread_id].join();
+        }
       }
+      retrieval_threads_vector.clear();
     }
   }
 
@@ -449,6 +440,22 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       SPDLOG_ERROR("Error in send_sample_data_for_keys_and_file with file_id = {}, sample_batch_size = {}: {}", file_id,
                    sample_batch_size, e.what());
       throw;
+    }
+  }
+
+  template <typename WriterT>
+  static void get_samples_and_send(const std::vector<int64_t>* file_ids_for_thread, WriterT* writer,
+                                   std::mutex* writer_mutex, const DatasetData* dataset_data, const YAML::Node* config,
+                                   int64_t sample_batch_size, const std::vector<int64_t>* request_keys,
+                                   const DatabaseDriver driver) {
+    const StorageDatabaseConnection storage_database_connection(*config);
+    soci::session session = storage_database_connection.get_session();
+
+    for (const int64_t& file_id : *file_ids_for_thread) {
+      const std::vector<int64_t> samples_corresponding_to_file =
+          get_samples_corresponding_to_file(file_id, dataset_data->dataset_id, *request_keys, session);
+      send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, file_id, samples_corresponding_to_file,
+                                                  *dataset_data, session, driver, sample_batch_size);
     }
   }
 

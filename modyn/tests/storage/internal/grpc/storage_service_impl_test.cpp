@@ -631,24 +631,24 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 2));
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0].size(), 3);
-  ASSERT_EQ(result[0][0], 1);
-  ASSERT_EQ(result[0][1], 2);
-  ASSERT_EQ(result[0][2], 3);
-  ASSERT_EQ(result[1].size(), 2);
-  ASSERT_EQ(result[1][0], 4);
-  ASSERT_EQ(result[1][1], 5);
-
-  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 3));
-  ASSERT_EQ(result.size(), 3);
   ASSERT_EQ(result[0].size(), 2);
   ASSERT_EQ(result[0][0], 1);
   ASSERT_EQ(result[0][1], 2);
-  ASSERT_EQ(result[1].size(), 2);
+  ASSERT_EQ(result[1].size(), 3);
   ASSERT_EQ(result[1][0], 3);
   ASSERT_EQ(result[1][1], 4);
-  ASSERT_EQ(result[2].size(), 1);
-  ASSERT_EQ(result[2][0], 5);
+  ASSERT_EQ(result[1][2], 5);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 3));
+  ASSERT_EQ(result.size(), 3);
+  ASSERT_EQ(result[0].size(), 1);
+  ASSERT_EQ(result[0][0], 1);
+  ASSERT_EQ(result[1].size(), 1);
+  ASSERT_EQ(result[1][0], 2);
+  ASSERT_EQ(result[2].size(), 3);
+  ASSERT_EQ(result[2][0], 3);
+  ASSERT_EQ(result[2][1], 4);
+  ASSERT_EQ(result[2][2], 5);
 
   file_ids = {1};
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 1));
