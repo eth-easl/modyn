@@ -46,7 +46,7 @@ class BinaryFileWrapperTest : public ::testing::Test {
 };
 
 TEST_F(BinaryFileWrapperTest, TestGetNumberOfSamples) {
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
@@ -59,7 +59,7 @@ TEST_F(BinaryFileWrapperTest, TestGetNumberOfSamples) {
 }
 
 TEST_F(BinaryFileWrapperTest, TestValidateFileExtension) {
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
@@ -69,7 +69,7 @@ TEST_F(BinaryFileWrapperTest, TestValidateFileExtension) {
 
 TEST_F(BinaryFileWrapperTest, TestValidateRequestIndices) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
@@ -87,7 +87,7 @@ TEST_F(BinaryFileWrapperTest, TestValidateRequestIndices) {
 
 TEST_F(BinaryFileWrapperTest, TestGetLabel) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
@@ -101,7 +101,7 @@ TEST_F(BinaryFileWrapperTest, TestGetLabel) {
 
 TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
@@ -117,7 +117,7 @@ TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
 
 TEST_F(BinaryFileWrapperTest, TestGetSample) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
@@ -142,7 +142,7 @@ TEST_F(BinaryFileWrapperTest, TestGetSample) {
 
 TEST_F(BinaryFileWrapperTest, TestGetSamples) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
@@ -180,7 +180,7 @@ TEST_F(BinaryFileWrapperTest, TestGetSamples) {
 
 TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
@@ -221,7 +221,7 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
 }
 
 TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
-  std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));

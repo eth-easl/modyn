@@ -82,8 +82,11 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
     const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
-      std::vector<std::string>::iterator begin = file_paths.begin() + static_cast<int32_t>(i * chunk_size);
-      std::vector<std::string>::iterator end = (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
+      // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
+      const std::vector<std::string>::iterator begin = file_paths.begin() + static_cast<int32_t>(i * chunk_size);
+      // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
+      const std::vector<std::string>::iterator end =
+          (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
 
       std::atomic<bool>* exception_thrown = &insertion_thread_exceptions_.at(i);
       exception_thrown->store(false);

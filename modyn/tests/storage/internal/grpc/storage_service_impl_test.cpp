@@ -22,8 +22,8 @@ using namespace grpc;
 class StorageServiceImplTest : public ::testing::Test {
  protected:
   std::string tmp_dir_;
-  int64_t early_sample_id_;
-  int64_t late_sample_id_;
+  int64_t early_sample_id_ = -1;
+  int64_t late_sample_id_ = -1;
 
   StorageServiceImplTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/storage_service_impl_test"} {}
 
@@ -233,6 +233,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   ASSERT_EQ(number_of_samples, 1);
 }
 
+// NOLINT(readability-function-cognitive-complexity)
 TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
@@ -291,6 +292,7 @@ TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
   ASSERT_EQ(responses3.size(), 0);
 }
 
+// NOLINT(readability-function-cognitive-complexity)
 TEST_F(StorageServiceImplTest, TestGetDataInInterval) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness

@@ -21,11 +21,10 @@ class MockServerWriter : public grpc::ServerWriterInterface<T> {
 
   MockServerWriter(grpc::internal::Call* call, grpc::ServerContext* ctx) : call_(call), ctx_(ctx) {}
 
-  /// ServerStreamingInterface
   MOCK_METHOD0_T(SendInitialMetadata, void());
 
-  /// WriterInterface
-  bool Write(const T& response, const grpc::WriteOptions /* options */) override {
+  bool Write(const T& response,
+             const grpc::WriteOptions /* options */) override {  // NOLINT(readability-identifier-naming)
     responses_.push_back(response);
     return true;
   };
@@ -35,8 +34,8 @@ class MockServerWriter : public grpc::ServerWriterInterface<T> {
   std::vector<T> get_responses() { return responses_; }
 
  private:
-  grpc::internal::Call* const call_;
-  grpc::ServerContext* const ctx_;
+  grpc::internal::Call* const call_ = nullptr;
+  grpc::ServerContext* const ctx_ = nullptr;
   template <class ServiceType, class RequestType, class ResponseType>
   friend class grpc::internal::ServerStreamingHandler;
 

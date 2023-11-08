@@ -82,7 +82,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                         modyn::storage::GetDatasetSizeResponse* response) override;
 
   template <typename WriterT>
-  Status Get_Impl(  // NOLINT readability-identifier-naming
+  Status Get_Impl(  // NOLINT (readability-identifier-naming)
       ServerContext* /*context*/, const modyn::storage::GetRequest* request, WriterT* writer) {
     try {
       soci::session session = storage_database_connection_.get_session();
@@ -118,8 +118,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   }
 
   template <typename WriterT>
-  Status GetNewDataSince_Impl(ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,
-                              WriterT* writer) {
+  Status GetNewDataSince_Impl(  // NOLINT (readability-identifier-naming)
+      ServerContext* /*context*/, const modyn::storage::GetNewDataSinceRequest* request, WriterT* writer) {
     try {
       soci::session session = storage_database_connection_.get_session();
       const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
@@ -141,8 +141,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   }
 
   template <typename WriterT>
-  Status GetDataInInterval_Impl(ServerContext* context, const modyn::storage::GetDataInIntervalRequest* request,
-                                WriterT* writer) {
+  Status GetDataInInterval_Impl(  // NOLINT (readability-identifier-naming)
+      ServerContext* /*context*/, const modyn::storage::GetDataInIntervalRequest* request, WriterT* writer) {
     try {
       soci::session session = storage_database_connection_.get_session();
       const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
@@ -247,6 +247,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     }
   }
 
+  // NOLINT (readability-function-cognitive-complexity)
   template <typename ResponseT, typename WriterT = ServerWriter<ResponseT>>
   static void send_sample_id_and_label(WriterT* writer, std::mutex* writer_mutex, const std::vector<int64_t>* file_ids,
                                        const YAML::Node* config, int64_t dataset_id, int64_t sample_batch_size) {
