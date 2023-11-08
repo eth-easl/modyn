@@ -67,36 +67,33 @@ def add_file_to_dataset(binary_data: bytes, name: str) -> None:
     )
 
 
-def create_random_binary_file() -> bytes:
+def create_random_binary_file() -> Tuple[bytes, list[bytes]]:
     binary_data = b''
+    samples = []
     for i in range(250):
         sample_binary_data = random.randbytes(10)
         binary_data += sample_binary_data
+        samples.append(sample_binary_data[:6])
 
-    return binary_data
+    return binary_data, samples
 
 
 def add_files_to_dataset(
     start_number: int,
     end_number: int,
-    files_added: list[bytes],
-) -> None:
+    samples: list[bytes],
+) -> list[bytes]:
     create_dataset_dir()
 
     for i in range(start_number, end_number):
-        binary_file = create_random_binary_file()
+        binary_file, file_samples = create_random_binary_file()
         add_file_to_dataset(binary_file, f"binary_{i}.bin")
-        files_added.append(binary_file)
+        samples.extend(file_samples)
+
+    return samples
 
 
 def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
-    samples_without_labels = []
-    for sample in expected_samples:
-        inner_sample = b''
-        for i in range(0, len(sample), 10):
-            inner_sample += sample[i:i+6]
-        samples_without_labels.append(inner_sample)
-
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -112,10 +109,10 @@ def check_data(keys: list[str], expected_samples: list[bytes]) -> None:
         for sample in response.samples:
             if sample is None:
                 assert False, f"Could not get sample with key {keys[samples_counter]}."
-            if sample not in samples_without_labels:
+            if sample not in expected_samples:
                 raise ValueError(
                     f"Sample {sample} with key {keys[samples_counter]} is not present in the "
-                    f"expected samples {samples_without_labels}. "
+                    f"expected samples {expected_samples}. "
                 )
             samples_counter += 1
 
