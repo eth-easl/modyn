@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional
+from typing import Any
 
 
 def flatten(non_flat_list: list[list[Any]]) -> list[Any]:

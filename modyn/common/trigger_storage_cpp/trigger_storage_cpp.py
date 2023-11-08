@@ -88,12 +88,7 @@ class TriggerStorageCPP:
             raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
 
         # We define a return object here that can infer its size when being parsed by ctypes
-        self.data_pointer = ndpointer(
-            dtype=[("f0", "<i8"), ("f1", "<f8")],
-            ndim=1,
-            shape=(1,),
-            flags="C_CONTIGUOUS",
-        )
+        self.data_pointer = ndpointer(dtype=[("f0", "<i8"), ("f1", "<f8")], ndim=1, shape=(1,), flags="C_CONTIGUOUS")
         self.data_pointer._shape_ = property(lambda self: self.shape_val[0])
 
         self._get_num_samples_in_file_impl = self.extension.get_num_samples_in_file
@@ -141,10 +136,7 @@ class TriggerStorageCPP:
         self._get_worker_samples_impl.restype = self.data_pointer
 
         self._parse_file_impl = self.extension.parse_file
-        self._parse_file_impl.argtypes = [
-            ctypes.POINTER(ctypes.c_char),
-            ctypes.POINTER(ctypes.c_uint64),
-        ]
+        self._parse_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.POINTER(ctypes.c_uint64)]
         self._parse_file_impl.restype = self.data_pointer
 
         self._release_data_impl = self.extension.release_data
@@ -185,16 +177,15 @@ class TriggerStorageCPP:
             the total retrieval workers must be smaller than 2."
         if retrieval_worker_id < 0 and total_retrieval_workers < 2:
             return self._get_all_samples(pipeline_id, trigger_id, partition_id)
-        else:
-            assert num_samples_trigger_partition > 0, "The number of samples per trigger must be positive."
-            return self._get_worker_samples(
-                pipeline_id,
-                trigger_id,
-                partition_id,
-                retrieval_worker_id,
-                total_retrieval_workers,
-                num_samples_trigger_partition,
-            )
+        assert num_samples_trigger_partition > 0, "The number of samples per trigger must be positive."
+        return self._get_worker_samples(
+            pipeline_id,
+            trigger_id,
+            partition_id,
+            retrieval_worker_id,
+            total_retrieval_workers,
+            num_samples_trigger_partition,
+        )
 
     def _get_worker_samples(
         self,
@@ -250,12 +241,7 @@ class TriggerStorageCPP:
         return result
 
     def save_trigger_sample(
-        self,
-        pipeline_id: int,
-        trigger_id: int,
-        partition_id: int,
-        trigger_samples: np.ndarray,
-        insertion_id: int,
+        self, pipeline_id: int, trigger_id: int, partition_id: int, trigger_samples: np.ndarray, insertion_id: int
     ) -> None:
         """
         Save the trigger samples for the given pipeline id, trigger id and partition id.
@@ -280,12 +266,7 @@ class TriggerStorageCPP:
         self._write_file(samples_file, trigger_samples)
 
     def save_trigger_samples(
-        self,
-        pipeline_id: int,
-        trigger_id: int,
-        partition_id: int,
-        trigger_samples: np.ndarray,
-        data_lengths: list,
+        self, pipeline_id: int, trigger_id: int, partition_id: int, trigger_samples: np.ndarray, data_lengths: list
     ) -> None:
         """
         Save the trigger samples for the given pipeline id, trigger id and partition id
@@ -320,8 +301,7 @@ class TriggerStorageCPP:
 
         return list(
             filter(
-                lambda file: file.startswith(f"{pipeline_id}_{trigger_id}_"),
-                os.listdir(self.trigger_sample_directory),
+                lambda file: file.startswith(f"{pipeline_id}_{trigger_id}_"), os.listdir(self.trigger_sample_directory)
             )
         )
 
@@ -387,21 +367,9 @@ class TriggerStorageCPP:
         file = ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8"))
         header = ctypes.c_char_p(header)
 
-        self._write_file_impl(
-            file,
-            data,
-            0,
-            len(data),
-            header,
-            128,
-        )
+        self._write_file_impl(file, data, 0, len(data), header, 128)
 
-    def _write_files(
-        self,
-        file_paths: Path,
-        trigger_samples: np.ndarray,
-        data_lengths: list,
-    ) -> None:
+    def _write_files(self, file_paths: Path, trigger_samples: np.ndarray, data_lengths: list) -> None:
         """Write the trigger samples to multiple files.
 
         Args:
@@ -444,14 +412,7 @@ class TriggerStorageCPP:
             ctypes.c_uint64,
         ]
 
-        self._write_files_impl(
-            files_p,
-            data,
-            data_lengths_p,
-            headers_p,
-            128,
-            len(data_lengths),
-        )
+        self._write_files_impl(files_p, data, data_lengths_p, headers_p, 128, len(data_lengths))
 
     def _build_array_header(self, d):
         """Write the header for an array and returns the version used
@@ -470,7 +431,7 @@ class TriggerStorageCPP:
         header = ["{"]
         for key, value in sorted(d.items()):
             # Need to use repr here, since we eval these when reading
-            header.append("'%s': %s, " % (key, repr(value)))
+            header.append(f"'{key}': {repr(value)}, ")
         header.append("}")
         header = "".join(header)
 
@@ -478,8 +439,8 @@ class TriggerStorageCPP:
         # when changing the array size, e.g. when growing it by appending data at
         # the end.
         shape = d["shape"]
-        GROWTH_AXIS_MAX_DIGITS = 21
-        header += " " * ((GROWTH_AXIS_MAX_DIGITS - len(repr(shape[0]))) if len(shape) > 0 else 0)
+        growth_axis_max_digits = 21
+        header += " " * ((growth_axis_max_digits - len(repr(shape[0]))) if len(shape) > 0 else 0)
 
         header = np.lib.format._wrap_header_guess_version(header)
         return header

@@ -3,7 +3,6 @@ import multiprocessing as mp
 import os
 import platform
 from abc import ABC, abstractmethod
-from multiprocessing.managers import SharedMemoryManager
 from typing import Any, Iterable, Optional
 
 import numpy as np
