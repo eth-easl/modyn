@@ -291,6 +291,92 @@ TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
   ASSERT_EQ(responses3.size(), 0);
 }
 
+TEST_F(StorageServiceImplTest, TestGetDataInInterval) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
+  grpc::ServerContext context;
+  grpc::internal::Call call;
+  modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse> writer(&call, &context);
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  std::string sql_expression = fmt::format(
+      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
+      "1)",
+      tmp_dir_);
+  session << sql_expression;
+
+  long long inserted_file_id = -1;  // NOLINT google-runtime-int (Linux otherwise complains about the following call)
+  if (!session.get_last_insert_id("files", inserted_file_id)) {
+    FAIL("Failed to insert file into database");
+  }
+
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
+      soci::use(inserted_file_id);
+  long long inserted_sample_id_ll =
+      -1;  // NOLINT google-runtime-int (Linux otherwise complains about the following call)
+  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
+    FAIL("Failed to insert sample into database");
+  }
+
+  uint64_t inserted_sample_id = static_cast<uint64_t>(inserted_sample_id_ll);
+
+  modyn::storage::GetDataInIntervalRequest request;
+  request.set_dataset_id("test_dataset");
+  request.set_start_timestamp(0);
+  request.set_end_timestamp(250);
+
+  grpc::Status status =
+      storage_service
+          .GetDataInInterval_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse>>(
+              &context, &request, &writer);
+
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetDataInIntervalResponse>& responses = writer.get_responses();
+  ASSERT_EQ(responses.size(), 1);
+  const modyn::storage::GetDataInIntervalResponse& response = responses[0];
+
+  std::vector<int64_t> keys;
+  keys.reserve(response.keys_size());
+  for (const auto& key : response.keys()) {
+    keys.push_back(key);
+  }
+
+  ASSERT_THAT(keys, ::testing::UnorderedElementsAre(early_sample_id_, late_sample_id_, inserted_sample_id));
+
+  // Now try only the last 2 files
+
+  modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse> writer2(&call, &context);
+  request.set_start_timestamp(50);
+  request.set_end_timestamp(250);
+
+  status = storage_service
+               .GetDataInInterval_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse>>(
+                   &context, &request, &writer2);
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetDataInIntervalResponse>& responses2 = writer2.get_responses();
+  ASSERT_EQ(responses2.size(), 1);
+  const modyn::storage::GetDataInIntervalResponse& response2 = responses2[0];
+  std::vector<int64_t> keys2;
+  keys2.reserve(response2.keys_size());
+  for (const auto& key : response2.keys()) {
+    keys2.push_back(key);
+  }
+  ASSERT_THAT(keys2, ::testing::UnorderedElementsAre(late_sample_id_, inserted_sample_id));
+
+  // And now no files
+  modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse> writer3(&call, &context);
+  request.set_start_timestamp(101);
+  request.set_end_timestamp(180);
+  status = storage_service
+               .GetDataInInterval_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse>>(
+                   &context, &request, &writer3);
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetDataInIntervalResponse>& responses3 = writer3.get_responses();
+  ASSERT_EQ(responses3.size(), 0);
+}
+
 TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);

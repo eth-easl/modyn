@@ -225,8 +225,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
 
     if (disable_multithreading_) {
-      send_sample_id_and_label<ResponseT, WriterT>(writer, writer_mutex, file_ids, storage_database_connection_,
-                                                   dataset_id, sample_batch_size_);
+      send_sample_id_and_label<ResponseT, WriterT>(writer, &writer_mutex, &file_ids, &config_, dataset_id,
+                                                   sample_batch_size_);
     } else {
       // Split the number of files over retrieval_threads_
       // TODO pass iterator around instead of copying ids around
@@ -235,11 +235,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
         retrieval_threads_vector[thread_id] =
-            std::thread(StorageServiceImpl::send_sample_id_and_label<ResponseT, WriterT>,
-              writer, writer_mutex, file_ids_per_thread[thread_id],
-                                                           std::ref(storage_database_connection_), dataset_id,
-                                                           sample_batch_size_);
-            
+            std::thread(StorageServiceImpl::send_sample_id_and_label<ResponseT, WriterT>, writer, &writer_mutex,
+                        &file_ids_per_thread[thread_id], &config_, dataset_id, sample_batch_size_);
       }
 
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -252,15 +249,14 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename ResponseT, typename WriterT = ServerWriter<ResponseT>>
   static void send_sample_id_and_label(WriterT* writer, std::mutex* writer_mutex, const std::vector<int64_t>* file_ids,
-                                       const YAML::Node* config, int64_t dataset_id,
-                                       int64_t sample_batch_size) {
+                                       const YAML::Node* config, int64_t dataset_id, int64_t sample_batch_size) {
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
     std::vector<SampleRecord> record_buf;
     record_buf.reserve(sample_batch_size);
 
-    for (const int64_t file_id : file_ids) {
+    for (const int64_t file_id : *file_ids) {
       const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
       SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples));
       if (number_of_samples > 0) {
@@ -290,7 +286,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             }
 
             {
-              const std::lock_guard<std::mutex> lock(writer_mutex);
+              const std::lock_guard<std::mutex> lock(*writer_mutex);
               writer->Write(response);
             }
           } else {
@@ -314,7 +310,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                      "The record buffer should never have more than 2*sample_batch_size elements!");
 
               {
-                const std::lock_guard<std::mutex> lock(writer_mutex);
+                const std::lock_guard<std::mutex> lock(*writer_mutex);
                 writer->Write(response);
               }
             }
@@ -334,7 +330,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
 
       {
-        const std::lock_guard<std::mutex> lock(writer_mutex);
+        const std::lock_guard<std::mutex> lock(*writer_mutex);
         writer->Write(response);
       }
     }

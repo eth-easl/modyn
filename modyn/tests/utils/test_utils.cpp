@@ -8,7 +8,7 @@ void TestUtils::create_dummy_yaml() {
   out << "  port: 50042" << '\n';
   out << "  sample_batch_size: 5" << '\n';
   out << "  sample_dbinsertion_batchsize: 10" << '\n';
-  out << "  insertion_threads: 8" << '\n';  // TODO change back to 1
+  out << "  insertion_threads: 1" << '\n';
   out << "  retrieval_threads: 1" << '\n';
   out << "  database:" << '\n';
   out << "    drivername: sqlite3" << '\n';
