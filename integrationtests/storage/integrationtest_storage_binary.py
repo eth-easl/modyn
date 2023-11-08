@@ -141,13 +141,13 @@ def test_storage() -> None:
         ), f"Received batched response, shouldn't happen: {responses}"
         if len(responses) == 1:
             response = responses[0]
-            if len(response.keys) == 250:  # 10 files, each one with 250 samples
+            if len(response.keys) == 2500:  # 10 files, each one with 250 samples
                 break
         time.sleep(1)
 
     assert response is not None, "Did not get any response from Storage"
     assert (
-        len(response.keys) == 250
+        len(response.keys) == 2500
     ), f"Not all samples were returned. Samples returned: {response.keys}"
 
     check_data(response.keys, FIRST_ADDED_BINARY)
@@ -168,13 +168,13 @@ def test_storage() -> None:
         ), f"Received batched response, shouldn't happen: {responses}"
         if len(responses) == 1:
             response = responses[0]
-            if len(response.keys) == 250:
+            if len(response.keys) == 2500:
                 break
         time.sleep(1)
 
     assert response is not None, "Did not get any response from Storage"
     assert (
-        len(response.keys) == 250
+        len(response.keys) == 2500
     ), f"Not all samples were returned. Samples returned: {response.keys}"
 
     check_data(response.keys, SECOND_ADDED_BINARY)
