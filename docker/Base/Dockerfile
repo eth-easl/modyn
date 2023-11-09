@@ -1,7 +1,6 @@
 FROM modyndependencies
 
 ARG MODYN_BUILDTYPE=Release
-ENV MODYN_BUILDTYPE=${MODYN_BUILDTYPE}
 
 # Copy source code into container
 ADD . /src
