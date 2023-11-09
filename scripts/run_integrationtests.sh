@@ -19,7 +19,11 @@ fi
 
 docker build -t modyndependencies -f docker/Dependencies/Dockerfile .
 docker build -t modynbase -f docker/Base/Dockerfile --build-arg MODYN_BUILDTYPE=$BUILDTYPE .
-docker compose up --build tests --abort-on-container-exit --exit-code-from tests
+#docker compose up --build tests --abort-on-container-exit --exit-code-from tests
+docker compose up -d --build tests --abort-on-container-exit --exit-code-from tests
+echo "Attaching to storage"
+docker logs $(docker compose ps -q storage) && docker attach $(docker compose ps -q storage)
+
 exitcode=$?
 
 # Cleanup
