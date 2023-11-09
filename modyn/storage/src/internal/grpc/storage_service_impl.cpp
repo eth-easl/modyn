@@ -165,7 +165,8 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
     }
 
     std::vector<int64_t> sample_ids(request->keys_size());
-    for (int64_t index = 0; index < request->keys_size(); ++index) {
+    // index is int type due to gRPC typing
+    for (int index = 0; index < request->keys_size(); ++index) {
       sample_ids[index] = request->keys(index);
     }
 
@@ -474,17 +475,6 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_for_samples(const std::vec
 int64_t StorageServiceImpl::get_number_of_samples_in_file(int64_t file_id, soci::session& session,
                                                           const int64_t dataset_id) {
   int64_t number_of_samples = 0;
-  int64_t number_of_rows = 0;
-  // TODO remove this debug code
-  session << "SELECT COUNT(*) FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
-      soci::into(number_of_rows), soci::use(file_id), soci::use(dataset_id);
-
-  if (number_of_rows != 1) {
-    SPDLOG_ERROR(fmt::format("Warning! Number of rows for file id {}, dataset id {} == {}", file_id, dataset_id,
-                             number_of_rows));
-    return number_of_samples;
-  }
-
   session << "SELECT number_of_samples FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
       soci::into(number_of_samples), soci::use(file_id), soci::use(dataset_id);
   return number_of_samples;

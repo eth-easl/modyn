@@ -18,7 +18,7 @@ TEST(UtilsTest, TestGetFileWrapper) {
   ASSERT_NE(file_wrapper1, nullptr);
   ASSERT_EQ(file_wrapper1->get_type(), FileWrapperType::SINGLE_SAMPLE);
 
-  std::shared_ptr<std::ifstream> binary_stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> binary_stream_ptr = std::make_shared<std::ifstream>();
   binary_stream_ptr->open("Testpath.bin", std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper, get_stream(testing::_)).WillOnce(testing::Return(binary_stream_ptr));
@@ -28,7 +28,7 @@ TEST(UtilsTest, TestGetFileWrapper) {
   ASSERT_NE(file_wrapper2, nullptr);
   ASSERT_EQ(file_wrapper2->get_type(), FileWrapperType::BINARY);
 
-  std::shared_ptr<std::ifstream> csv_stream_ptr = std::make_shared<std::ifstream>();
+  const std::shared_ptr<std::ifstream> csv_stream_ptr = std::make_shared<std::ifstream>();
   csv_stream_ptr->open("Testpath.csv", std::ios::binary);
 
   EXPECT_CALL(*filesystem_wrapper, get_stream(testing::_)).WillOnce(testing::Return(csv_stream_ptr));

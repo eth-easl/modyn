@@ -91,10 +91,10 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
       std::atomic<bool>* exception_thrown = &insertion_thread_exceptions_.at(i);
       exception_thrown->store(false);
 
-      insertion_thread_pool_.emplace_back(
-          std::thread(FileWatcher::handle_file_paths, begin, end, data_file_extension_, file_wrapper_type_, timestamp,
-                      filesystem_wrapper_type_, dataset_id_, &file_wrapper_config_node_, &config_,
-                      sample_dbinsertion_batchsize_, force_fallback_, exception_thrown));
+      insertion_thread_pool_.emplace_back(FileWatcher::handle_file_paths, begin, end, data_file_extension_,
+                                          file_wrapper_type_, timestamp, filesystem_wrapper_type_, dataset_id_,
+                                          &file_wrapper_config_node_, &config_, sample_dbinsertion_batchsize_,
+                                          force_fallback_, exception_thrown);
     }
 
     uint16_t index = 0;

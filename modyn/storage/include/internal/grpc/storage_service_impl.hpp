@@ -223,7 +223,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                                    sample_batch_size_);
     } else {
       // Split the number of files over retrieval_threads_
-      // TODO pass iterator around instead of copying ids around
+      // TODO(MaxiBoether): pass iterator around instead of copying ids around
       auto file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
 
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
@@ -241,9 +241,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     }
   }
 
-  // NOLINT (readability-function-cognitive-complexity)
   template <typename ResponseT, typename WriterT = ServerWriter<ResponseT>>
-  static void send_sample_id_and_label(WriterT* writer, std::mutex* writer_mutex, const std::vector<int64_t>* file_ids,
+  static void send_sample_id_and_label(WriterT* writer,  // NOLINT (readability-function-cognitive-complexity)
+                                       std::mutex* writer_mutex, const std::vector<int64_t>* file_ids,
                                        const YAML::Node* config, int64_t dataset_id, int64_t sample_batch_size) {
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
@@ -332,10 +332,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   }
 
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
-  static void send_sample_data_for_keys_and_file(WriterT* writer, std::mutex& writer_mutex, int64_t file_id,
-                                                 const std::vector<int64_t>& request_keys_per_file,
-                                                 const DatasetData& dataset_data, soci::session& session,
-                                                 const DatabaseDriver& driver, int64_t sample_batch_size) {
+  static void send_sample_data_for_keys_and_file(  // NOLINT(readability-function-cognitive-complexity)
+      WriterT* writer, std::mutex& writer_mutex, int64_t file_id, const std::vector<int64_t>& request_keys_per_file,
+      const DatasetData& dataset_data, soci::session& session, const DatabaseDriver& driver,
+      int64_t sample_batch_size) {
     try {
       std::string file_path;
       session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id", soci::into(file_path),

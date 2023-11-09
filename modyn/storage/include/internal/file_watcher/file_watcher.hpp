@@ -118,9 +118,9 @@ class FileWatcher {
   void search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp);
   void seek_dataset(soci::session& session);
   void seek(soci::session& session);
-  static void handle_file_paths(const std::vector<std::string>::iterator file_paths_begin,
-                                const std::vector<std::string>::iterator file_paths_end,
-                                std::string data_file_extension, FileWrapperType file_wrapper_type, int64_t timestamp,
+  static void handle_file_paths(std::vector<std::string>::iterator file_paths_begin,
+                                std::vector<std::string>::iterator file_paths_end, std::string data_file_extension,
+                                FileWrapperType file_wrapper_type, int64_t timestamp,
                                 FilesystemWrapperType filesystem_wrapper_type, int64_t dataset_id,
                                 const YAML::Node* file_wrapper_config, const YAML::Node* config,
                                 int64_t sample_dbinsertion_batchsize, bool force_fallback,

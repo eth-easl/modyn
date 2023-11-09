@@ -23,8 +23,8 @@ class MockServerWriter : public grpc::ServerWriterInterface<T> {
 
   MOCK_METHOD0_T(SendInitialMetadata, void());
 
-  bool Write(const T& response,
-             const grpc::WriteOptions /* options */) override {  // NOLINT(readability-identifier-naming)
+  bool Write(const T& response,  // NOLINT(readability-identifier-naming)
+             const grpc::WriteOptions /* options */) override {
     responses_.push_back(response);
     return true;
   };

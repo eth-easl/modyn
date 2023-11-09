@@ -233,7 +233,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   ASSERT_EQ(number_of_samples, 1);
 }
 
-// NOLINT(readability-function-cognitive-complexity)
+// NOLINTNEXTLINE (readability-function-cognitive-complexity)
 TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
@@ -303,26 +303,26 @@ TEST_F(StorageServiceImplTest, TestGetDataInInterval) {
   const StorageDatabaseConnection connection(config);
   soci::session session =
       connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
-  std::string sql_expression = fmt::format(
+  const std::string sql_expression = fmt::format(
       "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
       "1)",
       tmp_dir_);
   session << sql_expression;
 
-  long long inserted_file_id = -1;  // NOLINT google-runtime-int (Linux otherwise complains about the following call)
+  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
   if (!session.get_last_insert_id("files", inserted_file_id)) {
     FAIL("Failed to insert file into database");
   }
 
   session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
       soci::use(inserted_file_id);
-  long long inserted_sample_id_ll =
-      -1;  // NOLINT google-runtime-int (Linux otherwise complains about the following call)
+  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
+      -1;
   if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
     FAIL("Failed to insert sample into database");
   }
 
-  uint64_t inserted_sample_id = static_cast<uint64_t>(inserted_sample_id_ll);
+  auto inserted_sample_id = static_cast<uint64_t>(inserted_sample_id_ll);
 
   modyn::storage::GetDataInIntervalRequest request;
   request.set_dataset_id("test_dataset");
