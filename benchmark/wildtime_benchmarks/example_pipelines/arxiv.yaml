@@ -15,8 +15,6 @@ training:
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
-  initial_pass:
-    activated: False
   batch_size: 96
   optimizers:
     - name: "default"

@@ -38,7 +38,6 @@ def get_minimal_pipeline_config() -> dict:
             "amp": False,
             "dataloader_workers": 1,
             "initial_model": "random",
-            "initial_pass": {"activated": False},
             "batch_size": 42,
             "optimizers": [
                 {"name": "default", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},

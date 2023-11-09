@@ -106,13 +106,6 @@ class PipelineExecutor:
 
         assert self.trigger is not None, "Error during trigger initialization"
 
-    def initial_pass(self) -> None:
-        # TODO(#128): Implement initial pass.
-        # for reference = interval, fetch all data in the interval between start_timestamp and end_timestamp
-        # for reference = amount, we need support from the storage module to return the required keys
-        # In case self.previous_model_id is set, respect and update!
-        pass
-
     def _persist_pipeline_log(self) -> None:
         if "PYTEST_CURRENT_TEST" in os.environ:
             json.dumps(self.pipeline_log)  # Enforce serialization to catch issues
@@ -346,10 +339,6 @@ class PipelineExecutor:
             logger.info("Shutdown successful.")
 
     def execute(self) -> None:
-        # self.status_bar.update(demo="Initial Pass")
-        self.initial_pass()
-        logger.info(f"Pipeline {self.pipeline_id}: Initial pass completed.")
-
         self.get_dataset_selector_batch_size()
         if self.experiment_mode:
             self.replay_data()

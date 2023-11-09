@@ -10,7 +10,6 @@ import pytest
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import PipelineExecutor
 from modyn.supervisor.internal.supervisor import Supervisor
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
@@ -26,7 +25,6 @@ def get_minimal_training_config() -> dict:
         "dataloader_workers": 1,
         "use_previous_model": True,
         "initial_model": "random",
-        "initial_pass": {"activated": False},
         "learning_rate": 0.1,
         "batch_size": 42,
         "optimizers": [
@@ -217,26 +215,6 @@ def test__validate_training_options():
     training_config["initial_model"] = "UnknownInitialModel"
     assert not sup._validate_training_options(training_config)
 
-    # Check that training with an invalid reference for initial pass gets rejected
-    training_config = get_minimal_training_config()
-    training_config["initial_pass"]["activated"] = True
-    training_config["initial_pass"]["reference"] = "UnknownRef"
-    assert not sup._validate_training_options(training_config)
-
-    # Check that training with an invalid amount for initial pass gets rejected
-    training_config = get_minimal_training_config()
-    training_config["initial_pass"]["activated"] = True
-    training_config["initial_pass"]["reference"] = "amount"
-    training_config["initial_pass"]["amount"] = 2
-    assert not sup._validate_training_options(training_config)
-
-    # Check that training with an valid amount for initial pass gets accepted
-    training_config = get_minimal_training_config()
-    training_config["initial_pass"]["activated"] = True
-    training_config["initial_pass"]["reference"] = "amount"
-    training_config["initial_pass"]["amount"] = 0.5
-    assert sup._validate_training_options(training_config)
-
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test__validate_evaluation_options():
@@ -357,9 +335,7 @@ def test_unregister_pipeline():
 @patch.object(GRPCHandler, "trainer_server_available", return_value=True)
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
 @patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
-@patch.object(PipelineExecutor, "execute")
 def test_start_pipeline(
-    test_execute,
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,

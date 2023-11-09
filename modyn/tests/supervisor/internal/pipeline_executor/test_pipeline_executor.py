@@ -28,7 +28,6 @@ def get_minimal_training_config() -> dict:
         "dataloader_workers": 1,
         "use_previous_model": True,
         "initial_model": "random",
-        "initial_pass": {"activated": False},
         "learning_rate": 0.1,
         "batch_size": 42,
         "optimizers": [
@@ -78,6 +77,8 @@ def noop_constructor_mock(
     pipeline_config: dict,
     eval_directory: pathlib.Path,
     supervisor_supported_eval_result_writers: dict,
+    status_query_queue: mp.Queue,
+    status_response_queue: mp.Queue,
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
@@ -427,23 +428,6 @@ def test__run_training_with_evaluation(
     assert result_writer.trigger_id == 21
 
 
-@patch.object(PipelineExecutor, "__init__", noop_constructor_mock)
-def test_initial_pass():
-    pe = PipelineExecutor(
-        START_TIMESTAMP,
-        PIPELINE_ID,
-        get_minimal_system_config(),
-        get_minimal_pipeline_config(),
-        EVALUATION_DIRECTORY,
-        SUPPORTED_EVAL_RESULT_WRITERS,
-        mp.Queue(),
-        mp.Queue(),
-    )
-
-    # TODO(#10): implement a real test when func is implemented.
-    pe.initial_pass()
-
-
 @patch.object(GRPCHandler, "get_data_in_interval", return_value=[([(10, 1), (11, 2)], 0)])
 @patch.object(PipelineExecutor, "_handle_new_data")
 def test_replay_data_closed_interval(test__handle_new_data: MagicMock, test_get_data_in_interval: MagicMock):
@@ -497,13 +481,11 @@ def test_replay_data_open_interval_batched(test__handle_new_data: MagicMock, tes
 @patch.object(PipelineExecutor, "init_cluster_connection", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(PipelineExecutor, "get_dataset_selector_batch_size")
-@patch.object(PipelineExecutor, "initial_pass")
 @patch.object(PipelineExecutor, "replay_data")
 @patch.object(PipelineExecutor, "wait_for_new_data")
 def test_non_experiment_pipeline(
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
-    test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
     test_grpc_connection_established,
     test_init_cluster_connection,
@@ -513,7 +495,6 @@ def test_non_experiment_pipeline(
     pe.init_cluster_connection()
     pe.execute()
 
-    test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_called_once_with(21)
     test_replay_data.assert_not_called()
@@ -522,13 +503,11 @@ def test_non_experiment_pipeline(
 @patch.object(PipelineExecutor, "init_cluster_connection", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 @patch.object(PipelineExecutor, "get_dataset_selector_batch_size")
-@patch.object(PipelineExecutor, "initial_pass")
 @patch.object(PipelineExecutor, "replay_data")
 @patch.object(PipelineExecutor, "wait_for_new_data")
 def test_experiment_pipeline(
     test_wait_for_new_data: MagicMock,
     test_replay_data: MagicMock,
-    test_initial_pass: MagicMock,
     test_get_dataset_selector_batch_size: MagicMock,
     test_grpc_connection_established,
     test_init_cluster_connection,
@@ -538,7 +517,6 @@ def test_experiment_pipeline(
     pe.init_cluster_connection()
     pe.execute()
 
-    test_initial_pass.assert_called_once()
     test_get_dataset_selector_batch_size.assert_called_once()
     test_wait_for_new_data.assert_not_called()
     test_replay_data.assert_called_once()

@@ -192,18 +192,6 @@ class Supervisor:
                 logger.error("Initial model set to pretrained, but no initial_model_id given")
                 is_valid = False
 
-        if training_config["initial_pass"]["activated"]:
-            reference = training_config["initial_pass"]["reference"]
-            if reference not in ("amount", "timestamp"):
-                logger.error(f"Invalid reference for initial pass: {reference} (valid are 'amount' or 'timestamp')")
-                is_valid = False
-
-            if reference == "amount":
-                amount = training_config["initial_pass"]["amount"]
-                if float(amount) > 1.0 or float(amount) < 0:
-                    logger.error(f"Invalid initial pass amount: {amount}")
-                    is_valid = False
-
         return is_valid
 
     def validate_pipeline_config_content(self, pipeline_config: dict) -> bool:

@@ -45,7 +45,6 @@ def get_minimal_pipeline_config(
             "dataloader_workers": num_workers,
             "use_previous_model": True,
             "initial_model": "random",
-            "initial_pass": {"activated": False},
             "learning_rate": 0.1,
             "batch_size": 42,
             "optimizers": [
