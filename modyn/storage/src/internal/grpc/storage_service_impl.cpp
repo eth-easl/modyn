@@ -414,10 +414,10 @@ StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids
       const auto start_index = static_cast<int64_t>(thread_id * subset_size);
       const auto end_index = static_cast<int64_t>((thread_id + 1) * subset_size);
 
-      DEBUG_ASSERT(start_index < file_ids.size(),
+      DEBUG_ASSERT(start_index < static_cast<int64_t>(file_ids.size()),
                    fmt::format("Start Index too big! idx = {}, size = {}, thread_id = {}+1/{}, subset_size = {}",
                                start_index, file_ids.size(), thread_id, retrieval_threads, subset_size));
-      DEBUG_ASSERT(end_index <= file_ids.size(),
+      DEBUG_ASSERT(end_index <= static_cast<int64_t>(file_ids.size()),
                    fmt::format("End Index too big! idx = {}, size = {}, thread_id = {}+1/{}, subset_size = {}",
                                start_index, file_ids.size(), thread_id, retrieval_threads, subset_size));
 
