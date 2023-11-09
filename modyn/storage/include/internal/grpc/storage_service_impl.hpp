@@ -184,16 +184,23 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     std::mutex writer_mutex;
 
     if (disable_multithreading_) {
-      get_samples_and_send<WriterT>(&file_ids, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
+      const std::vector<int64_t>::const_iterator begin = file_ids.begin();
+      const std::vector<int64_t>::const_iterator end = file_ids.end();
+
+      get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
                                     &request_keys, driver);
 
     } else {
-      std::vector<std::vector<int64_t>> file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
+      std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
+          its_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
+        const std::vector<int64_t>::const_iterator begin = its_per_thread[thread_id].first;
+        const std::vector<int64_t>::const_iterator end = its_per_thread[thread_id].second;
+
         retrieval_threads_vector[thread_id] =
-            std::thread(StorageServiceImpl::get_samples_and_send<WriterT>, &file_ids_per_thread[thread_id], writer,
-                        &writer_mutex, &dataset_data, &config_, sample_batch_size_, &request_keys, driver);
+            std::thread(StorageServiceImpl::get_samples_and_send<WriterT>, begin, end, writer, &writer_mutex,
+                        &dataset_data, &config_, sample_batch_size_, &request_keys, driver);
       }
 
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -219,18 +226,19 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
 
     if (disable_multithreading_) {
-      send_sample_id_and_label<ResponseT, WriterT>(writer, &writer_mutex, &file_ids, &config_, dataset_id,
-                                                   sample_batch_size_);
+      send_sample_id_and_label<ResponseT, WriterT>(writer, &writer_mutex, file_ids.begin(), file_ids.end(), &config_,
+                                                   dataset_id, sample_batch_size_);
     } else {
       // Split the number of files over retrieval_threads_
-      // TODO(MaxiBoether): pass iterator around instead of copying ids around
-      auto file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
+      std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
+          file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
 
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
         retrieval_threads_vector[thread_id] =
             std::thread(StorageServiceImpl::send_sample_id_and_label<ResponseT, WriterT>, writer, &writer_mutex,
-                        &file_ids_per_thread[thread_id], &config_, dataset_id, sample_batch_size_);
+                        file_ids_per_thread[thread_id].first, file_ids_per_thread[thread_id].second, &config_,
+                        dataset_id, sample_batch_size_);
       }
 
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -243,15 +251,21 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename ResponseT, typename WriterT = ServerWriter<ResponseT>>
   static void send_sample_id_and_label(WriterT* writer,  // NOLINT (readability-function-cognitive-complexity)
-                                       std::mutex* writer_mutex, const std::vector<int64_t>* file_ids,
-                                       const YAML::Node* config, int64_t dataset_id, int64_t sample_batch_size) {
+                                       std::mutex* writer_mutex, const std::vector<int64_t>::const_iterator begin,
+                                       const std::vector<int64_t>::const_iterator end, const YAML::Node* config,
+                                       int64_t dataset_id, int64_t sample_batch_size) {
+    if (begin >= end) {
+      return;
+    }
+
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
     std::vector<SampleRecord> record_buf;
     record_buf.reserve(sample_batch_size);
 
-    for (const int64_t file_id : *file_ids) {
+    for (std::vector<int64_t>::const_iterator it = begin; it < end; ++it) {
+      const int64_t& file_id = *it;
       const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
       SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples));
       if (number_of_samples > 0) {
@@ -444,14 +458,20 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   }
 
   template <typename WriterT>
-  static void get_samples_and_send(const std::vector<int64_t>* file_ids_for_thread, WriterT* writer,
+  static void get_samples_and_send(const std::vector<int64_t>::const_iterator begin,
+                                   const std::vector<int64_t>::const_iterator end, WriterT* writer,
                                    std::mutex* writer_mutex, const DatasetData* dataset_data, const YAML::Node* config,
                                    int64_t sample_batch_size, const std::vector<int64_t>* request_keys,
                                    const DatabaseDriver driver) {
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
-    for (const int64_t& file_id : *file_ids_for_thread) {
+    if (begin >= end) {
+      return;
+    }
+
+    for (std::vector<int64_t>::const_iterator it = begin; it < end; ++it) {
+      const int64_t& file_id = *it;
       const std::vector<int64_t> samples_corresponding_to_file =
           get_samples_corresponding_to_file(file_id, dataset_data->dataset_id, *request_keys, session);
       send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, file_id, samples_corresponding_to_file,
@@ -473,8 +493,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static int64_t get_dataset_id(soci::session& session, const std::string& dataset_name);
   static std::vector<int64_t> get_file_ids_for_samples(const std::vector<int64_t>& request_keys, int64_t dataset_id,
                                                        soci::session& session);
-  static std::vector<std::vector<int64_t>> get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
-                                                                   uint64_t retrieval_threads);
+  static std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
+  get_file_ids_per_thread(const std::vector<int64_t>& file_ids, uint64_t retrieval_threads);
   static std::vector<int64_t> get_samples_corresponding_to_file(int64_t file_id, int64_t dataset_id,
                                                                 const std::vector<int64_t>& request_keys,
                                                                 soci::session& session);

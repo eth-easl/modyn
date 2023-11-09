@@ -389,11 +389,12 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
 
 // ------- Helper functions -------
 
-std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids,
-                                                                              uint64_t retrieval_threads) {
+std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
+StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids, uint64_t retrieval_threads) {
   ASSERT(retrieval_threads > 0, "This function is only intended for multi-threaded retrieval.");
 
-  std::vector<std::vector<int64_t>> file_ids_per_thread(retrieval_threads);
+  std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
+      file_ids_per_thread(retrieval_threads);
   try {
     if (file_ids.empty()) {
       SPDLOG_INFO("get_file_ids_per_thread returning early since file_ids is empty.");
@@ -421,10 +422,9 @@ std::vector<std::vector<int64_t>> StorageServiceImpl::get_file_ids_per_thread(co
                                start_index, file_ids.size(), thread_id, retrieval_threads, subset_size));
 
       if (thread_id == retrieval_threads - 1) {
-        file_ids_per_thread[thread_id] = std::vector<int64_t>(file_ids.begin() + start_index, file_ids.end());
+        file_ids_per_thread[thread_id] = std::make_pair(file_ids.begin() + start_index, file_ids.end());
       } else {
-        file_ids_per_thread[thread_id] =
-            std::vector<int64_t>(file_ids.begin() + start_index, file_ids.begin() + end_index);
+        file_ids_per_thread[thread_id] = std::make_pair(file_ids.begin() + start_index, file_ids.begin() + end_index);
       }
     }
   } catch (const std::exception& e) {
