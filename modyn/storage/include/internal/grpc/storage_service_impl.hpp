@@ -191,8 +191,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     std::mutex writer_mutex;
 
     if (disable_multithreading_) {
-      const std::vector<int64_t>::const_iterator begin = file_ids.begin(); // NOLINT (modernize-use-auto)
-      const std::vector<int64_t>::const_iterator end = file_ids.end(); // NOLINT (modernize-use-auto)
+      const std::vector<int64_t>::const_iterator begin = file_ids.begin();  // NOLINT (modernize-use-auto)
+      const std::vector<int64_t>::const_iterator end = file_ids.end();      // NOLINT (modernize-use-auto)
 
       get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
                                     &request_keys, driver);
