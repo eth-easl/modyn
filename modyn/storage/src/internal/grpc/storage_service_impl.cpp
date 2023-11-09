@@ -38,6 +38,7 @@ Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-
 
     // Check if the dataset exists
     const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+    session.close();
     SPDLOG_INFO(fmt::format("Received availability request for dataset {}", dataset_id));
 
     if (dataset_id == -1) {
@@ -113,7 +114,6 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
     if (number_of_files > 0) {
       std::vector<std::string> file_paths(number_of_files + 1);
       session << "SELECT path FROM files WHERE dataset_id = :dataset_id", soci::into(file_paths), soci::use(dataset_id);
-
       try {
         for (const auto& file_path : file_paths) {
           filesystem_wrapper->remove(file_path);
@@ -123,7 +123,7 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
         return {StatusCode::OK, "Error deleting dataset."};
       }
     }
-
+    session.close();
     const bool success = storage_database_connection_.delete_dataset(request->dataset_id(), dataset_id);
 
     response->set_success(success);
@@ -252,6 +252,7 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
       SPDLOG_ERROR("Error deleting data: {}", e.what());
       return {StatusCode::OK, "Error deleting data."};
     }
+    session.close();
     response->set_success(true);
     return {StatusCode::OK, "Data deleted."};
   } catch (const std::exception& e) {
@@ -339,6 +340,7 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
           }
         }
       }
+      session.close();
 
       if (!record_buf.empty()) {
         ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
@@ -397,16 +399,13 @@ StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids
       file_ids_per_thread(retrieval_threads);
   try {
     if (file_ids.empty()) {
-      SPDLOG_INFO("get_file_ids_per_thread returning early since file_ids is empty.");
       return file_ids_per_thread;
     }
 
     auto number_of_files = static_cast<uint64_t>(file_ids.size());
-    SPDLOG_INFO("Running get_file_ids_per_thread with {} threads for {} files", retrieval_threads, number_of_files);
 
     if (number_of_files < retrieval_threads) {
       retrieval_threads = number_of_files;
-      SPDLOG_INFO("Adjusting retrieval_threads to number_of_files since it's too big.");
     }
 
     const uint64_t subset_size = static_cast<uint64_t>(number_of_files / retrieval_threads);

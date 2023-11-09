@@ -93,6 +93,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       if (dataset_data.dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+        session.close();
         return {StatusCode::OK, "Dataset does not exist."};
       }
 
@@ -103,12 +104,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
 
       if (request_keys.empty()) {
-        SPDLOG_ERROR("No keys provided.");
         return {StatusCode::OK, "No keys provided."};
       }
 
       send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data, session,
                                           storage_database_connection_.get_drivername());
+      session.close();
 
       return {StatusCode::OK, "Data retrieved."};
     } catch (const std::exception& e) {
@@ -125,8 +126,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
       if (dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
+        session.close();
         return {StatusCode::OK, "Dataset does not exist."};
       }
+      session.close();
+
       const int64_t request_timestamp = request->timestamp();
 
       SPDLOG_INFO(fmt::format("Received GetNewDataSince Request for dataset {} (id = {}) with timestamp {}.",
@@ -148,8 +152,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
       if (dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} does not exist.", dataset_id);
+        session.close();
         return {StatusCode::OK, "Dataset does not exist."};
       }
+      session.close();
+
       const int64_t start_timestamp = request->start_timestamp();
       const int64_t end_timestamp = request->end_timestamp();
 
@@ -218,9 +225,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     soci::session session = storage_database_connection_.get_session();
 
     const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
-    SPDLOG_INFO(fmt::format("send_file_ids_and_labels got {} file ids.", file_ids.size()));
+    session.close();
+
     if (file_ids.empty()) {
-      SPDLOG_INFO("Returning early, since no file ids obtained.");
       return;
     }
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
@@ -267,7 +274,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     for (std::vector<int64_t>::const_iterator it = begin; it < end; ++it) {
       const int64_t& file_id = *it;
       const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
-      SPDLOG_INFO(fmt::format("file {} has {} samples", file_id, number_of_samples));
       if (number_of_samples > 0) {
         const std::string query = fmt::format(
             "SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = {}", file_id, dataset_id);
@@ -279,7 +285,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         while (true) {
           records = cursor_handler.yield_per(sample_batch_size);
 
-          SPDLOG_INFO(fmt::format("got {} records (batch size = {})", records.size(), sample_batch_size));
           if (records.empty()) {
             break;
           }
@@ -463,12 +468,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                    std::mutex* writer_mutex, const DatasetData* dataset_data, const YAML::Node* config,
                                    int64_t sample_batch_size, const std::vector<int64_t>* request_keys,
                                    const DatabaseDriver driver) {
-    const StorageDatabaseConnection storage_database_connection(*config);
-    soci::session session = storage_database_connection.get_session();
-
     if (begin >= end) {
       return;
     }
+    const StorageDatabaseConnection storage_database_connection(*config);
+    soci::session session = storage_database_connection.get_session();
 
     for (std::vector<int64_t>::const_iterator it = begin; it < end; ++it) {
       const int64_t& file_id = *it;
@@ -477,6 +481,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, file_id, samples_corresponding_to_file,
                                                   *dataset_data, session, driver, sample_batch_size);
     }
+    session.close();
   }
 
   static std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,

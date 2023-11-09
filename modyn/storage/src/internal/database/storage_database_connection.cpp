@@ -126,6 +126,8 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
 
   // Create partition table for samples
   add_sample_dataset_partition(name);
+  session.close();
+
   return true;
 }
 
@@ -134,6 +136,7 @@ int64_t StorageDatabaseConnection::get_dataset_id(const std::string& name) const
 
   int64_t dataset_id = -1;
   session << "SELECT dataset_id FROM datasets WHERE name = :name", soci::into(dataset_id), soci::use(name);
+  session.close();
 
   return dataset_id;
 }
@@ -178,6 +181,8 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name, const in
     SPDLOG_ERROR("Error deleting dataset {}: {}", name, e.what());
     return false;
   }
+
+  session.close();
 
   return true;
 }
