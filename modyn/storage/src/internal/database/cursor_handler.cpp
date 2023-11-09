@@ -106,4 +106,6 @@ void CursorHandler::close_cursor() {
     default:
       FAIL("Unsupported database driver");
   }
+
+  open_ = false;
 }
