@@ -292,8 +292,7 @@ TEST_F(StorageServiceImplTest, TestGetNewDataSince) {
   ASSERT_EQ(responses3.size(), 0);
 }
 
-// NOLINT(readability-function-cognitive-complexity)
-TEST_F(StorageServiceImplTest, TestGetDataInInterval) {
+TEST_F(StorageServiceImplTest, TestGetDataInInterval) {  // NOLINT(readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
   grpc::ServerContext context;

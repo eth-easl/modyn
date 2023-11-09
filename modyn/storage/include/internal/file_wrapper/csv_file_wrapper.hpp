@@ -53,6 +53,10 @@ class CsvFileWrapper : public FileWrapper {
       stream_->close();
     }
   }
+  CsvFileWrapper(const CsvFileWrapper&) = default;
+  CsvFileWrapper& operator=(const CsvFileWrapper&) = default;
+  CsvFileWrapper(CsvFileWrapper&&) = default;
+  CsvFileWrapper& operator=(CsvFileWrapper&&) = default;
 
   int64_t get_number_of_samples() override;
   int64_t get_label(int64_t index) override;

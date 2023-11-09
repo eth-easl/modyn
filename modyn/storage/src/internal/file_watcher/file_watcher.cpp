@@ -46,8 +46,6 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
     }
     try {
       const int64_t& modified_time = filesystem_wrapper->get_modified_time(file_path);
-      // TODO(MaxiBoether): remove print
-      SPDLOG_INFO(fmt::format("Modified time of {} is {}, timestamp is {}", file_path, modified_time, timestamp));
       return modified_time > timestamp;
     } catch (const std::exception& e) {
       SPDLOG_ERROR(fmt::format(
