@@ -339,11 +339,16 @@ class PipelineExecutor:
             logger.info("Shutdown successful.")
 
     def execute(self) -> None:
+        logger.info(f"[pipeline {self.pipeline_id}] Get dataset selector batch size.")
         self.get_dataset_selector_batch_size()
+
+        logger.info(f"[pipeline {self.pipeline_id}] Start executing, experiment mode {self.experiment_mode}.")
         if self.experiment_mode:
             self.replay_data()
         else:
             self.wait_for_new_data(self.start_timestamp)
+
+        logger.info(f"[pipeline {self.pipeline_id}] Execution done. Persist log.")
 
         # self.status_bar.update(demo="Cleanup")
         self._persist_pipeline_log()
