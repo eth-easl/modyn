@@ -103,6 +103,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       std::string dataset_name = request->dataset_id();
       const DatasetData dataset_data = get_dataset_data(session, dataset_name);
 
+      SPDLOG_INFO(fmt::format("Received GetRequest for dataset {} (id = {}) with {} keys.", dataset_name,
+                              dataset_data.dataset_id, request->keys_size()));
+
       if (dataset_data.dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
         session.close();

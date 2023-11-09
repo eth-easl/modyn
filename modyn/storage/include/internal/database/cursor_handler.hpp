@@ -51,6 +51,8 @@ class CursorHandler {
       default:
         FAIL("Unsupported database driver");
     }
+
+    open_ = true;
   }
   ~CursorHandler() { close_cursor(); }
   CursorHandler(const CursorHandler&) = delete;
@@ -69,5 +71,6 @@ class CursorHandler {
   int16_t number_of_columns_;
   std::unique_ptr<soci::rowset<soci::row>> rs_{nullptr};
   PGconn* postgresql_conn_{nullptr};
+  bool open_{false};
 };
 }  // namespace modyn::storage

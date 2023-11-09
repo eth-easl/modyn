@@ -301,7 +301,6 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
       while (true) {
         records = cursor_handler.yield_per(sample_batch_size_);
 
-        SPDLOG_INFO(fmt::format("got {} records (batch size = {})", records.size(), sample_batch_size_));
         if (records.empty()) {
           break;
         }
@@ -340,6 +339,7 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
           }
         }
       }
+      cursor_handler.close_cursor();
       session.close();
 
       if (!record_buf.empty()) {
