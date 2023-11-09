@@ -45,3 +45,18 @@ if (${MODYN_BUILD_STORAGE})
   message(STATUS "Including storage dependencies.")
   include(${MODYN_CMAKE_DIR}/storage_dependencies.cmake)
 endif ()
+
+################### yaml-cpp ####################
+# Technically, yaml-cpp is currently only required by storage
+# But we have a test util function requiring this.
+
+message(STATUS "Making yaml-cpp available.")
+
+FetchContent_Declare(
+  yaml-cpp
+  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+  GIT_TAG yaml-cpp-0.7.0
+)
+FetchContent_MakeAvailable(yaml-cpp)
+
+target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic -Wno-deprecated-declarations)

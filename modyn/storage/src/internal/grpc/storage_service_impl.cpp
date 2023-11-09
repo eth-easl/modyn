@@ -408,10 +408,11 @@ StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids
       retrieval_threads = number_of_files;
     }
 
-    const uint64_t subset_size = static_cast<uint64_t>(number_of_files / retrieval_threads);
+    const auto subset_size = static_cast<uint64_t>(number_of_files / retrieval_threads);
     for (uint64_t thread_id = 0; thread_id < retrieval_threads; ++thread_id) {
-      const uint64_t start_index = thread_id * subset_size;
-      const uint64_t end_index = (thread_id + 1) * subset_size;
+      // These need to be signed because we add them to iterators.
+      const auto start_index = static_cast<int64_t>(thread_id * subset_size);
+      const auto end_index = static_cast<int64_t>((thread_id + 1) * subset_size);
 
       DEBUG_ASSERT(start_index < file_ids.size(),
                    fmt::format("Start Index too big! idx = {}, size = {}, thread_id = {}+1/{}, subset_size = {}",

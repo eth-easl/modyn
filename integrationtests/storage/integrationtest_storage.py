@@ -27,9 +27,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
-from PIL import Image
-
 from modyn.utils.utils import flatten
+from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 

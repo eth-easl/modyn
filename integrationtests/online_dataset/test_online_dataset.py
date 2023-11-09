@@ -10,7 +10,6 @@ from typing import Iterable, Tuple
 
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
-from modyn.utils.utils import flatten
 import torch
 import yaml
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, JsonString, RegisterPipelineRequest
@@ -26,6 +25,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.utils import grpc_connection_established
+from modyn.utils.utils import flatten
 from PIL import Image
 from torchvision import transforms
 

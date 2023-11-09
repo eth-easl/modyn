@@ -65,18 +65,6 @@ foreach(_soci_target IN LISTS all_soci_targets)
 endforeach()
 
 
-################### yaml-cpp ####################
-message(STATUS "Making yaml-cpp available.")
-
-FetchContent_Declare(
-  yaml-cpp
-  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-  GIT_TAG yaml-cpp-0.7.0
-)
-FetchContent_MakeAvailable(yaml-cpp)
-
-target_compile_options(yaml-cpp INTERFACE -Wno-shadow -Wno-pedantic -Wno-deprecated-declarations)
-
 ################### gRPC ####################
 message(STATUS "Making gRPC available (this may take a while).")
 
