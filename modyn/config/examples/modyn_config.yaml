@@ -162,7 +162,8 @@ selector:
   sample_batch_size: 500000
   insertion_threads: 16
   trigger_sample_directory: "/tmp/trigger_samples"
-  cleanup_trigger_samples_after_shutdown: true
+  local_storage_directory: "/tmp/local_storage"
+  cleanup_storage_directories_after_shutdown: true
   ignore_existing_trigger_samples: false
 
 trainer_server:

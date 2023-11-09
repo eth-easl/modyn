@@ -3,7 +3,7 @@ This submodule provides backends for storing the seen samples during a pipeline.
 """
 import os
 
-from .local_storage_backend import LocalStorageBackend  # noqa: F401
+from .abstract_storage_backend import AbstractStorageBackend  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

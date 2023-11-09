@@ -345,12 +345,12 @@ def test__get_all_unused_data():
 
 def test__get_all_unused_data_partitioning():
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
-    strat._maximum_keys_in_memory = 1
+    strat.maximum_keys_in_memory = 1
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
     strat._mark_used([10])
 
     result = list(strat._get_all_unused_data())
-    assert len(result) == 2
+    assert len(result) == 2, f"result = {result}"
     result = flatten(result)
 
     assert set(result) == set([11, 12])

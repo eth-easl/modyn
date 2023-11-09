@@ -5,10 +5,10 @@ import random
 from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import asc, select
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
+from modyn.selector.internal.storage_backend.local import LocalStorageBackend
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,9 @@ class NewDataStrategy(AbstractSelectionStrategy):
     """
 
     def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
+        super().__init__(
+            config, modyn_config, pipeline_id, maximum_keys_in_memory, required_configs=["storage_backend"]
+        )
 
         if self.has_limit and not self.reset_after_trigger and "limit_reset" not in config:
             raise ValueError("Please define how to deal with the limit without resets using the 'limit_reset' option.")
@@ -50,13 +52,27 @@ class NewDataStrategy(AbstractSelectionStrategy):
             if self.limit_reset_strategy not in self.supported_limit_reset_strategies:
                 raise ValueError(f"Unsupported limit reset strategy: {self.limit_reset_strategy}")
 
+        self._storage_backend: AbstractStorageBackend
+        if config["storage_backend"] == "local":
+            self._storage_backend = LocalStorageBackend(
+                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+            )
+        elif config["storage_backend"] == "database":
+            self._storage_backend = DatabaseStorageBackend(
+                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+            )
+        else:
+            raise NotImplementedError(
+                f"Unknown storage backend \"{config['storage_backend']}\". Supported: local, database"
+            )
+
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
         swt = Stopwatch()
         swt.start("persist_samples")
-        persist_log = self._persist_samples(keys, timestamps, labels)
+        persist_log = self._storage_backend.persist_samples(self._next_trigger_id, keys, timestamps, labels)
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
@@ -88,41 +104,46 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
     def _get_data_reset(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         assert self.reset_after_trigger
-        swt = Stopwatch()
 
-        for samples, partition_log in self._get_current_trigger_data():
+        if self.has_limit:
             # TODO(#179): this assumes limit < len(samples)
-            if self.has_limit:
+            swt = Stopwatch()
+            for samples, partition_log in self._get_current_trigger_data():
                 swt.start("sample_time")
                 samples = random.sample(samples, min(len(samples), self.training_set_size_limit))
                 partition_log["sample_time"] = swt.stop()
-
-            yield samples, partition_log
+                yield samples, partition_log
+        else:
+            yield from self._get_current_trigger_data()
 
     def _get_data_tail(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         assert not self.reset_after_trigger and self.tail_triggers > 0
-        swt = Stopwatch()
 
-        for samples, partition_log in self._get_tail_triggers_data():
+        if self.has_limit:
+            swt = Stopwatch()
             # TODO(#179): this assumes limit < len(samples)
-            if self.has_limit:
+            for samples, partition_log in self._get_tail_triggers_data():
                 swt.start("sample_time")
                 samples = random.sample(samples, min(len(samples), self.training_set_size_limit))
                 partition_log["sample_time"] = swt.stop()
-
-            yield samples, partition_log
+                yield samples, partition_log
+        else:
+            yield from self._get_tail_triggers_data()
 
     def _get_data_no_reset(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         assert not self.reset_after_trigger
-        swt = Stopwatch()
-        for samples, partition_log in self._get_all_data():
-            # TODO(#179): this assumes limit < len(samples)
-            if self.has_limit:
+
+        if self.has_limit:
+            swt = Stopwatch()
+            for samples, partition_log in self._get_all_data():
+                # TODO(#179): this assumes limit < len(samples)
                 swt.start("handle_limit_time", overwrite=True)
                 samples = self._handle_limit_no_reset(samples)
                 partition_log["handle_limit_time"] = swt.stop()
 
-            yield samples, partition_log
+                yield samples, partition_log
+        else:
+            yield from self._get_all_data()
 
     def _handle_limit_no_reset(self, samples: list[int]) -> list[int]:
         assert self.limit_reset_strategy is not None
@@ -148,35 +169,12 @@ class NewDataStrategy(AbstractSelectionStrategy):
         return random.sample(samples, min(len(samples), self.training_set_size_limit))
 
     def _get_current_trigger_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
-        """Returns all sample for current trigger
+        """Returns all samples seen during current trigger.
 
         Returns:
-            list[int]: Keys of used samples
+            Iterable[tuple[list[int], dict[str, object]]]: Iterator over a tuple of a list of integers (maximum _maximum_keys_in_memory) and a log dict
         """
-        swt = Stopwatch()
-
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            stmt = (
-                select(SelectorStateMetadata.sample_key)
-                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-                .execution_options(yield_per=self._maximum_keys_in_memory)
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id == self._next_trigger_id,
-                )
-                .order_by(asc(SelectorStateMetadata.timestamp))
-            )
-
-            swt.start("get_chunk")
-            for chunk in database.session.execute(stmt).partitions():
-                log = {"get_chunk_time": swt.stop()}
-
-                if len(chunk) > 0:
-                    yield [res[0] for res in chunk], log
-                else:
-                    yield [], log
-
-                swt.start("get_chunk", overwrite=True)
+        yield from self._storage_backend.get_trigger_data(self._next_trigger_id)
 
     def _get_tail_triggers_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         """Returns all sample for current trigger
@@ -184,29 +182,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         Returns:
             list[int]: Keys of used samples
         """
-        swt = Stopwatch()
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            stmt = (
-                select(SelectorStateMetadata.sample_key)
-                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-                .execution_options(yield_per=self._maximum_keys_in_memory)
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers,
-                )
-                .order_by(asc(SelectorStateMetadata.timestamp))
-            )
-
-            swt.start("get_chunk")
-            for chunk in database.session.execute(stmt).partitions():
-                log = {"get_chunk_time": swt.stop()}
-
-                if len(chunk) > 0:
-                    yield [res[0] for res in chunk], log
-                else:
-                    yield [], log
-
-                swt.start("get_chunk", overwrite=True)
+        yield from self._storage_backend.get_data_since_trigger(self._next_trigger_id - self.tail_triggers)
 
     def _get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         """Returns all sample
@@ -214,26 +190,10 @@ class NewDataStrategy(AbstractSelectionStrategy):
         Returns:
             list[str]: Keys of used samples
         """
-        swt = Stopwatch()
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            stmt = (
-                select(SelectorStateMetadata.sample_key)
-                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-                .execution_options(yield_per=self._maximum_keys_in_memory)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id)
-                .order_by(asc(SelectorStateMetadata.timestamp))
-            )
-
-            swt.start("get_chunk")
-            for chunk in database.session.execute(stmt).partitions():
-                log = {"get_chunk_time": swt.stop()}
-
-                if len(chunk) > 0:
-                    yield [res[0] for res in chunk], log
-                else:
-                    yield [], log
-
-                swt.start("get_chunk", overwrite=True)
+        yield from self._storage_backend.get_all_data()
 
     def _reset_state(self) -> None:
         pass  # As we currently hold everything in database (#116), this currently is a noop.
+
+    def get_available_labels(self) -> list[int]:
+        return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)

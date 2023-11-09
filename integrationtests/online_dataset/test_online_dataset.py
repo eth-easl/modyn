@@ -199,7 +199,7 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
     strategy_config = {
         "name": "NewDataStrategy",
         "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": True},
+        "config": {"limit": -1, "reset_after_trigger": True, "storage_backend": "database"},
     }
 
     pipeline_id = selector.register_pipeline(

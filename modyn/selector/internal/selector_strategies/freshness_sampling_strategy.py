@@ -6,10 +6,13 @@ from math import isclose
 from typing import Any, Iterable, Iterator
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
-from sqlalchemy import asc, exc, func, select, update
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
+from sqlalchemy import exc, func, update
+from sqlalchemy.orm.session import Session
+from sqlalchemy.sql.selectable import Select
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +50,33 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 "FreshnessSamplingStrategy cannot reset state after trigger, because then no old data would be available to sample from."
             )
 
+        self._storage_backend: AbstractStorageBackend
+        if "storage_backend" in config:
+            if config["storage_backend"] == "local":
+                # TODO(#324): Support local backend on FreshnessSamplingStrategy
+                raise NotImplementedError("The FreshnessSamplingStrategy currently does not support the local backend.")
+
+            if config["storage_backend"] == "database":
+                self._storage_backend = DatabaseStorageBackend(
+                    self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+                )
+            else:
+                raise NotImplementedError(
+                    f"Unknown storage backend \"{config['storage_backend']}\". Supported: database"
+                )
+        else:
+            logger.info("FreshnessSamplingStrategy defaulting to database backend.")
+            self._storage_backend = DatabaseStorageBackend(
+                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+            )
+
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         assert len(keys) == len(timestamps)
         assert len(timestamps) == len(labels)
 
         swt = Stopwatch()
         swt.start("persist_samples")
-        persist_log = self._persist_samples(keys, timestamps, labels)
+        persist_log = self._storage_backend.persist_samples(self._next_trigger_id, keys, timestamps, labels)
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
@@ -86,12 +109,14 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         assert self._is_first_trigger
         self._is_first_trigger = False
 
-        for samples in self._get_all_unused_data():
+        if self.has_limit:
             # TODO(#179): this assumes limit < len(samples)
-            if self.has_limit and self.training_set_size_limit < len(samples):
-                samples = random.sample(samples, self.training_set_size_limit)
-
-            yield samples
+            for samples in self._get_all_unused_data():
+                yield random.sample(samples, self.training_set_size_limit) if self.training_set_size_limit < len(
+                    samples
+                ) else samples
+        else:
+            yield from self._get_all_unused_data()
 
     def _get_trigger_data(self) -> Iterable[list[int]]:
         assert not self._is_first_trigger
@@ -159,28 +184,33 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         Returns:
             list[str]: Keys of used samples
         """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            stmt = (
-                select(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
-                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-                .execution_options(yield_per=max(int(self._maximum_keys_in_memory / 2), 1))
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used)
+        assert isinstance(
+            self._storage_backend, DatabaseStorageBackend
+        ), "FreshnessStrategy currently only supports DatabaseBackend"
+
+        def _chunk_callback(chunk: Any) -> None:
+            _, used_data = zip(*chunk)
+            if used:
+                assert all(used_data), "Queried used data, but got unused data."
+            else:
+                assert not any(used_data), "Queried unused data, but got used data."
+
+        def _statement_modifier(stmt: Select) -> tuple:
+            return (
+                stmt.add_columns(SelectorStateMetadata.used)
                 .order_by(func.random())  # pylint: disable=not-callable
                 .limit(sample_size)
             )
 
-            for chunk in database.session.execute(stmt).partitions():
-                if len(chunk) > 0:
-                    keys, used_data = zip(*chunk)
-                    if used:
-                        assert all(used_data), "Queried used data, but got unused data."
-                    else:
-                        assert not any(used_data), "Queried unused data, but got used data."
-
-                else:
-                    keys = []
-
-                yield list(keys)
+        yield_per = max(int(self._maximum_keys_in_memory / 2), 1)
+        # Change to `yield from` when we actually use the log returned here.
+        for keys, _ in self._storage_backend._get_pipeline_data(
+            (SelectorStateMetadata.used == used,),
+            yield_per=yield_per,
+            statement_modifier=_statement_modifier,
+            chunk_callback=_chunk_callback,
+        ):
+            yield keys
 
     def _get_all_unused_data(self) -> Iterator[list[int]]:
         """Returns all unused samples
@@ -188,23 +218,24 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         Returns:
             list[str]: Keys of unused samples
         """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            stmt = (
-                select(SelectorStateMetadata.sample_key, SelectorStateMetadata.used)
-                # Enables batching of results in chunks. See https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#orm-queryguide-yield-per
-                .execution_options(yield_per=self._maximum_keys_in_memory)
-                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == False)
-                .order_by(asc(SelectorStateMetadata.timestamp))
-            )
+        assert isinstance(
+            self._storage_backend, DatabaseStorageBackend
+        ), "FreshnessStrategy currently only supports DatabaseBackend"
 
-            for chunk in database.session.execute(stmt).partitions():
-                if len(chunk) > 0:
-                    keys, used = zip(*chunk)
-                    assert not any(used), "Queried unused data, but got used data."
-                else:
-                    keys, used = [], []
+        def _chunk_callback(chunk: Any) -> None:
+            _, used = zip(*chunk)
+            assert not any(used), "Queried unused data, but got used data."
 
-                yield list(keys)
+        def _statement_modifier(stmt: Select) -> Any:
+            return stmt.add_columns(SelectorStateMetadata.used)
+
+        # Change to yield_from when we actually use the log returned here.
+        for keys, _ in self._storage_backend._get_pipeline_data(
+            (SelectorStateMetadata.used == False,),
+            statement_modifier=_statement_modifier,
+            chunk_callback=_chunk_callback,
+        ):
+            yield keys
 
     def _get_count_of_data(self, used: bool) -> int:
         """Returns all unused samples
@@ -212,28 +243,42 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         Returns:
             list[str]: Keys of unused samples
         """
-        with MetadataDatabaseConnection(self._modyn_config) as database:
+        assert isinstance(
+            self._storage_backend, DatabaseStorageBackend
+        ), "FreshnessStrategy currently only supports DatabaseBackend"
+
+        def _session_callback(session: Session) -> Any:
             return (
-                database.session.query(SelectorStateMetadata.sample_key)
+                session.query(SelectorStateMetadata.sample_key)
                 # TODO(#182): Index on used?
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used
                 ).count()
             )
 
+        return self._storage_backend._execute_on_session(_session_callback)
+
     def _mark_used(self, keys: list[int]) -> None:
         """Sets samples to used"""
         if len(keys) == 0:
             return
+        assert isinstance(
+            self._storage_backend, DatabaseStorageBackend
+        ), "FreshnessStrategy currently only supports DatabaseBackend"
 
-        with MetadataDatabaseConnection(self._modyn_config) as database:
+        def _session_callback(session: Session) -> None:
             try:
                 stmt = update(SelectorStateMetadata).where(SelectorStateMetadata.sample_key.in_(keys)).values(used=True)
-                database.session.execute(stmt)
-                database.session.commit()
+                session.execute(stmt)
+                session.commit()
             except exc.SQLAlchemyError as exception:
                 logger.error(f"Could not set metadata: {exception}")
-                database.session.rollback()
+                session.rollback()
+
+        self._storage_backend._execute_on_session(_session_callback)
 
     def _reset_state(self) -> None:
         raise NotImplementedError("This strategy does not support resets.")
+
+    def get_available_labels(self) -> list[int]:
+        return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)
