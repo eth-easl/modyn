@@ -15,7 +15,15 @@
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
+
+// Since grpc > 1.54.2, there are extra semicola and a missing override in
+// the external generated header. Since we want to have -Werror and diagnostics
+// on our code, we temporarily disable the warnings when importing this generated header.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
+#pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #include "storage.grpc.pb.h"
+#pragma GCC diagnostic pop
 
 namespace modyn::storage {
 
