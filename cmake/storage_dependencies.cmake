@@ -66,6 +66,7 @@ endforeach()
 
 
 ################### gRPC ####################
+set(MODYN_USES_LOCAL_GRPC false)
 if(MODYN_TRY_LOCAL_GRPC)
   set(protobuf_MODULE_COMPATIBLE true)
   find_package(Protobuf CONFIG)
@@ -83,8 +84,9 @@ if(MODYN_TRY_LOCAL_GRPC)
       set(MODYN_TRY_LOCAL_GRPC OFF)
     else()
       if (Protobuf_FOUND)
-        message(STATUS "Found protobuf! Include dirs = ${PROTOBUF_INCLUDE_DIRS}")
+        message(STATUS "Found protobuf!")
         include_directories(${PROTOBUF_INCLUDE_DIRS})
+        set(MODYN_USES_LOCAL_GRPC true)
         if (NOT TARGET grpc_cpp_plugin)
           message(STATUS "Since grpc_cpp_plugin was not defined as a target, we define it manually.")
           add_executable(grpc_cpp_plugin ALIAS gRPC::grpc_cpp_plugin) 

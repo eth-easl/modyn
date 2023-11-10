@@ -68,7 +68,53 @@ message(STATUS "Proto generated files in ${PROTO_BINARY_DIR}: ${PROTO_GENERATED_
 
 target_include_directories(modyn-storage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
-target_link_libraries(modyn-storage-proto PUBLIC grpc++ grpc++_reflection)
+target_link_libraries(modyn-storage-proto PUBLIC libprotobuf grpc++ grpc++_reflection)
+
+if (MODYN_USES_LOCAL_GRPC)
+    message(STATUS "Since we are using local gRPC, we need to fix linking issues. If you encounter errors, consider building gRPC from source.")
+    set(protobuf_ABSL_USED_TARGETS
+        absl::absl_check
+        absl::absl_log
+        absl::algorithm
+        absl::base
+        absl::bind_front
+        absl::bits
+        absl::btree
+        absl::cleanup
+        absl::cord
+        absl::core_headers
+        absl::debugging
+        absl::die_if_null
+        absl::dynamic_annotations
+        absl::flags
+        absl::flat_hash_map
+        absl::flat_hash_set
+        absl::function_ref
+        absl::hash
+        absl::layout
+        absl::log_initialize
+        absl::log_severity
+        absl::memory
+        absl::node_hash_map
+        absl::node_hash_set
+        absl::optional
+        absl::span
+        absl::status
+        absl::statusor
+        absl::strings
+        absl::synchronization
+        absl::time
+        absl::type_traits
+        absl::utility
+        absl::variant
+        absl::random_random
+    )
+
+    target_link_libraries(modyn-storage-proto PUBLIC protobuf::libprotobuf grpc_unsecure gpr utf8_range ${protobuf_ABSL_USED_TARGETS} libaddress_sorting.a libupb.a libcares.a libz.a)
+else()
+    target_link_libraries(modyn-storage-proto PUBLIC libprotobuf)
+endif()
+
 target_compile_options(modyn-storage-proto INTERFACE -Wno-unused-parameter -Wno-c++98-compat-extra-semi -Wno-conditional-uninitialized -Wno-documentation)
 
 target_sources(modyn-storage-library PRIVATE ${MODYN_STORAGE_HEADERS} ${MODYN_STORAGE_SOURCES})
