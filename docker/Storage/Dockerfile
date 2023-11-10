@@ -1,8 +1,8 @@
 FROM modyndependencies:latest
 
 COPY ./CMakeLists.txt /src
-COPY ./modyn/cmake /src/modyn/cmake
-COPY ./modyn/conf /src/modyn/conf
+COPY ./cmake /src/cmake
+COPY ./conf /src/conf
 COPY ./modyn/storage /src/modyn/storage
 
 WORKDIR /src
