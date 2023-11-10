@@ -109,10 +109,10 @@ class TriggerStorageCPP:
 
         self._write_files_impl = self.extension.write_files
         self._write_files_impl.argtypes = [
-            ctypes.POINTER(ctypes.POINTER(ctypes.c_char)),
+            ctypes.POINTER(ctypes.c_char_p),
             ndpointer(flags="C_CONTIGUOUS"),
             ctypes.POINTER(ctypes.c_uint64),
-            ctypes.POINTER(ctypes.POINTER(ctypes.c_char)),
+            ctypes.POINTER(ctypes.c_char_p),
             ctypes.c_uint64,
             ctypes.c_uint64,
         ]
@@ -403,15 +403,6 @@ class TriggerStorageCPP:
             files_p[i] = files[i]
             headers_p[i] = headers[i]
             data_lengths_p[i] = data_lengths[i]
-
-        self._write_files_impl.argtypes = [
-            ctypes.POINTER(ctypes.c_char_p),
-            ndpointer(flags="C_CONTIGUOUS"),
-            ctypes.POINTER(ctypes.c_uint64),
-            ctypes.POINTER(ctypes.c_char_p),
-            ctypes.c_uint64,
-            ctypes.c_uint64,
-        ]
 
         self._write_files_impl(files_p, data, data_lengths_p, headers_p, 128, len(data_lengths))
 
