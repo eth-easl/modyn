@@ -63,13 +63,11 @@ def register_new_dataset() -> None:
 def add_file_to_dataset(binary_data: bytes, name: str) -> None:
     with open(DATASET_PATH / name, "wb") as f:
         f.write(binary_data)
-    BINARY_UPDATED_TIME_STAMPS.append(
-        int(math.floor(os.path.getmtime(DATASET_PATH / name)))
-    )
+    BINARY_UPDATED_TIME_STAMPS.append(int(math.floor(os.path.getmtime(DATASET_PATH / name))))
 
 
 def create_random_binary_file() -> Tuple[bytes, list[bytes]]:
-    binary_data = b''
+    binary_data = b""
     samples = []
     for i in range(250):
         sample_binary_data = random.randbytes(10)
@@ -141,9 +139,7 @@ def test_storage() -> None:
         time.sleep(1)
 
     assert len(responses) > 0, "Did not get any response from Storage"
-    assert (
-        len(keys) == 2500
-    ), f"Not all samples were returned. Samples returned: {keys}"
+    assert len(keys) == 2500, f"Not all samples were returned. Samples returned: {keys}"
 
     check_data(keys, FIRST_ADDED_BINARY)
 
@@ -152,9 +148,7 @@ def test_storage() -> None:
     time.sleep(2)
     print("Continuing test.")
 
-    add_files_to_dataset(
-        10, 20, SECOND_ADDED_BINARY
-    )  # Add more samples to the dataset.
+    add_files_to_dataset(10, 20, SECOND_ADDED_BINARY)  # Add more samples to the dataset.
 
     for i in range(500):
         responses = list(get_new_data_since(BINARY_UPDATED_TIME_STAMPS[9] + 1))
@@ -166,9 +160,7 @@ def test_storage() -> None:
         time.sleep(1)
 
     assert len(responses) > 0, "Did not get any response from Storage"
-    assert (
-        len(keys) == 2500
-    ), f"Not all samples were returned. Samples returned: {keys}"
+    assert len(keys) == 2500, f"Not all samples were returned. Samples returned: {keys}"
 
     check_data(keys, SECOND_ADDED_BINARY)
 

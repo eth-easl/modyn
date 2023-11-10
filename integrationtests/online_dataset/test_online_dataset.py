@@ -380,5 +380,6 @@ def main() -> None:
         cleanup_storage_database()
         cleanup_dataset_dir()
 
+
 if __name__ == "__main__":
     main()

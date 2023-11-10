@@ -33,13 +33,7 @@ from PIL import Image
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
-CONFIG_FILE = (
-    SCRIPT_PATH.parent.parent.parent
-    / "modyn"
-    / "config"
-    / "examples"
-    / "modyn_config.yaml"
-)
+CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
 # The following path leads to a directory that is mounted into the docker container and shared with the
 # storage container.
 DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
@@ -66,9 +60,7 @@ def connect_to_storage() -> grpc.Channel:
     storage_channel = grpc.insecure_channel(storage_address)
 
     if not grpc_connection_established(storage_channel) or storage_channel is None:
-        raise ConnectionError(
-            f"Could not establish gRPC connection to storage at {storage_address}."
-        )
+        raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
 
     return storage_channel
 
@@ -82,9 +74,7 @@ def register_new_dataset() -> None:
         base_path=str(DATASET_PATH),
         dataset_id="test_dataset",
         description="Test dataset for integration tests.",
-        file_wrapper_config=json.dumps(
-            {"file_extension": ".png", "label_file_extension": ".txt"}
-        ),
+        file_wrapper_config=json.dumps({"file_extension": ".png", "label_file_extension": ".txt"}),
         file_wrapper_type="SingleSampleFileWrapper",
         filesystem_wrapper_type="LocalFilesystemWrapper",
         version="0.1.0",
@@ -133,16 +123,10 @@ def check_data_per_worker() -> None:
     storage = StorageStub(storage_channel)
 
     for worker_id in range(6):
-        request = GetDataPerWorkerRequest(
-            dataset_id="test_dataset", worker_id=worker_id, total_workers=6
-        )
-        responses: list[GetDataPerWorkerResponse] = list(
-            storage.GetDataPerWorker(request)
-        )
+        request = GetDataPerWorkerRequest(dataset_id="test_dataset", worker_id=worker_id, total_workers=6)
+        responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
 
-        assert (
-            len(responses) == 1
-        ), f"Received batched response or no response, shouldn't happen: {responses}"
+        assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
 
         response_keys_size = len(responses[0].keys)
 
@@ -183,9 +167,7 @@ def cleanup_storage_database() -> None:
 
 def add_image_to_dataset(image: Image, name: str) -> None:
     image.save(DATASET_PATH / name)
-    IMAGE_UPDATED_TIME_STAMPS.append(
-        int(math.floor(os.path.getmtime(DATASET_PATH / name)))
-    )
+    IMAGE_UPDATED_TIME_STAMPS.append(int(math.floor(os.path.getmtime(DATASET_PATH / name))))
 
 
 def create_random_image() -> Image:
@@ -202,9 +184,7 @@ def create_random_image() -> Image:
     return image
 
 
-def add_images_to_dataset(
-    start_number: int, end_number: int, images_added: list[bytes]
-) -> None:
+def add_images_to_dataset(start_number: int, end_number: int, images_added: list[bytes]) -> None:
     create_dataset_dir()
 
     for i in range(start_number, end_number):
@@ -230,9 +210,7 @@ def get_new_data_since(timestamp: int) -> Iterable[GetNewDataSinceResponse]:
     return responses
 
 
-def get_data_in_interval(
-    start_timestamp: int, end_timestamp: int
-) -> Iterable[GetDataInIntervalResponse]:
+def get_data_in_interval(start_timestamp: int, end_timestamp: int) -> Iterable[GetDataInIntervalResponse]:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -267,12 +245,8 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
                 assert False, f"Could not get image with key {keys[i]}."
             image = Image.open(io.BytesIO(sample))
             if image.tobytes() not in expected_images:
-                raise ValueError(
-                    f"Image with key {keys[i]} is not present in the expected images."
-                )
-    assert (
-        i == len(keys) - 1
-    ), f"Could not get all images. Images missing: keys: {keys} i: {i}"
+                raise ValueError(f"Image with key {keys[i]} is not present in the expected images.")
+    assert i == len(keys) - 1, f"Could not get all images. Images missing: keys: {keys} i: {i}"
 
 
 def check_delete_data(keys_to_delete: list[int]) -> None:
@@ -296,7 +270,7 @@ def test_storage() -> None:
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
     check_dataset_size(0)  # Check if the dataset is empty.
-    
+
     check_dataset_size_invalid()
 
     add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
@@ -310,16 +284,12 @@ def test_storage() -> None:
             keys = flatten([list(response.keys) for response in responses])
             labels = flatten([list(response.keys) for response in responses])
             if len(keys) == 10:
-                assert (
-                    label in [f"{i}" for i in range(0, 10)] for label in labels
-                )
+                assert (label in [f"{i}" for i in range(0, 10)] for label in labels)
                 break
         time.sleep(1)
 
     assert len(responses) > 0, "Did not get any response from Storage"
-    assert (
-        len(keys) == 10
-    ), f"Not all images were returned."
+    assert len(keys) == 10, f"Not all images were returned."
 
     first_image_keys = keys
 
@@ -331,9 +301,7 @@ def test_storage() -> None:
     time.sleep(2)
     print("Continuing test.")
 
-    add_images_to_dataset(
-        10, 20, SECOND_ADDED_IMAGES
-    )  # Add more images to the dataset.
+    add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
 
     for i in range(60):
         keys = []
@@ -343,25 +311,19 @@ def test_storage() -> None:
             keys = flatten([list(response.keys) for response in responses])
             labels = flatten([list(response.keys) for response in responses])
             if len(keys) == 10:
-                assert (
-                    label in [f"{i}" for i in range(10, 20)] for label in labels
-                )
+                assert (label in [f"{i}" for i in range(10, 20)] for label in labels)
                 break
         time.sleep(1)
 
     assert len(responses) > 0, "Did not get any response from Storage"
-    assert (
-        len(keys) == 10
-    ), f"Not all images were returned. Images returned = {keys}"
+    assert len(keys) == 10, f"Not all images were returned. Images returned = {keys}"
 
     check_data(keys, SECOND_ADDED_IMAGES)
     check_dataset_size(20)
 
     responses = list(get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9]))
-    
-    assert (
-        len(responses) > 0
-    ), f"Received no response, shouldn't happen: {responses}"
+
+    assert len(responses) > 0, f"Received no response, shouldn't happen: {responses}"
     keys = flatten([list(response.keys) for response in responses])
 
     check_data(keys, FIRST_ADDED_IMAGES)

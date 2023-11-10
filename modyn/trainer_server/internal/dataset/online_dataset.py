@@ -115,11 +115,29 @@ class OnlineDataset(IterableDataset):
         self._setup_composed_transform()
 
     def _init_grpc(self) -> None:
+        json_config = json.dumps(
+            {
+                "methodConfig": [
+                    {
+                        "name": [{"service": "<package>.<service>"}],
+                        "retryPolicy": {
+                            "maxAttempts": 5,
+                            "initialBackoff": "0.1s",
+                            "maxBackoff": "10s",
+                            "backoffMultiplier": 2,
+                            "retryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED"],
+                        },
+                    }
+                ]
+            }
+        )
+
         storage_channel = grpc.insecure_channel(
             self._storage_address,
             options=[
                 ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
                 ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.service_config", json_config),
             ],
         )
         if not grpc_connection_established(storage_channel):
