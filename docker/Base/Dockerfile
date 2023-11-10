@@ -1,6 +1,5 @@
 FROM modyndependencies
 
-
 # Copy source code into container
 COPY . /src
 

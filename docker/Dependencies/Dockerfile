@@ -38,15 +38,10 @@ RUN apt-get update -yq \
 RUN adduser -u 5678 --disabled-password --gecos "" appuser
 ENV PATH="${PATH}:/home/appuser/.local/bin"
 
-RUN mkdir /src
-ARG MODYN_BUILDTYPE=Release
-ENV MODYN_BUILDTYPE=$MODYN_BUILDTYPE
-RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
-
 # Install gRPC systemwide. When updating the version, make sure to also update the storage_dependencies.cmake file
 RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
     cd grpc && mkdir -p cmake/build && cd cmake/build && \
-    cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF && \
+    cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF ../.. && \
     make -j8 && make install && cd ../../
 
 # Install mamba
@@ -60,3 +55,8 @@ RUN mamba update -n base -c defaults mamba && mamba update --all && mamba init b
 # Install dependencies
 COPY ./environment.yml /tmp/environment.yml
 RUN mamba env create -f /tmp/environment.yml
+
+RUN mkdir /src
+ARG MODYN_BUILDTYPE=Release
+ENV MODYN_BUILDTYPE=$MODYN_BUILDTYPE
+RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
