@@ -32,7 +32,7 @@ def test_mnist() -> None:
     assert pipeline_id >= 0
 
 
-def test_start_one_pipeline() -> None:
+def test_start_one_experiment_pipeline() -> None:
     supervisor_channel = connect_to_server("supervisor")
     supervisor = SupervisorStub(supervisor_channel)
 
@@ -42,6 +42,7 @@ def test_start_one_pipeline() -> None:
         StartPipelineRequest(
             pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
             eval_directory=".",
+            start_replay_at=0,
         )
     ).pipeline_id
 
@@ -49,7 +50,7 @@ def test_start_one_pipeline() -> None:
     assert pipeline_id >= 0
 
 
-def test_start_two_pipelines() -> None:
+def test_start_two_experiment_pipelines() -> None:
     supervisor_channel = connect_to_server("supervisor")
     supervisor = SupervisorStub(supervisor_channel)
 
@@ -60,6 +61,7 @@ def test_start_two_pipelines() -> None:
         StartPipelineRequest(
             pipeline_config=SupervisorJsonString(value=json.dumps(pipeline1_config)),
             eval_directory=".",
+            start_replay_at=0,
         )
     ).pipeline_id
 
@@ -81,8 +83,8 @@ if __name__ == "__main__":
     dataset_helper = DatasetHelper()
     try:
         dataset_helper.setup_dataset()
-        test_start_one_pipeline()
-        test_start_two_pipelines()
+        test_start_one_experiment_pipeline()
+        test_start_two_experiment_pipelines()
         time.sleep(TIMEOUT)
         # test_mnist()
         # time.sleep(TIMEOUT * 5)
