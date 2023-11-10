@@ -1,8 +1,8 @@
 FROM modyndependencies:latest
 
 COPY CMakeLists.txt /src
-COPY modyn/storage /src/storage
-WORKDIR /src/storage
+COPY modyn/storage /src/modyn/storage
+WORKDIR /src
 RUN chown -R appuser /src
 USER appuser
 
