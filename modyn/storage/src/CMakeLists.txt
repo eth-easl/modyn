@@ -44,7 +44,7 @@ add_library(modyn-storage-proto ${MODYN-STORAGE_PROTOS})
 # This is fine here, but then clang-tidy starts to match the auto-generated files, which we do not want
 # Hence, we have to take the realpath of this directory.
 # We have to generate the directory first to make realpath work.
-set(PROTO_BINARY_DIR_REL "${CMAKE_CURRENT_BINARY_DIR}/../generated")
+set(PROTO_BINARY_DIR_REL "${CMAKE_CURRENT_BINARY_DIR}/../../../protos")
 file(MAKE_DIRECTORY ${PROTO_BINARY_DIR_REL})
 execute_process(COMMAND realpath ${PROTO_BINARY_DIR_REL} OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE PROTO_BINARY_DIR)
 
@@ -68,7 +68,7 @@ message(STATUS "Proto generated files in ${PROTO_BINARY_DIR}: ${PROTO_GENERATED_
 
 target_include_directories(modyn-storage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
-target_link_libraries(modyn-storage-proto PUBLIC libprotobuf grpc++)
+target_link_libraries(modyn-storage-proto PUBLIC grpc++ grpc++_reflection)
 target_compile_options(modyn-storage-proto INTERFACE -Wno-unused-parameter -Wno-c++98-compat-extra-semi -Wno-conditional-uninitialized -Wno-documentation)
 
 target_sources(modyn-storage-library PRIVATE ${MODYN_STORAGE_HEADERS} ${MODYN_STORAGE_SOURCES})

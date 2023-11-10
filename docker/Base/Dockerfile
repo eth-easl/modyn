@@ -1,11 +1,8 @@
 FROM modyndependencies
 
-ARG MODYN_BUILDTYPE=Release
-ENV MODYN_BUILDTYPE=$MODYN_BUILDTYPE
 
 # Copy source code into container
-ADD . /src
-RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
+COPY . /src
 
 RUN mamba run -n modyn pip install -e /src
 WORKDIR /src

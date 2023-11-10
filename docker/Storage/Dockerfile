@@ -1,4 +1,10 @@
-FROM modynbase:latest
+FROM modyndependencies:latest
+
+COPY CMakeLists.txt /src
+COPY modyn/storage /src/storage
+WORKDIR /src/storage
+RUN chown -R appuser /src
+USER appuser
 
 RUN mkdir build \
     && cd build \

@@ -32,6 +32,7 @@ set(CMAKE_EXE_LINKER_FLAGS_TSAN "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsani
 option(MODYN_BUILD_PLAYGROUND "Set ON to build playground" ON)
 option(MODYN_BUILD_TESTS "Set ON to build tests" ON)
 option(MODYN_BUILD_STORAGE "Set ON to build storage components" OFF)
+option(MODYN_TRY_LOCAL_GRPC "Set ON to try using local gRPC installation instead of building from source" ON)
 option(MODYN_TEST_COVERAGE "Set ON to add test coverage" OFF)
 
 #### INTERNAL OPTIONS ####

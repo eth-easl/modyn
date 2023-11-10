@@ -7,6 +7,7 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update -yq \
   && apt-get upgrade -yq \
   && apt-get install --no-install-recommends -qy \
+    autoconf \
     build-essential \
     gcc \
     g++ \
@@ -22,6 +23,8 @@ RUN apt-get update -yq \
     gdb \
     libdw-dev \
     libelf-dev \
+    libtool \
+    pkg-config \
     cmake \
     ca-certificates \
     libpq-dev \
@@ -34,6 +37,17 @@ RUN apt-get update -yq \
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
 RUN adduser -u 5678 --disabled-password --gecos "" appuser
 ENV PATH="${PATH}:/home/appuser/.local/bin"
+
+RUN mkdir /src
+ARG MODYN_BUILDTYPE=Release
+ENV MODYN_BUILDTYPE=$MODYN_BUILDTYPE
+RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
+
+# Install gRPC systemwide. When updating the version, make sure to also update the storage_dependencies.cmake file
+RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
+    cd grpc && mkdir -p cmake/build && pushd cmake/build && \
+    cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF && \
+    make -j8 && make install && popd
 
 # Install mamba
 ENV CONDA_DIR /opt/mamba

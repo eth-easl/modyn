@@ -66,28 +66,67 @@ endforeach()
 
 
 ################### gRPC ####################
-message(STATUS "Making gRPC available (this may take a while).")
+if(MODYN_TRY_LOCAL_GRPC)
+  set(protobuf_MODULE_COMPATIBLE true)
+  find_package(Protobuf CONFIG)
+  find_package(gRPC CONFIG)
 
-set(gRPC_PROTOBUF_PROVIDER "module" CACHE BOOL "" FORCE)
-set(ABSL_ENABLE_INSTALL ON)  # https://github.com/protocolbuffers/protobuf/issues/12185
-FetchContent_Declare(
-  gRPC
-  GIT_REPOSITORY https://github.com/grpc/grpc
-  GIT_TAG        v1.59.2
-  GIT_SHALLOW TRUE
-)
-set(gRPC_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(gRPC_BUILD_CSHARP_EXT OFF CACHE BOOL "" FORCE)
-set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+  get_cmake_property(_variableNames VARIABLES)
+  list (SORT _variableNames)
+  foreach (_variableName ${_variableNames})
+      message(STATUS "${_variableName}=${${_variableName}}")
+  endforeach()
+  if (gRPC_FOUND)
+    message(STATUS "Found gRPC version ${gRPC_VERSION} locally (gRPC_FOUND = ${gRPC_FOUND})!")
+    if (NOT TARGET gRPC::grpc_cpp_plugin)
+      message(STATUS "gRPC::grpc_cpp_plugin is not a target, despite finding CMake. Building from source.")
+      set(MODYN_TRY_LOCAL_GRPC OFF)
+    else()
+      if (Protobuf_FOUND)
+        message(STATUS "Found protobuf! Include dirs = ${PROTOBUF_INCLUDE_DIRS}")
+        include_directories(${PROTOBUF_INCLUDE_DIRS})
+        if (NOT TARGET grpc_cpp_plugin)
+          message(STATUS "Since grpc_cpp_plugin was not defined as a target, we define it manually.")
+          add_executable(grpc_cpp_plugin ALIAS gRPC::grpc_cpp_plugin) 
+        endif()
+      else()
+        message(FATAL "Did not find Protobuf, please run cmake in a clean build directory with -DMODYN_TRY_LOCAL_GRPC=Off or install protobuf on your system.")
+      endif()
+    endif()
+  else()
+    message(STATUS "Did not find gRPC locally, building from source.")
+  endif()
+endif()
 
-set(FETCHCONTENT_QUIET OFF)
-FetchContent_MakeAvailable(gRPC)
-set(FETCHCONTENT_QUIET ON)
+if((NOT MODYN_TRY_LOCAL_GRPC) OR (NOT gRPC_FOUND))
+  message(STATUS "Making gRPC available (this may take a while).")
+  set(gRPC_PROTOBUF_PROVIDER "module" CACHE BOOL "" FORCE)
+  set(ABSL_ENABLE_INSTALL ON)  # https://github.com/protocolbuffers/protobuf/issues/12185
+  FetchContent_Declare(
+    gRPC
+    GIT_REPOSITORY https://github.com/grpc/grpc
+    GIT_TAG        v1.59.2 # When updating this, make sure to also update the modynbase dockerfile
+    GIT_SHALLOW TRUE
+  )
+  set(gRPC_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(gRPC_BUILD_CSHARP_EXT OFF CACHE BOOL "" FORCE)
+  set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+
+  set(FETCHCONTENT_QUIET OFF)
+  FetchContent_MakeAvailable(gRPC)
+  set(FETCHCONTENT_QUIET ON)
+endif()
 
 file(DOWNLOAD
-    https://raw.githubusercontent.com/protocolbuffers/protobuf/v23.1/cmake/protobuf-generate.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
+https://raw.githubusercontent.com/protocolbuffers/protobuf/v23.1/cmake/protobuf-generate.cmake
+${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
+
+if(NOT COMMAND protobuf_generate)
+  message(FATAL_ERROR "protobuf_generate not available. Potentially there is an error with your local CMake installation. If set, try using -DMODYN_TRY_LOCAL_GRPC=Off.")
+else()
+  message(STATUS "Found protobuf_generate")
+endif()
 
 message(STATUS "Processed gRPC.")
 
