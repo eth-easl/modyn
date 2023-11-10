@@ -45,9 +45,9 @@ RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
 
 # Install gRPC systemwide. When updating the version, make sure to also update the storage_dependencies.cmake file
 RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
-    cd grpc && mkdir -p cmake/build && pushd cmake/build && \
+    cd grpc && mkdir -p cmake/build && cd cmake/build && \
     cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF && \
-    make -j8 && make install && popd
+    make -j8 && make install && cd ../../
 
 # Install mamba
 ENV CONDA_DIR /opt/mamba
