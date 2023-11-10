@@ -30,6 +30,8 @@ RUN apt-get update -yq \
     libpq-dev \
     libsqlite3-dev \
     software-properties-common \
+    curl \
+    unzip \
   && rm -rf /var/lib/apt/lists/* \
   && gcc --version && g++ --version && cmake --version
 
@@ -46,7 +48,7 @@ RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
 # Install gRPC systemwide. When updating the version, make sure to also update the storage_dependencies.cmake file
 RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
     cd grpc && mkdir -p cmake/build && cd cmake/build && \
-    cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=${MODYN_BUILDTYPE} ../.. && \
+    cmake -DgRPC_PROTOBUF_PROVIDER=module -DABSL_ENABLE_INSTALL=On -DgRPC_BUILD_CSHARP_EXT=Off -DABSL_BUILD_TESTING=Off -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=${MODYN_BUILDTYPE} ../.. && \
     make -j8 && make install && cd ../../
 
 # Install mamba

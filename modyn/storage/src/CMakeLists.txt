@@ -68,7 +68,7 @@ message(STATUS "Proto generated files in ${PROTO_BINARY_DIR}: ${PROTO_GENERATED_
 
 target_include_directories(modyn-storage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
-target_link_libraries(modyn-storage-proto PUBLIC libprotobuf grpc++ grpc++_reflection)
+target_link_libraries(modyn-storage-proto PUBLIC grpc++ grpc++_reflection)
 
 if (MODYN_USES_LOCAL_GRPC)
     message(STATUS "Since we are using local gRPC, we need to fix linking issues. If you encounter errors, consider building gRPC from source.")
@@ -110,7 +110,7 @@ if (MODYN_USES_LOCAL_GRPC)
         absl::random_random
     )
 
-    target_link_libraries(modyn-storage-proto PUBLIC protobuf::libprotobuf grpc_unsecure gpr utf8_range ${protobuf_ABSL_USED_TARGETS} libaddress_sorting.a libupb.a libcares.a libz.a)
+    target_link_libraries(modyn-storage-proto PUBLIC protobuf::libprotobuf grpc_unsecure gpr libaddress_sorting.a libupb.a libcares.a libz.a utf8_range ${protobuf_ABSL_USED_TARGETS})
 else()
     target_link_libraries(modyn-storage-proto PUBLIC libprotobuf)
 endif()
