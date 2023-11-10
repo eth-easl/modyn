@@ -7,6 +7,7 @@ COPY ./modyn/CMakeLists.txt /src/modyn/CMakeLists.txt
 COPY ./modyn/storage /src/modyn/storage
 COPY ./modyn/common/CMakeLists.txt /src/modyn/common/CMakeLists.txt
 COPY ./modyn/common/cpp /src/modyn/common/cpp
+COPY ./modyn/common/example_extension /src/modyn/common/example_extension
 COPY ./modyn/protos/storage.proto /src/modyn/protos/storage.proto
 
 WORKDIR /src
