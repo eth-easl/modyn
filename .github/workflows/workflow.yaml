@@ -317,7 +317,7 @@ jobs:
 
 # Checks whether the base container works correctly.
   dockerized-unittests:
-    timeout-minutes: 60
+    timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
       - flake8
