@@ -9,6 +9,7 @@ COPY ./modyn/common/CMakeLists.txt /src/modyn/common/CMakeLists.txt
 COPY ./modyn/common/cpp /src/modyn/common/cpp
 COPY ./modyn/common/example_extension /src/modyn/common/example_extension
 COPY ./modyn/protos/storage.proto /src/modyn/protos/storage.proto
+COPY ./modyn/config /src/modyn/config
 
 WORKDIR /src
 RUN chown -R appuser /src

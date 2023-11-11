@@ -20,6 +20,7 @@ services:
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./conf/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -38,6 +39,7 @@ services:
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./conf/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
