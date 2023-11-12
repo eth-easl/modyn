@@ -32,7 +32,6 @@ RUN apt-get update -yq \
     software-properties-common \
     curl \
     unzip \
-    bazel \
   && rm -rf /var/lib/apt/lists/* \
   && gcc --version && g++ --version && cmake --version
 
@@ -44,19 +43,15 @@ ENV PATH="${PATH}:/home/appuser/.local/bin"
 RUN mkdir /src
 ARG MODYN_BUILDTYPE=Release
 ENV MODYN_BUILDTYPE=$MODYN_BUILDTYPE
+ARG MODYN_DEP_BUILDTYPE=Release
+ENV MODYN_DEP_BUILDTYPE=$MODYN_DEP_BUILDTYPE
 RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
-
-# Install protobuf from source
-RUN git clone https://github.com/protocolbuffers/protobuf.git && \
-    cd protobuf && \
-    git submodule update --init --recursive && \
-    bazel build :protoc :protobuf && \
-    cp bazel-bin/protoc /usr/local/bin
+RUN echo "Used dependency buildtype is ${MODYN_DEP_BUILDTYPE}" >> /src/.modyn_dep_buildtype
 
 # Install gRPC systemwide. When updating the version, make sure to also update the storage_dependencies.cmake file
 RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
     cd grpc && mkdir -p cmake/build && cd cmake/build && \
-    cmake -DgRPC_PROTOBUF_PROVIDER=module -DABSL_ENABLE_INSTALL=On -DgRPC_BUILD_CSHARP_EXT=Off -DABSL_BUILD_TESTING=Off -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=${MODYN_BUILDTYPE} ../.. && \
+    cmake -DgRPC_PROTOBUF_PROVIDER=module -DABSL_ENABLE_INSTALL=On -DgRPC_BUILD_CSHARP_EXT=Off -DABSL_BUILD_TESTING=Off -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=${MODYN_DEP_BUILDTYPE} ../.. && \
     make -j8 && make install && cd ../../
 
 # Install mamba
