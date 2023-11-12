@@ -18,13 +18,13 @@ void StorageServer::run() {
   SPDLOG_INFO("Running storage service. Initializing datasets from config.");
 
   for (const YAML::Node& dataset_node : config_["storage"]["datasets"]) {
-    const std::string dataset_id = dataset_node["name"].as<std::string>();
-    const std::string base_path = dataset_node["base_path"].as<std::string>();
-    const std::string filesystem_wrapper_type = dataset_node["filesystem_wrapper_type"].as<std::string>();
-    const std::string file_wrapper_type = dataset_node["file_wrapper_type"].as<std::string>();
-    const std::string description = dataset_node["description"].as<std::string>();
-    const std::string version = dataset_node["version"].as<std::string>();
-    const std::string file_wrapper_config = dataset_node["file_wrapper_config"].as<std::string>();
+    const auto dataset_id = dataset_node["name"].as<std::string>();
+    const auto base_path = dataset_node["base_path"].as<std::string>();
+    const auto filesystem_wrapper_type = dataset_node["filesystem_wrapper_type"].as<std::string>();
+    const auto file_wrapper_type = dataset_node["file_wrapper_type"].as<std::string>();
+    const auto description = dataset_node["description"].as<std::string>();
+    const auto version = dataset_node["version"].as<std::string>();
+    const auto file_wrapper_config = dataset_node["file_wrapper_config"].as<std::string>();
 
     bool ignore_last_timestamp = false;
     int file_watcher_interval = 5;
