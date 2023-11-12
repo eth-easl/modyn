@@ -32,6 +32,7 @@ RUN apt-get update -yq \
     software-properties-common \
     curl \
     unzip \
+    bazel \
   && rm -rf /var/lib/apt/lists/* \
   && gcc --version && g++ --version && cmake --version
 
@@ -44,6 +45,13 @@ RUN mkdir /src
 ARG MODYN_BUILDTYPE=Release
 ENV MODYN_BUILDTYPE=$MODYN_BUILDTYPE
 RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
+
+# Install protobuf from source
+RUN git clone https://github.com/protocolbuffers/protobuf.git && \
+    cd protobuf && \
+    git submodule update --init --recursive && \
+    bazel build :protoc :protobuf && \
+    cp bazel-bin/protoc /usr/local/bin
 
 # Install gRPC systemwide. When updating the version, make sure to also update the storage_dependencies.cmake file
 RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \

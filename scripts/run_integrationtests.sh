@@ -23,6 +23,19 @@ docker compose up --build tests --abort-on-container-exit --exit-code-from tests
 
 exitcode=$?
 
+echo "LOGS START"
+echo "METADATADB"
+docker logs $(docker compose ps -q metadata-db)
+echo "STORAGEDB"
+docker logs $(docker compose ps -q storage-db)
+echo "STORAGE"
+docker logs $(docker compose ps -q storage)
+echo "SELECTOR"
+docker logs $(docker compose ps -q selector)
+echo "TRAINERSERVER"
+docker logs $(docker compose ps -q trainer_server)
+echo "LOGS END"
+
 # Cleanup
 docker compose down
 if [[ ! -z "$CI" ]]; then
