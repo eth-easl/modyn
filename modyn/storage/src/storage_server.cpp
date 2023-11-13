@@ -3,6 +3,8 @@
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
+#include <sstream>
+#include <string>
 #include <thread>
 
 #include "internal/file_watcher/file_watcher_watchdog.hpp"
@@ -24,7 +26,12 @@ void StorageServer::run() {
     const auto file_wrapper_type = dataset_node["file_wrapper_type"].as<std::string>();
     const auto description = dataset_node["description"].as<std::string>();
     const auto version = dataset_node["version"].as<std::string>();
-    const auto file_wrapper_config = dataset_node["file_wrapper_config"].as<std::string>();
+    const YAML::Node& file_wrapper_config_node = dataset_node["file_wrapper_config"];
+    std::ostringstream fwc_stream;
+    fwc_stream << file_wrapper_config_node;
+    const std::string file_wrapper_config = fwc_stream.str();
+
+    SPDLOG_INFO("Parsed filewrapper_config: {}", file_wrapper_config);
 
     bool ignore_last_timestamp = false;
     int file_watcher_interval = 5;
