@@ -324,7 +324,6 @@ class PipelineExecutor:
         logger.info(f"[pipeline {self.pipeline_id}] Execution done. Persist log.")
 
         self._persist_pipeline_log()
-        raise ValueError(f"Test exception {self.pipeline_id}")
 
 
 def execute_pipeline(
