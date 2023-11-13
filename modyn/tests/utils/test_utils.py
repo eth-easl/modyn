@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import torch
 import yaml
-from modyn.common.trigger_storage_cpp import TriggerSampleStorage
+from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
 from modyn.utils import (
@@ -180,7 +180,7 @@ def test_seed():
 
 def test_instantiate_class_existing():
     # class with a single parameter
-    trigger_storage = instantiate_class("modyn.common.trigger_storage_cpp", "TriggerSampleStorage", "test_path")
+    trigger_storage = instantiate_class("modyn.common.trigger_sample_storage", "TriggerSampleStorage", "test_path")
     assert isinstance(trigger_storage, TriggerSampleStorage)
     assert trigger_storage.trigger_sample_directory == "test_path"
     # class with several parameters

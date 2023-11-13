@@ -7,7 +7,7 @@ from typing import Any, Iterable, Optional
 
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.common.trigger_storage_cpp import TriggerSampleStorage
+from modyn.common.trigger_sample import ArrayWrapper, TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from sqlalchemy import func
@@ -314,7 +314,7 @@ class AbstractSelectionStrategy(ABC):
 
     def get_trigger_partition_keys(
         self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
-    ) -> list[tuple[int, float]]:
+    ) -> ArrayWrapper:
         """
         Given a trigger id and partition id, returns a list of all keys in this partition
 

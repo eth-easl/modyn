@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from modyn.common.trigger_storage_cpp import TriggerSampleStorage
+from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy

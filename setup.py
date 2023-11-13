@@ -91,12 +91,8 @@ class CMakeBuild(build_ext):
                 os.makedirs(EXTENSION_BUILD_DIR)
 
             # Config and build the extension
-            subprocess.check_call(
-                ["cmake", ext.cmake_lists_dir] + cmake_args, cwd=EXTENSION_BUILD_DIR
-            )
-            subprocess.check_call(
-                ["cmake", "--build", ".", "--config", cfg], cwd=EXTENSION_BUILD_DIR
-            )
+            subprocess.check_call(["cmake", ext.cmake_lists_dir] + cmake_args, cwd=EXTENSION_BUILD_DIR)
+            subprocess.check_call(["cmake", "--build", ".", "--config", cfg], cwd=EXTENSION_BUILD_DIR)
 
 
 # Where the magic happens:
@@ -109,13 +105,8 @@ setup(
     author=AUTHOR,
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
-    project_urls={
-        "Bug Tracker": URL_ISSUES,
-        "Source Code": URL_GITHUB,
-    },
-    packages=find_packages(
-        exclude=["tests", "*.tests", "*.tests.*", "tests.*", "tests.*.*"]
-    ),
+    project_urls={"Bug Tracker": URL_ISSUES, "Source Code": URL_GITHUB},
+    packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*", "tests.*.*"]),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
     # entry_points is is required for testing the Python scripts
@@ -144,10 +135,7 @@ setup(
     include_package_data=True,
     license="MIT",
     keywords=KEYWORDS,
-    ext_modules=[
-        CMakeExtension("example_extension"),
-        CMakeExtension("trigger_storage_cpp"),
-    ],
+    ext_modules=[CMakeExtension("example_extension"), CMakeExtension("trigger_sample_storage")],
     cmdclass={"build_ext": CMakeBuild},
     classifiers=[
         # Trove classifiers
