@@ -216,9 +216,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error while handling file paths: {}", e.what());
     exception_thrown->store(true);
-    if (session.is_connected()) {
-      session.close();
-    }
   }
 }
 
