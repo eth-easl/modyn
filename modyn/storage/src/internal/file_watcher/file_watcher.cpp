@@ -33,6 +33,7 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
   }
   const std::string file_extension = std::filesystem::path(file_path).extension().string();
   if (file_extension != data_file_extension) {
+    SPDLOG_INFO("File {} has invalid extension {} (valid = {}), discarding", file_path, file_extension, data_file_extension);
     return false;
   }
 
@@ -46,6 +47,9 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
     }
     try {
       const int64_t& modified_time = filesystem_wrapper->get_modified_time(file_path);
+      if (modified_time <= timestamp) {
+        SPDLOG_INFO("File {} has modified time {}, timestamp is {}, discarding", file_path, modified_time, timestamp);
+      }
       return modified_time > timestamp;
     } catch (const std::exception& e) {
       SPDLOG_ERROR(fmt::format(
@@ -53,6 +57,8 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
           file_path, e.what()));
       return false;
     }
+  } else {
+    SPDLOG_INFO("File {} is already known under id {}, discarding", file_path, file_id);
   }
   return false;
 }
@@ -79,6 +85,7 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
     }
   } else {
     const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
+    SPDLOG_INFO("Insertion chunk size is {} (threads = {})", chunk_size, insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
       // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
@@ -185,7 +192,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                     const YAML::Node* config, const int64_t sample_dbinsertion_batchsize,
                                     const bool force_fallback, std::atomic<bool>* exception_thrown) {
   try {
-    if (file_paths_begin >= file_paths_end) {
+    SPDLOG_INFO("Handling file paths!");
+    if (file_paths_begin >= file_paths_end) { 
       return;
     }
     const StorageDatabaseConnection storage_database_connection(*config);
