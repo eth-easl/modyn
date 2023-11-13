@@ -51,7 +51,7 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
       /* if (modified_time <= timestamp) {
         SPDLOG_INFO("File {} has modified time {}, timestamp is {}, discarding", file_path, modified_time, timestamp);
       } */
-      return modified_time > timestamp || timestamp == 0;
+      return modified_time >= timestamp || timestamp == 0;
     } catch (const std::exception& e) {
       SPDLOG_ERROR(fmt::format(
           "Error while checking modified time of file {}. It could be that a deletion request is currently running: {}",
