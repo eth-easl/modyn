@@ -291,7 +291,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
     const std::string query = fmt::format(
         "SELECT sample_id, label FROM samples WHERE file_id IN {} AND dataset_id = {}", file_placeholders, dataset_id);
-    const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_id);
+    const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_ids.at(0));
     CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 2);
 
     std::vector<SampleRecord> records;
