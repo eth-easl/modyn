@@ -315,6 +315,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           response.add_keys(record.id);
           response.add_labels(record.column_1);
         }
+
+        SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}", response.keys_size(),
+                    response.labels_size(), records.size());
+
         records.clear();
 
         {
@@ -335,9 +339,15 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             response.add_keys(record.id);
             response.add_labels(record.column_1);
           }
+          SPDLOG_INFO(
+              "Sending with response_keys = {}, response_labels = {}, record_buf.size = {} (minus sample_batch_size = "
+              "{})",
+              response.keys_size(), response.labels_size(), record_buf.size(), sample_batch_size);
 
           // Now, delete first sample_batch_size elements from vector as we are sending them
           record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
+
+          SPDLOG_INFO("New record_buf size = {}", record_buf.size());
 
           ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
                  "The record buffer should never have more than 2*sample_batch_size elements!");
@@ -360,7 +370,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         response.add_keys(record.id);
         response.add_labels(record.column_1);
       }
-
+      SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}", response.keys_size(),
+                  response.labels_size(), record_buf.size());
+      record_buf.clear();
       {
         const std::lock_guard<std::mutex> lock(*writer_mutex);
         writer->Write(response);
