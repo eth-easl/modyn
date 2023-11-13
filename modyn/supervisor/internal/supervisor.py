@@ -21,7 +21,7 @@ from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
-PIPELINE_MONITOR_INTERVAL = 10
+PIPELINE_MONITOR_INTERVAL = 5
 
 
 def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
@@ -33,18 +33,17 @@ def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
 
         num_active_pipeline_processes = 0
         for p_id, p_info in pipeline_process_dict.items():
-            p_info.process_handler.join()
             if p_info.process_handler.is_alive():
                 num_active_pipeline_processes += 1
                 logger.info(f"[{os.getpid()}][pipeline_monitor] pipeline {p_id} still running")
             else:
                 # TODO(#317): unregister pipeline when process terminates
                 logger.info(
-                    f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id}
-                        exit code {p_info.process_handler.exitcode}"""
+                    f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id},
+                    exit code {p_info.process_handler.exitcode}"""
                 )
-        logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")
-
+        if num_active_pipeline_processes > 0:
+            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")
         time.sleep(PIPELINE_MONITOR_INTERVAL)
 
 

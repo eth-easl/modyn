@@ -7,7 +7,7 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString a
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 
-TIMEOUT = 60
+TIMEOUT = 15
 
 
 def test_mnist() -> None:
