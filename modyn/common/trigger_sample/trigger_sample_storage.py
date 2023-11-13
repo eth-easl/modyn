@@ -58,28 +58,25 @@ class TriggerSampleStorage:
     sample weight separated by a comma.
     """
 
-    @staticmethod
-    def _get_library_path() -> Path:
+    def _get_library_path(self) -> Path:
         if platform == "darwin":
             library_filename = "libtrigger_sample_storage.dylib"
         else:
             library_filename = "libtrigger_sample_storage.so"
 
-        return TriggerSampleStorage._get_build_path() / library_filename
+        return self._get_build_path() / library_filename
 
-    @staticmethod
-    def _get_build_path() -> Path:
+    def _get_build_path(self) -> Path:
         return Path(__file__).parent.parent.parent.parent / "libbuild"
 
-    @staticmethod
-    def _ensure_library_present() -> None:
-        path = TriggerSampleStorage._get_library_path()
+    def _ensure_library_present(self) -> None:
+        path = self._get_library_path()
         if not path.exists():
-            raise RuntimeError(f"Cannot find {TriggerSampleStorage.__name__} library at {path}")
+            raise RuntimeError(f"Cannot find {self.__name__} library at {path}")
 
     def __init__(self, trigger_sample_directory: str = "sample_dir") -> None:
-        TriggerSampleStorage._ensure_library_present()
-        self.extension = ctypes.CDLL(str(TriggerSampleStorage._get_library_path()))
+        self._ensure_library_present()
+        self.extension = ctypes.CDLL(str(self._get_library_path()))
 
         self.trigger_sample_directory = trigger_sample_directory
         if not Path(self.trigger_sample_directory).exists():
