@@ -31,25 +31,19 @@ def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
         if num_pipelines > 0:
             logger.info(f"[{os.getpid()}][pipeline_monitor] {num_pipelines} pipelines registered")
 
-        # join all the terminated procs
-        num_active_pipeline_processes = len(mp.active_children())
-        if num_active_pipeline_processes > 0:
-            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")
-
+        num_active_pipeline_processes = 0
         for p_id, p_info in pipeline_process_dict.items():
-            p_info.update_status()
-            if p_info.pipeline_exited:
-                proc_alive = p_info.process_handler.is_alive()
+            p_info.process_handler.join()
+            if p_info.process_handler.is_alive():
+                num_active_pipeline_processes += 1
+                logger.info(f"[{os.getpid()}][pipeline_monitor] pipeline {p_id} still running")
+            else:
+                # TODO(#317): unregister pipeline when process terminates
                 logger.info(
                     f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id}
-                         exit code {p_info.pipeline_exit_code.name},
-                         proc alive {proc_alive}"""
+                        exit code {p_info.process_handler.exitcode}"""
                 )
-                if not proc_alive:
-                    # TODO(#317): unregister pipeline when process terminates
-                    pass
-            else:
-                logger.info(f"[{os.getpid()}][pipeline_monitor] pipeline {p_id} still running")
+        logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")
 
         time.sleep(PIPELINE_MONITOR_INTERVAL)
 

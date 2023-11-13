@@ -3,6 +3,7 @@ import logging
 import multiprocessing as mp
 import os
 import pathlib
+import sys
 import traceback
 from time import sleep
 from typing import Any, Optional
@@ -14,6 +15,7 @@ from modyn.supervisor.internal.triggers import Trigger
 from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
+EXCEPTION_EXITCODE = 8
 
 
 class PipelineExecutor:
@@ -322,6 +324,7 @@ class PipelineExecutor:
         logger.info(f"[pipeline {self.pipeline_id}] Execution done. Persist log.")
 
         self._persist_pipeline_log()
+        raise ValueError(f"Test exception {self.pipeline_id}")
 
 
 def execute_pipeline(
@@ -358,3 +361,4 @@ def execute_pipeline(
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)
         exception_queue.put(exception_msg)
+        sys.exit(EXCEPTION_EXITCODE)
