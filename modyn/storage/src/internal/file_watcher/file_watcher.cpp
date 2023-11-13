@@ -67,6 +67,7 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
  */
 void FileWatcher::search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp) {
   std::vector<std::string> file_paths = filesystem_wrapper->list(directory_path, /*recursive=*/true);
+  SPDLOG_INFO("Found {} files in total", file_paths.size());
 
   if (disable_multithreading_) {
     std::atomic<bool> exception_thrown = false;
@@ -120,6 +121,8 @@ void FileWatcher::seek_dataset(soci::session& session) {
   session << "SELECT last_timestamp FROM datasets "
              "WHERE dataset_id = :dataset_id",
       soci::into(last_timestamp), soci::use(dataset_id_);
+
+  SPDLOG_INFO("Seeking dataset {} with last timestamp = {}", dataset_id_, last_timestamp);
 
   search_for_new_files_in_directory(dataset_path_, last_timestamp);
 }
@@ -203,6 +206,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                                    filesystem_wrapper, session);
                  });
     if (!files_for_insertion.empty()) {
+      SPDLOG_INFO("Found {} files for insertion!", files_for_insertion.size());
       DatabaseDriver database_driver = storage_database_connection.get_drivername();
       handle_files_for_insertion(files_for_insertion, file_wrapper_type, dataset_id, *file_wrapper_config,
                                  sample_dbinsertion_batchsize, force_fallback, session, database_driver,
@@ -212,6 +216,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
     SPDLOG_ERROR("Error while handling file paths: {}", e.what());
     exception_thrown->store(true);
   }
+
+  session.close();
 }
 
 void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for_insertion,
@@ -227,7 +233,6 @@ void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for
   int64_t current_file_samples_to_be_inserted = 0;
   for (const auto& file_path : files_for_insertion) {
     file_wrapper->set_file_path(file_path);
-    // TODO(MaxiBoether): isn't this batched in Python?
     const int64_t file_id =
         insert_file(file_path, dataset_id, filesystem_wrapper, file_wrapper, session, database_driver);
 
@@ -354,6 +359,7 @@ void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_sam
                              // indicate to the backend that it has finished sending its data.
                              // https://web.mit.edu/cygwin/cygwin_v1.3.2/usr/doc/postgresql-7.1.2/html/libpq-copy.html
   PQendcopy(conn);
+  SPDLOG_INFO(fmt::format("Doing copy insertion for {} samples finished.", file_samples.size()));
 }
 
 /*
