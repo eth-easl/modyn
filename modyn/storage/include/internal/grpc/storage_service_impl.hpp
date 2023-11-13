@@ -297,7 +297,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     std::vector<SampleRecord> records;
 
     while (true) {
-      ASSERT(record_buf.size() < sample_batch_size,
+      ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
              fmt::format("Should have written records buffer, size = {}", record_buf.size()));
       records = cursor_handler.yield_per(sample_batch_size);
 
