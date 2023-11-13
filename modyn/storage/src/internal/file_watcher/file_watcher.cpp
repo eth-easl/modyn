@@ -212,12 +212,14 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                  sample_dbinsertion_batchsize, force_fallback, session, database_driver,
                                  filesystem_wrapper);
     }
+    session.close();
   } catch (const std::exception& e) {
     SPDLOG_ERROR("Error while handling file paths: {}", e.what());
     exception_thrown->store(true);
+    if (session.is_connected()) {
+      session.close();
+    }
   }
-
-  session.close();
 }
 
 void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for_insertion,
