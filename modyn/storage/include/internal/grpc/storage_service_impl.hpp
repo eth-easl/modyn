@@ -283,66 +283,68 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
+    std::vector<int64_t> file_ids(begin, end);
+    std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
+
     std::vector<SampleRecord> record_buf;
     record_buf.reserve(sample_batch_size);
 
-    for (std::vector<int64_t>::const_iterator it = begin; it < end; ++it) {
-      const int64_t& file_id = *it;
-      const int64_t number_of_samples = get_number_of_samples_in_file(file_id, session, dataset_id);
-      if (number_of_samples > 0) {
-        const std::string query = fmt::format(
-            "SELECT sample_id, label FROM samples WHERE file_id = {} AND dataset_id = {}", file_id, dataset_id);
-        const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_id);
-        CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 2);
+    const std::string query = fmt::format(
+        "SELECT sample_id, label FROM samples WHERE file_id IN {} AND dataset_id = {}", file_placeholders, dataset_id);
+    const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_id);
+    CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 2);
 
-        std::vector<SampleRecord> records;
+    std::vector<SampleRecord> records;
 
-        while (true) {
-          records = cursor_handler.yield_per(sample_batch_size);
+    while (true) {
+      ASSERT(record_buf.size() < sample_batch_size,
+             fmt::format("Should have written records buffer, size = {}", record_buf.size()));
+      records = cursor_handler.yield_per(sample_batch_size);
 
-          if (records.empty()) {
-            break;
+      if (records.empty()) {
+        break;
+      }
+
+      const uint64_t obtained_records = records.size();
+      ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
+
+      if (static_cast<int64_t>(obtained_records) == sample_batch_size) {
+        // If we obtained a full buffer, we can emit a response directly
+        ResponseT response;
+        for (const auto& record : records) {
+          response.add_keys(record.id);
+          response.add_labels(record.column_1);
+        }
+        records.clear();
+
+        {
+          const std::lock_guard<std::mutex> lock(*writer_mutex);
+          writer->Write(response);
+        }
+      } else {
+        // If not, we append to our record buf
+        record_buf.insert(record_buf.end(), records.begin(), records.end());
+        records.clear();
+        // If our record buf is big enough, emit a message
+        if (static_cast<int64_t>(record_buf.size()) >= sample_batch_size) {
+          ResponseT response;
+
+          // sample_batch_size is signed int...
+          for (int64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
+            const SampleRecord& record = record_buf[record_idx];
+            response.add_keys(record.id);
+            response.add_labels(record.column_1);
           }
-          const uint64_t obtained_records = records.size();
-          ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
 
-          if (static_cast<int64_t>(records.size()) == sample_batch_size) {
-            // If we obtained a full buffer, we can emit a response directly
-            ResponseT response;
-            for (const auto& record : records) {
-              response.add_keys(record.id);
-              response.add_labels(record.column_1);
-            }
+          // Now, delete first sample_batch_size elements from vector as we are sending them
+          record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
 
-            {
-              const std::lock_guard<std::mutex> lock(*writer_mutex);
-              writer->Write(response);
-            }
-          } else {
-            // If not, we append to our record buf
-            record_buf.insert(record_buf.end(), records.begin(), records.end());
-            // If our record buf is big enough, emit a message
-            if (static_cast<int64_t>(records.size()) >= sample_batch_size) {
-              ResponseT response;
+          ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
+                 "The record buffer should never have more than 2*sample_batch_size elements!");
 
-              // sample_batch_size is signed int...
-              for (int64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
-                const SampleRecord& record = record_buf[record_idx];
-                response.add_keys(record.id);
-                response.add_labels(record.column_1);
-              }
-
-              // Now, delete first sample_batch_size elements from vector as we are sending them
-              record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
-
-              ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
-                     "The record buffer should never have more than 2*sample_batch_size elements!");
-
-              {
-                const std::lock_guard<std::mutex> lock(*writer_mutex);
-                writer->Write(response);
-              }
-            }
+          {
+            const std::lock_guard<std::mutex> lock(*writer_mutex);
+            writer->Write(response);
           }
         }
       }
@@ -350,7 +352,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
     // Iterated over all files, we now need to emit all data from buffer
     if (!record_buf.empty()) {
-      ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size, "We should have written this buffer before!");
+      ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
+             fmt::format("We should have written this buffer before! Buffer has {} items.", record_buf.size()));
 
       ResponseT response;
       for (const auto& record : record_buf) {

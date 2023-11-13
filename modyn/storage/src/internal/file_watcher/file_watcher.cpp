@@ -33,7 +33,8 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
   }
   const std::string file_extension = std::filesystem::path(file_path).extension().string();
   if (file_extension != data_file_extension) {
-    // SPDLOG_INFO("File {} has invalid extension {} (valid = {}), discarding", file_path, file_extension, data_file_extension);
+    // SPDLOG_INFO("File {} has invalid extension {} (valid = {}), discarding", file_path, file_extension,
+    // data_file_extension);
     return false;
   }
 
@@ -191,7 +192,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                     const YAML::Node* config, const int64_t sample_dbinsertion_batchsize,
                                     const bool force_fallback, std::atomic<bool>* exception_thrown) {
   try {
-    if (file_paths_begin >= file_paths_end) { 
+    if (file_paths_begin >= file_paths_end) {
       return;
     }
     const StorageDatabaseConnection storage_database_connection(*config);
