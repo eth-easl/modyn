@@ -14,21 +14,19 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10supervisor.proto\x12\nsupervisor\"\x07\n\x05\x45mpty\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\"\xf5\x01\n\x14StartPipelineRequest\x12/\n\x0fpipeline_config\x18\x01 \x01(\x0b\x32\x16.supervisor.JsonString\x12\x16\n\x0e\x65val_directory\x18\x02 \x01(\t\x12\x1c\n\x0fstart_replay_at\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\x1b\n\x0estop_replay_at\x18\x04 \x01(\x05H\x01\x88\x01\x01\x12\x1d\n\x10maximum_triggers\x18\x05 \x01(\x05H\x02\x88\x01\x01\x42\x12\n\x10_start_replay_atB\x11\n\x0f_stop_replay_atB\x13\n\x11_maximum_triggers\"\'\n\x10PipelineResponse\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x32`\n\nSupervisor\x12R\n\x0estart_pipeline\x12 .supervisor.StartPipelineRequest\x1a\x1c.supervisor.PipelineResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10supervisor.proto\x12\nsupervisor\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\"\xf5\x01\n\x14StartPipelineRequest\x12/\n\x0fpipeline_config\x18\x01 \x01(\x0b\x32\x16.supervisor.JsonString\x12\x16\n\x0e\x65val_directory\x18\x02 \x01(\t\x12\x1c\n\x0fstart_replay_at\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\x1b\n\x0estop_replay_at\x18\x04 \x01(\x05H\x01\x88\x01\x01\x12\x1d\n\x10maximum_triggers\x18\x05 \x01(\x05H\x02\x88\x01\x01\x42\x12\n\x10_start_replay_atB\x11\n\x0f_stop_replay_atB\x13\n\x11_maximum_triggers\"\'\n\x10PipelineResponse\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x32`\n\nSupervisor\x12R\n\x0estart_pipeline\x12 .supervisor.StartPipelineRequest\x1a\x1c.supervisor.PipelineResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'supervisor_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_EMPTY']._serialized_start=32
-  _globals['_EMPTY']._serialized_end=39
-  _globals['_JSONSTRING']._serialized_start=41
-  _globals['_JSONSTRING']._serialized_end=68
-  _globals['_STARTPIPELINEREQUEST']._serialized_start=71
-  _globals['_STARTPIPELINEREQUEST']._serialized_end=316
-  _globals['_PIPELINERESPONSE']._serialized_start=318
-  _globals['_PIPELINERESPONSE']._serialized_end=357
-  _globals['_SUPERVISOR']._serialized_start=359
-  _globals['_SUPERVISOR']._serialized_end=455
+  _globals['_JSONSTRING']._serialized_start=32
+  _globals['_JSONSTRING']._serialized_end=59
+  _globals['_STARTPIPELINEREQUEST']._serialized_start=62
+  _globals['_STARTPIPELINEREQUEST']._serialized_end=307
+  _globals['_PIPELINERESPONSE']._serialized_start=309
+  _globals['_PIPELINERESPONSE']._serialized_end=348
+  _globals['_SUPERVISOR']._serialized_start=350
+  _globals['_SUPERVISOR']._serialized_end=446
 # @@protoc_insertion_point(module_scope)

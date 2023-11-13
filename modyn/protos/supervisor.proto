@@ -6,8 +6,6 @@ service Supervisor {
   rpc start_pipeline(StartPipelineRequest) returns (PipelineResponse) {}
 }
 
-message Empty {}
-
 message JsonString { string value = 1; }
 
 message StartPipelineRequest {

@@ -4,9 +4,7 @@ windows:
     layout: tiled
     panes:
       - docker logs $(docker compose ps -q supervisor) && docker attach $(docker compose ps -q supervisor)
-      - shell_command:
-        - docker exec -it $(docker compose ps -q supervisor) /bin/bash
-        - clear && mamba activate modyn && echo "Welcome to the supervisor pane. You have access to the 'modyn-supervisor' command here to submit pipelines."
+      - docker exec -it $(docker compose ps -q supervisor) /bin/bash
   - window_name: storage
     layout: tiled
     panes:

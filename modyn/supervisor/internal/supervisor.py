@@ -21,6 +21,7 @@ from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
+PIPELINE_MONITOR_INTERVAL = 10
 
 
 def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
@@ -50,7 +51,7 @@ def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
             else:
                 logger.info(f"[{os.getpid()}][pipeline_monitor] pipeline {p_id} still running")
 
-        time.sleep(10)
+        time.sleep(PIPELINE_MONITOR_INTERVAL)
 
 
 class Supervisor:
@@ -70,6 +71,7 @@ class Supervisor:
         self,
         modyn_config: dict,
     ) -> None:
+        # TODO(#317): redesign tensorboard. ignore it for now
         # TODO(#325): validate modyn_config
         self.modyn_config = modyn_config
         self._pipeline_process_dict: dict[int, PipelineInfo] = {}
@@ -77,12 +79,6 @@ class Supervisor:
         self._next_pipeline_lock = self._manager.Lock()
         self.grpc = GRPCHandler(self.modyn_config)
         self.pipeline_monitor_thread: Optional[threading.Thread] = None
-
-        # TODO(#317): redesign tensorboard. ignore it for now
-        # if "tensorboard" in self.modyn_config:
-        #     port = self.modyn_config["tensorboard"]["port"]
-        #     self._run_tensorboard(port)
-        #     logger.info(f"Starting up tensorboard on port {port}.")
 
     def __getstate__(self) -> dict:
         state = self.__dict__.copy()
@@ -346,23 +342,3 @@ class Supervisor:
         )
 
         return pipeline_id
-
-    # def _run_tensorboard(self, port: str) -> None:
-    #     logging.getLogger("tensorboard").setLevel(logging.ERROR)
-    #     logging.getLogger("MARKDOWN").setLevel(logging.ERROR)
-
-    #     tensorboard = program.TensorBoard()
-    #     tensorboard.configure(
-    #         argv=[
-    #             None,
-    #             "--logdir",
-    #             str(self.eval_directory),
-    #             "--bind_all",
-    #             "--port",
-    #             port,
-    #             "--window_title",
-    #             "Modyn TensorBoard",
-    #         ]
-    #     )
-    #     tensorboard.launch()
-    #     logging.getLogger("werkzeug").setLevel(logging.ERROR)

@@ -5,7 +5,6 @@ from collections import deque
 from time import sleep
 from typing import Any, Iterable, Optional
 
-import enlighten
 import grpc
 from modyn.common.benchmark import Stopwatch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -70,16 +69,12 @@ class GRPCHandler:
     def __init__(
         self,
         modyn_config: dict,
-        progress_mgr: Optional[enlighten.Manager] = None,
-        status_bar: Optional[enlighten.StatusBar] = None,
     ) -> None:
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
         self.connected_to_selector = False
         self.connected_to_evaluator = False
-        # self.progress_mgr = progress_mgr
-        # self.status_bar = status_bar
         self.storage: Optional[StorageStub] = None
         self.storage_channel: Optional[grpc.Channel] = None
         self.selector: Optional[SelectorStub] = None
@@ -416,19 +411,11 @@ class GRPCHandler:
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> dict[str, Any]:  # pragma: no cover
-        # assert self.progress_mgr is not None
-        # assert self.status_bar is not None
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
-        # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
-
-        # total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        # status_bar_scale = self.get_status_bar_scale(pipeline_id)
-
-        # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -584,26 +571,20 @@ class GRPCHandler:
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
     def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
-        # assert self.progress_mgr is not None
-        # assert self.status_bar is not None
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
-
-        # self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
 
         # We are using a deque here in order to fetch the status of each evaluation
         # sequentially in a round-robin manner.
         working_queue: deque[int] = deque()
         blocked_in_a_row: dict[int, int] = {}
         for evaluation_id in evaluations.keys():
-            # status_tracker.create_counter(self.progress_mgr, training_id, evaluation_id)
             working_queue.append(evaluation_id)
             blocked_in_a_row[evaluation_id] = 0
 
         while working_queue:
             current_evaluation_id = working_queue.popleft()
-            # current_evaluation_tracker = evaluations[current_evaluation_id]
             req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
             res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
 
@@ -623,17 +604,14 @@ class GRPCHandler:
 
                 if res.HasField("exception") and res.exception is not None:
                     logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
-                    # current_evaluation_tracker.end_counter(True)
                     continue
                 if not res.is_running:
-                    # current_evaluation_tracker.end_counter(False)
                     continue
                 if res.state_available:
                     assert res.HasField("samples_seen") and res.HasField(
                         "batches_seen"
                     ), f"Inconsistent server response:\n{res}"
 
-                    # current_evaluation_tracker.progress_counter(res.samples_seen)
                 elif res.is_running:
                     logger.warning("Evaluator is not blocked and is running, but no state is available.")
 
@@ -641,7 +619,6 @@ class GRPCHandler:
             sleep(1)
 
         logger.info("Evaluation completed ✅")
-        # self.status_bar.update(demo="Evaluation completed")
 
     def store_evaluation_results(
         self,

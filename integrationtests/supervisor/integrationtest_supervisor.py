@@ -86,8 +86,6 @@ if __name__ == "__main__":
         test_start_one_experiment_pipeline()
         test_start_two_experiment_pipelines()
         time.sleep(TIMEOUT)
-        # test_mnist()
-        # time.sleep(TIMEOUT * 5)
         # TODO(#317): implement get_status proto. check for pipeline execution success.
     finally:
         dataset_helper.cleanup_dataset_dir()
