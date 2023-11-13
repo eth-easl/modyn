@@ -202,6 +202,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                 .limit(sample_size)
             )
 
+<<<<<<< Updated upstream
         yield_per = max(int(self._maximum_keys_in_memory / 2), 1)
         # Change to `yield from` when we actually use the log returned here.
         for keys, _ in self._storage_backend._get_pipeline_data(
@@ -211,6 +212,20 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             chunk_callback=_chunk_callback,
         ):
             yield keys
+=======
+            for chunk in database.session.execute(stmt).partitions():
+                if len(chunk) > 0:
+                    keys, used_data = zip(*chunk)
+                    if used:
+                        assert all(used_data), "Queried used data, but got unused data."
+                    else:
+                        assert not any(used_data), "Queried unused data, but got used data."
+
+                else:
+                    keys = ()
+
+                yield list(keys)
+>>>>>>> Stashed changes
 
     def _get_all_unused_data(self) -> Iterator[list[int]]:
         """Returns all unused samples
@@ -222,9 +237,18 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             self._storage_backend, DatabaseStorageBackend
         ), "FreshnessStrategy currently only supports DatabaseBackend"
 
+<<<<<<< Updated upstream
         def _chunk_callback(chunk: Any) -> None:
             _, used = zip(*chunk)
             assert not any(used), "Queried unused data, but got used data."
+=======
+            for chunk in database.session.execute(stmt).partitions():
+                if len(chunk) > 0:
+                    keys, used = zip(*chunk)
+                    assert not any(used), "Queried unused data, but got used data."
+                else:
+                    keys, used = (), ()
+>>>>>>> Stashed changes
 
         def _statement_modifier(stmt: Select) -> Any:
             return stmt.add_columns(SelectorStateMetadata.used)
