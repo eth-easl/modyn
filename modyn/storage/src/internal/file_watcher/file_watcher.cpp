@@ -165,9 +165,12 @@ void FileWatcher::run() {
     return;
   }
 
+  seek(session);
+
   while (true) {
     try {
-      seek(session);
+      std::this_thread::sleep_for(std::chrono::seconds(file_watcher_interval));
+      //seek(session);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error while seeking dataset: {}", e.what());
       stop_file_watcher->store(true);
