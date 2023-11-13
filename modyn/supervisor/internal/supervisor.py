@@ -72,6 +72,7 @@ class Supervisor:
         self._next_pipeline_lock = self._manager.Lock()
         self.grpc = GRPCHandler(self.modyn_config)
         self.pipeline_monitor_thread: Optional[threading.Thread] = None
+        self.init_metadata_db()
 
     def __getstate__(self) -> dict:
         state = self.__dict__.copy()
@@ -88,7 +89,6 @@ class Supervisor:
     def init_cluster_connection(self) -> None:
         logging.info("Setting up connections to cluster components.")
         self.grpc.init_cluster_connection()
-        self.init_metadata_db()
 
         # TODO(#317): seed per pipeline instead of per system
         if "seed" in self.modyn_config:
