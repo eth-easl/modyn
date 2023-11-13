@@ -290,9 +290,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     record_buf.reserve(sample_batch_size);
 
     const std::string query = fmt::format(
-        "SELECT sample_id, label FROM samples WHERE file_id IN {} AND dataset_id = {}", file_placeholders, dataset_id);
+        "SELECT samples.sample_id, samples.label, files.updated_at "
+        "FROM samples INNER JOIN files "
+        "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
+        "WHERE samples.file_id IN {} AND samples.dataset_id = {}",
+        file_placeholders, dataset_id);
     const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_ids.at(0));
-    CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 2);
+    CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 3);
 
     std::vector<SampleRecord> records;
 
@@ -314,6 +318,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         for (const auto& record : records) {
           response.add_keys(record.id);
           response.add_labels(record.column_1);
+          response.add_timestamps(record.column_2);
         }
 
         SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}", response.keys_size(),
@@ -338,6 +343,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             const SampleRecord& record = record_buf[record_idx];
             response.add_keys(record.id);
             response.add_labels(record.column_1);
+            response.add_timestamps(record.column_2);
           }
           SPDLOG_INFO(
               "Sending with response_keys = {}, response_labels = {}, record_buf.size = {} (minus sample_batch_size = "
@@ -369,6 +375,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       for (const auto& record : record_buf) {
         response.add_keys(record.id);
         response.add_labels(record.column_1);
+        response.add_timestamps(record.column_2);
       }
       SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}", response.keys_size(),
                   response.labels_size(), record_buf.size());
