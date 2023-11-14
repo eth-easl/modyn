@@ -82,6 +82,7 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         logger.info("Download completed. Invoking model storage manager.")
 
         model_id = self.model_storage_manager.store_model(pipeline_id, trigger_id, local_model_path)
+        self.model_storage_manager.print_mem_usage("Post-Store-Model")
         os.remove(local_model_path)
 
         return RegisterModelResponse(success=True, model_id=model_id)

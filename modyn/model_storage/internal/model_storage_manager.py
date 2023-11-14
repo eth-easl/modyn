@@ -32,6 +32,13 @@ class ModelStorageManager:
         self._storage_dir = storage_dir
         self._ftp_dir = ftp_dir
 
+    def print_mem_usage(self, additional: str) -> None:
+        total = torch.cuda.get_device_properties(0).total_memory
+        reserved = torch.cuda.memory_reserved(0)
+        allocated = torch.cuda.memory_allocated(0)
+
+        logger.info(f"{additional}: Total mem = {total}, reserved = {reserved}, alloc = {allocated}")
+
     def store_model(self, pipeline_id: int, trigger_id: int, checkpoint_path: pathlib.Path) -> int:
         """
         Store the trained model contained in the checkpoint file to disk. It uses the model storage policy that is
@@ -46,25 +53,33 @@ class ModelStorageManager:
         Returns:
             int: the model id which identifies the stored model.
         """
+        self.print_mem_usage("Pre-Load")
         checkpoint = torch.load(checkpoint_path)
+        self.print_mem_usage("Post-Load")
         policy = self.get_model_storage_policy(pipeline_id)
+        self.print_mem_usage("Post-Policy")
 
         # split the model (stored under the "model" key) from metadata.
         assert "model" in checkpoint
         state_dict = checkpoint["model"]
+
+        self.print_mem_usage("Post-State Dict")
+
         local_model_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.model"
         model_path = self._storage_dir / local_model_filename
 
         # handle the new model according to the model storage policy. If it is stored incrementally, we receive
         # the model id of the parent.
         parent_id = self._handle_new_model(pipeline_id, trigger_id, state_dict, model_path, policy)
-        checkpoint.pop("model")
+        self.print_mem_usage("Post-HNM")
+        del state_dict
+        del checkpoint["model"]
+        self.print_mem_usage("Post-Pop")
 
         # now checkpoint only contains optimizer state and metadata.
         local_metadata_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.metadata.zip"
         metadata_path = self._storage_dir / local_metadata_filename
         torch.save(checkpoint, metadata_path)
-        
         del checkpoint
         gc.collect()
         torch.cuda.empty_cache()
@@ -97,7 +112,7 @@ class ModelStorageManager:
         Returns:
             int: if the model is stored incrementally, the parent model id is returned.
         """
-
+        self.print_mem_usage("HNM Call Begin")
         # check whether we must apply the incremental storage strategy or the full model strategy.
         if policy.incremental_model_strategy and (
             policy.full_model_interval is None or trigger_id % policy.full_model_interval != 0
@@ -106,17 +121,26 @@ class ModelStorageManager:
             if parent_model_id is not None:
                 # load model state of the parent model.
                 parent_model_state = self._reconstruct_model_state(parent_model_id, policy)
-                gc.collect()
-                torch.cuda.empty_cache()
 
                 # finally store the model delta.
                 policy.incremental_model_strategy.store_model(state_dict, parent_model_state, model_path)
 
+                del parent_model_state
+                del state_dict
+                gc.collect()
+                torch.cuda.empty_cache()
+
                 return parent_model_id
             logger.warning("Previous model is not available! Storing full model...")
+        self.print_mem_usage("Post Incremental Hnm")
 
         # store the model in its entirety.
         policy.full_model_strategy.store_model(state_dict, model_path)
+        self.print_mem_usage("Post Store Model Full Model")
+
+        del state_dict
+        gc.collect()
+        torch.cuda.empty_cache()
         return None
 
     def _reconstruct_model_state(self, model_id: int, policy: ModelStoragePolicy) -> dict:
@@ -144,7 +168,7 @@ class ModelStorageManager:
 
         # recursive step: we recurse to load the model state of the parent model.
         model_state = self._reconstruct_model_state(model.parent_model, policy)
-        
+
         gc.collect()
         torch.cuda.empty_cache()
 
