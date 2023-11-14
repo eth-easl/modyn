@@ -209,7 +209,7 @@ def test_instantiate_class_not_existing():
         instantiate_class("modyn.common.trigger_sample", "BeautifulAmazingStorage", "test_path")
     # missing parameters
     with pytest.raises(TypeError):
-        instantiate_class("modyn.common.trigger_sample_storage", "TriggerSampleStorage")
+        instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage")
 
 
 def test_calculate_checksum():

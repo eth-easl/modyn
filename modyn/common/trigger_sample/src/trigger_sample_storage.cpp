@@ -274,15 +274,15 @@ uint64_t read_data_size_from_header(std::ifstream& file) {
 int read_magic(std::ifstream& file) {
   const std::vector<unsigned char> magic_bytes = {0x93, 'N', 'U', 'M', 'P', 'Y'};
   char byte;
-  for (char magic_byte : magic_bytes) {
-    if (!file.get(byte) || byte != magic_byte) {
+  for (unsigned char magic_byte : magic_bytes) {
+    if (!file.get(byte) || byte != (char)magic_byte) {
       std::cerr << "Not a valid NumPy file." << std::endl;
       return -1;
     }
   }
 
   file.get(byte);
-  const int major_version = static_cast<int>(byte);
+  const int major_version = static_cast<int>((unsigned char)byte);
   file.get(byte);  // minor version is ignored
 
   return major_version;
