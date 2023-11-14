@@ -3,8 +3,6 @@ from typing import Any
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 
-# from torchvision.models.resnet import BasicBlock, ResNet
-
 
 class Dummy:
     # pylint: disable-next=unused-argument

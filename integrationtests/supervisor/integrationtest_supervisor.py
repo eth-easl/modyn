@@ -84,7 +84,7 @@ if __name__ == "__main__":
     try:
         dataset_helper.setup_dataset()
         test_start_one_experiment_pipeline()
-        # test_start_two_experiment_pipelines()
+        test_start_two_experiment_pipelines()
         time.sleep(TIMEOUT)
         # TODO(#317): implement get_status proto. check for pipeline execution success.
     finally:
