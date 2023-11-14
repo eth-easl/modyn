@@ -73,9 +73,9 @@ void* get_worker_samples_impl(const char* folder, int* size, const char* pattern
     break;
   }
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
 
-  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);  // NOLINT
+  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
 
   size[0] = samples;
   return data;
@@ -100,7 +100,7 @@ void* get_all_samples_impl(const char* folder, int* size, const char* pattern) {
     read_magic(file);
     const int samples_in_file = read_data_size_from_header(file);
 
-    char_vector.resize(dtype_size * (samples + samples_in_file));
+    char_vector.resize(static_cast<unsigned int>(dtype_size * (samples + samples_in_file)));
     file.read(char_vector.data() + dtype_size * samples, dtype_size * samples_in_file);
     samples += samples_in_file;
 
