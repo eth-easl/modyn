@@ -75,7 +75,7 @@ void* get_worker_samples_impl(const char* folder, int* size, const char* pattern
 
   void* data = malloc(sizeof(char) * dtype_size * samples);
 
-  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
+  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);  // NOLINT
 
   size[0] = samples;
   return data;
@@ -107,7 +107,7 @@ void* get_all_samples_impl(const char* folder, int* size, const char* pattern) {
     file.close();
   }
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
 
   memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
 
@@ -129,7 +129,7 @@ void* parse_file_impl(const char* filename, int* size) {
 
   size[0] = samples;
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
 
   file.read(static_cast<char*>(data), sizeof(char) * dtype_size * samples);
   file.close();
@@ -188,7 +188,7 @@ void write_files_impl(const char* filenames[], const void* data, int data_length
  *
  * @param data Array to free the memory of
  */
-void release_data_impl(void* data) { free(data); }
+void release_data_impl(void* data) { free(data); }  // NOLINT
 
 /**
  * @brief Read subset of samples from file

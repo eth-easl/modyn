@@ -74,7 +74,7 @@ class TriggerSampleStorage:
         if not path.exists():
             raise RuntimeError(f"Cannot find TriggerSampleStorage library at {path}")
 
-    def __init__(self, trigger_sample_directory) -> None:
+    def __init__(self, trigger_sample_directory: typing.Union[str, Path]) -> None:
         self._ensure_library_present()
         self.extension = ctypes.CDLL(str(self._get_library_path()))
 
