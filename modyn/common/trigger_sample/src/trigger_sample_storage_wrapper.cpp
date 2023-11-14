@@ -19,11 +19,6 @@ void* get_all_samples(const char* folder, int64_t* size, const char* pattern) {
   return modyn::common::trigger_sample_storage::get_all_samples_impl(folder, size, pattern);
 }
 
-void write_file(const char* filename, const void* data, int64_t data_offset, int64_t data_length, const char* header,
-                int64_t header_length) {
-  return modyn::common::trigger_sample_storage::write_file_impl(filename, data, data_offset, data_length, header,
-                                                                header_length);
-}
 void write_files(const char* filenames[], const void* data, int64_t data_lengths[], const char* headers[],
                  int64_t header_length, std::uint64_t num_files) {
   return modyn::common::trigger_sample_storage::write_files_impl(filenames, data, data_lengths, headers, header_length,

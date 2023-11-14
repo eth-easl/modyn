@@ -17,13 +17,13 @@ void* get_all_samples_impl(const char* folder, int64_t* size, const char* patter
 
 void* parse_file_impl(const char* filename, int64_t* size);
 
-void write_file_impl(const char* filename, const void* data, int64_t data_offset, int64_t data_length,
-                     const char* header, int64_t header_length);
 void write_files_impl(const char* filenames[], const void* data, int64_t data_lengths[], const char* headers[],
                       int64_t header_length, std::uint64_t num_files);
 
 void release_data_impl(void* data);
 
+void write_file(const char* filename, const void* data, int64_t data_offset, int64_t data_length, const char* header,
+                int64_t header_length);
 bool parse_file_subset(const char* filename, std ::vector<char>& char_vector, int64_t samples, int64_t start_index,
                        int64_t end_index);
 std::vector<std::string> get_matching_files(const char* folder, const char* pattern);

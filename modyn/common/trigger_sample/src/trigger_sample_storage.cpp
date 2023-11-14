@@ -13,6 +13,7 @@
 #include <vector>
 
 // NOLINTBEGIN(modernize-avoid-c-arrays)
+// We need to use these c-style arrays to interface with ctypes
 namespace modyn::common::trigger_sample_storage {
 
 /**
@@ -108,7 +109,7 @@ void* get_all_samples_impl(const char* folder, int64_t* size, const char* patter
     file.close();
   }
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT: required for ctypes
 
   memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
 
@@ -130,32 +131,12 @@ void* parse_file_impl(const char* filename, int64_t* size) {
 
   size[0] = samples;
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT: required for ctypes
 
   file.read(static_cast<char*>(data), static_cast<int64_t>(sizeof(char) * dtype_size * samples));
   file.close();
 
   return data;
-}
-
-/**
- * @brief Write samples to file
- *
- * @param filename File to write to
- * @param data Array of samples to write
- * @param data_offset Offset in array to write
- * @param data_length Length of the array
- * @param header File header to write
- * @param header_length Length of the header
- */
-void write_file_impl(const char* filename, const void* data, int64_t data_offset, const int64_t data_length,
-                     const char* header, const int64_t header_length) {
-  std::ofstream file = open_file_write(filename);
-
-  file.write(header, header_length);
-  file.write(static_cast<const char*>(data) + dtype_size * data_offset, dtype_size * data_length);
-
-  file.close();
 }
 
 /**
@@ -174,7 +155,7 @@ void write_files_impl(const char* filenames[], const void* data, int64_t data_le
   int64_t data_offset = 0;
 
   for (uint64_t i = 0; i < num_files; ++i) {
-    futures.push_back(std::async(std::launch::async, write_file_impl, filenames[i], data, data_offset, data_lengths[i],
+    futures.push_back(std::async(std::launch::async, write_file, filenames[i], data, data_offset, data_lengths[i],
                                  headers[i], header_length));
     data_offset += data_lengths[i];
   }
@@ -189,7 +170,27 @@ void write_files_impl(const char* filenames[], const void* data, int64_t data_le
  *
  * @param data Array to free the memory of
  */
-void release_data_impl(void* data) { free(data); }  // NOLINT
+void release_data_impl(void* data) { free(data); }  // NOLINT: required for ctypes
+
+/**
+ * @brief Write samples to file
+ *
+ * @param filename File to write to
+ * @param data Array of samples to write
+ * @param data_offset Offset in array to write
+ * @param data_length Length of the array
+ * @param header File header to write
+ * @param header_length Length of the header
+ */
+void write_file(const char* filename, const void* data, int64_t data_offset, const int64_t data_length,
+                const char* header, const int64_t header_length) {
+  std::ofstream file = open_file_write(filename);
+
+  file.write(header, header_length);
+  file.write(static_cast<const char*>(data) + dtype_size * data_offset, dtype_size * data_length);
+
+  file.close();
+}
 
 /**
  * @brief Read subset of samples from file

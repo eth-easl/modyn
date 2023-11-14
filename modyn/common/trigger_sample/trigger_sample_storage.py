@@ -95,17 +95,6 @@ class TriggerSampleStorage:
         self._get_num_samples_in_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char)]
         self._get_num_samples_in_file_impl.restype = ctypes.c_int64
 
-        self._write_file_impl = self.extension.write_file
-        self._write_file_impl.argtypes = [
-            ctypes.POINTER(ctypes.c_char),
-            ndpointer(flags="C_CONTIGUOUS"),
-            ctypes.c_int64,
-            ctypes.c_int64,
-            ctypes.POINTER(ctypes.c_char),
-            ctypes.c_int64,
-        ]
-        self._write_file_impl.restype = None
-
         self._write_files_impl = self.extension.write_files
         self._write_files_impl.argtypes = [
             ctypes.POINTER(ctypes.c_char_p),
@@ -240,31 +229,6 @@ class TriggerSampleStorage:
         result = ArrayWrapper(data, self._release_data_impl)
         return result
 
-    def save_trigger_sample(
-        self, pipeline_id: int, trigger_id: int, partition_id: int, trigger_samples: np.ndarray, insertion_id: int
-    ) -> None:
-        """
-        Save the trigger samples for the given pipeline id, trigger id and partition id.
-
-        :param pipeline_id: the id of the pipeline
-        :param trigger_id: the id of the trigger
-        :param partition_id: the id of the partition
-        :param trigger_samples: the trigger samples
-        :param insertion_id: the id of the insertion
-        """
-        if trigger_samples.dtype != np.dtype("i8,f8"):
-            raise ValueError(f"Unexpected dtype: {trigger_samples.dtype}\nExpected: {np.dtype('i8,f8')}")
-
-        Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
-
-        samples_file = Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{insertion_id}"
-
-        assert not Path(samples_file).exists(), (
-            f"Trigger samples file {samples_file} already exists. " f"Please delete it if you want to overwrite it."
-        )
-
-        self._write_file(samples_file, trigger_samples)
-
     def save_trigger_samples(
         self, pipeline_id: int, trigger_id: int, partition_id: int, trigger_samples: np.ndarray, data_lengths: list
     ) -> None:
@@ -351,23 +315,6 @@ class TriggerSampleStorage:
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         return self._get_num_samples_in_file_impl(file)
-
-    def _write_file(self, file_path: Path, trigger_samples: np.ndarray) -> None:
-        """Write the trigger samples to the given file.
-
-        Args:
-            file_path (str): File path to write to.
-            trigger_samples (np.ndarray): List of trigger samples.
-        """
-
-        data = np.asanyarray(trigger_samples)
-
-        header = self._build_array_header(np.lib.format.header_data_from_array_1_0(data))
-
-        file = ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8"))
-        header = ctypes.c_char_p(header)  # type: ignore
-
-        self._write_file_impl(file, data, 0, len(data), header, 128)
 
     def _write_files(self, file_paths: list, trigger_samples: np.ndarray, data_lengths: list) -> None:
         """Write the trigger samples to multiple files.
