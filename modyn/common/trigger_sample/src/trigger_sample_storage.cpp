@@ -11,6 +11,7 @@
 #include <iostream>
 #include <vector>
 
+// NOLINTBEGIN(modernize-avoid-c-arrays)
 namespace modyn::common::trigger_sample_storage {
 
 /**
@@ -72,7 +73,7 @@ void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pa
     break;
   }
 
-  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);
+  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);  // NOLINT
 
   memcpy((char*)data, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
 
@@ -106,7 +107,7 @@ void* get_all_samples_impl(const char* folder, uint64_t* size, const char* patte
     file.close();
   }
 
-  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);
+  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);  // NOLINT
 
   memcpy((char*)data, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
 
@@ -128,7 +129,7 @@ void* parse_file_impl(const char* filename, uint64_t* size) {
 
   size[0] = samples;
 
-  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);
+  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);  // NOLINT
 
   file.read((char*)data, sizeof(char) * DTYPE_SIZE * samples);
   file.close();
@@ -187,7 +188,7 @@ void write_files_impl(const char* filenames[], const void* data, uint64_t data_l
  *
  * @param data Array to free the memory of
  */
-void release_data_impl(void* data) { free(data); }
+void release_data_impl(void* data) { free(data); }  // NOLINT
 
 /**
  * @brief Read subset of samples from file
@@ -210,7 +211,7 @@ bool parse_file_subset(const char* filename, std::vector<char>& char_vector, con
     return false;
   }
 
-  const uint64_t offset = start_index * DTYPE_SIZE;
+  const int offset = static_cast<int>(start_index) * DTYPE_SIZE;
   const uint64_t num_bytes = (end_index - start_index) * DTYPE_SIZE;
 
   file.seekg(offset, std::ios::cur);
@@ -252,14 +253,14 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
  * @return uint64_t Data size
  */
 uint64_t read_data_size_from_header(std::ifstream& file) {
-  char header_chars[2];
-  file.read(header_chars, 2);
-  int header_length = header_chars[1];
+  std::array<char, 2> header_chars;
+  file.read(header_chars.data(), 2);
+  unsigned int header_length = header_chars[1];
   header_length <<= 8;
   header_length += header_chars[0];
 
   std::string buffer(header_length, ' ');
-  file.read(&buffer[0], header_length);
+  file.read(buffer.data(), header_length);
 
   // Find the location of the shape and convert to int
   return std::strtol(&buffer[buffer.find_last_of('(') + 1], nullptr, 10);
@@ -274,15 +275,15 @@ uint64_t read_data_size_from_header(std::ifstream& file) {
 int read_magic(std::ifstream& file) {
   const std::vector<unsigned char> magic_bytes = {0x93, 'N', 'U', 'M', 'P', 'Y'};
   char byte;
-  for (unsigned char magic_byte : magic_bytes) {
-    if (!file.get(byte) || byte != (char)magic_byte) {
+  for (const unsigned char magic_byte : magic_bytes) {
+    if (!file.get(byte) || byte != static_cast<char>(magic_byte)) {
       std::cerr << "Not a valid NumPy file." << std::endl;
       return -1;
     }
   }
 
   file.get(byte);
-  const int major_version = static_cast<int>((unsigned char)byte);
+  const int major_version = static_cast<int>(static_cast<unsigned char>(byte));
   file.get(byte);  // minor version is ignored
 
   return major_version;
@@ -316,3 +317,5 @@ std::ofstream open_file_write(const char* filename) {
   return file;
 }
 }  // namespace modyn::common::trigger_sample_storage
+
+// NOLINTEND(modernize-avoid-c-arrays)

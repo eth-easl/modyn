@@ -3,6 +3,8 @@
 #include <fstream>
 #include <vector>
 
+// NOLINTBEGIN(modernize-avoid-c-arrays)
+
 namespace modyn::common::trigger_sample_storage {
 
 const int DTYPE_SIZE = 16;
@@ -32,3 +34,5 @@ int read_magic(std::ifstream& file);
 std::ifstream open_file(const char* filename);
 std::ofstream open_file_write(const char* filename);
 }  // namespace modyn::common::trigger_sample_storage
+
+// NOLINTEND(modernize-avoid-c-arrays)
