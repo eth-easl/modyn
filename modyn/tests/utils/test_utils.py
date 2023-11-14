@@ -180,7 +180,7 @@ def test_seed():
 
 def test_instantiate_class_existing():
     # class with a single parameter
-    trigger_storage = instantiate_class("modyn.common.trigger_sample_storage", "TriggerSampleStorage", "test_path")
+    trigger_storage = instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage", "test_path")
     assert isinstance(trigger_storage, TriggerSampleStorage)
     assert trigger_storage.trigger_sample_directory == "test_path"
     # class with several parameters
@@ -209,7 +209,7 @@ def test_instantiate_class_not_existing():
         instantiate_class("modyn.common.trigger_sample", "BeautifulAmazingStorage", "test_path")
     # missing parameters
     with pytest.raises(TypeError):
-        instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage")
+        instantiate_class("modyn.common.trigger_sample_storage", "TriggerSampleStorage")
 
 
 def test_calculate_checksum():

@@ -323,7 +323,7 @@ class TriggerSampleStorage:
             for file in this_trigger_files:
                 os.remove(os.path.join(self.trigger_sample_directory, file))
 
-    def _parse_file(self, file_path: Path) -> np.ndarray:
+    def _parse_file(self, file_path: Path) -> ArrayWrapper:
         """Parse the given file and return the samples.
 
         Args:
@@ -352,7 +352,7 @@ class TriggerSampleStorage:
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         return self._get_num_samples_in_file_impl(file)
 
-    def _write_file(self, file_path: Path, trigger_samples: list) -> None:
+    def _write_file(self, file_path: Path, trigger_samples: np.ndarray) -> None:
         """Write the trigger samples to the given file.
 
         Args:
