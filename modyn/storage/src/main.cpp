@@ -9,7 +9,7 @@
 
 using namespace modyn::storage;
 
-void setup_logger() { spdlog::set_pattern("[%Y-%m-%d:%H:%M:%S] [%s:%#] [%l] %v"); }
+void setup_logger() { spdlog::set_pattern("[%Y-%m-%d:%H:%M:%S] [%s:%#] [%l] [p%P:t%t] %v"); }
 
 argparse::ArgumentParser setup_argparser() {
   argparse::ArgumentParser parser("Modyn Storage");
