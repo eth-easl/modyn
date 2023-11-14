@@ -308,7 +308,6 @@ class Supervisor:
         pipeline_id = self.register_pipeline(pipeline_config)
         logger.info(f"Pipeline {pipeline_id} registered, start executing.")
 
-        logger.info(f"start_pipeline: start method is {mp.get_start_method()}")
         process = Process(
             target=execute_pipeline,
             args=(
