@@ -18,9 +18,9 @@ namespace modyn::common::trigger_sample_storage {
  * @brief Get the number of samples in file
  *
  * @param filename File to read
- * @return uint64_t Amount of samples
+ * @return int Amount of samples
  */
-uint64_t get_num_samples_in_file_impl(const char* filename) {
+int get_num_samples_in_file_impl(const char* filename) {
   std::ifstream file = open_file(filename);
   read_magic(file);
   return read_data_size_from_header(file);
@@ -36,11 +36,11 @@ uint64_t get_num_samples_in_file_impl(const char* filename) {
  * @param worker_subset_size Total amount of samples to store
  * @return void* Array of samples
  */
-void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pattern, const uint64_t start_index,
-                              const uint64_t worker_subset_size) {
+void* get_worker_samples_impl(const char* folder, int* size, const char* pattern, const int start_index,
+                              const int worker_subset_size) {
   const std::vector<std::string> matching_files = get_matching_files(folder, pattern);
-  uint64_t samples = 0;
-  uint64_t current_index = 0;
+  int samples = 0;
+  int current_index = 0;
 
   std::vector<char> char_vector;
 
@@ -49,13 +49,13 @@ void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pa
       // We have already retrieved all the samples for the worker
       break;
     }
-    const uint64_t num_samples = get_num_samples_in_file_impl(filename.c_str());
+    const int num_samples = get_num_samples_in_file_impl(filename.c_str());
     if (current_index + num_samples <= start_index) {
       // The samples in the file are before the samples for the worker
       current_index += num_samples;
       continue;
     }
-    const uint64_t start = (start_index >= current_index) ? start_index - current_index : 0;
+    const int start = (start_index >= current_index) ? start_index - current_index : 0;
     if (current_index + num_samples < start_index + worker_subset_size) {
       // The head of samples for the worker are in the file, either partially from
       // start_index - current_index to the end of the file if start_index> current_index
@@ -73,7 +73,7 @@ void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pa
     break;
   }
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);
 
   memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
 
@@ -89,25 +89,25 @@ void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pa
  * @param pattern Pattern to match. Should match at start of filename
  * @return void* Array of samples
  */
-void* get_all_samples_impl(const char* folder, uint64_t* size, const char* pattern) {
+void* get_all_samples_impl(const char* folder, int* size, const char* pattern) {
   const std::vector<std::string> matching_files = get_matching_files(folder, pattern);
   std::vector<char> char_vector;
 
-  uint64_t samples = 0;
+  int samples = 0;
 
   for (const std::string& filename : matching_files) {
     std::ifstream file = open_file(filename.c_str());
     read_magic(file);
-    const uint64_t samples_in_file = read_data_size_from_header(file);
+    const int samples_in_file = read_data_size_from_header(file);
 
     char_vector.resize(dtype_size * (samples + samples_in_file));
-    file.read(char_vector.data() + dtype_size * samples, static_cast<int>(dtype_size * samples_in_file));
+    file.read(char_vector.data() + dtype_size * samples, dtype_size * samples_in_file);
     samples += samples_in_file;
 
     file.close();
   }
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);
 
   memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
 
@@ -122,14 +122,14 @@ void* get_all_samples_impl(const char* folder, uint64_t* size, const char* patte
  * @param size Return pointer for array size
  * @return void* Array of samples
  */
-void* parse_file_impl(const char* filename, uint64_t* size) {
+void* parse_file_impl(const char* filename, int* size) {
   std::ifstream file = open_file(filename);
   read_magic(file);
-  const uint64_t samples = read_data_size_from_header(file);
+  const int samples = read_data_size_from_header(file);
 
   size[0] = samples;
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);
 
   file.read(static_cast<char*>(data), sizeof(char) * dtype_size * samples);
   file.close();
@@ -147,11 +147,11 @@ void* parse_file_impl(const char* filename, uint64_t* size) {
  * @param header File header to write
  * @param header_length Length of the header
  */
-void write_file_impl(const char* filename, const void* data, uint64_t data_offset, const uint64_t data_length,
-                     const char* header, const uint64_t header_length) {
+void write_file_impl(const char* filename, const void* data, int data_offset, const int data_length, const char* header,
+                     const int header_length) {
   std::ofstream file = open_file_write(filename);
 
-  file.write(header, static_cast<int>(header_length));
+  file.write(header, header_length);
   file.write((char*)data + dtype_size * data_offset, dtype_size * data_length);
 
   file.close();
@@ -167,10 +167,10 @@ void write_file_impl(const char* filename, const void* data, uint64_t data_offse
  * @param header_length Length of the headers
  * @param num_files Amount of files
  */
-void write_files_impl(const char* filenames[], const void* data, uint64_t data_lengths[], const char* headers[],
-                      uint64_t header_length, uint64_t num_files) {
+void write_files_impl(const char* filenames[], const void* data, int data_lengths[], const char* headers[],
+                      int header_length, uint64_t num_files) {
   std::vector<std::future<void>> futures;
-  uint64_t data_offset = 0;
+  int data_offset = 0;
 
   for (uint64_t i = 0; i < num_files; ++i) {
     futures.push_back(std::async(std::launch::async, write_file_impl, filenames[i], data, data_offset, data_lengths[i],
@@ -188,7 +188,7 @@ void write_files_impl(const char* filenames[], const void* data, uint64_t data_l
  *
  * @param data Array to free the memory of
  */
-void release_data_impl(void* data) { free(data); }  // NOLINT
+void release_data_impl(void* data) { free(data); }
 
 /**
  * @brief Read subset of samples from file
@@ -201,18 +201,18 @@ void release_data_impl(void* data) { free(data); }  // NOLINT
  * @return true File read succesfully
  * @return false end_index exceeds samples of file
  */
-bool parse_file_subset(const char* filename, std::vector<char>& char_vector, const uint64_t samples,
-                       const uint64_t start_index, const uint64_t end_index) {
+bool parse_file_subset(const char* filename, std::vector<char>& char_vector, const int samples, const int start_index,
+                       const int end_index) {
   std::ifstream file = open_file(filename);
   read_magic(file);
-  const uint64_t samples_in_file = read_data_size_from_header(file);
+  const int samples_in_file = read_data_size_from_header(file);
 
   if (end_index > samples_in_file) {
     return false;
   }
 
   const int offset = static_cast<int>(start_index) * dtype_size;
-  const uint64_t num_bytes = (end_index - start_index) * dtype_size;
+  const int num_bytes = (end_index - start_index) * dtype_size;
 
   file.seekg(offset, std::ios::cur);
   char_vector.resize(dtype_size * (samples + num_bytes));
@@ -250,9 +250,9 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
  * @brief Read array file header
  *
  * @param file File to read from
- * @return uint64_t Data size
+ * @return int Data size
  */
-uint64_t read_data_size_from_header(std::ifstream& file) {
+int read_data_size_from_header(std::ifstream& file) {
   std::array<char, 2> header_chars;
   file.read(header_chars.data(), 2);
   unsigned int header_length = header_chars[1];

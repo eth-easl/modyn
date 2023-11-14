@@ -74,7 +74,7 @@ class TriggerSampleStorage:
         if not path.exists():
             raise RuntimeError(f"Cannot find TriggerSampleStorage library at {path}")
 
-    def __init__(self, trigger_sample_directory: str = "sample_dir") -> None:
+    def __init__(self, trigger_sample_directory) -> None:
         self._ensure_library_present()
         self.extension = ctypes.CDLL(str(self._get_library_path()))
 
@@ -93,16 +93,16 @@ class TriggerSampleStorage:
 
         self._get_num_samples_in_file_impl = self.extension.get_num_samples_in_file
         self._get_num_samples_in_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char)]
-        self._get_num_samples_in_file_impl.restype = ctypes.c_uint64
+        self._get_num_samples_in_file_impl.restype = ctypes.c_int
 
         self._write_file_impl = self.extension.write_file
         self._write_file_impl.argtypes = [
             ctypes.POINTER(ctypes.c_char),
             ndpointer(flags="C_CONTIGUOUS"),
-            ctypes.c_uint64,
-            ctypes.c_uint64,
+            ctypes.c_int,
+            ctypes.c_int,
             ctypes.POINTER(ctypes.c_char),
-            ctypes.c_uint64,
+            ctypes.c_int,
         ]
         self._write_file_impl.restype = None
 
@@ -110,9 +110,9 @@ class TriggerSampleStorage:
         self._write_files_impl.argtypes = [
             ctypes.POINTER(ctypes.c_char_p),
             ndpointer(flags="C_CONTIGUOUS"),
-            ctypes.POINTER(ctypes.c_uint64),
+            ctypes.POINTER(ctypes.c_int),
             ctypes.POINTER(ctypes.c_char_p),
-            ctypes.c_uint64,
+            ctypes.c_int,
             ctypes.c_uint64,
         ]
         self._write_files_impl.restype = None
@@ -120,7 +120,7 @@ class TriggerSampleStorage:
         self._get_all_samples_impl = self.extension.get_all_samples
         self._get_all_samples_impl.argtypes = [
             ctypes.POINTER(ctypes.c_char),
-            ctypes.POINTER(ctypes.c_uint64),
+            ctypes.POINTER(ctypes.c_int),
             ctypes.POINTER(ctypes.c_char),
         ]
         self._get_all_samples_impl.restype = self.data_pointer
@@ -128,15 +128,15 @@ class TriggerSampleStorage:
         self._get_worker_samples_impl = self.extension.get_worker_samples
         self._get_worker_samples_impl.argtypes = [
             ctypes.POINTER(ctypes.c_char),
-            ctypes.POINTER(ctypes.c_uint64),
+            ctypes.POINTER(ctypes.c_int),
             ctypes.POINTER(ctypes.c_char),
-            ctypes.c_uint64,
-            ctypes.c_uint64,
+            ctypes.c_int,
+            ctypes.c_int,
         ]
         self._get_worker_samples_impl.restype = self.data_pointer
 
         self._parse_file_impl = self.extension.parse_file
-        self._parse_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.POINTER(ctypes.c_uint64)]
+        self._parse_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.POINTER(ctypes.c_int)]
         self._parse_file_impl.restype = self.data_pointer
 
         self._release_data_impl = self.extension.release_data
@@ -213,7 +213,7 @@ class TriggerSampleStorage:
         )
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
-        size = (ctypes.c_uint64 * 1)()
+        size = (ctypes.c_int * 1)()
         self.data_pointer.shape_val = size  # type: ignore
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
@@ -232,7 +232,7 @@ class TriggerSampleStorage:
         """
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
-        size = (ctypes.c_uint64 * 1)()
+        size = (ctypes.c_int * 1)()
         self.data_pointer.shape_val = size  # type: ignore
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
@@ -334,7 +334,7 @@ class TriggerSampleStorage:
         """
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
-        size = (ctypes.c_uint64 * 1)()
+        size = (ctypes.c_int * 1)()
         self.data_pointer.shape_val = size  # type: ignore
 
         data = self._parse_file_impl(file, size).reshape(-1)
@@ -399,7 +399,7 @@ class TriggerSampleStorage:
 
         files_p = (ctypes.c_char_p * len(files))()
         headers_p = (ctypes.c_char_p * len(files))()
-        data_lengths_p = (ctypes.c_uint64 * len(data_lengths))()
+        data_lengths_p = (ctypes.c_int * len(data_lengths))()
 
         for i, _ in enumerate(files):
             files_p[i] = files[i]
