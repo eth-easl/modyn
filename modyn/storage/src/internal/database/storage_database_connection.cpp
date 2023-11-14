@@ -71,6 +71,8 @@ void StorageDatabaseConnection::create_tables() const {
   if (drivername_ == DatabaseDriver::POSTGRESQL && sample_table_unlogged_) {
     session << "ALTER TABLE samples SET UNLOGGED";
   }
+
+  session.close();
 }
 
 bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::string& base_path,
@@ -234,4 +236,6 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
     default:
       FAIL("Unsupported database driver.");
   }
+
+  session.close();
 }

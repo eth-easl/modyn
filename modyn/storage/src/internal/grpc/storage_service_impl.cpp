@@ -380,6 +380,8 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
     session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
         soci::into(total_keys), soci::use(dataset_id);
 
+    session.close();
+
     response->set_num_keys(total_keys);
     response->set_success(true);
     return {StatusCode::OK, "Dataset size retrieved."};

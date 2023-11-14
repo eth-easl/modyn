@@ -124,7 +124,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data, session,
                                           storage_database_connection_.get_drivername());
-      session.close();
+
+      if (session.is_connected()) {
+        session.close();
+      }
 
       return {StatusCode::OK, "Data retrieved."};
     } catch (const std::exception& e) {
@@ -194,8 +197,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                   const DatabaseDriver& driver) {
     // TODO(maxiBoether): we need to benchmark this. In Python, we just get all samples from the DB and then fetch then
     // from disk. Here, we first have to get all files with a big subq, then all samples for each file again. Not sure
-    // if this is faster instead of one big query and then parallelizing over that result.
+    // if this is faster instead of splitting up the request keys across threads.
+
+    SPDLOG_INFO("Obtaining file ids for samples.");
     const std::vector<int64_t> file_ids = get_file_ids_for_samples(request_keys, dataset_data.dataset_id, session);
+    session.close();
+    SPDLOG_INFO("File ids for samples obtained.");
 
     if (file_ids.empty()) {
       SPDLOG_ERROR("No files corresponding to the keys found in dataset {}.", dataset_data.dataset_id);
@@ -238,7 +245,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_file_ids_and_labels(WriterT* writer, const int64_t dataset_id, const int64_t start_timestamp = -1,
                                 int64_t end_timestamp = -1) {
     soci::session session = storage_database_connection_.get_session();
-
     const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
     session.close();
 
@@ -384,6 +390,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         const std::lock_guard<std::mutex> lock(*writer_mutex);
         writer->Write(response);
       }
+    }
+
+    if (session.is_connected()) {
+      session.close();
     }
   }
 

@@ -63,6 +63,8 @@ class FileWatcher {
       return;
     }
 
+    session.close();
+
     filesystem_wrapper_type_ = static_cast<FilesystemWrapperType>(filesystem_wrapper_type_int);
 
     SPDLOG_INFO("FileWatcher for dataset {} uses path {}, file_wrapper_id {} and file_system_id {}", dataset_id_,

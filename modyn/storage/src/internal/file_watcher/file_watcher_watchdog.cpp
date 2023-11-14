@@ -109,6 +109,7 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
 
   std::vector<int64_t> dataset_ids_vector(number_of_datasets);
   session << "SELECT dataset_id FROM datasets", soci::into(dataset_ids_vector);
+  session.close();
 
   const std::unordered_set<int64_t> dataset_ids(dataset_ids_vector.begin(), dataset_ids_vector.end());
 

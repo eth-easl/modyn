@@ -48,10 +48,9 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, const s
     }
     try {
       const int64_t& modified_time = filesystem_wrapper->get_modified_time(file_path);
-      // TODO (Mboether): Remove befor merge
-      if (modified_time <= timestamp) {
+      /* if (modified_time <= timestamp) {
         SPDLOG_INFO("File {} has modified time {}, timestamp is {}, discarding", file_path, modified_time, timestamp);
-      }
+      } */
       return modified_time >= timestamp || timestamp == 0;
     } catch (const std::exception& e) {
       SPDLOG_ERROR(fmt::format(
@@ -183,6 +182,8 @@ void FileWatcher::run() {
       break;
     }
   }
+
+  session.close();
 }
 
 void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator file_paths_begin,
