@@ -72,7 +72,7 @@ class TriggerSampleStorage:
     def _ensure_library_present(self) -> None:
         path = self._get_library_path()
         if not path.exists():
-            raise RuntimeError(f"Cannot find {self.__name__} library at {path}")
+            raise RuntimeError(f"Cannot find TriggerSampleStorage library at {path}")
 
     def __init__(self, trigger_sample_directory: str = "sample_dir") -> None:
         self._ensure_library_present()
@@ -86,8 +86,10 @@ class TriggerSampleStorage:
             raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
 
         # We define a return object here that can infer its size when being parsed by ctypes
-        self.data_pointer = ndpointer(dtype=[("f0", "<i8"), ("f1", "<f8")], ndim=1, shape=(1,), flags="C_CONTIGUOUS")
-        self.data_pointer._shape_ = property(lambda self: self.shape_val[0])
+        self.data_pointer = ndpointer(
+            dtype=[("f0", "<i8"), ("f1", "<f8")], ndim=1, shape=(1,), flags="C_CONTIGUOUS"
+        )  # type: ignore
+        self.data_pointer._shape_ = property(lambda self: self.shape_val[0])  # type: ignore
 
         self._get_num_samples_in_file_impl = self.extension.get_num_samples_in_file
         self._get_num_samples_in_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char)]
@@ -212,7 +214,7 @@ class TriggerSampleStorage:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
-        self.data_pointer.shape_val = size
+        self.data_pointer.shape_val = size  # type: ignore
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
         data = self._get_worker_samples_impl(folder, size, pattern, start_index, worker_subset_size).reshape(-1)
@@ -231,7 +233,7 @@ class TriggerSampleStorage:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
-        self.data_pointer.shape_val = size
+        self.data_pointer.shape_val = size  # type: ignore
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
         data = self._get_all_samples_impl(folder, size, pattern).reshape(-1)
@@ -333,7 +335,7 @@ class TriggerSampleStorage:
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         size = (ctypes.c_uint64 * 1)()
-        self.data_pointer.shape_val = size
+        self.data_pointer.shape_val = size  # type: ignore
 
         data = self._parse_file_impl(file, size).reshape(-1)
         result = ArrayWrapper(data, self._release_data_impl)
@@ -363,7 +365,7 @@ class TriggerSampleStorage:
         header = self._build_array_header(np.lib.format.header_data_from_array_1_0(data))
 
         file = ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8"))
-        header = ctypes.c_char_p(header)
+        header = ctypes.c_char_p(header)  # type: ignore
 
         self._write_file_impl(file, data, 0, len(data), header, 128)
 
@@ -393,7 +395,7 @@ class TriggerSampleStorage:
             length_sum += data_length
 
         files = [ctypes.c_char_p(str(file_path.with_suffix(".npy")).encode("utf-8")) for file_path in file_paths]
-        headers = [ctypes.c_char_p(header) for header in raw_headers]
+        headers = [ctypes.c_char_p(header) for header in raw_headers]  # type: ignore
 
         files_p = (ctypes.c_char_p * len(files))()
         headers_p = (ctypes.c_char_p * len(files))()
@@ -417,12 +419,12 @@ class TriggerSampleStorage:
         Returns:
             str: Header string
         """
-        header = ["{"]
+        header_list = ["{"]
         for key, value in sorted(d.items()):
             # Need to use repr here, since we eval these when reading
-            header.append(f"'{key}': {repr(value)}, ")
-        header.append("}")
-        header = "".join(header)
+            header_list.append(f"'{key}': {repr(value)}, ")
+        header_list.append("}")
+        header = "".join(header_list)
 
         # Add some spare space so that the array header can be modified in-place
         # when changing the array size, e.g. when growing it by appending data at
@@ -431,5 +433,5 @@ class TriggerSampleStorage:
         growth_axis_max_digits = 21
         header += " " * ((growth_axis_max_digits - len(repr(shape[0]))) if len(shape) > 0 else 0)
 
-        header = np.lib.format._wrap_header_guess_version(header)
+        header = np.lib.format._wrap_header_guess_version(header)  # type: ignore
         return header
