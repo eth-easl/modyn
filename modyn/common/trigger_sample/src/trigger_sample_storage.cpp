@@ -13,8 +13,6 @@
 
 namespace modyn::common::trigger_sample_storage {
 
-const int DTYPE_SIZE = 16;
-
 /**
  * @brief Get the number of samples in file
  *
