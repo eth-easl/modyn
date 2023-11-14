@@ -1,7 +1,5 @@
-import multiprocessing as mp
 import os
 import platform
-from multiprocessing.managers import SharedMemoryManager
 
 import numpy as np
 import torch
@@ -46,15 +44,15 @@ class LocalDatasetWriter(TriggerSampleStorage):
         trigger_id: int,
         pipeline_id: int,
         training_samples: np.ndarray,
-        insertion_id: int,
+        data_lengths: list,
         offline_dataset_path: str,
     ) -> None:
-        TriggerSampleStorage(trigger_sample_directory=offline_dataset_path).save_trigger_sample(
+        TriggerSampleStorage(trigger_sample_directory=offline_dataset_path).save_trigger_samples(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
             trigger_samples=training_samples,
-            insertion_id=insertion_id,
+            data_lengths=data_lengths,
         )
 
     def inform_samples(self, sample_ids: list, sample_weights: torch.Tensor) -> None:
@@ -90,49 +88,29 @@ class LocalDatasetWriter(TriggerSampleStorage):
                 self.trigger_id,
                 self.pipeline_id,
                 np.array(self.output_samples_list, dtype=np.dtype("i8,f8")),
-                0,
+                [len(self.output_samples_list)],
                 self.trigger_sample_directory,
             )
             self._prepare_for_new_file()
             return
 
-        number_worker_samples = self.current_sample_index // self.number_of_workers
-        processes: list[mp.Process] = []
+        samples_per_proc = self.current_sample_index // self.number_of_workers
 
-        with SharedMemoryManager() as smm:
-            for i in range(self.number_of_workers):
-                start_idx = i * number_worker_samples
-                end_idx = (
-                    start_idx + number_worker_samples
-                    if i < self.number_of_workers - 1
-                    else len(self.output_samples_list)
-                )
-                proc_samples = np.array(self.output_samples_list[start_idx:end_idx], dtype=np.dtype("i8,f8"))
-                if len(proc_samples) > 0:
-                    shm = smm.SharedMemory(proc_samples.nbytes)
+        data_lengths = []
+        if samples_per_proc > 0:
+            data_lengths = [samples_per_proc] * (self.number_of_workers - 1)
 
-                    shared_proc_samples: np.ndarray = np.ndarray(
-                        proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
-                    )
-                    shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
-                    assert proc_samples.shape == shared_proc_samples.shape
+        if sum(data_lengths) < len(self.output_samples_list):
+            data_lengths.append(len(self.output_samples_list) - sum(data_lengths))
 
-                    proc = mp.Process(
-                        target=LocalDatasetWriter._store_triggersamples_impl,
-                        args=(
-                            self.current_file_index,
-                            self.trigger_id,
-                            self.pipeline_id,
-                            shared_proc_samples,
-                            i,
-                            self.trigger_sample_directory,
-                        ),
-                    )
-                    proc.start()
-                    processes.append(proc)
-
-            for proc in processes:
-                proc.join()
+        LocalDatasetWriter._store_triggersamples_impl(
+            self.current_file_index,
+            self.trigger_id,
+            self.pipeline_id,
+            np.array(self.output_samples_list, dtype=np.dtype("i8,f8")),
+            data_lengths,
+            self.trigger_sample_directory,
+        )
 
         self._prepare_for_new_file()
 
