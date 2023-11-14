@@ -112,17 +112,16 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         return {StatusCode::OK, "Dataset does not exist."};
       }
 
-      const int keys_size = request->keys_size();
-      std::vector<int64_t> request_keys(keys_size);
-      for (int i = 0; i < keys_size; i++) {
-        request_keys[i] = request->keys(i);
-      }
-
-      if (request_keys.empty()) {
+      const int64_t keys_size = static_cast<int64_t>(request->keys_size());
+      if (keys_size == 0) {
         return {StatusCode::OK, "No keys provided."};
       }
 
-      send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data, session,
+      std::vector<int64_t> request_keys;
+      request_keys.reserve(keys_size);
+      std::copy(request->keys().begin(), request->keys().end(), std::back_inserter(request_keys));
+
+      send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data,
                                           storage_database_connection_.get_drivername());
 
       if (session.is_connected()) {
@@ -193,35 +192,24 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   void send_sample_data_from_keys(WriterT* writer, const std::vector<int64_t>& request_keys,
-                                  const DatasetData& dataset_data, soci::session& session,
-                                  const DatabaseDriver& driver) {
+                                  const DatasetData& dataset_data, const DatabaseDriver& driver) {
     // TODO(maxiBoether): we need to benchmark this. In Python, we just get all samples from the DB and then fetch then
     // from disk. Here, we first have to get all files with a big subq, then all samples for each file again. Not sure
     // if this is faster instead of splitting up the request keys across threads.
-
-    SPDLOG_INFO("Obtaining file ids for samples.");
-    const std::vector<int64_t> file_ids = get_file_ids_for_samples(request_keys, dataset_data.dataset_id, session);
-    session.close();
-    SPDLOG_INFO("File ids for samples obtained.");
-
-    if (file_ids.empty()) {
-      SPDLOG_ERROR("No files corresponding to the keys found in dataset {}.", dataset_data.dataset_id);
-      return;
-    }
 
     // create mutex to protect the writer from concurrent writes as this is not supported by gRPC
     std::mutex writer_mutex;
 
     if (disable_multithreading_) {
-      const std::vector<int64_t>::const_iterator begin = file_ids.begin();  // NOLINT (modernize-use-auto)
-      const std::vector<int64_t>::const_iterator end = file_ids.end();      // NOLINT (modernize-use-auto)
+      const std::vector<int64_t>::const_iterator begin = request_keys.begin();  // NOLINT (modernize-use-auto)
+      const std::vector<int64_t>::const_iterator end = request_keys.end();      // NOLINT (modernize-use-auto)
 
       get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
                                     &request_keys, driver);
 
     } else {
       std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
-          its_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
+          its_per_thread = get_keys_per_thread(request_keys, retrieval_threads_);
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
         const std::vector<int64_t>::const_iterator begin = its_per_thread[thread_id].first;
@@ -259,7 +247,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     } else {
       // Split the number of files over retrieval_threads_
       std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
-          file_ids_per_thread = get_file_ids_per_thread(file_ids, retrieval_threads_);
+          file_ids_per_thread = get_keys_per_thread(file_ids, retrieval_threads_);
 
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -399,112 +387,98 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   static void send_sample_data_for_keys_and_file(  // NOLINT(readability-function-cognitive-complexity)
-      WriterT* writer, std::mutex& writer_mutex, int64_t file_id, const std::vector<int64_t>& request_keys_per_file,
+      WriterT* writer, std::mutex& writer_mutex, const std::vector<int64_t>& sample_keys,
       const DatasetData& dataset_data, soci::session& session, const DatabaseDriver& driver,
       int64_t sample_batch_size) {
     try {
-      std::string file_path;
-      session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id", soci::into(file_path),
-          soci::use(file_id), soci::use(dataset_data.dataset_id);
+      const uint64_t num_keys = sample_keys.size();
+      std::vector<int64_t> sample_labels(num_keys);
+      std::vector<int64_t> sample_indices(num_keys);
+      std::vector<int64_t> sample_fileids(num_keys);
+      const std::string sample_query = fmt::format(
+          "SELECT label, sample_index, file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN ({}) ORDER "
+          "BY file_id",
+          fmt::join(sample_keys, ","));
+      session << sample_query, soci::into(sample_labels), soci::into(sample_indices), soci::into(sample_fileids),
+          soci::use(dataset_data.dataset_id);
 
-      if (file_path.empty()) {
-        SPDLOG_ERROR(
-            fmt::format("Could not obtain full path of file id {} in dataset {}", file_id, dataset_data.dataset_id));
+      int64_t current_file_id = sample_fileids[0];
+      int64_t current_file_start_idx = 0;
+      std::string current_file_path;
+      session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
+          soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
+
+      if (current_file_path.empty()) {
+        SPDLOG_ERROR(fmt::format("Could not obtain full path of file id {} in dataset {}", current_file_id,
+                                 dataset_data.dataset_id));
       }
-
-      std::vector<SampleRecord> record_buf;
-      record_buf.reserve(sample_batch_size);
-
-      std::vector<std::vector<unsigned char>> sample_buf;
-      sample_buf.reserve(sample_batch_size);
-
       const YAML::Node file_wrapper_config_node = YAML::Load(dataset_data.file_wrapper_config);
       auto filesystem_wrapper =
           get_filesystem_wrapper(static_cast<FilesystemWrapperType>(dataset_data.filesystem_wrapper_type));
-      auto file_wrapper = get_file_wrapper(file_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
-                                           file_wrapper_config_node, filesystem_wrapper);
 
-      CursorHandler cursor_handler(session, driver,
-                                   fmt::format("SELECT sample_id, sample_index, label FROM samples WHERE file_id = "
-                                               "{} AND dataset_id = {} AND sample_id IN ({})",
-                                               file_id, dataset_data.dataset_id, fmt::join(request_keys_per_file, ",")),
-                                   fmt::format("file_{}", file_id), 3);
+      auto file_wrapper =
+          get_file_wrapper(current_file_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
+                           file_wrapper_config_node, filesystem_wrapper);
 
-      std::vector<SampleRecord> records;
+      for (uint64_t sample_idx = 0; sample_idx < num_keys; ++sample_idx) {
+        const int64_t& sample_fileid = sample_fileids[sample_idx];
 
-      while (true) {
-        records = cursor_handler.yield_per(sample_batch_size);
-        if (records.empty()) {
-          break;
-        }
-        const uint64_t obtained_records = records.size();
-        ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
-
-        std::vector<int64_t> sample_indexes(obtained_records);
-        for (size_t i = 0; i < obtained_records; ++i) {
-          sample_indexes[i] = records[i].column_1;
-        }
-        const auto samples = file_wrapper->get_samples_from_indices(sample_indexes);
-
-        if (static_cast<int64_t>(records.size()) == sample_batch_size) {
-          // If we obtained a full buffer, we can emit a response directly
+        if (sample_fileid != current_file_id) {
+          // 1. Prepare response
+          const std::vector<int64_t> file_indexes(sample_indices.begin() + current_file_start_idx,
+                                                  sample_indices.begin() + sample_idx);
+          const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
+          // Protobuf expects the data as std::string...
+          std::vector<std::string> stringified_data;
+          stringified_data.reserve(data.size());
+          for (const std::vector<unsigned char>& char_vec : data) {
+            stringified_data.emplace_back(char_vec.begin(), char_vec.end());
+          }
 
           modyn::storage::GetResponse response;
-          for (int64_t i = 0; i < sample_batch_size; ++i) {
-            response.add_keys(records[i].id);
-            response.add_labels(records[i].column_2);
-            response.add_samples(samples[i].data(), samples[i].size());
-          }
+          response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
+          response.mutable_keys()->Assign(sample_keys.begin() + current_file_start_idx,
+                                          sample_keys.begin() + sample_idx);
+          response.mutable_labels()->Assign(sample_labels.begin() + current_file_start_idx,
+                                            sample_labels.begin() + sample_idx);
+
+          // 2. Send response
           {
             const std::lock_guard<std::mutex> lock(writer_mutex);
             writer->Write(response);
           }
-        } else {
-          // If not, we append to our buffers
-          record_buf.insert(record_buf.end(), records.begin(), records.end());
-          sample_buf.insert(sample_buf.end(), samples.begin(), samples.end());
 
-          // If our record buf is big enough, emit a message
-          if (static_cast<int64_t>(records.size()) >= sample_batch_size) {
-            modyn::storage::GetResponse response;
-            for (int64_t i = 0; i < sample_batch_size; ++i) {
-              response.add_keys(record_buf[i].id);
-              response.add_labels(record_buf[i].column_2);
-              response.add_samples(sample_buf[i].data(), sample_buf[i].size());
-            }
-            // Now, delete first sample_batch_size elements from vector as we are sending them
-            record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
-            sample_buf.erase(sample_buf.begin(), sample_buf.begin() + sample_batch_size);
-
-            ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
-                   "The record buffer should never have more than 2*sample_batch_size elements!");
-
-            {
-              const std::lock_guard<std::mutex> lock(writer_mutex);
-              writer->Write(response);
-            }
-          }
+          // 3. Update state
+          current_file_id = sample_fileid;
+          current_file_path = "",
+          session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
+          soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
+          file_wrapper->set_file_path(current_file_path);
+          current_file_start_idx = sample_idx;
         }
       }
 
-      if (!record_buf.empty()) {
-        ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
-               "We should have written this buffer before!");
-        const uint64_t buffer_size = record_buf.size();
-        modyn::storage::GetResponse response;
-        for (uint64_t i = 0; i < buffer_size; ++i) {
-          response.add_keys(record_buf[i].id);
-          response.add_labels(record_buf[i].column_2);
-          response.add_samples(sample_buf[i].data(), sample_buf[i].size());
-        }
-        {
-          const std::lock_guard<std::mutex> lock(writer_mutex);
-          writer->Write(response);
-        }
+      // Send leftovers
+      const std::vector<int64_t> file_indexes(sample_indices.begin() + current_file_start_idx, sample_indices.end());
+      const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
+      // Protobuf expects the data as std::string...
+      std::vector<std::string> stringified_data;
+      stringified_data.reserve(data.size());
+      for (const std::vector<unsigned char>& char_vec : data) {
+        stringified_data.emplace_back(char_vec.begin(), char_vec.end());
+      }
+
+      modyn::storage::GetResponse response;
+      response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
+      response.mutable_keys()->Assign(sample_keys.begin() + current_file_start_idx, sample_keys.end());
+      response.mutable_labels()->Assign(sample_labels.begin() + current_file_start_idx, sample_labels.end());
+
+      {
+        const std::lock_guard<std::mutex> lock(writer_mutex);
+        writer->Write(response);
       }
     } catch (const std::exception& e) {
-      SPDLOG_ERROR("Error in send_sample_data_for_keys_and_file with file_id = {}, sample_batch_size = {}: {}", file_id,
-                   sample_batch_size, e.what());
+      SPDLOG_ERROR("Error in send_sample_data_for_keys_and_file: {}", e.what());
       throw;
     }
   }
@@ -520,14 +494,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     }
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
-
-    for (std::vector<int64_t>::const_iterator it = begin; it < end; ++it) {
-      const int64_t& file_id = *it;
-      const std::vector<int64_t> samples_corresponding_to_file =
-          get_samples_corresponding_to_file(file_id, dataset_data->dataset_id, *request_keys, session);
-      send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, file_id, samples_corresponding_to_file,
-                                                  *dataset_data, session, driver, sample_batch_size);
-    }
+    std::vector<int64_t> sample_keys(begin, end);
+    send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session, driver,
+                                                sample_batch_size);
     session.close();
   }
 
@@ -546,7 +515,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static std::vector<int64_t> get_file_ids_for_samples(const std::vector<int64_t>& request_keys, int64_t dataset_id,
                                                        soci::session& session);
   static std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
-  get_file_ids_per_thread(const std::vector<int64_t>& file_ids, uint64_t retrieval_threads);
+  get_keys_per_thread(const std::vector<int64_t>& file_ids, uint64_t retrieval_threads);
   static std::vector<int64_t> get_samples_corresponding_to_file(int64_t file_id, int64_t dataset_id,
                                                                 const std::vector<int64_t>& request_keys,
                                                                 soci::session& session);

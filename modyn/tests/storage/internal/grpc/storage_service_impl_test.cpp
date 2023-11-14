@@ -619,7 +619,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
 
   std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>> iterator_result;
   std::vector<int64_t> file_ids = {1, 2, 3, 4, 5};
-  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 1));
+  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_keys_per_thread(file_ids, 1));
 
   std::vector<std::vector<int64_t>> result;
   for (const auto& its : iterator_result) {
@@ -638,7 +638,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
   ASSERT_EQ(result[0][3], 4);
   ASSERT_EQ(result[0][4], 5);
 
-  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 2));
+  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_keys_per_thread(file_ids, 2));
   result.clear();
   for (const auto& its : iterator_result) {
     std::vector<int64_t> thread_result;
@@ -657,7 +657,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
   ASSERT_EQ(result[1][1], 4);
   ASSERT_EQ(result[1][2], 5);
 
-  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 3));
+  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_keys_per_thread(file_ids, 3));
   result.clear();
   for (const auto& its : iterator_result) {
     std::vector<int64_t> thread_result;
@@ -677,7 +677,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
   ASSERT_EQ(result[2][2], 5);
 
   file_ids = {1};
-  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 1));
+  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_keys_per_thread(file_ids, 1));
   result.clear();
   for (const auto& its : iterator_result) {
     std::vector<int64_t> thread_result;
@@ -690,7 +690,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
   ASSERT_EQ(result[0].size(), 1);
   ASSERT_EQ(result[0][0], 1);
 
-  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_file_ids_per_thread(file_ids, 2));
+  ASSERT_NO_THROW(iterator_result = StorageServiceImpl::get_keys_per_thread(file_ids, 2));
   result.clear();
   for (const auto& its : iterator_result) {
     std::vector<int64_t> thread_result;

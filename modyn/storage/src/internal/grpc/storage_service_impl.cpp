@@ -392,49 +392,48 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
 }
 
 // ------- Helper functions -------
-
 std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
-StorageServiceImpl::get_file_ids_per_thread(const std::vector<int64_t>& file_ids, uint64_t retrieval_threads) {
-  ASSERT(retrieval_threads > 0, "This function is only intended for multi-threaded retrieval.");
+StorageServiceImpl::get_keys_per_thread(const std::vector<int64_t>& keys, uint64_t threads) {
+  ASSERT(threads > 0, "This function is only intended for multi-threaded retrieval.");
 
-  std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
-      file_ids_per_thread(retrieval_threads);
+  std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>> keys_per_thread(
+      threads);
   try {
-    if (file_ids.empty()) {
-      return file_ids_per_thread;
+    if (keys.empty()) {
+      return keys_per_thread;
     }
 
-    auto number_of_files = static_cast<uint64_t>(file_ids.size());
+    auto number_of_keys = static_cast<uint64_t>(keys.size());
 
-    if (number_of_files < retrieval_threads) {
-      retrieval_threads = number_of_files;
+    if (number_of_keys < threads) {
+      threads = number_of_keys;
     }
 
-    const auto subset_size = static_cast<uint64_t>(number_of_files / retrieval_threads);
-    for (uint64_t thread_id = 0; thread_id < retrieval_threads; ++thread_id) {
+    const auto subset_size = static_cast<uint64_t>(number_of_keys / threads);
+    for (uint64_t thread_id = 0; thread_id < threads; ++thread_id) {
       // These need to be signed because we add them to iterators.
       const auto start_index = static_cast<int64_t>(thread_id * subset_size);
       const auto end_index = static_cast<int64_t>((thread_id + 1) * subset_size);
 
-      DEBUG_ASSERT(start_index < static_cast<int64_t>(file_ids.size()),
+      DEBUG_ASSERT(start_index < static_cast<int64_t>(keys.size()),
                    fmt::format("Start Index too big! idx = {}, size = {}, thread_id = {}+1/{}, subset_size = {}",
-                               start_index, file_ids.size(), thread_id, retrieval_threads, subset_size));
-      DEBUG_ASSERT(end_index <= static_cast<int64_t>(file_ids.size()),
+                               start_index, keys.size(), thread_id, threads, subset_size));
+      DEBUG_ASSERT(end_index <= static_cast<int64_t>(keys.size()),
                    fmt::format("End Index too big! idx = {}, size = {}, thread_id = {}+1/{}, subset_size = {}",
-                               start_index, file_ids.size(), thread_id, retrieval_threads, subset_size));
+                               start_index, keys.size(), thread_id, threads, subset_size));
 
-      if (thread_id == retrieval_threads - 1) {
-        file_ids_per_thread[thread_id] = std::make_pair(file_ids.begin() + start_index, file_ids.end());
+      if (thread_id == threads - 1) {
+        keys_per_thread[thread_id] = std::make_pair(keys.begin() + start_index, keys.end());
       } else {
-        file_ids_per_thread[thread_id] = std::make_pair(file_ids.begin() + start_index, file_ids.begin() + end_index);
+        keys_per_thread[thread_id] = std::make_pair(keys.begin() + start_index, keys.begin() + end_index);
       }
     }
   } catch (const std::exception& e) {
-    SPDLOG_ERROR("Error in get_file_ids_per_thread with file_ids.size() = {}, retrieval_theads = {}: {}",
-                 file_ids.size(), retrieval_threads, e.what());
+    SPDLOG_ERROR("Error in get_keys_per_thread with keys.size() = {}, retrieval_theads = {}: {}", keys.size(), threads,
+                 e.what());
     throw;
   }
-  return file_ids_per_thread;
+  return keys_per_thread;
 }
 
 std::vector<int64_t> StorageServiceImpl::get_samples_corresponding_to_file(const int64_t file_id,

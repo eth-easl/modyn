@@ -119,7 +119,7 @@ class OnlineDataset(IterableDataset):
             {
                 "methodConfig": [
                     {
-                        "name": [{"service": "<package>.<service>"}],
+                        "name": [{"service": "modyn.storage.Storage"}],
                         "retryPolicy": {
                             "maxAttempts": 5,
                             "initialBackoff": "0.1s",
