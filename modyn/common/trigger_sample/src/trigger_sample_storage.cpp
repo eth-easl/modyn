@@ -1,6 +1,7 @@
 #include "trigger_sample_storage.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -131,7 +132,7 @@ void* parse_file_impl(const char* filename, int64_t* size) {
 
   void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
 
-  file.read(static_cast<char*>(data), sizeof(char) * dtype_size * samples);
+  file.read(static_cast<char*>(data), static_cast<int64_t>(sizeof(char) * dtype_size * samples));
   file.close();
 
   return data;
@@ -253,7 +254,7 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
  * @return int64_t Data size
  */
 int64_t read_data_size_from_header(std::ifstream& file) {
-  std::array<char, 2> header_chars = {};
+  std::array<char, 2> header_chars;
   file.read(header_chars.data(), 2);
   uint64_t header_length = header_chars[1];
   header_length <<= 8u;
