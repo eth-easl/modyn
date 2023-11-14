@@ -37,7 +37,7 @@ def get_minimal_pipeline_config(
 ) -> dict:
     return {
         "pipeline": {"name": "Test"},
-        "model": {"id": "ResNet18"},
+        "model": {"id": "Dummy"},
         "model_storage": model_storage_config,
         "training": {
             "gpus": 1,
