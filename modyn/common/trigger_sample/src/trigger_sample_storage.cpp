@@ -73,9 +73,9 @@ void* get_worker_samples_impl(const char* folder, uint64_t* size, const char* pa
     break;
   }
 
-  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
 
-  memcpy((char*)data, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
+  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
 
   size[0] = samples;
   return data;
@@ -100,16 +100,16 @@ void* get_all_samples_impl(const char* folder, uint64_t* size, const char* patte
     read_magic(file);
     const uint64_t samples_in_file = read_data_size_from_header(file);
 
-    char_vector.resize(DTYPE_SIZE * (samples + samples_in_file));
-    file.read(char_vector.data() + DTYPE_SIZE * samples, DTYPE_SIZE * samples_in_file);
+    char_vector.resize(dtype_size * (samples + samples_in_file));
+    file.read(char_vector.data() + dtype_size * samples, static_cast<int>(dtype_size * samples_in_file));
     samples += samples_in_file;
 
     file.close();
   }
 
-  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
 
-  memcpy((char*)data, char_vector.data(), sizeof(char) * DTYPE_SIZE * samples);
+  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
 
   size[0] = samples;
   return data;
@@ -129,9 +129,9 @@ void* parse_file_impl(const char* filename, uint64_t* size) {
 
   size[0] = samples;
 
-  void* data = malloc(sizeof(char) * DTYPE_SIZE * samples);  // NOLINT
+  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
 
-  file.read((char*)data, sizeof(char) * DTYPE_SIZE * samples);
+  file.read(static_cast<char*>(data), sizeof(char) * dtype_size * samples);
   file.close();
 
   return data;
@@ -151,8 +151,8 @@ void write_file_impl(const char* filename, const void* data, uint64_t data_offse
                      const char* header, const uint64_t header_length) {
   std::ofstream file = open_file_write(filename);
 
-  file.write(header, header_length);
-  file.write((char*)data + DTYPE_SIZE * data_offset, DTYPE_SIZE * data_length);
+  file.write(header, static_cast<int>(header_length));
+  file.write((char*)data + dtype_size * data_offset, dtype_size * data_length);
 
   file.close();
 }
@@ -211,12 +211,12 @@ bool parse_file_subset(const char* filename, std::vector<char>& char_vector, con
     return false;
   }
 
-  const int offset = static_cast<int>(start_index) * DTYPE_SIZE;
-  const uint64_t num_bytes = (end_index - start_index) * DTYPE_SIZE;
+  const int offset = static_cast<int>(start_index) * dtype_size;
+  const uint64_t num_bytes = (end_index - start_index) * dtype_size;
 
   file.seekg(offset, std::ios::cur);
-  char_vector.resize(DTYPE_SIZE * (samples + num_bytes));
-  file.read(char_vector.data() + DTYPE_SIZE * samples, DTYPE_SIZE * num_bytes);
+  char_vector.resize(dtype_size * (samples + num_bytes));
+  file.read(char_vector.data() + dtype_size * samples, dtype_size * num_bytes);
 
   file.close();
   return true;

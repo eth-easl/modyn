@@ -7,7 +7,7 @@
 
 namespace modyn::common::trigger_sample_storage {
 
-const int DTYPE_SIZE = 16;
+const int dtype_size = 16;
 
 uint64_t get_num_samples_in_file_impl(const char* filename);
 
