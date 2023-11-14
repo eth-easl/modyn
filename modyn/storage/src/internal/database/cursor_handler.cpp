@@ -88,7 +88,11 @@ void CursorHandler::close_cursor() {
   switch (driver_) {
     case DatabaseDriver::POSTGRESQL: {
       auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session_.get_backend());
-      ASSERT(postgresql_session_backend != nullptr, "CursorHandler nullpointer from session backend!");
+      if (postgresql_session_backend == nullptr) {
+        SPDLOG_ERROR("Cannot close cursor due to session being nullptr!");
+        return;
+      }
+
       PGconn* conn = postgresql_session_backend->conn_;
 
       const std::string close_query = "CLOSE " + cursor_name_;

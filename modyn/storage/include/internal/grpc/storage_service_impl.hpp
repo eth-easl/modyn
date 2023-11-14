@@ -193,11 +193,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   void send_sample_data_from_keys(WriterT* writer, const std::vector<int64_t>& request_keys,
                                   const DatasetData& dataset_data, const DatabaseDriver& driver) {
-    // TODO(maxiBoether): we need to benchmark this. In Python, we just get all samples from the DB and then fetch then
-    // from disk. Here, we first have to get all files with a big subq, then all samples for each file again. Not sure
-    // if this is faster instead of splitting up the request keys across threads.
-
-    // create mutex to protect the writer from concurrent writes as this is not supported by gRPC
+    // Create mutex to protect the writer from concurrent writes as this is not supported by gRPC
     std::mutex writer_mutex;
 
     if (disable_multithreading_) {
@@ -359,6 +355,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         }
       }
     }
+
+    cursor_handler.close_cursor();
 
     // Iterated over all files, we now need to emit all data from buffer
     if (!record_buf.empty()) {
