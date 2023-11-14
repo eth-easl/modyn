@@ -1,5 +1,6 @@
 """Model storage GRPC servicer."""
 
+import gc
 import logging
 import os
 import pathlib
@@ -103,6 +104,10 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
             return FetchModelResponse(success=False)
         model_file_path = self.ftp_dir / f"{current_time_millis()}_{request.model_id}.modyn"
         torch.save(model_dict, model_file_path)
+
+        del model_dict
+        gc.collect()
+        torch.cuda.empty_cache()
 
         logger.info(f"Trained model {request.model_id} has local path {model_file_path}")
         return FetchModelResponse(

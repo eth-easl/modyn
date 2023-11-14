@@ -1,3 +1,4 @@
+import gc
 import json
 import logging
 import pathlib
@@ -63,12 +64,18 @@ class ModelStorageManager:
         local_metadata_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.metadata.zip"
         metadata_path = self._storage_dir / local_metadata_filename
         torch.save(checkpoint, metadata_path)
+        
+        del checkpoint
+        gc.collect()
+        torch.cuda.empty_cache()
 
         # add the new model to the database.
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return database.add_trained_model(
                 pipeline_id, trigger_id, local_model_filename, local_metadata_filename, parent_id
             )
+        
+
 
     def _handle_new_model(
         self,
@@ -99,6 +106,8 @@ class ModelStorageManager:
             if parent_model_id is not None:
                 # load model state of the parent model.
                 parent_model_state = self._reconstruct_model_state(parent_model_id, policy)
+                gc.collect()
+                torch.cuda.empty_cache()
 
                 # finally store the model delta.
                 policy.incremental_model_strategy.store_model(state_dict, parent_model_state, model_path)
@@ -129,10 +138,15 @@ class ModelStorageManager:
         if not model.parent_model:
             # base case: we can load a fully stored model.
             model_state = self._get_base_model_state(model.pipeline_id)
+            gc.collect()
+            torch.cuda.empty_cache()
             return policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
         # recursive step: we recurse to load the model state of the parent model.
         model_state = self._reconstruct_model_state(model.parent_model, policy)
+        
+        gc.collect()
+        torch.cuda.empty_cache()
 
         # we apply the incremental strategy to load our model state.
         return policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
@@ -209,6 +223,9 @@ class ModelStorageManager:
         if metadata:
             metadata_dict = torch.load(self._storage_dir / model.metadata_path)
             model_dict.update(metadata_dict)
+            del metadata_dict
+            gc.collect()
+            torch.cuda.empty_cache()
 
         return model_dict
 
