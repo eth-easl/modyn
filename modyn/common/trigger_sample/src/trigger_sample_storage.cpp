@@ -152,7 +152,7 @@ void write_file_impl(const char* filename, const void* data, int64_t data_offset
   std::ofstream file = open_file_write(filename);
 
   file.write(header, header_length);
-  file.write((char*)data + dtype_size * data_offset, dtype_size * data_length);
+  file.write(static_cast<const char*>(data) + dtype_size * data_offset, dtype_size * data_length);
 
   file.close();
 }
@@ -253,14 +253,14 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
  * @return int64_t Data size
  */
 int64_t read_data_size_from_header(std::ifstream& file) {
-  std::array<char, 2> header_chars;
+  std::array<char, 2> header_chars = {};
   file.read(header_chars.data(), 2);
   uint64_t header_length = header_chars[1];
-  header_length <<= 8;
+  header_length <<= 8u;
   header_length += header_chars[0];
 
   std::string buffer(header_length, ' ');
-  file.read(buffer.data(), header_length);
+  file.read(buffer.data(), static_cast<int64_t>(header_length));
 
   // Find the location of the shape and convert to int64_t
   return std::strtol(&buffer[buffer.find_last_of('(') + 1], nullptr, 10);
@@ -283,7 +283,7 @@ int64_t read_magic(std::ifstream& file) {
   }
 
   file.get(byte);
-  const int64_t major_version = static_cast<int64_t>(static_cast<unsigned char>(byte));
+  const auto major_version = static_cast<int64_t>(static_cast<unsigned char>(byte));
   file.get(byte);  // minor version is ignored
 
   return major_version;
