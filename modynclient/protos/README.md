@@ -1,0 +1,1 @@
+# This should be an exact copy of ../modyn/protos
