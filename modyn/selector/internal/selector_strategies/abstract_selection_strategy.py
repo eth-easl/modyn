@@ -315,7 +315,7 @@ class AbstractSelectionStrategy(ABC):
         self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
     ) -> ArrayWrapper:
         """
-        Given a trigger id and partition id, returns a list of all keys in this partition
+        Given a trigger id and partition id, returns an ArrayWrapper of all keys in this partition
 
         Args:
             trigger_id (int): The trigger id

@@ -85,12 +85,6 @@ class TriggerSampleStorage:
         if sys.maxsize < 2**63 - 1:
             raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
 
-        # We define a return object here that can infer its size when being parsed by ctypes
-        self.data_pointer = ndpointer(
-            dtype=[("f0", "<i8"), ("f1", "<f8")], ndim=1, shape=(1,), flags="C_CONTIGUOUS"
-        )  # type: ignore
-        self.data_pointer._shape_ = property(lambda self: self.shape_val[0])  # type: ignore
-
         self._get_num_samples_in_file_impl = self.extension.get_num_samples_in_file
         self._get_num_samples_in_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char)]
         self._get_num_samples_in_file_impl.restype = ctypes.c_int64
@@ -112,7 +106,7 @@ class TriggerSampleStorage:
             ctypes.POINTER(ctypes.c_int64),
             ctypes.POINTER(ctypes.c_char),
         ]
-        self._get_all_samples_impl.restype = self.data_pointer
+        self._get_all_samples_impl.restype = ctypes.POINTER(ctypes.c_char)
 
         self._get_worker_samples_impl = self.extension.get_worker_samples
         self._get_worker_samples_impl.argtypes = [
@@ -122,11 +116,11 @@ class TriggerSampleStorage:
             ctypes.c_int64,
             ctypes.c_int64,
         ]
-        self._get_worker_samples_impl.restype = self.data_pointer
+        self._get_worker_samples_impl.restype = ctypes.POINTER(ctypes.c_char)
 
         self._parse_file_impl = self.extension.parse_file
         self._parse_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.POINTER(ctypes.c_int64)]
-        self._parse_file_impl.restype = self.data_pointer
+        self._parse_file_impl.restype = ctypes.POINTER(ctypes.c_char)
 
         self._release_data_impl = self.extension.release_data
         self._release_data_impl.argtypes = [ndpointer(dtype=[("f0", "<i8"), ("f1", "<f8")], flags="C_CONTIGUOUS")]
@@ -203,11 +197,15 @@ class TriggerSampleStorage:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_int64 * 1)()
-        self.data_pointer.shape_val = size  # type: ignore
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
-        data = self._get_worker_samples_impl(folder, size, pattern, start_index, worker_subset_size).reshape(-1)
-        result = ArrayWrapper(data, self._release_data_impl)
+        data = self._get_worker_samples_impl(folder, size, pattern, start_index, worker_subset_size)
+
+        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))
+        full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
+        buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
+        result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
+
         return result
 
     def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> ArrayWrapper:
@@ -222,11 +220,16 @@ class TriggerSampleStorage:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size = (ctypes.c_int64 * 1)()
-        self.data_pointer.shape_val = size  # type: ignore
+
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
-        data = self._get_all_samples_impl(folder, size, pattern).reshape(-1)
-        result = ArrayWrapper(data, self._release_data_impl)
+        data = self._get_all_samples_impl(folder, size, pattern)
+
+        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))
+        full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
+        buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
+        result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
+
         return result
 
     def save_trigger_samples(
@@ -299,10 +302,13 @@ class TriggerSampleStorage:
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         size = (ctypes.c_int64 * 1)()
-        self.data_pointer.shape_val = size  # type: ignore
 
-        data = self._parse_file_impl(file, size).reshape(-1)
-        result = ArrayWrapper(data, self._release_data_impl)
+        data = self._parse_file_impl(file, size)
+
+        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))
+        full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
+        buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
+        result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
 
         return result
 

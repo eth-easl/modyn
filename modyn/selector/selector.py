@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
+import numpy as np
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models.triggers import Trigger
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.utils.utils import flatten, get_partition_for_worker
+from modyn.common.trigger_sample import ArrayWrapper
 
 
 class Selector:
@@ -28,7 +30,7 @@ class Selector:
         self._modyn_config = modyn_config
 
         # TODO(#308): Share partition cache between selector instances
-        self._trigger_cache: Dict[int, list[list[tuple[int, float]]]] = {}
+        self._trigger_cache: Dict[int, list[ArrayWrapper]] = {}
         self._maximum_keys_in_cache = cache_size
         self._current_keys_in_cache = 0
 
@@ -53,7 +55,7 @@ class Selector:
 
     def get_sample_keys_and_weights(
         self, trigger_id: int, worker_id: int, partition_id: int
-    ) -> list[tuple[int, float]]:
+    ) -> Union[np.ndarray, ArrayWrapper]:
         """
         For a given trigger and worker, this function returns the subset of sample
         keys to be queried from storage. It also returns the associated weight of each sample.
@@ -76,15 +78,10 @@ class Selector:
             start_index, worker_subset_size = get_partition_for_worker(
                 worker_id, self._num_workers, len(self._trigger_cache[trigger_id][partition_id])
             )
-            training_samples_subset = self._trigger_cache[trigger_id][partition_id][
-                start_index : start_index + worker_subset_size
-            ]
-        else:
-            training_samples_subset = self._strategy.get_trigger_partition_keys(
-                trigger_id, partition_id, worker_id, self._num_workers
+            return np.asanyarray(
+                self._trigger_cache[trigger_id][partition_id][start_index : start_index + worker_subset_size]
             )
-
-        return training_samples_subset
+        return self._strategy.get_trigger_partition_keys(trigger_id, partition_id, worker_id, self._num_workers)
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         return self._strategy.inform_data(keys, timestamps, labels)
