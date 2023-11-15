@@ -66,11 +66,14 @@ void StorageServer::run() {
   // Wait for shutdown signal (storage_shutdown_requested_ true)
   storage_shutdown_requested_.wait(true);
 
-  SPDLOG_INFO("Storage service shutting down.");
+  SPDLOG_INFO("Shutdown requested.");
 
   stop_grpc_server_.store(true);
   grpc_server_thread.join();
 
+  SPDLOG_INFO("gRPC server stopped.");
+
   stop_file_watcher_watchdog_.store(true);
   file_watcher_watchdog_thread.join();
+  SPDLOG_INFO("Filewatcher stopped.");
 }

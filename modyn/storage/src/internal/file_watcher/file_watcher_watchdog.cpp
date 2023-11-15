@@ -146,6 +146,7 @@ void FileWatcherWatchdog::watch_file_watcher_threads() {
 void FileWatcherWatchdog::run() {
   while (true) {
     if (stop_file_watcher_watchdog_->load()) {
+      SPDLOG_INFO("FileWatcherWatchdog exiting run loop.");
       break;
     }
     try {
@@ -156,14 +157,17 @@ void FileWatcherWatchdog::run() {
     }
     std::this_thread::sleep_for(std::chrono::seconds(file_watcher_watchdog_sleep_time_s_));
   }
+
   for (auto& file_watcher_thread_flag : file_watcher_thread_stop_flags_) {
     file_watcher_thread_flag.second.store(true);
   }
+  SPDLOG_INFO("FileWatcherWatchdog joining file watcher threads.");
   for (auto& file_watcher_thread : file_watcher_threads_) {
     if (file_watcher_thread.second.joinable()) {
       file_watcher_thread.second.join();
     }
   }
+  SPDLOG_INFO("FileWatcherWatchdog joined file watcher threads.");
 }
 
 std::vector<int64_t> FileWatcherWatchdog::get_running_file_watcher_threads() {

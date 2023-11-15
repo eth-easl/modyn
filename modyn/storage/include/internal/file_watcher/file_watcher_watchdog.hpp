@@ -37,6 +37,7 @@ class FileWatcherWatchdog {
   void stop_file_watcher_thread(int64_t dataset_id);
   void run();
   void stop() {
+    SPDLOG_INFO("FileWatcherWatchdog requesting storage shutdown!");
     stop_file_watcher_watchdog_->store(true);
     request_storage_shutdown_->store(true);
   }

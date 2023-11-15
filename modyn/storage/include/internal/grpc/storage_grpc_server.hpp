@@ -16,6 +16,7 @@ class StorageGrpcServer {
       : config_{config}, stop_grpc_server_{stop_grpc_server}, request_storage_shutdown_{request_storage_shutdown} {}
   void run();
   void stop() {
+    SPDLOG_INFO("gRPC Server requesting storage shutdown");
     stop_grpc_server_->store(true);
     request_storage_shutdown_->store(true);
   }
