@@ -23,10 +23,6 @@ training:
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
-  initial_pass:
-    activated: True
-    reference: amount
-    amount: 0.5
   batch_size: 64
   optimizers:
     - name: "default"

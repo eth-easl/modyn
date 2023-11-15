@@ -178,7 +178,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                         assert not any(used_data), "Queried unused data, but got used data."
 
                 else:
-                    keys = []
+                    keys = ()
 
                 yield list(keys)
 
@@ -202,7 +202,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
                     keys, used = zip(*chunk)
                     assert not any(used), "Queried unused data, but got used data."
                 else:
-                    keys, used = [], []
+                    keys, used = (), ()
 
                 yield list(keys)
 

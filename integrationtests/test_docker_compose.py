@@ -134,6 +134,21 @@ def selector_running() -> bool:
     return True
 
 
+def supervisor_running() -> bool:
+    config = get_modyn_config()
+
+    supervisor_address = f"{config['supervisor']['hostname']}:{config['supervisor']['port']}"
+    supervisor_channel = grpc.insecure_channel(supervisor_address)
+
+    if not grpc_connection_established(supervisor_channel):
+        print(f"Could not establish gRPC connection to supervisor at {supervisor_address}. Retrying.")
+        return False
+
+    print("Sucessfully connected to supervisor!")
+
+    return True
+
+
 def system_running() -> bool:
     return (
         storage_db_running()
@@ -143,6 +158,7 @@ def system_running() -> bool:
         and model_storage_running()
         and evaluator_running()
         and trainer_server_running()
+        and supervisor_running()
     )
 
 

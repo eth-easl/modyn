@@ -49,8 +49,6 @@ training:
   num_prefetched_partitions: 8
   use_previous_model: True
   initial_model: random
-  initial_pass:
-    activated: False
   batch_size: 65536
   optimizers:
     - name: "mlp"

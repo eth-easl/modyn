@@ -228,21 +228,6 @@ properties:
         type: number
         description: |
           In case of pretrained initial model, provide the model id of the initial model
-      initial_pass:
-        type: object
-        description: |
-          Setting of initial pass through data
-        properties:
-          activated:
-            type: boolean
-            description: |
-              Whether we do an initial pass through the data
-          reference:
-            type: string
-            description: |
-              If we do an initial pass, we define whether we reference a certain percentage of all data (= amount) or all data in an interval (= start_timestamp, end_timestamp)
-        required:
-          - activated
       checkpointing:
         type: object
         description: |
@@ -360,7 +345,6 @@ properties:
       - batch_size
       - selection_strategy
       - initial_model
-      - initial_pass
       - use_previous_model
       - checkpointing
       - optimization_criterion

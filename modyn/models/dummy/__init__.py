@@ -1,5 +1,5 @@
-"""Supervisor module. The supervisor initiates a pipeline and coordinates all components.
-
+"""
+Dummy
 """
 import os
 

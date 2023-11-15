@@ -5,7 +5,6 @@ from collections import deque
 from time import sleep
 from typing import Any, Iterable, Optional
 
-import enlighten
 import grpc
 from modyn.common.benchmark import Stopwatch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -43,7 +42,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
-from modyn.supervisor.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
+from modyn.supervisor.internal.utils import EvaluationStatusTracker
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -66,20 +65,26 @@ logger = logging.getLogger(__name__)
 class GRPCHandler:
     # pylint: disable=too-many-instance-attributes
 
+    # pylint: disable=unused-argument
     def __init__(
         self,
         modyn_config: dict,
-        progress_mgr: Optional[enlighten.Manager] = None,
-        status_bar: Optional[enlighten.StatusBar] = None,
-    ):
+    ) -> None:
         self.config = modyn_config
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
         self.connected_to_selector = False
         self.connected_to_evaluator = False
-        self.progress_mgr = progress_mgr
-        self.status_bar = status_bar
+        self.storage: Optional[StorageStub] = None
+        self.storage_channel: Optional[grpc.Channel] = None
+        self.selector: Optional[SelectorStub] = None
+        self.selector_channel: Optional[grpc.Channel] = None
+        self.trainer_server: Optional[TrainerServerStub] = None
+        self.trainer_server_channel: Optional[grpc.Channel] = None
+        self.evaluator: Optional[EvaluatorStub] = None
+        self.evaluator_channel: Optional[grpc.Channel] = None
 
+    def init_cluster_connection(self) -> None:
         self.init_storage()
         self.init_selector()
         self.init_trainer_server()
@@ -101,7 +106,7 @@ class GRPCHandler:
 
         self.storage = StorageStub(self.storage_channel)
         logger.info("Successfully connected to storage.")
-        self.connected_to_storage = True
+        self.connected_to_storage = self.storage is not None
 
     def init_selector(self) -> None:
         assert self.config is not None
@@ -119,7 +124,7 @@ class GRPCHandler:
 
         self.selector = SelectorStub(self.selector_channel)
         logger.info("Successfully connected to selector.")
-        self.connected_to_selector = True
+        self.connected_to_selector = self.selector is not None
 
     def init_trainer_server(self) -> None:
         assert self.config is not None
@@ -131,7 +136,7 @@ class GRPCHandler:
 
         self.trainer_server = TrainerServerStub(self.trainer_server_channel)
         logger.info("Successfully connected to trainer server.")
-        self.connected_to_trainer_server = True
+        self.connected_to_trainer_server = self.trainer_server is not None
 
     def init_evaluator(self) -> None:
         assert self.config is not None
@@ -143,9 +148,10 @@ class GRPCHandler:
 
         self.evaluator = EvaluatorStub(self.evaluator_channel)
         logger.info("Successfully connected to evaluator.")
-        self.connected_to_evaluator = True
+        self.connected_to_evaluator = self.evaluator is not None
 
     def dataset_available(self, dataset_id: str) -> bool:
+        assert self.storage is not None
         assert self.connected_to_storage, "Tried to check for dataset availability, but no storage connection."
         logger.info(f"Checking whether dataset {dataset_id} is available.")
 
@@ -156,6 +162,7 @@ class GRPCHandler:
     def get_new_data_since(
         self, dataset_id: str, timestamp: int
     ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
+        assert self.storage is not None
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -171,6 +178,7 @@ class GRPCHandler:
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
     ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
+        assert self.storage is not None
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -188,6 +196,7 @@ class GRPCHandler:
             swt.start("request", overwrite=True)
 
     def get_time_at_storage(self) -> int:
+        assert self.storage is not None
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
@@ -198,6 +207,8 @@ class GRPCHandler:
         return response.timestamp
 
     def inform_selector(self, pipeline_id: int, data: list[tuple[int, int, int]]) -> dict[str, Any]:
+        assert self.selector is not None
+
         keys, timestamps, labels = zip(*data)
         request = DataInformRequest(pipeline_id=pipeline_id, keys=keys, timestamps=timestamps, labels=labels)
         response: DataInformResponse = self.selector.inform_data(request)
@@ -207,6 +218,8 @@ class GRPCHandler:
     def inform_selector_and_trigger(
         self, pipeline_id: int, data: list[tuple[int, int, int]]
     ) -> tuple[int, dict[str, Any]]:
+        assert self.selector is not None
+
         keys: list[int]
         timestamps: list[int]
         labels: list[int]
@@ -224,6 +237,8 @@ class GRPCHandler:
         return trigger_id, json.loads(response.log.value)
 
     def trainer_server_available(self) -> bool:
+        assert self.trainer_server is not None
+
         if not self.connected_to_trainer_server:
             raise ConnectionError("Tried to check whether server is available, but Supervisor is not even connected!")
 
@@ -245,6 +260,7 @@ class GRPCHandler:
     def start_training(
         self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model_id: Optional[int]
     ) -> int:
+        assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
             raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
 
@@ -376,12 +392,16 @@ class GRPCHandler:
         return training_id
 
     def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+        assert self.selector is not None
+
         request = GetNumberOfSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
         response: NumberOfSamplesResponse = self.selector.get_number_of_samples(request)
 
         return response.num_samples
 
     def get_status_bar_scale(self, pipeline_id: int) -> int:
+        assert self.selector is not None
+
         request = GetStatusBarScaleRequest(pipeline_id=pipeline_id)
         response: StatusBarScaleResponse = self.selector.get_status_bar_scale(request)
 
@@ -391,19 +411,11 @@ class GRPCHandler:
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> dict[str, Any]:  # pragma: no cover
-        assert self.progress_mgr is not None
-        assert self.status_bar is not None
-
+        assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
-        self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
-
-        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        status_bar_scale = self.get_status_bar_scale(pipeline_id)
-
-        status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -433,7 +445,7 @@ class GRPCHandler:
                         res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
 
-                    status_tracker.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
+                    # status_tracker.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -444,12 +456,14 @@ class GRPCHandler:
                 trainer_log = json.loads(res.log.value)
                 break
 
-        status_tracker.close_counter()
+        # status_tracker.close_counter()
         logger.info("Training completed 🚀")
 
         return trainer_log
 
     def store_trained_model(self, training_id: int) -> int:
+        assert self.trainer_server is not None
+
         logger.info(f"Storing trained model for training {training_id}")
 
         req = StoreFinalModelRequest(training_id=training_id)
@@ -466,6 +480,8 @@ class GRPCHandler:
         return res.model_id
 
     def seed_selector(self, seed: int) -> None:
+        assert self.selector is not None
+
         if not (0 <= seed <= 100 and isinstance(seed, int)):
             raise ValueError("The seed must be an integer in [0,100]")
         if not self.connected_to_selector:
@@ -480,6 +496,7 @@ class GRPCHandler:
         assert success, "Something went wrong while seeding the selector"
 
     def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusTracker]:
+        assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
 
@@ -554,32 +571,26 @@ class GRPCHandler:
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
     def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
-        assert self.progress_mgr is not None
-        assert self.status_bar is not None
-
+        assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
-
-        self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
 
         # We are using a deque here in order to fetch the status of each evaluation
         # sequentially in a round-robin manner.
         working_queue: deque[int] = deque()
         blocked_in_a_row: dict[int, int] = {}
-        for evaluation_id, status_tracker in evaluations.items():
-            status_tracker.create_counter(self.progress_mgr, training_id, evaluation_id)
+        for evaluation_id in evaluations.keys():
             working_queue.append(evaluation_id)
             blocked_in_a_row[evaluation_id] = 0
 
         while working_queue:
             current_evaluation_id = working_queue.popleft()
-            current_evaluation_tracker = evaluations[current_evaluation_id]
             req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
             res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
 
             if not res.valid:
                 logger.warning(f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n")
-                current_evaluation_tracker.end_counter(True)
+                # current_evaluation_tracker.end_counter(True)
                 continue
 
             if res.blocked:
@@ -593,17 +604,14 @@ class GRPCHandler:
 
                 if res.HasField("exception") and res.exception is not None:
                     logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
-                    current_evaluation_tracker.end_counter(True)
                     continue
                 if not res.is_running:
-                    current_evaluation_tracker.end_counter(False)
                     continue
                 if res.state_available:
                     assert res.HasField("samples_seen") and res.HasField(
                         "batches_seen"
                     ), f"Inconsistent server response:\n{res}"
 
-                    current_evaluation_tracker.progress_counter(res.samples_seen)
                 elif res.is_running:
                     logger.warning("Evaluator is not blocked and is running, but no state is available.")
 
@@ -611,13 +619,13 @@ class GRPCHandler:
             sleep(1)
 
         logger.info("Evaluation completed ✅")
-        self.status_bar.update(demo="Evaluation completed")
 
     def store_evaluation_results(
         self,
         evaluation_result_writers: list[AbstractEvaluationResultWriter],
         evaluations: dict[int, EvaluationStatusTracker],
     ) -> None:
+        assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
