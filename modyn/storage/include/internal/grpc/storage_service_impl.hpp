@@ -123,7 +123,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data);
 
-      if (session.is_connected()) {
+      // sqlite causes memory leaks otherwise
+      if (session.get_backend_name() != "sqlite3" && session.is_connected()) {
         session.close();
       }
 
@@ -376,7 +377,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
     }
 
-    if (session.is_connected()) {
+    // sqlite causes memory leaks otherwise
+    if (session.get_backend_name() != "sqlite3" && session.is_connected()) {
       session.close();
     }
   }
