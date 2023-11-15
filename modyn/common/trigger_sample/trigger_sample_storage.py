@@ -201,7 +201,7 @@ class TriggerSampleStorage:
 
         data = self._get_worker_samples_impl(folder, size, pattern, start_index, worker_subset_size)
 
-        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))
+        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))  # type: ignore
         full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
         buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
         result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
@@ -225,7 +225,7 @@ class TriggerSampleStorage:
 
         data = self._get_all_samples_impl(folder, size, pattern)
 
-        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))
+        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))  # type: ignore
         full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
         buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
         result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
@@ -305,7 +305,7 @@ class TriggerSampleStorage:
 
         data = self._parse_file_impl(file, size)
 
-        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))
+        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))  # type: ignore
         full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
         buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
         result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
