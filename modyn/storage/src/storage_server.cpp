@@ -64,9 +64,9 @@ void StorageServer::run() {
   std::thread grpc_server_thread(&StorageGrpcServer::run, &grpc_server_);
 
   // Wait for shutdown signal (storage_shutdown_requested_ true)
-  storage_shutdown_requested_.wait(true);
+  storage_shutdown_requested_.wait(false);
 
-  SPDLOG_INFO("Shutdown requested.");
+  SPDLOG_INFO("Shutdown requested at storage server, requesting shutdown of gRPC server.");
 
   stop_grpc_server_.store(true);
   grpc_server_thread.join();

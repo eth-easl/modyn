@@ -112,7 +112,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         return {StatusCode::OK, "Dataset does not exist."};
       }
 
-      const int64_t keys_size = static_cast<int64_t>(request->keys_size());
+      const auto keys_size = static_cast<int64_t>(request->keys_size());
       if (keys_size == 0) {
         return {StatusCode::OK, "No keys provided."};
       }
@@ -121,8 +121,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       request_keys.reserve(keys_size);
       std::copy(request->keys().begin(), request->keys().end(), std::back_inserter(request_keys));
 
-      send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data,
-                                          storage_database_connection_.get_drivername());
+      send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data);
 
       if (session.is_connected()) {
         session.close();
@@ -192,7 +191,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   void send_sample_data_from_keys(WriterT* writer, const std::vector<int64_t>& request_keys,
-                                  const DatasetData& dataset_data, const DatabaseDriver& driver) {
+                                  const DatasetData& dataset_data) {
     // Create mutex to protect the writer from concurrent writes as this is not supported by gRPC
     std::mutex writer_mutex;
 
@@ -200,8 +199,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       const std::vector<int64_t>::const_iterator begin = request_keys.begin();  // NOLINT (modernize-use-auto)
       const std::vector<int64_t>::const_iterator end = request_keys.end();      // NOLINT (modernize-use-auto)
 
-      get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
-                                    &request_keys, driver);
+      get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_);
 
     } else {
       std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
@@ -213,7 +211,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
         retrieval_threads_vector[thread_id] =
             std::thread(StorageServiceImpl::get_samples_and_send<WriterT>, begin, end, writer, &writer_mutex,
-                        &dataset_data, &config_, sample_batch_size_, &request_keys, driver);
+                        &dataset_data, &config_, sample_batch_size_);
       }
 
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -386,8 +384,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   static void send_sample_data_for_keys_and_file(  // NOLINT(readability-function-cognitive-complexity)
       WriterT* writer, std::mutex& writer_mutex, const std::vector<int64_t>& sample_keys,
-      const DatasetData& dataset_data, soci::session& session, const DatabaseDriver& driver,
-      int64_t sample_batch_size) {
+      const DatasetData& dataset_data, soci::session& session, int64_t /*sample_batch_size*/) {
+    // Note that we currently ignore the sample batch size here, under the assumption that users do not request more
+    // keys than this
     try {
       const uint64_t num_keys = sample_keys.size();
       std::vector<int64_t> sample_labels(num_keys);
@@ -428,8 +427,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         if (sample_fileid != current_file_id) {
           // 1. Prepare response
           SPDLOG_INFO("Encountered new file, getting data from disk");
-          const std::vector<int64_t> file_indexes(sample_indices.begin() + current_file_start_idx,
-                                                  sample_indices.begin() + sample_idx);
+          const std::vector<int64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
+                                                  sample_indices.begin() + static_cast<int64_t>(sample_idx));
           const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
           SPDLOG_INFO("Got data from disk, preparing response.");
 
@@ -442,10 +441,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
           modyn::storage::GetResponse response;
           response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
-          response.mutable_keys()->Assign(sample_keys.begin() + current_file_start_idx,
-                                          sample_keys.begin() + sample_idx);
-          response.mutable_labels()->Assign(sample_labels.begin() + current_file_start_idx,
-                                            sample_labels.begin() + sample_idx);
+          response.mutable_keys()->Assign(sample_keys.begin() + static_cast<int64_t>(current_file_start_idx),
+                                          sample_keys.begin() + static_cast<int64_t>(sample_idx));
+          response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
+                                            sample_labels.begin() + static_cast<int64_t>(sample_idx));
           SPDLOG_INFO("Response prepared.");
 
           // 2. Send response
@@ -495,15 +494,14 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static void get_samples_and_send(const std::vector<int64_t>::const_iterator begin,
                                    const std::vector<int64_t>::const_iterator end, WriterT* writer,
                                    std::mutex* writer_mutex, const DatasetData* dataset_data, const YAML::Node* config,
-                                   int64_t sample_batch_size, const std::vector<int64_t>* request_keys,
-                                   const DatabaseDriver driver) {
+                                   int64_t sample_batch_size) {
     if (begin >= end) {
       return;
     }
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
-    std::vector<int64_t> sample_keys(begin, end);
-    send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session, driver,
+    const std::vector<int64_t> sample_keys(begin, end);
+    send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session,
                                                 sample_batch_size);
     session.close();
   }
@@ -523,7 +521,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static std::vector<int64_t> get_file_ids_for_samples(const std::vector<int64_t>& request_keys, int64_t dataset_id,
                                                        soci::session& session);
   static std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
-  get_keys_per_thread(const std::vector<int64_t>& file_ids, uint64_t retrieval_threads);
+  get_keys_per_thread(const std::vector<int64_t>& keys, uint64_t threads);
   static std::vector<int64_t> get_samples_corresponding_to_file(int64_t file_id, int64_t dataset_id,
                                                                 const std::vector<int64_t>& request_keys,
                                                                 soci::session& session);

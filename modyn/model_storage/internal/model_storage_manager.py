@@ -32,13 +32,6 @@ class ModelStorageManager:
         self._storage_dir = storage_dir
         self._ftp_dir = ftp_dir
 
-    def print_mem_usage(self, additional: str) -> None:
-        total = torch.cuda.get_device_properties(0).total_memory
-        reserved = torch.cuda.memory_reserved(0)
-        allocated = torch.cuda.memory_allocated(0)
-
-        logger.info(f"{additional}: Total mem = {total}, reserved = {reserved}, alloc = {allocated}")
-
     def store_model(self, pipeline_id: int, trigger_id: int, checkpoint_path: pathlib.Path) -> int:
         """
         Store the trained model contained in the checkpoint file to disk. It uses the model storage policy that is
@@ -53,17 +46,12 @@ class ModelStorageManager:
         Returns:
             int: the model id which identifies the stored model.
         """
-        self.print_mem_usage("Pre-Load")
         checkpoint = torch.load(checkpoint_path)
-        self.print_mem_usage("Post-Load")
         policy = self.get_model_storage_policy(pipeline_id)
-        self.print_mem_usage("Post-Policy")
 
         # split the model (stored under the "model" key) from metadata.
         assert "model" in checkpoint
         state_dict = checkpoint["model"]
-
-        self.print_mem_usage("Post-State Dict")
 
         local_model_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.model"
         model_path = self._storage_dir / local_model_filename
@@ -71,26 +59,26 @@ class ModelStorageManager:
         # handle the new model according to the model storage policy. If it is stored incrementally, we receive
         # the model id of the parent.
         parent_id = self._handle_new_model(pipeline_id, trigger_id, state_dict, model_path, policy)
-        self.print_mem_usage("Post-HNM")
         del state_dict
         del checkpoint["model"]
-        self.print_mem_usage("Post-Pop")
 
         # now checkpoint only contains optimizer state and metadata.
         local_metadata_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.metadata.zip"
         metadata_path = self._storage_dir / local_metadata_filename
         torch.save(checkpoint, metadata_path)
         del checkpoint
-        gc.collect()
-        torch.cuda.empty_cache()
+        self._clear_cuda_mem()
 
         # add the new model to the database.
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return database.add_trained_model(
                 pipeline_id, trigger_id, local_model_filename, local_metadata_filename, parent_id
             )
-        
 
+    def _clear_cuda_mem(self) -> None:
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def _handle_new_model(
         self,
@@ -112,7 +100,6 @@ class ModelStorageManager:
         Returns:
             int: if the model is stored incrementally, the parent model id is returned.
         """
-        self.print_mem_usage("HNM Call Begin")
         # check whether we must apply the incremental storage strategy or the full model strategy.
         if policy.incremental_model_strategy and (
             policy.full_model_interval is None or trigger_id % policy.full_model_interval != 0
@@ -127,20 +114,16 @@ class ModelStorageManager:
 
                 del parent_model_state
                 del state_dict
-                gc.collect()
-                torch.cuda.empty_cache()
+                self._clear_cuda_mem()
 
                 return parent_model_id
             logger.warning("Previous model is not available! Storing full model...")
-        self.print_mem_usage("Post Incremental Hnm")
 
         # store the model in its entirety.
         policy.full_model_strategy.store_model(state_dict, model_path)
-        self.print_mem_usage("Post Store Model Full Model")
 
         del state_dict
-        gc.collect()
-        torch.cuda.empty_cache()
+        self._clear_cuda_mem()
         return None
 
     def _reconstruct_model_state(self, model_id: int, policy: ModelStoragePolicy) -> dict:
@@ -162,15 +145,13 @@ class ModelStorageManager:
         if not model.parent_model:
             # base case: we can load a fully stored model.
             model_state = self._get_base_model_state(model.pipeline_id)
-            gc.collect()
-            torch.cuda.empty_cache()
+            self._clear_cuda_mem()
             return policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
         # recursive step: we recurse to load the model state of the parent model.
         model_state = self._reconstruct_model_state(model.parent_model, policy)
 
-        gc.collect()
-        torch.cuda.empty_cache()
+        self._clear_cuda_mem()
 
         # we apply the incremental strategy to load our model state.
         return policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
@@ -248,8 +229,7 @@ class ModelStorageManager:
             metadata_dict = torch.load(self._storage_dir / model.metadata_path)
             model_dict.update(metadata_dict)
             del metadata_dict
-            gc.collect()
-            torch.cuda.empty_cache()
+            self._clear_cuda_mem()
 
         return model_dict
 

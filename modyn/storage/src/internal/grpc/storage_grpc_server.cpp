@@ -45,7 +45,7 @@ void StorageGrpcServer::run() {
   SPDLOG_INFO("Server listening on {}", server_address);
 
   // Wait for the server to shutdown or signal to shutdown.
-  stop_grpc_server_->wait(true);
+  stop_grpc_server_->wait(false);
   server->Shutdown();
 
   stop();

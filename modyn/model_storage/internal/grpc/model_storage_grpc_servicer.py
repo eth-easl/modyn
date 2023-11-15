@@ -1,6 +1,5 @@
 """Model storage GRPC servicer."""
 
-import gc
 import logging
 import os
 import pathlib
@@ -82,7 +81,6 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         logger.info("Download completed. Invoking model storage manager.")
 
         model_id = self.model_storage_manager.store_model(pipeline_id, trigger_id, local_model_path)
-        self.model_storage_manager.print_mem_usage("Post-Store-Model")
         os.remove(local_model_path)
 
         return RegisterModelResponse(success=True, model_id=model_id)
@@ -107,8 +105,7 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         torch.save(model_dict, model_file_path)
 
         del model_dict
-        gc.collect()
-        torch.cuda.empty_cache()
+        self.model_storage_manager._clear_cuda_mem()
 
         logger.info(f"Trained model {request.model_id} has local path {model_file_path}")
         return FetchModelResponse(
