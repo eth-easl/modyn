@@ -69,6 +69,11 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Skips the unzipping and only (re)creates labels and timestamps.",
     )
     parser_.add_argument(
+        "--skip_labels",
+        action="store_true",
+        help="Skips the labeling",
+    )
+    parser_.add_argument(
         "--tmpdir", type=pathlib.Path, action="store", help="If given, use a different directory for storing temporary data"
     )
     parser_.add_argument(
@@ -96,7 +101,11 @@ def main():
         logger.info("Starting extraction")
         downloader.extract()
 
-    downloader.convert_labels_and_timestamps(args.all)
+    if not args.skip_labels:
+        logger.info("Starting labeling")
+        downloader.convert_labels_and_timestamps(args.all)
+
+    downloader.remove_images_without_label()
 
     if args.dummyyear:
         downloader.add_dummy_year()
@@ -159,13 +168,13 @@ class CLDatasets:
                 self.tmpdir + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
             )
 
-        self.remove_images_without_label()
 
     def remove_images_without_label(self):
         print("Removing images without label...")
         removed_files = 0
 
-        for filename in glob.iglob(self.directory + "**/*.jpg", recursive=True):
+        image_paths = pathlib.Path(self.directory).glob("**/*.jpg")
+        for filename in tqdm(image_paths):
             file_path = pathlib.Path(filename)
             label_path = pathlib.Path(file_path.parent / f"{file_path.stem}.label")
 
@@ -189,23 +198,24 @@ class CLDatasets:
         warned_once = False
 
         logger.info("Labels and timestamps loaded, applying")
+        missing_files = 0
         for store_location, label, timestamp in tqdm(
             zip(store_loc, labels, timestamps), total=len(store_loc)
         ):
             path = pathlib.Path(
-                self.directory
-                + "/CLOC/data/"
+                self.directory + "/"
                 + store_location.strip().replace("\n", "")
             )
 
             if not path.exists():
                 if not self.test_mode:
-                    raise FileExistsError(f"Cannot find file {store_location}")
+                    raise FileExistsError(f"Cannot find file {path}")
                 if not warned_once:
                     logger.warning(
-                        f"Cannot find file {store_location}, but we are in test mode. Will not repeat this warning."
+                        f"Cannot find file {path}, but we are in test mode. Will not repeat this warning."
                     )
                     warned_once = True
+                missing_files += 1
                 continue
 
             label_path = pathlib.Path(path.parent / f"{path.stem}.label")
@@ -221,9 +231,11 @@ class CLDatasets:
 
             os.utime(path, (actual_timestamp, actual_timestamp))
 
+        logger.info(f"missing files for {store_loc_path} = {missing_files}/{len(store_loc)}")
+
     def add_dummy_year(self):
-        dummy_path = pathlib.Path(self.directory + "/CLOC/data/dummy.jpg")
-        dummy_label_path = pathlib.Path(self.directory + "/CLOC/data/dummy.label")
+        dummy_path = pathlib.Path(self.directory + "/dummy.jpg")
+        dummy_label_path = pathlib.Path(self.directory + "/dummy.label")
 
         assert not dummy_path.exists() and not dummy_label_path.exists()
 
@@ -262,7 +274,7 @@ class CLDatasets:
             else:
                 print(f"Skipping {target} as it already exists")
 
-        with ThreadPoolExecutor(max_workers=32) as executor, tqdm(total=len(blobs_to_download)) as pbar:
+        with ThreadPoolExecutor(max_workers=16) as executor, tqdm(total=len(blobs_to_download)) as pbar:
             futures_list = []
             download_blob = lambda target, blob: blob.download_to_filename(target)
 
