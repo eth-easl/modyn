@@ -460,7 +460,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
           file_wrapper->set_file_path(current_file_path);
-          current_file_start_idx = sample_idx;
+          current_file_start_idx = static_cast<int64_t>(sample_idx);
           SPDLOG_INFO("Local state updated.");
         }
       }
