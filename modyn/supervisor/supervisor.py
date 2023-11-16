@@ -10,6 +10,7 @@ from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
+    LogResultWriter,
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -31,7 +32,11 @@ class Supervisor:
         "CoresetStrategy",
     ]
 
-    supported_evaluation_result_writers: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
+    supported_evaluation_result_writers: dict = {
+        "json": JsonResultWriter,
+        "tensorboard": TensorboardResultWriter,
+        "log": LogResultWriter,
+    }
 
     def __init__(
         self,
@@ -253,9 +258,11 @@ class Supervisor:
                 )
                 if not train_dataset_in_eval:
                     # TODO(#335): Fix this. Clean up in general.
-                    logger.error("To create the evaluation matrix, you need to specify"
-                    f" how to evaluate the training dataset {train_dataset_id}" # pylint: disable
-                    " in the evaluation section of the pipeline.")
+                    logger.error(
+                        "To create the evaluation matrix, you need to specify"
+                        f" how to evaluate the training dataset {train_dataset_id}"  # pylint: disable
+                        " in the evaluation section of the pipeline."
+                    )
                     is_valid = False
 
         return is_valid
@@ -545,10 +552,7 @@ class Supervisor:
                 logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
                 evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", trigger)
-                def noop_func(noop: Any):
-                    pass
-                eval_result_writer.store_results = noop_func
+                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluations)
                 self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
