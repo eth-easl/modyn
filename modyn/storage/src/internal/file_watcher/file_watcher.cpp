@@ -10,6 +10,7 @@
 #include <functional>
 #include <iostream>
 #include <sstream>
+#include <unordered_set>
 
 #include "internal/file_wrapper/file_wrapper_utils.hpp"
 #include "internal/filesystem_wrapper/filesystem_wrapper_utils.hpp"
@@ -197,22 +198,70 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
     if (file_paths_begin >= file_paths_end) {
       return;
     }
+
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
-    std::vector<std::string> files_for_insertion;
     auto filesystem_wrapper = get_filesystem_wrapper(filesystem_wrapper_type);
 
     int ignore_last_timestamp = 0;
     session << "SELECT ignore_last_timestamp FROM datasets WHERE dataset_id = :dataset_id",
         soci::into(ignore_last_timestamp), soci::use(dataset_id);
 
-    std::copy_if(
-        file_paths_begin, file_paths_end, std::back_inserter(files_for_insertion),
-        [&timestamp, &session, &filesystem_wrapper, &ignore_last_timestamp, &dataset_id](const std::string& file_path) {
-          return check_file_for_insertion(file_path, static_cast<bool>(ignore_last_timestamp), timestamp, dataset_id,
-                                          filesystem_wrapper, session);
-        });
+    // 1. Batch files into chunks
+
+    uint64_t num_paths = file_paths_end - file_paths_begin;
+    uint64_t num_chunks = num_paths / sample_dbinsertion_batchsize;
+
+    if (num_paths % sample_dbinsertion_batchsize != 0) {
+      ++num_chunks;
+    }
+
+    std::vector<std::string> unknown_files;
+
+    for (uint64_t i = 0; i < num_chunks; ++i) {
+      SPDLOG_INFO("Handling chunk {}/{}", i + 1, num_chunks);
+      auto start_it = file_paths_begin + i * static_cast<uint64_t>(sample_dbinsertion_batchsize);
+      auto end_it = i < num_chunks - 1 ? start_it + sample_dbinsertion_batchsize : file_paths_end;
+      std::vector<std::string> chunk_paths(start_it, end_it);
+      std::string known_files_query = fmt::format(
+          "SELECT path FROM files WHERE path IN (\"{}\") AND dataset_id = :dataset_id", fmt::join(chunk_paths, "\",\""));
+      std::vector<std::string> known_paths(sample_dbinsertion_batchsize);
+      SPDLOG_INFO("Chunk: {}/{} prepared query", i + 1, num_chunks);
+
+      session << known_files_query, soci::into(known_paths), soci::use(dataset_id);
+      SPDLOG_INFO("Chunk: {}/{} executed query", i + 1, num_chunks);
+      std::unordered_set<std::string> known_paths_set(known_paths.begin(), known_paths.end());
+      SPDLOG_INFO("Chunk: {}/{} prepared hashtable", i + 1, num_chunks);
+
+      std::copy_if(chunk_paths.begin(), chunk_paths.end(), std::back_inserter(unknown_files),
+                   [&known_paths_set](const std::string& file_path) { return !known_paths_set.contains(file_path); });
+    }
+    SPDLOG_INFO("Found {} unknwon files!", unknown_files.size());
+    std::vector<std::string> files_for_insertion;
+
+    if (!ignore_last_timestamp) {
+      files_for_insertion.reserve(unknown_files.size());
+
+      std::copy_if(unknown_files.begin(), unknown_files.end(), std::back_inserter(files_for_insertion),
+                   [&filesystem_wrapper, &timestamp](const std::string& file_path) {
+                     try {
+                       const int64_t& modified_time = filesystem_wrapper->get_modified_time(file_path);
+                       return modified_time >= timestamp || timestamp == 0;
+                     } catch (const std::exception& mod_e) {
+                       SPDLOG_ERROR(
+                           fmt::format("Error while checking modified time of file {}. It could be that a deletion "
+                                       "request is currently running: {}",
+                                       file_path, mod_e.what()));
+                       return false;
+                     }
+                   });
+    } else {
+      files_for_insertion = unknown_files;
+    }
+
+    unknown_files.clear();
+    unknown_files.shrink_to_fit();
 
     // TODO(MaxiBoether) move back into if
     SPDLOG_INFO("Found {} files for insertion!", files_for_insertion.size());
