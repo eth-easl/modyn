@@ -12,6 +12,7 @@ from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDatase
 from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import AbstractDecomposableMetric, AbstractHolisticMetric
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluatorMessages
+from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders as prepare_trigger_dataloaders
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 
@@ -57,6 +58,33 @@ class PytorchEvaluator:
         self._info("Initialized PyTorch evaluator.")
 
     def _prepare_dataloader(self, evaluation_info: EvaluationInfo) -> torch.utils.data.DataLoader:
+        if evaluation_info.pipeline_id is None:
+            return self._prepare_fixed_evaluation_dataloader(evaluation_info)
+
+        return self._prepare_trigger_evaluation_dataloader(evaluation_info)
+
+    def _prepare_trigger_evaluation_dataloader(self, evaluation_info: EvaluationInfo) -> torch.utils.data.DataLoader:
+        self._debug("Creating OnlineDataset.")
+        dataloader, _ = prepare_trigger_dataloaders(
+            evaluation_info.pipeline_id,
+            evaluation_info.trigger_id,
+            evaluation_info.dataset_id,
+            evaluation_info.num_dataloaders,
+            evaluation_info.batch_size,
+            evaluation_info.bytes_parser,
+            evaluation_info.transform_list,
+            evaluation_info.storage_address,
+            evaluation_info.selector_address,
+            evaluation_info.evaluation_id,
+            evaluation_info.num_prefetched_partitions,
+            evaluation_info.parallel_prefetch_requests,
+            None,  # TODO(create issue): Support tokenizer in Evaluator (also affects fixed set)
+            None,
+        )
+
+        return dataloader
+
+    def _prepare_fixed_evaluation_dataloader(self, evaluation_info: EvaluationInfo) -> torch.utils.data.DataLoader:
         self._debug("Creating EvaluationDataset.")
         dataset = EvaluationDataset(
             evaluation_info.dataset_id,

@@ -32,11 +32,13 @@ from modyn.metadata_database.models import TrainedModel
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
+from modyn.selector.internal.grpc.generated.selector_pb2 import GetNumberOfSamplesRequest, NumberOfSamplesResponse
+from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils import dynamic_module_import, grpc_connection_established
+from modyn.utils import MAX_MESSAGE_SIZE, dynamic_module_import, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         model_storage_address = f"{config['model_storage']['hostname']}:{config['model_storage']['port']}"
         self._model_storage_stub = EvaluatorGRPCServicer.connect_to_model_storage(model_storage_address)
 
+        self._selector_address = f"{config['selector']['hostname']}:{config['selector']['port']}"
+        self._selector_stub = EvaluatorGRPCServicer.connect_to_selector(self._selector_address)
+
     @staticmethod
     def connect_to_model_storage(model_storage_address: str) -> ModelStorageStub:
         model_storage_channel = grpc.insecure_channel(model_storage_address)
@@ -89,7 +94,22 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
         return StorageStub(storage_channel)
 
+    @staticmethod
+    def connect_to_selector(selector_address: str) -> SelectorStub:
+        selector_channel = grpc.insecure_channel(
+            selector_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
+        assert selector_channel is not None
+        if not grpc_connection_established(selector_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to selector at address {selector_address}.")
+        return SelectorStub(selector_channel)
+
     # pylint: disable=too-many-locals
+
     def evaluate_model(self, request: EvaluateModelRequest, context: grpc.ServicerContext) -> EvaluateModelResponse:
         logger.info("Received evaluate model request.")
 
@@ -115,15 +135,39 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
             return EvaluateModelResponse(evaluation_started=False)
 
-        dataset_size_req = GetDatasetSizeRequest(dataset_id=request.dataset_info.dataset_id)
-        dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
-
-        if not dataset_size_response.success:
-            logger.error(
-                f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
-                f"Evaluation cannot be started."
+        dataset_size = -1
+        pipeline_id: Optional[int] = None
+        trigger_id: Optional[int] = None
+        num_prefetched_partitions: Optional[int] = None
+        parallel_prefetch_requests: Optional[int] = None
+        if request.HasField("trigger_training_set_info"):
+            num_samples_request = GetNumberOfSamplesRequest(
+                pipeline_id=request.trigger_training_set_info.pipeline_id,
+                trigger_id=request.trigger_training_set_info.trigger_id,
             )
-            return EvaluateModelResponse(evaluation_started=False)
+            num_samples_response: NumberOfSamplesResponse = self._selector_stub.get_number_of_samples(
+                num_samples_request
+            )
+            dataset_size = num_samples_response.num_samples
+            pipeline_id = request.trigger_training_set_info.pipeline_id
+            trigger_id = request.trigger_training_set_info.trigger_id
+            num_prefetched_partitions = request.trigger_training_set_info.num_prefetched_partitions
+            parallel_prefetch_requests = request.trigger_training_set_info.parallel_prefetch_requests
+
+        else:
+            dataset_size_req = GetDatasetSizeRequest(dataset_id=request.dataset_info.dataset_id)
+            dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
+
+            if not dataset_size_response.success:
+                logger.error(
+                    f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
+                    f"Evaluation cannot be started."
+                )
+                return EvaluateModelResponse(evaluation_started=False)
+
+            dataset_size = dataset_size_response.num_keys
+
+        assert dataset_size > -1
 
         with self._lock:
             evaluation_id = self._next_evaluation_id
@@ -151,14 +195,18 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             self._storage_address,
             metrics,
             trained_model_path,
+            pipeline_id,
+            trigger_id,
+            num_prefetched_partitions,
+            parallel_prefetch_requests,
+            self._selector_address,
         )
+
         self._evaluation_dict[evaluation_id] = evaluation_info
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
-        return EvaluateModelResponse(
-            evaluation_started=True, evaluation_id=evaluation_id, dataset_size=dataset_size_response.num_keys
-        )
+        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id, dataset_size=dataset_size)
 
     @staticmethod
     def _setup_metrics(metric_configurations: list[MetricConfiguration]) -> list[AbstractEvaluationMetric]:
