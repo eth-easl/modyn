@@ -78,7 +78,7 @@ class PytorchEvaluator:
             evaluation_info.evaluation_id,
             evaluation_info.num_prefetched_partitions,
             evaluation_info.parallel_prefetch_requests,
-            None,  # TODO(create issue): Support tokenizer in Evaluator (also affects fixed set)
+            None,  # TODO(#336): Support tokenizer in Evaluator (also affects fixed set)
             None,
         )
 

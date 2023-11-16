@@ -32,6 +32,8 @@ from modyn.metadata_database.models import TrainedModel
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
+
+# pylint: disable-next=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetNumberOfSamplesRequest, NumberOfSamplesResponse
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 

@@ -52,8 +52,8 @@ class Supervisor:
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
         self.evaluation_matrix = evaluation_matrix
-        self.trained_models = []
-        self.triggers = []
+        self.trained_models: list[int] = []
+        self.triggers: list[int] = []
 
         self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": pipeline_config, "modyn_config": modyn_config},
@@ -248,16 +248,14 @@ class Supervisor:
             else:
                 train_dataset_id = self.pipeline_config["data"]["dataset_id"]
                 train_dataset_in_eval = any(
-                    [
-                        dataset["dataset_id"] == train_dataset_id
-                        for dataset in self.pipeline_config["evaluation"]["datasets"]
-                    ]
+                    dataset["dataset_id"] == train_dataset_id
+                    for dataset in self.pipeline_config["evaluation"]["datasets"]
                 )
                 if not train_dataset_in_eval:
-                    # TODO(create issue): Fix this. Clean up in general.
+                    # TODO(#335): Fix this. Clean up in general.
                     logger.error(
                         "To create the evaluation matrix,"
-                        + f"you need to specify how to evaluate the training dataset {train_dataset_id}"
+                        + "you need to specify how to evaluate the training dataset {}".format(train_dataset_id)
                         + " in the evaluation section of the pipeline."
                     )
                     is_valid = False

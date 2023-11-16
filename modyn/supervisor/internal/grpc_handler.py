@@ -539,23 +539,22 @@ class GRPCHandler:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
         device = pipeline_config["evaluation"]["device"]
+        evaluations: dict[int, EvaluationStatusTracker] = {}
 
         if pipeline_id is None:
             # In this case, we evaluate on fixed datasets
-            evaluations: dict[int, EvaluationStatusTracker] = {}
-
             for dataset in pipeline_config["evaluation"]["datasets"]:
                 dataset_id = dataset["dataset_id"]
 
                 req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
-                response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
+                fixed_eval_response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
 
-                if not response.evaluation_started:
-                    logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {response}.")
+                if not fixed_eval_response.evaluation_started:
+                    logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {fixed_eval_response}.")
                 else:
-                    evaluation_id = response.evaluation_id
+                    evaluation_id = fixed_eval_response.evaluation_id
                     logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-                    evaluations[evaluation_id] = EvaluationStatusTracker(dataset_id, response.dataset_size)
+                    evaluations[evaluation_id] = EvaluationStatusTracker(dataset_id, fixed_eval_response.dataset_size)
 
             return evaluations
 
@@ -581,14 +580,16 @@ class GRPCHandler:
             num_prefetched_partitions,
             parallel_prefetch_requests,
         )
-        response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
+        trigger_eval_response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
 
-        if not response.evaluation_started:
-            logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {response}.")
+        if not trigger_eval_response.evaluation_started:
+            logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {trigger_eval_response}.")
         else:
-            evaluation_id = response.evaluation_id
+            evaluation_id = trigger_eval_response.evaluation_id
             logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-            evaluations[evaluation_id] = EvaluationStatusTracker(dataset_id, response.dataset_size)
+            evaluations[evaluation_id] = EvaluationStatusTracker(dataset_id, trigger_eval_response.dataset_size)
+
+        return evaluations
 
     @staticmethod
     def _prepare_evaluation_request(
@@ -648,8 +649,14 @@ class GRPCHandler:
         }
 
         if pipeline_id is not None:
+            assert trigger_id is not None
+            assert num_prefetched_partitions is not None
+            assert parallel_prefetch_requests is not None
             ttsi = TriggerTrainingSetInfo(
-                pipeline_id, trigger_id, num_prefetched_partitions, parallel_prefetch_requests
+                pipeline_id=pipeline_id,
+                trigger_id=trigger_id,
+                num_prefetched_partitions=num_prefetched_partitions,
+                parallel_prefetch_requests=parallel_prefetch_requests,
             )
             start_evaluation_kwargs["trigger_training_set_info"] = ttsi
 
