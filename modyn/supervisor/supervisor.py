@@ -253,11 +253,10 @@ class Supervisor:
                 )
                 if not train_dataset_in_eval:
                     # TODO(#335): Fix this. Clean up in general.
-                    logger.error(
-                        "To create the evaluation matrix,"
-                        "you need to specify how to evaluate the training dataset {}"
-                        " in the evaluation section of the pipeline.".format(train_dataset_id)
-                    )
+                    error_str =  "To create the evaluation matrix, you need to specify"
+                        + f" how to evaluate the training dataset {train_dataset_id}"
+                        + " in the evaluation section of the pipeline."
+                    logger.error(error_str)
                     is_valid = False
 
         return is_valid
