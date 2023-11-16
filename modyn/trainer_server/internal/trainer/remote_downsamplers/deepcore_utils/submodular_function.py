@@ -67,13 +67,13 @@ class FacilityLocation(SubmodularFunction):
 
     def calc_gain_batch(self, idx_gain, selected, **kwargs):
         batch_idx = ~self.all_idx
-        batch_idx[0: kwargs["batch"]] = True
+        batch_idx[0 : kwargs["batch"]] = True
         gains = np.maximum(
             0.0, self.similarity_kernel(batch_idx, idx_gain) - self.cur_max[batch_idx].reshape(-1, 1)
         ).sum(axis=0)
         for i in range(kwargs["batch"], self.n, kwargs["batch"]):
             batch_idx = ~self.all_idx
-            batch_idx[i * kwargs["batch"]: (i + 1) * kwargs["batch"]] = True
+            batch_idx[i * kwargs["batch"] : (i + 1) * kwargs["batch"]] = True
             gains += np.maximum(
                 0.0, self.similarity_kernel(batch_idx, idx_gain) - self.cur_max[batch_idx].reshape(-1, 1)
             ).sum(axis=0)

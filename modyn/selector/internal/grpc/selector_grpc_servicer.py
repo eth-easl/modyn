@@ -110,7 +110,7 @@ class SelectorGRPCServicer(SelectorServicer):
             return
 
         for i in range(0, num_samples, self._sample_batch_size):
-            batch = samples[i: i + self._sample_batch_size]
+            batch = samples[i : i + self._sample_batch_size]
             batch_keys = [sample[0] for sample in batch]
             batch_weights = [sample[1] for sample in batch]
             yield SamplesResponse(training_samples_subset=batch_keys, training_samples_weights=batch_weights)

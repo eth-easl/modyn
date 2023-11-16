@@ -46,7 +46,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
 
             if exponent_bytestream is not None and tensor_model.dtype == torch.float32:
                 for i in range(0, len(difference), 4):
-                    reordered_diff = self.reorder_buffer(difference[i: i + 4])
+                    reordered_diff = self.reorder_buffer(difference[i : i + 4])
                     bytestream.write(reordered_diff[0:3])
                     exponent_bytestream.write(reordered_diff[3:4])
             else:
@@ -85,8 +85,8 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
                 if tensor.dtype == torch.float32:
                     buffer = bytearray(num_bytes)
                     for i in range(0, num_bytes, 4):
-                        buffer[i: i + 3] = file.read(3)
-                        buffer[i + 3: i + 4] = exponent_bytes.read(1)
+                        buffer[i : i + 3] = file.read(3)
+                        buffer[i + 3 : i + 4] = exponent_bytes.read(1)
 
                     prev_model_state[layer_name] = self.difference_operator.restore(tensor, self.reorder_buffer(buffer))
                 else:
@@ -152,7 +152,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
         bytestream = io.BytesIO()
 
         for i in range(0, len(buffer), 2):
-            count = int.from_bytes(buffer[i: i + 1], byteorder="big")
+            count = int.from_bytes(buffer[i : i + 1], byteorder="big")
 
-            bytestream.write(count * buffer[i + 1: i + 2])
+            bytestream.write(count * buffer[i + 1 : i + 2])
         return bytestream.getvalue()
