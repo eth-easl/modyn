@@ -225,7 +225,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
       auto end_it = i < num_chunks - 1 ? start_it + sample_dbinsertion_batchsize : file_paths_end;
       std::vector<std::string> chunk_paths(start_it, end_it);
       std::string known_files_query = fmt::format(
-          "SELECT path FROM files WHERE path IN (\"{}\") AND dataset_id = :dataset_id", fmt::join(chunk_paths, "\",\""));
+          "SELECT path FROM files WHERE path IN ('{}') AND dataset_id = :dataset_id", fmt::join(chunk_paths, "','"));
       std::vector<std::string> known_paths(sample_dbinsertion_batchsize);
       SPDLOG_INFO("Chunk: {}/{} prepared query", i + 1, num_chunks);
 
