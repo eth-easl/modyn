@@ -76,6 +76,10 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
   std::vector<std::string> file_paths = filesystem_wrapper->list(directory_path, /*recursive=*/true);
   SPDLOG_INFO("Found {} files in total", file_paths.size());
 
+  if (file_paths.empty()) {
+    return;
+  }
+
   if (disable_multithreading_) {
     std::atomic<bool> exception_thrown = false;
     FileWatcher::handle_file_paths(file_paths.begin(), file_paths.end(), data_file_extension_, file_wrapper_type_,
@@ -85,11 +89,12 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
       *stop_file_watcher = true;
     }
   } else {
-    const auto chunk_size = static_cast<int16_t>(file_paths.size() / insertion_threads_);
+    const auto chunk_size = static_cast<int64_t>(file_paths.size()) / static_cast<int64_t>(insertion_threads_);
+    SPDLOG_INFO("Inserting {} files per thread (total = {} threads)", chunk_size, insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
       // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
-      const std::vector<std::string>::iterator begin = file_paths.begin() + static_cast<int32_t>(i * chunk_size);
+      const std::vector<std::string>::iterator begin = file_paths.begin() + static_cast<int64_t>(i) * chunk_size;
       // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
       const std::vector<std::string>::iterator end =
           (i < insertion_threads_ - 1) ? (begin + chunk_size) : file_paths.end();
