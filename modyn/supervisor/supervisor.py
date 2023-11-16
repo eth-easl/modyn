@@ -546,7 +546,9 @@ class Supervisor:
                 evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
                 eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", trigger)
-                eval_result_writer.store_results = lambda arg: arg  # make it a noop
+                def noop_func(noop: Any):
+                    pass
+                eval_result_writer.store_results = noop_func
                 self.grpc.store_evaluation_results([eval_result_writer], evaluations)
                 self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
