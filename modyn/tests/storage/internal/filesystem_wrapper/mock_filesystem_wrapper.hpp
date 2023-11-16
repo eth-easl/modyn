@@ -14,7 +14,8 @@ class MockFilesystemWrapper : public FilesystemWrapper {
   MockFilesystemWrapper() : FilesystemWrapper() {}  // NOLINT
   MOCK_METHOD(std::vector<unsigned char>, get, (const std::string& path), (override));
   MOCK_METHOD(bool, exists, (const std::string& path), (override));
-  MOCK_METHOD(std::vector<std::string>, list, (const std::string& path, bool recursive), (override));
+  MOCK_METHOD(std::vector<std::string>, list, (const std::string& path, bool recursive, std::string extension),
+              (override));
   MOCK_METHOD(bool, is_directory, (const std::string& path), (override));
   MOCK_METHOD(bool, is_file, (const std::string& path), (override));
   MOCK_METHOD(uint64_t, get_file_size, (const std::string& path), (override));

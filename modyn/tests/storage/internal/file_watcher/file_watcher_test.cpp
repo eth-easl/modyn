@@ -142,20 +142,20 @@ TEST_F(FileWatcherTest, TestExtractCheckFileForInsertion) {
 
   EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(1000));
 
-  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 0, 1, filesystem_wrapper, session));
+  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", false, 0, 1, filesystem_wrapper, session));
 
   EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillOnce(testing::Return(0));
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 1000, 1, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", false, 1000, 1, filesystem_wrapper, session));
 
-  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", ".txt", true, 0, 1, filesystem_wrapper, session));
+  ASSERT_TRUE(FileWatcher::check_file_for_insertion("test.txt", true, 0, 1, filesystem_wrapper, session));
 
   session << "INSERT INTO files (file_id, dataset_id, path, updated_at) VALUES "
              "(1, 1, 'test.txt', 1000)";
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 0, 1, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", false, 0, 1, filesystem_wrapper, session));
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", ".txt", false, 1000, 1, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test.txt", false, 1000, 1, filesystem_wrapper, session));
 }
 
 TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
@@ -185,7 +185,7 @@ TEST_F(FileWatcherTest, TestUpdateFilesInDirectory) {
 
   const std::vector<std::string> files = {test_file_path, label_file_path};
 
-  EXPECT_CALL(*filesystem_wrapper, list(testing::_, testing::_)).WillOnce(testing::Return(files));
+  EXPECT_CALL(*filesystem_wrapper, list(testing::_, testing::_, testing::_)).WillOnce(testing::Return(files));
   EXPECT_CALL(*filesystem_wrapper, get_modified_time(testing::_)).WillRepeatedly(testing::Return(1000));
   ON_CALL(*filesystem_wrapper, exists(testing::_)).WillByDefault(testing::Return(true));
   ON_CALL(*filesystem_wrapper, is_valid_path(testing::_)).WillByDefault(testing::Return(true));
@@ -267,7 +267,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {  // NOLINT(readability-function-c
   label_file2.close();
   ASSERT(!label_file2.is_open(), "Could not close label file");
 
-  std::vector<std::string> files = {test_file_path, label_file_path, test_file_path2, label_file_path2};
+  std::vector<std::string> files = {test_file_path, test_file_path2};
 
   const StorageDatabaseConnection connection(config);
 
@@ -281,13 +281,13 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {  // NOLINT(readability-function-c
   const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
   std::atomic<bool> exception_thrown = false;
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files.begin(), files.end(), ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files.begin(), files.end(), FileWrapperType::SINGLE_SAMPLE, 0,
                                                  FilesystemWrapperType::LOCAL, 1, &file_wrapper_config_node, &config,
                                                  100, false, &exception_thrown));
 
   // Check if the samples are added to the database
   int32_t sample_id1 = -1;
-  int32_t label1;
+  int32_t label1 = -1;
   int32_t file_id = 1;
   session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id1),
       soci::into(label1);
@@ -295,7 +295,7 @@ TEST_F(FileWatcherTest, TestHandleFilePaths) {  // NOLINT(readability-function-c
   ASSERT_EQ(label1, 1);
 
   int32_t sample_id2 = -1;
-  int32_t label2;
+  int32_t label2 = -1;
   file_id = 2;
   session << "SELECT sample_id, label FROM samples WHERE file_id = :id", soci::use(file_id), soci::into(sample_id2),
       soci::into(label2);
@@ -341,7 +341,7 @@ TEST_F(FileWatcherTest, TestSeekDatasetWithNonExistentDirectory) {
   std::filesystem::remove_all(tmp_dir_);
 }
 
-TEST_F(FileWatcherTest, TestCheckFileForInsertionWithInvalidPath) {
+TEST_F(FileWatcherTest, TestCheckFileForInsertionWithEmptyPath) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
 
   const StorageDatabaseConnection connection(config);
@@ -349,8 +349,7 @@ TEST_F(FileWatcherTest, TestCheckFileForInsertionWithInvalidPath) {
 
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
 
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("", ".txt", false, 0, 1, filesystem_wrapper, session));
-  ASSERT_FALSE(FileWatcher::check_file_for_insertion("test", ".txt", true, 0, 1, filesystem_wrapper, session));
+  ASSERT_FALSE(FileWatcher::check_file_for_insertion("", false, 0, 1, filesystem_wrapper, session));
 }
 
 TEST_F(FileWatcherTest, TestFallbackInsertionWithEmptyVector) {
@@ -372,7 +371,7 @@ TEST_F(FileWatcherTest, TestHandleFilePathsWithEmptyVector) {
   const YAML::Node file_wrapper_config_node = YAML::Load(StorageTestUtils::get_dummy_file_wrapper_config_inline());
 
   std::atomic<bool> exception_thrown = false;
-  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files.begin(), files.end(), ".txt", FileWrapperType::SINGLE_SAMPLE, 0,
+  ASSERT_NO_THROW(FileWatcher::handle_file_paths(files.begin(), files.end(), FileWrapperType::SINGLE_SAMPLE, 0,
                                                  FilesystemWrapperType::LOCAL, 1, &file_wrapper_config_node, &config,
                                                  100, false, &exception_thrown));
 }

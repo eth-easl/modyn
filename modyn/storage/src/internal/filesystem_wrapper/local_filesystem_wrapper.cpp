@@ -32,8 +32,8 @@ std::shared_ptr<std::ifstream> LocalFilesystemWrapper::get_stream(const std::str
 
 bool LocalFilesystemWrapper::exists(const std::string& path) { return std::filesystem::exists(path); }
 
-std::vector<std::string> LocalFilesystemWrapper::list(const std::string& path, bool recursive) {
-  std::vector<std::string> paths = std::vector<std::string>();
+std::vector<std::string> LocalFilesystemWrapper::list(const std::string& path, bool recursive, std::string extension) {
+  std::vector<std::string> paths;
 
   if (!std::filesystem::exists(path)) {
     return paths;
@@ -41,14 +41,16 @@ std::vector<std::string> LocalFilesystemWrapper::list(const std::string& path, b
 
   if (recursive) {
     for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
-      if (!std::filesystem::is_directory(entry)) {
-        paths.push_back(entry.path());
+      const std::filesystem::path& entry_path = entry.path();
+      if (!std::filesystem::is_directory(entry) && entry_path.extension().string() == extension) {
+        paths.push_back(entry_path);
       }
     }
   } else {
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
-      if (!std::filesystem::is_directory(entry)) {
-        paths.push_back(entry.path());
+      const std::filesystem::path& entry_path = entry.path();
+      if (!std::filesystem::is_directory(entry) && entry_path.extension().string() == extension) {
+        paths.push_back(entry_path);
       }
     }
   }

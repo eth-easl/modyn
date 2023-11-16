@@ -121,9 +121,8 @@ class FileWatcher {
   void seek_dataset(soci::session& session);
   void seek(soci::session& session);
   static void handle_file_paths(std::vector<std::string>::iterator file_paths_begin,
-                                std::vector<std::string>::iterator file_paths_end, std::string data_file_extension,
-                                FileWrapperType file_wrapper_type, int64_t timestamp,
-                                FilesystemWrapperType filesystem_wrapper_type, int64_t dataset_id,
+                                std::vector<std::string>::iterator file_paths_end, FileWrapperType file_wrapper_type,
+                                int64_t timestamp, FilesystemWrapperType filesystem_wrapper_type, int64_t dataset_id,
                                 const YAML::Node* file_wrapper_config, const YAML::Node* config,
                                 int64_t sample_dbinsertion_batchsize, bool force_fallback,
                                 std::atomic<bool>* exception_thrown);
@@ -138,9 +137,8 @@ class FileWatcher {
                              const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
                              const std::unique_ptr<FileWrapper>& file_wrapper, soci::session& session,
                              DatabaseDriver& database_driver);
-  static bool check_file_for_insertion(const std::string& file_path, const std::string& data_file_extension,
-                                       bool ignore_last_timestamp, int64_t timestamp, int64_t dataset_id,
-                                       const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
+  static bool check_file_for_insertion(const std::string& file_path, bool ignore_last_timestamp, int64_t timestamp,
+                                       int64_t dataset_id, const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
                                        soci::session& session);
   static void postgres_copy_insertion(const std::vector<FileFrame>& file_samples, int64_t dataset_id,
                                       soci::session& session);

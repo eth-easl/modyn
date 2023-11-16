@@ -73,15 +73,15 @@ TEST_F(LocalFilesystemWrapperTest, TestExists) {
   const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
   const std::string file_name_2 = test_base_dir + path_seperator + "test_file_2.txt";
-  LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper();
+  LocalFilesystemWrapper filesystem_wrapper;
   ASSERT_TRUE(filesystem_wrapper.exists(file_name));
   ASSERT_FALSE(filesystem_wrapper.exists(file_name_2));
 }
 
 TEST_F(LocalFilesystemWrapperTest, TestList) {
   const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
-  LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper();
-  std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/false);
+  LocalFilesystemWrapper filesystem_wrapper;
+  std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/false, ".txt");
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
   ASSERT_EQ(files.size(), 1);
   ASSERT_EQ((files)[0], file_name);
@@ -89,8 +89,8 @@ TEST_F(LocalFilesystemWrapperTest, TestList) {
 
 TEST_F(LocalFilesystemWrapperTest, TestListRecursive) {
   const YAML::Node config = modyn::test::TestUtils::get_dummy_config();
-  LocalFilesystemWrapper filesystem_wrapper = LocalFilesystemWrapper();
-  std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/true);
+  LocalFilesystemWrapper filesystem_wrapper;
+  std::vector<std::string> files = filesystem_wrapper.list(test_base_dir, /*recursive=*/true, ".txt");
   ASSERT_EQ(files.size(), 2);
   const std::string file_name = test_base_dir + path_seperator + "test_file.txt";
   const std::string file_name_2 = test_base_dir + path_seperator + "test_dir_2/test_file_2.txt";
