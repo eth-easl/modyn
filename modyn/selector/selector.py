@@ -77,7 +77,7 @@ class Selector:
                 worker_id, self._num_workers, len(self._trigger_cache[trigger_id][partition_id])
             )
             training_samples_subset = self._trigger_cache[trigger_id][partition_id][
-                start_index : start_index + worker_subset_size
+                start_index: start_index + worker_subset_size
             ]
         else:
             training_samples_subset = self._strategy.get_trigger_partition_keys(

@@ -255,8 +255,8 @@ class Supervisor:
                     # TODO(#335): Fix this. Clean up in general.
                     logger.error(
                         "To create the evaluation matrix,"
-                        + "you need to specify how to evaluate the training dataset {}".format(train_dataset_id)
-                        + " in the evaluation section of the pipeline."
+                        "you need to specify how to evaluate the training dataset {}"
+                        " in the evaluation section of the pipeline.".format(train_dataset_id)
                     )
                     is_valid = False
 
@@ -540,10 +540,17 @@ class Supervisor:
             json.dump(self.pipeline_log, logfile, indent=4)
 
     def build_evaluation_matrix(self) -> None:
+        self.pipeline_log["evaluation_matrix"] = {}
         for model in self.trained_models:
+            self.pipeline_log["evaluation_matrix"][model] = {}
             for trigger in self.triggers:
+                logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
                 evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", trigger)
+                eval_result_writer.store_results = lambda arg: arg  # make it a noop
+                self.grpc.store_evaluation_results([eval_result_writer], evaluations)
+                self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
