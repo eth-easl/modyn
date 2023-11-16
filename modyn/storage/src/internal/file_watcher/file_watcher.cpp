@@ -87,6 +87,7 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
     SPDLOG_INFO("Inserting {} files per thread (total = {} threads)", chunk_size, insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
+      SPDLOG_INFO("Spawning thread {}/{} for insertion.", i + 1, insertion_threads_);
       // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
       const std::vector<std::string>::iterator begin = file_paths.begin() + static_cast<int64_t>(i) * chunk_size;
       // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
@@ -192,6 +193,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                     const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
                                     std::atomic<bool>* exception_thrown) {
   try {
+    SPDLOG_INFO("Hi, this is handle_file_paths. Checking {} items", file_paths_end - file_paths_begin);
     if (file_paths_begin >= file_paths_end) {
       return;
     }
@@ -211,8 +213,11 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
           return check_file_for_insertion(file_path, static_cast<bool>(ignore_last_timestamp), timestamp, dataset_id,
                                           filesystem_wrapper, session);
         });
+
+    // TODO(MaxiBoether) move back into if
+    SPDLOG_INFO("Found {} files for insertion!", files_for_insertion.size());
+
     if (!files_for_insertion.empty()) {
-      SPDLOG_INFO("Found {} files for insertion!", files_for_insertion.size());
       DatabaseDriver database_driver = storage_database_connection.get_drivername();
       handle_files_for_insertion(files_for_insertion, file_wrapper_type, dataset_id, *file_wrapper_config,
                                  sample_dbinsertion_batchsize, force_fallback, session, database_driver,
