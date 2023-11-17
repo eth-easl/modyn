@@ -264,7 +264,8 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
 int64_t read_data_size_from_header(std::ifstream& file) {
   std::array<char, 2> header_chars = {};
   file.read(header_chars.data(), 2);
-  uint64_t header_length = static_cast<uint64_t>(header_chars[1]);
+  // double cast required by clang-tidy
+  auto header_length = static_cast<uint64_t>(static_cast<unsigned char>(header_chars[1]));
   header_length <<= 8u;
   header_length += header_chars[0];
 
@@ -294,7 +295,8 @@ int64_t read_magic(std::ifstream& file) {
   }
 
   file.get(byte);
-  const auto major_version = static_cast<int64_t>(byte);
+  // double cast required by clang-tidy
+  const auto major_version = static_cast<int64_t>(static_cast<unsigned char>(byte));
   file.get(byte);  // minor version is ignored
 
   return major_version;
