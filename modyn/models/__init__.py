@@ -7,6 +7,7 @@ from .articlenet.articlenet import ArticleNet  # noqa: F401
 from .dlrm.dlrm import DLRM  # noqa: F401
 from .fmownet.fmownet import FmowNet  # noqa: F401
 from .resnet18.resnet18 import ResNet18  # noqa: F401
+from .resnet152.resnet152 import ResNet152  # noqa: F401
 from .yearbooknet.yearbooknet import YearbookNet  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
