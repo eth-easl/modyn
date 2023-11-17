@@ -228,8 +228,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_file_ids_and_labels(WriterT* writer, const int64_t dataset_id, const int64_t start_timestamp = -1,
                                 int64_t end_timestamp = -1) {
     soci::session session = storage_database_connection_.get_session();
-    // TODO(create issue): We might want to have a cursor for this as well and iterate over it, since that can also
-    // return millions of files
+    // TODO(create issue): We might want to have a cursor for this as well and iterate over it, since that can also return millions
+    // of files
     const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
     session.close();
 
@@ -276,7 +276,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
     uint64_t num_paths = end - begin;
     // TODO(MaxiBoether): use sample_dbinsertion_batchsize or sth instead of 1 mio
-    uint64_t chunk_size = static_cast<uint64_t>(10000000);
+    uint64_t chunk_size = static_cast<uint64_t>(1000000);
     uint64_t num_chunks = num_paths / chunk_size;
     if (num_paths % chunk_size != 0) {
       ++num_chunks;
