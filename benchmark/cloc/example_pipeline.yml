@@ -5,12 +5,19 @@ model:
   id: ResNet50
   config:
     num_classes: 713
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
 training:
   gpus: 1
   device: "cuda:0"
   dataloader_workers: 8
+  num_prefetched_partitions: 4
+  parallel_prefetch_requests: 4
   use_previous_model: True
   initial_model: random
+  initial_pass:
+    activated: False
   batch_size: 256
   optimizers:
     - name: "default"
@@ -28,8 +35,10 @@ training:
     activated: False
   selection_strategy:
     name: NewDataStrategy
+    # With that setting, there is most often only 1 partition
     maximum_keys_in_memory: 1000000
     config:
+      storage_backend: "database"
       limit: -1
       reset_after_trigger: True
 data:
@@ -43,8 +52,7 @@ data:
     import io
     def bytes_parser_function(data: bytes) -> Image:
       return Image.open(io.BytesIO(data)).convert("RGB")
-
 trigger:
   id: TimeTrigger
   trigger_config:
-    trigger_every: "1y"
+    trigger_every: "52w"
