@@ -233,8 +233,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       return;
     }
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
+    bool force_no_mt = true;
+    SPDLOG_ERROR("Multithreaded retrieval of new samples is currently broken, disabling...");
 
-    if (disable_multithreading_) {
+    if (force_no_mt || disable_multithreading_) {
       send_sample_id_and_label<ResponseT, WriterT>(writer, &writer_mutex, file_ids.begin(), file_ids.end(), &config_,
                                                    dataset_id, sample_batch_size_);
     } else {
