@@ -228,6 +228,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_file_ids_and_labels(WriterT* writer, const int64_t dataset_id, const int64_t start_timestamp = -1,
                                 int64_t end_timestamp = -1) {
     soci::session session = storage_database_connection_.get_session();
+    // TODO(create issue): We might want to have a cursor for this as well and iterate over it, since that can also
+    // return millions of files
     const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
     session.close();
 
@@ -272,108 +274,122 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
-    std::vector<int64_t> file_ids(begin, end);
-    std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
+    uint64_t num_paths = end - begin;
+    // TODO(MaxiBoether): use sample_dbinsertion_batchsize or sth instead of 1 mio
+    uint64_t chunk_size = static_cast<uint64_t>(10000000);
+    uint64_t num_chunks = num_paths / chunk_size;
+    if (num_paths % chunk_size != 0) {
+      ++num_chunks;
+    }
 
-    std::vector<SampleRecord> record_buf;
-    record_buf.reserve(sample_batch_size);
+    for (uint64_t i = 0; i < num_chunks; ++i) {
+      auto start_it = begin + i * chunk_size;
+      auto end_it = i < num_chunks - 1 ? start_it + chunk_size : end;
 
-    const std::string query = fmt::format(
-        "SELECT samples.sample_id, samples.label, files.updated_at "
-        "FROM samples INNER JOIN files "
-        "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
-        "WHERE samples.file_id IN {} AND samples.dataset_id = {}",
-        file_placeholders, dataset_id);
-    const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_ids.at(0));
-    CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 3);
+      std::vector<int64_t> file_ids(start_it, end_it);
+      std::string file_placeholders = fmt::format("({})", fmt::join(file_ids, ","));
 
-    std::vector<SampleRecord> records;
+      std::vector<SampleRecord> record_buf;
+      record_buf.reserve(sample_batch_size);
 
-    while (true) {
-      ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
-             fmt::format("Should have written records buffer, size = {}", record_buf.size()));
-      records = cursor_handler.yield_per(sample_batch_size);
+      const std::string query = fmt::format(
+          "SELECT samples.sample_id, samples.label, files.updated_at "
+          "FROM samples INNER JOIN files "
+          "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
+          "WHERE samples.file_id IN {} AND samples.dataset_id = {}",
+          file_placeholders, dataset_id);
+      const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_ids.at(0));
+      CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 3);
 
-      if (records.empty()) {
-        break;
-      }
+      std::vector<SampleRecord> records;
 
-      const uint64_t obtained_records = records.size();
-      ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
+      while (true) {
+        ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
+               fmt::format("Should have written records buffer, size = {}", record_buf.size()));
+        records = cursor_handler.yield_per(sample_batch_size);
 
-      if (static_cast<int64_t>(obtained_records) == sample_batch_size) {
-        // If we obtained a full buffer, we can emit a response directly
-        ResponseT response;
-        for (const auto& record : records) {
-          response.add_keys(record.id);
-          response.add_labels(record.column_1);
-          response.add_timestamps(record.column_2);
+        if (records.empty()) {
+          break;
         }
 
-        SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}", response.keys_size(),
-                    response.labels_size(), records.size());
+        const uint64_t obtained_records = records.size();
+        ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
 
-        records.clear();
-
-        {
-          const std::lock_guard<std::mutex> lock(*writer_mutex);
-          writer->Write(response);
-        }
-      } else {
-        // If not, we append to our record buf
-        record_buf.insert(record_buf.end(), records.begin(), records.end());
-        records.clear();
-        // If our record buf is big enough, emit a message
-        if (static_cast<int64_t>(record_buf.size()) >= sample_batch_size) {
+        if (static_cast<int64_t>(obtained_records) == sample_batch_size) {
+          // If we obtained a full buffer, we can emit a response directly
           ResponseT response;
-
-          // sample_batch_size is signed int...
-          for (int64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
-            const SampleRecord& record = record_buf[record_idx];
+          for (const auto& record : records) {
             response.add_keys(record.id);
             response.add_labels(record.column_1);
             response.add_timestamps(record.column_2);
           }
-          SPDLOG_INFO(
-              "Sending with response_keys = {}, response_labels = {}, record_buf.size = {} (minus sample_batch_size = "
-              "{})",
-              response.keys_size(), response.labels_size(), record_buf.size(), sample_batch_size);
 
-          // Now, delete first sample_batch_size elements from vector as we are sending them
-          record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
+          SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}", response.keys_size(),
+                      response.labels_size(), records.size());
 
-          SPDLOG_INFO("New record_buf size = {}", record_buf.size());
-
-          ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
-                 "The record buffer should never have more than 2*sample_batch_size elements!");
+          records.clear();
 
           {
             const std::lock_guard<std::mutex> lock(*writer_mutex);
             writer->Write(response);
           }
+        } else {
+          // If not, we append to our record buf
+          record_buf.insert(record_buf.end(), records.begin(), records.end());
+          records.clear();
+          // If our record buf is big enough, emit a message
+          if (static_cast<int64_t>(record_buf.size()) >= sample_batch_size) {
+            ResponseT response;
+
+            // sample_batch_size is signed int...
+            for (int64_t record_idx = 0; record_idx < sample_batch_size; ++record_idx) {
+              const SampleRecord& record = record_buf[record_idx];
+              response.add_keys(record.id);
+              response.add_labels(record.column_1);
+              response.add_timestamps(record.column_2);
+            }
+            SPDLOG_INFO(
+                "Sending with response_keys = {}, response_labels = {}, record_buf.size = {} (minus sample_batch_size "
+                "= "
+                "{})",
+                response.keys_size(), response.labels_size(), record_buf.size(), sample_batch_size);
+
+            // Now, delete first sample_batch_size elements from vector as we are sending them
+            record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
+
+            SPDLOG_INFO("New record_buf size = {}", record_buf.size());
+
+            ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
+                   "The record buffer should never have more than 2*sample_batch_size elements!");
+
+            {
+              const std::lock_guard<std::mutex> lock(*writer_mutex);
+              writer->Write(response);
+            }
+          }
         }
       }
-    }
 
-    cursor_handler.close_cursor();
+      cursor_handler.close_cursor();
 
-    // Iterated over all files, we now need to emit all data from buffer
-    if (!record_buf.empty()) {
-      ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
-             fmt::format("We should have written this buffer before! Buffer has {} items.", record_buf.size()));
+      // Iterated over all files, we now need to emit all data from buffer
+      if (!record_buf.empty()) {
+        ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
+               fmt::format("We should have written this buffer before! Buffer has {} items.", record_buf.size()));
 
-      ResponseT response;
-      for (const auto& record : record_buf) {
-        response.add_keys(record.id);
-        response.add_labels(record.column_1);
-        response.add_timestamps(record.column_2);
-      }
-      SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}", response.keys_size(),
-                  response.labels_size(), record_buf.size());
-      record_buf.clear();
-      {
-        const std::lock_guard<std::mutex> lock(*writer_mutex);
-        writer->Write(response);
+        ResponseT response;
+        for (const auto& record : record_buf) {
+          response.add_keys(record.id);
+          response.add_labels(record.column_1);
+          response.add_timestamps(record.column_2);
+        }
+        SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}", response.keys_size(),
+                    response.labels_size(), record_buf.size());
+        record_buf.clear();
+        {
+          const std::lock_guard<std::mutex> lock(*writer_mutex);
+          writer->Write(response);
+        }
       }
     }
 
