@@ -305,7 +305,8 @@ int64_t read_magic(std::ifstream& file) {
  * @return std::ifstream Opened file stream
  */
 std::ifstream open_file(const char* filename) {
-  std::ifstream file(filename, std::ios::binary);
+  std::filesystem::path file_path = filename;
+  std::ifstream file(file_path, std::ios::binary);
   if (!file.is_open()) {
     FAIL("Trigger Sample Storage failed to open a file for reading.");
   }
@@ -319,7 +320,8 @@ std::ifstream open_file(const char* filename) {
  * @return std::ofstream Opened file stream
  */
 std::ofstream open_file_write(const char* filename) {
-  std::ofstream file(filename, std::ios::binary);
+  std::filesystem::path file_path = filename;
+  std::ofstream file(file_path, std::ios::binary);
   if (!file.is_open()) {
     FAIL("Trigger Sample Storage failed to open a file for writing.");
   }
