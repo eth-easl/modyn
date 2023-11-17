@@ -9,9 +9,11 @@ from sys import platform
 import numpy as np
 from numpy.ctypeslib import ndpointer
 
-from .utils import get_partition_for_worker
+from modyn.utils import get_partition_for_worker
 
 logger = logging.getLogger(__name__)
+
+NUMPY_HEADER_SIZE = 128
 
 
 class ArrayWrapper:
@@ -290,7 +292,7 @@ class TriggerSampleStorage:
             for file in this_trigger_files:
                 os.remove(os.path.join(self.trigger_sample_directory, file))
 
-    def _parse_file(self, file_path: Path) -> ArrayWrapper:
+    def parse_file(self, file_path: Path) -> ArrayWrapper:
         """Parse the given file and return the samples.
 
         Args:
@@ -299,6 +301,9 @@ class TriggerSampleStorage:
         Returns:
             np.ndarray: List of trigger samples.
         """
+
+        if not file_path.exists():
+            return np.empty((0,), dtype=[("f0", "<i8"), ("f1", "<f8")])
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
         size = (ctypes.c_int64 * 1)()
@@ -359,7 +364,7 @@ class TriggerSampleStorage:
             headers_p[i] = headers[i]
             data_lengths_p[i] = data_lengths[i]
 
-        self._write_files_impl(files_p, data, data_lengths_p, headers_p, 128, len(data_lengths))
+        self._write_files_impl(files_p, data, data_lengths_p, headers_p, NUMPY_HEADER_SIZE, len(data_lengths))
 
     def _build_array_header(self, d: dict) -> str:
         """Build the header for the array

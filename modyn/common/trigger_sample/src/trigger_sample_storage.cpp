@@ -12,6 +12,8 @@
 #include <iostream>
 #include <vector>
 
+#include "modyn/utils/utils.hpp"
+
 // NOLINTBEGIN(modernize-avoid-c-arrays)
 // We need to use these c-style arrays to interface with ctypes
 namespace modyn::common::trigger_sample_storage {
@@ -75,11 +77,12 @@ void* get_worker_samples_impl(const char* folder, int64_t* size, const char* pat
     break;
   }
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT
+  std::size_t data_length = sizeof(char) * dtype_size * samples;
+  void* data = malloc(data_length);  // NOLINT: required for ctypes
 
-  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
+  std::memcpy(static_cast<char*>(data), char_vector.data(), data_length);
 
-  size[0] = samples;
+  *size = samples;
   return data;
 }
 
@@ -109,11 +112,12 @@ void* get_all_samples_impl(const char* folder, int64_t* size, const char* patter
     file.close();
   }
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT: required for ctypes
+  std::size_t data_length = sizeof(char) * dtype_size * samples;
+  void* data = malloc(data_length);  // NOLINT: required for ctypes
 
-  memcpy(static_cast<char*>(data), char_vector.data(), sizeof(char) * dtype_size * samples);
+  std::memcpy(static_cast<char*>(data), char_vector.data(), data_length);
 
-  size[0] = samples;
+  *size = samples;
   return data;
 }
 
@@ -129,11 +133,12 @@ void* parse_file_impl(const char* filename, int64_t* size) {
   read_magic(file);
   const int64_t samples = read_data_size_from_header(file);
 
-  size[0] = samples;
+  *size = samples;
 
-  void* data = malloc(sizeof(char) * dtype_size * samples);  // NOLINT: required for ctypes
+  std::size_t data_length = sizeof(char) * dtype_size * samples;
+  void* data = malloc(data_length);  // NOLINT: required for ctypes
 
-  file.read(static_cast<char*>(data), static_cast<int64_t>(sizeof(char) * dtype_size * samples));
+  file.read(static_cast<char*>(data), static_cast<int64_t>(data_length));
   file.close();
 
   return data;
@@ -170,7 +175,7 @@ void write_files_impl(const char* filenames[], const void* data, int64_t data_le
  *
  * @param data Array to free the memory of
  */
-void release_data_impl(void* data) { free(data); }  // NOLINT: required for ctypes
+void release_data_impl(void* data) { std::free(data); }  // NOLINT: required for ctypes
 
 /**
  * @brief Write samples to file
@@ -249,7 +254,7 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
 }
 
 /**
- * @brief Read array file header
+ * @brief Read array file header. Should be called after reading magic bytes.
  *
  * @param file File to read from
  * @return int64_t Data size
@@ -265,6 +270,8 @@ int64_t read_data_size_from_header(std::ifstream& file) {
   file.read(buffer.data(), static_cast<int64_t>(header_length));
 
   // Find the location of the shape and convert to int64_t
+  // We search for `(` to skip the rest of the header, which we don't use.
+  // We convert the characters base 10 into a number.
   return std::strtol(&buffer[buffer.find_last_of('(') + 1], nullptr, 10);
 }
 
@@ -276,10 +283,10 @@ int64_t read_data_size_from_header(std::ifstream& file) {
  */
 int64_t read_magic(std::ifstream& file) {
   const std::vector<unsigned char> magic_bytes = {0x93, 'N', 'U', 'M', 'P', 'Y'};
-  char byte;
+  char byte = 0;
   for (const unsigned char magic_byte : magic_bytes) {
     if (!file.get(byte) || byte != static_cast<char>(magic_byte)) {
-      std::cerr << "Not a valid NumPy file." << std::endl;
+      FAIL("Trigger Sample Storage tried to open a non-valid NumPy file.");
       return -1;
     }
   }
@@ -300,7 +307,7 @@ int64_t read_magic(std::ifstream& file) {
 std::ifstream open_file(const char* filename) {
   std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {
-    std::cerr << "Failed to open file: " << filename << "\n";
+    FAIL("Trigger Sample Storage failed to open a file for reading.");
   }
   return file;
 }
@@ -314,7 +321,7 @@ std::ifstream open_file(const char* filename) {
 std::ofstream open_file_write(const char* filename) {
   std::ofstream file(filename, std::ios::binary);
   if (!file.is_open()) {
-    std::cerr << "Failed to open file: " << filename << "\n";
+    FAIL("Trigger Sample Storage failed to open a file for writing.");
   }
   return file;
 }

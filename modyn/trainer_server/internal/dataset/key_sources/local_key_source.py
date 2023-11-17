@@ -1,3 +1,4 @@
+import numpy as np
 from typing import Optional
 
 from modyn.common.trigger_sample import TriggerSampleStorage
@@ -13,7 +14,7 @@ class LocalKeySource(AbstractKeySource):
 
     def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
         path = self._trigger_sample_storage.get_file_path(self._pipeline_id, self._trigger_id, partition_id, worker_id)
-        tuples_list = self._trigger_sample_storage._parse_file(path)
+        tuples_list = self._trigger_sample_storage.parse_file(path)
 
         if len(tuples_list) == 0:
             return [], []

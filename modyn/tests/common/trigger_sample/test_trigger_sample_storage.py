@@ -68,7 +68,7 @@ def test_parse_file():
     )
     file_path = Path(TMP_DIR) / "1_2_3_0.npy"
 
-    samples = TriggerSampleStorage(TMP_DIR)._parse_file(file_path)
+    samples = TriggerSampleStorage(TMP_DIR).parse_file(file_path)
     assert len(samples) == 2
     assert samples[0][0] == 1
     assert samples[0][1] == 1.0
@@ -81,7 +81,7 @@ def test_parse_file():
         1, 2, 3, np.array([(1, 1.0), (2, 2.0), (3, 3.0), (4, 4.0)], dtype=np.dtype("i8,f8")), [4]
     )
 
-    samples = TriggerSampleStorage(TMP_DIR)._parse_file(file_path)
+    samples = TriggerSampleStorage(TMP_DIR).parse_file(file_path)
     assert len(samples) == 4
     assert samples[0][0] == 1
     assert samples[0][1] == 1.0
@@ -212,8 +212,8 @@ def test_extended_get_trigger_samples():
 
 
 def test_get_trigger_samples_no_file():
-    with pytest.raises(ValueError):
-        TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3)
+    tmp = TriggerSampleStorage(TMP_DIR).get_trigger_samples(1, 2, 3)
+    assert not tmp
 
 
 def test_get_trigger_samples_illegal_workers():

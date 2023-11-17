@@ -79,7 +79,8 @@ class Selector:
                 worker_id, self._num_workers, len(self._trigger_cache[trigger_id][partition_id])
             )
             return np.asanyarray(
-                self._trigger_cache[trigger_id][partition_id][start_index : start_index + worker_subset_size]
+                self._trigger_cache[trigger_id][partition_id][start_index : start_index + worker_subset_size],
+                dtype=[("f0", "<i8"), ("f1", "<f8")],
             )
         return self._strategy.get_trigger_partition_keys(trigger_id, partition_id, worker_id, self._num_workers)
 
