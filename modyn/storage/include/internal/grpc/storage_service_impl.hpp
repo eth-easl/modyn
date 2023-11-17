@@ -296,7 +296,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           "FROM samples INNER JOIN files "
           "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
           "WHERE samples.file_id IN {} AND samples.dataset_id = {} "
-          "ORDER BY files.updated_at ASC",  
+          "ORDER BY files.updated_at ASC",
           file_placeholders, dataset_id);
       const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_ids.at(0));
       CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 3);

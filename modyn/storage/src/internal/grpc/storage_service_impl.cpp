@@ -565,18 +565,20 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_given_number_of_files(soci
 
   try {
     if (start_timestamp >= 0 && end_timestamp == -1) {
-      session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",
+      session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp ORDER BY "
+                 "updated_at ASC",
           soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp);
     } else if (start_timestamp == -1 && end_timestamp >= 0) {
-      session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp",
+      session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at <= :end_timestamp ORDER BY "
+                 "updated_at ASC",
           soci::into(file_ids), soci::use(dataset_id), soci::use(end_timestamp);
     } else if (start_timestamp >= 0 && end_timestamp >= 0) {
       session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp AND "
-                 "updated_at <= :end_timestamp",
+                 "updated_at <= :end_timestamp ORDER BY updated_at ASC",
           soci::into(file_ids), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
     } else {
-      session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id", soci::into(file_ids),
-          soci::use(dataset_id);
+      session << "SELECT file_id FROM files WHERE dataset_id = :dataset_id ORDER BY updated_at ASC",
+          soci::into(file_ids), soci::use(dataset_id);
     }
   } catch (const std::exception& e) {
     SPDLOG_ERROR(
