@@ -76,6 +76,16 @@ class CMakeBuild(build_ext):
 
         for ext in self.extensions:
             cfg = _get_env_variable("MODYN_BUILDTYPE", "Release")
+
+            if cfg == "Asan" or cfg == "Tsan":
+                cfg = "Debug"
+                print(
+                    "Warning! You set buildtype to Asan or Tsan. "
+                    "This will be respected by the C++ components, "
+                    "but not the C++ extensions of Modyn, since Python "
+                    "breaks with sanitizers enabled. Using Debug instead."
+                )
+
             print(f"Using build type {cfg} for Modyn.")
             cmake_args = [
                 "-DCMAKE_BUILD_TYPE=%s" % cfg,
@@ -123,7 +133,6 @@ setup(
     },
     scripts=[
         "modyn/supervisor/modyn-supervisor",
-        "modyn/storage/modyn-storage",
         "modyn/trainer_server/modyn-trainer-server",
         "modyn/selector/modyn-selector",
         "modyn/metadata_processor/modyn-metadata-processor",
