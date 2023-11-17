@@ -7,6 +7,8 @@
 
 namespace modyn::common::trigger_sample_storage {
 
+// This is the size of the numpy dtype that we use to store the keys and weights
+// Fixed-size defined by numpy in Python.
 const int64_t dtype_size = 16;
 
 int64_t get_num_samples_in_file_impl(const char* filename);

@@ -63,7 +63,7 @@ void* get_worker_samples_impl(const char* folder, int64_t* size, const char* pat
     if (current_index + num_samples < start_index + worker_subset_size) {
       // The head of samples for the worker are in the file, either partially from
       // start_index - current_index to the end of the file if start_index> current_index
-      //  or completely from 0 to the end of the file.
+      // or completely from 0 to the end of the file.
       // Because the end index is exclusive, we compare < instead of <= otherwise we would retrieve
       // one more sample than we should
       parse_file_subset(filename.c_str(), char_vector, samples, start, num_samples);
@@ -77,8 +77,9 @@ void* get_worker_samples_impl(const char* folder, int64_t* size, const char* pat
     break;
   }
 
-  const std::size_t data_length = sizeof(char) * dtype_size * samples;
+  const uint64_t data_length = sizeof(char) * dtype_size * samples;
   void* data = malloc(data_length);  // NOLINT: required for ctypes
+  ASSERT(data != nullptr, "Could not allocate memory!");
 
   std::memcpy(static_cast<char*>(data), char_vector.data(), data_length);
 
@@ -112,7 +113,7 @@ void* get_all_samples_impl(const char* folder, int64_t* size, const char* patter
     file.close();
   }
 
-  const std::size_t data_length = sizeof(char) * dtype_size * samples;
+  const uint64_t data_length = sizeof(char) * dtype_size * samples;
   void* data = malloc(data_length);  // NOLINT: required for ctypes
 
   std::memcpy(static_cast<char*>(data), char_vector.data(), data_length);
@@ -135,8 +136,9 @@ void* parse_file_impl(const char* filename, int64_t* size) {
 
   *size = samples;
 
-  const std::size_t data_length = sizeof(char) * dtype_size * samples;
+  const uint64_t data_length = sizeof(char) * dtype_size * samples;
   void* data = malloc(data_length);  // NOLINT: required for ctypes
+  ASSERT(data != nullptr, "Could not allocate memory");
 
   file.read(static_cast<char*>(data), static_cast<int64_t>(data_length));
   file.close();
@@ -262,7 +264,7 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
 int64_t read_data_size_from_header(std::ifstream& file) {
   std::array<char, 2> header_chars = {};
   file.read(header_chars.data(), 2);
-  uint64_t header_length = static_cast<unsigned char>(header_chars[1]);
+  uint64_t header_length = static_cast<uint64_t>(header_chars[1]);
   header_length <<= 8u;
   header_length += header_chars[0];
 
@@ -292,7 +294,7 @@ int64_t read_magic(std::ifstream& file) {
   }
 
   file.get(byte);
-  const auto major_version = static_cast<int64_t>(static_cast<unsigned char>(byte));
+  const auto major_version = static_cast<int64_t>(byte);
   file.get(byte);  // minor version is ignored
 
   return major_version;
@@ -305,11 +307,10 @@ int64_t read_magic(std::ifstream& file) {
  * @return std::ifstream Opened file stream
  */
 std::ifstream open_file(const char* filename) {
-  const std::filesystem::path file_path = filename;
+  const std::filesystem::path file_path(filename);
   std::ifstream file(file_path, std::ios::binary);
-  if (!file.is_open()) {
-    FAIL("Trigger Sample Storage failed to open a file for reading.");
-  }
+  ASSERT(file.is_open(), "Trigger Sample Storage failed to open a file for reading.");
+
   return file;
 }
 
@@ -320,11 +321,10 @@ std::ifstream open_file(const char* filename) {
  * @return std::ofstream Opened file stream
  */
 std::ofstream open_file_write(const char* filename) {
-  const std::filesystem::path file_path = filename;
+  const std::filesystem::path file_path(filename);
   std::ofstream file(file_path, std::ios::binary);
-  if (!file.is_open()) {
-    FAIL("Trigger Sample Storage failed to open a file for writing.");
-  }
+  ASSERT(file.is_open(), "Trigger Sample Storage failed to open a file for writing.");
+
   return file;
 }
 }  // namespace modyn::common::trigger_sample_storage
