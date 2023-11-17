@@ -1,6 +1,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <filesystem>
 
 #include "trigger_sample_storage.hpp"
