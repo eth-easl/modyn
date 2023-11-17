@@ -33,14 +33,10 @@ namespace modyn::storage {
 
 using namespace grpc;
 
-template <typename T>
-concept IsResponse = std::is_same_v<T, modyn::storage::GetDataInIntervalResponse> ||
-                     std::is_same_v<T, modyn::storage::GetNewDataSinceResponse>;
-
 struct SampleData {
-  std::vector<int64_t> ids{};
-  std::vector<int64_t> indices{};
-  std::vector<int64_t> labels{};
+  std::vector<int64_t> ids;
+  std::vector<int64_t> indices;
+  std::vector<int64_t> labels;
 };
 
 struct DatasetData {
@@ -296,7 +292,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           "SELECT samples.sample_id, samples.label, files.updated_at "
           "FROM samples INNER JOIN files "
           "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
-          "WHERE samples.file_id IN {} AND samples.dataset_id = {}",
+          "WHERE samples.file_id IN {} AND samples.dataset_id = {} "
+          "ORDER BY asc(files.updated_at)",  // TODO(MaxiBoether): This breaks with > 1 thread!
           file_placeholders, dataset_id);
       const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_ids.at(0));
       CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 3);
