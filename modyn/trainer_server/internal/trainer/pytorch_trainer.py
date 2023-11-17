@@ -383,8 +383,8 @@ class PytorchTrainer:
                 self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=True)
 
                 stopw.start("PreprocessBatch", resume=True)
-                sample_ids, target, data = self.preprocess_batch(batch)
-                stopw.stop()
+                sample_ids, target, data = self.preprocess_batch(batch, stopw)
+                stopw.stop("PreprocessBatch")
 
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
@@ -469,6 +469,10 @@ class PytorchTrainer:
             self._log["epochs"][epoch]["TotalFetchBatch"] = stopw.measurements.get("FetchBatch", 0)
             self._log["epochs"][epoch]["OnBatchBeginCallbacks"] = stopw.measurements.get("OnBatchBeginCallbacks", 0)
             self._log["epochs"][epoch]["PreprocessBatch"] = stopw.measurements.get("PreprocessBatch", 0)
+            self._log["epochs"][epoch]["PreprocSampleIDs"] = stopw.measurements.get("PreprocSampleIDs", 0)
+            self._log["epochs"][epoch]["LabelTransform"] = stopw.measurements.get("LabelTransform", 0)
+            self._log["epochs"][epoch]["MoveLabelToGPU"] = stopw.measurements.get("MoveLabelToGPU", 0)
+            self._log["epochs"][epoch]["MoveDataToGPU"] = stopw.measurements.get("MoveDataToGPU", 0)
             self._log["epochs"][epoch]["DownsampleBTS"] = stopw.measurements.get("DownsampleBTS", 0)
             self._log["epochs"][epoch]["DownsampleSTB"] = stopw.measurements.get("DownsampleSTB", 0)
             self._log["epochs"][epoch]["Forward"] = stopw.measurements.get("Forward", 0)
@@ -566,7 +570,11 @@ class PytorchTrainer:
         except queue.Empty:
             pass
 
-    def preprocess_batch(self, batch: tuple) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
+    def preprocess_batch(self, batch: tuple, stopw: Optional[Stopwatch] = None) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
+        if stopw is None:
+            stopw = Stopwatch()
+
+        stopw.start("PreprocSampleIDs", resume=True)
         sample_ids = batch[0]
         if isinstance(sample_ids, torch.Tensor):
             sample_ids = sample_ids.tolist()
@@ -574,12 +582,20 @@ class PytorchTrainer:
             sample_ids = list(sample_ids)
 
         assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
+        stopw.stop("PreprocSampleIDs")
 
-        if self._label_tranformer_function is None:
-            target = batch[2].to(self._device)
+        stopw.start("LabelTransform", resume=True)
+        if self._label_tranformer_function is not None:
+            target = self._label_tranformer_function(batch[2])
         else:
-            target = self._label_tranformer_function(batch[2]).to(self._device)
+            target = batch[2]
+        stopw.stop("LabelTransform")
 
+        stopw.start("MoveLabelToGPU", resume=True)
+        target = target.to(self._device)
+        stopw.stop("MoveLabelToGPU")
+
+        stopw.start("MoveDataToGPU", resume=True)
         data: Union[torch.Tensor, dict]
         if isinstance(batch[1], torch.Tensor):
             data = batch[1].to(self._device)
@@ -592,6 +608,7 @@ class PytorchTrainer:
                 "The format of the data provided is not supported in modyn. "
                 "Please use either torch tensors or dict[str, torch.Tensor]"
             )
+        stopw.stop("MoveDataToGPU")
 
         return sample_ids, target, data
 
