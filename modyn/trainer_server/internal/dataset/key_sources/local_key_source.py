@@ -1,4 +1,3 @@
-import numpy as np
 from typing import Optional
 
 from modyn.common.trigger_sample import TriggerSampleStorage

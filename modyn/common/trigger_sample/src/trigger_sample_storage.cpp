@@ -77,7 +77,7 @@ void* get_worker_samples_impl(const char* folder, int64_t* size, const char* pat
     break;
   }
 
-  std::size_t data_length = sizeof(char) * dtype_size * samples;
+  const std::size_t data_length = sizeof(char) * dtype_size * samples;
   void* data = malloc(data_length);  // NOLINT: required for ctypes
 
   std::memcpy(static_cast<char*>(data), char_vector.data(), data_length);
@@ -112,7 +112,7 @@ void* get_all_samples_impl(const char* folder, int64_t* size, const char* patter
     file.close();
   }
 
-  std::size_t data_length = sizeof(char) * dtype_size * samples;
+  const std::size_t data_length = sizeof(char) * dtype_size * samples;
   void* data = malloc(data_length);  // NOLINT: required for ctypes
 
   std::memcpy(static_cast<char*>(data), char_vector.data(), data_length);
@@ -135,7 +135,7 @@ void* parse_file_impl(const char* filename, int64_t* size) {
 
   *size = samples;
 
-  std::size_t data_length = sizeof(char) * dtype_size * samples;
+  const std::size_t data_length = sizeof(char) * dtype_size * samples;
   void* data = malloc(data_length);  // NOLINT: required for ctypes
 
   file.read(static_cast<char*>(data), static_cast<int64_t>(data_length));

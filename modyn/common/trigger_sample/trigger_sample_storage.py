@@ -7,9 +7,8 @@ from pathlib import Path
 from sys import platform
 
 import numpy as np
-from numpy.ctypeslib import ndpointer
-
 from modyn.utils import get_partition_for_worker
+from numpy.ctypeslib import ndpointer
 
 logger = logging.getLogger(__name__)
 
@@ -198,17 +197,11 @@ class TriggerSampleStorage:
         )
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
-        size = (ctypes.c_int64 * 1)()
+        size_ptr = (ctypes.c_int64 * 1)()
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
-        data = self._get_worker_samples_impl(folder, size, pattern, start_index, worker_subset_size)
-
-        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))  # type: ignore
-        full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
-        buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
-        result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
-
-        return result
+        data = self._get_worker_samples_impl(folder, size_ptr, pattern, start_index, worker_subset_size)
+        return self._cbytes_to_numpy(data, size_ptr)
 
     def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> ArrayWrapper:
         """
@@ -221,18 +214,27 @@ class TriggerSampleStorage:
         """
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
-        size = (ctypes.c_int64 * 1)()
+        size_ptr = (ctypes.c_int64 * 1)()
 
         pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
 
-        data = self._get_all_samples_impl(folder, size, pattern)
+        data = self._get_all_samples_impl(folder, size_ptr, pattern)
+        return self._cbytes_to_numpy(data, size_ptr)
 
-        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))  # type: ignore
-        full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
+    def _cbytes_to_numpy(self, data: ctypes.POINTER, size_ptr: ctypes.POINTER) -> ArrayWrapper:
+        """Convert ctypeslib bytes function output to numpy with dynamic size.
+
+        Args:
+            data (ctypes.POINTER): The result of the c function
+            size_ptr (ctypes.POINTER): Pointer to the size
+
+        Returns:
+            ArrayWrapper: Array of trigger samples
+        """
+        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size_ptr[0],))  # type: ignore
+        full_ctype = ctypes.c_char * full_dtype.itemsize * size_ptr[0]
         buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
-        result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
-
-        return result
+        return ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
 
     def save_trigger_samples(
         self, pipeline_id: int, trigger_id: int, partition_id: int, trigger_samples: np.ndarray, data_lengths: list
@@ -306,16 +308,10 @@ class TriggerSampleStorage:
             return np.empty((0,), dtype=[("f0", "<i8"), ("f1", "<f8")])
 
         file = ctypes.c_char_p(str(file_path).encode("utf-8"))
-        size = (ctypes.c_int64 * 1)()
+        size_ptr = (ctypes.c_int64 * 1)()
 
-        data = self._parse_file_impl(file, size)
-
-        full_dtype = np.dtype([("f0", "<i8"), ("f1", "<f8")], (size[0],))  # type: ignore
-        full_ctype = ctypes.c_char * full_dtype.itemsize * size[0]
-        buffer = ctypes.cast(data, ctypes.POINTER(full_ctype)).contents
-        result = ArrayWrapper(np.frombuffer(buffer, dtype=full_dtype), self._release_data_impl)
-
-        return result
+        data = self._parse_file_impl(file, size_ptr)
+        return self._cbytes_to_numpy(data, size_ptr)
 
     def _get_num_samples_in_file(self, file_path: Path) -> int:
         """Get the number of samples in the given file.

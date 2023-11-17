@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional, Union
-import numpy as np
 
+import numpy as np
+from modyn.common.trigger_sample import ArrayWrapper
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models.triggers import Trigger
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.utils.utils import flatten, get_partition_for_worker
-from modyn.common.trigger_sample import ArrayWrapper
 
 
 class Selector:
