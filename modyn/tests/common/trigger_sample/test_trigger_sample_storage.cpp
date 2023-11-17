@@ -31,7 +31,7 @@ TEST_F(TriggerSampleTest, TestWriteReadSingle) {
       "                           \n",
       128);
   const std::string file = tmp_dir_ + "/test.npy";
-  const std::string data_write("0123456789012345678901234567890", 32);
+  const std::string data_write("01234567890123456789012345678901", 32);
 
   modyn::common::trigger_sample_storage::write_file(file.c_str(), data_write.c_str(), 0u, 2u, header.c_str(), 128u);
 
@@ -57,14 +57,14 @@ TEST_F(TriggerSampleTest, TestWriteReadAllMulti) {
       "                           \n",
       128);
   const std::string file_a = tmp_dir_ + "/test_a.npy";
-  const std::string data_write_a("0123456789012345678901234567890", 32);
+  const std::string data_write_a("01234567890123456789012345678901", 32);
 
   const std::string header_b(
       "\x93NUMPY\x01\x00v\x00{'descr': [('f0', '<i8'), ('f1', '<f8')], 'fortran_order': False, 'shape': (3,), }        "
       "                           \n",
       128);
   const std::string file_b = tmp_dir_ + "/test_b.npy";
-  const std::string data_write_b("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU", 48);
+  const std::string data_write_b("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV", 48);
 
   modyn::common::trigger_sample_storage::write_file(file_a.c_str(), data_write_a.c_str(), 0u, 2u, header_a.c_str(),
                                                     128u);
@@ -93,14 +93,14 @@ TEST_F(TriggerSampleTest, TestWriteReadWorkerMulti) {
       "                           \n",
       128);
   const std::string file_a = tmp_dir_ + "/test_a.npy";
-  const std::string data_write_a("0123456789012345678901234567890", 32);
+  const std::string data_write_a("01234567890123456789012345678901", 32);
 
   const std::string header_b(
       "\x93NUMPY\x01\x00v\x00{'descr': [('f0', '<i8'), ('f1', '<f8')], 'fortran_order': False, 'shape': (3,), }        "
       "                           \n",
       128);
   const std::string file_b = tmp_dir_ + "/test_b.npy";
-  const std::string data_write_b("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU", 48);
+  const std::string data_write_b("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV", 48);
 
   modyn::common::trigger_sample_storage::write_file(file_a.c_str(), data_write_a.c_str(), 0u, 2u, header_a.c_str(),
                                                     128u);
