@@ -222,7 +222,7 @@ class TriggerSampleStorage:
         return self._cbytes_to_numpy(data, size_ptr)
 
     def _cbytes_to_numpy(
-        self, data: ctypes.POINTER[ctypes.c_char], size_ptr: ctypes.POINTER[ctypes.c_uint64]
+        self, data: ctypes.POINTER(ctypes.c_char), size_ptr: ctypes.POINTER(ctypes.c_uint64)  # type: ignore
     ) -> ArrayWrapper:
         """Convert ctypeslib bytes function output to numpy with dynamic size.
 
