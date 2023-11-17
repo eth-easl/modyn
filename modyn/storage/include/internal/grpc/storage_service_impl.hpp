@@ -290,12 +290,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       std::vector<SampleRecord> record_buf;
       record_buf.reserve(sample_batch_size);
 
+      // TODO(create issue): Figure out multithreaded retrieval of this!
       const std::string query = fmt::format(
           "SELECT samples.sample_id, samples.label, files.updated_at "
           "FROM samples INNER JOIN files "
           "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
           "WHERE samples.file_id IN {} AND samples.dataset_id = {} "
-          "ORDER BY asc(files.updated_at)",  // TODO(MaxiBoether): This breaks with > 1 thread!
+          "ORDER BY files.updated_at ASC",  
           file_placeholders, dataset_id);
       const std::string cursor_name = fmt::format("cursor_{}_{}", dataset_id, file_ids.at(0));
       CursorHandler cursor_handler(session, storage_database_connection.get_drivername(), query, cursor_name, 3);
