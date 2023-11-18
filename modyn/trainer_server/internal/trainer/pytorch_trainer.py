@@ -570,7 +570,9 @@ class PytorchTrainer:
         except queue.Empty:
             pass
 
-    def preprocess_batch(self, batch: tuple, stopw: Optional[Stopwatch] = None) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
+    def preprocess_batch(
+        self, batch: tuple, stopw: Optional[Stopwatch] = None
+    ) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
         if stopw is None:
             stopw = Stopwatch()
 

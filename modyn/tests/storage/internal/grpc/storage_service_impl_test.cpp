@@ -472,9 +472,10 @@ TEST_F(StorageServiceImplTest, TestGetFileIds) {
 
   std::vector<int64_t> result;
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 100));
+  // File 1 has timestamp 100, file 2 has timestamp 1
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0], 1);
-  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[1], 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 1));
   ASSERT_EQ(result.size(), 1);
@@ -486,8 +487,8 @@ TEST_F(StorageServiceImplTest, TestGetFileIds) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1));
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0], 1);
-  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[1], 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 2));
   ASSERT_EQ(result.size(), 1);
@@ -495,8 +496,8 @@ TEST_F(StorageServiceImplTest, TestGetFileIds) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids(session, 1, 1, 100));
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0], 1);
-  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[1], 1);
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileCount) {
@@ -533,8 +534,8 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
   std::vector<int64_t> result;
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 1, 100, 2));
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0], 1);
-  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[0], 2);  // file 2 has timestamp 1, file 1 has timestamp 100, return result is ordered
+  ASSERT_EQ(result[1], 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 1, 1, 1));
   ASSERT_EQ(result.size(), 1);
@@ -546,8 +547,8 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, -1, -1, 2));
   ASSERT_EQ(result.size(), 2);
-  ASSERT_EQ(result[0], 1);
-  ASSERT_EQ(result[1], 2);
+  ASSERT_EQ(result[0], 2);
+  ASSERT_EQ(result[1], 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 2, -1, 1));
   ASSERT_EQ(result.size(), 1);
