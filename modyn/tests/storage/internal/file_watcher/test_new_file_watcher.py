@@ -50,7 +50,7 @@ def get_invalid_modyn_config() -> dict:
                 "host": "",
                 "port": 0,
                 "database": TEST_DATABASE,
-            },
+            }
         }
     }
 

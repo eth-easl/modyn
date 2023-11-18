@@ -3,7 +3,7 @@ This submodule implements necessary functions to persist a calculated trigger tr
 """
 import os
 
-from .trigger_sample_storage import TriggerSampleStorage  # noqa: F401
+from .trigger_sample_storage import ArrayWrapper, TriggerSampleStorage  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")
