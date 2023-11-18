@@ -122,3 +122,39 @@ trigger:
   id: TimeTrigger
   trigger_config:
     trigger_every: "1d"
+evaluation:
+  device: "cuda:0"
+  result_writers: ["json"]
+  datasets:
+    - dataset_id: criteo
+      bytes_parser_function: |
+        import torch
+        import numpy as np
+        def bytes_parser_function(x: bytes) -> dict:
+          num_features = x[:52]
+          cat_features = x[52:]
+          num_features_array = np.frombuffer(num_features, dtype=np.float32)
+          cat_features_array = np.frombuffer(cat_features, dtype=np.int32)
+          return {
+            "numerical_input": torch.asarray(num_features_array, copy=True, dtype=torch.float32),
+            "categorical_input": torch.asarray(cat_features_array, copy=True, dtype=torch.long)
+          }
+      label_transformer_function: |
+        import torch
+        # we need to convert our integer-type labels to floats,
+        # since the BCEWithLogitsLoss function does not work with integers.
+        def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
+          return x.to(torch.float32)
+      batch_size: 65536
+      dataloader_workers: 16
+      metrics:
+        - name: "Accuracy"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.ge(torch.sigmoid(model_output).float(), 0.5)
+        - name: "RocAuc"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.sigmoid(model_output).float()
