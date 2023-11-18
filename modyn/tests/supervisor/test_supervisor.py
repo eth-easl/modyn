@@ -245,6 +245,7 @@ def test__validate_evaluation_options():
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_validate_pipeline_config_content():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
+    sup.evaluation_matrix = False
 
     # Check that our minimal pipeline config gets accepted
     sup.pipeline_config = get_minimal_pipeline_config()
@@ -276,6 +277,7 @@ def test_validate_pipeline_config_content():
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_validate_pipeline_config():
     sup = Supervisor(get_minimal_pipeline_config(), get_minimal_system_config(), EVALUATION_DIRECTORY, None)
+    sup.evaluation_matrix = False
 
     # Check that our minimal pipeline config gets accepted
     sup.pipeline_config = get_minimal_pipeline_config()
