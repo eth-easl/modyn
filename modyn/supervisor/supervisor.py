@@ -10,6 +10,7 @@ from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
+    LogResultWriter,
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -31,7 +32,11 @@ class Supervisor:
         "CoresetStrategy",
     ]
 
-    supported_evaluation_result_writers: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
+    supported_evaluation_result_writers: dict = {
+        "json": JsonResultWriter,
+        "tensorboard": TensorboardResultWriter,
+        "log": LogResultWriter,
+    }
 
     def __init__(
         self,
@@ -41,6 +46,7 @@ class Supervisor:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
+        evaluation_matrix: bool = False,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
@@ -50,6 +56,9 @@ class Supervisor:
         self.current_training_id: Optional[int] = None
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
+        self.evaluation_matrix = evaluation_matrix
+        self.trained_models: list[int] = []
+        self.triggers: list[int] = []
 
         self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": pipeline_config, "modyn_config": modyn_config},
@@ -236,6 +245,25 @@ class Supervisor:
 
         if "evaluation" in self.pipeline_config:
             is_valid = is_valid and self._validate_evaluation_options(self.pipeline_config["evaluation"])
+
+        if self.evaluation_matrix:
+            if "evaluation" not in self.pipeline_config:
+                logger.error("Can only create evaluation matrix with evaluation section.")
+                is_valid = False
+            else:
+                train_dataset_id = self.pipeline_config["data"]["dataset_id"]
+                train_dataset_in_eval = any(
+                    dataset["dataset_id"] == train_dataset_id
+                    for dataset in self.pipeline_config["evaluation"]["datasets"]
+                )
+                if not train_dataset_in_eval:
+                    # TODO(#335): Fix this. Clean up in general.
+                    logger.error(
+                        "To create the evaluation matrix, you need to specify"
+                        f" how to evaluate the training dataset {train_dataset_id}"  # pylint: disable
+                        " in the evaluation section of the pipeline."
+                    )
+                    is_valid = False
 
         return is_valid
 
@@ -460,8 +488,11 @@ class Supervisor:
         if self.pipeline_config["training"]["use_previous_model"]:
             self.previous_model_id = model_id
 
+        self.trained_models.append(model_id)
+        self.triggers.append(trigger_id)
+
         # Start evaluation
-        if "evaluation" in self.pipeline_config:
+        if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
             # TODO(#300) Add evaluator to pipeline log
             evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
@@ -513,6 +544,18 @@ class Supervisor:
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
 
+    def build_evaluation_matrix(self) -> None:
+        self.pipeline_log["evaluation_matrix"] = {}
+        for model in self.trained_models:
+            self.pipeline_log["evaluation_matrix"][model] = {}
+            for trigger in self.triggers:
+                logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
+                evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
+                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
+                self.grpc.store_evaluation_results([eval_result_writer], evaluations)
+                self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
+
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
@@ -524,6 +567,9 @@ class Supervisor:
         self.get_dataset_selector_batch_size()
         if self.experiment_mode:
             self.replay_data()
+
+            if self.evaluation_matrix:
+                self.build_evaluation_matrix()
         else:
             self.wait_for_new_data(start_timestamp)
 

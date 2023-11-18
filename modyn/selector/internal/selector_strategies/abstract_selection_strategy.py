@@ -1,14 +1,12 @@
 import logging
-import multiprocessing as mp
 import os
 import platform
 from abc import ABC, abstractmethod
-from multiprocessing.managers import SharedMemoryManager
 from typing import Any, Iterable, Optional
 
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.common.trigger_sample import TriggerSampleStorage
+from modyn.common.trigger_sample import ArrayWrapper, TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from sqlalchemy import func
@@ -168,33 +166,26 @@ class AbstractSelectionStrategy(ABC):
         trigger_id: int,
         pipeline_id: int,
         training_samples: np.ndarray,
+        data_lengths: list,
         modyn_config: dict,
-        insertion_id: int,
     ) -> None:
         TriggerSampleStorage(
-            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"],
-        ).save_trigger_sample(
+            trigger_sample_directory=modyn_config["selector"]["trigger_sample_directory"]
+        ).save_trigger_samples(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,
             trigger_samples=training_samples,
-            insertion_id=insertion_id,
+            data_lengths=data_lengths,
         )
 
     @staticmethod
     def _store_trigger_num_keys(
-        modyn_config: dict,
-        pipeline_id: int,
-        trigger_id: int,
-        partition_id: int,
-        num_keys: int,
+        modyn_config: dict, pipeline_id: int, trigger_id: int, partition_id: int, num_keys: int
     ) -> None:
         with MetadataDatabaseConnection(modyn_config) as database:
             trigger_partition = TriggerPartition(
-                pipeline_id=pipeline_id,
-                trigger_id=trigger_id,
-                partition_id=partition_id,
-                num_keys=num_keys,
+                pipeline_id=pipeline_id, trigger_id=trigger_id, partition_id=partition_id, num_keys=num_keys
             )
             # TODO(#246): Maybe clean this up after some time.
             database.session.add(trigger_partition)
@@ -245,8 +236,8 @@ class AbstractSelectionStrategy(ABC):
                     trigger_id,
                     self._pipeline_id,
                     np.array(training_samples, dtype=np.dtype("i8,f8")),
+                    [len(training_samples)],
                     self._modyn_config,
-                    0,
                 )
                 overall_partition_log["store_triggersamples_time"] = swt.stop()
                 log["trigger_partitions"].append(overall_partition_log)
@@ -256,36 +247,29 @@ class AbstractSelectionStrategy(ABC):
             swt.start("store_triggersamples", overwrite=True)
             swt.start("mt_prep", overwrite=True)
             samples_per_proc = int(len(training_samples) / self._insertion_threads)
-            processes: list[mp.Process] = []
 
-            with SharedMemoryManager() as smm:
-                for i in range(self._insertion_threads):
-                    start_idx = i * samples_per_proc
-                    end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(training_samples)
-                    proc_samples = np.array(training_samples[start_idx:end_idx], dtype=np.dtype("i8,f8"))
-                    if len(proc_samples) > 0:
-                        shm = smm.SharedMemory(proc_samples.nbytes)
+            data_lengths = []
 
-                        shared_proc_samples: np.ndarray = np.ndarray(
-                            proc_samples.shape, dtype=proc_samples.dtype, buffer=shm.buf
-                        )
-                        shared_proc_samples[:] = proc_samples  # This copies into the prepared numpy array
-                        assert proc_samples.shape == shared_proc_samples.shape
+            overall_partition_log["mt_prep_time"] = swt.stop()
+            swt.start("mt_finish", overwrite=True)
 
-                        logger.debug(f"Starting trigger saving process for {len(proc_samples)} samples.")
-                        proc = mp.Process(
-                            target=AbstractSelectionStrategy._store_triggersamples_impl,
-                            args=(partition, trigger_id, self._pipeline_id, shared_proc_samples, self._modyn_config, i),
-                        )
-                        proc.start()
-                        processes.append(proc)
+            if samples_per_proc > 0:
+                data_lengths = [samples_per_proc] * (self._insertion_threads - 1)
 
-                overall_partition_log["mt_prep_time"] = swt.stop()
-                swt.start("mt_finish", overwrite=True)
-                for proc in processes:
-                    proc.join()
-                overall_partition_log["mt_finish_time"] = swt.stop()
-                overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
+            if sum(data_lengths) < len(training_samples):
+                data_lengths.append(len(training_samples) - sum(data_lengths))
+
+            AbstractSelectionStrategy._store_triggersamples_impl(
+                partition,
+                trigger_id,
+                self._pipeline_id,
+                np.array(training_samples, dtype=np.dtype("i8,f8")),
+                data_lengths,
+                self._modyn_config,
+            )
+
+            overall_partition_log["mt_finish_time"] = swt.stop()
+            overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
 
             log["trigger_partitions"].append(overall_partition_log)
             swt.start("on_trigger", overwrite=True)
@@ -329,9 +313,9 @@ class AbstractSelectionStrategy(ABC):
 
     def get_trigger_partition_keys(
         self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
-    ) -> list[tuple[int, float]]:
+    ) -> ArrayWrapper:
         """
-        Given a trigger id and partition id, returns a list of all keys in this partition
+        Given a trigger id and partition id, returns an ArrayWrapper of all keys in this partition
 
         Args:
             trigger_id (int): The trigger id
@@ -358,9 +342,7 @@ class AbstractSelectionStrategy(ABC):
             assert num_samples_trigger_partition is not None, f"Could not find TriggerPartition {partition_id} in DB"
             num_samples_trigger_partition = num_samples_trigger_partition[0]
 
-        data = TriggerSampleStorage(
-            self._trigger_sample_directory,
-        ).get_trigger_samples(
+        data = TriggerSampleStorage(self._trigger_sample_directory).get_trigger_samples(
             pipeline_id=self._pipeline_id,
             trigger_id=trigger_id,
             partition_id=partition_id,

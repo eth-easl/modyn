@@ -115,10 +115,7 @@ setup(
     author=AUTHOR,
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
-    project_urls={
-        "Bug Tracker": URL_ISSUES,
-        "Source Code": URL_GITHUB,
-    },
+    project_urls={"Bug Tracker": URL_ISSUES, "Source Code": URL_GITHUB},
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*", "tests.*.*"]),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
@@ -147,7 +144,7 @@ setup(
     include_package_data=True,
     license="MIT",
     keywords=KEYWORDS,
-    ext_modules=[CMakeExtension("example_extension")],
+    ext_modules=[CMakeExtension("example_extension"), CMakeExtension("trigger_sample_storage")],
     cmdclass={"build_ext": CMakeBuild},
     classifiers=[
         # Trove classifiers
