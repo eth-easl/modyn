@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -57,11 +58,7 @@ def test_init():
 
     with pytest.raises(ValueError):
         AbstractSelectionStrategy(
-            {"limit": -1, "reset_after_trigger": False},
-            get_minimal_modyn_config(),
-            42,
-            1000,
-            ["doesntexist"],
+            {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000, ["doesntexist"]
         )
 
     #  Test reinit works
@@ -110,7 +107,10 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
     test_reset_state.assert_not_called()
     test__on_trigger.assert_called_once()
 
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 0)
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -133,8 +133,14 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
     test_reset_state.assert_not_called()
     test__on_trigger.assert_called_once()
 
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
-    assert strat.get_trigger_partition_keys(trigger_id, 1) == [(13, 1.0), (14, 1.0), (15, 1.0)]
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 0)
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 1)
+        == np.array([(13, 1.0), (14, 1.0), (15, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
 
     with pytest.raises(AssertionError):
         strat.get_trigger_partition_keys(trigger_id, 2)
@@ -160,7 +166,10 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
 
     test_reset_state.assert_called_once()
     test__on_trigger.assert_called_once()
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == [(10, 1.0), (11, 1.0), (12, 1.0)]
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 0)
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -188,11 +197,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert data[0].num_keys == 4
         assert data[0].num_partitions == 2
 
-        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(
-            42,
-            0,
-            0,
-        )
+        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(42, 0, 0)
 
         assert len(data) == 3
         assert data[0][0] == 10
@@ -202,11 +207,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
         assert data[2][0] == 12
         assert data[2][1] == 1.0
 
-        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(
-            42,
-            0,
-            1,
-        )
+        data = TriggerSampleStorage(TMP_DIR).get_trigger_samples(42, 0, 1)
 
         assert len(data) == 1
         assert data[0][0] == 13
