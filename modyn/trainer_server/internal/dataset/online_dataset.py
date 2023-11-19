@@ -68,6 +68,7 @@ class OnlineDataset(IterableDataset):
         self._uses_weights = None
         self._log_path = log_path
         self._log: dict[str, Any] = {"partitions": {}}
+        self._log_lock: Optional[threading.Lock] = None
         self._sw = Stopwatch()
 
         self._data_threads: dict[int, threading.Thread] = {}
@@ -212,7 +213,8 @@ class OnlineDataset(IterableDataset):
 
         get_data_log["get_data"] = self._sw.stop(f"GetDataPart{partition_id}")
         get_data_log["response_times"] = all_response_times
-        self._log["partitions"][str(partition_id)] = get_data_log
+        with self._log_lock:
+            self._log["partitions"][str(partition_id)] = get_data_log
 
         if partition_locks is not None and partition_valid is not None:
             with partition_locks[partition_id]:
@@ -239,18 +241,21 @@ class OnlineDataset(IterableDataset):
     def _persist_log(self, worker_id: int) -> None:
         if self._log_path is None:
             return
+        
+        assert self._log_lock is not None
 
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            json.dumps(self._log)  # Enforce serialization to catch issues
-            return  # But don't actually store in tests
+        with self._log_lock:
+            if "PYTEST_CURRENT_TEST" in os.environ:
+                json.dumps(self._log)  # Enforce serialization to catch issues
+                return  # But don't actually store in tests
 
-        log_file = f"{self._log_path / str(worker_id)}.log"
-        self._log["transform"] = self._sw.measurements.get("transform", 0)
-        self._log["wait_for_later_partitions"] = self._sw.measurements.get("wait_for_later_partitions", 0)
-        self._log["wait_for_initial_partition"] = self._sw.measurements.get("wait_for_initial_partition", 0)
+            log_file = f"{self._log_path / str(worker_id)}.log"
+            self._log["transform"] = self._sw.measurements.get("transform", 0)
+            self._log["wait_for_later_partitions"] = self._sw.measurements.get("wait_for_later_partitions", 0)
+            self._log["wait_for_initial_partition"] = self._sw.measurements.get("wait_for_initial_partition", 0)
 
-        with open(log_file, "w", encoding="utf-8") as logfile:
-            json.dump(self._log, logfile)
+            with open(log_file, "w", encoding="utf-8") as logfile:
+                json.dump(self._log, logfile)
 
     def _prefetch_partition(self, worker_id: int, maybe_continue: bool = False) -> None:
         assert self._start_prefetch_lock is not None
@@ -437,6 +442,7 @@ class OnlineDataset(IterableDataset):
             self._log = {"partitions": {}}
             self._sw = Stopwatch()
             self._start_prefetch_lock = threading.Lock()
+            self._log_lock = threading.Lock()
 
         # Always reinitialize these structures for prefetching (for multiple epochs)
         self._data_threads = {}
@@ -456,7 +462,8 @@ class OnlineDataset(IterableDataset):
             + f"Num prefetched partitions = {self._num_prefetched_partitions}",
             worker_id,
         )
-        self._log["num_partitions"] = self._num_partitions
+        with self._log_lock:
+            self._log["num_partitions"] = self._num_partitions
         self._num_prefetched_partitions = min(self._num_prefetched_partitions, self._num_partitions)
 
         for data_tuple in self.all_partition_generator(worker_id):
