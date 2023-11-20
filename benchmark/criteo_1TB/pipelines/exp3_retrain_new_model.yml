@@ -93,7 +93,7 @@ training:
     activated: False
   selection_strategy:
     name: NewDataStrategy
-    maximum_keys_in_memory: 2000000
+    maximum_keys_in_memory: 10000000
     config:
       storage_backend: "database"
       limit: -1
