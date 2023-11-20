@@ -120,13 +120,13 @@ class OnlineDataset(IterableDataset):
             {
                 "methodConfig": [
                     {
-                        "name": [{"service": "modyn.storage.Storage"}],
+                        "name": [{}],
                         "retryPolicy": {
-                            "maxAttempts": 5,
+                            "maxAttempts": 10,
                             "initialBackoff": "0.1s",
                             "maxBackoff": "10s",
                             "backoffMultiplier": 2,
-                            "retryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED"],
+                            "retryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED", "DEADLINE_EXCEEDED"],
                         },
                     }
                 ]
@@ -139,6 +139,8 @@ class OnlineDataset(IterableDataset):
                 ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
                 ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
                 ("grpc.service_config", json_config),
+                ('grpc.keepalive_permit_without_calls', True),
+                ('grpc.keepalive_time_ms', 2 * 60 * 60 * 1000),
             ],
         )
         if not grpc_connection_established(storage_channel):
@@ -165,7 +167,11 @@ class OnlineDataset(IterableDataset):
         stopw.start("ResponseTime", overwrite=True)
         for _, response in enumerate(self._storagestub.Get(req)):
             yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
+            if not grpc_connection_established(self.storage_channel):
+                self._info("gRPC connection lost, trying to reconnect!")
+                self._init_grpc()
             stopw.start("ResponseTime", overwrite=True)
+        
 
     # pylint: disable=too-many-locals
     def _get_data(
