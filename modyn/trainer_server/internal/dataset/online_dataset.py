@@ -61,6 +61,7 @@ class OnlineDataset(IterableDataset):
         self._transform_list: list[Callable] = []
         self._transform: Optional[Callable] = None
         self._storagestub: StorageStub = None
+        self._storage_channel: Optional[Any] = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
         # the default key source is the Selector. Then it can be changed using change_key_source
@@ -133,7 +134,7 @@ class OnlineDataset(IterableDataset):
             }
         )
 
-        storage_channel = grpc.insecure_channel(
+        self._storage_channel = grpc.insecure_channel(
             self._storage_address,
             options=[
                 ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
@@ -143,9 +144,9 @@ class OnlineDataset(IterableDataset):
                 ('grpc.keepalive_time_ms', 2 * 60 * 60 * 1000),
             ],
         )
-        if not grpc_connection_established(storage_channel):
+        if not grpc_connection_established(self._storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
-        self._storagestub = StorageStub(storage_channel)
+        self._storagestub = StorageStub(self._storage_channel)
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
