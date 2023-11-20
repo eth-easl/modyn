@@ -124,7 +124,8 @@ setup(
                    "_modyn_selector=modyn.selector.selector_entrypoint:main",
                    "_modyn_metadata_processor=modyn.metadata_processor.metadata_processor_entrypoint:main",
                    "_modyn_model_storage=modyn.model_storage.model_storage_entrypoint:main",
-                   "_modyn_evaluator=modyn.evaluator.evaluator_entrypoint:main"]},
+                   "_modyn_evaluator=modyn.evaluator.evaluator_entrypoint:main",
+                   "_modyn_client=modynclient.client.entrypoint:main"]},
     scripts=[
         'modyn/supervisor/modyn-supervisor',
         'modyn/storage/modyn-storage',
@@ -132,7 +133,8 @@ setup(
         'modyn/selector/modyn-selector',
         'modyn/metadata_processor/modyn-metadata-processor',
         'modyn/model_storage/modyn-model-storage',
-        'modyn/evaluator/modyn-evaluator'
+        'modyn/evaluator/modyn-evaluator',
+        'modynclient/client/modyn-client'
     ],
     install_requires=REQUIRED,
     extras_require=EXTRAS,

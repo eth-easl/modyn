@@ -39,8 +39,7 @@ def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
             else:
                 # TODO(#317): unregister pipeline when process terminates
                 logger.info(
-                    f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id},
-                    exit code {p_info.process_handler.exitcode}"""
+                    f"[{os.getpid()}][pipeline_monitor] pipeline {p_id}, exit code {p_info.process_handler.exitcode}"
                 )
         if num_active_pipeline_processes > 0:
             logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")

@@ -28,6 +28,7 @@ class Client:
 
 
     def start_pipeline(self) -> None:
+        logger.info(f"model id: {self.pipeline_config['model']['id']}, max triggers: {self.maximum_triggers}")
         self.pipeline_id = self.grpc.start_pipeline(
             self.pipeline_config, 
             self.eval_directory, 
@@ -35,6 +36,7 @@ class Client:
             self.stop_replay_at, 
             self.maximum_triggers
         )
+        logger.info(f"Pipeline started: <{self.pipeline_id}>")
     
 
     def poll_pipeline_status(self) -> None:
