@@ -168,7 +168,7 @@ class OnlineDataset(IterableDataset):
         stopw.start("ResponseTime", overwrite=True)
         for _, response in enumerate(self._storagestub.Get(req)):
             yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
-            if not grpc_connection_established(self.storage_channel):
+            if not grpc_connection_established(self._storage_channel):
                 self._info("gRPC connection lost, trying to reconnect!")
                 self._init_grpc()
             stopw.start("ResponseTime", overwrite=True)
