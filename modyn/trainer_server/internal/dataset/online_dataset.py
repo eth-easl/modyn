@@ -140,8 +140,8 @@ class OnlineDataset(IterableDataset):
                 ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
                 ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
                 ("grpc.service_config", json_config),
-                ('grpc.keepalive_permit_without_calls', True),
-                ('grpc.keepalive_time_ms', 2 * 60 * 60 * 1000),
+                ("grpc.keepalive_permit_without_calls", True),
+                ("grpc.keepalive_time_ms", 2 * 60 * 60 * 1000),
             ],
         )
         if not grpc_connection_established(self._storage_channel):
@@ -159,7 +159,7 @@ class OnlineDataset(IterableDataset):
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def _get_data_from_storage(
-        self, selector_keys: list[int]
+        self, selector_keys: list[int], worker_id: Optional[int] = None
     ) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
         stopw = Stopwatch()
@@ -169,12 +169,12 @@ class OnlineDataset(IterableDataset):
         for _, response in enumerate(self._storagestub.Get(req)):
             yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
             if not grpc_connection_established(self._storage_channel):
-                self._info("gRPC connection lost, trying to reconnect!")
+                self._info("gRPC connection lost, trying to reconnect!", worker_id)
                 self._init_grpc()
             stopw.start("ResponseTime", overwrite=True)
-        
 
     # pylint: disable=too-many-locals
+
     def _get_data(
         self,
         data_container: dict,
@@ -198,7 +198,7 @@ class OnlineDataset(IterableDataset):
 
         key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
 
-        for data_tuple in self._get_data_from_storage(keys):
+        for data_tuple in self._get_data_from_storage(keys, worker_id):
             stor_keys, data, labels, response_time = data_tuple
             all_response_times.append(response_time)
             num_items = len(stor_keys)
@@ -220,6 +220,8 @@ class OnlineDataset(IterableDataset):
 
         get_data_log["get_data"] = self._sw.stop(f"GetDataPart{partition_id}")
         get_data_log["response_times"] = all_response_times
+        assert self._log_lock is not None
+
         with self._log_lock:
             self._log["partitions"][str(partition_id)] = get_data_log
 
@@ -248,7 +250,7 @@ class OnlineDataset(IterableDataset):
     def _persist_log(self, worker_id: int) -> None:
         if self._log_path is None:
             return
-        
+
         assert self._log_lock is not None
 
         with self._log_lock:
@@ -469,6 +471,7 @@ class OnlineDataset(IterableDataset):
             + f"Num prefetched partitions = {self._num_prefetched_partitions}",
             worker_id,
         )
+        assert self._log_lock is not None
         with self._log_lock:
             self._log["num_partitions"] = self._num_partitions
         self._num_prefetched_partitions = min(self._num_prefetched_partitions, self._num_partitions)

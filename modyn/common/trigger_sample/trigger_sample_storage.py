@@ -364,7 +364,7 @@ class TriggerSampleStorage:
 
         self._write_files_impl(files_p, data, data_lengths_p, headers_p, NUMPY_HEADER_SIZE, len(data_lengths))
 
-    def _build_array_header(self, d: dict) -> str:
+    def _build_array_header(self, array_dict: dict) -> str:
         """Build the header for the array
         Sourced from NumPy, modified version of _write_array_header:
         https://github.com/numpy/numpy/blob/main/numpy/lib/format.py
@@ -376,7 +376,7 @@ class TriggerSampleStorage:
             str: Header string
         """
         header_list = ["{"]
-        for key, value in sorted(d.items()):
+        for key, value in sorted(array_dict.items()):
             # Need to use repr here, since we eval these when reading
             header_list.append(f"'{key}': {repr(value)}, ")
         header_list.append("}")
@@ -385,7 +385,7 @@ class TriggerSampleStorage:
         # Add some spare space so that the array header can be modified in-place
         # when changing the array size, e.g. when growing it by appending data at
         # the end.
-        shape = d["shape"]
+        shape = array_dict["shape"]
         growth_axis_max_digits = 21
         header += " " * ((growth_axis_max_digits - len(repr(shape[0]))) if len(shape) > 0 else 0)
 
