@@ -172,7 +172,8 @@ class ModelStorageManager:
         assert hasattr(model_module, model_class_name), f"Model {model_class_name} not available."
 
         model_handler = getattr(model_module, model_class_name)
-        return model_handler(json.loads(model_config), "cpu", amp).model.state_dict()
+        # TODO(create issue): remove cuda and fix GPU loading for DLRM (also apex for model storage)
+        return model_handler(json.loads(model_config), "cuda:1", amp).model.state_dict()
 
     def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
         """
