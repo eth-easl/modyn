@@ -273,8 +273,9 @@ class PytorchTrainer:
     def load_state_if_given(self, path: pathlib.Path, load_optimizer_state: bool = False) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
         self._info(f"Loading model state from {path}")
+        # We load the weights on the CPU, and `load_state_dict` moves them to GPU
         with open(path, "rb") as state_file:
-            checkpoint = torch.load(io.BytesIO(state_file.read()))
+            checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device('cpu'))
 
         assert "model" in checkpoint
         self._model.model.load_state_dict(checkpoint["model"])
