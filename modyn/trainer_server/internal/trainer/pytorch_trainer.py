@@ -459,13 +459,16 @@ class PytorchTrainer:
                 self._log["epochs"][epoch]["BatchTimings"] = batch_timings
 
             # mypy cannot handle np.min and np.max
-            batch_timings = np.array(batch_timings)
-            self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings).item()  # type: ignore
-            self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings).item()  # type: ignore
-            self._log["epochs"][epoch]["AvgFetchBatch"] = np.mean(batch_timings).item()
-            self._log["epochs"][epoch]["MedianFetchBatch"] = np.median(batch_timings).item()
-            self._log["epochs"][epoch]["StdFetchBatch"] = np.std(batch_timings).item()
-            del batch_timings
+            if len(batch_timings > 0):
+                batch_timings = np.array(batch_timings)
+                self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings).item()  # type: ignore
+                self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings).item()  # type: ignore
+                self._log["epochs"][epoch]["AvgFetchBatch"] = np.mean(batch_timings).item()
+                self._log["epochs"][epoch]["MedianFetchBatch"] = np.median(batch_timings).item()
+                self._log["epochs"][epoch]["StdFetchBatch"] = np.std(batch_timings).item()
+                del batch_timings
+            else:
+                self._error("Got zero batch timings, cannot get minimum.")
 
             self._log["epochs"][epoch]["TotalFetchBatch"] = stopw.measurements.get("FetchBatch", 0)
             self._log["epochs"][epoch]["OnBatchBeginCallbacks"] = stopw.measurements.get("OnBatchBeginCallbacks", 0)

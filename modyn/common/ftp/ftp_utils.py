@@ -158,16 +158,16 @@ def download_trained_model(
             if not success and num_try < tries - 1:
                 logger.error("Download finished without exception but checksums did not match, retrying")
                 continue
-
-        except Exception as ex:
+        # Retry mechanism requires generic exception
+        except Exception as ex: # pylint: disable=broad-exception-caught
             logger.error("Caught exception while downloading file.")
             logger.error(ex)
             if num_try < tries - 1:
                 logger.warning("Trying again")
                 continue
-            else:
-                logger.error("Tried enough times.")
-                raise
+
+            logger.error("Tried enough times.")
+            raise
 
         break
 
@@ -184,15 +184,15 @@ def download_trained_model(
                 password="modyn",
                 remote_file_path=pathlib.Path(remote_path),
             )
-        except Exception as ex:
+        except Exception as ex: # pylint: disable=broad-exception-caught
             logger.error("Caught exception while deleting file.")
             logger.error(ex)
             if num_try < tries - 1:
                 logger.warning("Trying again")
                 continue
-            else:
-                logger.error("Tried enough times.")
-                raise
+
+            logger.error("Tried enough times.")
+            raise
 
         break
 
