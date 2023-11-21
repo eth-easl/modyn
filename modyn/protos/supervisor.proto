@@ -4,6 +4,7 @@ package supervisor;
 
 service Supervisor {
   rpc start_pipeline(StartPipelineRequest) returns (PipelineResponse) {}
+  rpc get_pipeline_status(GetPipelineStatusRequest) returns (GetPipelineStatusResponse) {}
 }
 
 message JsonString { string value = 1; }
@@ -17,3 +18,10 @@ message StartPipelineRequest {
 }
 
 message PipelineResponse { int32 pipeline_id = 1; }
+
+message GetPipelineStatusRequest { int32 pipeline_id = 1; }
+
+message GetPipelineStatusResponse {
+    string status = 1;
+    JsonString detail = 2;
+}

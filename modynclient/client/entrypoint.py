@@ -92,11 +92,13 @@ def main() -> None:
             logger.info(f"Replay interval ends at {args.stop_replay_at}.")
 
     logger.info("Initializing client.")
+    logger.info(f"{client_config}")
     client = Client(
-        pipeline_config, client_config, args.eval_dir, args.start_replay_at, args.stop_replay_at, args.maximum_triggers
+        client_config, pipeline_config, args.eval_dir, args.start_replay_at, args.stop_replay_at, args.maximum_triggers
     )
     logger.info("Starting pipeline.")
     client.start_pipeline()
+    client.poll_pipeline_status()
 
     logger.info("Client returned, exiting.")
 

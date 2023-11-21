@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import time
 from typing import Optional
 from modynclient.client.internal.grpc_handler import GRPCHandler
 
@@ -40,4 +41,11 @@ class Client:
     
 
     def poll_pipeline_status(self) -> None:
-        pass
+        res = self.grpc.get_pipeline_status(self.pipeline_id)
+
+        while res["status"] == "running":
+            print(res)
+            res = self.grpc.get_pipeline_status(self.pipeline_id)
+            time.sleep(1)
+            
+        print(res)

@@ -5,4 +5,4 @@ project:
 
 supervisor:
   ip: 127.0.0.1
-  port: "50063"
+  port: "3000"

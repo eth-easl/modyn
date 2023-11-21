@@ -7,7 +7,11 @@ import grpc
 
 # TODO(#317 client): share with modyn or make a copy?
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
+    StartPipelineRequest, 
+    GetPipelineStatusRequest, 
+    GetPipelineStatusResponse,
+)
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
 
@@ -66,4 +70,13 @@ class GRPCHandler:
         return pipeline_id
     
     def get_pipeline_status(self, pipeline_id: int) -> dict:
-        pass
+        if not self.connected_to_supervisor:
+            raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
+        
+        get_status_request = GetPipelineStatusRequest(pipeline_id=pipeline_id)
+
+        res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(get_status_request)
+        status = res.status
+        detail = json.loads(res.detail.value)
+
+        return {"status": status, "detail": detail}

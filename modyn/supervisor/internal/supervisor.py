@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os
 import pathlib
 import threading
+import queue
 import time
 from multiprocessing import Manager, Process
 from typing import Any, Optional
@@ -215,7 +216,10 @@ class Supervisor:
         return available
 
     def validate_system(self, pipeline_config: dict) -> bool:
-        return self.dataset_available(pipeline_config) and self.grpc.trainer_server_available()
+        dataset_available = self.dataset_available(pipeline_config)
+        trainer_server_available = self.grpc.trainer_server_available()
+        logger.info(f"Validate system: dataset {dataset_available}, trainer server {trainer_server_available}")
+        return dataset_available and trainer_server_available
 
     def register_pipeline(self, pipeline_config: dict) -> int:
         """
@@ -333,3 +337,21 @@ class Supervisor:
         )
 
         return pipeline_id
+    
+    def get_pipeline_status(self, pipeline_id: int) -> dict:
+        if pipeline_id not in self._pipeline_process_dict:
+            return {"status": "not found"}
+        
+        p_info = self._pipeline_process_dict[pipeline_id]
+
+        if p_info.process_handler.is_alive():
+            # TODO(#317): fine-grained stages
+            detail = p_info.get_status_detail()
+            logger.info(f"[{pipeline_id}] detail: {detail}")
+            return {"status": "running", "detail": detail}
+        else:
+            exception_msg = p_info.check_for_exception()
+            return {
+                "status": "exit", 
+                "detail":{"exitcode": p_info.process_handler.exitcode, "exception": exception_msg}
+            }

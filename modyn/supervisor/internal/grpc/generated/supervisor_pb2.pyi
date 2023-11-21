@@ -79,3 +79,38 @@ class PipelineResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
 
 global___PipelineResponse = PipelineResponse
+
+@typing_extensions.final
+class GetPipelineStatusRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PIPELINE_ID_FIELD_NUMBER: builtins.int
+    pipeline_id: builtins.int
+    def __init__(
+        self,
+        *,
+        pipeline_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+
+global___GetPipelineStatusRequest = GetPipelineStatusRequest
+
+@typing_extensions.final
+class GetPipelineStatusResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    STATUS_FIELD_NUMBER: builtins.int
+    DETAIL_FIELD_NUMBER: builtins.int
+    status: builtins.str
+    @property
+    def detail(self) -> global___JsonString: ...
+    def __init__(
+        self,
+        *,
+        status: builtins.str = ...,
+        detail: global___JsonString | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["detail", b"detail"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["detail", b"detail", "status", b"status"]) -> None: ...
+
+global___GetPipelineStatusResponse = GetPipelineStatusResponse
