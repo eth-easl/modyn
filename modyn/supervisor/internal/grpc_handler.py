@@ -427,11 +427,8 @@ class GRPCHandler:
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         status_bar_scale = self.get_status_bar_scale(pipeline_id)
         training_reporter = TrainingStatusReporter(self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale)
-        training_reporter.create_counter()
-        self.training_status_queue.put({"stage": "wait for training",
-                                        "action": "update_status_bar",
-                                        "training_id": training_id,
-                                        "demo": f"Waiting for training (id = {training_id})"})
+        training_reporter.create_tracker()
+        training_reporter.update_status_bar(f"Waiting for training")
         # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
         # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
@@ -477,10 +474,7 @@ class GRPCHandler:
 
         training_reporter.close_counter()
         # status_tracker.close_counter()
-        self.training_status_queue.put({"stage": "wait for training",
-                                        "action": "update_status_bar",
-                                        "training_id": training_id,
-                                        "demo": "Training completed"})
+        training_reporter.update_status_bar("Training completed")
         logger.info("Training completed 🚀")
 
         return trainer_log

@@ -67,8 +67,7 @@ class PipelineExecutor:
         }
         self._determine_pipeline_mode()
         self._setup_trigger()
-        self._selector_batch_size = 512
-        # self._selector_batch_size = 128
+        self._selector_batch_size = 128
 
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None

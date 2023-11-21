@@ -10,10 +10,16 @@ class TrainingStatusReporter:
         self.training_id = training_id
         self.samples_per_epoch =  samples_per_epoch
         self.status_bar_scale = status_bar_scale
-        
-    def create_counter(self) -> None:
+    
+    def update_status_bar(self, demo: str) -> None:
         self.training_status_queue.put({"stage": "wait for training",
-                                        "action": "create_counter", 
+                                    "action": "update_status_bar",
+                                    "training_id": self.training_id,
+                                    "demo": demo})
+        
+    def create_tracker(self) -> None:
+        self.training_status_queue.put({"stage": "wait for training",
+                                        "action": "create_tracker", 
                                         "trigger_id": self.trigger_id,
                                         "training_id": self.training_id, 
                                         "total_samples": self.samples_per_epoch,
