@@ -459,7 +459,7 @@ class PytorchTrainer:
                 self._log["epochs"][epoch]["BatchTimings"] = batch_timings
 
             # mypy cannot handle np.min and np.max
-            if len(batch_timings > 0):
+            if len(batch_timings) > 0:
                 batch_timings = np.array(batch_timings)
                 self._log["epochs"][epoch]["MinFetchBatch"] = np.min(batch_timings).item()  # type: ignore
                 self._log["epochs"][epoch]["MaxFetchBatch"] = np.max(batch_timings).item()  # type: ignore
