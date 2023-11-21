@@ -62,9 +62,14 @@ class SupervisorGRPCServicer(SupervisorServicer):
         request: GetPipelineStatusRequest, 
         context: grpc.ServicerContext
     ) -> GetPipelineStatusResponse:
-        res = self._supervisor.get_pipeline_status(request.pipeline_id)
+        status = self._supervisor.get_pipeline_status(request.pipeline_id)
+        
+        res = GetPipelineStatusResponse(status = status["status"])
+        if "pipeline_status_detail" in status:
+            pipeline_status_detail = SupervisorJsonString(value=json.dumps(status["pipeline_status_detail"]))
+            res.pipeline_status_detail.CopyFrom(pipeline_status_detail)
+        if "training_status_detail" in status:
+            training_status_detail = SupervisorJsonString(value=json.dumps(status["training_status_detail"]))
+            res.training_status_detail.CopyFrom(training_status_detail)
 
-        return GetPipelineStatusResponse(
-            status = res["status"],
-            detail = SupervisorJsonString(value=json.dumps(res["detail"]))
-        )
+        return res

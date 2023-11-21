@@ -96,8 +96,9 @@ class Supervisor:
 
     def monitor_pipelines(self) -> None:
         logging.info("Starting pipeline monitor thread.")
-        self.pipeline_monitor_thread = threading.Thread(target=pipeline_monitor, args=(self._pipeline_process_dict,))
-        self.pipeline_monitor_thread.start()
+        # self.pipeline_monitor_thread = threading.Thread(target=pipeline_monitor, args=(self._pipeline_process_dict,))
+        # self.pipeline_monitor_thread.start()
+        pass
 
     def validate_pipeline_config_schema(self, pipeline_config: dict) -> bool:
         schema_path = (
@@ -304,8 +305,8 @@ class Supervisor:
             raise ValueError("Invalid system configuration")
 
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        training_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        pipeline_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
         start_timestamp = self.grpc.get_time_at_storage()
         pipeline_id = self.register_pipeline(pipeline_config)
@@ -321,8 +322,8 @@ class Supervisor:
                 eval_directory,
                 self.supported_evaluation_result_writers,
                 exception_queue,
-                status_query_queue,
-                status_response_queue,
+                training_status_queue,
+                pipeline_status_queue,
                 start_replay_at,
                 stop_replay_at,
                 maximum_triggers,
@@ -332,26 +333,37 @@ class Supervisor:
         self._pipeline_process_dict[pipeline_id] = PipelineInfo(
             process,
             exception_queue,
-            status_query_queue,
-            status_response_queue,
+            training_status_queue,
+            pipeline_status_queue,
         )
 
         return pipeline_id
     
     def get_pipeline_status(self, pipeline_id: int) -> dict:
+        ret = {}
+
         if pipeline_id not in self._pipeline_process_dict:
-            return {"status": "not found"}
+            ret["status"] = "not found"
+            return ret
         
         p_info = self._pipeline_process_dict[pipeline_id]
 
         if p_info.process_handler.is_alive():
-            # TODO(#317): fine-grained stages
-            detail = p_info.get_status_detail()
-            logger.info(f"[{pipeline_id}] detail: {detail}")
-            return {"status": "running", "detail": detail}
+            ret["status"] = "running"
+
+            pipeline_status_detail = p_info.get_pipeline_status_detail()
+            if pipeline_status_detail is not None:
+                ret["pipeline_status_detail"] = pipeline_status_detail
+
+            training_status_detail = p_info.get_training_status_detail()
+            if training_status_detail is not None:
+                ret["training_status_detail"] = training_status_detail
+
+            logger.info(f"[{pipeline_id}] pipeline_status_detail: {pipeline_status_detail},\n\ttraining_status_detail: {training_status_detail}") 
         else:
+            ret["status"] = "exit"
+
             exception_msg = p_info.check_for_exception()
-            return {
-                "status": "exit", 
-                "detail":{"exitcode": p_info.process_handler.exitcode, "exception": exception_msg}
-            }
+            ret["pipeline_status_detail"] = {"exitcode": p_info.process_handler.exitcode, "exception": exception_msg}
+    
+        return ret

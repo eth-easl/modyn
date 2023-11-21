@@ -13,7 +13,7 @@ from modyn.supervisor.internal.evaluation_result_writer import (
 )
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
-from modyn.supervisor.internal.utils.evaluation_status_tracker import EvaluationStatusTracker
+from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
@@ -400,7 +400,7 @@ def test__run_training_with_evaluation(
     test_start_training: MagicMock,
     test_store_trained_model: MagicMock,
 ):
-    evaluations = {1: EvaluationStatusTracker("MNIST_eval", 1000)}
+    evaluations = {1: EvaluationStatusReporter("MNIST_eval", 1000)}
     test_start_evaluation.return_value = evaluations
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     evaluation_pipeline_config = get_minimal_pipeline_config()

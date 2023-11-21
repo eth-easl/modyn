@@ -1,8 +1,11 @@
+import json
 import logging
 import pathlib
 import time
 from typing import Optional
 from modynclient.client.internal.grpc_handler import GRPCHandler
+
+POLL_TIMEOUT = 2
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +47,8 @@ class Client:
         res = self.grpc.get_pipeline_status(self.pipeline_id)
 
         while res["status"] == "running":
-            print(res)
+            print(json.dumps(res, sort_keys=True, indent=2))
             res = self.grpc.get_pipeline_status(self.pipeline_id)
-            time.sleep(1)
+            time.sleep(POLL_TIMEOUT)
             
-        print(res)
+        print(json.dumps(res, sort_keys=True, indent=2))

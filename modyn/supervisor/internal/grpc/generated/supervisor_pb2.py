@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10supervisor.proto\x12\nsupervisor\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\"\xf5\x01\n\x14StartPipelineRequest\x12/\n\x0fpipeline_config\x18\x01 \x01(\x0b\x32\x16.supervisor.JsonString\x12\x16\n\x0e\x65val_directory\x18\x02 \x01(\t\x12\x1c\n\x0fstart_replay_at\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\x1b\n\x0estop_replay_at\x18\x04 \x01(\x05H\x01\x88\x01\x01\x12\x1d\n\x10maximum_triggers\x18\x05 \x01(\x05H\x02\x88\x01\x01\x42\x12\n\x10_start_replay_atB\x11\n\x0f_stop_replay_atB\x13\n\x11_maximum_triggers\"\'\n\x10PipelineResponse\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"/\n\x18GetPipelineStatusRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"S\n\x19GetPipelineStatusResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12&\n\x06\x64\x65tail\x18\x02 \x01(\x0b\x32\x16.supervisor.JsonString2\xc6\x01\n\nSupervisor\x12R\n\x0estart_pipeline\x12 .supervisor.StartPipelineRequest\x1a\x1c.supervisor.PipelineResponse\"\x00\x12\x64\n\x13get_pipeline_status\x12$.supervisor.GetPipelineStatusRequest\x1a%.supervisor.GetPipelineStatusResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10supervisor.proto\x12\nsupervisor\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\"\xf5\x01\n\x14StartPipelineRequest\x12/\n\x0fpipeline_config\x18\x01 \x01(\x0b\x32\x16.supervisor.JsonString\x12\x16\n\x0e\x65val_directory\x18\x02 \x01(\t\x12\x1c\n\x0fstart_replay_at\x18\x03 \x01(\x05H\x00\x88\x01\x01\x12\x1b\n\x0estop_replay_at\x18\x04 \x01(\x05H\x01\x88\x01\x01\x12\x1d\n\x10maximum_triggers\x18\x05 \x01(\x05H\x02\x88\x01\x01\x42\x12\n\x10_start_replay_atB\x11\n\x0f_stop_replay_atB\x13\n\x11_maximum_triggers\"\'\n\x10PipelineResponse\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"/\n\x18GetPipelineStatusRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"\xdb\x01\n\x19GetPipelineStatusResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12;\n\x16pipeline_status_detail\x18\x02 \x01(\x0b\x32\x16.supervisor.JsonStringH\x00\x88\x01\x01\x12;\n\x16training_status_detail\x18\x03 \x01(\x0b\x32\x16.supervisor.JsonStringH\x01\x88\x01\x01\x42\x19\n\x17_pipeline_status_detailB\x19\n\x17_training_status_detail2\xc6\x01\n\nSupervisor\x12R\n\x0estart_pipeline\x12 .supervisor.StartPipelineRequest\x1a\x1c.supervisor.PipelineResponse\"\x00\x12\x64\n\x13get_pipeline_status\x12$.supervisor.GetPipelineStatusRequest\x1a%.supervisor.GetPipelineStatusResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -28,8 +28,8 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_PIPELINERESPONSE']._serialized_end=348
   _globals['_GETPIPELINESTATUSREQUEST']._serialized_start=350
   _globals['_GETPIPELINESTATUSREQUEST']._serialized_end=397
-  _globals['_GETPIPELINESTATUSRESPONSE']._serialized_start=399
-  _globals['_GETPIPELINESTATUSRESPONSE']._serialized_end=482
-  _globals['_SUPERVISOR']._serialized_start=485
-  _globals['_SUPERVISOR']._serialized_end=683
+  _globals['_GETPIPELINESTATUSRESPONSE']._serialized_start=400
+  _globals['_GETPIPELINESTATUSRESPONSE']._serialized_end=619
+  _globals['_SUPERVISOR']._serialized_start=622
+  _globals['_SUPERVISOR']._serialized_end=820
 # @@protoc_insertion_point(module_scope)

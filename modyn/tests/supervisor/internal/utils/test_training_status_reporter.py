@@ -1,10 +1,11 @@
 import enlighten
-from modyn.supervisor.internal.utils.training_status_tracker import CurrentEvent, TrainingStatusTracker
+from modyn.supervisor.internal.utils.training_status_reporter import CurrentEvent, TrainingStatusReporter
 
+# TODO(#317): move these to modynclient
 
 def test_counter_training_one_epoch():
     mgr = enlighten.get_manager()
-    status_tracker = TrainingStatusTracker(mgr, 12, 50, 100)
+    status_tracker = TrainingStatusReporter(mgr, 12, 50, 100)
 
     assert status_tracker.current_epoch == 0
     assert status_tracker.last_samples_training == 0
@@ -30,7 +31,7 @@ def test_counter_training_one_epoch():
 
 def test_counter_training_several_epochs():
     mgr = enlighten.get_manager()
-    status_tracker = TrainingStatusTracker(mgr, 12, 50, 100)
+    status_tracker = TrainingStatusReporter(mgr, 12, 50, 100)
 
     assert status_tracker.current_epoch == 0
     assert status_tracker.last_samples_training == 0
@@ -88,7 +89,7 @@ def test_counter_training_several_epochs():
 
 def test_counter_downsampling():
     mgr = enlighten.get_manager()
-    status_tracker = TrainingStatusTracker(mgr, 12, 50, 100)
+    status_tracker = TrainingStatusReporter(mgr, 12, 50, 100)
 
     assert status_tracker.current_epoch == 0
     assert status_tracker.last_samples_training == 0
@@ -112,7 +113,7 @@ def test_counter_downsampling():
 
 def test_counter_alternating():
     mgr = enlighten.get_manager()
-    status_tracker = TrainingStatusTracker(mgr, 12, 50, 100)
+    status_tracker = TrainingStatusReporter(mgr, 12, 50, 100)
 
     assert status_tracker.current_epoch == 0
     assert status_tracker.last_samples_training == 0

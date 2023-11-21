@@ -23,5 +23,6 @@ message GetPipelineStatusRequest { int32 pipeline_id = 1; }
 
 message GetPipelineStatusResponse {
     string status = 1;
-    JsonString detail = 2;
+    optional JsonString pipeline_status_detail = 2;
+    optional JsonString training_status_detail = 3;
 }

@@ -1,6 +1,7 @@
 # pylint: disable=no-name-in-module
 import json
 import logging
+import multiprocessing as mp
 from collections import deque
 from time import sleep
 from typing import Any, Iterable, Optional
@@ -42,7 +43,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
-from modyn.supervisor.internal.utils import EvaluationStatusTracker
+from modyn.supervisor.internal.utils import TrainingStatusReporter, EvaluationStatusReporter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -69,12 +70,16 @@ class GRPCHandler:
     def __init__(
         self,
         modyn_config: dict,
+        training_status_queue: Optional[mp.Queue] = None,
     ) -> None:
         self.config = modyn_config
+        self.training_status_queue = training_status_queue
+
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
         self.connected_to_selector = False
         self.connected_to_evaluator = False
+
         self.storage: Optional[StorageStub] = None
         self.storage_channel: Optional[grpc.Channel] = None
         self.selector: Optional[SelectorStub] = None
@@ -411,11 +416,24 @@ class GRPCHandler:
     def wait_for_training_completion(
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> dict[str, Any]:  # pragma: no cover
+        assert self.training_status_queue is not None
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
+        logger.info("wait for training completion")
+
+        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
+        status_bar_scale = self.get_status_bar_scale(pipeline_id)
+        training_reporter = TrainingStatusReporter(self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale)
+        training_reporter.create_counter()
+        self.training_status_queue.put({"stage": "wait for training",
+                                        "action": "update_status_bar",
+                                        "training_id": training_id,
+                                        "demo": f"Waiting for training (id = {training_id})"})
+        # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
+        # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -445,6 +463,7 @@ class GRPCHandler:
                         res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
 
+                    training_reporter.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
                     # status_tracker.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
 
                 elif res.is_running:
@@ -456,7 +475,12 @@ class GRPCHandler:
                 trainer_log = json.loads(res.log.value)
                 break
 
+        training_reporter.close_counter()
         # status_tracker.close_counter()
+        self.training_status_queue.put({"stage": "wait for training",
+                                        "action": "update_status_bar",
+                                        "training_id": training_id,
+                                        "demo": "Training completed"})
         logger.info("Training completed 🚀")
 
         return trainer_log
@@ -495,14 +519,15 @@ class GRPCHandler:
 
         assert success, "Something went wrong while seeding the selector"
 
-    def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusTracker]:
+    def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusReporter]:
+        assert self.training_status_queue is not None
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
 
         device = pipeline_config["evaluation"]["device"]
 
-        evaluations: dict[int, EvaluationStatusTracker] = {}
+        evaluations: dict[int, EvaluationStatusReporter] = {}
 
         for dataset in pipeline_config["evaluation"]["datasets"]:
             dataset_id = dataset["dataset_id"]
@@ -515,7 +540,7 @@ class GRPCHandler:
             else:
                 evaluation_id = response.evaluation_id
                 logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-                evaluations[evaluation_id] = EvaluationStatusTracker(dataset_id, response.dataset_size)
+                evaluations[evaluation_id] = EvaluationStatusReporter(self.training_status_queue, evaluation_id, dataset_id, response.dataset_size)
 
         return evaluations
 
@@ -570,27 +595,36 @@ class GRPCHandler:
 
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
-    def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusTracker]) -> None:
+    def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]) -> None:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
+    
+        logger.info("wait for evaluation completion")
+        self.training_status_queue.put({"stage": "wait for evaluation",
+                                        "action": "update_status_bar",
+                                        "training_id": training_id,
+                                        "demo": f"Waiting for evaluation (training = {training_id})"})
+        #  self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
 
         # We are using a deque here in order to fetch the status of each evaluation
         # sequentially in a round-robin manner.
         working_queue: deque[int] = deque()
         blocked_in_a_row: dict[int, int] = {}
-        for evaluation_id in evaluations.keys():
+        for evaluation_id, evaluation_reporter in evaluations.items():
+            evaluation_reporter.create_counter(training_id, evaluation_id)
             working_queue.append(evaluation_id)
             blocked_in_a_row[evaluation_id] = 0
 
         while working_queue:
             current_evaluation_id = working_queue.popleft()
+            current_evaluation_reporter = evaluations[current_evaluation_id]
             req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
             res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
 
             if not res.valid:
                 logger.warning(f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n")
-                # current_evaluation_tracker.end_counter(True)
+                current_evaluation_reporter.end_counter(training_id, True)
                 continue
 
             if res.blocked:
@@ -604,26 +638,34 @@ class GRPCHandler:
 
                 if res.HasField("exception") and res.exception is not None:
                     logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
+                    current_evaluation_reporter.end_counter(training_id, True)
                     continue
                 if not res.is_running:
+                    current_evaluation_reporter.end_counter(training_id, False)
                     continue
                 if res.state_available:
                     assert res.HasField("samples_seen") and res.HasField(
                         "batches_seen"
                     ), f"Inconsistent server response:\n{res}"
 
+                    current_evaluation_reporter.progress_counter(training_id, res.samples_seen)
                 elif res.is_running:
                     logger.warning("Evaluator is not blocked and is running, but no state is available.")
 
             working_queue.append(current_evaluation_id)
             sleep(1)
 
+        self.training_status_queue.put({"stage": "wait for evaluation",
+                                        "action": "update_status_bar",
+                                        "training_id": training_id,
+                                        "demo": "Evaluation completed"})
+        # self.status_bar.update(demo="Evaluation completed")
         logger.info("Evaluation completed ✅")
 
     def store_evaluation_results(
         self,
         evaluation_result_writers: list[AbstractEvaluationResultWriter],
-        evaluations: dict[int, EvaluationStatusTracker],
+        evaluations: dict[int, EvaluationStatusReporter],
     ) -> None:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:

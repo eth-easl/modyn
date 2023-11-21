@@ -76,7 +76,12 @@ class GRPCHandler:
         get_status_request = GetPipelineStatusRequest(pipeline_id=pipeline_id)
 
         res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(get_status_request)
-        status = res.status
-        detail = json.loads(res.detail.value)
 
-        return {"status": status, "detail": detail}
+        ret = {"status": res.status}
+
+        if res.HasField("pipeline_status_detail"):
+            ret["pipeline_status_detail"] = json.loads(res.pipeline_status_detail.value)
+        if res.HasField("training_status_detail"):
+            ret["training_status_detail"] = json.loads(res.training_status_detail.value)
+
+        return ret
