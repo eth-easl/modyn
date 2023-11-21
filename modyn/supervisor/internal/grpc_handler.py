@@ -65,7 +65,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
+from modyn.utils import grpc_common_config, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -90,13 +90,7 @@ class GRPCHandler:
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
-        self.storage_channel = grpc.insecure_channel(
-            storage_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
+        self.storage_channel = grpc.insecure_channel(storage_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
@@ -108,13 +102,7 @@ class GRPCHandler:
     def init_selector(self) -> None:
         assert self.config is not None
         selector_address = f"{self.config['selector']['hostname']}:{self.config['selector']['port']}"
-        self.selector_channel = grpc.insecure_channel(
-            selector_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
+        self.selector_channel = grpc.insecure_channel(selector_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.selector_channel):
             raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
@@ -126,7 +114,7 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
+        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
@@ -138,7 +126,7 @@ class GRPCHandler:
     def init_evaluator(self) -> None:
         assert self.config is not None
         evaluator_address = f"{self.config['evaluator']['hostname']}:{self.config['evaluator']['port']}"
-        self.evaluator_channel = grpc.insecure_channel(evaluator_address)
+        self.evaluator_channel = grpc.insecure_channel(evaluator_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.evaluator_channel):
             raise ConnectionError(f"Could not establish gRPC connection to evaluator at {evaluator_address}.")

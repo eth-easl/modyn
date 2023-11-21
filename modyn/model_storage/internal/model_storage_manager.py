@@ -173,7 +173,8 @@ class ModelStorageManager:
 
         model_handler = getattr(model_module, model_class_name)
         # TODO(create issue): remove cuda and fix GPU loading for DLRM (also apex for model storage)
-        return model_handler(json.loads(model_config), "cuda:1", amp).model.state_dict()
+        device = "cuda:1" if torch.cuda.is_available() else "cpu"
+        return model_handler(json.loads(model_config), device, amp).model.state_dict()
 
     def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
         """

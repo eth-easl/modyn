@@ -16,8 +16,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource, SelectorKeySource
 from modyn.utils import (
     BYTES_PARSER_FUNC_NAME,
-    MAX_MESSAGE_SIZE,
     deserialize_function,
+    grpc_common_config,
     grpc_connection_established,
     instantiate_class,
 )
@@ -117,33 +117,7 @@ class OnlineDataset(IterableDataset):
         self._setup_composed_transform()
 
     def _init_grpc(self) -> None:
-        json_config = json.dumps(
-            {
-                "methodConfig": [
-                    {
-                        "name": [{}],
-                        "retryPolicy": {
-                            "maxAttempts": 10,
-                            "initialBackoff": "0.1s",
-                            "maxBackoff": "10s",
-                            "backoffMultiplier": 2,
-                            "retryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED", "DEADLINE_EXCEEDED"],
-                        },
-                    }
-                ]
-            }
-        )
-
-        self._storage_channel = grpc.insecure_channel(
-            self._storage_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.service_config", json_config),
-                ("grpc.keepalive_permit_without_calls", True),
-                ("grpc.keepalive_time_ms", 2 * 60 * 60 * 1000),
-            ],
-        )
+        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
         if not grpc_connection_established(self._storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(self._storage_channel)
