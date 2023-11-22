@@ -559,7 +559,8 @@ class Supervisor:
                 eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluations)
                 self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
-
+                self._persist_pipeline_log()
+                
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)
