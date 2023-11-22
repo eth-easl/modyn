@@ -4,6 +4,7 @@ import pathlib
 from typing import Optional
 
 import grpc
+from google.protobuf.json_format import MessageToDict
 
 # TODO(#317 client): share with modyn or make a copy?
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
@@ -73,12 +74,6 @@ class GRPCHandler:
         get_status_request = GetPipelineStatusRequest(pipeline_id=pipeline_id)
 
         res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(get_status_request)
-
-        ret = {"status": res.status}
-
-        if res.HasField("pipeline_status_detail"):
-            ret["pipeline_status_detail"] = json.loads(res.pipeline_status_detail.value)
-        if res.HasField("training_status_detail"):
-            ret["training_status_detail"] = json.loads(res.training_status_detail.value)
+        ret = MessageToDict(res, preserving_proto_field_name=True, including_default_value_fields=True)
 
         return ret

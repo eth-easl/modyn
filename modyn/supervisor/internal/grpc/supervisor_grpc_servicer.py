@@ -7,9 +7,13 @@ import threading
 from typing import Optional
 
 import grpc
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
+from google.protobuf.json_format import ParseDict
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
+    GetPipelineStatusRequest,
+    GetPipelineStatusResponse,
+    PipelineResponse,
+    StartPipelineRequest,
+)
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorServicer  # noqa: E402, E501
 from modyn.supervisor.internal.supervisor import Supervisor
 
@@ -56,14 +60,7 @@ class SupervisorGRPCServicer(SupervisorServicer):
     def get_pipeline_status(
         self, request: GetPipelineStatusRequest, context: grpc.ServicerContext
     ) -> GetPipelineStatusResponse:
-        status = self._supervisor.get_pipeline_status(request.pipeline_id)
-
-        res = GetPipelineStatusResponse(status=status["status"])
-        if "pipeline_status_detail" in status:
-            pipeline_status_detail = SupervisorJsonString(value=json.dumps(status["pipeline_status_detail"]))
-            res.pipeline_status_detail.CopyFrom(pipeline_status_detail)
-        if "training_status_detail" in status:
-            training_status_detail = SupervisorJsonString(value=json.dumps(status["training_status_detail"]))
-            res.training_status_detail.CopyFrom(training_status_detail)
+        msg = self._supervisor.get_pipeline_status(request.pipeline_id)
+        res = ParseDict(msg, GetPipelineStatusResponse())
 
         return res

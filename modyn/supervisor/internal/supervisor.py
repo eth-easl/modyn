@@ -349,22 +349,25 @@ class Supervisor:
         if p_info.process_handler.is_alive():
             ret["status"] = "running"
 
-            pipeline_status_detail = p_info.get_pipeline_status_detail()
-            if pipeline_status_detail is not None:
-                ret["pipeline_status_detail"] = pipeline_status_detail
+            pipeline_stage = p_info.get_pipeline_stage()
+            if pipeline_stage is not None:
+                ret["pipeline_stage"] = pipeline_stage
 
-            training_status_detail = p_info.get_training_status_detail()
-            if training_status_detail is not None:
-                ret["training_status_detail"] = training_status_detail
+            training_status = p_info.get_training_status()
+            if training_status is not None:
+                ret["training_status"] = training_status
 
-            logger.info(
-                f"[{pipeline_id}] pipeline_status_detail: {pipeline_status_detail}, "
-                f"training_status_detail: {training_status_detail}"
-            )
+            logger.info(f"[{pipeline_id}] pipeline_stage: {pipeline_stage}, " f"training_status: {training_status}")
         else:
             ret["status"] = "exit"
-
+            ret["pipeline_stage"] = {
+                "stage": "exit",
+                "msg_type": "exit",
+                "log": False,
+                "exit_msg": {"exitcode": p_info.process_handler.exitcode},
+            }
             exception_msg = p_info.check_for_exception()
-            ret["pipeline_status_detail"] = {"exitcode": p_info.process_handler.exitcode, "exception": exception_msg}
+            if exception_msg is not None:
+                ret["pipeline_stage"]["exit_msg"]["exception"] = exception_msg
 
         return ret

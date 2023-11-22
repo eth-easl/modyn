@@ -62,80 +62,94 @@ class Client:
             logger.info(msg)
 
         msg_type = msg['msg_type']
-        submsg = msg['msg']
 
         demo = f"Pipeline <{self.pipeline_id}> {msg['stage']}"
 
         if msg_type == "general":
             pass
+        elif msg_type == "id":
+            submsg = msg['id_msg']
+            demo += f" ({submsg['id_type']} = {submsg['id']})"
+        elif msg_type == "dataset":
+            demo += f" (dataset = {msg['dataset_msg']['id']})"
         elif msg_type == "counter":
+            submsg = msg['counter_msg']
             if submsg["action"] == "create":
                 self.pbar = self.progress_mgr.counter(
-                    total=submsg["new_data_len"],
+                    total=submsg["create_params"]["new_data_len"],
                     desc=f"[Pipeline {self.pipeline_id}] Processing New Samples",
                     unit="samples"
                 )
             elif submsg["action"] == "update":
                 assert self.pbar is not None
-                self.pbar.update(submsg["batch_size"])
+                self.pbar.update(submsg["update_params"]["batch_size"])
             elif submsg["action"] == "close":
                 assert self.pbar is not None
                 self.pbar.clear(flush=True)
                 self.pbar.close(clear=True)
         else:
-            demo += f" ({msg_type} = {submsg['id']})"
+            logger.error(f"unknown msg_type {msg_type} for running pipeline")
 
         self.status_bar.update(demo=demo)
 
     def _monitor_training_progress(self, msg: dict) -> None:
+        id = msg["id"]
+
         if msg["stage"] == "wait for training":
             if msg["action"] == "create_tracker":
+                params = msg["training_create_tracker_params"]
                 self.training_status_tracker = TrainingStatusTracker(
-                    self.progress_mgr, msg["training_id"], msg["total_samples"],  msg["status_bar_scale"]
+                    self.progress_mgr, id, params["total_samples"],  params["status_bar_scale"]
                 )
             elif msg["action"] == "progress_counter":
+                params = msg["training_progress_counter_params"]
                 self.training_status_tracker.progress_counter(
-                    msg["samples_seen"], msg["downsampling_samples_seen"], msg["is_training"]
+                    params["samples_seen"], params["downsampling_samples_seen"], params["is_training"]
                 )
             elif msg["action"] == "close_counter":
                 self.training_status_tracker.close_counter()
+
         elif msg["stage"] == "wait for evaluation":
             if msg["action"] == "create_tracker":
-                self.evaluations[msg["evaluation_id"]] = EvaluationStatusTracker(
-                    msg["dataset_id"], msg["dataset_size"]
+                params = msg["eval_create_tracker_params"]
+                self.evaluations[id] = EvaluationStatusTracker(
+                    params["dataset_id"], params["dataset_size"]
                 )
             elif msg["action"] == "create_counter":
-                self.evaluations[msg["evaluation_id"]].create_counter(
-                    self.progress_mgr, msg["training_id"], msg["evaluation_id"]
+                params = msg["eval_create_counter_params"]
+                self.evaluations[id].create_counter(
+                    self.progress_mgr, params["training_id"], id
                 )
             elif msg["action"] == "progress_counter":
-                self.evaluations[msg["evaluation_id"]].progress_counter(msg["total_samples_seen"])
+                params = msg["eval_progress_counter_params"]
+                self.evaluations[id].progress_counter(params["total_samples_seen"])
             elif msg["action"] == "end_counter":
-                self.evaluations[msg["evaluation_id"]].end_counter(msg["error"])
+                params = msg["eval_end_counter_params"]
+                self.evaluations[id].end_counter(params["error"])
 
     def poll_pipeline_status(self) -> None:
         res = self.grpc.get_pipeline_status(self.pipeline_id)
 
         while res["status"] == "running":
             # print(json.dumps(res, sort_keys=True, indent=2))
-            if "pipeline_status_detail" in res:
-                self._monitor_pipeline_progress(res["pipeline_status_detail"])
+            if "pipeline_stage" in res:
+                self._monitor_pipeline_progress(res["pipeline_stage"])
 
-            if "training_status_detail" in res:
-                self._monitor_training_progress(res["training_status_detail"])
+            if "training_status" in res:
+                self._monitor_training_progress(res["training_status"])
 
             time.sleep(POLL_TIMEOUT)
 
             res = self.grpc.get_pipeline_status(self.pipeline_id)
 
         if res["status"] == "exit":
-            if res["pipeline_status_detail"]["exitcode"] == 0:
+            if res["pipeline_stage"]["exit_msg"]["exitcode"] == 0:
                 logger.info(f"Pipeline <{self.pipeline_id}> finished successfully.")
             else:
                 logger.info(
-                    f"Pipeline <{self.pipeline_id}> exited with error {res['pipeline_status_detail']['exception']}"
+                    f"Pipeline <{self.pipeline_id}> exited with error {res['pipeline_stage']['exit_msg']['exception']}"
                 )
         elif res["status"] == "not found":
             logger.info(f"Pipeline <{self.pipeline_id}> not found.")
         else:
-            print(json.dumps(res, sort_keys=True, indent=2))
+            logger.error(f"unknown pipeline status {json.dumps(res, sort_keys=True, indent=2)}")

@@ -434,10 +434,13 @@ class GRPCHandler:
         )
         training_reporter.create_tracker()
         self.pipeline_status_queue.put(
-            {"stage": "Waiting for training", "msg_type": "training", "msg": {"id": training_id}, "log": True}
+            {
+                "stage": "Waiting for training",
+                "msg_type": "id",
+                "log": True,
+                "id_msg": {"id_type": "training", "id": training_id},
+            }
         )
-        # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
-        # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
         blocked_in_a_row = 0
 
@@ -484,9 +487,9 @@ class GRPCHandler:
         self.pipeline_status_queue.put(
             {
                 "stage": "Training completed 🚀",
-                "msg_type": "training",
-                "msg": {"id": training_id},
+                "msg_type": "id",
                 "log": True,
+                "id_msg": {"id_type": "training", "id": training_id},
             }
         )
         logger.info("Training completed 🚀")
@@ -618,12 +621,11 @@ class GRPCHandler:
         self.pipeline_status_queue.put(
             {
                 "stage": "Waiting for evaluation",
-                "msg_type": "training",
-                "msg": {"id": training_id},
+                "msg_type": "id",
                 "log": True,
+                "id_msg": {"id_type": "training", "id": training_id},
             }
         )
-        #  self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
 
         # We are using a deque here in order to fetch the status of each evaluation
         # sequentially in a round-robin manner.
@@ -642,7 +644,7 @@ class GRPCHandler:
 
             if not res.valid:
                 logger.warning(f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n")
-                current_evaluation_reporter.end_counter(training_id, True)
+                current_evaluation_reporter.end_counter(True)
                 continue
 
             if res.blocked:
@@ -656,17 +658,17 @@ class GRPCHandler:
 
                 if res.HasField("exception") and res.exception is not None:
                     logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
-                    current_evaluation_reporter.end_counter(training_id, True)
+                    current_evaluation_reporter.end_counter(True)
                     continue
                 if not res.is_running:
-                    current_evaluation_reporter.end_counter(training_id, False)
+                    current_evaluation_reporter.end_counter(False)
                     continue
                 if res.state_available:
                     assert res.HasField("samples_seen") and res.HasField(
                         "batches_seen"
                     ), f"Inconsistent server response:\n{res}"
 
-                    current_evaluation_reporter.progress_counter(training_id, res.samples_seen)
+                    current_evaluation_reporter.progress_counter(res.samples_seen)
                 elif res.is_running:
                     logger.warning("Evaluator is not blocked and is running, but no state is available.")
 
@@ -676,12 +678,11 @@ class GRPCHandler:
         self.pipeline_status_queue.put(
             {
                 "stage": "Evaluation completed ✅",
-                "msg_type": "training",
-                "msg": {"id": training_id},
+                "msg_type": "id",
                 "log": True,
+                "id_msg": {"id_type": "training", "id": training_id},
             }
         )
-        # self.status_bar.update(demo="Evaluation completed")
         logger.info("Evaluation completed ✅")
 
     def store_evaluation_results(

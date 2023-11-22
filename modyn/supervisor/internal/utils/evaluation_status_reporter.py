@@ -13,9 +13,11 @@ class EvaluationStatusReporter:
             {
                 "stage": "wait for evaluation",
                 "action": "create_tracker",
-                "evaluation_id": self.evaluation_id,
-                "dataset_id": self.dataset_id,
-                "dataset_size": self.dataset_size,
+                "id": self.evaluation_id,
+                "eval_create_tracker_params": {
+                    "dataset_id": self.dataset_id,
+                    "dataset_size": self.dataset_size,
+                },
             }
         )
 
@@ -24,33 +26,33 @@ class EvaluationStatusReporter:
             {
                 "stage": "wait for evaluation",
                 "action": "create_counter",
-                "evaluation_id": self.evaluation_id,
-                "training_id": training_id,
-                "dataset_id": self.dataset_id,
-                "dataset_size": self.dataset_size,
+                "id": self.evaluation_id,
+                "eval_create_counter_params": {
+                    "training_id": training_id,
+                },
             }
         )
 
-    def progress_counter(self, training_id: int, total_samples_seen: int) -> None:
+    def progress_counter(self, total_samples_seen: int) -> None:
         self.training_status_queue.put(
             {
                 "stage": "wait for evaluation",
                 "action": "progress_counter",
-                "evaluation_id": self.evaluation_id,
-                "training_id": training_id,
-                "dataset_id": self.dataset_id,
-                "total_samples_seen": total_samples_seen,
+                "id": self.evaluation_id,
+                "eval_progress_counter_params": {
+                    "total_samples_seen": total_samples_seen,
+                },
             }
         )
 
-    def end_counter(self, training_id: int, error: bool) -> None:
+    def end_counter(self, error: bool) -> None:
         self.training_status_queue.put(
             {
                 "stage": "wait for evaluation",
                 "action": "end_counter",
-                "evaluation_id": self.evaluation_id,
-                "training_id": training_id,
-                "dataset_id": self.dataset_id,
-                "error": error,
+                "id": self.evaluation_id,
+                "eval_end_counter_params": {
+                    "error": error,
+                },
             }
         )

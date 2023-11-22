@@ -21,8 +21,92 @@ message PipelineResponse { int32 pipeline_id = 1; }
 
 message GetPipelineStatusRequest { int32 pipeline_id = 1; }
 
+message PipelineStageIdMsg {
+    string id_type = 1;
+    int32 id = 2;
+}
+
+message PipelineStageDatasetMsg {
+    string id = 1;  
+}
+
+message PipelineStageCounterCreateParams {
+    int32 new_data_len = 1;
+}
+
+message PipelineStageCounterUpdateParams {
+    int32 batch_size = 1;
+}
+
+message PipelineStageCounterMsg {
+    string action = 1;
+    oneof params {
+        PipelineStageCounterCreateParams create_params = 2;
+        PipelineStageCounterUpdateParams update_params = 3;
+    }
+}
+
+message PipelineStageExitMsg {
+    int32 exitcode = 1;
+    optional string exception = 2;
+}
+
+message PipelineStage {
+    string stage = 1;
+    string msg_type = 2;
+    bool log = 3;
+    oneof msg {
+        PipelineStageIdMsg id_msg = 4;
+        PipelineStageDatasetMsg dataset_msg = 5;
+        PipelineStageCounterMsg counter_msg = 6;
+        PipelineStageExitMsg exit_msg = 7;
+    }
+}
+
+message TrainingStatusCreateTrackerParams {
+    int32 total_samples = 1;
+    int32 status_bar_scale = 2;
+}
+
+message TrainingStatusProgressCounterParams {
+    int32 samples_seen = 1;
+    int32 downsampling_samples_seen = 2;
+    bool is_training = 3;
+}
+
+message EvaluationStatusCreateTrackerParams {
+    string dataset_id = 1;
+    int32 dataset_size = 2;
+} 
+
+message EvaluationStatusCreateCounterParams {
+    int32 training_id = 1;
+}
+
+message EvaluationStatusProgressCounterParams {
+    int32 total_samples_seen = 1;
+}
+
+message EvaluationStatusEndCounterParams {
+    bool error = 1;
+}
+
+message TrainingStatus {
+    string stage = 1;
+    string action = 2;
+    int32 id = 3;
+    oneof params {
+        TrainingStatusCreateTrackerParams training_create_tracker_params = 4;
+        TrainingStatusProgressCounterParams training_progress_counter_params = 5;
+        EvaluationStatusCreateTrackerParams eval_create_tracker_params = 6;
+        EvaluationStatusCreateCounterParams eval_create_counter_params = 7;
+        EvaluationStatusProgressCounterParams eval_progress_counter_params = 8;
+        EvaluationStatusEndCounterParams eval_end_counter_params = 9;
+    }
+}
+
 message GetPipelineStatusResponse {
     string status = 1;
-    optional JsonString pipeline_status_detail = 2;
-    optional JsonString training_status_detail = 3;
+    optional PipelineStage pipeline_stage = 2;
+    optional TrainingStatus training_status = 3;
 }
