@@ -53,8 +53,8 @@ class F1Score(AbstractDecomposableMetric):
         self.classification_matrix = np.zeros((3, self.num_classes))
 
     def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
-        y_true = y_true.numpy()
-        y_pred = y_pred.numpy()
+        y_true = y_true.detach().cpu().numpy()
+        y_pred = y_pred.detach().cpu().numpy()
 
         correct_mask = np.equal(y_true, y_pred)
         wrong_mask = np.invert(correct_mask)
