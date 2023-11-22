@@ -153,7 +153,7 @@ evaluation:
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
               return torch.ge(torch.sigmoid(model_output).float(), 0.5)
-        - name: "RocAuc"
+        - name: "ROC-AUC"
           evaluation_transformer_function: |
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
